@@ -55,23 +55,23 @@ class BuildPython(CrossCompileAutotoolsProject):
     def configure(self, **kwargs):
         # maybe interesting:   --with(out)-pymalloc    disable/enable specialized mallocs
         if self.should_include_debug_info:
-            self.configureArgs.append("--with-pydebug")
+            self.configure_args.append("--with-pydebug")
             # XXXAR: always add assertions?
-            self.configureArgs.append("--with-assertions")
+            self.configure_args.append("--with-assertions")
 
         if self.compiling_for_cheri():
             # computed gotos currently crash the compiler...
-            self.configureArgs.append("--without-computed-gotos")
+            self.configure_args.append("--without-computed-gotos")
         else:
-            self.configureArgs.append("--with-computed-gotos")
+            self.configure_args.append("--with-computed-gotos")
 
         # fails to cross-compile and does weird stuff on host (uses wrong python version?)
-        self.configureArgs.append("--without-ensurepip")
+        self.configure_args.append("--without-ensurepip")
 
 
         if not self.compiling_for_host():
-            self.configureArgs.append("--without-pymalloc")  # use system malloc
-            self.configureArgs.append("--without-doc-strings")  # should reduce size
+            self.configure_args.append("--without-pymalloc")  # use system malloc
+            self.configure_args.append("--without-doc-strings")  # should reduce size
             native_python = self.get_instance_for_cross_target(CompilationTargets.NATIVE,
                                                                self.config).install_dir / "bin/python3"
             if not native_python.exists():

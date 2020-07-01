@@ -82,7 +82,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             autotools_triple = autotools_triple.replace("-purecap", "")
             # TODO: do we have to remove these too?
             # autotools_triple = autotools_triple.replace("mips64c128-", "cheri-")
-            self.configureArgs.extend(["--host=" + autotools_triple, "--target=" + autotools_triple,
+            self.configure_args.extend(["--host=" + autotools_triple, "--target=" + autotools_triple,
                                        "--build=" + buildhost])
 
     def add_configure_and_make_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
@@ -92,7 +92,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     def add_configure_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
         super().add_configure_env_arg(arg, value)
         if self._configure_supports_variables_on_cmdline:
-            self.configureArgs.append(arg + "=" + str(value))
+            self.configure_args.append(arg + "=" + str(value))
 
     def add_configure_vars(self, **kwargs):
         for k, v in kwargs.items():
@@ -101,22 +101,22 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     def set_configure_prog_with_args(self, prog: str, path: Path, args: list):
         super().set_configure_prog_with_args(prog, path, args)
         if self._configure_supports_variables_on_cmdline:
-            self.configureArgs.append(prog + "=" + self.configureEnvironment[prog])
+            self.configure_args.append(prog + "=" + self.configureEnvironment[prog])
 
     def setup(self):
         super().setup()
         if self._configure_understands_enable_static:     # workaround for nginx which isn't really autotools
             if self.force_static_linkage:
-                self.configureArgs.extend(["--enable-static", "--disable-shared"])
+                self.configure_args.extend(["--enable-static", "--disable-shared"])
             elif self.force_dynamic_linkage:
-                self.configureArgs.extend(["--disable-static", "--enable-shared"])
+                self.configure_args.extend(["--disable-static", "--enable-shared"])
             # Otherwise just let the project decide
             # else:
-            #    self.configureArgs.extend(["--enable-static", "--enable-shared"])
+            #    self.configure_args.extend(["--enable-static", "--enable-shared"])
         if self.crosscompile_target.is_cheri_purecap() and self._configure_supports_libdir:
             # Install to lib and not libcheri since we have a separate prefix and that makes it
             # easier to handle build systems that assume that library are always in /lib
-            self.configureArgs.append("--libdir=" + str(self.install_prefix) + "/lib")
+            self.configure_args.append("--libdir=" + str(self.install_prefix) + "/lib")
 
     def configure(self, **kwargs):
         if self._autotools_add_default_compiler_args:

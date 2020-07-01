@@ -69,7 +69,7 @@ class BuildGnuBinutils(AutotoolsProject):
         #    elf64ltsmip_fbsd
         #    elf32btsmipn32_fbsd
         #    elf32ltsmipn32_fbsd
-        self.configureArgs.extend([
+        self.configure_args.extend([
             # on cheri gcc -dumpmachine returns mips64-undermydesk-freebsd, however this is not accepted by BFD
             # if we just pass --target=mips64 this apparently defaults to mips64-unknown-elf on freebsd
             # and also on Linux, but let's be explicit in case it assumes ELF binaries to target linux
@@ -87,7 +87,7 @@ class BuildGnuBinutils(AutotoolsProject):
             #  "--program-prefix=cheri-unknown-freebsd-",
             "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems
         ])
-        self.configureArgs.append("--disable-shared")
+        self.configure_args.append("--disable-shared")
         # newer compilers will default to -std=c99 which will break binutils:
         cflags = "-std=gnu89 -O2"
         info = get_compiler_info(Path(os.getenv("CC", shutil.which("cc"))))

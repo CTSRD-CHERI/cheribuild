@@ -89,7 +89,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         install_root = self.install_dir if self.compiling_for_host() else self.install_prefix
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
         # ./configure flags
-        self.configureArgs.extend([
+        self.configure_args.extend([
             "--disable-nls",
             "--enable-tui",
             "--disable-ld",  # "--enable-ld",
@@ -108,9 +108,9 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
         # BUILD the gui:
         if False and self.compiling_for_host():
-            self.configureArgs.append("--enable-gdbtk")
+            self.configure_args.append("--enable-gdbtk")
             # if OSInfo.IS_MAC:
-            # self.configureArgs.append("--with-tcl=/usr/local/opt/tcl-tk/lib")
+            # self.configure_args.append("--with-tcl=/usr/local/opt/tcl-tk/lib")
             # self.configureEnvironment["PKG_CONFIG_PATH"] =
             # "/usr/local/opt/tcl-tk/lib/pkgconfig:/usr/local/lib/pkgconfig"
 
@@ -129,13 +129,13 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")
         self.cross_warning_flags.append("-Wno-error=format")
         self.cross_warning_flags.append("-Wno-error=incompatible-pointer-types")
-        self.configureArgs.append("--enable-targets=all")
+        self.configure_args.append("--enable-targets=all")
         if self.compiling_for_host():
             self.LDFLAGS.append("-L/usr/local/lib")
-            self.configureArgs.append("--with-expat")
-            self.configureArgs.append("--with-python=" + str(sys.executable))
+            self.configure_args.append("--with-expat")
+            self.configure_args.append("--with-python=" + str(sys.executable))
         else:
-            self.configureArgs.extend(["--without-python", "--without-expat", "--without-libunwind-ia64"])
+            self.configure_args.extend(["--without-python", "--without-expat", "--without-libunwind-ia64"])
             self.configureEnvironment.update(gl_cv_func_gettimeofday_clobber="no",
                                              lt_cv_sys_max_cmd_len="262144",
                                              # The build system run CC without any flags to detect dependency style...
@@ -177,8 +177,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
     def configure(self, **kwargs):
         if self.compiling_for_host() and OSInfo.IS_MAC:
             self.configureEnvironment.clear()
-            print(self.configureArgs)
-            # self.configureArgs.clear()
+            print(self.configure_args)
+            # self.configure_args.clear()
         super().configure()
 
     def compile(self, **kwargs):

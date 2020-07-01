@@ -67,18 +67,18 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
 
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
             # We have to build a purecap if we want to support CHERI
-            self.configureArgs.append("--with-abi=l64pc128")
+            self.configure_args.append("--with-abi=l64pc128")
             # Enable CHERI extensions
-            self.configureArgs.append("--with-arch=rv64imafdcxcheri")
-            self.configureArgs.append("--with-mem-start=" + self.mem_start)
+            self.configure_args.append("--with-arch=rv64imafdcxcheri")
+            self.configure_args.append("--with-mem-start=" + self.mem_start)
         else:
-            self.configureArgs.append("--with-abi=lp64")
-            self.configureArgs.append("--with-arch=rv64imafdc")
+            self.configure_args.append("--with-abi=lp64")
+            self.configure_args.append("--with-arch=rv64imafdc")
 
         if self.build_type == BuildType.DEBUG:
-            self.configureArgs.append("--enable-logo")  # For debugging
+            self.configure_args.append("--enable-logo")  # For debugging
 
-        self.configureArgs.append("--disable-fp-emulation")  # Should not be needed
+        self.configure_args.append("--disable-fp-emulation")  # Should not be needed
 
         # BBL build uses weird objcopy flags and therefore requires GNU objcopy if you want to build everything
         # Fortunetaly we don't need this when building only BBL.
@@ -90,12 +90,12 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         if self.without_payload:
             # Build an OpenSBI fw_jump style BBL
             assert self.kernel_class is None
-            self.configureArgs.append("--without-payload")
+            self.configure_args.append("--without-payload")
         else:
             # Add the kernel as a payload:
             assert self.kernel_class is not None
             kernel_path = self.kernel_class.get_installed_kernel_path(self, cross_target=self.crosscompile_target)
-            self.configureArgs.append("--with-payload=" + str(kernel_path))
+            self.configure_args.append("--with-payload=" + str(kernel_path))
 
     def compile(self, **kwargs):
         self.run_make("bbl")

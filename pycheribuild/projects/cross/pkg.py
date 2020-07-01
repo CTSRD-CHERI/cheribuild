@@ -44,9 +44,9 @@ class BuildPkg(CrossCompileAutotoolsProject):
         super().setup()
         # The configure script won't accept --target (but does allow --host/--build)
         if not self.compiling_for_host():
-            for i in self.configureArgs:
+            for i in self.configure_args:
                 if i.startswith("--target="):
-                    self.configureArgs.remove(i)
+                    self.configure_args.remove(i)
                     break  # avoid continuing iteration with a modified container
         self.common_warning_flags.append("-Werror=implicit-function-declaration")
         if self.target_info.is_macos():

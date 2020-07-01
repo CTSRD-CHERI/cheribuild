@@ -66,11 +66,11 @@ class BuildFettOpenSSH(FettProjectMixin, BuildOpenSSH):
 
     def configure(self, **kwargs):
         openssl_dir = str(BuildFettOpenSSL.get_instance(self)._install_prefix)
-        self.configureArgs.append("--with-ssl-dir=" + str(BuildFettOpenSSL.get_instance(self).destdir) + "/" + openssl_dir)
+        self.configure_args.append("--with-ssl-dir=" + str(BuildFettOpenSSL.get_instance(self).destdir) + "/" + openssl_dir)
         self.COMMON_LDFLAGS.append("-Wl,-rpath," + openssl_dir + "/lib")
 
         zlib_dir = str(BuildFettZlib.get_instance(self)._install_prefix)
-        self.configureArgs.append("--with-zlib=" + str(BuildFettZlib.get_instance(self).destdir) + "/" + zlib_dir)
+        self.configure_args.append("--with-zlib=" + str(BuildFettZlib.get_instance(self).destdir) + "/" + zlib_dir)
         self.COMMON_LDFLAGS.append("-Wl,-rpath," + zlib_dir + "/lib")
 
         super().configure(**kwargs)

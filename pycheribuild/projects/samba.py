@@ -54,15 +54,15 @@ class BuildSamba(Project):
         self.configureCommand = self.source_dir / "configure"
         if SMB_OUT_OF_SOURCE_BUILD_WORKS:
             self.configureCommand = self.source_dir / "buildtools/bin/waf"
-            self.configureArgs.insert(0, "configure")
+            self.configure_args.insert(0, "configure")
             self.make_args.set_command(self.source_dir / "buildtools/bin/waf")
             self.make_args.add_flags("--blddir=" + str(self.build_dir))
             self.make_args.add_flags("--srcdir=" + str(self.source_dir))
-            self.configureArgs.append("--blddir=" + str(self.build_dir))
-            self.configureArgs.append("--srcdir=" + str(self.source_dir))
+            self.configure_args.append("--blddir=" + str(self.build_dir))
+            self.configure_args.append("--srcdir=" + str(self.source_dir))
         # Based on https://willhaley.com/blog/compile-samba-macos/
         # Also try to disable everything that is not needed for QEMU user shares
-        self.configureArgs.extend([
+        self.configure_args.extend([
             "--disable-cephfs",
             "--disable-cups",
             "--disable-iprint",
@@ -90,11 +90,11 @@ class BuildSamba(Project):
         # Force python2 for now (since py3 seems broken)
         self.configureEnvironment["PYTHON"] = shutil.which("python")
         #  version 4.9 "--without-json-audit",
-        self.configureArgs.append("--without-json")
+        self.configure_args.append("--without-json")
         if OSInfo.IS_MAC:
             self.add_required_system_tool("/usr/local/opt/krb5/bin/kinit", homebrew="krb5")
             # TODO: brew --prefix krb5
-            self.configureArgs.extend(["--with-system-mitkrb5", "/usr/local/opt/krb5"])
+            self.configure_args.extend(["--with-system-mitkrb5", "/usr/local/opt/krb5"])
 
     def configure(self, **kwargs):
         # Add the yapp binary

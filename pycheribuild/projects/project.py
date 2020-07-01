@@ -1763,7 +1763,7 @@ class Project(SimpleProject):
 
         self.configureCommand = ""
         # non-assignable variables:
-        self.configureArgs = []  # type: typing.List[str]
+        self.configure_args = []  # type: typing.List[str]
         self.configureEnvironment = {}  # type: typing.Dict[str,str]
         self._lastStdoutLineCanBeOverwritten = False
         self.make_args = MakeOptions(self.make_kind, self)
@@ -1924,7 +1924,7 @@ class Project(SimpleProject):
 
     @property
     def _no_overwrite_allowed(self) -> "typing.Iterable[str]":
-        return super()._no_overwrite_allowed + ("configureArgs", "configureEnvironment", "make_args")
+        return super()._no_overwrite_allowed + ("configure_args", "configureEnvironment", "make_args")
 
     # Make sure that API is used properly
     def __setattr__(self, name, value):
@@ -2099,7 +2099,7 @@ class Project(SimpleProject):
         if not Path(_configure_path).exists():
             self.fatal("Configure command ", _configure_path, "does not exist!")
         if _configure_path:
-            self.run_with_logfile([_configure_path] + self.configureArgs, logfile_name="configure", cwd=cwd,
+            self.run_with_logfile([_configure_path] + self.configure_args, logfile_name="configure", cwd=cwd,
                 env=self.configureEnvironment)
 
     def compile(self, cwd: Path = None, parallel: bool = True):
@@ -2479,14 +2479,14 @@ class CMakeProject(Project):
                 # TODO: add support for cmake --build <dir> --target <tgt> -- <args>
                 fatalError("Unknown CMake Generator", custom_generator, "-> don't know which build command to run")
         self.generator = generator
-        self.configureArgs.append(str(self.source_dir))  # TODO: use undocumented -H and -B options?
+        self.configure_args.append(str(self.source_dir))  # TODO: use undocumented -H and -B options?
         if self.generator == CMakeProject.Generator.Ninja:
             if not custom_generator:
-                self.configureArgs.append("-GNinja")
+                self.configure_args.append("-GNinja")
             self.make_args.kind = MakeCommandKind.Ninja
         if self.generator == CMakeProject.Generator.Makefiles:
             if not custom_generator:
-                self.configureArgs.append("-GUnix Makefiles")
+                self.configure_args.append("-GUnix Makefiles")
             self.make_args.kind = MakeCommandKind.DefaultMake
 
         if self.build_type != BuildType.DEFAULT:
@@ -2495,10 +2495,10 @@ class CMakeProject(Project):
                 self.build_type = BuildType.MINSIZEREL
                 self._force_debug_info = True
 
-        self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + str(self.build_type.value))
+        self.configure_args.append("-DCMAKE_BUILD_TYPE=" + str(self.build_type.value))
         # TODO: always generate it?
         if self.config.create_compilation_db:
-            self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
+            self.configure_args.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
             # Don't add the user provided options here, add them in configure() so that they are put last
         # This must come first:
         if not self.compiling_for_host():
@@ -2530,7 +2530,7 @@ class CMakeProject(Project):
 
     def add_cmake_options(self, *, _include_empty_vars=False, _replace=True, **kwargs):
         for option, value in kwargs.items():
-            if not _replace and any(x.startswith("-D" + option + "=") for x in self.configureArgs):
+            if not _replace and any(x.startswith("-D" + option + "=") for x in self.configure_args):
                 self.verbose_print("Not replacing ", option, "since it is already set.")
                 return
             if any(x.startswith("-D" + option) for x in self.cmakeOptions):
@@ -2542,7 +2542,7 @@ class CMakeProject(Project):
             if not str(value) and not _include_empty_vars:
                 continue
             assert value is not None
-            self.configureArgs.append("-D" + option + "=" + str(value))
+            self.configure_args.append("-D" + option + "=" + str(value))
 
     def set_minimum_cmake_version(self, major: int, minor: int, patch: int = 0):
         self.__minimum_cmake_version = (major, minor, patch)
@@ -2652,7 +2652,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
         # TODO: BUILD_SHARED_LIBS=OFF?
 
         # Add the options from the config file:
-        self.configureArgs.extend(self.cmakeOptions)
+        self.configure_args.extend(self.cmakeOptions)
         # make sure we get a completely fresh cache when --reconfigure is passed:
         cmake_cache = self.build_dir / "CMakeCache.txt"
         if self.config.forceConfigure:
@@ -2727,11 +2727,11 @@ class AutotoolsProject(Project):
         if self._configure_supports_prefix:
             if self.install_prefix != self.install_dir:
                 assert self.destdir, "custom install prefix requires DESTDIR being set!"
-                self.configureArgs.append("--prefix=" + str(self.install_prefix))
+                self.configure_args.append("--prefix=" + str(self.install_prefix))
             else:
-                self.configureArgs.append("--prefix=" + str(self.install_dir))
+                self.configure_args.append("--prefix=" + str(self.install_dir))
         if self.extraConfigureFlags:
-            self.configureArgs.extend(self.extraConfigureFlags)
+            self.configure_args.extend(self.extraConfigureFlags)
         super().configure(**kwargs)
 
     def needs_configure(self):

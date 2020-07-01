@@ -496,11 +496,11 @@ def test_libcxxrt_dependency_path():
     # Test that we pick the correct libunwind path when building libcxxrt
     def check_libunwind_path(path, target_name):
         tgt = target_manager.get_target_raw(target_name).get_or_create_project(None, config)
-        for i in tgt.configureArgs:
+        for i in tgt.configure_args:
             if i.startswith("-DLIBUNWIND_PATH="):
-                assert i == ("-DLIBUNWIND_PATH=" + str(path)), tgt.configureArgs
+                assert i == ("-DLIBUNWIND_PATH=" + str(path)), tgt.configure_args
                 return
-        assert False, "Should have found -DLIBUNWIND_PATH= in " + str(tgt.configureArgs)
+        assert False, "Should have found -DLIBUNWIND_PATH= in " + str(tgt.configure_args)
 
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")

@@ -36,13 +36,13 @@ class BuildBmake(AutotoolsProject):
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def configure(self, **kwargs):
-        self.configureArgs.append("--with-default-sys-path=" + str(self.install_dir / "share/mk"))
-        self.configureArgs.append("--with-machine=amd64")
-        # self.configureArgs.append("--with-force-machine=amd64")
-        # self.configureArgs.append("--with-machine_arch=amd64")
+        self.configure_args.append("--with-default-sys-path=" + str(self.install_dir / "share/mk"))
+        self.configure_args.append("--with-machine=amd64")
+        # self.configure_args.append("--with-force-machine=amd64")
+        # self.configure_args.append("--with-machine_arch=amd64")
         if not OSInfo.IS_FREEBSD:
-            self.configureArgs.append("--without-meta")
-            self.configureArgs.append("--without-filemon")
+            self.configure_args.append("--without-meta")
+            self.configure_args.append("--without-filemon")
         super().configure()
 
     def compile(self, **kwargs):

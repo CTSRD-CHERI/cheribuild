@@ -38,7 +38,7 @@ class BuildAsio(CrossCompileAutotoolsProject):
     def setup(self):
         super().setup()
         self.configureCommand = self.source_dir / "asio/configure"
-        # TODO: add the right flags self.configureArgs.append("--foo")
+        # TODO: add the right flags self.configure_args.append("--foo")
 
     def configure(self, **kwargs):
         if not self.configureCommand.exists():

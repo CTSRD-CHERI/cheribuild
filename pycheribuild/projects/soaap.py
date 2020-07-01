@@ -59,8 +59,8 @@ class BuildSoaap(CMakeProject):
 
     def configure(self, **kwargs):
         soaap_llvm = BuildSoaapLLVM.get_instance(self)
-        print(soaap_llvm.configureArgs)
-        build_shared_libs = any(x == "-DBUILD_SHARED_LIBS=ON" for x in soaap_llvm.configureArgs)
+        print(soaap_llvm.configure_args)
+        build_shared_libs = any(x == "-DBUILD_SHARED_LIBS=ON" for x in soaap_llvm.configure_args)
         self.add_cmake_options(LLVM_DIR=soaap_llvm.build_dir / "share/llvm/cmake")
         self.add_cmake_options(BUILD_SHARED_LIBS=build_shared_libs)
         super().configure(**kwargs)

@@ -103,31 +103,31 @@ class BuildQEMUBase(AutotoolsProject):
 
         # Disable some more unneeded things (we don't usually need the GUI frontends)
         if not self.gui:
-            self.configureArgs.extend(["--disable-vnc", "--disable-sdl", "--disable-gtk", "--disable-opengl"])
+            self.configure_args.extend(["--disable-vnc", "--disable-sdl", "--disable-gtk", "--disable-opengl"])
             if self.target_info.is_macos():
-                self.configureArgs.append("--disable-cocoa")
+                self.configure_args.append("--disable-cocoa")
 
         # QEMU now builds with python3
-        self.configureArgs.append("--python=" + sys.executable)
+        self.configure_args.append("--python=" + sys.executable)
         if self.build_type == BuildType.DEBUG:
-            self.configureArgs.extend(["--enable-debug", "--enable-debug-tcg"])
+            self.configure_args.extend(["--enable-debug", "--enable-debug-tcg"])
         else:
             # Try to optimize as much as possible:
-            self.configureArgs.extend(["--disable-stack-protector"])
+            self.configure_args.extend(["--disable-stack-protector"])
 
         if self.with_sanitizers:
             self.warning("Option --qemu/sanitizers is deprecated, use --qemu/use-asan instead")
         if self.with_sanitizers or self.use_asan:
-            self.configureArgs.append("--enable-sanitizers")
+            self.configure_args.append("--enable-sanitizers")
             if self.use_lto:
                 self.info("Disabling LTO for ASAN instrumented builds")
             self.use_lto = False
 
         # Having symbol information is useful for debugging and profiling
-        self.configureArgs.append("--disable-strip")
+        self.configure_args.append("--disable-strip")
 
         if not self.target_info.is_linux():
-            self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
+            self.configure_args.extend(["--disable-linux-aio", "--disable-kvm"])
 
         if self.config.verbose:
             self.make_args.set(V=1)
@@ -168,7 +168,7 @@ class BuildQEMUBase(AutotoolsProject):
             self.add_required_system_tool(smbd_path, cheribuild_target="samba", freebsd="samba48", apt="samba",
                                        homebrew="samba")
 
-            self.configureArgs.append("--smbd=" + str(smbd_path))
+            self.configure_args.append("--smbd=" + str(smbd_path))
             if not Path(smbd_path).exists():
                 if self.target_info.is_macos():
                     # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
@@ -181,7 +181,7 @@ class BuildQEMUBase(AutotoolsProject):
                                       "If you really don't need QEMU host shares you can disable the samba dependency "
                                       "by setting --qemu/no-use-smbd")
 
-        self.configureArgs.extend([
+        self.configure_args.extend([
             "--target-list=" + self.qemu_targets,
             "--enable-slirp=git",
             "--disable-linux-user",
@@ -204,10 +204,10 @@ class BuildQEMUBase(AutotoolsProject):
             self.make_args.set(V=1)  # Otherwise bear can't parse the compiler output
         ldflags = self.default_ldflags + self.LDFLAGS
         if ldflags:
-            self.configureArgs.append("--extra-ldflags=" + commandline_to_str(ldflags))
+            self.configure_args.append("--extra-ldflags=" + commandline_to_str(ldflags))
         cxxflags = self.default_compiler_flags + self.CXXFLAGS
         if cxxflags:
-            self.configureArgs.append("--extra-cxxflags=" + commandline_to_str(cxxflags))
+            self.configure_args.append("--extra-cxxflags=" + commandline_to_str(cxxflags))
 
     def run_tests(self):
         self.run_make("check", cwd=self.build_dir)
@@ -265,7 +265,7 @@ class BuildQEMU(BuildQEMUBase):
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DENABLE_CHERI_SANITIY_CHECKS=1")
         # the capstone disassembler doesn't support CHERI instructions:
-        self.configureArgs.append("--disable-capstone")
+        self.configure_args.append("--disable-capstone")
         # TODO: tests:
         # noinspection PyUnreachableCode
         if False:
@@ -279,7 +279,7 @@ class BuildQEMU(BuildQEMUBase):
             tgt_info_mips = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_MIPS64, fake_project)
             # noinspection PyTypeChecker
             tgt_info_riscv64 = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_RISCV64, fake_project)
-            self.configureArgs.extend([
+            self.configure_args.extend([
                 "--cross-cc-mips=" + str(tgt_info_mips.c_compiler),
                 "--cross-cc-cflags-mips=" + commandline_to_str(tgt_info_mips.essential_compiler_and_linker_flags).replace("=", " "),
                 "--cross-cc-riscv64=" + str(tgt_info_riscv64.c_compiler),

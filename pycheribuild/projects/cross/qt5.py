@@ -74,21 +74,21 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
     def configure(self, **kwargs):
         if self.force_static_linkage:
-            self.configureArgs.append("-static")
+            self.configure_args.append("-static")
 
         if self.compiling_for_host():
-            self.configureArgs.extend(["-prefix", str(self.install_dir)])
-            self.configureArgs.append("QMAKE_CC=" + str(self.CC))
-            self.configureArgs.append("QMAKE_CXX=" + str(self.CXX))
+            self.configure_args.extend(["-prefix", str(self.install_dir)])
+            self.configure_args.append("QMAKE_CC=" + str(self.CC))
+            self.configure_args.append("QMAKE_CXX=" + str(self.CXX))
             if OSInfo.IS_LINUX and get_compiler_info(self.CC).is_clang:
                 # otherwise the build assumes GCC
-                self.configureArgs.append("-platform")
-                self.configureArgs.append("linux-clang")
+                self.configure_args.append("-platform")
+                self.configure_args.append("linux-clang")
             # FreeBSD header files may use the register storage class but c++17 disallows this
             if OSInfo.IS_FREEBSD:
-                self.configureArgs.append("-platform")
-                self.configureArgs.append("offscreen")
-                self.configureArgs.extend(["-c++std", "c++14"])
+                self.configure_args.append("-platform")
+                self.configure_args.append("offscreen")
+                self.configure_args.extend(["-c++std", "c++14"])
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = self.default_compiler_flags
@@ -97,9 +97,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
             if self.crosscompile_target.is_cheri_purecap():
                 # Note: we are using the hybrid sysroot, so base system libraries are in usr/libcheri:
-                self.configureArgs.append("QMAKE_LIBDIR=" + str(self.cross_sysroot_path / "usr/libcheri"))
+                self.configure_args.append("QMAKE_LIBDIR=" + str(self.cross_sysroot_path / "usr/libcheri"))
             elif self.compiling_for_mips(include_purecap=False):
-                # self.configureArgs.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
+                # self.configure_args.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
                 pass
 
             # The build system already passes these:
@@ -108,7 +108,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             cross_compile_prefix = self.target_info.target_triple
             if self.compiling_for_mips(include_purecap=True):
                 cross_compile_prefix = "mips64-unknown-freebsd"
-            self.configureArgs.extend([
+            self.configure_args.extend([
                 "-device", "freebsd-generic-clang",
                 "-device-option", "CROSS_COMPILE={}/{}-".format(self.sdk_bindir, cross_compile_prefix),
                 "-device-option", "COMPILER_FLAGS=" + commandline_to_str(compiler_flags),
@@ -117,7 +117,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-prefix", "/usr/local/" + self._xtarget.generic_suffix
                 ])
 
-        self.configureArgs.extend([
+        self.configure_args.extend([
             # To ensure the host and cross-compiled version is the same also disable opengl and dbus there
             "-no-opengl", "-no-dbus",
             # Missing configure check for evdev means it will fail to compile for CHERI
@@ -129,51 +129,51 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             "-no-iconv"
             ])
         if self.build_tests:
-            self.configureArgs.append("-developer-build")
+            self.configure_args.append("-developer-build")
             if OSInfo.IS_MAC:
                 # Otherwise we get "ERROR: debug-only framework builds are not supported. Configure with -no-framework
                 # if you want a pure debug build."
-                self.configureArgs.append("-no-framework")
+                self.configure_args.append("-no-framework")
 
         else:
-            self.configureArgs.extend(["-nomake", "tests"])
+            self.configure_args.extend(["-nomake", "tests"])
 
         if not self.build_examples:
             # Seems to have changed
-            self.configureArgs.extend(["-nomake", "examples", "-no-compile-examples"])
+            self.configure_args.extend(["-nomake", "examples", "-no-compile-examples"])
         # currently causes build failures:
         # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
-        self.configureArgs.append("-qt-libpng")
+        self.configure_args.append("-qt-libpng")
 
         print("TYPE:", self.build_type)
         # TODO: once we update to qt 5.12 add this:
-        # self.configureArgs.append("-gdb-index")
+        # self.configure_args.append("-gdb-index")
         if self.build_type == BuildType.DEBUG:
-            self.configureArgs.append("-debug")
+            self.configure_args.append("-debug")
             # optimize-debug needs GCC
-            # self.configureArgs.append("-optimize-debug")
+            # self.configure_args.append("-optimize-debug")
         else:
             assert self.build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO,
                                        BuildType.MINSIZEREL, BuildType.RELEASE)
-            self.configureArgs.append("-release")
+            self.configure_args.append("-release")
             if self.build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO):
-                self.configureArgs.append("-force-debug-info")
+                self.configure_args.append("-force-debug-info")
             if self.build_type in (BuildType.MINSIZEREL, BuildType.MINSIZERELWITHDEBINFO):
-                self.configureArgs.append("-optimize-size")  # Use -Os, otherwise it will use -O3
+                self.configure_args.append("-optimize-size")  # Use -Os, otherwise it will use -O3
 
         if self.assertions:
-            self.configureArgs.append("-force-asserts")
+            self.configure_args.append("-force-asserts")
 
-        self.configureArgs.append("-no-pch")  # slows down build but gives useful crash testcases
+        self.configure_args.append("-no-pch")  # slows down build but gives useful crash testcases
 
         #  -reduce-exports ...... Reduce amount of exported symbols [auto]
-        self.configureArgs.append("-reduce-exports")
+        self.configure_args.append("-reduce-exports")
         # -reduce-relocations .. Reduce amount of relocations [auto] (Unix only)
         # TODO: this needs PIE:
-        # self.configureArgs.append("-reduce-relocations")
+        # self.configure_args.append("-reduce-relocations")
 
         if self.minimal:
-            self.configureArgs.extend([
+            self.configure_args.extend([
                 "-no-widgets",
                 "-no-glib",
                 "-no-gtk",
@@ -184,7 +184,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-no-iconv"
                 ])
 
-        self.configureArgs.extend(["-opensource", "-confirm-license"])
+        self.configure_args.extend(["-opensource", "-confirm-license"])
 
         self.delete_file(self.build_dir / "config.cache")
         self.delete_file(self.build_dir / "config.opt")
@@ -209,7 +209,7 @@ class BuildQt5(BuildQtWithConfigureScript):
         if not self.allModules:
             modules_to_skip = "qtgamepad qtlocation".split()
             for i in modules_to_skip:
-                self.configureArgs.extend(["-skip", i])
+                self.configure_args.extend(["-skip", i])
             # TODO: skip modules that just increase compile time and are useless
         super().configure(**kwargs)
 
@@ -287,7 +287,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     def __init__(self, config):
         super().__init__(config)
         self.configureCommand = self.source_dir / "icu4c/source/configure"
-        self.configureArgs.extend(["--disable-plugins", "--disable-dyload",
+        self.configure_args.extend(["--disable-plugins", "--disable-dyload",
                                    "--disable-tests",
                                    "--disable-samples"])
         self.nativeBuildDir = self.build_dir_for_target(CompilationTargets.NATIVE)
@@ -296,15 +296,15 @@ class BuildICU4C(CrossCompileAutotoolsProject):
         self.cross_warning_flags += ["-Wno-error"]  # FIXME: build with capability -Werror
 
         if not self.compiling_for_host():
-            self.configureArgs.append("--with-cross-build=" + str(self.nativeBuildDir))
+            self.configure_args.append("--with-cross-build=" + str(self.nativeBuildDir))
             # can't build them yet
             # error: undefined symbol: uconvmsg_dat
-            # self.configureArgs.append("--disable-tools")
+            # self.configure_args.append("--disable-tools")
             # but these seem to be needed
-            # self.configureArgs.append("--disable-draft")
-            # self.configureArgs.append("--disable-extras")  # can't add this to host build, it will fail otherwise
+            # self.configure_args.append("--disable-draft")
+            # self.configure_args.append("--disable-extras")  # can't add this to host build, it will fail otherwise
             # We have modified the ICU data Makefile so that ICU builds a big endian data archive
-            self.configureArgs.append("--with-data-packaging=archive")
+            self.configure_args.append("--with-data-packaging=archive")
 
     def process(self):
         if not self.compiling_for_host() and not (self.nativeBuildDir / "bin/icupkg").exists():
@@ -331,7 +331,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
             self.configureCommand = self.source_dir / "configure"
         else:
             self.configureCommand = self.source_dir / "autogen.sh"
-        self.configureArgs.extend([
+        self.configure_args.extend([
             "--without-python", "--without-modules", "--without-lzma",
             ])
         if OSInfo.IS_MAC:

@@ -47,7 +47,7 @@ class BuildOpenRADTool(AutotoolsProject):
     _configure_understands_enable_static = False
 
     def configure(self, **kwargs):
-        self.configureArgs.append("PREFIX=" + str(self.install_prefix))
+        self.configure_args.append("PREFIX=" + str(self.install_prefix))
         super().configure(**kwargs)
 
     def needs_configure(self):

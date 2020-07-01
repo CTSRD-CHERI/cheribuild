@@ -54,8 +54,8 @@ class BuildCheriSpike(AutotoolsProject):
 
     def setup(self):
         super().setup()
-        self.configureArgs.append("--enable-cheri")
-        self.configureArgs.append("--disable-rvfi-dii")
+        self.configure_args.append("--enable-cheri")
+        self.configure_args.append("--disable-rvfi-dii")
         # We have to pass LDFLAGS as part of CC/CXX since the build system is dumb.
         common_flags = self.default_compiler_flags + self.default_ldflags
         self.configureEnvironment["CC"] = commandline_to_str([self.CC] + common_flags + self.CFLAGS)

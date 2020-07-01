@@ -81,8 +81,8 @@ class BuildNginx(CrossCompileAutotoolsProject):
 
     def configure(self):
         if self.should_include_debug_info:
-            self.configureArgs.append("--with-debug")
-        self.configureArgs.extend(["--without-pcre",
+            self.configure_args.append("--with-debug")
+        self.configure_args.extend(["--without-pcre",
                                    "--without-http_rewrite_module",
                                    "--with-http_v2_module",
                                    "--with-http_ssl_module",
@@ -92,7 +92,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
                                    "--builddir=" + str(self.build_dir)])
         if not self.compiling_for_host():
             self.LDFLAGS.append("-v")
-            self.configureArgs.extend(["--crossbuild=FreeBSD:12.0-CURRENT:mips",
+            self.configure_args.extend(["--crossbuild=FreeBSD:12.0-CURRENT:mips",
                                        "--with-cc-opt=" + commandline_to_str(self.default_compiler_flags),
                                        "--with-ld-opt=" + commandline_to_str(self.default_ldflags),
                                        "--sysroot=" + str(self.sdk_sysroot),

@@ -40,5 +40,5 @@ class BuildCMake(AutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, configure_script="bootstrap")
-        self.configureArgs.append("--parallel=" + str(self.config.makeJobs))
+        self.configure_args.append("--parallel=" + str(self.config.makeJobs))
         # TODO: do we need to use gmake on FreeBSD?

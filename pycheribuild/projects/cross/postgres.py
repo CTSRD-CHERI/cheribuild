@@ -52,7 +52,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         if self.enable_assertions:
             self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
             # self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
-            self.configureArgs.append("--enable-cassert")
+            self.configure_args.append("--enable-cassert")
 
         self.common_warning_flags.extend(["-pedantic", "-Wno-gnu-statement-expression",
                                           "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
@@ -78,17 +78,17 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             # currently we can only build static:
             # self.LDFLAGS.append("-static")
             # self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
-            self.configureArgs.extend(["--without-libxml", "--without-readline", "--without-gssapi"])
+            self.configure_args.extend(["--without-libxml", "--without-readline", "--without-gssapi"])
         else:
-            self.configureArgs.extend(["--with-libxml", "--with-readline", "--without-gssapi"])
+            self.configure_args.extend(["--with-libxml", "--with-readline", "--without-gssapi"])
 
         if self.force_static_linkage:
             self.add_configure_env_arg("LDFLAGS_EX", "-static")
             self.COMMON_FLAGS.append("-DDISABLE_LOADABLE_MODULES=1")
         if self.should_include_debug_info:
-            self.configureArgs.append("--enable-debug")
+            self.configure_args.append("--enable-debug")
         else:
-            self.configureArgs.append("--disable-debug")
+            self.configure_args.append("--disable-debug")
 
     def install(self, **kwargs):
         super().install()

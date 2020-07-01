@@ -175,7 +175,7 @@ class BuildBubbleWrap(AutotoolsProject):
         super().__init__(config)
         self.add_required_system_header("sys/capability.h", apt="libcap-dev")
         self.configureCommand = self.source_dir / "autogen.sh"
-        self.configureArgs.append("--with-bash-completion-dir=no")
+        self.configure_args.append("--with-bash-completion-dir=no")
 
 
 class ProjectUsingOpam(OpamMixin, Project):

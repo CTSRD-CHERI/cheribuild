@@ -43,7 +43,7 @@ class BuildLibObjC2(CMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.configureArgs.extend([
+        self.configure_args.extend([
             "-DCMAKE_ASM_COMPILER=clang",
             "-DCMAKE_ASM_COMPILER_ID=Clang",  # For some reason CMake doesn't detect the ASM compiler ID for clang
             "-DCMAKE_ASM_FLAGS=-c",  # required according to docs when using clang as ASM compiler
@@ -64,7 +64,7 @@ class BuildGnuStep_Make(AutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.configureArgs.extend([
+        self.configure_args.extend([
             "--with-layout=fhs",  # more traditional file system layout
             "--with-library-combo=ng-gnu-gnu",  # use the new libobjc2 that supports ARC
             "--enable-objc-nonfragile-abi",  # not sure if required but given in install guide
@@ -107,7 +107,7 @@ class GnuStepModule(AutotoolsProject):
 
         # print(coloured(AnsiColour.green, "LDFLAGS=-L" + gnustep_libdir))
         # TODO: what about spaces??
-        # self.configureArgs.append("LDFLAGS=-L" + gnustep_libdir + " -Wl,-rpath," + gnustep_libdir)
+        # self.configure_args.append("LDFLAGS=-L" + gnustep_libdir + " -Wl,-rpath," + gnustep_libdir)
         super().configure()
 
 
@@ -116,7 +116,7 @@ class BuildGnuStep_Base(GnuStepModule):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, moduleName="base")
-        self.configureArgs.extend([
+        self.configure_args.extend([
             "--disable-mixedabi",
             # TODO: "--enable-libdispatch",
             # "--with-config-file=" + str(self.install_dir / "etc/GNUStep/GNUStep.conf")
@@ -136,7 +136,7 @@ class BuildGnuStep_Gui(GnuStepModule):
 class BuildGnuStep_Back(GnuStepModule):
     def __init__(self, config: CheriConfig):
         super().__init__(config, moduleName="back")
-        self.configureArgs.append("--enable-graphics=cairo")
+        self.configure_args.append("--enable-graphics=cairo")
 
 
 class BuildGnuStep(TargetAliasWithDependencies):

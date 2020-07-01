@@ -360,7 +360,7 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
             self.fatal("Need at least one project in --include-projects config option")
         self.add_cmake_options(LLVM_ENABLE_PROJECTS=";".join(self.included_projects))
         # CMake needs to run on the llvm subdir
-        self.configureArgs[0] = self.configureArgs[0] + "/" + self.llvm_subdir
+        self.configure_args[0] = self.configure_args[0] + "/" + self.llvm_subdir
         super().configure(**kwargs)
 
 

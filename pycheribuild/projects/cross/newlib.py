@@ -127,12 +127,12 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             )
 
         if self.target_info.target.is_riscv(include_purecap=True):
-            self.configureArgs.extend([
+            self.configure_args.extend([
                 "--disable-libgloss"
                 ])
 
         if self.target_info.is_baremetal():
-            self.configureArgs.extend([
+            self.configure_args.extend([
                 "--enable-malloc-debugging",
                 "--enable-newlib-long-time_t",  # we want time_t to be long and not int!
                 "--enable-newlib-io-c99-formats",
@@ -158,23 +158,23 @@ class BuildNewlib(CrossCompileAutotoolsProject):
                 "--enable-serial-host-configure",
                 ])
         elif self.target_info.is_rtems():
-            self.configureArgs.extend([
+            self.configure_args.extend([
                 "--enable-newlib-io-c99-formats",
                 "--disable-libstdcxx"  # not sure if this is needed
                 ])
 
         if self.locale_support:
             # needed for locale support
-            self.configureArgs.append("--enable-newlib-mb")
-            self.configureArgs.append("--enable-newlib-iconv")
+            self.configure_args.append("--enable-newlib-mb")
+            self.configure_args.append("--enable-newlib-iconv")
         else:
-            self.configureArgs.append("--disable-newlib-mb")
-            self.configureArgs.append("--disable-newlib-iconv")
+            self.configure_args.append("--disable-newlib-mb")
+            self.configure_args.append("--disable-newlib-iconv")
 
-        # won't work: self.configureArgs.append("--host=" + self.target_info.target_triple)
-        self.configureArgs.append("--target=" + self.target_info.target_triple)
-        self.configureArgs.append("--disable-multilib")
-        self.configureArgs.append("--with-newlib")
+        # won't work: self.configure_args.append("--host=" + self.target_info.target_triple)
+        self.configure_args.append("--target=" + self.target_info.target_triple)
+        self.configure_args.append("--disable-multilib")
+        self.configure_args.append("--with-newlib")
         super().configure()
 
     def install(self, **kwargs):
