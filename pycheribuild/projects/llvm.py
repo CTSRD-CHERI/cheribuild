@@ -81,6 +81,14 @@ class BuildLLVMBase(CMakeProject):
         cls.dylib = cls.add_bool_option("dylib", default=False, help="Build dynamic-link LLVM")
         cls.install_toolchain_only = cls.add_bool_option("install-toolchain-only", default=False,
                                                          help="Install only toolchain binaries (i.e. no test tools)")
+        cls.build_minimal_toolchain = cls.add_bool_option("build-minimal-toolchain", default=False,
+                                                          help="Only build the binaries required for a minimal "
+                                                               "toolchain (this is useful to avoid excessive compile "
+                                                               "times with LTO)")
+
+    minimal_toolchain_targets = ["clang", "clang-format", "lld", "llvm-ar", "llvm-cxxfilt", "llvm-mc", "llvm-nm",
+                                 "llvm-objcopy", "llvm-objdump", "llvm-readelf", "llvm-readobj", "llvm-size",
+                                 "llvm-strings", "llvm-strip", "llvm-symbolizer"]
 
     def setup(self):
         super().setup()
@@ -167,6 +175,14 @@ class BuildLLVMBase(CMakeProject):
         if "LLVM_ENABLE_ASSERTIONS" not in "".join(self.cmakeOptions):
             self.add_cmake_options(LLVM_ENABLE_ASSERTIONS=self.enable_assertions)
         self.add_cmake_options(LLVM_LIT_ARGS="--max-time 3600 --timeout 300 -s -vv")
+        if self.build_minimal_toolchain:
+            if self.build_everything:
+                self.fatal(self.target, "/build-everything is incompatible with ", self.target,
+                           "/build-minimal-toolchain", sep="")
+            self.add_cmake_options(LLVM_BUILD_LLVM_DYLIB=False, LLVM_LINK_LLVM_DYLIB=False,
+                                   LLVM_BUILD_LLVM_C_DYLIB=False, CLANG_LINK_CLANG_DYLIB=False,
+                                   LLVM_INCLUDE_UTILS=False, LLVM_INCLUDE_TESTS=False, CLANG_INCLUDE_TESTS=False,
+                                   CLANG_ENABLE_STATIC_ANALYZER=False, CLANG_ENABLE_ARCMT=False)
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
         super().set_lto_binutils(ar=ar, ranlib=ranlib, nm=nm, ld=ld)
@@ -221,8 +237,24 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
                                   "is not supported. Clang version %d.%d or newer is required." % (major, minor),
                                   install_instructions=install_instructions)
 
+    def compile(self, **kwargs):
+        if self.build_minimal_toolchain:
+            # TODO: should allow multiple targets in self.run_make()
+            make_args = self.make_args.copy()
+            make_args.add_flags(*self.minimal_toolchain_targets)
+            self.run_make(options=make_args)
+        else:
+            super().compile(**kwargs)
+
     def install(self, **kwargs):
-        super().install()
+        if self.build_minimal_toolchain:
+            # TODO: should allow multiple targets in self.run_make()
+            make_args = self.make_args.copy()
+            make_args.add_flags("install-clang-resource-headers",
+                                *["install-" + x for x in self.minimal_toolchain_targets])
+            self.run_make(options=make_args)
+        else:
+            super().install(**kwargs)
         if self.skip_cheri_symlinks:
             return
         # create a symlinks for triple-prefixed tools
