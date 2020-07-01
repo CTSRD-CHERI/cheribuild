@@ -46,8 +46,8 @@ class BuildSQLite(CrossCompileAutotoolsProject):
     def setup(self):
         super().setup()
         if not self.compiling_for_host():
-            self.configureEnvironment["BUILD_CC"] = self.host_CC
-            # self.configureEnvironment["BUILD_CFLAGS"] = "-integrated-as"
+            self.configure_environment["BUILD_CC"] = self.host_CC
+            # self.configure_environment["BUILD_CFLAGS"] = "-integrated-as"
             self.configure_args.extend([
                 "--disable-amalgamation",  # don't concatenate sources
                 "--disable-load-extension",

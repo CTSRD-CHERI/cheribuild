@@ -58,7 +58,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
                                       # "-Wno-extended-offsetof",
                                       "-Wno-format-pedantic",
                                       ])
-            self.configureEnvironment["AR"] = str(self.sdk_bindir / "cheri-unknown-freebsd-ar")
+            self.configure_environment["AR"] = str(self.sdk_bindir / "cheri-unknown-freebsd-ar")
         # The makefile expects the current working directory to be the source dir. Therefore we add -f $build/Makefile
         # This is also in the makefile generated in the source dir but it doesn't work with multiple build dirs
         self.make_args.add_flags("-f", self.build_dir / "Makefile")
@@ -97,20 +97,20 @@ class BuildNginx(CrossCompileAutotoolsProject):
                                        "--with-ld-opt=" + commandline_to_str(self.default_ldflags),
                                        "--sysroot=" + str(self.sdk_sysroot),
                                        ])
-            self.configureEnvironment["CC_TEST_FLAGS"] = commandline_to_str(self.default_compiler_flags)
-            self.configureEnvironment["NGX_TEST_LD_OPT"] = commandline_to_str(self.default_ldflags)
-            self.configureEnvironment["NGX_SIZEOF_int"] = "4"
-            self.configureEnvironment["NGX_SIZEOF_sig_atomic_t"] = "4"  # on mips it is an int
-            self.configureEnvironment["NGX_SIZEOF_long"] = "8"
-            self.configureEnvironment["NGX_SIZEOF_long_long"] = "8"
-            self.configureEnvironment["NGX_SIZEOF_size_t"] = "8"
-            self.configureEnvironment["NGX_SIZEOF_off_t"] = "8"
-            self.configureEnvironment["NGX_SIZEOF_time_t"] = "8"
-            self.configureEnvironment["NGX_SIZEOF_void_p"] = str(self.target_info.pointer_size)
-            self.configureEnvironment["NGX_HAVE_MAP_DEVZERO"] = "yes"
-            self.configureEnvironment["NGX_HAVE_SYSVSHM"] = "yes"
-            self.configureEnvironment["NGX_HAVE_MAP_ANON"] = "yes"
-            self.configureEnvironment["NGX_HAVE_POSIX_SEM"] = "yes"
+            self.configure_environment["CC_TEST_FLAGS"] = commandline_to_str(self.default_compiler_flags)
+            self.configure_environment["NGX_TEST_LD_OPT"] = commandline_to_str(self.default_ldflags)
+            self.configure_environment["NGX_SIZEOF_int"] = "4"
+            self.configure_environment["NGX_SIZEOF_sig_atomic_t"] = "4"  # on mips it is an int
+            self.configure_environment["NGX_SIZEOF_long"] = "8"
+            self.configure_environment["NGX_SIZEOF_long_long"] = "8"
+            self.configure_environment["NGX_SIZEOF_size_t"] = "8"
+            self.configure_environment["NGX_SIZEOF_off_t"] = "8"
+            self.configure_environment["NGX_SIZEOF_time_t"] = "8"
+            self.configure_environment["NGX_SIZEOF_void_p"] = str(self.target_info.pointer_size)
+            self.configure_environment["NGX_HAVE_MAP_DEVZERO"] = "yes"
+            self.configure_environment["NGX_HAVE_SYSVSHM"] = "yes"
+            self.configure_environment["NGX_HAVE_MAP_ANON"] = "yes"
+            self.configure_environment["NGX_HAVE_POSIX_SEM"] = "yes"
         super().configure(cwd=self.source_dir)
 
     def compile(self, **kwargs):
@@ -126,9 +126,9 @@ class BuildFettNginx(FettProjectMixin, BuildNginx):
 
     def configure(self):
         openssl_dir = str(BuildFettOpenSSL.get_instance(self)._install_prefix)
-        self.configureEnvironment["NGX_OPENSSL_fett_path"] = str(
+        self.configure_environment["NGX_OPENSSL_fett_path"] = str(
             BuildFettOpenSSL.get_instance(self).destdir) + openssl_dir
-        self.configureEnvironment["NGX_OPENSSL_fett_rpath"] = openssl_dir + "/lib"
+        self.configure_environment["NGX_OPENSSL_fett_rpath"] = openssl_dir + "/lib"
         super().configure()
 
     def install(self):

@@ -101,7 +101,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     def set_configure_prog_with_args(self, prog: str, path: Path, args: list):
         super().set_configure_prog_with_args(prog, path, args)
         if self._configure_supports_variables_on_cmdline:
-            self.configure_args.append(prog + "=" + self.configureEnvironment[prog])
+            self.configure_args.append(prog + "=" + self.configure_environment[prog])
 
     def setup(self):
         super().setup()
@@ -122,7 +122,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         if self._autotools_add_default_compiler_args:
             cppflags = self.default_compiler_flags
             for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
-                assert key not in self.configureEnvironment, key
+                assert key not in self.configure_environment, key
             # We have to include -target xxx-unknown-freebsd as part of CC for some build systems since they fail
             # if a plain $CC can't compile programs.
             self.set_configure_prog_with_args("CC", self.CC, self.target_info.essential_compiler_and_linker_flags)
@@ -139,11 +139,11 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
                     self.add_configure_env_arg("LD", self.target_info.linker)
 
         # remove all empty items from environment:
-        env = {k: v for k, v in self.configureEnvironment.items() if v}
-        self.configureEnvironment.clear()
-        self.configureEnvironment.update(env)
+        env = {k: v for k, v in self.configure_environment.items() if v}
+        self.configure_environment.clear()
+        self.configure_environment.update(env)
         self.print(coloured(AnsiColour.yellow, "Cross configure environment:",
-                            pprint.pformat(self.configureEnvironment, width=160)))
+                            pprint.pformat(self.configure_environment, width=160)))
         super().configure(**kwargs)
 
     def process(self):

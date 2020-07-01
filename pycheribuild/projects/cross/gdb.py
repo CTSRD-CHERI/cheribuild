@@ -111,7 +111,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.configure_args.append("--enable-gdbtk")
             # if OSInfo.IS_MAC:
             # self.configure_args.append("--with-tcl=/usr/local/opt/tcl-tk/lib")
-            # self.configureEnvironment["PKG_CONFIG_PATH"] =
+            # self.configure_environment["PKG_CONFIG_PATH"] =
             # "/usr/local/opt/tcl-tk/lib/pkgconfig:/usr/local/lib/pkgconfig"
 
         # extra ./configure environment variables:
@@ -136,7 +136,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.configure_args.append("--with-python=" + str(sys.executable))
         else:
             self.configure_args.extend(["--without-python", "--without-expat", "--without-libunwind-ia64"])
-            self.configureEnvironment.update(gl_cv_func_gettimeofday_clobber="no",
+            self.configure_environment.update(gl_cv_func_gettimeofday_clobber="no",
                                              lt_cv_sys_max_cmd_len="262144",
                                              # The build system run CC without any flags to detect dependency style...
                                              # (ZW_PROG_COMPILER_DEPENDENCIES([CC])) -> for gcc3 mode which seems
@@ -156,14 +156,14 @@ class BuildGDB(CrossCompileAutotoolsProject):
             # Currently there are a lot of `undefined symbol 'elf_version'`, etc errors
             # Add -lelf to the linker command line until the source is fixed
             self.LDFLAGS.append("-lelf")
-            self.configureEnvironment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
+            self.configure_environment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
         if self.make_args.command == "gmake":
-            self.configureEnvironment["MAKE"] = "gmake"
+            self.configure_environment["MAKE"] = "gmake"
 
-        self.configureEnvironment["CC_FOR_BUILD"] = str(self.host_CC)
-        self.configureEnvironment["CXX_FOR_BUILD"] = str(self.host_CXX)
-        self.configureEnvironment["CFLAGS_FOR_BUILD"] = "-g -fcommon"
-        self.configureEnvironment["CXXFLAGS_FOR_BUILD"] = "-g -fcommon"
+        self.configure_environment["CC_FOR_BUILD"] = str(self.host_CC)
+        self.configure_environment["CXX_FOR_BUILD"] = str(self.host_CXX)
+        self.configure_environment["CFLAGS_FOR_BUILD"] = "-g -fcommon"
+        self.configure_environment["CXXFLAGS_FOR_BUILD"] = "-g -fcommon"
 
         if not self.compiling_for_host():
             self.add_configure_env_arg("AR", self.sdk_bindir / "ar")
@@ -172,11 +172,11 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
         # Some of the configure scripts are invoked lazily (during the make invocation instead of from ./configure)
         # Therefore we need to set all the enviroment variables when compiling, too.
-        self.make_args.set_env(**self.configureEnvironment)
+        self.make_args.set_env(**self.configure_environment)
 
     def configure(self, **kwargs):
         if self.compiling_for_host() and OSInfo.IS_MAC:
-            self.configureEnvironment.clear()
+            self.configure_environment.clear()
             print(self.configure_args)
             # self.configure_args.clear()
         super().configure()

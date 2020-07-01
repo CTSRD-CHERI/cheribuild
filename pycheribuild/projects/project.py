@@ -1764,7 +1764,7 @@ class Project(SimpleProject):
         self.configureCommand = ""
         # non-assignable variables:
         self.configure_args = []  # type: typing.List[str]
-        self.configureEnvironment = {}  # type: typing.Dict[str,str]
+        self.configure_environment = {}  # type: typing.Dict[str,str]
         self._lastStdoutLineCanBeOverwritten = False
         self.make_args = MakeOptions(self.make_kind, self)
         if self.config.create_compilation_db and self.compileDBRequiresBear:
@@ -1870,7 +1870,7 @@ class Project(SimpleProject):
                 PKG_CONFIG_LIBDIR=self.target_info.pkgconfig_dirs,
                 PKG_CONFIG_SYSROOT_DIR=self.target_info.sysroot_dir
                 )
-            self.configureEnvironment.update(pkg_config_args)
+            self.configure_environment.update(pkg_config_args)
             self.make_args.set_env(**pkg_config_args)
         if self.use_lto:
             self.add_lto_build_options(get_compiler_info(self.CC))
@@ -1924,7 +1924,7 @@ class Project(SimpleProject):
 
     @property
     def _no_overwrite_allowed(self) -> "typing.Iterable[str]":
-        return super()._no_overwrite_allowed + ("configure_args", "configureEnvironment", "make_args")
+        return super()._no_overwrite_allowed + ("configure_args", "configure_environment", "make_args")
 
     # Make sure that API is used properly
     def __setattr__(self, name, value):
@@ -2079,13 +2079,13 @@ class Project(SimpleProject):
             return
         assert not isinstance(value, list), ("Wrong type:", type(value))
         assert not isinstance(value, tuple), ("Wrong type:", type(value))
-        self.configureEnvironment[arg] = str(value)
+        self.configure_environment[arg] = str(value)
 
     def set_configure_prog_with_args(self, prog: str, path: Path, args: list):
         fullpath = str(path)
         if args:
             fullpath += " " + commandline_to_str(args)
-        self.configureEnvironment[prog] = fullpath
+        self.configure_environment[prog] = fullpath
 
     def configure(self, cwd: Path = None, configure_path: Path = None):
         if cwd is None:
@@ -2100,7 +2100,7 @@ class Project(SimpleProject):
             self.fatal("Configure command ", _configure_path, "does not exist!")
         if _configure_path:
             self.run_with_logfile([_configure_path] + self.configure_args, logfile_name="configure", cwd=cwd,
-                env=self.configureEnvironment)
+                env=self.configure_environment)
 
     def compile(self, cwd: Path = None, parallel: bool = True):
         if cwd is None:
@@ -2741,7 +2741,7 @@ class AutotoolsProject(Project):
         kwargs = {"NM": nm, "AR": ar, "RANLIB": ranlib}
         if ld:
             kwargs["LD"] = ld
-        self.configureEnvironment.update(**kwargs)
+        self.configure_environment.update(**kwargs)
         # self.make_args.env_vars.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
         self.make_args.set(**kwargs)
         self.make_args.env_vars.update(**kwargs)

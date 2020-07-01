@@ -88,7 +88,7 @@ class BuildSamba(Project):
             "--prefix=" + str(self.install_dir),
             ])
         # Force python2 for now (since py3 seems broken)
-        self.configureEnvironment["PYTHON"] = shutil.which("python")
+        self.configure_environment["PYTHON"] = shutil.which("python")
         #  version 4.9 "--without-json-audit",
         self.configure_args.append("--without-json")
         if OSInfo.IS_MAC:
@@ -98,7 +98,7 @@ class BuildSamba(Project):
 
     def configure(self, **kwargs):
         # Add the yapp binary
-        self.configureEnvironment["PATH"] = os.getenv("PATH") + ":" + str(Path(shutil.which("perl")).resolve().parent)
+        self.configure_environment["PATH"] = os.getenv("PATH") + ":" + str(Path(shutil.which("perl")).resolve().parent)
         super().configure(cwd=self.source_dir, **kwargs)
 
     def compile(self, **kwargs):

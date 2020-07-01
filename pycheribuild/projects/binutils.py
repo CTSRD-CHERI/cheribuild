@@ -93,7 +93,7 @@ class BuildGnuBinutils(AutotoolsProject):
         info = get_compiler_info(Path(os.getenv("CC", shutil.which("cc"))))
         if info.compiler == "clang" or (info.compiler == "gcc" and info.version >= (4, 6, 0)):
             cflags += " -Wno-unused"
-        self.configureEnvironment["CFLAGS"] = cflags
+        self.configure_environment["CFLAGS"] = cflags
 
     def compile(self, **kwargs):
         self.run_make("all-ld", logfile_name="build")

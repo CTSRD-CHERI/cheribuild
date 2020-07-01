@@ -87,8 +87,8 @@ class BuildPython(CrossCompileAutotoolsProject):
                 ac_cv_file__dev_ptmx="no",  # no /dev/ptmx file on cheribsd
                 ac_cv_file__dev_ptc="no",  # no /dev/ptc file on cheribsd
                 )
-            # self.configureEnvironment["ac_cv_file__dev_ptmx+set"] = "set"
-            # self.configureEnvironment["ac_cv_file__dev_ptc+set"] = "set"
+            # self.configure_environment["ac_cv_file__dev_ptmx+set"] = "set"
+            # self.configure_environment["ac_cv_file__dev_ptc+set"] = "set"
             # TODO: do I need to set? ac_sys_release=13.0
         super().configure(**kwargs)
 

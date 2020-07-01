@@ -39,6 +39,6 @@ class BuildRsync(CrossCompileAutotoolsProject):
 
     def configure(self, **kwargs):
         # The rsync check for gettimeofday timzeone argument fails because the prototype for exit is missing (-Werror)
-        self.configureEnvironment.update(rsync_cv_HAVE_GETTIMEOFDAY_TZ="yes")
+        self.configure_environment.update(rsync_cv_HAVE_GETTIMEOFDAY_TZ="yes")
         super().configure(**kwargs)
 
