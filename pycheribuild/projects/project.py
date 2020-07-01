@@ -1089,7 +1089,8 @@ class ReuseOtherProjectRepository(SourceRepository):
         self.repo_for_target = repo_for_target
 
     def ensure_cloned(self, current_project: "Project", **kwargs) -> None:
-        src = self.get_real_source_dir(current_project, current_project.default_source_dir)
+        # noinspection PyProtectedMember
+        src = self.get_real_source_dir(current_project, current_project._initial_source_dir)
         if not src.exists():
             current_project.fatal("Source repository for target", current_project.target, "does not exist.",
                                   fixit_hint="This project uses the sources from the " + self.source_project.target +
@@ -1545,7 +1546,7 @@ class Project(SimpleProject):
     @classmethod
     def setup_config_options(cls, install_directory_help="", **kwargs):
         super().setup_config_options(**kwargs)
-        cls.default_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.default_source_dir,
+        cls._initial_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.default_source_dir,
                                                      help="Override default source directory for " + cls.project_name)
         cls.build_dir = cls.add_path_option("build-directory", metavar="DIR", default=cls.default_build_dir,
                                             help="Override default source directory for " + cls.project_name)
@@ -1766,10 +1767,10 @@ class Project(SimpleProject):
             # HACK: override the source directory (ignoring the setting from the JSON)
             # This should be done using a decorator that also changes default_source_dir so that we can
             # take the JSON into account
-            self.default_source_dir = self.repository.get_real_source_dir(self, self.default_source_dir)
+            self._initial_source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
             self.info("Overriding source directory for", self.target, "since it reuses the sources of",
-                      self.repository.source_project.target, "->", self.default_source_dir)
-        self.source_dir = self.repository.get_real_source_dir(self, self.default_source_dir)
+                      self.repository.source_project.target, "->", self._initial_source_dir)
+        self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
 
         if self.build_in_source_dir:
             self.verbose_print("Cannot build", self.project_name, "in a separate build dir, will build in",
@@ -2040,7 +2041,7 @@ class Project(SimpleProject):
         if not self.repository and not self.config.skip_update:
             self.fatal("Cannot update", self.project_name, "as it is missing a repository source",
                        fatal_when_pretending=True)
-        self.repository.update(self, src_dir=self.source_dir, default_src_dir=self.default_source_dir,
+        self.repository.update(self, src_dir=self.source_dir, default_src_dir=self._initial_source_dir,
                                revision=self.git_revision, skip_submodules=self.skip_git_submodules)
         if self.is_large_source_repository and (self.source_dir / ".git").exists():
             # This is a large repository, tell git to do whatever it can to speed up operations (new in 2.24):
@@ -2358,7 +2359,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.config.skip_update:
             # When --skip-update is set (or we don't have working internet) only check that the repository exists
             if self.repository:
-                self.repository.ensure_cloned(self, src_dir=self.source_dir, default_src_dir=self.default_source_dir,
+                self.repository.ensure_cloned(self, src_dir=self.source_dir, default_src_dir=self._initial_source_dir,
                                               skip_submodules=self.skip_git_submodules)
         else:
             self.update()

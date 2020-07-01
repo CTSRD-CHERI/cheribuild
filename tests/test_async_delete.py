@@ -23,13 +23,12 @@ class MockProject(Project):
         self._xtarget = CompilationTargets.NATIVE
         self.project_name = name
         expected_src = config.source_root / "sources" / name  # type: Path
-        self.default_source_dir = expected_src
+        self._initial_source_dir = expected_src
         expected_install = config.source_root / "install" / name  # type: Path
         self._install_dir = expected_install
         expected_build = Path(config.source_root, "build", name + "-build")  # type: Path
         self.build_dir = expected_build
         super().__init__(config)
-        assert self.default_source_dir == expected_src
         assert self.source_dir == expected_src
         assert self.build_dir == expected_build
         assert self.install_dir == expected_install

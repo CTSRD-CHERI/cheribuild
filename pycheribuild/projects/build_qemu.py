@@ -60,7 +60,7 @@ class BuildQEMUBase(AutotoolsProject):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        super().setup_config_options()
+        super().setup_config_options(**kwargs)
         cls.with_sanitizers = cls.add_bool_option("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)",
                                                   default=False)
         cls.use_smbd = cls.add_bool_option("use-smbd", show_help=False, default=True,
