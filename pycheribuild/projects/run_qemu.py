@@ -210,9 +210,9 @@ class LaunchQEMUBase(SimpleProject):
                 else:
                     share_name = "qemu{}".format(smb_dir_count)
                 user_network_options += str(directory) + share_name_option + ("@ro" if readonly else "")
-                guest_cmd = coloured(AnsiColour.yellow, "mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N "
-                                                        "//10.0.2.4/{share_name} {target}".format(target=target,
-                                                                                                  share_name=share_name))
+                guest_cmd = coloured(AnsiColour.yellow,
+                                     "mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name}"
+                                     " {target}".format(target=target, share_name=share_name))
                 self.info("Providing ", coloured(AnsiColour.green, str(directory)),
                           coloured(AnsiColour.cyan, " over SMB to the guest. Use `"), guest_cmd,
                           coloured(AnsiColour.cyan, "` to mount it"), sep="")
@@ -254,8 +254,8 @@ class LaunchQEMUBase(SimpleProject):
                                                          trap_on_unrepresentable=self.config.trap_on_unrepresentable,
                                                          debugger_on_cheri_trap=self.config.debugger_on_cheri_trap,
                                                          add_virtio_rng=self._add_virtio_rng)
-        qemu_command += self._projectSpecificOptions + self._after_disk_options + monitor_options \
-                        + logfile_options + self.extra_qemu_options + virtfs_args
+        qemu_command += self._projectSpecificOptions + self._after_disk_options + monitor_options
+        qemu_command += logfile_options + self.extra_qemu_options + virtfs_args
         self.info("About to run QEMU with image", self.disk_image, "and kernel", self.current_kernel)
 
         if self.config.wait_for_debugger or self.config.debugger_in_tmux_pane:
@@ -389,9 +389,9 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             source_class = disk_image_class.get_instance(self).source_project
         self.source_class = source_class
         self.current_kernel = source_class.get_installed_kernel_path(self)
-        if hasattr(source_class, "rootfs_dir"):
+        if hasattr(source_class, "get_rootfs_dir"):
             # noinspection PyCallingNonCallable
-            self.rootfs_path = source_class.rootfs_dir(self, config=config)
+            self.rootfs_path = source_class.get_rootfs_dir(self, config=config)
         if needs_disk_image:
             self.disk_image = disk_image_class.get_instance(self).disk_image_path
         self.needs_remote_kernel_copy = True
@@ -424,8 +424,8 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     _source_class = None
 
     @classproperty
-    def supported_architectures(cls):
-        return cls._source_class.supported_architectures
+    def supported_architectures(self):
+        return self._source_class.supported_architectures
 
     @classmethod
     def get_cross_target_index(cls, **kwargs):
@@ -437,8 +437,8 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         return -1  # return -1 for NONE
 
     @classproperty
-    def default_architecture(cls):
-        return cls._source_class.default_architecture
+    def default_architecture(self):
+        return self._source_class.default_architecture
 
     @classmethod
     def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig):
@@ -618,12 +618,13 @@ class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
         super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
 
     def __init__(self, config):
+        # noinspection PyTypeChecker
         super().__init__(config, source_class=BuildCheriBsdMfsKernel, needs_disk_image=False)
         if self.config.use_minimal_benchmark_kernel:
             self.current_kernel = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self)
             if str(self.remote_kernel_path).endswith("MFS_ROOT"):
                 self.remote_kernel_path += "_BENCHMARK"
-        self.rootfs_path = BuildCHERIBSD.rootfs_dir(self, config)
+        self.rootfs_path = BuildCHERIBSD.get_rootfs_dir(self, config)
 
     def run_tests(self):
         self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", "--minimal-image")
