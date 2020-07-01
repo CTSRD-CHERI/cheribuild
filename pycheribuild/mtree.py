@@ -107,6 +107,9 @@ class MtreeFile(object):
                 self.load(f)
                 return
         self._mtree.clear()
+        if os.getenv("_TEST_SKIP_METALOG"):
+            status_update("Not parsing", file, "in test mode")
+            return  # avoid parsing all metalog files in the basic sanity checks
         for line in file.readlines():
             line = line.strip()
             if not line or line.startswith("#"):
