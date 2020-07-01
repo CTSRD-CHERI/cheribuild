@@ -69,8 +69,8 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         self._install_dir = self._install_dir.parent  # newlib install already appends the triple
         self.verbose_print("install_dir=", self.install_dir, "_install_prefix=", self._install_prefix, "_install_dir=",
                            self._install_dir, "dest=", self.destdir, "real=", self.real_install_root_dir)
-        # self.configureCommand = Path("/this/path/does/not/exist")
-        self.configureCommand = self.source_dir / "configure"
+        # self.configure_command = Path("/this/path/does/not/exist")
+        self.configure_command = self.source_dir / "configure"
         # FIXME: how can I force it to run a full configure step (this is needed because it runs the newlib configure
         # step during make all rather than during ./configure
         self.make_args.env_vars["newlib_cv_ldbl_eq_dbl"] = "yes"

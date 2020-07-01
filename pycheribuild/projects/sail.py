@@ -174,7 +174,7 @@ class BuildBubbleWrap(AutotoolsProject):
     def __init__(self, config):
         super().__init__(config)
         self.add_required_system_header("sys/capability.h", apt="libcap-dev")
-        self.configureCommand = self.source_dir / "autogen.sh"
+        self.configure_command = self.source_dir / "autogen.sh"
         self.configure_args.append("--with-bash-completion-dir=no")
 
 

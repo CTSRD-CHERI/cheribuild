@@ -47,7 +47,7 @@ from ...utils import classproperty, commandline_to_str
 class BuildFettConfig(CrossCompileProject):
     project_name = "fett-config"
     repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Target.git", default_branch="cheri")
-    skipGitSubmodules = True
+    skip_git_submodules = True
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
 
     dependencies = ["fett-nginx", "fett-openssh", "fett-sqlite", "fett-voting"]

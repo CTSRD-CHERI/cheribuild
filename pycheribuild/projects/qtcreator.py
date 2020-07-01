@@ -38,7 +38,7 @@ class BuildQtCreator(Project):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.add_required_system_tool("qmake")
-        self.configureCommand = "qmake"
+        self.configure_command = "qmake"
         self.configure_args.extend(["-r", self.source_dir / "qtcreator.pro"])
         self.configure_environment["LLVM_INSTALL_DIR"] = str(self.config.cheri_sdk_dir)
         self.make_args.kind = MakeCommandKind.DefaultMake  # should also work with bsd make

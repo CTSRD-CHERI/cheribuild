@@ -51,9 +51,9 @@ class BuildSamba(Project):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.configureCommand = self.source_dir / "configure"
+        self.configure_command = self.source_dir / "configure"
         if SMB_OUT_OF_SOURCE_BUILD_WORKS:
-            self.configureCommand = self.source_dir / "buildtools/bin/waf"
+            self.configure_command = self.source_dir / "buildtools/bin/waf"
             self.configure_args.insert(0, "configure")
             self.make_args.set_command(self.source_dir / "buildtools/bin/waf")
             self.make_args.add_flags("--blddir=" + str(self.build_dir))

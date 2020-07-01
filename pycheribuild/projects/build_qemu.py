@@ -49,7 +49,7 @@ class BuildQEMUBase(AutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     doNotAddToTargets = True
     is_sdk_target = True
-    skipGitSubmodules = True  # we don't need these
+    skip_git_submodules = True  # we don't need these
     can_build_with_asan = True
     default_targets = "some-invalid-target"
     lto_by_default = True

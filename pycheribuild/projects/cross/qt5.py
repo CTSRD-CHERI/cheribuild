@@ -52,7 +52,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.configureCommand = self.source_dir / "configure"
+        self.configure_command = self.source_dir / "configure"
         if not self.compiling_for_host():
             self._linkage = Linkage.STATIC
 
@@ -197,7 +197,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
 class BuildQt5(BuildQtWithConfigureScript):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qt5", default_branch="5.10", force_branch=True)
-    skipGitSubmodules = True  # init-repository does it for us
+    skip_git_submodules = True  # init-repository does it for us
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -286,7 +286,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 
     def __init__(self, config):
         super().__init__(config)
-        self.configureCommand = self.source_dir / "icu4c/source/configure"
+        self.configure_command = self.source_dir / "icu4c/source/configure"
         self.configure_args.extend(["--disable-plugins", "--disable-dyload",
                                    "--disable-tests",
                                    "--disable-samples"])
@@ -328,9 +328,9 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
     def __init__(self, config):
         super().__init__(config)
         if (self.source_dir / "configure").exists():
-            self.configureCommand = self.source_dir / "configure"
+            self.configure_command = self.source_dir / "configure"
         else:
-            self.configureCommand = self.source_dir / "autogen.sh"
+            self.configure_command = self.source_dir / "autogen.sh"
         self.configure_args.extend([
             "--without-python", "--without-modules", "--without-lzma",
             ])

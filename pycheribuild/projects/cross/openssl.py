@@ -45,7 +45,7 @@ class BuildOpenSSL(CrossCompileProject):
 
     def setup(self):
         super().setup()
-        self.configureCommand = shutil.which("perl")
+        self.configure_command = shutil.which("perl")
         self.set_configure_prog_with_args("CC", self.CC, self.default_compiler_flags + ["-fuse-ld=lld"])
         self.add_configure_env_arg("AR", self.target_info.ar)
         self.configure_args.append(self.source_dir / "Configure")

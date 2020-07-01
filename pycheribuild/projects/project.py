@@ -1369,9 +1369,9 @@ class Project(SimpleProject):
     # Ideally this would be a flag in GitRepository, but that will not work with inheritance (since some
     # subclasses use different repositories and they would all have to set that flag again). Annoying for LLVM/FreeBSD
     is_large_source_repository = False
-    gitRevision = None
-    skipGitSubmodules = False
-    compileDBRequiresBear = True
+    git_revision = None
+    skip_git_submodules = False
+    compile_db_requires_bear = True
     doNotAddToTargets = True
 
     build_dir_suffix = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
@@ -1566,9 +1566,10 @@ class Project(SimpleProject):
         cls._install_dir = cls.add_path_option("install-directory", metavar="DIR", help=install_directory_help,
                                                default=cls._default_install_dir_fn)
         if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository):
-            cls.gitRevision = cls.add_config_option("git-revision", metavar="REVISION",
-                help="The git revision to checkout prior to building. Useful if HEAD is broken for one "
-                     "project but you still want to update the other projects.")
+            cls.git_revision = cls.add_config_option("git-revision", metavar="REVISION",
+                                                     help="The git revision to checkout prior to building. Useful if "
+                                                     "HEAD is broken for one "
+                                                          "project but you still want to update the other projects.")
             # TODO: can argparse action be used to store to the class member directly?
             # seems like I can create a new action a pass a reference to the repository:
             # class FooAction(argparse.Action):
@@ -1761,13 +1762,13 @@ class Project(SimpleProject):
                 self.source_dir)
             self.build_dir = self.source_dir
 
-        self.configureCommand = ""
+        self.configure_command = ""
         # non-assignable variables:
         self.configure_args = []  # type: typing.List[str]
         self.configure_environment = {}  # type: typing.Dict[str,str]
         self._lastStdoutLineCanBeOverwritten = False
         self.make_args = MakeOptions(self.make_kind, self)
-        if self.config.create_compilation_db and self.compileDBRequiresBear:
+        if self.config.create_compilation_db and self.compile_db_requires_bear:
             # CompileDB seems to generate broken compile_commands,json
             if self.make_args.is_gnu_make and False:
                 # use compiledb instead of bear for gnu make
@@ -1948,7 +1949,7 @@ class Project(SimpleProject):
         assert options is not None
         assert make_command is not None
         options = options.copy()
-        if self.config.create_compilation_db and self.compileDBRequiresBear:
+        if self.config.create_compilation_db and self.compile_db_requires_bear:
             compdb_extra_args = []
             if self._compiledb_tool == "bear":
                 compdb_extra_args = ["--cdb", self.build_dir / compilation_db_name, "--append", make_command]
@@ -1957,7 +1958,7 @@ class Project(SimpleProject):
             else:
                 self.fatal("Invalid tool")
             options.set_command(shutil.which(self._compiledb_tool), can_pass_j_flag=options.can_pass_jflag,
-                early_args=compdb_extra_args)
+                                early_args=compdb_extra_args)
             # Ensure that recursive make invocations reuse the compilation DB tool
             options.set(MAKE=commandline_to_str([options.command] + compdb_extra_args))
             make_command = options.command
@@ -2026,7 +2027,7 @@ class Project(SimpleProject):
             self.fatal("Cannot update", self.project_name, "as it is missing a repository source",
                        fatal_when_pretending=True)
         self.repository.update(self, src_dir=self.source_dir, default_src_dir=self.default_source_dir,
-            revision=self.gitRevision, skip_submodules=self.skipGitSubmodules)
+                               revision=self.git_revision, skip_submodules=self.skip_git_submodules)
         if self.is_large_source_repository and (self.source_dir / ".git").exists():
             # This is a large repository, tell git to do whatever it can to speed up operations (new in 2.24):
             # https://git-scm.com/docs/git-config#Documentation/git-config.txt-featuremanyFiles
@@ -2093,7 +2094,7 @@ class Project(SimpleProject):
         if not self.should_run_configure():
             return
 
-        _configure_path = self.configureCommand
+        _configure_path = self.configure_command
         if configure_path:
             _configure_path = configure_path
         if not Path(_configure_path).exists():
@@ -2344,7 +2345,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             # When --skip-update is set (or we don't have working internet) only check that the repository exists
             if self.repository:
                 self.repository.ensure_cloned(self, src_dir=self.source_dir, default_src_dir=self.default_source_dir,
-                    skip_submodules=self.skipGitSubmodules)
+                                              skip_submodules=self.skip_git_submodules)
         else:
             self.update()
         if not self._systemDepsChecked:
@@ -2443,7 +2444,7 @@ class CMakeProject(Project):
     """
     __minimum_cmake_version = None  # type: Tuple[int, int, int]
     doNotAddToTargets = True
-    compileDBRequiresBear = False  # cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON does it
+    compile_db_requires_bear = False  # cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON does it
     generate_cmakelists = False  # There is already a CMakeLists.txt
 
     class Generator(Enum):
@@ -2466,7 +2467,7 @@ class CMakeProject(Project):
 
     def __init__(self, config, generator=Generator.Ninja):
         super().__init__(config)
-        self.configureCommand = os.getenv("CMAKE_COMMAND", "cmake")
+        self.configure_command = os.getenv("CMAKE_COMMAND", "cmake")
         self.add_required_system_tool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
         # allow a -G flag in cmake-options to override the default generator (e.g. use makefiles for CLion)
         custom_generator = next((x for x in self.cmakeOptions if x.startswith("-G")), None)
@@ -2668,19 +2669,19 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
         super().install(_stdout_filter=_stdout_filter)
 
     def _get_cmake_version(self):
-        cmd = Path(self.configureCommand)
-        assert self.configureCommand is not None
-        if not cmd.is_absolute() or not Path(self.configureCommand).exists():
-            self.fatal("Could not find cmake binary:", self.configureCommand)
+        cmd = Path(self.configure_command)
+        assert self.configure_command is not None
+        if not cmd.is_absolute() or not Path(self.configure_command).exists():
+            self.fatal("Could not find cmake binary:", self.configure_command)
             return 0, 0, 0
         assert cmd.is_absolute()
         return get_program_version(cmd, program_name=b"cmake")
 
     def check_system_dependencies(self):
-        if not Path(self.configureCommand).is_absolute():
-            abspath = shutil.which(self.configureCommand)
+        if not Path(self.configure_command).is_absolute():
+            abspath = shutil.which(self.configure_command)
             if abspath:
-                self.configureCommand = abspath
+                self.configure_command = abspath
         super().check_system_dependencies()
         if self.__minimum_cmake_version:
             version_components = self._get_cmake_version()
@@ -2721,7 +2722,7 @@ class AutotoolsProject(Project):
 
     def __init__(self, config, configure_script="configure"):
         super().__init__(config)
-        self.configureCommand = self.source_dir / configure_script
+        self.configure_command = self.source_dir / configure_script
 
     def configure(self, **kwargs):
         if self._configure_supports_prefix:
