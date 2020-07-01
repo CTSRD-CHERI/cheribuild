@@ -83,8 +83,8 @@ def run_juliet_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
 
         try:
             shutil.copy2(args.ld_preload_path, args.build_dir)
-        except:
-            boot_cheribsd.failure("could not copy shared library for preload")
+        except Exception as e:
+            boot_cheribsd.failure("could not copy shared library for preload: ", e)
             return False
         preload_path = Path(args.ld_preload_path)
         run_command = "/build/juliet-run.sh {} {}".format(args.testcase_timeout, "/build/" + preload_path.name)

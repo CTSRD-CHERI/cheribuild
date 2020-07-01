@@ -43,7 +43,7 @@ ignoredFiles = [scriptDir / "jenkins.py", scriptDir / "config/jenkinsconfig.py"]
 emptyLines = 0
 
 
-def insertLocalFile(line: str, srcFile: Path):
+def insertLocalFile(line: str, _: Path):
     if "def include_local_file(" in line:
         lines.append(line)
         return  # don't replace the function definition

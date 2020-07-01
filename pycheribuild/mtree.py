@@ -61,8 +61,8 @@ class MtreeEntry(object):
             assert path[:2] == "./"
             path = path[:2] + os.path.normpath(path[2:])
             # print("After:", path)
-        attrDict = OrderedDict()  # keep them in insertion order
-        for k,v in map(lambda s: s.split(sep="=", maxsplit=1), elements[1:]):
+        attr_dict = OrderedDict()  # keep them in insertion order
+        for k, v in map(lambda s: s.split(sep="=", maxsplit=1), elements[1:]):
             # ignore some tags that makefs doesn't like
             # sometimes there will be time with nanoseconds in the manifest, makefs can't handle that
             # also the tags= key is not supported
@@ -72,20 +72,20 @@ class MtreeEntry(object):
             if contents_root and k == "contents":
                 if not os.path.isabs(v):
                     v = str(contents_root / v)
-            attrDict[k] = v
-        return MtreeEntry(path, attrDict)
+            attr_dict[k] = v
+        return MtreeEntry(path, attr_dict)
         # FIXME: use contents=
 
     @classmethod
-    def parseAllDirsInMtree(cls, mtreeFile: Path) -> "typing.List[MtreeEntry]":
-        with mtreeFile.open("r", encoding="utf-8") as f:
+    def parse_all_dirs_in_mtree(cls, mtree_file: Path) -> "typing.List[MtreeEntry]":
+        with mtree_file.open("r", encoding="utf-8") as f:
             result = []
             for line in f.readlines():
                 if " type=dir" in line:
                     try:
                         result.append(MtreeEntry.parse(line))
-                    except Exception:
-                        warningMessage("Could not parse line", line, "in mtree file", mtreeFile)
+                    except Exception as e:
+                        warningMessage("Could not parse line", line, "in mtree file", mtree_file, e)
             return result
 
     def __str__(self):
@@ -96,12 +96,12 @@ class MtreeEntry(object):
 
 
 class MtreeFile(object):
-    def __init__(self, file: "typing.Union[io.StringIO,Path,typing.IO]"=None, contents_root: Path=None):
+    def __init__(self, file: "typing.Union[io.StringIO,Path,typing.IO]" = None, contents_root: Path = None):
         self._mtree = OrderedDict()  # type: typing.Dict[str, MtreeEntry]
         if file:
             self.load(file, contents_root)
 
-    def load(self, file: "typing.Union[io.StringIO,Path,typing.IO]", contents_root: Path=None):
+    def load(self, file: "typing.Union[io.StringIO,Path,typing.IO]", contents_root: Path = None):
         if isinstance(file, Path):
             with file.open("r") as f:
                 self.load(f)
@@ -145,7 +145,7 @@ class MtreeFile(object):
             result = "0{0:o}".format(stat.S_IMODE(path.lstat().st_mode))  # format as octal with leading 0 prefix
         except IOError as e:
             default = "0755" if should_be_dir else "0644"
-            warningMessage("Failed to stat", path, "assuming mode",  default, e)
+            warningMessage("Failed to stat", path, "assuming mode", default, e)
             result = default
         # make sure that the .ssh config files are installed with the right permissions
         if path.name == ".ssh" and result != "0700":
@@ -195,7 +195,7 @@ class MtreeFile(object):
 
     def add_dir(self, path, mode=None, uname="root", gname="wheel", print_status=True, reference_dir=None):
         if isinstance(path, Path):
-            path= str(path)
+            path = str(path)
         assert not path.startswith("/")
         path = path.rstrip("/")  # remove trailing slashes
         mtree_path = self._ensure_mtree_path_fmt(path)
@@ -246,4 +246,3 @@ class MtreeFile(object):
             output.write(str(self._mtree[path]))
             output.write("\n")
         output.write("# END\n")
-

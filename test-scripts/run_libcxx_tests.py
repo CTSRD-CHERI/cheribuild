@@ -39,14 +39,14 @@ import tempfile
 import time
 import traceback
 import typing
-from multiprocessing import Process, Queue, Barrier
+from multiprocessing import Barrier, Process, Queue
 from pathlib import Path
 from queue import Empty
 
 import run_remote_lit_test
 from run_remote_lit_test import mp_debug
 # To combine the test result xmls
-from run_tests_common import junitparser, run_tests_main, boot_cheribsd
+from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
@@ -210,9 +210,9 @@ def wait_or_terminate_all_shards(processes, max_time, timed_out):
             # wait for completion
             try:
                 p.join(timeout=remaining_time.total_seconds())
-            except:
-                boot_cheribsd.failure("Could not join job ", p.name, " in ", remaining_time.total_seconds(), " seconds",
-                                      exit=False)
+            except Exception as e:
+                boot_cheribsd.failure("Could not join job ", p.name, " in ", remaining_time.total_seconds(),
+                                      " seconds: ", e, exit=False)
                 timed_out = True
         if p.is_alive():
             boot_cheribsd.failure("Parallel job ", p.name, " did not exit cleanly!", exit=False)
