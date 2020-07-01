@@ -47,7 +47,6 @@ class BuildElftoolchain(Project):
         # TODO: move this to project
         self.makedirs(self.build_dir)
         self.make_args.env_vars["MAKEOBJDIRPREFIX"] = self.build_dir
-        self.makeArgs = ["WITH_TESTS=no", "-DNO_ROOT"]
         # TODO: build static?
         if self.build_static:
             self.make_args.set(LDSTATIC="-static")
@@ -62,15 +61,15 @@ class BuildElftoolchain(Project):
 
         if not self.config.verbose:
             self.make_args.add_flags("-s")
-        self.programsToBuild = ["brandelf", "elfcopy", "elfdump", "strings", "nm", "readelf", "addr2line",
-                                "size", "findtextrel"]
+        self.programs_to_build = ["brandelf", "elfcopy", "elfdump", "strings", "nm", "readelf", "addr2line",
+                                  "size", "findtextrel"]
         # some make targets install more than one tool:
         # strip, objcopy and mcs are links to elfcopy and ranlib is a link to ar
-        self.extraPrograms = ["strip", "objcopy", "mcs"]
-        self.libTargets = ["common", "libelf", "libelftc", "libdwarf"]
+        self.extra_programs = ["strip", "objcopy", "mcs"]
+        self.lib_targets = ["common", "libelf", "libelftc", "libdwarf"]
         if self.build_ar:
-            self.programsToBuild.append("ar")
-            self.extraPrograms.append("ranlib")
+            self.programs_to_build.append("ar")
+            self.extra_programs.append("ranlib")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -99,7 +98,7 @@ class BuildElftoolchain(Project):
             # build is not parallel-safe -> we can't make with all the all-foo targets and -jN
             # To speed it up run make for the individual library directories instead and then for all the binaries
             first_call = True  # recreate logfile on first call, after that append
-            for tgt in self.libTargets + self.programsToBuild:
+            for tgt in self.lib_targets + self.programs_to_build:
                 self.run_make("obj", cwd=self.source_dir / tgt, logfile_name="build", append_to_logfile=not first_call)
                 self.run_make("all", cwd=self.source_dir / tgt, logfile_name="build", append_to_logfile=True)
                 first_call = False
@@ -138,12 +137,12 @@ class BuildElftoolchain(Project):
         for i in ("bin", "lib", "include", "share") + mandirs:
             self.makedirs(self.install_dir / i)
         first_call = True  # recreate logfile on first call, after that append
-        for tgt in self.programsToBuild:
+        for tgt in self.programs_to_build:
             self.run_make_install(cwd=self.source_dir / tgt, logfile_name="install", append_to_logfile=not first_call,
-                                parallel=False)
+                                  parallel=False)
             first_call = False
 
-        all_installed_tools = self.programsToBuild + self.extraPrograms
+        all_installed_tools = self.programs_to_build + self.extra_programs
         for prog in all_installed_tools:
             if prog == "strip":
                 self.delete_file(self.install_dir / "bin" / ("cheri-unknown-freebsd-" + prog))

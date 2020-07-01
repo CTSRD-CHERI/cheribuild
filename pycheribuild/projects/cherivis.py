@@ -70,7 +70,7 @@ class BuildCheriVis(Project):
         self.add_required_system_tool("clang++")
         if OSInfo.IS_LINUX or OSInfo.IS_FREEBSD:
             self.add_required_system_tool("gnustep-config", install_instructions=gnuStepInstallInstructions)
-        self.gnustepMakefilesDir = None  # type: typing.Optional[Path]
+        self.gnustep_makefiles_dir = None  # type: typing.Optional[Path]
         if OSInfo.IS_MAC:
             self.make_args.set_command("xcodebuild", can_pass_j_flag=False,
                 install_instructions="Install Command Line Tools")
@@ -100,11 +100,11 @@ class BuildCheriVis(Project):
             return  # don't need GnuStep here
 
         configOutput = runCmd("gnustep-config", "--variable=GNUSTEP_MAKEFILES", capture_output=True).stdout
-        self.gnustepMakefilesDir = Path(configOutput.decode("utf-8").strip())
-        commonDotMake = self.gnustepMakefilesDir / "common.make"
+        self.gnustep_makefiles_dir = Path(configOutput.decode("utf-8").strip())
+        commonDotMake = self.gnustep_makefiles_dir / "common.make"
         if not commonDotMake.is_file():
             self.dependency_error("gnustep-config binary exists, but", commonDotMake, "does not exist!",
-                                 install_instructions=gnuStepInstallInstructions())
+                                  install_instructions=gnuStepInstallInstructions())
         # TODO: set ADDITIONAL_LIB_DIRS?
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC17
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC29
@@ -117,7 +117,7 @@ class BuildCheriVis(Project):
         # cheritrace_rel_path = os.path.relpath(str(self.cheritrace_path.parent.resolve()), str(self.source_dir.resolve()))
         self.make_args.set(CXX=self.CXX,
                            CC=self.CPP,
-                           GNUSTEP_MAKEFILES=self.gnustepMakefilesDir,
+                           GNUSTEP_MAKEFILES=self.gnustep_makefiles_dir,
                            # Uncomment this to enable building with an install libchertrace
                            # CHERITRACE_DIR=cheritrace_rel_path,  # make it find the cheritrace library
                            # GNUSTEP_INSTALLATION_DOMAIN="USER",

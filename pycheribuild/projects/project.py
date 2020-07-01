@@ -2467,15 +2467,15 @@ class CMakeProject(Project):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.cmakeOptions = cls.add_config_option("cmake-options", default=[], kind=list, metavar="OPTIONS",
-            help="Additional command line options to pass to CMake")
+        cls.cmake_options = cls.add_config_option("cmake-options", default=[], kind=list, metavar="OPTIONS",
+                                                  help="Additional command line options to pass to CMake")
 
     def __init__(self, config, generator=Generator.Ninja):
         super().__init__(config)
         self.configure_command = os.getenv("CMAKE_COMMAND", "cmake")
         self.add_required_system_tool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
         # allow a -G flag in cmake-options to override the default generator (e.g. use makefiles for CLion)
-        custom_generator = next((x for x in self.cmakeOptions if x.startswith("-G")), None)
+        custom_generator = next((x for x in self.cmake_options if x.startswith("-G")), None)
         if custom_generator:
             if "Unix Makefiles" in custom_generator:
                 generator = CMakeProject.Generator.Makefiles
@@ -2539,9 +2539,9 @@ class CMakeProject(Project):
             if not _replace and any(x.startswith("-D" + option + "=") for x in self.configure_args):
                 self.verbose_print("Not replacing ", option, "since it is already set.")
                 return
-            if any(x.startswith("-D" + option) for x in self.cmakeOptions):
+            if any(x.startswith("-D" + option) for x in self.cmake_options):
                 self.info("Not using default value of '", value, "' for CMake option '", option,
-                    "' since it is explicitly overwritten in the configuration", sep="")
+                          "' since it is explicitly overwritten in the configuration", sep="")
                 continue
             if isinstance(value, bool):
                 value = "ON" if value else "OFF"
@@ -2658,7 +2658,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
         # TODO: BUILD_SHARED_LIBS=OFF?
 
         # Add the options from the config file:
-        self.configure_args.extend(self.cmakeOptions)
+        self.configure_args.extend(self.cmake_options)
         # make sure we get a completely fresh cache when --reconfigure is passed:
         cmake_cache = self.build_dir / "CMakeCache.txt"
         if self.config.force_configure:

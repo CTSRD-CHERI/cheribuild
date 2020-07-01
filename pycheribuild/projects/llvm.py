@@ -103,7 +103,7 @@ class BuildLLVMBase(CMakeProject):
         if os.cpu_count() >= 24:
             link_jobs *= 2  # Increase number of link jobs for powerful servers
         # non-shared debug builds take lots of ram -> use fewer parallel jobs
-        if self.should_include_debug_info and "-DBUILD_SHARED_LIBS=ON" not in self.cmakeOptions:
+        if self.should_include_debug_info and "-DBUILD_SHARED_LIBS=ON" not in self.cmake_options:
             link_jobs //= 4
         self.add_cmake_options(LLVM_PARALLEL_LINK_JOBS=link_jobs)  # anything more causes too much I/O + memory usage
         if self.use_asan:
@@ -172,7 +172,7 @@ class BuildLLVMBase(CMakeProject):
         self.add_cmake_options(LLVM_USE_SPLIT_DWARF=True)
         # self.add_cmake_options(LLVM_APPEND_VC_REV=False)
         # don't set LLVM_ENABLE_ASSERTIONS if it is defined in cmake-options
-        if "LLVM_ENABLE_ASSERTIONS" not in "".join(self.cmakeOptions):
+        if "LLVM_ENABLE_ASSERTIONS" not in "".join(self.cmake_options):
             self.add_cmake_options(LLVM_ENABLE_ASSERTIONS=self.enable_assertions)
         self.add_cmake_options(LLVM_LIT_ARGS="--max-time 3600 --timeout 300 -s -vv")
         if self.build_minimal_toolchain:
@@ -477,11 +477,11 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
                                          help="The git repository for tools/" + name)
             return repo, rev
 
-        cls.clangRepository, cls.clangRevision = add_subproject_ptions("clang")
+        cls.clang_repository, cls.clang_revision = add_subproject_ptions("clang")
         if include_lld_revision:  # not built yet
-            cls.lldRepository, cls.lldRevision = add_subproject_ptions("lld")
+            cls.lld_repository, cls.lld_revision = add_subproject_ptions("lld")
         if include_lldb_revision:  # not built yet
-            cls.lldbRepository, cls.lldbRevision = add_subproject_ptions("lldb")
+            cls.lldb_repository, cls.lldb_revision = add_subproject_ptions("lldb")
 
     def setup(self):
         super().setup()
@@ -492,11 +492,11 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
     def update(self):
         super().update()
         if "clang" in self.included_projects:
-            GitRepository(self.clangRepository).update(self, src_dir=self.source_dir / "tools/clang",
-                                                       revision=self.clangRevision),
+            GitRepository(self.clang_repository).update(self, src_dir=self.source_dir / "tools/clang",
+                                                        revision=self.clang_revision),
         if "lld" in self.included_projects:
-            GitRepository(self.lldRepository).update(self, src_dir=self.source_dir / "tools/lld",
-                                                     revision=self.lldRevision),
+            GitRepository(self.lld_repository).update(self, src_dir=self.source_dir / "tools/lld",
+                                                      revision=self.lld_revision),
         if "lldb" in self.included_projects:  # Not yet usable
-            GitRepository(self.lldbRepository).update(self, src_dir=self.source_dir / "tools/lldb",
-                                                      revision=self.lldbRevision),
+            GitRepository(self.lldb_repository).update(self, src_dir=self.source_dir / "tools/lldb",
+                                                       revision=self.lldb_revision),

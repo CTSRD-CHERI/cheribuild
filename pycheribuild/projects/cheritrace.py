@@ -42,14 +42,14 @@ class BuildCheriTrace(CMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.llvmConfigPath = self.config.cheri_sdk_bindir / "llvm-config"
+        self.llvm_config_path = self.config.cheri_sdk_bindir / "llvm-config"
 
     def configure(self):
-        if not self.llvmConfigPath.is_file():
+        if not self.llvm_config_path.is_file():
             self.dependency_error("Could not find llvm-config from CHERI LLVM.",
-                                 install_instructions="Build target 'llvm' first.")
+                                  install_instructions="Build target 'llvm' first.")
         self.add_cmake_options(
-            LLVM_CONFIG=self.llvmConfigPath,
+            LLVM_CONFIG=self.llvm_config_path,
             PYTHON_BINDINGS=self.include_python_bindings
-        )
+            )
         super().configure()

@@ -46,8 +46,8 @@ class BuildGnuBinutils(AutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options()
-        cls.fullInstall = cls.add_bool_option("install-all-tools", help="Whether to install all binutils tools instead"
-                                                                      "of only as, ld and objdump")
+        cls.full_install = cls.add_bool_option("install-all-tools", help="Whether to install all binutils tools instead"
+                                                                         "of only as, ld and objdump")
 
     def setup(self):
         super().setup()
@@ -86,7 +86,7 @@ class BuildGnuBinutils(AutotoolsProject):
             "--disable-info",
             #  "--program-prefix=cheri-unknown-freebsd-",
             "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems
-        ])
+            ])
         self.configure_args.append("--disable-shared")
         # newer compilers will default to -std=c99 which will break binutils:
         cflags = "-std=gnu89 -O2"
@@ -102,7 +102,7 @@ class BuildGnuBinutils(AutotoolsProject):
 
     def install(self, **kwargs):
         bindir = self.install_dir / "bin"
-        if not self.fullInstall:
+        if not self.full_install:
             # we don't want to install all programs, as the rest comes from elftoolchain
             self.run_make("install-gas", logfile_name="install", append_to_logfile=True, parallel=False)
             self.delete_file(bindir / "mips64-unknown-freebsd-ld")
