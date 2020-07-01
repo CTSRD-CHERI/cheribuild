@@ -53,7 +53,7 @@ __all__ = ["typing", "print_command", "include_local_file", "CompilerInfo",  # n
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "set_env",  # no-combine
            "init_global_config", "warningMessage", "popen_handle_noexec", "extract_version",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "get_compiler_info", "latest_system_clang_tool",  # no-combine
-           "get_program_version", "SafeDict",  # no-combine
+           "get_program_version", "SafeDict", "keep_terminal_sane",  # no-combine
            "default_make_jobs_count", "commandline_to_str", "OSInfo", "is_jenkins_build",  # no-combine
            "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
            "is_case_sensitive_dir", "SocketAndPort"]  # no-combine

@@ -43,7 +43,7 @@ import typing
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Union
+from typing import Callable, Tuple, Union
 
 from ..config.chericonfig import BuildType, BuildType, CheriConfig, CheriConfig
 from ..config.loader import (ComputedDefaultValue, ComputedDefaultValue, ConfigLoaderBase, ConfigOptionBase,
@@ -346,12 +346,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return result
 
     @classproperty
-    def default_architecture(cls) -> CrossCompileTarget:
-        result = cls._default_architecture
+    def default_architecture(self) -> CrossCompileTarget:
+        result = self._default_architecture
         if result is not None:
             return result
         # otherwise pick the first supported arch:
-        return cls.supported_architectures[0]
+        return self.supported_architectures[0]
 
     @property
     def crosscompile_target(self):
@@ -2441,6 +2441,7 @@ class CMakeProject(Project):
     Sets configure command to CMake, adds -DCMAKE_INSTALL_PREFIX=installdir
     and checks that CMake is installed
     """
+    __minimum_cmake_version = None  # type: Tuple[int, int, int]
     doNotAddToTargets = True
     compileDBRequiresBear = False  # cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON does it
     generate_cmakelists = False  # There is already a CMakeLists.txt
@@ -2543,10 +2544,10 @@ class CMakeProject(Project):
             assert value is not None
             self.configureArgs.append("-D" + option + "=" + str(value))
 
-    def set_minimum_cmake_version(self, major, minor):
-        self.__minimum_cmake_version = (major, minor)
+    def set_minimum_cmake_version(self, major: int, minor: int, patch: int = 0):
+        self.__minimum_cmake_version = (major, minor, patch)
 
-    def _cmakeInstallStdoutFilter(self, line: bytes):
+    def _cmake_install_stdout_filter(self, line: bytes):
         # don't show the up-to date install lines
         if line.startswith(b"-- Up-to-date:"):
             return
@@ -2579,7 +2580,8 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
 """
         else:
             add_lib_suffix = "# no lib suffix needed for non-purecap"
-        self._prepare_toolchain_file(file=file,
+        self._prepare_toolchain_file(
+            file=file,
             TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else
             self.config.cheri_sdk_bindir,
             TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
@@ -2598,7 +2600,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
             TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs,
             TOOLCHAIN_PREFIX_PATHS=";".join(map(str, self.target_info.cmake_prefix_paths)),
             TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
-            )
+        )
 
     def configure(self, **kwargs):
         if self.install_prefix != self.install_dir:
@@ -2662,7 +2664,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
 
     def install(self, _stdout_filter="__DEFAULT__"):
         if _stdout_filter == "__DEFAULT__":
-            _stdout_filter = self._cmakeInstallStdoutFilter
+            _stdout_filter = self._cmake_install_stdout_filter
         super().install(_stdout_filter=_stdout_filter)
 
     def _get_cmake_version(self):
