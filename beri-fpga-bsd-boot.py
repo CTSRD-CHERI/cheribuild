@@ -60,6 +60,7 @@ import pexpect
 # Command line arguments #
 ##########################
 
+
 def auto_int(x):
     return int(x, 0)
 
@@ -229,6 +230,9 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
+logf = None
+VERBOSE_LEVEL = 0
+
 ################
 # Output utils #
 ################
@@ -280,13 +284,20 @@ class PP(string.Formatter):
             return super(PP, self).format(value, spec)
 
 
-errorprint = lambda msg: verboseprint(error_lvl, PP().format("{:error_}", msg))
-infoprint = lambda msg: verboseprint(info_lvl, PP().format("{:info_}", msg))
-phaseprint = lambda msg: verboseprint(phase_lvl, PP().format("{:phase_}", msg))
-hostcmdprint = lambda msg: verboseprint(hostcmd_lvl, PP().format("{:hostcmd_}", msg))
+def errorprint(msg):
+    verboseprint(error_lvl, PP().format("{:error_}", msg))
 
-logf = None
-VERBOSE_LEVEL = 0
+
+def infoprint(msg):
+    verboseprint(info_lvl, PP().format("{:info_}", msg))
+
+
+def phaseprint(msg):
+    verboseprint(phase_lvl, PP().format("{:phase_}", msg))
+
+
+def hostcmdprint(msg):
+    verboseprint(hostcmd_lvl, PP().format("{:hostcmd_}", msg))
 
 
 def verboseprint(lvl, msg):

@@ -96,7 +96,7 @@ class FileSystemUtils(object):
         be deleted though.
         :return:
         """
-        deleterThread = None
+        deleter_thread = None
         tempdir = path.with_suffix(".delete-me-pls")
         if not path.is_dir():
             self.makedirs(path)
@@ -134,8 +134,8 @@ class FileSystemUtils(object):
                 assert len(list(path.iterdir())) == 0, list(path.iterdir())
         if tempdir.is_dir() or self.config.pretend:
             # we now have an empty directory, start background deleter and return to caller
-            deleterThread = FileSystemUtils.DeleterThread(self, tempdir)
-        return ThreadJoiner(deleterThread)
+            deleter_thread = FileSystemUtils.DeleterThread(self, tempdir)
+        return ThreadJoiner(deleter_thread)
 
     def copy_directory(self, src_path: Path, dst_path: Path):
         print_command("cp", "-r", src_path, dst_path, print_verbose_only=True)
@@ -194,7 +194,8 @@ class FileSystemUtils(object):
         if mode:
             file.chmod(mode)
 
-    def create_symlink(self, src: Path, dest: Path, *, relative=True, cwd: Path = None, print_verbose_only=True):
+    @staticmethod
+    def create_symlink(src: Path, dest: Path, *, relative=True, cwd: Path = None, print_verbose_only=True):
         assert dest.is_absolute() or cwd is not None
         if not cwd:
             cwd = dest.parent
