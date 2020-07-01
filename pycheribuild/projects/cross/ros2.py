@@ -97,17 +97,17 @@ class BuildRos2(CrossCompileCMakeProject):
         output = self.run_cmd(cmdline, cwd=self.source_dir, capture_output=True, print_verbose_only=False)
 
         # extract LD_LIBRARY_PATH into a variable
-        LD_LIBRARY_PATH = output.stdout.decode("utf-8").rstrip()
-        if len(LD_LIBRARY_PATH) == 0:
+        ld_library_path = output.stdout.decode("utf-8").rstrip()
+        if len(ld_library_path) == 0:
             self.warning("LD_LIBRARY_PATH not set.")
             return
 
         # convert LD_LIBRARY_PATH into LD_CHERI_LIBRARY_PATH for CheriBSD
-        LD_LIBRARY_PATH = str(self.source_dir) + ":" + LD_LIBRARY_PATH
-        LD_LIBRARY_PATH = LD_LIBRARY_PATH.replace(str(self.source_dir), "${rootdir}")
-        LD_CHERI_LIBRARY_PATH = LD_LIBRARY_PATH
-        LD_CHERI_LIBRARY_PATH += ":${LD_CHERI_LIBRARY_PATH}"
-        LD_LIBRARY_PATH += ":${LD_LIBRARY_PATH}"
+        ld_library_path = str(self.source_dir) + ":" + ld_library_path
+        ld_library_path = ld_library_path.replace(str(self.source_dir), "${rootdir}")
+        ld_cheri_library_path = ld_library_path
+        ld_cheri_library_path += ":${LD_CHERI_LIBRARY_PATH}"
+        ld_library_path += ":${LD_LIBRARY_PATH}"
 
         # write LD_CHERI_LIBRARY_PATH to a text file to source from csh in CheriBSD
         csh_script = """#!/bin/csh
@@ -121,13 +121,13 @@ if (! $?LD_LIBRARY_PATH ) then
   set LD_LIBRARY_PATH=""
 endif
 setenv LD_LIBRARY_PATH {LD_LIBRARY_PATH}
-""".format(LD_CHERI_LIBRARY_PATH=LD_CHERI_LIBRARY_PATH, LD_LIBRARY_PATH=LD_LIBRARY_PATH)
+""".format(LD_CHERI_LIBRARY_PATH=ld_cheri_library_path, LD_LIBRARY_PATH=ld_library_path)
         self.write_file(self.source_dir / 'cheri_setup.csh', csh_script, overwrite=True)
         posix_sh_script = """#!/bin/sh
 rootdir=`pwd`
 export LD_CHERI_LIBRARY_PATH={LD_CHERI_LIBRARY_PATH}
 export LD_LIBRARY_PATH={LD_LIBRARY_PATH}
-""".format(LD_CHERI_LIBRARY_PATH=LD_CHERI_LIBRARY_PATH, LD_LIBRARY_PATH=LD_LIBRARY_PATH)
+""".format(LD_CHERI_LIBRARY_PATH=ld_cheri_library_path, LD_LIBRARY_PATH=ld_library_path)
         # write LD_CHERI_LIBRARY_PATH to a text file to source from sh in CheriBSD
         self.write_file(self.source_dir / 'cheri_setup.sh', posix_sh_script, overwrite=True)
 

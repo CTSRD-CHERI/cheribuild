@@ -20,6 +20,7 @@ from pycheribuild.config.defaultconfig import DefaultCheriConfig
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that target_manager gets populated
 from pycheribuild.projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
+# noinspection PyProtectedMember
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, _BuildDiskImageBase
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, FreeBSDToolchainKind
@@ -39,8 +40,8 @@ def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> Defau
     # noinspection PyGlobalUndefined
     global _cheri_config
     if not _targets_registered:
-        allTargetNames = list(sorted(target_manager.target_names)) + ["__run_everything__"]
-        ConfigLoaderBase._cheri_config = DefaultCheriConfig(_loader, allTargetNames)
+        all_target_names = list(sorted(target_manager.target_names)) + ["__run_everything__"]
+        ConfigLoaderBase._cheri_config = DefaultCheriConfig(_loader, all_target_names)
         SimpleProject._config_loader = _loader
         target_manager.register_command_line_options()
         _targets_registered = True
@@ -120,7 +121,9 @@ def test_cross_compile_project_inherits():
     assert qtbase_default.project_name == qtbase_native.project_name
     assert qtbase_mips.project_name == qtbase_native.project_name
     # These classes were generated:
+    # noinspection PyUnresolvedReferences
     assert qtbase_native.synthetic_base == qtbase_class
+    # noinspection PyUnresolvedReferences
     assert qtbase_mips.synthetic_base == qtbase_class
     assert not hasattr(qtbase_class, "synthetic_base")
 
@@ -170,7 +173,7 @@ def test_cross_compile_project_inherits():
     assert not qtbase_mips.build_tests, "qtbase-mips should have a JSON false override for build-tests"
 
     # However, don't inherit for build_dir since that doesn't make sense:
-    def assertBuildDirsDifferent():
+    def assert_build_dirs_different():
         # Default should be CHERI purecap
         # print("Default build dir:", qtbase_default.build_dir)
         # print("Native build dir:", qtbase_native.build_dir)
@@ -179,24 +182,24 @@ def test_cross_compile_project_inherits():
         assert qtbase_default.build_dir != qtbase_mips.build_dir
         assert qtbase_mips.build_dir != qtbase_native.build_dir
 
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
     # overriding native build dir is fine:
     _parse_arguments(["--qtbase-native/build-directory=/foo/bar"])
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
     _parse_config_file_and_args(b'{"qtbase-native/build-directory": "/foo/bar"}')
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
     # Should not inherit from the default one:
     _parse_arguments(["--qtbase/build-directory=/foo/bar"])
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
     _parse_config_file_and_args(b'{"qtbase/build-directory": "/foo/bar"}')
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
 
     # Should not inherit from the default one:
     _parse_arguments(["--qtbase/build-directory=/foo/bar", "--qtbase-mips-hybrid/build-directory=/bar/foo"])
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
     _parse_config_file_and_args(b'{"qtbase/build-directory": "/foo/bar",'
                                 b' "qtbase-mips-hybrid/build-directory": "/bar/foo"}')
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
 
 
 # FIXME: cheribsd-cheri/kernel-config should use the cheribsd/kernel-config value
@@ -278,37 +281,37 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assert not cheribsd_cheri.debug_kernel, "cheribsd-cheri should have a JSON false override for debug-kernel"
 
     # However, don't inherit for build_dir since that doesn't make sense:
-    def assertBuildDirsDifferent():
+    def assert_build_dirs_different():
         assert cheribsd_cheri.build_dir != cheribsd_purecap.build_dir
         assert cheribsd_cheri.build_dir != cheribsd_mips.build_dir
         assert cheribsd_cheri.build_dir == cheribsd_default_tgt.build_dir
 
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
     # overriding native build dir is fine:
     _parse_arguments(["--cheribsd-purecap/build-directory=/foo/bar"])
     assert cheribsd_purecap.build_dir == Path("/foo/bar")
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
     _parse_config_file_and_args(b'{"cheribsd-purecap/build-directory": "/foo/bar"}')
     assert cheribsd_purecap.build_dir == Path("/foo/bar")
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
     # cheribsd-cheri should inherit from the default one, but not cheribsd-purecap:
     _parse_arguments(["--cheribsd/build-directory=/foo/bar"])
     assert cheribsd_cheri.build_dir == Path("/foo/bar")
     assert cheribsd_purecap.build_dir != Path("/foo/bar")
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
     _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar"}')
     assert cheribsd_cheri.build_dir == Path("/foo/bar")
     assert cheribsd_purecap.build_dir != Path("/foo/bar")
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
 
     # cheribsd-cheri/builddir should have higher prirority:
     _parse_arguments(["--cheribsd/build-directory=/foo/bar", "--cheribsd-cheri/build-directory=/bar/foo"])
     assert cheribsd_cheri.build_dir == Path("/bar/foo")
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
     _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar",'
                                 b' "cheribsd-cheri/build-directory": "/bar/foo"}')
     assert cheribsd_cheri.build_dir == Path("/bar/foo")
-    assertBuildDirsDifferent()
+    assert_build_dirs_different()
 
 
 def test_target_alias():
@@ -354,14 +357,11 @@ def test_target_alias():
                                          "--cheribsd-mips-hybrid/mfs-root-image=/command/line/value")
     # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
     # We should load config options for that target from
-    cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(None,
-                                                                                           config)  # type:
-    # BuildCHERIBSD
-    mfs_option = inspect.getattr_static(cheribsd_cheri, "mfs_root_image")
+    cheribsd_cheri = target_manager.get_target_raw(
+        "cheribsd-cheri").get_or_create_project(None, config)  # type: BuildCHERIBSD
     assert str(cheribsd_cheri.mfs_root_image) == "/command/line/value"
-    cheribsd_mips_hybrid = target_manager.get_target_raw("cheribsd-mips-hybrid").get_or_create_project(None,
-                                                                                                       config)  #
-    # type: BuildCHERIBSD
+    cheribsd_mips_hybrid = target_manager.get_target_raw(
+        "cheribsd-mips-hybrid").get_or_create_project(None, config)  # type: BuildCHERIBSD
     assert str(cheribsd_mips_hybrid.mfs_root_image) == "/command/line/value"
 
 
@@ -426,7 +426,7 @@ def test_kernconf():
 def test_duplicate_key():
     with pytest.raises(SyntaxError) as excinfo:
         _parse_config_file_and_args(b'{ "output-root": "/foo", "some-other-key": "abc", "output-root": "/bar" }')
-        assert re.search("duplicate key: 'output-root'", excinfo.value)
+        assert re.search("duplicate key: 'output-root'", str(excinfo.value))
 
 
 def _get_config_with_include(tmpdir: Path, config_json: bytes, workdir: Path = None):
@@ -499,14 +499,14 @@ def test_config_file_include():
         # Nonexistant paths should raise an error
         with pytest.raises(FileNotFoundError) as excinfo:
             _get_config_with_include(config_dir, b'{ "#include": "bad-path.json"}')
-            assert re.search("No such file or directory", excinfo.value)
+            assert re.search("No such file or directory", str(excinfo.value))
 
         # Currently only one #include per config file is allowed
         # TODO: this could be supported but it might be better to accept a list instead?
         with pytest.raises(SyntaxError) as excinfo:
             _get_config_with_include(config_dir,
                                      b'{ "#include": "128-common.json", "foo": "bar", "#include": "256-common.json"}')
-            assert re.search("duplicate key: '#include'", excinfo.value)
+            assert re.search("duplicate key: '#include'", str(excinfo.value))
 
 
 def test_libcxxrt_dependency_path():

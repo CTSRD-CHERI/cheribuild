@@ -104,8 +104,8 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     is_sdk_target = True
     dependencies = ["newlib"]
     needs_sysroot = False  # We don't need a complete sysroot
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + \
-                              CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
+    supported_architectures = \
+        CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
     _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
 
     # Note: needs to be @classproperty since it is called before __init__

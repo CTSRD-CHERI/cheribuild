@@ -42,11 +42,11 @@ class AnsiColour(Enum):
 
 
 def coloured(colour: AnsiColour, *args, sep=" ") -> str:
-    startColour = "\x1b[1;" + str(colour.value) + "m"
-    endColour = "\x1b[0m"  # reset
+    start_colour = "\x1b[1;" + str(colour.value) + "m"
+    end_colour = "\x1b[0m"  # reset
     if len(args) == 1:
         if isinstance(args[0], str):
-            return startColour + args[0] + endColour
-        return startColour + sep.join(map(str, args[0])) + endColour
+            return start_colour + args[0] + end_colour
+        return start_colour + sep.join(map(str, args[0])) + end_colour
     else:
-        return startColour + sep.join(map(str, args)) + endColour
+        return start_colour + sep.join(map(str, args)) + end_colour

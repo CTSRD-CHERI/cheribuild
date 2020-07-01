@@ -30,13 +30,16 @@
 
 from .project import CMakeProject, BuildType, GitRepository, CheriConfig
 from ..config.compilation_targets import CompilationTargets
+from ..config.loader import ComputedDefaultValue
 
 
 class BuildCheriOS(CMakeProject):
     dependencies = ["cherios-llvm", "makefs-linux"]
     default_build_type = BuildType.DEBUG
     repository = GitRepository("https://github.com/CTSRD-CHERI/cherios.git", default_branch="master")
-    _default_install_dir_fn = lambda config, cls: config.output_root / ("cherios" + config.mips_cheri_bits_str)
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, cls: config.output_root / ("cherios" + config.mips_cheri_bits_str),
+        as_string="<OUTPUT_ROOT>/cherios128")
     needs_sysroot = False
     supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP]
 

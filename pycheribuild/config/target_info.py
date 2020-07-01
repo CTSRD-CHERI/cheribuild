@@ -162,6 +162,7 @@ class TargetInfo(ABC):
         """Flags that need to be passed to cc/c++/cpp in all cases"""
         return []
 
+    # noinspection PyMethodMayBeStatic
     def required_link_flags(self) -> typing.List[str]:
         """Flags that need to be passed to cc/c++ for linking"""
         return []

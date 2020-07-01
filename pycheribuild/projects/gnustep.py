@@ -58,6 +58,7 @@ class BuildLibObjC2(CMakeProject):
         self.add_required_system_tool("clang++")
 
 
+# noinspection PyPep8Naming
 class BuildGnuStep_Make(AutotoolsProject):
     repository = GitRepository("https://github.com/gnustep/tools-make.git")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
@@ -80,8 +81,8 @@ class GnuStepModule(AutotoolsProject):
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     build_in_source_dir = True  # out of source builds don't seem to work!
 
-    def __init__(self, config: CheriConfig, moduleName: str):
-        self.repository = GitRepository("https://github.com/gnustep/libs-" + moduleName + ".git")
+    def __init__(self, config: CheriConfig, module_name: str):
+        self.repository = GitRepository("https://github.com/gnustep/libs-" + module_name + ".git")
         super().__init__(config)
         self.add_required_pkg_config("gnutls")
         # Ubuntu puts libtiff-4 is in libtiff5-dev...
@@ -111,11 +112,12 @@ class GnuStepModule(AutotoolsProject):
         super().configure()
 
 
+# noinspection PyPep8Naming
 class BuildGnuStep_Base(GnuStepModule):
     do_not_add_to_targets = False  # Even though it ends in Base this is not a Base class
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, moduleName="base")
+        super().__init__(config, module_name="base")
         self.configure_args.extend([
             "--disable-mixedabi",
             # TODO: "--enable-libdispatch",
@@ -123,9 +125,10 @@ class BuildGnuStep_Base(GnuStepModule):
             ])
 
 
+# noinspection PyPep8Naming
 class BuildGnuStep_Gui(GnuStepModule):
     def __init__(self, config: CheriConfig):
-        super().__init__(config, moduleName="gui")
+        super().__init__(config, module_name="gui")
 
     def check_system_dependencies(self):
         # TODO check that libjpeg62-devel is not installed on opensuse, must use libjpeg8-devel
@@ -133,9 +136,10 @@ class BuildGnuStep_Gui(GnuStepModule):
         super().check_system_dependencies()
 
 
+# noinspection PyPep8Naming
 class BuildGnuStep_Back(GnuStepModule):
     def __init__(self, config: CheriConfig):
-        super().__init__(config, moduleName="back")
+        super().__init__(config, module_name="back")
         self.configure_args.append("--enable-graphics=cairo")
 
 

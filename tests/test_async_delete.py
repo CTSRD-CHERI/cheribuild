@@ -77,6 +77,7 @@ class TestAsyncDelete(TestCase):
     def _assertNumFiles(self, path, numFiles):
         self.assertEqual(len(list(path.iterdir())), numFiles, "expected %d files in %s" % (numFiles, path))
 
+    # noinspection PyUnreachableCode
     def test_keeproot(self):
         # Not sure how to test this, Linux reuses the inode number on tmpfs
         if False:
@@ -114,13 +115,13 @@ class TestAsyncDelete(TestCase):
         files = subprocess.check_output(["find", str(directory)]).rstrip().decode("utf-8").split("\n")
         print("   ", "\n    ".join(files))
 
-    def _check_async_delete(self, message, tmpdirExpected: bool):
+    def _check_async_delete(self, message, tmpdir_expected: bool):
         self._dump_dir_tree(self.config.source_root / "build", message)
         moved_builddir = self.project.build_dir.with_suffix(".delete-me-pls")
         with self.project.async_clean_directory(self.project.build_dir):
             self._assertDirEmpty(self.project.build_dir)  # build directory should be available immediately and be empty
             # should take 1 second before the deleting starts
-            if tmpdirExpected:
+            if tmpdir_expected:
                 assert moved_builddir.exists(), "tmpdir should exist"
                 self._assertNumFiles(moved_builddir, 1)
             else:
@@ -136,18 +137,18 @@ class TestAsyncDelete(TestCase):
         assert not moved_builddir.exists()
 
         # default test: full build dir
-        self._check_async_delete("non-empty buildir, no tmpdir", tmpdirExpected=True)
+        self._check_async_delete("non-empty buildir, no tmpdir", tmpdir_expected=True)
 
         # now check that it also works if the dir is empty, we just don't create a new dir
         self._assertDirEmpty(self.project.build_dir)
         assert not moved_builddir.exists()
-        self._check_async_delete("empty buildir, no tmpdir", tmpdirExpected=False)
+        self._check_async_delete("empty buildir, no tmpdir", tmpdir_expected=False)
 
         # now check that it also works if the dir does not exist yet
         self._assertDirEmpty(self.project.build_dir)
         self.project.build_dir.rmdir()
         assert not self.project.build_dir.exists(), self.project.build_dir
-        self._check_async_delete("missing build dir, no tmpdir", tmpdirExpected=False)
+        self._check_async_delete("missing build dir, no tmpdir", tmpdir_expected=False)
 
         # now try that it also works even if builddir and tempdir still exists (e.g. from a previous crashed run)
         self._assertDirEmpty(self.project.build_dir)
@@ -155,20 +156,20 @@ class TestAsyncDelete(TestCase):
         self._assertNumFiles(moved_builddir, 1)
         subdir.mkdir()
         self._assertNumFiles(self.project.build_dir, 1)
-        self._check_async_delete("non-empty buildir, tmpdir exists", tmpdirExpected=True)
+        self._check_async_delete("non-empty buildir, tmpdir exists", tmpdir_expected=True)
 
         # same with an empty builddir and tempdir still exists (e.g. from a previous crashed run)
         self._assertDirEmpty(self.project.build_dir)
         os.makedirs(str(moved_builddir / "subdir"))
         self._assertNumFiles(moved_builddir, 1)
-        self._check_async_delete("empty buildir, tmpdir exists", tmpdirExpected=True)
+        self._check_async_delete("empty buildir, tmpdir exists", tmpdir_expected=True)
 
         # now try that it also works even if the tempdir still exists and builddir is missing
         os.makedirs(str(moved_builddir / "subdir"))
         self.project.build_dir.rmdir()
         self._assertNumFiles(moved_builddir, 1)
         assert not self.project.build_dir.exists(), self.project.build_dir
-        self._check_async_delete("missing builddir, tmpdir exists", tmpdirExpected=True)
+        self._check_async_delete("missing builddir, tmpdir exists", tmpdir_expected=True)
 
     def test_async_delete_keep_root(self):
         subdir = self.project.build_dir / "subdir"

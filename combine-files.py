@@ -33,17 +33,17 @@ import sys
 import typing
 from pathlib import Path
 
-scriptDir = Path(__file__).resolve().parent / "pycheribuild"  # type: Path
+script_dir = Path(__file__).resolve().parent / "pycheribuild"  # type: Path
 
 imports = []  # type: typing.List[str]
-fromImports = []  # type: typing.List[str]
+from_imports = []  # type: typing.List[str]
 lines = []  # type: typing.List[str]
-handledFiles = []  # type: typing.List[Path]
-ignoredFiles = [scriptDir / "jenkins.py", scriptDir / "config/jenkinsconfig.py"]
-emptyLines = 0
+handled_files = []  # type: typing.List[Path]
+ignored_files = [script_dir / "jenkins.py", script_dir / "config/jenkinsconfig.py"]
+empty_lines = 0
 
 
-def insertLocalFile(line: str, _: Path):
+def insert_local_file(line: str, _: Path):
     if "def include_local_file(" in line:
         lines.append(line)
         return  # don't replace the function definition
@@ -53,8 +53,8 @@ def insertLocalFile(line: str, _: Path):
     if not match or len(match.groups()) < 1:
         sys.exit("Invalid include_local_file: " + line)
     relative_path = match.groups()[0]
-    # print("Including file", relative_path, "from", src_file.relative_to(scriptDir), file=sys.stderr)
-    target_file = scriptDir / relative_path
+    # print("Including file", relative_path, "from", src_file.relative_to(script_dir), file=sys.stderr)
+    target_file = script_dir / relative_path
     new_line = line[0:match.start()] + "R\"\"\"\n"  # start raw string
     # print("New line is '", new_line, "'", sep="", file=sys.stderr)
     lines.append(new_line)
@@ -64,8 +64,8 @@ def insertLocalFile(line: str, _: Path):
     lines.append("\"\"\"" + line[match.end():])
 
 
-def handleLine(line: str, src_file: Path):
-    global emptyLines
+def handle_line(line: str, src_file: Path):
+    global empty_lines
     if line.endswith("# no-combine\n"):
         return
     if line.startswith("import "):
@@ -74,127 +74,126 @@ def handleLine(line: str, src_file: Path):
     if line.startswith("from "):
         # no need to add the local imports if we are combining
         if not line.startswith("from ."):
-            fromImports.append(line)
+            from_imports.append(line)
         return
     elif line.lstrip().startswith("from ."):
         return  # skip relative imports inside functions
     if len(line.strip()) == 0:
-        emptyLines += 1
-        if emptyLines > 2:
+        empty_lines += 1
+        if empty_lines > 2:
             return  # don't add more than 2 empty lines
     else:
-        emptyLines = 0
+        empty_lines = 0
 
     if "include_local_file" in line:
-        insertLocalFile(line, src_file)
+        insert_local_file(line, src_file)
     else:
         lines.append(line)
 
 
-def addFilteredFile(p: Path):
+def add_filtered_file(p: Path):
     # print("adding", p, file=sys.stderr)
-    handledFiles.append(p)
+    handled_files.append(p)
     # TODO: filter
     with p.open("r") as f:
         for line in f.readlines():
-            handleLine(line, p)
+            handle_line(line, p)
 
-def checkAllFilesUsed(directory: Path):
+
+def check_all_files_used(directory: Path):
     for p in directory.iterdir():
         if not p.is_file():
             continue
         if p.name == "__init__.py" or p.name == "__main__.py":
             continue  # only needed when building as a module
-        if p not in handledFiles and p not in ignoredFiles:
+        if p not in handled_files and p not in ignored_files:
             print("\x1b[1;31m", p, " not added!\x1b[0m", file=sys.stderr, sep="")
 
 
 # append all the individual files in the right order
-addFilteredFile(scriptDir / "colour.py")
-addFilteredFile(scriptDir / "utils.py")
-addFilteredFile(scriptDir / "mtree.py")
-addFilteredFile(scriptDir / "config/loader.py")
-addFilteredFile(scriptDir / "config/target_info.py")
-addFilteredFile(scriptDir / "config/chericonfig.py")
-addFilteredFile(scriptDir / "config/defaultconfig.py")
-addFilteredFile(scriptDir / "targets.py")
-addFilteredFile(scriptDir / "filesystemutils.py")
-addFilteredFile(scriptDir / "projects/project.py")
+add_filtered_file(script_dir / "colour.py")
+add_filtered_file(script_dir / "utils.py")
+add_filtered_file(script_dir / "mtree.py")
+add_filtered_file(script_dir / "config/loader.py")
+add_filtered_file(script_dir / "config/target_info.py")
+add_filtered_file(script_dir / "config/chericonfig.py")
+add_filtered_file(script_dir / "config/defaultconfig.py")
+add_filtered_file(script_dir / "targets.py")
+add_filtered_file(script_dir / "filesystemutils.py")
+add_filtered_file(script_dir / "projects/project.py")
 
 # for now keep the original order
-addFilteredFile(scriptDir / "projects/build_qemu.py")
-addFilteredFile(scriptDir / "projects/binutils.py")
-addFilteredFile(scriptDir / "projects/llvm.py")
+add_filtered_file(script_dir / "projects/build_qemu.py")
+add_filtered_file(script_dir / "projects/binutils.py")
+add_filtered_file(script_dir / "projects/llvm.py")
 
-addFilteredFile(scriptDir / "projects/bmake.py")
-addFilteredFile(scriptDir / "projects/bsdtar.py")
-addFilteredFile(scriptDir / "projects/cmake.py")
-addFilteredFile(scriptDir / "projects/cherios.py")
-addFilteredFile(scriptDir / "projects/cherisim.py")
-addFilteredFile(scriptDir / "projects/elftoolchain.py")
-addFilteredFile(scriptDir / "projects/cheritrace.py")
-addFilteredFile(scriptDir / "projects/makefs_linux.py")
-addFilteredFile(scriptDir / "projects/qtcreator.py")
-addFilteredFile(scriptDir / "projects/kdevelop.py")
-addFilteredFile(scriptDir / "projects/bear.py")
-addFilteredFile(scriptDir / "projects/cherivis.py")
-addFilteredFile(scriptDir / "projects/gnustep.py")
-addFilteredFile(scriptDir / "projects/go.py")
-addFilteredFile(scriptDir / "projects/sail.py")
-addFilteredFile(scriptDir / "projects/soaap.py")
-addFilteredFile(scriptDir / "projects/effectivesan.py")
-addFilteredFile(scriptDir / "projects/softboundcets.py")
-addFilteredFile(scriptDir / "projects/valgrind.py")
-addFilteredFile(scriptDir / "projects/ninja.py")
-addFilteredFile(scriptDir / "projects/cheri_afl.py")
+add_filtered_file(script_dir / "projects/bmake.py")
+add_filtered_file(script_dir / "projects/bsdtar.py")
+add_filtered_file(script_dir / "projects/cmake.py")
+add_filtered_file(script_dir / "projects/cherios.py")
+add_filtered_file(script_dir / "projects/cherisim.py")
+add_filtered_file(script_dir / "projects/elftoolchain.py")
+add_filtered_file(script_dir / "projects/cheritrace.py")
+add_filtered_file(script_dir / "projects/makefs_linux.py")
+add_filtered_file(script_dir / "projects/qtcreator.py")
+add_filtered_file(script_dir / "projects/kdevelop.py")
+add_filtered_file(script_dir / "projects/bear.py")
+add_filtered_file(script_dir / "projects/cherivis.py")
+add_filtered_file(script_dir / "projects/gnustep.py")
+add_filtered_file(script_dir / "projects/go.py")
+add_filtered_file(script_dir / "projects/sail.py")
+add_filtered_file(script_dir / "projects/soaap.py")
+add_filtered_file(script_dir / "projects/effectivesan.py")
+add_filtered_file(script_dir / "projects/softboundcets.py")
+add_filtered_file(script_dir / "projects/valgrind.py")
+add_filtered_file(script_dir / "projects/ninja.py")
+add_filtered_file(script_dir / "projects/cheri_afl.py")
 
 # cross compilation targets
-addFilteredFile(scriptDir / "projects/cross/cheribsd.py")
-addFilteredFile(scriptDir / "projects/cross/crosscompileproject.py")
+add_filtered_file(script_dir / "projects/cross/cheribsd.py")
+add_filtered_file(script_dir / "projects/cross/crosscompileproject.py")
 
 # First three need to be in order, then add all others
-cross_files = [
-    (scriptDir / "projects/cross/cheribsd.py").resolve(),
-    (scriptDir / "projects/cross/crosscompileproject.py").resolve(),
-]
-for file in sorted((scriptDir / "projects/cross").glob("*.py")):
+cross_files = [(script_dir / "projects/cross/cheribsd.py").resolve(),
+               (script_dir / "projects/cross/crosscompileproject.py").resolve()]
+for file in sorted((script_dir / "projects/cross").glob("*.py")):
     path = file.resolve()
     if path not in cross_files:
         cross_files.append(path)
 
 for file in cross_files:
-    addFilteredFile(file)
+    add_filtered_file(file)
 
 # disk-image, sdk and run_qemu must come after cheribsd as they use CheriBSD.rootfs_dir
-addFilteredFile(scriptDir / "projects/disk_image.py")
-addFilteredFile(scriptDir / "projects/syzkaller.py")
-addFilteredFile(scriptDir / "projects/sdk.py")
-addFilteredFile(scriptDir / "projects/spike.py")
-addFilteredFile(scriptDir / "projects/run_qemu.py")
-addFilteredFile(scriptDir / "projects/run_fpga.py")
+add_filtered_file(script_dir / "projects/disk_image.py")
+add_filtered_file(script_dir / "projects/syzkaller.py")
+add_filtered_file(script_dir / "projects/sdk.py")
+add_filtered_file(script_dir / "projects/spike.py")
+add_filtered_file(script_dir / "projects/run_qemu.py")
+add_filtered_file(script_dir / "projects/run_fpga.py")
 
 # this one should not be needed
-addFilteredFile(scriptDir / "projects/samba.py")
+add_filtered_file(script_dir / "projects/samba.py")
 
 # now make sure that all the projects were handled
-checkAllFilesUsed(scriptDir)
-checkAllFilesUsed(scriptDir / "projects")
-checkAllFilesUsed(scriptDir / "config")
-checkAllFilesUsed(scriptDir / "projects/cross")
+check_all_files_used(script_dir)
+check_all_files_used(script_dir / "projects")
+check_all_files_used(script_dir / "config")
+check_all_files_used(script_dir / "projects/cross")
 
 # now add the main() function
-addFilteredFile(scriptDir / "__main__.py")
+add_filtered_file(script_dir / "__main__.py")
 
 # print(len(imports), len(set(imports)), file=sys.stderr)
 imports = sorted(set(imports))
-fromImports = sorted(set(fromImports))
+from_imports = sorted(set(from_imports))
 # print(imports, file=sys.stderr)
-# print(fromImports, file=sys.stderr)
+# print(from_imports, file=sys.stderr)
 
 fullFile = ("#!/usr/bin/env python3\n" +
             "# PYTHON_ARGCOMPLETE_OK\n" +
             "".join(imports) +
-            "".join(fromImports) +
+            "".join(from_imports) +
             "\n# See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri\n" +
             "".join(lines))
 print(fullFile)

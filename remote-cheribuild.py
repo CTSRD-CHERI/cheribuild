@@ -57,8 +57,9 @@ with tempfile.NamedTemporaryFile(prefix="cheribuild-", suffix=".py") as tmp:
 # and even if we force a tty with -tt it won't work because python3 will start in interpreter mode...
 # `ssh -tt "$host" python3 - < "$script" "$@"`
 # so the only solution seems to be scp script to host and run it there
-scp "$script" "${host}:~/.remote-py3-script.py" > /dev/null && ssh -tt "$host" python3 '$HOME/.remote-py3-script.py' "$@"
-    """
+scp "$script" "${host}:~/.remote-py3-script.py" > /dev/null && \
+    ssh -tt "$host" python3 '$HOME/.remote-py3-script.py' "$@"
+"""
     remoteFile = "$HOME/.remote-py3-script.py"
     subprocess.check_call(["scp", tmp.name, host + ":" + remoteFile])
     # call execvp so that we get "^CExiting due to Ctrl+C" instead of a CalledProcessError

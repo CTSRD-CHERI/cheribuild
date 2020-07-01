@@ -32,5 +32,5 @@
 from pathlib import Path
 
 files = sorted(Path(__file__).parent.glob("*.py"))
-moduleNames = [f.name[:-3] for f in files if f.is_file() and f.name != "__init__.py"]
-__all__ = moduleNames
+module_names = [f.name[:-3] for f in files if f.is_file() and f.name != "__init__.py"]
+__all__ = module_names

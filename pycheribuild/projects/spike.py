@@ -68,7 +68,8 @@ class BuildCheriSpike(AutotoolsProject):
 
 class RunCheriSpikeBase(SimpleProject):
     do_not_add_to_targets = True
-    _bbl_class = BuildBBLNoPayload.get_class_for_target(CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP)
+    _bbl_xtarget = CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP
+    _bbl_class = BuildBBLNoPayload.get_class_for_target(_bbl_xtarget)
     _source_class = None
 
     @classmethod
@@ -77,11 +78,10 @@ class RunCheriSpikeBase(SimpleProject):
 
     def process(self):
         kernel = self._source_class.get_installed_kernel_path(self)
+        # We always want output even with --quiet
         self.run_cmd([BuildCheriSpike.get_simulator_binary(self), "+payload=" + str(kernel),
-                      self._bbl_class.get_installed_kernel_path(self,
-                                                                cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP)],
-                     give_tty_control=True,
-                     stdout=sys.stdout, stderr=sys.stderr)  # We always want output even with --quiet
+                      self._bbl_class.get_installed_kernel_path(self, cross_target=self._bbl_xtarget)],
+                     give_tty_control=True, stdout=sys.stdout, stderr=sys.stderr)
 
 
 class RunCheriBsdSpike(RunCheriSpikeBase):

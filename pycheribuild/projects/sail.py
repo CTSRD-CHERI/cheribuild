@@ -416,11 +416,10 @@ class OcamlProject(OpamMixin, Project):
         except CalledProcessError as e:
             self.warning(e)
             self.warning("stderr was:", e.stderr)
-            self.dependency_error(
-                "OCaml env seems to be messed up. Note: On MacOS homebrew OCaml is not installed correctly. Try "
-                "installing it with opam instead:", install_instructions="Try running `" + self._opam_cmd_str("update",
-                                                                                                              _add_switch=False) + " && " + self._opam_cmd_str(
-                    "switch", _add_switch=False) + " 4.06.0`")
+            hint = "Try running `" + self._opam_cmd_str("update", _add_switch=False) + " && " + self._opam_cmd_str(
+                "switch", _add_switch=False) + " 4.06.0`"
+            self.dependency_error("OCaml env seems to be messed up. Note: On MacOS homebrew OCaml is not installed"
+                                  " correctly. Try installing it with opam instead:", install_instructions=hint)
         super().process()
 
 

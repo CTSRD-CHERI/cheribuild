@@ -1,7 +1,6 @@
 import pytest
 import sys
 import io
-import os
 import tempfile
 
 try:
@@ -74,7 +73,7 @@ def test_add_dir():
 def test_add_dir_infer_mode():
     mtree = MtreeFile()
     with tempfile.TemporaryDirectory() as td:
-        parent_dir = _create_dir(td, "parent", 0o750)
+        parent_dir = _create_dir(Path(td), "parent", 0o750)
         testdir = _create_dir(parent_dir, "testdir", 0o700)
         mtree.add_dir("foo/bar", reference_dir=testdir)
         expected = """#mtree 2.0
@@ -89,7 +88,7 @@ def test_add_dir_infer_mode():
 def test_add_file_infer_mode():
     mtree = MtreeFile()
     with tempfile.TemporaryDirectory() as td:
-        parent_dir = _create_dir(td, "parent", 0o750)
+        parent_dir = _create_dir(Path(td), "parent", 0o750)
         testdir = _create_dir(parent_dir, "testdir", 0o700)
         testfile = _create_file(testdir, "file", 0o666)
         testlink = _create_symlink(testdir, name="link", target="file", mode=0o444)
@@ -114,7 +113,7 @@ def test_add_file_infer_mode():
 def test_add_file_infer_ssh_mode():
     mtree = MtreeFile()
     with tempfile.TemporaryDirectory() as td:
-        root_dir = _create_dir(td, "root", 0o744)
+        root_dir = _create_dir(Path(td), "root", 0o744)
         ssh_dir = _create_dir(root_dir, ".ssh", 0o777)
         auth_keys = _create_file(ssh_dir, "authorized_keys", 0o666)
         privkey = _create_file(ssh_dir, "id_foo", 0o754)
@@ -230,16 +229,16 @@ def test_add_file():
 def temp_symlink():
     target = "/usr/bin"
     with tempfile.TemporaryDirectory() as td:
-        link = _create_symlink(td, "testlink", target, mode=0o644)
-        file = _create_file(td, "testfile", mode=0o700)
+        link = _create_symlink(Path(td), "testlink", target, mode=0o644)
+        file = _create_file(Path(td), "testfile", mode=0o700)
         yield link, file, target  # provide the fixture value
 
 
-def test_symlink_symlink(temp_symlink):
+def test_symlink_symlink(symlink):
     mtree = MtreeFile()
-    print(temp_symlink)
-    mtree.add_file(temp_symlink[0], "tmp/link", mode=0o755, parent_dir_mode=0o755)
-    mtree.add_file(temp_symlink[1], "tmp/testfile", mode=0o755, parent_dir_mode=0o755)
+    print(symlink)
+    mtree.add_file(symlink[0], "tmp/link", mode=0o755, parent_dir_mode=0o755)
+    mtree.add_file(symlink[1], "tmp/testfile", mode=0o755, parent_dir_mode=0o755)
     print(_get_as_str(mtree), file=sys.stderr)
     expected = """#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
@@ -247,15 +246,15 @@ def test_symlink_symlink(temp_symlink):
 ./tmp/link type=link uname=root gname=wheel mode=0755 link={target}
 ./tmp/testfile type=file uname=root gname=wheel mode=0755 contents={testfile}
 # END
-""".format(target=temp_symlink[2], testfile=str(temp_symlink[1]))
+""".format(target=symlink[2], testfile=str(symlink[1]))
     assert expected == _get_as_str(mtree)
 
 
-def test_symlink_infer_mode(temp_symlink):
+def test_symlink_infer_mode(symlink):
     mtree = MtreeFile()
-    print(temp_symlink)
-    mtree.add_file(temp_symlink[0], "tmp/link", parent_dir_mode=0o755)
-    mtree.add_file(temp_symlink[1], "tmp/testfile", parent_dir_mode=0o755)
+    print(symlink)
+    mtree.add_file(symlink[0], "tmp/link", parent_dir_mode=0o755)
+    mtree.add_file(symlink[1], "tmp/testfile", parent_dir_mode=0o755)
     print(_get_as_str(mtree), file=sys.stderr)
     symlink_perms = "0644" if HAVE_LCHMOD else "0777"
     expected = """#mtree 2.0
@@ -264,5 +263,5 @@ def test_symlink_infer_mode(temp_symlink):
 ./tmp/link type=link uname=root gname=wheel mode={symlink_perms} link={target}
 ./tmp/testfile type=file uname=root gname=wheel mode=0700 contents={testfile}
 # END
-""".format(target=temp_symlink[2], testfile=str(temp_symlink[1]), symlink_perms=symlink_perms)
+""".format(target=symlink[2], testfile=str(symlink[1]), symlink_perms=symlink_perms)
     assert expected == _get_as_str(mtree)

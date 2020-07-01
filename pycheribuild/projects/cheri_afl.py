@@ -47,8 +47,8 @@ class BuildAflCheriNinja(Project):
         self.make_args.env_vars["SDK_PATH"] = self.config.cheri_sdk_dir
         self.make_args.env_vars["XCC"] = self.config.cheri_sdk_bindir / "clang"
         self.make_args.env_vars["LLVM_CONFIG"] = self.config.cheri_sdk_bindir / "llvm-config"
-        cheri_mips_sysroot = BuildCHERIBSD.get_instance(self,
-                                                        cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID).target_info.sysroot_dir
+        cheribsd_mips_hybrid = BuildCHERIBSD.get_instance(self, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID)
+        cheri_mips_sysroot = cheribsd_mips_hybrid.target_info.sysroot_dir
         base_xcflags = "-target mips64-unknown-freebsd13 -mcpu=beri -integrated-as -msoft-float --sysroot=" + str(
             cheri_mips_sysroot)
         base_flags = self.make_args.copy()

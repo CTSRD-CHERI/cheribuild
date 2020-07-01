@@ -35,7 +35,7 @@ from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandK
 from ..utils import OSInfo, ThreadJoiner
 
 
-def gnuStepInstallInstructions():
+def gnustep_install_instructions():
     if OSInfo.IS_FREEBSD:
         return "Try running `pkg install gnustep-make gnustep-gui` or `cheribuild.py gnustep` to build from source"
     if OSInfo.IS_LINUX:
@@ -71,7 +71,7 @@ class BuildCheriVis(Project):
         self.add_required_system_tool("clang")
         self.add_required_system_tool("clang++")
         if OSInfo.IS_LINUX or OSInfo.IS_FREEBSD:
-            self.add_required_system_tool("gnustep-config", install_instructions=gnuStepInstallInstructions)
+            self.add_required_system_tool("gnustep-config", install_instructions=gnustep_install_instructions)
         self.gnustep_makefiles_dir = None  # type: typing.Optional[Path]
         if OSInfo.IS_MAC:
             self.make_args.set_command("xcodebuild", can_pass_j_flag=False,
@@ -106,7 +106,7 @@ class BuildCheriVis(Project):
         common_dot_make = self.gnustep_makefiles_dir / "common.make"
         if not common_dot_make.is_file():
             self.dependency_error("gnustep-config binary exists, but", common_dot_make, "does not exist!",
-                                  install_instructions=gnuStepInstallInstructions())
+                                  install_instructions=gnustep_install_instructions())
         # TODO: set ADDITIONAL_LIB_DIRS?
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC17
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC29

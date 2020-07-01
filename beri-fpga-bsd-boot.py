@@ -219,6 +219,7 @@ def parse_args() -> argparse.Namespace:
         import argcomplete
         argcomplete.autocomplete(parser)
     except ImportError:
+        # noinspection PyUnusedLocal
         argcomplete = {}
     # parse the arguments
     args = parser.parse_args()
@@ -554,6 +555,7 @@ def boot_bsd(kernel_img, args, ssh_pubkey: Path):
     return console
 
 
+# noinspection PyUnusedLocal
 def do_scp(src, dst, *, port: int, ssh_privkey, timeout=600):
     cmd = ['scp']
     if port != 22:
