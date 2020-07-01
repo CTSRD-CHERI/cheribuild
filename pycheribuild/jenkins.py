@@ -59,12 +59,12 @@ class JenkinsConfigLoader(ConfigLoaderBase):
     """
 
     def load(self):
-        self._parsedArgs = self._parser.parse_args()
-        if self._parsedArgs.targets is None:
-            self._parsedArgs.targets = []
-        if isinstance(self._parsedArgs.targets, str):
-            self._parsedArgs.targets = [self._parsedArgs.targets]
-        assert isinstance(self._parsedArgs.targets, list)
+        self._parsed_args = self._parser.parse_args()
+        if self._parsed_args.targets is None:
+            self._parsed_args.targets = []
+        if isinstance(self._parsed_args.targets, str):
+            self._parsed_args.targets = [self._parsed_args.targets]
+        assert isinstance(self._parsed_args.targets, list)
 
     def finalize_options(self, available_targets: list, **kwargs):
         target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.OPTIONAL,

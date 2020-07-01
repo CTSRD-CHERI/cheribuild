@@ -19,7 +19,7 @@ class MockActions(Enum):
 class MockConfig(CheriConfig):
     def __init__(self, source_root: Path, pretend=True):  # allow overriding pretend for the async_delete test
         self.fake_loader = DefaultValueOnlyConfigLoader()
-        self.fake_loader._parsedArgs = MockArgs()
+        self.fake_loader._parsed_args = MockArgs()
         super().__init__(self.fake_loader, action_class=MockActions)
         self.default_action = ""
         self.source_root = source_root

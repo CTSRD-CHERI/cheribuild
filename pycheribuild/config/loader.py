@@ -120,7 +120,7 @@ class ConfigLoaderBase(object):
     _cheri_config = None  # type: CheriConfig
 
     options = dict()  # type: typing.Dict[str, "ConfigOptionBase"]
-    _parsedArgs = None
+    _parsed_args = None
     _JSON = {}  # type: dict
     _completing_arguments = "_ARGCOMPLETE" in os.environ
 
@@ -223,7 +223,7 @@ class ConfigLoaderBase(object):
 
     @property
     def targets(self) -> "typing.List[str]":
-        return self._parsedArgs.targets
+        return self._parsed_args.targets
 
 
 class ConfigOptionBase(object):
@@ -428,13 +428,13 @@ class CommandLineConfigOption(ConfigOptionBase):
 
     # noinspection PyProtectedMember
     def _load_from_commandline(self):
-        assert self._loader._parsedArgs  # load() must have been called before using this object
+        assert self._loader._parsed_args  # load() must have been called before using this object
         # FIXME: check the fallback name here
-        assert hasattr(self._loader._parsedArgs, self.action.dest)
-        result = getattr(self._loader._parsedArgs, self.action.dest)  # from command line
+        assert hasattr(self._loader._parsed_args, self.action.dest)
+        result = getattr(self._loader._parsed_args, self.action.dest)  # from command line
         if result is None:
             for alias_action in self.alias_actions:
-                result = getattr(self._loader._parsedArgs, alias_action.dest)  # alias from command line
+                result = getattr(self._loader._parsed_args, alias_action.dest)  # alias from command line
                 if result is not None:
                     break
         return result
@@ -601,7 +601,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                     json_lines.append(line)
             # print("".join(jsonLines))
             result = json.loads("".join(json_lines), object_pairs_hook=dict_raise_on_duplicates)
-            if self._parsedArgs and self._parsedArgs.verbose is True:
+            if self._parsed_args and self._parsed_args.verbose is True:
                 print("Parsed", config_path, "as", coloured(AnsiColour.cyan, json.dumps(result)))
             return result
 
@@ -617,9 +617,9 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 if isinstance(a[key], dict) and isinstance(b[key], dict):
                     self.merge_dict_recursive(a[key], b[key], included_file, base_file, path + [str(key)])
                 elif a[key] != b[key]:
-                    if self._parsedArgs and self._parsedArgs.verbose is True:
+                    if self._parsed_args and self._parsed_args.verbose is True:
                         print("Overriding '" + '.'.join(path + [str(key)]) + "' value", b[key], " from", included_file,
-                            "with value ", a[key], "from", base_file)
+                              "with value ", a[key], "from", base_file)
                 else:
                     pass  # same leaf value
             else:
@@ -640,7 +640,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             included_path = config_path.parent / include_value
             included_json = self.__load_json_with_includes(included_path)
             result = self.merge_dict_recursive(result, included_json, included_path, config_path)
-            if self._parsedArgs and self._parsedArgs.verbose is True:
+            if self._parsed_args and self._parsed_args.verbose is True:
                 print(coloured(AnsiColour.cyan, "Merging JSON config file", included_path))
                 print("New result is", coloured(AnsiColour.cyan, json.dumps(result)))
 
@@ -649,13 +649,13 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     def _load_json_config_file(self) -> None:
         self._JSON = {}
         if not self._configPath:
-            self._configPath = Path(os.path.expanduser(self._parsedArgs.config_file)).absolute()
+            self._configPath = Path(os.path.expanduser(self._parsed_args.config_file)).absolute()
         if self._configPath.exists():
             self._JSON = self.__load_json_with_includes(self._configPath)
-        elif hasattr(self._parsedArgs, "config_file_given"):
+        elif hasattr(self._parsed_args, "config_file_given"):
             print(coloured(AnsiColour.red, "Configuration file", self._configPath,
-                "does not exist, using only command line arguments."), file=sys.stderr)
-            raise FileNotFoundError(self._parsedArgs.config_file)
+                           "does not exist, using only command line arguments."), file=sys.stderr)
+            raise FileNotFoundError(self._parsed_args.config_file)
         else:
             print(coloured(AnsiColour.green, "Configuration file", self._configPath,
                 "does not exist, using only command line arguments."), file=sys.stderr)
@@ -684,9 +684,9 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                     exclude=self.completion_excludes,  # hide these options from the output
                     print_suppressed=True,  # also include target-specific options
                     )
-        self._parsedArgs, trailingTargets = self._parser.parse_known_args()
-        # print(self._parsedArgs, trailingTargets)
-        self._parsedArgs.targets += trailingTargets
+        self._parsed_args, trailingTargets = self._parser.parse_known_args()
+        # print(self._parsed_args, trailingTargets)
+        self._parsed_args.targets += trailingTargets
         self._load_json_config_file()
         # Now validate the config file
         self._validate_config_file()
