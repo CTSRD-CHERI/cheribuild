@@ -234,13 +234,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 fatalError("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
                 raise
             # Handle --include-dependencies with --skip-sdk is passed
-            if config.skipSdk and dep_target.projectClass.is_sdk_target:
+            if config.skipSdk and dep_target.project_class.is_sdk_target:
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
                         "since it is an SDK target and --skip-sdk was passed.")
                 continue
             if config.includeDependencies and (
-                    not config.include_toolchain_dependencies and dep_target.projectClass.is_toolchain_target()):
+                    not config.include_toolchain_dependencies and dep_target.project_class.is_toolchain_target()):
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
                         "since it is a toolchain target and --include-toolchain-dependencies was not passed.")
@@ -256,7 +256,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         break
             assert not isinstance(dep_target, MultiArchTargetAlias), "All targets should be fully resolved but got " \
                                                                      + str(dep_target) + " in " + cls.__name__
-            if dep_target.projectClass is cls:
+            if dep_target.project_class is cls:
                 # assert False, "Found self as dependency:" + str(cls)
                 continue
             yield dep_target
@@ -281,7 +281,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if target not in result:
                 result.append(target)
             # now recursively add the other deps:
-            recursive_deps = target.projectClass.recursive_dependencies(config)
+            recursive_deps = target.project_class.recursive_dependencies(config)
             for r in recursive_deps:
                 if r not in result:
                     result.append(r)
@@ -439,16 +439,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if isinstance(target, MultiArchTarget):
             # check for exact match
             if target.target_arch is arch:
-                return target.projectClass
+                return target.project_class
             # Otherwise fall back to the target alias and find the matching one
             target = target.base_target
         if isinstance(target, MultiArchTargetAlias):
             for t in target.derived_targets:
                 if t.target_arch is arch:
-                    return t.projectClass
+                    return t.project_class
         elif isinstance(target, Target):
             # single architecture target
-            result = target.projectClass
+            result = target.project_class
             if arch is None or result._xtarget is arch:
                 return result
         raise LookupError("Invalid arch " + str(arch) + " for class " + str(cls))

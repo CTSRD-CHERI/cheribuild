@@ -29,9 +29,9 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolc
     global_config.include_toolchain_dependencies = add_toolchain
     global_config.skipSdk = skip_sdk
     for t in real_targets:
-        if t.projectClass._xtarget is None:
+        if t.project_class._xtarget is None:
             continue
-        t.projectClass._cached_deps = None
+        t.project_class._cached_deps = None
         t.get_dependencies(global_config)  # ensure they have been cached
     result = list(t.name for t in target_manager.get_all_targets(real_targets, global_config))
     # print("result = ", result)
@@ -128,9 +128,9 @@ def test_webkit_cached_deps():
     # regression test for a bug in caching deps
     config = copy.copy(global_config)
     config.skipSdk = True
-    webkit_native = target_manager.get_target_raw("qtwebkit-native").projectClass
-    webkit_cheri = target_manager.get_target_raw("qtwebkit-mips-purecap").projectClass
-    webkit_mips = target_manager.get_target_raw("qtwebkit-mips-hybrid").projectClass
+    webkit_native = target_manager.get_target_raw("qtwebkit-native").project_class
+    webkit_cheri = target_manager.get_target_raw("qtwebkit-mips-purecap").project_class
+    webkit_mips = target_manager.get_target_raw("qtwebkit-mips-hybrid").project_class
     # Check that the deps are not cached yet
     _check_deps_not_cached((webkit_native, webkit_cheri, webkit_mips))
 

@@ -100,13 +100,13 @@ def real_main():
     ensure_fd_is_blocking(sys.stdout.fileno())
     ensure_fd_is_blocking(sys.stderr.fileno())
 
-    all_target_names = list(sorted(target_manager.targetNames))
+    all_target_names = list(sorted(target_manager.target_names))
     run_everything_target = "__run_everything__"
     config_loader = JsonAndCommandLineConfigLoader()
     # Register all command line options
     cheri_config = DefaultCheriConfig(config_loader, all_target_names + [run_everything_target])
     SimpleProject._configLoader = config_loader
-    target_manager.registerCommandLineOptions()
+    target_manager.register_command_line_options()
     # load them from JSON/cmd line
     cheri_config.load()
     init_global_config(test_mode=False, pretend_mode=cheri_config.pretend,

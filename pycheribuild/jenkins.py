@@ -208,12 +208,12 @@ def create_sdk_from_archives(cheri_config: JenkinsConfig, needs_cheribsd_sysroot
 
 def _jenkins_main():
     os.environ["_CHERIBUILD_JENKINS_BUILD"] = "1"
-    all_target_names = list(sorted(target_manager.targetNames))
+    all_target_names = list(sorted(target_manager.target_names))
     config_loader = JenkinsConfigLoader()
     # Register all command line options
     cheri_config = JenkinsConfig(config_loader, all_target_names)
     SimpleProject._configLoader = config_loader
-    target_manager.registerCommandLineOptions()
+    target_manager.register_command_line_options()
     cheri_config.load()
     if cheri_config.verbose:
         # json = cheri_config.getOptionsJSON()  # make sure all config options are loaded
@@ -243,7 +243,7 @@ def _jenkins_main():
         for tgt in target_manager.targets:
             if isinstance(tgt, SimpleTargetAlias):
                 continue
-            cls = tgt.projectClass
+            cls = tgt.project_class
             if issubclass(cls, Project):
                 cls._default_install_dir_fn = Path(str(cheri_config.outputRoot) + str(cheri_config.installationPrefix))
                 i = inspect.getattr_static(cls, "_install_dir")
@@ -257,11 +257,11 @@ def _jenkins_main():
                 else:
                     cls._install_dir = Path(str(cheri_config.outputRoot) + str(cheri_config.installationPrefix))
                     cls._check_install_dir_conflict = False
-                # print(project.projectClass.project_name, project.projectClass.install_dir)
+                # print(project.project_class.project_name, project.project_class.install_dir)
 
         Target.instantiating_targets_should_warn = False
-        target.checkSystemDeps(cheri_config)
-        # need to set destdir after checkSystemDeps:
+        target.check_system_deps(cheri_config)
+        # need to set destdir after check_system_deps:
         project = target.get_or_create_project(cheri_config.preferred_xtarget, cheri_config)
         assert project
         cross_target = project.get_crosscompile_target(cheri_config)

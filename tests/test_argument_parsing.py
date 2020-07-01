@@ -39,10 +39,10 @@ def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> Defau
     # noinspection PyGlobalUndefined
     global _cheri_config
     if not _targets_registered:
-        allTargetNames = list(sorted(target_manager.targetNames)) + ["__run_everything__"]
+        allTargetNames = list(sorted(target_manager.target_names)) + ["__run_everything__"]
         ConfigLoaderBase._cheri_config = DefaultCheriConfig(_loader, allTargetNames)
         SimpleProject._configLoader = _loader
-        target_manager.registerCommandLineOptions()
+        target_manager.register_command_line_options()
         _targets_registered = True
     target_manager.reset()
     ConfigLoaderBase._cheri_config.loader._configPath = config_file
@@ -109,7 +109,7 @@ def test_per_project_override():
 def test_cross_compile_project_inherits():
     # Parse args once to ensure target_manager is initialized
     config = _parse_arguments(["--skip-configure"])
-    qtbase_class = target_manager.get_target_raw("qtbase").projectClass
+    qtbase_class = target_manager.get_target_raw("qtbase").project_class
     qtbase_default = target_manager.get_target_raw("qtbase").get_or_create_project(None, config)  # type: BuildQtBase
     qtbase_native = target_manager.get_target_raw("qtbase-native").get_or_create_project(None,
         config)  # type: BuildQtBase
@@ -203,7 +203,7 @@ def test_cross_compile_project_inherits():
 def test_cheribsd_purecap_inherits_config_from_cheribsd():
     # Parse args once to ensure target_manager is initialized
     config = _parse_arguments(["--skip-configure"])
-    cheribsd_class = target_manager.get_target_raw("cheribsd").projectClass
+    cheribsd_class = target_manager.get_target_raw("cheribsd").project_class
     cheribsd_default_tgt = target_manager.get_target_raw("cheribsd").get_or_create_project(None,
         config)  # type: BuildCHERIBSD
     assert cheribsd_default_tgt.target == "cheribsd-mips-hybrid"
