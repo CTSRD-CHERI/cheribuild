@@ -34,7 +34,7 @@ import argparse
 from run_tests_common import *
 
 
-def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace):
     print("Running qtbase tests")
     boot_cheribsd.run_cheribsd_command(qemu, "/mnt/tests/auto/corelib/global/qtendian/tst_qtendian")
     # TODO: -o /path/to/file,xunitxml

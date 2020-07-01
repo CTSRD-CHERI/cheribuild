@@ -264,7 +264,6 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[LitShard
     max_boot_time = datetime.timedelta(seconds=10 * 60) if not args.pretend else datetime.timedelta(seconds=5)
     boot_cheribsd.info("Waiting for all shards to boot...")
     boot_end_time = start_time + max_boot_time
-    booted_shards = 0
     remaining_processes = processes.copy()
     not_booted_processes = processes.copy()
     retrying_queue_read = False

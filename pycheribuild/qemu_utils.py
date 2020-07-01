@@ -153,7 +153,7 @@ def qemu_supports_9pfs(qemu: Path) -> bool:
     return b"-virtfs ?: Usage: -virtfs" in prog.stderr
 
 
-def riscv_bios_arguments(xtarget: CrossCompileTarget, caller, prefer_bbl=True) -> typing.List[str]:
+def riscv_bios_arguments(xtarget: CrossCompileTarget, _, prefer_bbl=True) -> typing.List[str]:
     assert xtarget.is_riscv(include_purecap=True)
     if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
         # noinspection PyUnreachableCode

@@ -30,14 +30,15 @@
 #
 import re
 import sys
+import typing
 from pathlib import Path
 
 scriptDir = Path(__file__).resolve().parent / "pycheribuild"  # type: Path
 
-imports = []
-fromImports = []
-lines = []
-handledFiles = []
+imports = []  # type: typing.List[str]
+fromImports = []  # type: typing.List[str]
+lines = []  # type: typing.List[str]
+handledFiles = []  # type: typing.List[Path]
 ignoredFiles = [scriptDir / "jenkins.py", scriptDir / "config/jenkinsconfig.py"]
 emptyLines = 0
 
@@ -51,19 +52,19 @@ def insertLocalFile(line: str, srcFile: Path):
     match = re.search(pattern, line)
     if not match or len(match.groups()) < 1:
         sys.exit("Invalid include_local_file: " + line)
-    relativePath = match.groups()[0]
-    # print("Including file", relativePath, "from", srcFile.relative_to(scriptDir), file=sys.stderr)
-    target_file = scriptDir / relativePath
-    newLine = line[0:match.start()] + "R\"\"\"\n"  # start raw string
-    # print("New line is '", newLine, "'", sep="", file=sys.stderr)
-    lines.append(newLine)
+    relative_path = match.groups()[0]
+    # print("Including file", relative_path, "from", src_file.relative_to(scriptDir), file=sys.stderr)
+    target_file = scriptDir / relative_path
+    new_line = line[0:match.start()] + "R\"\"\"\n"  # start raw string
+    # print("New line is '", new_line, "'", sep="", file=sys.stderr)
+    lines.append(new_line)
     with target_file.open() as f:
         for includedline in f.readlines():
             lines.append(includedline)
     lines.append("\"\"\"" + line[match.end():])
 
 
-def handleLine(line: str, srcFile: Path):
+def handleLine(line: str, src_file: Path):
     global emptyLines
     if line.endswith("# no-combine\n"):
         return
@@ -85,7 +86,7 @@ def handleLine(line: str, srcFile: Path):
         emptyLines = 0
 
     if "include_local_file" in line:
-        insertLocalFile(line, srcFile)
+        insertLocalFile(line, src_file)
     else:
         lines.append(line)
 

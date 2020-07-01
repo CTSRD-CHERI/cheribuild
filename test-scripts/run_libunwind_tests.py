@@ -37,7 +37,7 @@ import run_remote_lit_test
 from run_tests_common import *
 
 
-def setup_libunwind_env(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+def setup_libunwind_env(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace):
     # Copy the libunwind library to both MIPS and CHERI library dirs so that it is picked up
     # Do this instead of setting LD_LIBRARY_PATH to use only the libraries that we actually need.
     # FIXME: Find a cleaner solution for the lib/libcheri mess

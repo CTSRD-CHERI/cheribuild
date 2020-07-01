@@ -31,7 +31,7 @@ import sys
 
 from .cross.bbl import BuildBBLNoPayload
 from .cross.cheribsd import BuildCheriBsdMfsKernel
-from .project import (AutotoolsProject, BuildType, commandline_to_str, DefaultInstallDir, GitRepository,
+from .project import (AutotoolsProject, BuildType, CheriConfig, commandline_to_str, DefaultInstallDir, GitRepository,
                       MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets
 
@@ -72,7 +72,7 @@ class RunCheriSpikeBase(SimpleProject):
     _source_class = None
 
     @classmethod
-    def dependencies(cls, config):
+    def dependencies(cls, _: CheriConfig):
         return [cls._source_class.target, cls._bbl_class.target, BuildCheriSpike.target]
 
     def process(self):

@@ -49,7 +49,7 @@ from ...utils import (classproperty, commandline_to_str, get_compiler_info, incl
                       print_command, runCmd, statusUpdate, ThreadJoiner, warningMessage)
 
 
-def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
+def default_kernel_config(_: CheriConfig, project: SimpleProject) -> str:
     assert isinstance(project, BuildFreeBSD)
     xtarget = project.crosscompile_target
     if xtarget.is_any_x86():

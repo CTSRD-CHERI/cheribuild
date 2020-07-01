@@ -66,11 +66,7 @@ def add_args(parser: argparse.ArgumentParser):
                         help="Don't run full python test suite, only check that a basic program works")
 
 
-def adjust_args(args: argparse.Namespace):
-    pass
-
-
 if __name__ == '__main__':
     # we don't need ssh running to execute the tests
     run_tests_main(test_function=run_tests, need_ssh=False, should_mount_builddir=True, should_mount_srcdir=True,
-                   argparse_setup_callback=add_args, argparse_adjust_args_callback=adjust_args)
+                   argparse_setup_callback=add_args)

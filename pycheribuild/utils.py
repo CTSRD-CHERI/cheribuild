@@ -189,6 +189,7 @@ def _become_tty_foreground_process():
     signal.signal(signal.SIGTTOU, hdlr)
 
 
+# noinspection PyShadowingBuiltins
 def runCmd(*args, capture_output=False, capture_error=False, input: "typing.Union[str, bytes]" = None, timeout=None,
            print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False, no_print=False,
            replace_env=False, give_tty_control=False, expected_exit_code=0, allow_unexpected_returncode=False,

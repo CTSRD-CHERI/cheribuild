@@ -47,7 +47,6 @@ def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path):
 def fixup_kyua_generated_junit_xml(xml_file: Path):
     boot_cheribsd.info("Updating statistics in JUnit file ", xml_file)
     # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
-    orig_xml_bytes = xml_file.read_bytes()
     orig_xml_str = xml_file.read_text("utf-8", errors='backslashreplace')
     xml_str = orig_xml_str
     for i in range(32):

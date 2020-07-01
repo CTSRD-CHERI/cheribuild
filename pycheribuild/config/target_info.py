@@ -369,7 +369,6 @@ class NativeTargetInfo(TargetInfo):
         result = []
         if self.project.auto_var_init != AutoVarInit.NONE:
             compiler = get_compiler_info(self.c_compiler)
-            valid_clang_version = False
             if compiler.is_apple_clang:
                 # Not sure which apple clang version is the first to support it but 11.0.3 on my system does
                 valid_clang_version = compiler.version >= (11, 0)

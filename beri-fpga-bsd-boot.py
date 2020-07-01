@@ -151,8 +151,9 @@ def parse_args() -> argparse.Namespace:
                                     help="Individual sub-command help available by invoking it with -h or --help.")
     subcmds.required = True
 
-    bitfile_only = subcmds.add_parser('load-bitfile', help="Load the bitfile onto the FPGA.",
-                                      formatter_class=ArgumentDefaultsHelpFormatter)
+    # load-bitfile
+    subcmds.add_parser('load-bitfile', help="Load the bitfile onto the FPGA.",
+                       formatter_class=ArgumentDefaultsHelpFormatter)
 
     # bootonly
     bootonly = subcmds.add_parser('bootonly', help="Boot KIMAGE on BITFILE.",

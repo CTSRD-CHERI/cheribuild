@@ -66,7 +66,7 @@ class BuildRos2(CrossCompileCMakeProject):
             cmdline.append("console_cohesion+")
         self.run_cmd(cmdline, cwd=self.source_dir, **kwargs)
 
-    def _get_poco(self, **kwargs):
+    def _get_poco(self):
         # find and copy libPocoFoundation.so.71 from the sysroot into self.source_dir
         # this is a bit ugly, but allows us to link the poco library whether we're running
         # hybrid or purecap cheribsd.  this is helpful because if we're running hybrid cheribsd,
@@ -81,7 +81,7 @@ class BuildRos2(CrossCompileCMakeProject):
         else:
             self.fatal("libPocoFoundation.so.71 cannot be found at expected path", poco_path)
 
-    def _set_env(self, **kwargs):
+    def _set_env(self):
         # create cheri_setup.csh and cheri_setup.sh files in self.source_dir which can be source'ed
         # to set environment variables (primarily LD_CHERI_LIBRARY_PATH)
         #
@@ -93,7 +93,7 @@ class BuildRos2(CrossCompileCMakeProject):
             self.warning("No setup.bash file to source.")
             return
         cmdline = shlex.split("bash -c 'source " + str(setup_script) + " && echo $LD_LIBRARY_PATH'")
-        output = self.run_cmd(cmdline, cwd=self.source_dir, capture_output=True, print_verbose_only=False, **kwargs)
+        output = self.run_cmd(cmdline, cwd=self.source_dir, capture_output=True, print_verbose_only=False)
 
         # extract LD_LIBRARY_PATH into a variable
         LD_LIBRARY_PATH = output.stdout.decode("utf-8").rstrip()
@@ -152,8 +152,8 @@ export LD_LIBRARY_PATH={LD_LIBRARY_PATH}
 
         # call the functions to copy the poco library and create an env setup file
         if not self.compiling_for_host():
-            self._get_poco(**kwargs)
-            self._set_env(**kwargs)
+            self._get_poco()
+            self._set_env()
 
     def run_tests(self):
         # only test when not compiling for host

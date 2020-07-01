@@ -348,8 +348,8 @@ class BuildSpec2006(CrossCompileProject):
         # TODO: apply a patch instead?
         benchspec_overrides = self.ctsrd_evaluation_trunk / "spec-cpu2006-v1.1/benchspec"
         if benchspec_overrides.exists():
-            for dir in benchspec_overrides.iterdir():
-                self.run_cmd("cp", "-a", dir, ".", cwd=self.build_dir / "spec/benchspec")
+            for override_dir in benchspec_overrides.iterdir():
+                self.run_cmd("cp", "-a", override_dir, ".", cwd=self.build_dir / "spec/benchspec")
 
         config_file_text = self.read_file(self.spec_config_dir / "freebsd-cheribuild.cfg")
         # FIXME: this should really not be needed....
@@ -407,17 +407,17 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test \
                      run_in_pretend_mode=spec_archive.exists() and output_dir.exists(), raise_in_pretend_mode=False)
         spec_root = output_dir / "benchspec/CPU2006"
         if spec_root.exists():
-            for dir in spec_root.iterdir():
-                if dir.name.startswith("4") and "." in dir.name:
-                    assert dir.name in self.complete_benchmark_list, "Got unknown benchmark " + dir.name
+            for spec_dir in spec_root.iterdir():
+                if spec_dir.name.startswith("4") and "." in spec_dir.name:
+                    assert spec_dir.name in self.complete_benchmark_list, "Got unknown benchmark " + spec_dir.name
                     # Delete all benchmark files for benchmarks that we won't run
-                    print(dir.name, self.benchmark_list)
-                    if dir.name not in self.benchmark_list:
-                        self.run_cmd("rm", "-rf", dir.resolve(), run_in_pretend_mode=True)
+                    print(spec_dir.name, self.benchmark_list)
+                    if spec_dir.name not in self.benchmark_list:
+                        self.run_cmd("rm", "-rf", spec_dir.resolve(), run_in_pretend_mode=True)
                         continue
                 # Copy run scripts for the benchmarks that we built
-                if (self.spec_run_scripts / dir.name).exists():
-                    self.run_cmd("cp", "-av", self.spec_run_scripts / dir.name, str(spec_root) + "/")
+                if (self.spec_run_scripts / spec_dir.name).exists():
+                    self.run_cmd("cp", "-av", self.spec_run_scripts / spec_dir.name, str(spec_root) + "/")
         run_script = spec_root / "run_jenkins-bluehive.sh"
         self.install_file(self.spec_run_scripts / "run_jenkins-bluehive.sh", run_script, mode=0o755,
                           print_verbose_only=False)

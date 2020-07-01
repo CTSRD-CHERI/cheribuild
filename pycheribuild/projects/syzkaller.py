@@ -31,7 +31,6 @@
 
 import json
 import os
-from urllib.parse import urlparse
 
 from .build_qemu import BuildQEMU
 from .cross.cheribsd import BuildCHERIBSD
@@ -71,9 +70,9 @@ class BuildSyzkaller(CrossCompileProject):
         # self.gopath = source_base / gohome
         self.goroot = config.cheri_sdk_dir / "go"
 
-        repo_url = urlparse(self.repository.url)
-        repo_path = repo_url.path.split(".")[0]
-        parts = ["src", repo_url.netloc] + repo_path.split("/")
+        # repo_url = urlparse(self.repository.url)
+        # repo_path = repo_url.path.split(".")[0]
+        # parts = ["src", repo_url.netloc] + repo_path.split("/")
         self.gopath = self.build_dir
         self.gosrc = self.source_dir
 
@@ -108,7 +107,7 @@ class BuildSyzkaller(CrossCompileProject):
         self.make_args.set_env(CFLAGS=" ".join(cflags))
         self.run_make(parallel=False, cwd=self.gosrc)
 
-    def generate(self, **kwargs):
+    def generate(self):
         with set_env(PATH=self._newPath, SOURCEDIR=self.cheribsd_dir):
             self.run_make("extract", parallel=False, cwd=self.gosrc)
             self.run_make("generate", parallel=False, cwd=self.gosrc)
