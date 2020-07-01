@@ -450,6 +450,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        self.__objdir = None
         if self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAP:
             self.target_info._sdk_root_dir = Path("/this/path/should/not/be/used/when/bootstrapping")
         elif self.build_toolchain == FreeBSDToolchainKind.UPSTREAM_LLVM:
@@ -780,13 +781,17 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     @property
     def objdir(self):
+        if self.__objdir is not None:
+            return self.__objdir
         # TODO use https://github.com/pydanny/cached-property ?
-        objdir = self._query_buildenv_path(self.buildworld_args, ".OBJDIR")
-        if not objdir or objdir == Path():
+        self.__objdir = self._query_buildenv_path(self.buildworld_args, ".OBJDIR")
+        if self.__objdir is None:
+            self.__objdir = Path()
+        if not self.__objdir or self.__objdir == Path():
             # just clean the whole directory instead
             self.warning("Could not infer buildworld root objdir")
             return self.build_dir
-        return objdir
+        return self.__objdir
 
     def kernel_objdir(self, config):
         result = self.objdir / "sys"
