@@ -80,7 +80,7 @@ def flush_stdio(stream):
                 time.sleep(0.1)
 
 
-def _default_stdout_filter(arg: bytes):
+def _default_stdout_filter(_: bytes):
     raise NotImplementedError("Should never be called, this is a dummy")
 
 
@@ -361,33 +361,39 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         compiler = get_compiler_info(self.host_CC)
         return compiler.default_target
 
+    # noinspection PyPep8Naming
     @property
     def CC(self):
         return self.target_info.c_compiler
 
+    # noinspection PyPep8Naming
     @property
     def CXX(self):
         return self.target_info.cxx_compiler
 
+    # noinspection PyPep8Naming
     @property
     def CPP(self):
         return self.target_info.c_preprocessor
 
+    # noinspection PyPep8Naming
     @property
     def host_CC(self):
         return TargetInfo.host_c_compiler(self.config)
 
+    # noinspection PyPep8Naming
     @property
     def host_CXX(self):
         return TargetInfo.host_cxx_compiler(self.config)
 
+    # noinspection PyPep8Naming
     @property
     def host_CPP(self):
         return TargetInfo.host_c_preprocessor(self.config)
 
     @classproperty
-    def needs_sysroot(cls):
-        return not cls._xtarget.is_native()  # Most projects need a sysroot (but not native)
+    def needs_sysroot(self):
+        return not self._xtarget.is_native()  # Most projects need a sysroot (but not native)
 
     def compiling_for_mips(self, include_purecap: bool):
         return self.crosscompile_target.is_mips(include_purecap=include_purecap)
@@ -453,6 +459,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return self.target_info.sysroot_dir
 
     # Duplicate all arguments instead of using **kwargs to get sensible code completion
+    # noinspection PyShadowingBuiltins
     @staticmethod
     def run_cmd(*args, capture_output=False, capture_error=False, input: typing.Union[str, bytes] = None, timeout=None,
                 print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False, no_print=False,
@@ -721,12 +728,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             self.__run_process_with_filtered_output(make, logfile, stdout_filter, cmd_str)
 
     def __run_process_with_filtered_output(self, proc: subprocess.Popen, logfile: "typing.Optional[typing.IO]",
-                                       stdout_filter: "typing.Callable[[bytes], None]", cmdStr: str):
+                                       stdout_filter: "typing.Callable[[bytes], None]", cmd_str: str):
         logfile_lock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
         stderr_thread = None
         if logfile:
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
-            stderr_thread = threading.Thread(target=self._handle_stderr, args=(logfile, proc.stderr, logfile_lock, self))
+            stderr_thread = threading.Thread(target=self._handle_stderr,
+                                             args=(logfile, proc.stderr, logfile_lock, self))
             stderr_thread.start()
         for line in proc.stdout:
             with logfile_lock:  # make sure we don't interleave stdout and stderr lines
@@ -756,7 +764,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             # add the final new line after the filtering
             sys.stdout.buffer.write(b"\n")
         if retcode:
-            message = "Command \"%s\" failed with exit code %d.\n" % (cmdStr, retcode)
+            message = "Command \"%s\" failed with exit code %d.\n" % (cmd_str, retcode)
             if logfile:
                 message += "See " + logfile.name + " for details."
             raise SystemExit(message)
@@ -841,7 +849,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         fatalError(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending)
 
 
-def install_dir_not_specified(config: CheriConfig, project: "Project"):
+def install_dir_not_specified(_: CheriConfig, project: "Project"):
     raise RuntimeError("install_dir_not_specified! dummy impl must not be called: " + str(project))
 
 
@@ -1081,8 +1089,8 @@ class ReuseOtherProjectRepository(SourceRepository):
             current_project.fatal("Source repository for target", current_project.target, "does not exist.",
                                   fixit_hint="This project uses the sources from the " + self.source_project.target +
                                              "target so you will have to clone that first. Try running:\n\t`" +
-                                             "cheribuild.py " + self.source_project.target + "--no-skip-update --skip-configure " +
-                                             "--skip-build --skip-install`")
+                                             "cheribuild.py " + self.source_project.target +
+                                             "--no-skip-update --skip-configure --skip-build --skip-install`")
 
     def get_real_source_dir(self, caller: SimpleProject, default_src_dir: typing.Optional[Path]) -> Path:
         return self.source_project.get_source_dir(caller, caller.config,
@@ -1151,7 +1159,7 @@ class GitRepository(SourceRepository):
             return  # Nothing else to do
 
         # Handle per-target overrides by adding a new git-worktree git-worktree
-        target_override = self.per_target_branches.get(current_project._xtarget, None)
+        target_override = self.per_target_branches.get(current_project.crosscompile_target, None)
         assert target_override is not None, "Default src != src -> must have a per-target override"
         if (src_dir / ".git").exists():
             return
@@ -1184,7 +1192,7 @@ class GitRepository(SourceRepository):
                 remote_name + "/" + target_override.branch], cwd=default_src_dir)
 
     def get_real_source_dir(self, caller: SimpleProject, default_src_dir: Path) -> Path:
-        target_override = self.per_target_branches.get(caller._xtarget, None)
+        target_override = self.per_target_branches.get(caller.crosscompile_target, None)
         if target_override is None:
             return default_src_dir
         return default_src_dir.with_name(target_override.directory_name)
@@ -1722,7 +1730,7 @@ class Project(SimpleProject):
             # Should no longer be needed now that I added a hack for .eh_frame
             # "-Wl,-z,notext",  # needed so that LLD allows text relocations
             ]
-        if self.should_include_debug_info and not ".bfd" in self.target_info.linker.name:
+        if self.should_include_debug_info and ".bfd" not in self.target_info.linker.name:
             # Add a gdb_index to massively speed up running GDB on CHERIBSD:
             result.append("-Wl,--gdb-index")
         if self.target_info.is_cheribsd() and self.config.withLibstatcounters:
@@ -1926,7 +1934,8 @@ class Project(SimpleProject):
         if self.__dict__.get("_preventAssign"):
             # assert name not in ("source_dir", "build_dir", "install_dir")
             assert name != "install_dir", "install_dir should not be modified, only _install_dir or _install_prefix"
-            assert name != "install_prefix", "install_prefix should not be modified, only _install_dir or _install_prefix"
+            assert name != "install_prefix", "install_prefix should not be modified, only _install_dir or " \
+                                             "_install_prefix"
             if name in self._no_overwrite_allowed:
                 import traceback
                 traceback.print_stack()
@@ -2225,6 +2234,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     suffix += "-dynamic"
                 if self.config.benchmark_lazy_binding:
                     suffix += "-lazybinding"
+            # noinspection PyAttributeOutsideInit
             self._statcounters_csv = self.target + "-statcounters{}-{}.csv".format(
                 suffix, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
             return self._statcounters_csv
