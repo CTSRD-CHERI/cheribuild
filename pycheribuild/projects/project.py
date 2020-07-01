@@ -1539,7 +1539,6 @@ class Project(SimpleProject):
     @classmethod
     def setup_config_options(cls, install_directory_help="", **kwargs):
         super().setup_config_options(**kwargs)
-        # statusUpdate("Setting up config options for", cls, cls.target)
         cls.default_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.default_source_dir,
                                                      help="Override default source directory for " + cls.project_name)
         cls.build_dir = cls.add_path_option("build-directory", metavar="DIR", default=cls.default_build_dir,

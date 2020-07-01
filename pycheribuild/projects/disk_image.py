@@ -36,16 +36,15 @@ import tempfile
 import typing
 from pathlib import Path
 
-from .cross.cheribsd import (BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions,
-                            BuildFreeBSDDeviceModel)
+from .cross.cheribsd import (BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDDeviceModel, BuildFreeBSDGFE,
+                             BuildFreeBSDWithDefaultOptions)
 from .cross.gdb import BuildGDB
 from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget,
                       DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile
 from ..targets import target_manager
-from ..utils import (AnsiColour, classproperty, coloured, include_local_file, OSInfo, set_env, statusUpdate,
-                     warningMessage)
+from ..utils import (AnsiColour, classproperty, coloured, include_local_file, OSInfo, set_env)
 
 
 # Notes:
@@ -181,7 +180,7 @@ class _BuildDiskImageBase(SimpleProject):
                     file = stripped_path
 
         if not self.config.quiet:
-            statusUpdate(file, " -> /", path_in_target, sep="")
+            self.info(file, " -> /", path_in_target, sep="")
 
         # This also adds all the parent directories to METALOG
         self.mtree.add_file(file, path_in_target, mode=mode, uname=user, gname=group, print_status=self.config.verbose)
@@ -360,7 +359,7 @@ class _BuildDiskImageBase(SimpleProject):
             if cross_target.is_cheri_purecap():
                 cross_target = cross_target.get_cheri_hybrid_target()
             if not any(x is cross_target for x in BuildGDB.supported_architectures):
-                warningMessage("GDB cannot be built for architecture ", cross_target, " -> not addding it")
+                self.warning("GDB cannot be built for architecture ", cross_target, " -> not addding it")
             else:
                 gdb_instance = BuildGDB.get_instance_for_cross_target(cross_target, self.config)  # type: BuildGDB
                 gdb_path = gdb_instance.real_install_root_dir
@@ -537,8 +536,8 @@ class _BuildDiskImageBase(SimpleProject):
                 self.manifest_file,  # use METALOG as the manifest for the disk image
                 ], cwd=self.rootfs_dir)
         except Exception:
-            warningMessage("makefs failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
-                           " or cheribsd) and attach the METALOG file.")
+            self.warning("makefs failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
+                         " or cheribsd) and attach the METALOG file.")
             self.query_yes_no("About to delete the temporary directory. Copy any files you need before pressing enter.",
                               yes_no_str="")
             raise
@@ -583,14 +582,14 @@ class _BuildDiskImageBase(SimpleProject):
                 self.run_cmd(qemu_img_command, "info", self.disk_image_path)
 
     def copy_from_remote_host(self):
-        statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
+        self.info("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
         if not self.remote_path:
             self.fatal("Path to the remote disk image is not set, option '--", self.target,
                        "/remote-path' must be set to a path that scp understands (e.g. vica:/foo/bar/disk.img)", sep="")
             return
         # noinspection PyAttributeOutsideInit
         self.remote_path = os.path.expandvars(self.remote_path)
-        statusUpdate("Will copy the disk-image from ", self.remote_path, sep="")
+        self.info("Will copy the disk-image from ", self.remote_path, sep="")
         if not self.query_yes_no("Continue?"):
             return
 
@@ -647,9 +646,9 @@ class _BuildDiskImageBase(SimpleProject):
             self.fatal(
                 "Missing makefs command ('{}')! Should be found in FreeBSD build dir (or set $MAKEFS_CMD)".format(
                     self.makefs_cmd))
-        statusUpdate("Disk image will be saved to", self.disk_image_path)
-        statusUpdate("Disk image root fs is", self.rootfs_dir)
-        statusUpdate("Extra files for the disk image will be copied from", self.extra_files_dir)
+        self.info("Disk image will be saved to", self.disk_image_path)
+        self.info("Disk image root fs is", self.rootfs_dir)
+        self.info("Extra files for the disk image will be copied from", self.extra_files_dir)
 
         if not self.input_metalog.is_file():
             self.fatal("mtree manifest", self.input_metalog, "is missing")

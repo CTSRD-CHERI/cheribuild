@@ -31,7 +31,7 @@ import typing
 from pathlib import Path
 
 from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
-from ..utils import get_program_version, OSInfo, set_env, statusUpdate, warningMessage
+from ..utils import get_program_version, OSInfo, set_env
 
 
 class BuildElftoolchain(Project):
@@ -91,9 +91,9 @@ class BuildElftoolchain(Project):
             if version > 20170101:
                 is_old_broken_bmake = False
             else:
-                statusUpdate("Note: Working around old version of bmake: ", version)
+                self.info("Note: Working around old version of bmake: ", version)
         except Exception as e:
-            warningMessage("Could not determine bmake version:", e)
+            self.warning("Could not determine bmake version:", e)
         if is_old_broken_bmake:
             # build is not parallel-safe -> we can't make with all the all-foo targets and -jN
             # To speed it up run make for the individual library directories instead and then for all the binaries

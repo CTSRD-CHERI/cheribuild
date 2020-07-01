@@ -45,8 +45,7 @@ from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CrossCompileTarget, MipsFloatAbi
 from ...targets import target_manager
 from ...utils import (classproperty, commandline_to_str, get_compiler_info, include_local_file, is_jenkins_build,
-                      OSInfo,
-                      print_command, runCmd, statusUpdate, ThreadJoiner, warningMessage)
+                      OSInfo, print_command, runCmd, ThreadJoiner)
 
 
 def default_kernel_config(_: CheriConfig, project: SimpleProject) -> str:
@@ -214,8 +213,8 @@ class BuildFreeBSDBase(Project):
 
         for option in self.extra_make_args:
             if not self._xtarget.is_cheri_purecap() and "CHERI_" in option:
-                warningMessage("Not adding CHERI specific make option", option, "for", self.target,
-                               " -- consider setting separate", self.target + "/make-options in the config file.")
+                self.warning("Not adding CHERI specific make option", option, "for", self.target,
+                             " -- consider setting separate", self.target + "/make-options in the config file.")
                 continue
             if "=" in option:
                 key, value = option.split("=")
@@ -628,7 +627,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 builddir = kernel_dir
                 cleaning_kerneldir = True
             else:
-                warningMessage("Do not know the full path to the kernel build directory, will clean the whole tree!")
+                self.warning("Do not know the full path to the kernel build directory, will clean the whole tree!")
                 builddir = root_builddir
         else:
             # builddir = root_builddir
@@ -658,7 +657,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if mfs_root_image:
             kernel_make_args.set(MFS_IMAGE=mfs_root_image)
             if self.compiling_for_mips(include_purecap=True) and "MFS_ROOT" not in kernconf:
-                warningMessage("Attempting to build an MFS_ROOT kernel but kernel config name sounds wrong")
+                self.warning("Attempting to build an MFS_ROOT kernel but kernel config name sounds wrong")
         if not self.kernel_toolchain_exists and not self.fast_rebuild:
             kernel_toolchain_opts = kernel_make_args.copy()
             # The kernel seems to use LDFLAGS and ignore XLDFLAGS. Ensure we don't pass those flags when building host
@@ -673,7 +672,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 kernel_toolchain_opts.set_with_options(AUTO_OBJ=True)
             self.run_make("kernel-toolchain", options=kernel_toolchain_opts)
             self.kernel_toolchain_exists = True
-        statusUpdate("Building kernels for configs:", kernconf)
+        self.info("Building kernels for configs:", kernconf)
         self.run_make("buildkernel", options=kernel_make_args,
                       compilation_db_name="compile_commands_" + kernconf.replace(" ", "_") + ".json")
 
@@ -689,7 +688,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             install_kernel_args.set(INSTALL_KERNEL_DOT_FULL=True)
         if destdir:
             install_kernel_args.set_env(DESTDIR=destdir)
-        statusUpdate("Installing kernels for configs:", kernconf)
+        self.info("Installing kernels for configs:", kernconf)
         self.run_make("installkernel", options=install_kernel_args, parallel=False)
 
     def compile(self, mfs_root_image: Path = None, sysroot_only=False, all_kernel_configs: str = None, **kwargs):
@@ -773,10 +772,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if last_line.startswith("/") and cmd.returncode == 0:
                 self.verbose_print("BUILDENV var", var, "was", last_line)
                 return Path(last_line)
-            warningMessage("Failed to query", var, "-- output was:", lines)
+            self.warning("Failed to query", var, "-- output was:", lines)
             return None
         except subprocess.CalledProcessError as e:
-            warningMessage("Could not query make variable", var, "for buildworld root objdir: ", e)
+            self.warning("Could not query make variable", var, "for buildworld root objdir: ", e)
             return None
 
     @property
@@ -785,7 +784,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         objdir = self._query_buildenv_path(self.buildworld_args, ".OBJDIR")
         if not objdir or objdir == Path():
             # just clean the whole directory instead
-            warningMessage("Could not infer buildworld root objdir")
+            self.warning("Could not infer buildworld root objdir")
             return self.build_dir
         return objdir
 
@@ -793,7 +792,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         result = self.objdir / "sys"
         if result.exists():
             return Path(result) / config
-        warningMessage("Could not infer buildkernel objdir")
+        self.warning("Could not infer buildkernel objdir")
         return None
 
     @property
@@ -805,10 +804,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def install(self, all_kernel_configs: str = None, sysroot_only=False, install_with_subdir_override=False,
                 skip_kernel=False, **kwargs):
         if self.subdir_override and not install_with_subdir_override:
-            statusUpdate("Skipping install step because SUBDIR_OVERRIDE was set")
+            self.info("Skipping install step because SUBDIR_OVERRIDE was set")
             return
         if self.config.freebsd_host_tools_only:
-            statusUpdate("Skipping install step because freebsd-host-tools was set")
+            self.info("Skipping install step because freebsd-host-tools was set")
             return
         # keeping the old rootfs directory prior to install can sometimes cause the build to fail so delete by default
         if self.config.clean or not self.keep_old_rootfs:
@@ -827,8 +826,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     # support building old versions of cheribsd before _compiler-metadata was renamed to _build-metadata
                     self.run_make("_compiler-metadata", options=install_world_args)
                 except subprocess.CalledProcessError:
-                    warningMessage("Failed to run either target _compiler-metadata or "
-                                   "_build_metadata, build system has changed!")
+                    self.warning("Failed to run either target _compiler-metadata or "
+                                 "_build_metadata, build system has changed!")
             # By default also create a sysroot when installing world
             installsysroot_args = install_world_args.copy()
             # No need for the files in /usr/share and the METALOG file
@@ -927,7 +926,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def process(self):
         if not OSInfo.IS_FREEBSD and not self.crossbuild:
-            statusUpdate("Can't build FreeBSD on a non-FreeBSD host (yet)!")
+            self.info("Can't build FreeBSD on a non-FreeBSD host (yet)!")
             return
         _clear_dangerous_make_env_vars()
 
@@ -991,7 +990,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # for non-library targets we need to set WANT_CHERI=pure in the environment to get the binary
             # to build as a CHERI binary
             if any("WITH_CHERI_PURE" in x for x in make_args.all_commandline_args):
-                statusUpdate("WITH_CHERI_PURE found in build args -> set WANT_CHERI?=pure for non-library", subdir)
+                self.info("WITH_CHERI_PURE found in build args -> set WANT_CHERI?=pure for non-library", subdir)
                 make_args.set_env(WANT_CHERI="pure")
         colour_diags = "export CLANG_FORCE_COLOR_DIAGNOSTICS=always; " if self.config.clang_colour_diags else ""
         build_cmd = "{colour_diags} {clean} && {build} && {install} && echo \"  Done.\"".format(
@@ -1003,16 +1002,16 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # If --libcompat-buildenv was passed skip the MIPS lib
         has_libcompat = self.crosscompile_target.is_hybrid_or_purecap_cheri() and is_lib  # TODO: handle lib32
         if has_libcompat and (self.config.libcompat_buildenv or libcompat_only):
-            statusUpdate("Skipping default ABI build of", subdir, "since --libcompat-buildenv was passed.")
+            self.info("Skipping default ABI build of", subdir, "since --libcompat-buildenv was passed.")
         else:
-            statusUpdate("Building", subdir, "using buildenv target")
+            self.info("Building", subdir, "using buildenv target")
             runCmd([self.make_args.command] + make_args.all_commandline_args + ["buildenv"], env=make_args.env_vars,
                    cwd=self.source_dir)
         # If we are building a library, we want to build both the CHERI and the mips version (unless the
         # user explicitly specified --libcompat-buildenv)
         if has_libcompat and not noncheri_only and self.libcompat_name():
             compat_buildenv_target = self.libcompat_name() + "buildenv"
-            statusUpdate("Building", subdir, "using", compat_buildenv_target, "target")
+            self.info("Building", subdir, "using", compat_buildenv_target, "target")
             runCmd([self.make_args.command] + make_args.all_commandline_args + [compat_buildenv_target],
                    env=make_args.env_vars,
                    cwd=self.source_dir)
@@ -1140,7 +1139,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
 
     def process(self):
         if not OSInfo.IS_FREEBSD and not self.crossbuild:
-            statusUpdate("Can't build FreeBSD on a non-FreeBSD host (yet)!")
+            self.info("Can't build FreeBSD on a non-FreeBSD host (yet)!")
             return
         _clear_dangerous_make_env_vars()
         super().process()
@@ -1251,7 +1250,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                 else:
                     self.extra_kernels.append("FETT")
             else:
-                warningMessage("Unsupported architecture for FETT kernels")
+                self.warning("Unsupported architecture for FETT kernels")
 
     def _remove_schg_flag(self, *paths: "typing.Iterable[str]"):
         for i in paths:
@@ -1398,7 +1397,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 
     def update(self):
         if not self.config.skip_update:
-            statusUpdate("Not updating cheribsd repo when building mfs-root-kernel to avoid unwanted changes")
+            self.info("Not updating cheribsd repo when building mfs-root-kernel to avoid unwanted changes")
         pass
 
     @classmethod
@@ -1594,7 +1593,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         return super().cross_sysroot_path
 
     def copy_sysroot_from_remote_machine(self):
-        statusUpdate("Copying sysroot from remote system.")
+        self.info("Copying sysroot from remote system.")
         if not self.remote_path:
             self.fatal(
                 "Missing remote SDK path: Please set --cheribsd-sysroot/remote-sdk-path (or --freebsd/crossbuild)")
@@ -1603,7 +1602,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         # noinspection PyAttributeOutsideInit
         self.remote_path = os.path.expandvars(self.remote_path)
         remote_sysroot_archive = self.remote_path + "/" + self.sysroot_archive_name
-        statusUpdate("Will copy the sysroot files from ", remote_sysroot_archive, sep="")
+        self.info("Will copy the sysroot files from ", remote_sysroot_archive, sep="")
         if not self.query_yes_no("Continue?"):
             return
 
@@ -1664,7 +1663,7 @@ class BuildCheriBsdSysroot(SimpleProject):
 
     def process(self):
         if self.config.skip_buildworld:
-            statusUpdate("Not building sysroot because --skip-buildworld was passed")
+            self.info("Not building sysroot because --skip-buildworld was passed")
             return
 
         with self.async_clean_directory(self.cross_sysroot_path):
@@ -1677,7 +1676,7 @@ class BuildCheriBsdSysroot(SimpleProject):
                 # clang++ expects libgcc_eh to exist:
                 libgcc_eh = self.cross_sysroot_path / "usr/libcheri/libgcc_eh.a"
                 if not libgcc_eh.is_file():
-                    warningMessage("CHERI libgcc_eh missing! You should probably update CheriBSD")
+                    self.warning("CHERI libgcc_eh missing! You should probably update CheriBSD")
                     runCmd("ar", "rc", libgcc_eh)
 
 

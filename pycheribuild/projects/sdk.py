@@ -34,7 +34,7 @@ import subprocess
 from .project import (CheriConfig, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject,
                       TargetAliasWithDependencies)
 from ..targets import target_manager
-from ..utils import include_local_file, OSInfo, set_env, statusUpdate
+from ..utils import include_local_file, OSInfo, set_env
 
 
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
@@ -109,7 +109,7 @@ class StartCheriSDKShell(SimpleProject):
         new_path = str(self.config.cheri_sdk_bindir) + ":" + str(self.config.dollar_path_with_other_tools)
         shell = os.getenv("SHELL", "/bin/sh")
         with set_env(MANPATH=new_man_path, PATH=new_path):
-            statusUpdate("Starting CHERI SDK shell... ", end="")
+            self.info("Starting CHERI SDK shell... ", end="")
             try:
                 self.run_cmd(shell)
             except subprocess.CalledProcessError as e:
