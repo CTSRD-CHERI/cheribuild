@@ -57,9 +57,9 @@ def get_default_ssh_forwarding_port(addend: int):
 
 class LaunchQEMUBase(SimpleProject):
     doNotAddToTargets = True
-    _forwardSSHPort = True
+    forward_ssh_port = True
     _can_provide_src_via_smb = False
-    sshForwardingPort = None  # type: int
+    ssh_forwarding_port = None  # type: int
     custom_qemu_smb_mount = None
     # Add a virtio RNG to speed up random number generation
     _add_virtio_rng = True
@@ -76,32 +76,31 @@ class LaunchQEMUBase(SimpleProject):
         cls.log_directory = cls.add_path_option("log-directory", default=None, metavar="DIR",
                                                 help="If set QEMU will log to a timestamped file in this directory. "
                                                      "Will be ignored if the 'logfile' option is set")
-        cls.useTelnet = cls.add_config_option("monitor-over-telnet", kind=int, metavar="PORT", show_help=True,
-                                              help="If set, the QEMU monitor will be reachable by connecting to "
-                                                   "localhost at $PORT via telnet instead of using CTRL+A,C")
+        cls.use_telnet = cls.add_config_option("monitor-over-telnet", kind=int, metavar="PORT", show_help=True,
+                                               help="If set, the QEMU monitor will be reachable by connecting to "
+                                                    "localhost at $PORT via telnet instead of using CTRL+A,C")
 
         cls.custom_qemu_smb_mount = cls.add_path_option("smb-host-directory", default=None, metavar="DIR",
                                                         help="If set QEMU will provide this directory over smb with "
                                                              "the name //10.0.2.4/qemu for use with mount_smbfs")
         cls.cvtrace = cls.add_bool_option("cvtrace", help="Use binary trace output instead of textual")
         # TODO: -s will no longer work, not sure anyone uses it though
-        if cls._forwardSSHPort:
-            cls.sshForwardingPort = cls.add_config_option("ssh-forwarding-port", kind=int,
-                                                          default=default_ssh_port, metavar="PORT", show_help=True,
-                                                          help="The port on localhost to forward to the QEMU ssh "
-                                                               "port. You can then use `ssh root@localhost -p $PORT` "
-                                                               "to connect to the VM")
+        if cls.forward_ssh_port:
+            cls.ssh_forwarding_port = cls.add_config_option("ssh-forwarding-port", kind=int,
+                                                            default=default_ssh_port, metavar="PORT", show_help=True,
+                                                            help="The port on localhost to forward to the QEMU ssh "
+                                                                 "port. You can then use `ssh root@localhost -p $PORT` "
+                                                                 "to connect to the VM")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.qemuBinary = None  # type: typing.Optional[Path]
-        self.currentKernel = None  # type: typing.Optional[Path]
+        self.qemu_binary = None  # type: typing.Optional[Path]
+        self.current_kernel = None  # type: typing.Optional[Path]
         self.disk_image = None  # type: typing.Optional[Path]
-        self.virtioDisk = False
         self._projectSpecificOptions = []
         self.bios_flags = []
         self.qemu_options = QemuOptions(self.crosscompile_target)
-        self._qemuUserNetworking = True
+        self.qemu_user_networking = True
         self.rootfs_path = None  # type:typing.Optional[Path]
         self._after_disk_options = []
 
@@ -116,10 +115,10 @@ class LaunchQEMUBase(SimpleProject):
         if xtarget.is_riscv(include_purecap=True):
             self._add_virtio_rng = False
             self.bios_flags += self.get_riscv_bios_args()
-            self.qemuBinary = BuildQEMU.qemu_cheri_binary(self)
+            self.qemu_binary = BuildQEMU.qemu_cheri_binary(self)
             self._can_provide_src_via_smb = True
         elif xtarget.is_mips(include_purecap=True):
-            self.qemuBinary = BuildQEMU.qemu_cheri_binary(self)
+            self.qemu_binary = BuildQEMU.qemu_cheri_binary(self)
             self._can_provide_src_via_smb = True
         elif xtarget.is_any_x86() or xtarget.is_aarch64():
             # Use the system QEMU instead of CHERI QEMU (for now)
@@ -127,33 +126,33 @@ class LaunchQEMUBase(SimpleProject):
             self.add_required_system_tool("qemu-system-" + self.qemu_options.qemu_arch_sufffix)
         else:
             assert False, "Unknown target " + str(xtarget)
-        if self.qemuBinary is None:
+        if self.qemu_binary is None:
             # only CHERI QEMU supports more than one SMB share
             self._can_provide_src_via_smb = True
             binary_name = "qemu-system-" + self.qemu_options.qemu_arch_sufffix
             if (self.config.qemu_bindir / binary_name).is_file():
-                self.qemuBinary = self.config.qemu_bindir / binary_name
+                self.qemu_binary = self.config.qemu_bindir / binary_name
             else:
-                self.qemuBinary = Path(shutil.which(binary_name) or "/could/not/find/qemu")
+                self.qemu_binary = Path(shutil.which(binary_name) or "/could/not/find/qemu")
 
     def process(self):
-        assert self.qemuBinary is not None
-        if not self.qemuBinary.exists():
-            self.dependency_error("QEMU is missing:", self.qemuBinary,
+        assert self.qemu_binary is not None
+        if not self.qemu_binary.exists():
+            self.dependency_error("QEMU is missing:", self.qemu_binary,
                                   install_instructions="Run `cheribuild.py qemu` or `cheribuild.py run -d`.")
-        if self.currentKernel is not None and not self.currentKernel.exists():
-            self.dependency_error("Kernel is missing:", self.currentKernel,
+        if self.current_kernel is not None and not self.current_kernel.exists():
+            self.dependency_error("Kernel is missing:", self.current_kernel,
                                   install_instructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
 
-        if self._forwardSSHPort and not self.is_port_available(self.sshForwardingPort):
-            self.print_port_usage(self.sshForwardingPort)
-            self.fatal("SSH forwarding port", self.sshForwardingPort, "is already in use! Make sure you don't ",
+        if self.forward_ssh_port and not self.is_port_available(self.ssh_forwarding_port):
+            self.print_port_usage(self.ssh_forwarding_port)
+            self.fatal("SSH forwarding port", self.ssh_forwarding_port, "is already in use! Make sure you don't ",
                        "already have a QEMU instance running or change the chosen port by setting the config option",
                        self.target + "/ssh-forwarding-port")
 
         monitor_options = []
-        if self.useTelnet:
-            monitor_port = self.useTelnet
+        if self.use_telnet:
+            monitor_port = self.use_telnet
             monitor_options = ["-monitor", "telnet:127.0.0.1:" + str(monitor_port) + ",server,nowait"]
             if not self.is_port_available(monitor_port):
                 self.warning("Cannot connect QEMU montitor to port", monitor_port)
@@ -187,7 +186,7 @@ class LaunchQEMUBase(SimpleProject):
         user_network_options = ""
         smb_dir_count = 0
         have_9pfs_support = (self.crosscompile_target.is_native() or
-                             self.crosscompile_target.is_any_x86()) and qemu_supports_9pfs(self.qemuBinary)
+                             self.crosscompile_target.is_any_x86()) and qemu_supports_9pfs(self.qemu_binary)
         # Only default to providing the smb mount if smbd exists
         have_smbfs_support = self._can_provide_src_via_smb and shutil.which("smbd")
 
@@ -239,17 +238,17 @@ class LaunchQEMUBase(SimpleProject):
             add_smb_or_9p_dir(self.config.output_root, "/outputroot", share_name="output_root", readonly=True)
             add_smb_or_9p_dir(self.rootfs_path, "/rootfs", share_name="rootfs", readonly=False)
 
-        if self._forwardSSHPort:
-            user_network_options += ",hostfwd=tcp::" + str(self.sshForwardingPort) + "-:22"
+        if self.forward_ssh_port:
+            user_network_options += ",hostfwd=tcp::" + str(self.ssh_forwarding_port) + "-:22"
             # bind the qemu ssh port to the hosts port
-            # qemu_command += ["-redir", "tcp:" + str(self.sshForwardingPort) + "::22"]
-            print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.sshForwardingPort,
+            # qemu_command += ["-redir", "tcp:" + str(self.ssh_forwarding_port) + "::22"]
+            print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.ssh_forwarding_port,
                            sep=""))
 
         # input("Press enter to continue")
-        qemu_command = self.qemu_options.get_commandline(qemu_command=self.qemuBinary, kernel_file=self.currentKernel,
+        qemu_command = self.qemu_options.get_commandline(qemu_command=self.qemu_binary, kernel_file=self.current_kernel,
                                                          disk_image=self.disk_image,
-                                                         add_network_device=self._qemuUserNetworking,
+                                                         add_network_device=self.qemu_user_networking,
                                                          bios_args=self.bios_flags,
                                                          user_network_args=user_network_options,
                                                          trap_on_unrepresentable=self.config.trap_on_unrepresentable,
@@ -257,7 +256,7 @@ class LaunchQEMUBase(SimpleProject):
                                                          add_virtio_rng=self._add_virtio_rng)
         qemu_command += self._projectSpecificOptions + self._after_disk_options + monitor_options \
                         + logfile_options + self.extra_qemu_options + virtfs_args
-        self.info("About to run QEMU with image", self.disk_image, "and kernel", self.currentKernel)
+        self.info("About to run QEMU with image", self.disk_image, "and kernel", self.current_kernel)
 
         if self.config.wait_for_debugger or self.config.debugger_in_tmux_pane:
             gdb_socket_placeholder = find_free_port()
@@ -279,7 +278,7 @@ class LaunchQEMUBase(SimpleProject):
                 return commandline_to_str(result)
 
             self.info("To start and connect GDB run the following command in another terminal:")
-            path_to_kernel = self.currentKernel
+            path_to_kernel = self.current_kernel
             if path_to_kernel is None:
                 path_to_kernel = self.rootfs_path / "boot/kernel/kernel"
             # Prefer the file with debug info
@@ -329,7 +328,7 @@ class LaunchQEMUBase(SimpleProject):
                 try:
                     if "TMUX" not in os.environ:
                         raise Exception("--debugger-in-tmux-pane set, but not in a tmux session")
-                    start_gdb_in_tmux_pane(gdb_command(self.currentKernel, "panic"))
+                    start_gdb_in_tmux_pane(gdb_command(self.current_kernel, "panic"))
                 except ImportError:
                     self.info(coloured(AnsiColour.red, "libtmux not installed, impossible to automatically start gdb"))
                 except Exception as e:
@@ -376,9 +375,9 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         if not OSInfo.IS_FREEBSD:
-            cls.remoteKernelPath = cls.add_config_option("remote-kernel-path", show_help=True,
-                                                         help="Path to the FreeBSD kernel image on a remote host. "
-                                                              "Needed because FreeBSD cannot be cross-compiled.")
+            cls.remote_kernel_path = cls.add_config_option("remote-kernel-path", show_help=True,
+                                                           help="Path to the FreeBSD kernel image on a remote host. "
+                                                                "Needed because FreeBSD cannot be cross-compiled.")
             cls.skipKernelUpdate = cls.add_bool_option("skip-kernel-update", show_help=True,
                                                        help="Don't update the kernel from the remote host")
 
@@ -389,33 +388,33 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             # noinspection PyProtectedMember
             source_class = disk_image_class.get_instance(self).source_project
         self.source_class = source_class
-        self.currentKernel = source_class.get_installed_kernel_path(self)
+        self.current_kernel = source_class.get_installed_kernel_path(self)
         if hasattr(source_class, "rootfs_dir"):
             # noinspection PyCallingNonCallable
             self.rootfs_path = source_class.rootfs_dir(self, config=config)
         if needs_disk_image:
             self.disk_image = disk_image_class.get_instance(self).disk_image_path
-        self.needsRemoteKernelCopy = True
+        self.needs_remote_kernel_copy = True
         # no need to copy from remote host if we were crossbuilding
         if OSInfo.IS_FREEBSD or source_class.get_instance(self).crossbuild:
-            self.needsRemoteKernelCopy = False
+            self.needs_remote_kernel_copy = False
         # same if skip-update was passed
         elif self.skipKernelUpdate or self.config.skip_update:
-            self.needsRemoteKernelCopy = False
+            self.needs_remote_kernel_copy = False
 
     def _copy_kernel_image_from_remote_host(self):
         self.info("Copying kernel image from FreeBSD build machine")
-        if not self.remoteKernelPath:
+        if not self.remote_kernel_path:
             self.fatal("Path to the remote disk image is not set, option '--", self.target, "/",
                        "remote-kernel-path' must be set to a path that scp understands",
                        " (e.g. vica:/foo/bar/kernel)", sep="")
             return
-        scp_path = os.path.expandvars(self.remoteKernelPath)
-        self.makedirs(self.currentKernel.parent)
-        self.copy_remote_file(scp_path, self.currentKernel)
+        scp_path = os.path.expandvars(self.remote_kernel_path)
+        self.makedirs(self.current_kernel.parent)
+        self.copy_remote_file(scp_path, self.current_kernel)
 
     def process(self):
-        if self.needsRemoteKernelCopy:
+        if self.needs_remote_kernel_copy:
             self._copy_kernel_image_from_remote_host()
         super().process()
 
@@ -482,7 +481,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
 
     def run_tests(self):
         self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.disk_image,
-                                                  kernel_path=self.currentKernel)
+                                                  kernel_path=self.current_kernel)
 
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
@@ -490,21 +489,19 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     project_name = "run-cherios"
     dependencies = ["cherios-qemu", "cherios"]
     supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP]
-    _forwardSSHPort = False
-    _qemuUserNetworking = False
+    forward_ssh_port = False
+    qemu_user_networking = False
     hide_options_from_help = True
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
-                                     default_ssh_port=get_default_ssh_forwarding_port(40),
-                                     **kwargs)
+        super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(40), **kwargs)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # FIXME: these should be config options
         cherios = BuildCheriOS.get_instance(self, config)
-        self.currentKernel = BuildCheriOS.get_build_dir(self) / "boot/cherios.elf"
+        self.current_kernel = BuildCheriOS.get_build_dir(self) / "boot/cherios.elf"
         self.disk_image = self.config.output_root / "cherios-disk.img"
         self._projectSpecificOptions = ["-no-reboot"]
 
@@ -519,11 +516,11 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
             self._projectSpecificOptions.append(str(cherios.smp_cores))
 
         self.qemu_options.virtio_disk = True  # CheriOS needs virtio
-        self._qemuUserNetworking = False
+        self.qemu_user_networking = False
 
     def setup(self):
         super().setup()
-        self.qemuBinary = BuildCheriOSQEMU.qemu_binary(self)
+        self.qemu_binary = BuildCheriOSQEMU.qemu_binary(self)
 
     def process(self):
         if not self.disk_image.exists():
@@ -538,16 +535,14 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
     project_name = "run-rtems"
     dependencies = ["rtems"]
     supported_architectures = [CompilationTargets.RTEMS_RISCV64_PURECAP]
-    _forwardSSHPort = False
-    _qemuUserNetworking = False
+    forward_ssh_port = False
+    qemu_user_networking = False
     _enable_smbfs_support = False
     _add_virtio_rng = False
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
-                                     default_ssh_port=None,
-                                     **kwargs)
+        super().setup_config_options(default_ssh_port=None, **kwargs)
 
     def get_riscv_bios_args(self) -> typing.List[str]:
         # Run a simple RTEMS shell application (run in machine mode using the -bios QEMU argument)
@@ -563,16 +558,14 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     dependencies = ["freertos"]
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
                                CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
-    _forwardSSHPort = False
-    _qemuUserNetworking = False
+    forward_ssh_port = False
+    qemu_user_networking = False
     _enable_smbfs_support = False
     _add_virtio_rng = False
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
-                                     defaultSshPort=None,
-                                     **kwargs)
+        super().setup_config_options(defaultSshPort=None, **kwargs)
 
     def get_riscv_bios_args(self) -> typing.List[str]:
         # Run a simple FreeRTOS blinky demo application (run in machine mode using the -bios QEMU argument)
@@ -590,8 +583,7 @@ class LaunchFreeBSD(_RunMultiArchFreeBSDImage):
     @classmethod
     def setup_config_options(cls, **kwargs):
         add_to_port = cls.get_cross_target_index()
-        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
-                                     default_ssh_port=get_default_ssh_forwarding_port(10 + add_to_port), **kwargs)
+        super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(10 + add_to_port), **kwargs)
 
 
 class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
@@ -602,8 +594,7 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
     @classmethod
     def setup_config_options(cls, **kwargs):
         add_to_port = cls.get_cross_target_index()
-        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
-                                     default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
+        super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
 
 
 class LaunchFreeBSDGFE(_RunMultiArchFreeBSDImage):
@@ -614,8 +605,7 @@ class LaunchFreeBSDGFE(_RunMultiArchFreeBSDImage):
     @classmethod
     def setup_config_options(cls, **kwargs):
         add_to_port = cls.get_cross_target_index()
-        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
-                                     default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
+        super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
 
 
 class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
@@ -625,15 +615,14 @@ class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
     @classmethod
     def setup_config_options(cls, **kwargs):
         add_to_port = cls.get_cross_target_index()
-        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
-                                     default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
+        super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
 
     def __init__(self, config):
         super().__init__(config, source_class=BuildCheriBsdMfsKernel, needs_disk_image=False)
         if self.config.use_minimal_benchmark_kernel:
-            self.currentKernel = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self)
-            if str(self.remoteKernelPath).endswith("MFS_ROOT"):
-                self.remoteKernelPath += "_BENCHMARK"
+            self.current_kernel = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self)
+            if str(self.remote_kernel_path).endswith("MFS_ROOT"):
+                self.remote_kernel_path += "_BENCHMARK"
         self.rootfs_path = BuildCHERIBSD.rootfs_dir(self, config)
 
     def run_tests(self):

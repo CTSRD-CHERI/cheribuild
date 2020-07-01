@@ -50,13 +50,13 @@ class LaunchFPGABase(SimpleProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.currentKernel = None  # type: Optional[Path]
+        self.current_kernel = None  # type: Optional[Path]
 
     def process(self):
-        assert self.currentKernel is not None
-        if self.currentKernel is not None and not self.currentKernel.exists():
-            self.dependency_error("Kernel is missing:", self.currentKernel,
-                                 install_instructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
+        assert self.current_kernel is not None
+        if self.current_kernel is not None and not self.current_kernel.exists():
+            self.dependency_error("Kernel is missing:", self.current_kernel,
+                                  install_instructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
         sim_project = BuildCheriSim.get_instance(self, cross_target=CompilationTargets.NATIVE)
         cherilibs_dir = Path(sim_project.source_dir, "cherilibs")
         cheri_dir = Path(sim_project.source_dir, "cheri")
@@ -72,7 +72,7 @@ class LaunchFPGABase(SimpleProject):
             basic_args.extend(["--ssh-key", str(self.config.test_ssh_key.with_suffix(""))])
         # use a bitfile from jenkins. TODO: add option for overriding
         basic_args.append("--jenkins-bitfile=cheri" + self.config.mips_cheri_bits_str)
-        basic_args.append("--kernel-img=" + str(self.currentKernel))
+        basic_args.append("--kernel-img=" + str(self.current_kernel))
 
         bootonly_args = ["--interact"]
         if self.extra_bootonly_options:
@@ -116,20 +116,20 @@ class LaunchCheriBSDOnFGPA(LaunchFPGABase):
         mfs_kernel = BuildCheriBsdMfsKernel.get_instance(self)
         # TODO: allow using a plain MIPS kernel?
         if self.kernel_image:
-            self.currentKernel = self.kernel_image
+            self.current_kernel = self.kernel_image
         else:
             if self.benchmark_kernel:
                 kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
             else:
                 kernel_config = mfs_kernel.fpga_kernconf
-            self.currentKernel = mfs_kernel.installed_kernel_for_config(self, kernel_config)
+            self.current_kernel = mfs_kernel.installed_kernel_for_config(self, kernel_config)
         with tempfile.TemporaryDirectory() as kernel_image_tmpdir:
             # Strip to kernel image to save some time when copying it to the FPGA booting
             # TODO: move into beri-fpga-bsd-boot?
-            stripped_target = Path(kernel_image_tmpdir, self.currentKernel.name + ".stripped")
-            self.run_cmd(self.config.cheri_sdk_bindir / "llvm-strip", self.currentKernel, "-o", stripped_target)
-            self.run_cmd("du", "-h", self.currentKernel, stripped_target)
-            self.currentKernel = stripped_target
+            stripped_target = Path(kernel_image_tmpdir, self.current_kernel.name + ".stripped")
+            self.run_cmd(self.config.cheri_sdk_bindir / "llvm-strip", self.current_kernel, "-o", stripped_target)
+            self.run_cmd("du", "-h", self.current_kernel, stripped_target)
+            self.current_kernel = stripped_target
             super().process()
 
 # TODO: boot purecap minimal disk image

@@ -464,7 +464,7 @@ def test_config_file_include():
             b'{ "run": { "ssh-forwarding-port": 12345 }, "#include": "change-smb-dir.json" }')
         run_project = target_manager.get_target_raw("run").get_or_create_project(None, result)
         assert run_project.custom_qemu_smb_mount == Path("/some/path")
-        assert run_project.sshForwardingPort == 12345
+        assert run_project.ssh_forwarding_port == 12345
 
         with tempfile.TemporaryDirectory() as d2:
             # Check that relative paths work
