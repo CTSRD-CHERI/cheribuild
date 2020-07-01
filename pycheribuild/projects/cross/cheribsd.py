@@ -273,13 +273,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAP
 
     @classmethod
-    def rootfsDir(cls, caller, config=None, cross_target: CrossCompileTarget = None):
+    def rootfs_dir(cls, caller, config=None, cross_target: CrossCompileTarget = None):
         return cls.get_install_dir(caller, config, cross_target)
 
     @classmethod
     def get_installed_kernel_path(cls, caller, config: CheriConfig = None,
                                   cross_target: CrossCompileTarget = None):
-        return cls.rootfsDir(caller, config, cross_target) / "boot/kernel/kernel"
+        return cls.rootfs_dir(caller, config, cross_target) / "boot/kernel/kernel"
 
     @classmethod
     def setup_config_options(cls, bootstrap_toolchain=False, use_upstream_llvm: bool = None, debug_info_by_default=True, **kwargs):

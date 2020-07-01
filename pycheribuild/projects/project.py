@@ -1568,7 +1568,7 @@ class Project(SimpleProject):
         if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository):
             cls.git_revision = cls.add_config_option("git-revision", metavar="REVISION",
                                                      help="The git revision to checkout prior to building. Useful if "
-                                                     "HEAD is broken for one "
+                                                          "HEAD is broken for one "
                                                           "project but you still want to update the other projects.")
             # TODO: can argparse action be used to store to the class member directly?
             # seems like I can create a new action a pass a reference to the repository:

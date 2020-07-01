@@ -165,7 +165,7 @@ for file in sorted((scriptDir / "projects/cross").glob("*.py")):
 for file in cross_files:
     addFilteredFile(file)
 
-# disk-image, sdk and run_qemu must come after cheribsd as they use CheriBSD.rootfsDir
+# disk-image, sdk and run_qemu must come after cheribsd as they use CheriBSD.rootfs_dir
 addFilteredFile(scriptDir / "projects/disk_image.py")
 addFilteredFile(scriptDir / "projects/syzkaller.py")
 addFilteredFile(scriptDir / "projects/sdk.py")

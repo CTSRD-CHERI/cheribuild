@@ -213,12 +213,12 @@ class BuildFettDiskImage(BuildCheriBSDDiskImage):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.minimumImageSize = "10g"
-        self.autoPrefixes.append("fett/")
+        self.minimum_image_size = "10g"
+        self.auto_prefixes.append("fett/")
         # Manpage indexs are being generated and not added to METALOG
         # this is a bug in whatever is calling makewhatis.
-        self.autoPrefixes.append("usr/share/openssl/man/mandoc.db")
-        self.autoPrefixes.append("usr/share/man/mandoc.db")
+        self.auto_prefixes.append("usr/share/openssl/man/mandoc.db")
+        self.auto_prefixes.append("usr/share/man/mandoc.db")
 
     @classmethod
     def setup_config_options(cls, **kwargs):

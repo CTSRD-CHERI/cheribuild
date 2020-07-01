@@ -390,9 +390,9 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             source_class = disk_image_class.get_instance(self).source_project
         self.source_class = source_class
         self.currentKernel = source_class.get_installed_kernel_path(self)
-        if hasattr(source_class, "rootfsDir"):
+        if hasattr(source_class, "rootfs_dir"):
             # noinspection PyCallingNonCallable
-            self.rootfs_path = source_class.rootfsDir(self, config=config)
+            self.rootfs_path = source_class.rootfs_dir(self, config=config)
         if needs_disk_image:
             self.disk_image = disk_image_class.get_instance(self).disk_image_path
         self.needsRemoteKernelCopy = True
@@ -634,7 +634,7 @@ class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
             self.currentKernel = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self)
             if str(self.remoteKernelPath).endswith("MFS_ROOT"):
                 self.remoteKernelPath += "_BENCHMARK"
-        self.rootfs_path = BuildCHERIBSD.rootfsDir(self, config)
+        self.rootfs_path = BuildCHERIBSD.rootfs_dir(self, config)
 
     def run_tests(self):
         self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", "--minimal-image")
