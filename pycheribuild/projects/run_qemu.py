@@ -56,7 +56,7 @@ def get_default_ssh_forwarding_port(addend: int):
 
 
 class LaunchQEMUBase(SimpleProject):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     forward_ssh_port = True
     _can_provide_src_via_smb = False
     ssh_forwarding_port = None  # type: int
@@ -368,7 +368,7 @@ class LaunchQEMUBase(SimpleProject):
 
 
 class AbstractLaunchFreeBSD(LaunchQEMUBase):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     _can_provide_src_via_smb = True
 
     @classmethod
@@ -420,7 +420,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
 
 
 class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     _source_class = None
 
     @classproperty

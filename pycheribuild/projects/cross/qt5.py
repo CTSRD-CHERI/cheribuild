@@ -41,7 +41,7 @@ from ...utils import commandline_to_str, fatalError, get_compiler_info, OSInfo, 
 class BuildQtWithConfigureScript(CrossCompileProject):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.SYSROOT
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     add_host_target_build_config_options = False
     # Should not be needed, but it seems like some of the tests are broken otherwise
     make_kind = MakeCommandKind.GnuMake
@@ -226,7 +226,7 @@ class BuildQt5(BuildQtWithConfigureScript):
 
 
 class BuildQtBase(BuildQtWithConfigureScript):
-    doNotAddToTargets = False  # Even though it ends in Base this is not a Base class
+    do_not_add_to_targets = False  # Even though it ends in Base this is not a Base class
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="5.10", force_branch=True)
     is_large_source_repository = True
     default_source_dir = ComputedDefaultValue(

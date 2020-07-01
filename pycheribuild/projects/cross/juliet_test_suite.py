@@ -63,7 +63,7 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
 
 
 class BuildJulietCWESubdir(CrossCompileCMakeProject):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     cwe_number = None
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
 

@@ -97,7 +97,7 @@ class _AdditionalFileTemplates(object):
 
 
 class _BuildDiskImageBase(SimpleProject):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     disk_image_path = None  # type: Path
     _freebsd_build_class = None
     strip_binaries = False  # True by default for minimal disk-image
@@ -971,7 +971,7 @@ class _AArch64FileTemplates(_AdditionalFileTemplates):
 
 
 class BuildMultiArchDiskImage(_BuildDiskImageBase):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     _source_class = None  # type: typing.Type[SimpleProject]
 
     @classproperty

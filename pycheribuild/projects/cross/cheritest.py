@@ -34,7 +34,7 @@ from ..sail import BuildSailCheriMips
 
 
 class _BuildCheriMipsTestBase(Project):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     target = "cheritest"
     project_name = "cheritest"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheritest.git")

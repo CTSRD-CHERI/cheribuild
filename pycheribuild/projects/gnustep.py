@@ -76,7 +76,7 @@ class BuildGnuStep_Make(AutotoolsProject):
 
 # FIXME: do we need to source Makefiles/GNUstep.sh before building?
 class GnuStepModule(AutotoolsProject):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     build_in_source_dir = True  # out of source builds don't seem to work!
 
@@ -112,7 +112,7 @@ class GnuStepModule(AutotoolsProject):
 
 
 class BuildGnuStep_Base(GnuStepModule):
-    doNotAddToTargets = False  # Even though it ends in Base this is not a Base class
+    do_not_add_to_targets = False  # Even though it ends in Base this is not a Base class
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, moduleName="base")

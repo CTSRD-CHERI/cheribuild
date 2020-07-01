@@ -35,7 +35,7 @@ from .crosscompileproject import (CrossCompileProject, DefaultInstallDir, FettPr
 
 class BuildOpenSSL(CrossCompileProject):
     # Just add the FETT target below for now.
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     build_in_source_dir = True
 
     repository = GitRepository("https://github.com/CTSRD-CHERI/openssl.git")

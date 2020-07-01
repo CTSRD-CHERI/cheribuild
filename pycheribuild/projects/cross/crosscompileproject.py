@@ -48,7 +48,7 @@ __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProj
 # This mixin sets supported_architectures to ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS and thereby
 # avoids repeating this for every target than can be cross-built
 class CrossCompileMixin(object):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     add_build_dir_suffix_for_native = True  # Add the suffix for the native build
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
@@ -56,15 +56,15 @@ class CrossCompileMixin(object):
 
 
 class CrossCompileProject(CrossCompileMixin, Project):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
 
 
 class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
-    doNotAddToTargets = True  # only used as base class
+    do_not_add_to_targets = True  # only used as base class
 
 
 class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
-    doNotAddToTargets = True  # only used as base class
+    do_not_add_to_targets = True  # only used as base class
 
     add_host_target_build_config_options = True
     _autotools_add_default_compiler_args = True

@@ -37,7 +37,7 @@ from ..config.compilation_targets import CompilationTargets
 
 
 class LaunchFPGABase(SimpleProject):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
 
     @classmethod
     def setup_config_options(cls, **kwargs):

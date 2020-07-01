@@ -12,7 +12,7 @@ import subprocess
 
 # noinspection PyTypeChecker
 class MockProject(Project):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     project_name = "FAKE"
     target = "FAKE"
     _should_not_be_instantiated = False

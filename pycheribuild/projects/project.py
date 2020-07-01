@@ -89,11 +89,11 @@ class ProjectSubclassDefinitionHook(type):
         super().__init__(name, bases, clsdict)
         if typing.TYPE_CHECKING:  # no-combine
             assert issubclass(cls, SimpleProject)  # no-combine
-        if clsdict.get("doNotAddToTargets") is not None:
-            if clsdict.get("doNotAddToTargets") is True:
-                return  # if doNotAddToTargets is defined within the class we skip it
+        if clsdict.get("do_not_add_to_targets") is not None:
+            if clsdict.get("do_not_add_to_targets") is True:
+                return  # if do_not_add_to_targets is defined within the class we skip it
         elif name.endswith("Base"):
-            fatalError("Found class name ending in Base (", name, ") but doNotAddToTargets was not defined", sep="")
+            fatalError("Found class name ending in Base (", name, ") but do_not_add_to_targets was not defined", sep="")
 
         project_name = None
         if "project_name" in clsdict:
@@ -116,7 +116,7 @@ class ProjectSubclassDefinitionHook(type):
 
         if not target_name:
             sys.exit("target name is not set and cannot infer from class " + name +
-                     " -- set project_name=, target= or doNotAddToTargets=True")
+                     " -- set project_name=, target= or do_not_add_to_targets=True")
         if cls.__dict__.get("dependencies_must_be_built"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
@@ -143,7 +143,7 @@ class ProjectSubclassDefinitionHook(type):
                 new_dict = cls.__dict__.copy()
                 new_dict["_xtarget"] = arch
                 new_dict["_should_not_be_instantiated"] = False  # unlike the subclass we can instantiate these
-                new_dict["doNotAddToTargets"] = True  # We are already adding it here
+                new_dict["do_not_add_to_targets"] = True  # We are already adding it here
                 new_dict["target"] = new_name
                 new_dict["synthetic_base"] = cls  # We are already adding it here
                 # noinspection PyTypeChecker
@@ -178,7 +178,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # Whether to hide the options from the default --help output (only add to --help-hidden)
     hide_options_from_help = False
     # Project subclasses will automatically have a target based on their name generated unless they add this:
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
     # However, if the output is just a plain text file don't attempt to do any line clearing
     _clear_line_sequence = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
@@ -1374,7 +1374,7 @@ class Project(SimpleProject):
     git_revision = None
     skip_git_submodules = False
     compile_db_requires_bear = True
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
 
     build_dir_suffix = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
     add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
@@ -2450,7 +2450,7 @@ class CMakeProject(Project):
     and checks that CMake is installed
     """
     __minimum_cmake_version = None  # type: Tuple[int, int, int]
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     compile_db_requires_bear = False  # cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON does it
     generate_cmakelists = False  # There is already a CMakeLists.txt
 
@@ -2712,7 +2712,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
 
 
 class AutotoolsProject(Project):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     _configure_supports_prefix = True
     make_kind = MakeCommandKind.GnuMake
 
@@ -2757,7 +2757,7 @@ class AutotoolsProject(Project):
 
 # A target that is just an alias for at least one other targets but does not force building of dependencies
 class TargetAlias(SimpleProject):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     dependencies_must_be_built = False
     hasSourceFiles = False
     is_alias = True
@@ -2768,7 +2768,7 @@ class TargetAlias(SimpleProject):
 
 # A target that does nothing (used for e.g. the "all" target)
 class TargetAliasWithDependencies(TargetAlias):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     dependencies_must_be_built = True
     hasSourceFiles = False
 

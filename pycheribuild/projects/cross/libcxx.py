@@ -41,7 +41,7 @@ from ...utils import commandline_to_str, OSInfo, runCmd, set_env, warningMessage
 
 # A base class to set the default installation directory
 class _CxxRuntimeCMakeProject(CrossCompileCMakeProject):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     cross_install_dir = DefaultInstallDir.SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
 

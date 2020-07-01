@@ -35,7 +35,7 @@ from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompil
 
 
 class BuildBBLBase(CrossCompileAutotoolsProject):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     repository = GitRepository("https://github.com/CTSRD-CHERI/riscv-pk",
         force_branch=True, default_branch="cheri_purecap",  # Compilation fixes for clang and support for CHERI
         old_urls=[b"https://github.com/jrtc27/riscv-pk.git"])

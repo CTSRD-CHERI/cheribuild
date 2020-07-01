@@ -47,7 +47,7 @@ class BuildQEMUBase(AutotoolsProject):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     # QEMU will not work with BSD make, need GNU make
     make_kind = MakeCommandKind.GnuMake
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     is_sdk_target = True
     skip_git_submodules = True  # we don't need these
     can_build_with_asan = True

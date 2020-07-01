@@ -33,7 +33,7 @@ from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDi
 
 class BuildZlib(CrossCompileAutotoolsProject):
     # Just add add the FETT target below for now.
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
 
     repository = GitRepository("https://github.com/CTSRD-CHERI/zlib.git")
 

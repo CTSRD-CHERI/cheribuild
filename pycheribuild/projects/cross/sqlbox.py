@@ -34,7 +34,7 @@ from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDi
 
 class BuildSQLbox(CrossCompileAutotoolsProject):
     # Just add add the FETT target below for now.
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     build_in_source_dir = True
 
     repository = GitRepository("https://github.com/kristapsdz/sqlbox.git")

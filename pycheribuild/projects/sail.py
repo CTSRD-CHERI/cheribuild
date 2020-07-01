@@ -179,7 +179,7 @@ class BuildBubbleWrap(AutotoolsProject):
 
 
 class ProjectUsingOpam(OpamMixin, Project):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
 
 
 REMS_OPAM_REPO = "https://github.com/rems-project/opam-repository.git"
@@ -380,7 +380,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
 
 # Old way of installing sail:
 class OcamlProject(OpamMixin, Project):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake

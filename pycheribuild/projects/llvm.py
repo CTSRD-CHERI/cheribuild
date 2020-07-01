@@ -47,7 +47,7 @@ class BuildLLVMBase(CMakeProject):
     repository = GitRepository(github_base_url + "llvm.git")
     no_default_sysroot = None
     skip_cheri_symlinks = True
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     can_build_with_asan = True
     is_large_source_repository = True
     # Linking all the debug info takes forever
@@ -346,7 +346,7 @@ exec {lld} "$@"
 
 
 class BuildLLVMMonoRepoBase(BuildLLVMBase):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
     llvm_subdir = "llvm"
 
     @classmethod
@@ -463,7 +463,7 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
 
 # Keep around the build infrastructure for building the split repos for now (needed for SOAAP):
 class BuildLLVMSplitRepoBase(BuildLLVMBase):
-    doNotAddToTargets = True
+    do_not_add_to_targets = True
 
     @classmethod
     def setup_config_options(cls, include_lld_revision=True, include_lldb_revision=False, **kwargs):
