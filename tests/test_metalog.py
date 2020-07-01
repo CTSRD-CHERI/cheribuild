@@ -233,12 +233,12 @@ def temp_symlink():
         file = _create_file(Path(td), "testfile", mode=0o700)
         yield link, file, target  # provide the fixture value
 
-
-def test_symlink_symlink(symlink):
+# noinspection PyShadowingNames
+def test_symlink_symlink(temp_symlink):
     mtree = MtreeFile()
-    print(symlink)
-    mtree.add_file(symlink[0], "tmp/link", mode=0o755, parent_dir_mode=0o755)
-    mtree.add_file(symlink[1], "tmp/testfile", mode=0o755, parent_dir_mode=0o755)
+    print(temp_symlink)
+    mtree.add_file(temp_symlink[0], "tmp/link", mode=0o755, parent_dir_mode=0o755)
+    mtree.add_file(temp_symlink[1], "tmp/testfile", mode=0o755, parent_dir_mode=0o755)
     print(_get_as_str(mtree), file=sys.stderr)
     expected = """#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
@@ -246,15 +246,16 @@ def test_symlink_symlink(symlink):
 ./tmp/link type=link uname=root gname=wheel mode=0755 link={target}
 ./tmp/testfile type=file uname=root gname=wheel mode=0755 contents={testfile}
 # END
-""".format(target=symlink[2], testfile=str(symlink[1]))
+""".format(target=temp_symlink[2], testfile=str(temp_symlink[1]))
     assert expected == _get_as_str(mtree)
 
 
-def test_symlink_infer_mode(symlink):
+# noinspection PyShadowingNames
+def test_symlink_infer_mode(temp_symlink):
     mtree = MtreeFile()
-    print(symlink)
-    mtree.add_file(symlink[0], "tmp/link", parent_dir_mode=0o755)
-    mtree.add_file(symlink[1], "tmp/testfile", parent_dir_mode=0o755)
+    print(temp_symlink)
+    mtree.add_file(temp_symlink[0], "tmp/link", parent_dir_mode=0o755)
+    mtree.add_file(temp_symlink[1], "tmp/testfile", parent_dir_mode=0o755)
     print(_get_as_str(mtree), file=sys.stderr)
     symlink_perms = "0644" if HAVE_LCHMOD else "0777"
     expected = """#mtree 2.0
@@ -263,5 +264,5 @@ def test_symlink_infer_mode(symlink):
 ./tmp/link type=link uname=root gname=wheel mode={symlink_perms} link={target}
 ./tmp/testfile type=file uname=root gname=wheel mode=0700 contents={testfile}
 # END
-""".format(target=symlink[2], testfile=str(symlink[1]), symlink_perms=symlink_perms)
+""".format(target=temp_symlink[2], testfile=str(temp_symlink[1]), symlink_perms=symlink_perms)
     assert expected == _get_as_str(mtree)
