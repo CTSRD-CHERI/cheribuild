@@ -186,7 +186,7 @@ class BuildLLVMBase(CMakeProject):
                                    LLVM_BUILD_LLVM_C_DYLIB=False, CLANG_LINK_CLANG_DYLIB=False,
                                    LLVM_INCLUDE_UTILS=False, LLVM_INCLUDE_TESTS=False, CLANG_INCLUDE_TESTS=False,
                                    CLANG_ENABLE_STATIC_ANALYZER=False, CLANG_ENABLE_ARCMT=False,
-                                   LLVM_INSTALL_TOOLCHAIN_ONLY=False, # This prevents some targets from being created
+                                   LLVM_INSTALL_TOOLCHAIN_ONLY=False,  # This prevents some targets from being created
                                    )
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):

@@ -405,7 +405,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # before querying the compiler.
         if self.crossbuild:
             assert not OSInfo.IS_FREEBSD
-            self.addCrossBuildOptions()
+            self.add_cross_build_options()
 
         # external toolchain options:
         self._setup_cross_toolchain_config()
@@ -844,11 +844,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             all_kernel_configs = self.kernelConfig
         self._installkernel(kernconf=all_kernel_configs)
 
-    def addCrossBuildOptions(self):
-        # we also need to ensure that our SDK build tools are being picked up first
-        # build_path = str(self.sdk_bindir) + ":" + str(self.crossBinDir)
-        # self.make_args.env_vars["PATH"] = build_path
-
+    def add_cross_build_options(self):
         # Tell glibc functions to be POSIX compatible
         # Would be ideal, but it seems like there is too much that depends on non-posix flags
         # self.common_options.env_vars["POSIXLY_CORRECT"] = "1"
@@ -1052,7 +1048,7 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
         cls.include_llvm = cls.add_bool_option("build-target-llvm",
             help="Build LLVM for the target architecture. Note: this adds significant time to the build")
 
-    def addCrossBuildOptions(self):
+    def add_cross_build_options(self):
         # Just try to build as much as possible (but using make.py)
         if not self.include_llvm:
             # Avoid extremely long builds by default

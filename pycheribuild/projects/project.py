@@ -2511,8 +2511,8 @@ class CMakeProject(Project):
             # Despite the name it should also work for baremetal newlib
             assert self.target_info.is_cheribsd() or self.target_info.is_baremetal() or self.target_info.is_rtems()
             self._cmakeTemplate = include_local_file("files/CrossToolchain.cmake.in")
-            self.toolchainFile = self.build_dir / "CrossToolchain.cmake"
-            self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchainFile)
+            self.toolchain_file = self.build_dir / "CrossToolchain.cmake"
+            self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchain_file)
         # The toolchain files need at least CMake 3.7
         self.set_minimum_cmake_version(3, 7)
 
@@ -2633,7 +2633,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
         if not self.compiling_for_host():
             # TODO: set CMAKE_STRIP, CMAKE_NM, CMAKE_OBJDUMP, CMAKE_READELF, CMAKE_DLLTOOL, CMAKE_DLLTOOL,
             #  CMAKE_ADDR2LINE
-            self.generate_cmake_toolchain_file(self.toolchainFile)
+            self.generate_cmake_toolchain_file(self.toolchain_file)
             self.add_cmake_options(
                 _CMAKE_TOOLCHAIN_LOCATION=self.target_info.sdk_root_dir / "bin",
                 CMAKE_LINKER=self.target_info.linker)
@@ -2717,8 +2717,8 @@ class AutotoolsProject(Project):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.extraConfigureFlags = cls.add_config_option("configure-options", default=[], kind=list, metavar="OPTIONS",
-            help="Additional command line options to pass to configure")
+        cls.extra_configure_flags = cls.add_config_option("configure-options", default=[], kind=list, metavar="OPTIONS",
+                                                          help="Additional command line options to pass to configure")
 
     """
     Like Project but automatically sets up the defaults for autotools like projects
@@ -2736,8 +2736,8 @@ class AutotoolsProject(Project):
                 self.configure_args.append("--prefix=" + str(self.install_prefix))
             else:
                 self.configure_args.append("--prefix=" + str(self.install_dir))
-        if self.extraConfigureFlags:
-            self.configure_args.extend(self.extraConfigureFlags)
+        if self.extra_configure_flags:
+            self.configure_args.extend(self.extra_configure_flags)
         super().configure(**kwargs)
 
     def needs_configure(self):
