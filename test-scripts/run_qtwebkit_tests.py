@@ -32,61 +32,51 @@
 import argparse
 from pathlib import Path
 
-from run_tests_common import junitparser, run_tests_main, boot_cheribsd
+from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 
 
 def setup_qtwebkit_test_environment(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace):
     boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
-    boot_cheribsd.run_cheribsd_command(qemu, "export ICU_DATA=/sysroot/usr/local/share/icu/60.0.1")
-    boot_cheribsd.run_cheribsd_command(qemu, "export LANG=en_US.UTF-8")
-    boot_cheribsd.run_cheribsd_command(qemu, "echo '<h1>Hello World!</h1>' > /tmp/helloworld.html")
+    qemu.run("export ICU_DATA=/sysroot/usr/local/share/icu/60.0.1")
+    qemu.run("export LANG=en_US.UTF-8")
+    qemu.run("echo '<h1>Hello World!</h1>' > /tmp/helloworld.html")
 
     # mime database
-    boot_cheribsd.run_cheribsd_command(qemu, "mkdir -p /usr/share/mime/packages")
+    qemu.run("mkdir -p /usr/share/mime/packages")
     # old directory names:
-    boot_cheribsd.run_cheribsd_command(qemu, "mkdir -p /usr/local/Qt-cheri/lib/fonts")
-    boot_cheribsd.run_cheribsd_command(qemu, "ln -sf /usr/local/Qt-cheri /usr/local/Qt-mips")
+    qemu.run("mkdir -p /usr/local/Qt-cheri/lib/fonts")
+    qemu.run("ln -sf /usr/local/Qt-cheri /usr/local/Qt-mips")
     # New directory names:
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sf /usr/local/Qt-cheri /usr/local/mips")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sf /usr/local/Qt-cheri /usr/local/cheri")
-    boot_cheribsd.checked_run_cheribsd_command(qemu,
-                                               "cp /source/LayoutTests/resources/Ahem.ttf "
-                                               "/usr/local/Qt-cheri/lib/fonts")
-    boot_cheribsd.checked_run_cheribsd_command(qemu,
-                                               "cp "
-                                               "/source/LayoutTests/fast/writing-mode/resources/DroidSansFallback-reduced.ttf /usr/local/Qt-cheri/lib/fonts")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /build/mime.cache /usr/share/mime")
-    boot_cheribsd.checked_run_cheribsd_command(qemu,
-                                               "cp /build/freedesktop.org.xml "
-                                               "/usr/share/mime/packages/freedesktop.org.xml")
+    qemu.checked_run("ln -sf /usr/local/Qt-cheri /usr/local/mips")
+    qemu.checked_run("ln -sf /usr/local/Qt-cheri /usr/local/cheri")
+    qemu.checked_run("cp /source/LayoutTests/resources/Ahem.ttf /usr/local/Qt-cheri/lib/fonts")
+    qemu.checked_run("cp /source/LayoutTests/fast/writing-mode/resources/DroidSansFallback-reduced.ttf "
+                     "/usr/local/Qt-cheri/lib/fonts")
+    qemu.checked_run("cp /build/mime.cache /usr/share/mime")
+    qemu.checked_run("cp /build/freedesktop.org.xml /usr/share/mime/packages/freedesktop.org.xml")
 
-    boot_cheribsd.success(
-        "To debug crashes run: `sysctl kern.corefile=/build/%N.%P.core; sysctl kern.coredump=1` and then run CHERI "
-        "gdb on the host system.")
+    boot_cheribsd.success("To debug crashes run: `sysctl kern.corefile=/build/%N.%P.core; sysctl kern.coredump=1`"
+                          " and then run CHERI gdb on the host system.")
 
     # copy the smaller files to /tmp to avoid the smbfs overhead
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /build/bin/jsc.stripped /tmp/jsc")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /build/bin/DumpRenderTree.stripped /tmp/DumpRenderTree")
+    qemu.checked_run("cp /build/bin/jsc.stripped /tmp/jsc")
+    qemu.checked_run("cp /build/bin/DumpRenderTree.stripped /tmp/DumpRenderTree")
 
 
 def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running QtWebkit tests")
     try:
         # Check that jsc + dumprendertree work
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/jsc --help", timeout=1200)
+        qemu.checked_run("/tmp/jsc --help", timeout=1200)
         # Run a simple javascript loop
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/jsc -e 'for (i = 0; i < 10; i++) print(1 + i);'",
-                                                   timeout=1200)
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/DumpRenderTree -v /tmp/helloworld.html", timeout=1800)
-        boot_cheribsd.checked_run_cheribsd_command(qemu,
-                                                   "/tmp/DumpRenderTree -p --stdout /build/hello.png "
-                                                   "/tmp/helloworld.html",
-                                                   timeout=1800)
+        qemu.checked_run("/tmp/jsc -e 'for (i = 0; i < 10; i++) print(1 + i);'", timeout=1200)
+        qemu.checked_run("/tmp/DumpRenderTree -v /tmp/helloworld.html", timeout=1800)
+        qemu.checked_run("/tmp/DumpRenderTree -p --stdout /build/hello.png /tmp/helloworld.html", timeout=1800)
         if not args.smoketest:
-            boot_cheribsd.checked_run_cheribsd_command(qemu,
-                                                       "/source/Tools/Scripts/run-layout-jsc -j /tmp/jsc -t "
-                                                       "/source/LayoutTests -r /build/results -x /build/results.xml",
-                                                       timeout=None)
+            qemu.checked_run(
+                "/source/Tools/Scripts/run-layout-jsc -j /tmp/jsc -t "
+                "/source/LayoutTests -r /build/results -x /build/results.xml",
+                timeout=None)
         return True
     finally:
         tests_xml_path = Path(args.build_dir, 'results.xml')

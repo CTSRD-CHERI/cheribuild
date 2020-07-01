@@ -95,13 +95,13 @@ class OpamMixin(object):
                 self.__ignore_switch_version = False
             self.__using_correct_switch = True
 
-    def run_opam_cmd(self, command, *args, ignoreErrors=False, _add_switch=True, **kwargs):
+    def run_opam_cmd(self, command, *args, ignore_errors=False, _add_switch=True, **kwargs):
         self._ensure_correct_switch()
         command_list = self._opam_cmd(command, *args, _add_switch=_add_switch)
         try:
             return self.run_command_in_ocaml_env(command_list, **kwargs)
         except CalledProcessError:
-            if ignoreErrors:
+            if ignore_errors:
                 # noinspection PyUnresolvedReferences
                 self.verbose_print(
                     "Ignoring non-zero exit code from " + coloured(AnsiColour.yellow, commandline_to_str(command_list)))

@@ -121,7 +121,7 @@ def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, a
         if mp_q:
             mp_q.put((COMPLETED, args.internal_shard))
         return result
-    except:
+    except Exception:
         if mp_q:
             boot_cheribsd.failure("GOT EXCEPTION in shard ", args.internal_shard, ": ", sys.exc_info(), exit=False)
             e = sys.exc_info()[1]

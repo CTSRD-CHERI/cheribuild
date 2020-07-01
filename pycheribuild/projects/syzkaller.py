@@ -59,7 +59,7 @@ class BuildSyzkaller(CrossCompileProject):
         cls.sysgen = cls.add_bool_option(
             "run-sysgen", show_help=True,
             help="Rerun syz-extract and syz-sysgen to rebuild generated Go "
-            "syscall descriptions.")
+                 "syscall descriptions.")
 
     def __init__(self, config):
         self._install_prefix = config.cheri_sdk_dir
@@ -152,20 +152,20 @@ class RunSyzkaller(SimpleProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.syz_config = cls.add_path_option("syz-config", default=None,
-                                           help="Path to the syzkaller configuration file to use.",
-                                           show_help=True)
+                                             help="Path to the syzkaller configuration file to use.",
+                                             show_help=True)
         cls.syz_ssh_key = cls.add_path_option("ssh-privkey", show_help=True,
                                               default=lambda config, project: (
-                                                          config.source_root / "extra-files" / "syzkaller_id_rsa"),
-                                              help="A directory with additional files that will be added to the image (default: "
-                                                   "'$SOURCE_ROOT/extra-files/syzkaller_id_rsa')",
+                                                      config.source_root / "extra-files" / "syzkaller_id_rsa"),
+                                              help="A directory with additional files that will be added to the image "
+                                                   "(default: '$SOURCE_ROOT/extra-files/syzkaller_id_rsa')",
                                               metavar="syzkaller_id_rsa")
         cls.syz_workdir = cls.add_path_option("workdir", show_help=True,
                                               default=lambda config, project: (
-                                                          config.output_root / "syzkaller-workdir"),
+                                                      config.output_root / "syzkaller-workdir"),
                                               help="Working directory for syzkaller output.", metavar="DIR")
         cls.syz_debug = cls.add_bool_option("debug",
-            help="Run syz-manager in debug mode, requires manual startup of the VM.")
+                                            help="Run syz-manager in debug mode, requires manual startup of the VM.")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -175,10 +175,9 @@ class RunSyzkaller(SimpleProject):
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID).syzkaller_binary()
         self.kernel_path = BuildCHERIBSD.get_installed_kernel_path(
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP)
-        self.kernel_src_path = BuildCHERIBSD.get_instance(self,
-                                                          cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).source_dir
-        self.kernel_build_path = BuildCHERIBSD.get_instance(self,
-                                                            cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).build_dir
+        mips_purecap_cheribsd = BuildCHERIBSD.get_instance(self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP)
+        self.kernel_src_path = mips_purecap_cheribsd.source_dir
+        self.kernel_build_path = mips_purecap_cheribsd.build_dir
         self.disk_image = BuildCheriBSDDiskImage.get_instance(
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).disk_image_path
 
