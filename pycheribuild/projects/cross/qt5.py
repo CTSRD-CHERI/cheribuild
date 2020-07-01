@@ -34,7 +34,7 @@ from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, Cr
                                   CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
                                   Linkage, MakeCommandKind)
 from ...config.loader import ComputedDefaultValue
-from ...utils import commandline_to_str, fatalError, get_compiler_info, OSInfo, runCmd
+from ...utils import commandline_to_str, get_compiler_info, OSInfo, runCmd
 
 
 # This class is used to build qtbase and all of qt5
@@ -450,7 +450,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                 raise
 
             if not Path(td, "mime/mime.cache").exists():
-                fatalError("Could not generated shared-mime-info cache!")
+                self.fatal("Could not generated shared-mime-info cache!")
             # install mime.cache and freedesktop.org.xml into the build dir for tests
             self.install_file(mime_info_src, self.build_dir / "freedesktop.org.xml", force=True,
                               print_verbose_only=False)

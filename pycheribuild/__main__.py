@@ -47,7 +47,7 @@ from .projects import *  # make sure all projects are loaded so that target_mana
 from .projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
 from .projects.project import SimpleProject
 from .targets import target_manager
-from .utils import (AnsiColour, coloured, commandline_to_str, fatalError, get_program_version,
+from .utils import (AnsiColour, coloured, commandline_to_str, fatal_error, get_program_version,
                     have_working_internet_connection, init_global_config, print_command, status_update,
                     runCmd)
 
@@ -91,7 +91,7 @@ def ensure_fd_is_blocking(fd):
         fcntl.fcntl(fd, fcntl.F_SETFL, flag & ~os.O_NONBLOCK)
     flag = fcntl.fcntl(fd, fcntl.F_GETFL)
     if flag & os.O_NONBLOCK:
-        fatalError("fd", fd, "is set to nonblocking and could not unset flag")
+        fatal_error("fd", fd, "is set to nonblocking and could not unset flag")
 
 
 def real_main():
@@ -124,7 +124,8 @@ def real_main():
         if cheri_config.build_root == build_option._get_default_value(cheri_config) and \
                 cheri_config.source_root == source_option._get_default_value(cheri_config) and \
                 cheri_config.output_root == output_option._get_default_value(cheri_config):
-            fatalError("Running cheribuild in docker with the default source/output/build directories is not supported")
+            fatal_error(
+                "Running cheribuild in docker with the default source/output/build directories is not supported")
 
     if CheribuildAction.LIST_TARGETS in cheri_config.action:
         print("Available targets are:\n ", "\n  ".join(all_target_names))
@@ -134,7 +135,7 @@ def real_main():
         sys.exit()
     elif cheri_config.get_config_option:
         if cheri_config.get_config_option not in config_loader.options:
-            fatalError("Unknown config key", cheri_config.get_config_option)
+            fatal_error("Unknown config key", cheri_config.get_config_option)
         option = config_loader.options[cheri_config.get_config_option]
         # noinspection PyProtectedMember
         print(option.__get__(cheri_config,
@@ -215,7 +216,7 @@ def real_main():
         if cheri_config.libcompat_buildenv or cheri_config.buildenv:
             cheri_config.targets.append("cheribsd")
         else:
-            fatalError("At least one target name is required (see --list-targets).")
+            fatal_error("At least one target name is required (see --list-targets).")
 
     if not cheri_config.quiet:
         print("Sources will be stored in", cheri_config.source_root)
@@ -251,8 +252,8 @@ def main():
     except subprocess.CalledProcessError as err:
         error = True
         cwd = (". Working directory was ", err.cwd) if hasattr(err, "cwd") else ()
-        fatalError("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
-                   err.returncode, *cwd, fatal_when_pretending=True, sep="", exit_code=err.returncode)
+        fatal_error("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
+                    err.returncode, *cwd, fatal_when_pretending=True, sep="", exit_code=err.returncode)
     finally:
         if error:
             signal.signal(signal.SIGTERM, signal.SIG_IGN)

@@ -53,7 +53,7 @@ from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchi
 from ..filesystemutils import FileSystemUtils
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str,
-                     commandline_to_str, CompilerInfo, fatalError, get_compiler_info, get_program_version,
+                     commandline_to_str, CompilerInfo, fatal_error, get_compiler_info, get_program_version,
                      get_version_output, include_local_file, is_jenkins_build, OSInfo, popen_handle_noexec,
                      print_command, runCmd, status_update, ThreadJoiner, warning_message)
 
@@ -93,7 +93,8 @@ class ProjectSubclassDefinitionHook(type):
             if clsdict.get("do_not_add_to_targets") is True:
                 return  # if do_not_add_to_targets is defined within the class we skip it
         elif name.endswith("Base"):
-            fatalError("Found class name ending in Base (", name, ") but do_not_add_to_targets was not defined", sep="")
+            fatal_error("Found class name ending in Base (", name, ") but do_not_add_to_targets was not defined",
+                        sep="")
 
         project_name = None
         if "project_name" in clsdict:
@@ -231,7 +232,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             try:
                 dep_target = target_manager.get_target(dep_name, arch=expected_build_arch, config=config, caller=cls)
             except KeyError:
-                fatalError("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
+                fatal_error("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
                 raise
             # Handle --include-dependencies with --skip-sdk is passed
             if config.skip_sdk and dep_target.project_class.is_sdk_target:
@@ -848,7 +849,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @staticmethod
     def fatal(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False):
-        fatalError(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending)
+        fatal_error(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending)
 
 
 def install_dir_not_specified(_: CheriConfig, project: "Project"):
@@ -1362,7 +1363,7 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
 def _default_install_dir_str(project: "Project") -> str:
     install_dir = project.get_default_install_dir_kind()
     return str(install_dir.value)
-    # fatalError("Unknown install dir for", project.project_name)
+    # fatal_error("Unknown install dir for", project.project_name)
 
 
 class Project(SimpleProject):
@@ -2484,7 +2485,7 @@ class CMakeProject(Project):
                 generator = CMakeProject.Generator.Ninja
             else:
                 # TODO: add support for cmake --build <dir> --target <tgt> -- <args>
-                fatalError("Unknown CMake Generator", custom_generator, "-> don't know which build command to run")
+                self.fatal("Unknown CMake Generator", custom_generator, "-> don't know which build command to run")
         self.generator = generator
         self.configure_args.append(str(self.source_dir))  # TODO: use undocumented -H and -B options?
         if self.generator == CMakeProject.Generator.Ninja:

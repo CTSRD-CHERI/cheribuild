@@ -47,7 +47,7 @@ from .projects.cross import *  # make sure all projects are loaded so that targe
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project, SimpleProject
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
-from .utils import (commandline_to_str, fatalError, get_program_version, init_global_config, OSInfo, runCmd, set_env,
+from .utils import (commandline_to_str, fatal_error, get_program_version, init_global_config, OSInfo, runCmd, set_env,
                     status_update, ThreadJoiner, warning_message)
 
 EXTRACT_SDK_TARGET = "extract-sdk"
@@ -106,7 +106,7 @@ class SdkArchive(object):
             # print("Matched files:", found)
             if len(found) == 0:
                 if fatal:
-                    fatalError("required files", glob, "missing. Source archive =", self.archive)
+                    fatal_error("required files", glob, "missing. Source archive =", self.archive)
                 else:
                     status_update("required files", glob, "missing. Source archive was", self.archive)
                     return False
@@ -164,7 +164,7 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[Sdk
         archive.extract()
 
     if not cheri_config.cheri_sdk_bindir.exists():
-        fatalError("SDK bin dir does not exist after extracting sysroot archives!")
+        fatal_error("SDK bin dir does not exist after extracting sysroot archives!")
 
     # Use llvm-ar/llvm-ranlib or the host ar/ranlib if they ar/ranlib are missing from archive
     for tool in ("ar", "ranlib", "nm"):
@@ -229,11 +229,11 @@ def _jenkins_main():
         sys.exit()
 
     if cheri_config.action == [""]:
-        fatalError("No action specified, did you mean to pass --build?")
+        fatal_error("No action specified, did you mean to pass --build?")
         sys.exit()
 
     if len(cheri_config.targets) != 1:
-        fatalError("Expected exactly one target!")
+        fatal_error("Expected exactly one target!")
         sys.exit()
 
     if JenkinsAction.BUILD in cheri_config.action or JenkinsAction.TEST in cheri_config.action:
@@ -269,8 +269,8 @@ def _jenkins_main():
         if isinstance(target,
                 MultiArchTargetAlias) and cross_target is not None and cross_target != cheri_config.preferred_xtarget\
                 and cheri_config.preferred_xtarget is not None:
-            fatalError("Cannot build project", project.target, "with cross compile target", cross_target.name,
-                       "when --cpu is set to", cheri_config.preferred_xtarget.name, fatal_when_pretending=True)
+            fatal_error("Cannot build project", project.target, "with cross compile target", cross_target.name,
+                        "when --cpu is set to", cheri_config.preferred_xtarget.name, fatal_when_pretending=True)
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheri_config.output_root
             project._install_prefix = cheri_config.installation_prefix
@@ -286,14 +286,14 @@ def _jenkins_main():
             elif cheri_config.cheri_sdk_path:
                 expected_clang = cheri_config.cheri_sdk_bindir / "clang"
                 if not expected_clang.exists():
-                    fatalError("--cheri-sdk-path specified but", expected_clang, "does not exist")
+                    fatal_error("--cheri-sdk-path specified but", expected_clang, "does not exist")
             else:
                 need_cheribsd_sysroot = project.needs_sysroot and project.target_info.is_cheribsd()
                 create_sdk_from_archives(cheri_config, needs_cheribsd_sysroot=need_cheribsd_sysroot)
 
         if project.needs_sysroot and not project.target_info.sysroot_dir.exists() and JenkinsAction.BUILD in \
                 cheri_config.action:
-            fatalError("Sysroot directory", project.target_info.sysroot_dir, "does not exist")
+            fatal_error("Sysroot directory", project.target_info.sysroot_dir, "does not exist")
 
         if cheri_config.debug_output:
             status_update("Configuration options for building", project.target, file=sys.stderr)
@@ -334,7 +334,7 @@ def _jenkins_main():
 
         # bsdtar too old and GNU tar not found
         if not tar_cmd:
-            fatalError("Could not find a usable version of the tar command")
+            fatal_error("Could not find a usable version of the tar command")
             return
         status_update("Creating tarball", cheri_config.tarball_name)
         # Strip all ELF files:
@@ -371,5 +371,5 @@ def jenkins_main():
     except KeyboardInterrupt:
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError as err:
-        fatalError("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code",
-            err.returncode)
+        fatal_error("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code",
+                    err.returncode)

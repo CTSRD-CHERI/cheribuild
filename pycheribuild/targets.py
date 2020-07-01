@@ -35,7 +35,7 @@ from collections import OrderedDict
 
 from .config.chericonfig import CheriConfig
 from .config.target_info import CrossCompileTarget
-from .utils import AnsiColour, coloured, fatalError, set_env, status_update, warning_message
+from .utils import AnsiColour, coloured, fatal_error, set_env, status_update, warning_message
 
 if typing.TYPE_CHECKING:  # no-combine
     from .projects.project import SimpleProject  # no-combine
@@ -290,7 +290,7 @@ class DeprecatedTargetAlias(SimpleTargetAlias):
         from .projects.project import SimpleProject
         # noinspection PyProtectedMember
         if not SimpleProject._query_yes_no(config, "Continue?", default_result=True):
-            fatalError("Cannot continue.")
+            fatal_error("Cannot continue.")
         return self._real_target
 
 

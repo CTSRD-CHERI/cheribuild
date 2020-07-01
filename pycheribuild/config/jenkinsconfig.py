@@ -37,7 +37,7 @@ from .chericonfig import CheriConfig
 from .compilation_targets import CompilationTargets, CrossCompileTarget
 from .loader import ConfigLoaderBase
 from ..filesystemutils import FileSystemUtils
-from ..utils import default_make_jobs_count, fatalError, OSInfo, warning_message
+from ..utils import default_make_jobs_count, fatal_error, OSInfo, warning_message
 
 
 def default_install_prefix(conf: "JenkinsConfig", _):
@@ -202,7 +202,7 @@ class JenkinsConfig(CheriConfig):
         super().load()
 
         if not self.workspace or not self.workspace.is_dir():
-            fatalError("WORKSPACE is not set to a valid directory:", self.workspace)
+            fatal_error("WORKSPACE is not set to a valid directory:", self.workspace)
         self.source_root = self.workspace
         self.build_root = self.workspace
         if self.output_path != self.default_output_path:
@@ -244,7 +244,7 @@ class JenkinsConfig(CheriConfig):
         elif self.cpu in ("x86", "x86_64", "amd64", "host", "native"):
             self.preferred_xtarget = CompilationTargets.NATIVE
         else:
-            fatalError("CPU is not set to a valid value:", self.cpu)
+            fatal_error("CPU is not set to a valid value:", self.cpu)
 
         if self.force_update:
             self.skip_update = False
@@ -257,13 +257,13 @@ class JenkinsConfig(CheriConfig):
             self.clang_plusplus_path = Path(os.getenv("HOST_CXX", self.clang_plusplus_path))
             self.clang_cpp_path = Path(os.getenv("HOST_CPP", self.clang_cpp_path))
             if not self.clang_path.exists():
-                fatalError("C compiler", self.clang_path, "does not exit. Pass --clang-path or set $HOST_CC")
+                fatal_error("C compiler", self.clang_path, "does not exit. Pass --clang-path or set $HOST_CC")
             if not self.clang_plusplus_path.exists():
-                fatalError("C++ compiler", self.clang_plusplus_path,
-                           "does not exit. Pass --clang++-path or set $HOST_CXX")
+                fatal_error("C++ compiler", self.clang_plusplus_path,
+                            "does not exit. Pass --clang++-path or set $HOST_CXX")
             if not self.clang_cpp_path.exists():
-                fatalError("C pre-processor", self.clang_cpp_path,
-                           "does not exit. Pass --clang-cpp-path or set $HOST_CPP")
+                fatal_error("C pre-processor", self.clang_cpp_path,
+                            "does not exit. Pass --clang-cpp-path or set $HOST_CPP")
         else:
             # always use the CHERI clang built by jenkins
             self.clang_path = self.cheri_sdk_bindir / "clang"

@@ -42,7 +42,7 @@ except ImportError:
     argcomplete = None
 
 from ..colour import *
-from ..utils import fatalError, warning_message
+from ..utils import fatal_error, warning_message
 from pathlib import Path
 
 if typing.TYPE_CHECKING:  # no-combine
@@ -292,8 +292,8 @@ class ConfigOptionBase(object):
         try:
             result = self._convert_type(result)
         except ValueError as e:
-            fatalError("Invalid value for option '", self.full_option_name,
-                "': could not convert '", result, "': ", str(e), sep="")
+            fatal_error("Invalid value for option '", self.full_option_name,
+                        "': could not convert '", result, "': ", str(e), sep="")
             sys.exit()
         return result
 

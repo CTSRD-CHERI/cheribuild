@@ -36,7 +36,7 @@ import typing
 from pathlib import Path
 
 from .config.chericonfig import CheriConfig
-from .utils import AnsiColour, fatalError, print_command, runCmd, status_update, ThreadJoiner, warning_message
+from .utils import AnsiColour, fatal_error, print_command, runCmd, status_update, ThreadJoiner, warning_message
 
 
 class FileSystemUtils(object):
@@ -187,7 +187,7 @@ class FileSystemUtils(object):
         if self.config.pretend:
             return
         if not overwrite and file.exists():
-            fatalError("File", file, "already exists!")
+            fatal_error("File", file, "already exists!")
         self.makedirs(file.parent)
         with file.open("w", encoding="utf-8") as f:
             f.write(contents)
@@ -210,7 +210,7 @@ class FileSystemUtils(object):
 
     def move_file(self, src: Path, dest: Path, force=False, create_dirs=True):
         if not src.exists():
-            fatalError(src, "doesn't exist")
+            fatal_error(src, "doesn't exist")
         cmd = ["mv", "-f"] if force else ["mv"]
         if create_dirs and not dest.parent.exists():
             self.makedirs(dest.parent)
@@ -229,7 +229,7 @@ class FileSystemUtils(object):
         if (dest.is_symlink() or dest.exists()) and force:
             dest.unlink()
         if not src.exists():
-            fatalError("Required file", src, "does not exist")
+            fatal_error("Required file", src, "does not exist")
         if create_dirs and not dest.parent.exists():
             self.makedirs(dest.parent)
         if dest.is_symlink():
@@ -244,7 +244,7 @@ class FileSystemUtils(object):
         if self.config.pretend:
             return
         if not file.exists():
-            fatalError("Required file", file, "does not exist")
+            fatal_error("Required file", file, "does not exist")
         with file.open("r+", encoding="utf-8") as f:
             lines = list(rewrite(f.read().splitlines()))
             f.seek(0)
@@ -273,7 +273,7 @@ class FileSystemUtils(object):
         if not tool_name:
             tool_name = tool_path.name
         if not tool_path.is_file():
-            fatalError("Attempting to create symlink to non-existent build tool_path:", tool_path)
+            fatal_error("Attempting to create symlink to non-existent build tool_path:", tool_path)
 
         # a prefixed tool_path was installed -> create link such as mips4-unknown-freebsd-ld -> ld
         if create_unprefixed_link:

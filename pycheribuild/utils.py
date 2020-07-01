@@ -50,7 +50,7 @@ from .colour import AnsiColour, coloured
 
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "print_command", "include_local_file", "CompilerInfo",  # no-combine
-           "runCmd", "status_update", "fatalError", "coloured", "AnsiColour", "set_env",  # no-combine
+           "runCmd", "status_update", "fatal_error", "coloured", "AnsiColour", "set_env",  # no-combine
            "init_global_config", "warning_message", "popen_handle_noexec", "extract_version",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "get_compiler_info", "latest_system_clang_tool",  # no-combine
            "get_program_version", "SafeDict", "keep_terminal_sane",  # no-combine
@@ -266,8 +266,8 @@ def runCmd(*args, capture_output=False, capture_error=False, input: "typing.Unio
             if retcode != expected_exit_code and not allow_unexpected_returncode:
                 if GlobalConfig.PRETEND_MODE and not raise_in_pretend_mode:
                     cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
-                    fatalError("Command ", "`" + commandline_to_str(process.args) +
-                               "` failed with unexpected exit code ", retcode, *cwd, sep="")
+                    fatal_error("Command ", "`" + commandline_to_str(process.args) +
+                                "` failed with unexpected exit code ", retcode, *cwd, sep="")
                 else:
                     raise _make_called_process_error(retcode, process.args, stdout=stdout, stderr=stderr,
                                                      cwd=kwargs["cwd"])
@@ -488,7 +488,7 @@ def warning_message(*args, sep=" "):
     print(coloured(AnsiColour.magenta, maybe_add_space("Warning:", sep) + args, sep=sep), file=sys.stderr, flush=True)
 
 
-def fatalError(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exit_code=3):
+def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exit_code=3):
     # we ignore fatal errors when simulating a run
     if GlobalConfig.PRETEND_MODE:
         print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr,
@@ -509,7 +509,7 @@ def fatalError(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exi
 def include_local_file(path: str) -> str:
     file = Path(__file__).parent / path  # type: Path
     if not file.is_file():
-        fatalError(file, "is missing!")
+        fatal_error(file, "is missing!")
     with file.open("r", encoding="utf-8") as f:
         return f.read()
 
@@ -532,7 +532,7 @@ def have_working_internet_connection():
     except OSError:
         return False
     except Exception as ex:
-        fatalError("Something went wrong  while checking for internet connection", ex)
+        fatal_error("Something went wrong  while checking for internet connection", ex)
         return False
     finally:
         if x:
