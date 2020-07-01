@@ -14,7 +14,7 @@ from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfi
 _loader = JsonAndCommandLineConfigLoader()
 from pycheribuild.projects.project import SimpleProject
 
-SimpleProject._configLoader = _loader
+SimpleProject._config_loader = _loader
 from pycheribuild.targets import target_manager, Target
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
 # noinspection PyUnresolvedReferences
@@ -41,7 +41,7 @@ def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> Defau
     if not _targets_registered:
         allTargetNames = list(sorted(target_manager.target_names)) + ["__run_everything__"]
         ConfigLoaderBase._cheri_config = DefaultCheriConfig(_loader, allTargetNames)
-        SimpleProject._configLoader = _loader
+        SimpleProject._config_loader = _loader
         target_manager.register_command_line_options()
         _targets_registered = True
     target_manager.reset()

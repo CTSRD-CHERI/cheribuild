@@ -212,7 +212,7 @@ def _jenkins_main():
     config_loader = JenkinsConfigLoader()
     # Register all command line options
     cheri_config = JenkinsConfig(config_loader, all_target_names)
-    SimpleProject._configLoader = config_loader
+    SimpleProject._config_loader = config_loader
     target_manager.register_command_line_options()
     cheri_config.load()
     if cheri_config.verbose:

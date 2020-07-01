@@ -117,7 +117,7 @@ class ProjectSubclassDefinitionHook(type):
         if not target_name:
             sys.exit("target name is not set and cannot infer from class " + name +
                      " -- set project_name=, target= or doNotAddToTargets=True")
-        if cls.__dict__.get("dependenciesMustBeBuilt"):
+        if cls.__dict__.get("dependencies_must_be_built"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
         supported_archs = cls.supported_architectures
@@ -159,14 +159,14 @@ class ProjectSubclassDefinitionHook(type):
 
 
 class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
-    _configLoader = None  # type: ConfigLoaderBase
+    _config_loader = None  # type: ConfigLoaderBase
 
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
     project_name = None
     dependencies = []  # type: typing.List[str]
-    dependenciesMustBeBuilt = False
-    isAlias = False
+    dependencies_must_be_built = False
+    is_alias = False
     is_sdk_target = False  # for --skip-sdk
     source_dir = None
     build_dir = None
@@ -181,7 +181,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     doNotAddToTargets = True
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
     # However, if the output is just a plain text file don't attempt to do any line clearing
-    _clearLineSequence = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
+    _clear_line_sequence = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
     # Default to NATIVE only
     supported_architectures = [BasicCompilationTargets.NATIVE]
     # The architecture to build for the unsuffixed target name (defaults to supported_architectures[0] if no match)
@@ -485,10 +485,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         help_hidden = not show_help
 
         # check that the group was defined in the current class not a superclass
-        if "_commandLineOptionGroup" not in cls.__dict__:
+        if "_commandline_option_group" not in cls.__dict__:
             # noinspection PyProtectedMember
             # has to be a single underscore otherwise the name gets mangled to _Foo__commandlineOptionGroup
-            cls._commandLineOptionGroup = cls._configLoader._parser.add_argument_group(
+            cls._commandline_option_group = cls._config_loader._parser.add_argument_group(
                 "Options for target '" + cls.target + "'")
         # For targets such as qtbase-mips we want to fall back to checking the value of the option for qtbase
         fallback_name_base = getattr(cls, "_config_inherits_from", None)
@@ -533,9 +533,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
         alias_target_names = [prefix + "/" + name for prefix in cls.__dict__.get("_alias_target_names", tuple())]
-        return cls._configLoader.add_option(config_option_key + "/" + name, shortname, default=default, type=kind,
-            _owning_class=cls, group=cls._commandLineOptionGroup, help_hidden=help_hidden,
-            _fallback_names=fallback_config_names, _alias_names=alias_target_names, **kwargs)
+        return cls._config_loader.add_option(config_option_key + "/" + name, shortname, default=default, type=kind,
+                                             _owning_class=cls, group=cls._commandline_option_group,
+                                             help_hidden=help_hidden,
+                                             _fallback_names=fallback_config_names, _alias_names=alias_target_names,
+                                             **kwargs)
 
     @classmethod
     def add_bool_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None,
@@ -651,7 +653,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def _line_not_important_stdout_filter(self, line: bytes):
         # by default we don't keep any line persistent, just have updating output
         if self._last_stdout_line_can_be_overwritten:
-            sys.stdout.buffer.write(Project._clearLineSequence)
+            sys.stdout.buffer.write(Project._clear_line_sequence)
         sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
         sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
         flush_stdio(sys.stdout)
@@ -1377,7 +1379,7 @@ class Project(SimpleProject):
     build_dir_suffix = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
     add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
 
-    defaultSourceDir = ComputedDefaultValue(
+    default_source_dir = ComputedDefaultValue(
         function=lambda config, project: Path(config.source_root / project.project_name.lower()),
         as_string=lambda cls: "$SOURCE_ROOT/" + cls.project_name.lower())
 
@@ -1398,7 +1400,7 @@ class Project(SimpleProject):
         result += "-build"
         return result
 
-    defaultBuildDir = ComputedDefaultValue(
+    default_build_dir = ComputedDefaultValue(
         function=_default_build_dir, as_string=lambda cls: cls.project_build_dir_help())
 
     make_kind = MakeCommandKind.DefaultMake
@@ -1538,9 +1540,9 @@ class Project(SimpleProject):
     def setup_config_options(cls, install_directory_help="", **kwargs):
         super().setup_config_options(**kwargs)
         # statusUpdate("Setting up config options for", cls, cls.target)
-        cls.default_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.defaultSourceDir,
+        cls.default_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.default_source_dir,
                                                      help="Override default source directory for " + cls.project_name)
-        cls.build_dir = cls.add_path_option("build-directory", metavar="DIR", default=cls.defaultBuildDir,
+        cls.build_dir = cls.add_path_option("build-directory", metavar="DIR", default=cls.default_build_dir,
                                             help="Override default source directory for " + cls.project_name)
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
@@ -1755,7 +1757,7 @@ class Project(SimpleProject):
             self.repository.url = self._repository_url
         if isinstance(self.repository, ReuseOtherProjectRepository):
             # HACK: override the source directory (ignoring the setting from the JSON)
-            # This should be done using a decorator that also changes defaultSourceDir so that we can
+            # This should be done using a decorator that also changes default_source_dir so that we can
             # take the JSON into account
             self.default_source_dir = self.repository.get_real_source_dir(self, self.default_source_dir)
             self.info("Overriding source directory for", self.target, "since it reuses the sources of",
@@ -2756,9 +2758,9 @@ class AutotoolsProject(Project):
 # A target that is just an alias for at least one other targets but does not force building of dependencies
 class TargetAlias(SimpleProject):
     doNotAddToTargets = True
-    dependenciesMustBeBuilt = False
+    dependencies_must_be_built = False
     hasSourceFiles = False
-    isAlias = True
+    is_alias = True
 
     def process(self):
         assert len(self.dependencies) > 0
@@ -2767,7 +2769,7 @@ class TargetAlias(SimpleProject):
 # A target that does nothing (used for e.g. the "all" target)
 class TargetAliasWithDependencies(TargetAlias):
     doNotAddToTargets = True
-    dependenciesMustBeBuilt = True
+    dependencies_must_be_built = True
     hasSourceFiles = False
 
 

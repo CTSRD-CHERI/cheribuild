@@ -59,7 +59,7 @@ class BuildCheriCompressedCaps(CMakeProject):
 class BuildFreestandingSdk(SimpleProject):
     target = "freestanding-sdk"
     dependencies = ["llvm-native", "qemu", "gdb-native"]
-    dependenciesMustBeBuilt = True
+    dependencies_must_be_built = True
     is_sdk_target = True
 
     def __init__(self, config: CheriConfig):
@@ -106,7 +106,7 @@ class StartCheriSDKShell(SimpleProject):
 
     def process(self):
         new_man_path = str(self.config.cheri_sdk_dir / "share/man") + ":" + os.getenv("MANPATH", "") + ":"
-        new_path = str(self.config.cheri_sdk_bindir) + ":" + str(self.config.dollarPathWithOtherTools)
+        new_path = str(self.config.cheri_sdk_bindir) + ":" + str(self.config.dollar_path_with_other_tools)
         shell = os.getenv("SHELL", "/bin/sh")
         with set_env(MANPATH=new_man_path, PATH=new_path):
             statusUpdate("Starting CHERI SDK shell... ", end="")

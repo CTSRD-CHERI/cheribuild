@@ -78,7 +78,7 @@ class Target(object):
         if self._completed:
             return
         project = self.get_or_create_project(None, config)
-        with set_env(PATH=config.dollarPathWithOtherTools):
+        with set_env(PATH=config.dollar_path_with_other_tools):
             # make sure all system dependencies exist first
             project.check_system_dependencies()
 
@@ -101,7 +101,7 @@ class Target(object):
             project.setup()
         # noinspection PyProtectedMember
         assert project._setup_called, str(self._project_class) + ": forgot to call super().setup()?"
-        new_env = {"PATH": project.config.dollarPathWithOtherTools}
+        new_env = {"PATH": project.config.dollar_path_with_other_tools}
         if project.config.clang_colour_diags:
             new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
         with set_env(**new_env):
@@ -358,11 +358,11 @@ class TargetManager(object):
             chosen_targets.append(t)
             all_target_dependencies = t.get_dependencies(config)  # Ensure we cache the dependencies
             deps_to_add = []
-            if add_dependencies or t.project_class.dependenciesMustBeBuilt:
+            if add_dependencies or t.project_class.dependencies_must_be_built:
                 # some targets such as sdk always need their dependencies build:
                 deps_to_add = all_target_dependencies
-            elif t.project_class.isAlias:
-                assert not t.project_class.dependenciesMustBeBuilt
+            elif t.project_class.is_alias:
+                assert not t.project_class.dependencies_must_be_built
                 # for aliases without full dependencies just add the direct dependencies
                 remaining_targets_to_check.extend(t.project_class.direct_dependencies(config))
                 continue

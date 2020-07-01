@@ -229,7 +229,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
     doNotAddToTargets = False  # Even though it ends in Base this is not a Base class
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="5.10", force_branch=True)
     is_large_source_repository = True
-    defaultSourceDir = ComputedDefaultValue(
+    default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
         as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
 
@@ -351,7 +351,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
 
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.SYSROOT
-    defaultSourceDir = ComputedDefaultValue(
+    default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtwebkit",
         as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
     needs_mxcaptable_static = True  # Currently way over the limit

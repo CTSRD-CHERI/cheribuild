@@ -105,7 +105,7 @@ def real_main():
     config_loader = JsonAndCommandLineConfigLoader()
     # Register all command line options
     cheri_config = DefaultCheriConfig(config_loader, all_target_names + [run_everything_target])
-    SimpleProject._configLoader = config_loader
+    SimpleProject._config_loader = config_loader
     target_manager.register_command_line_options()
     # load them from JSON/cmd line
     cheri_config.load()

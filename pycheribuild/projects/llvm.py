@@ -43,8 +43,8 @@ _false_unless_build_all_set = ComputedDefaultValue(function=lambda config, proje
 
 
 class BuildLLVMBase(CMakeProject):
-    githubBaseUrl = "https://github.com/CTSRD-CHERI/"
-    repository = GitRepository(githubBaseUrl + "llvm.git")
+    github_base_url = "https://github.com/CTSRD-CHERI/"
+    repository = GitRepository(github_base_url + "llvm.git")
     no_default_sysroot = None
     skip_cheri_symlinks = True
     doNotAddToTargets = True
@@ -473,7 +473,7 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
             rev = cls.add_config_option(name + "-git-revision", kind=str, metavar="REVISION",
                                         help="The git revision for tools/" + name)
             repo = cls.add_config_option(name + "-repository", kind=str, metavar="REPOSITORY",
-                                         default=cls.githubBaseUrl + name + ".git",
+                                         default=cls.github_base_url + name + ".git",
                                          help="The git repository for tools/" + name)
             return repo, rev
 

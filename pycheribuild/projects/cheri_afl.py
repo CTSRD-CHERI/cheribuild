@@ -37,8 +37,7 @@ class BuildAflCheriNinja(Project):
     repository = GitRepository("https://github.com/CTSRD-CHERI/AFL-CHERI")
     native_install_dir = DefaultInstallDir.CHERI_SDK
     make_kind = MakeCommandKind.GnuMake
-
-    defaultBuildDir = Project.defaultSourceDir  # we have to build in the source directory
+    build_in_source_dir = True
 
     def configure(self, **kwargs):
         pass

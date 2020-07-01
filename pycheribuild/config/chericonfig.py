@@ -412,7 +412,7 @@ class CheriConfig(object):
         os.environ["CHERI_CAPTABLE_ABI"] = self.cheri_cap_table_abi
 
     @property
-    def dollarPathWithOtherTools(self) -> str:
+    def dollar_path_with_other_tools(self) -> str:
         return str(self.other_tools_dir / "bin") + ":" + os.getenv("PATH")
 
     @property

@@ -135,7 +135,7 @@ class BuildFreeBSDBase(Project):
     is_large_source_repository = True
     has_installsysroot_target = False
 
-    defaultExtraMakeOptions = [
+    default_extra_make_options = [
         # "-DWITHOUT_HTML",  # should not be needed
         # "-DWITHOUT_SENDMAIL", "-DWITHOUT_MAIL",  # no need for sendmail
         # "-DWITHOUT_SVNLITE",  # no need for SVN
@@ -150,7 +150,7 @@ class BuildFreeBSDBase(Project):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.extra_make_args = cls.add_config_option("build-options", default=cls.defaultExtraMakeOptions, kind=list,
+        cls.extra_make_args = cls.add_config_option("build-options", default=cls.default_extra_make_options, kind=list,
                                                     metavar="OPTIONS",
                                                     help="Additional make options to be passed to make when building "
                                                          "FreeBSD/CheriBSD. See `man src.conf` for more info.",
@@ -365,7 +365,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def _stdout_filter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
             if self._last_stdout_line_can_be_overwritten:
-                sys.stdout.buffer.write(Project._clearLineSequence)
+                sys.stdout.buffer.write(Project._clear_line_sequence)
             sys.stdout.buffer.write(line)
             flush_stdio(sys.stdout)
             self._last_stdout_line_can_be_overwritten = False

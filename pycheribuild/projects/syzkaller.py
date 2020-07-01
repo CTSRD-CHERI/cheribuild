@@ -43,8 +43,8 @@ from ..utils import set_env, ThreadJoiner
 class BuildSyzkaller(CrossCompileProject):
     dependencies = ["go", "cheribsd"]
     project_name = "cheri-syzkaller"
-    githubBaseUrl = "https://github.com/CTSRD-CHERI/"
-    repository = GitRepository(githubBaseUrl + "cheri-syzkaller.git")
+    github_base_url = "https://github.com/CTSRD-CHERI/"
+    repository = GitRepository(github_base_url + "cheri-syzkaller.git")
     # no_default_sysroot = None // probably useless??
     # skip_cheri_symlinks = True // llvm target only, useless here
     make_kind = MakeCommandKind.GnuMake
@@ -77,7 +77,7 @@ class BuildSyzkaller(CrossCompileProject):
         self.gosrc = self.source_dir
 
         self._new_path = (str(self.config.cheri_sdk_dir / "bin") + ":" +
-                          str(self.config.dollarPathWithOtherTools))
+                          str(self.config.dollar_path_with_other_tools))
 
         self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self)
 

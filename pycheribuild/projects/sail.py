@@ -116,7 +116,7 @@ class OpamMixin(object):
         self._ensure_correct_switch()
         opam_env = dict(GIT_TEMPLATE_DIR="",  # see https://github.com/ocaml/opam/issues/3493
                         OPAMROOT=self.opamroot, CCACHE_DISABLE=1,  # https://github.com/ocaml/opam/issues/3395
-                        PATH=self.config.dollarPathWithOtherTools)
+                        PATH=self.config.dollar_path_with_other_tools)
         if Path(self.opam_binary).is_absolute():
             opam_env["OPAM_USER_PATH_RO"] = Path(self.opam_binary).parent
         if not (self.opamroot / "opam-init").exists():

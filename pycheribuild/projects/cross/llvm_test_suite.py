@@ -40,7 +40,7 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
     dependencies = ["llvm-native"]
     default_build_type = BuildType.DEBUG
     project_name = "llvm-test-suite"
-    defaultSourceDir = ComputedDefaultValue(
+    default_source_dir = ComputedDefaultValue(
         function=lambda config, project: Path(config.source_root / "llvm-test-suite"),
         as_string="$SOURCE_ROOT/llvm-test-suite")
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL

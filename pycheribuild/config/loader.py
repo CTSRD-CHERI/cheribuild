@@ -124,7 +124,7 @@ class ConfigLoaderBase(object):
     _json = {}  # type: dict
     _completing_arguments = "_ARGCOMPLETE" in os.environ
 
-    showAllHelp = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or _completing_arguments
+    show_all_help = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or _completing_arguments
 
     def __init__(self, option_cls):
         self.__option_cls = option_cls
@@ -372,7 +372,7 @@ class CommandLineConfigOption(ConfigOptionBase):
                  _fallback_names: "typing.List[str]" = None, _alias_names: "typing.List[str]" = None, **kwargs):
         super().__init__(name, shortname, default, value_type, _owning_class, _loader, _fallback_names, _alias_names)
         # hide obscure options unless --help-hidden/--help/all is passed
-        if help_hidden and not self._loader.showAllHelp:
+        if help_hidden and not self._loader.show_all_help:
             kwargs["help"] = argparse.SUPPRESS
         self.action = self._add_argparse_action(name, shortname, default, group, kwargs)
         # Add the aliases (with argparse.SUPPRESS)
