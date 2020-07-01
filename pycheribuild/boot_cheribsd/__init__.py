@@ -50,14 +50,15 @@ import traceback
 import typing
 from pathlib import Path
 
+from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
+from ..qemu_utils import QemuOptions, riscv_bios_arguments
+from ..utils import find_free_port, keep_terminal_sane
+
 _cheribuild_root = Path(__file__).parent.parent.parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
 assert (_pexpect_dir / "pexpect/__init__.py").exists()
 assert str(_pexpect_dir.resolve()) in sys.path, str(_pexpect_dir) + " not found in " + str(sys.path)
-import pexpect
-from ..utils import find_free_port, keep_terminal_sane
-from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
-from ..qemu_utils import QemuOptions, riscv_bios_arguments
+import pexpect  # noqa: E402
 
 SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
                                                          CompilationTargets.CHERIBSD_MIPS_HYBRID,

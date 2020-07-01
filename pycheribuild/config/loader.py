@@ -41,9 +41,10 @@ try:
 except ImportError:
     argcomplete = None
 
-from ..colour import *
 from ..utils import fatal_error, warning_message
+from ..colour import AnsiColour, coloured
 from pathlib import Path
+from enum import Enum
 
 if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine

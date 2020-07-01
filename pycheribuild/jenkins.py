@@ -40,10 +40,11 @@ from pathlib import Path
 
 from .config.jenkinsconfig import JenkinsAction, JenkinsConfig
 from .config.loader import CommandLineConfigOption, ConfigLoaderBase
+# make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
-from .projects import *  # make sure all projects are loaded so that target_manager gets populated
+from .projects import *  # noqa: F401,F403
 # noinspection PyUnresolvedReferences
-from .projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
+from .projects.cross import *  # noqa: F401,F403
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project, SimpleProject
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager

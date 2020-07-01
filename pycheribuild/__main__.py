@@ -41,10 +41,11 @@ from .config.defaultconfig import CheribuildAction, DefaultCheriConfig
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
 from .config.loader import JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
+# make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
-from .projects import *  # make sure all projects are loaded so that target_manager gets populated
+from .projects import *  # noqa: F401,F403
 # noinspection PyUnresolvedReferences
-from .projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
+from .projects.cross import *  # noqa: F401,F403
 from .projects.project import SimpleProject
 from .targets import target_manager
 from .utils import (AnsiColour, coloured, commandline_to_str, fatal_error, get_program_version,

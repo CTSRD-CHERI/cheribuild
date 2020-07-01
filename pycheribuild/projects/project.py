@@ -45,15 +45,14 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Tuple, Union
 
-from ..config.chericonfig import BuildType, BuildType, CheriConfig, CheriConfig
-from ..config.loader import (ComputedDefaultValue, ComputedDefaultValue, ConfigLoaderBase, ConfigOptionBase,
-                             DefaultValueOnlyConfigOption)
-from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CPUArchitecture,
-                                  CrossCompileTarget, CrossCompileTarget, Linkage, Linkage, TargetInfo, TargetInfo)
+from ..config.chericonfig import BuildType, CheriConfig
+from ..config.loader import (ComputedDefaultValue, ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption)
+from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, Linkage,
+                                  TargetInfo)
 from ..filesystemutils import FileSystemUtils
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
-from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str,
-                     commandline_to_str, CompilerInfo, fatal_error, get_compiler_info, get_program_version,
+from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str, CompilerInfo,
+                     fatal_error, get_compiler_info, get_program_version,
                      get_version_output, include_local_file, is_jenkins_build, OSInfo, popen_handle_noexec,
                      print_command, run_command, status_update, ThreadJoiner, warning_message)
 
@@ -1547,7 +1546,7 @@ class Project(SimpleProject):
     def setup_config_options(cls, install_directory_help="", **kwargs):
         super().setup_config_options(**kwargs)
         cls._initial_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.default_source_dir,
-                                                     help="Override default source directory for " + cls.project_name)
+                                                      help="Override default source directory for " + cls.project_name)
         cls.build_dir = cls.add_path_option("build-directory", metavar="DIR", default=cls.default_build_dir,
                                             help="Override default source directory for " + cls.project_name)
         if cls.can_build_with_asan:
