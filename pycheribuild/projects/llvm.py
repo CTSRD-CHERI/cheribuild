@@ -179,10 +179,15 @@ class BuildLLVMBase(CMakeProject):
             if self.build_everything:
                 self.fatal(self.target, "/build-everything is incompatible with ", self.target,
                            "/build-minimal-toolchain", sep="")
+                if self.install_toolchain_only:
+                    self.fatal(self.target, "/build-minimal-toolchain is incompatible with ", self.target,
+                               "/install-toolchain-only", sep="")
             self.add_cmake_options(LLVM_BUILD_LLVM_DYLIB=False, LLVM_LINK_LLVM_DYLIB=False,
                                    LLVM_BUILD_LLVM_C_DYLIB=False, CLANG_LINK_CLANG_DYLIB=False,
                                    LLVM_INCLUDE_UTILS=False, LLVM_INCLUDE_TESTS=False, CLANG_INCLUDE_TESTS=False,
-                                   CLANG_ENABLE_STATIC_ANALYZER=False, CLANG_ENABLE_ARCMT=False)
+                                   CLANG_ENABLE_STATIC_ANALYZER=False, CLANG_ENABLE_ARCMT=False,
+                                   LLVM_INSTALL_TOOLCHAIN_ONLY=False, # This prevents some targets from being created
+                                   )
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
         super().set_lto_binutils(ar=ar, ranlib=ranlib, nm=nm, ld=ld)
