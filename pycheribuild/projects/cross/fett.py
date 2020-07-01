@@ -86,10 +86,10 @@ class BuildFettConfig(CrossCompileProject):
         mtree.add_dir(nginx_prefix / "conf/sites")
         mtree.add_dir(nginx_prefix / "logs")
         # XXX: make private key dir 700?
-        mtree.add_file(nginx_src / "common/keys/private-selfsigned.key",
-                       nginx_prefix / "etc/ssl/private/private-selfsigned.key", mode="0600")
-        mtree.add_file(nginx_src / "common/certs/selfsigned.crt",
-                       nginx_prefix / "etc/ssl/certs/selfsigned.crt")
+        mtree.add_file(nginx_src / "common/keys/fett-webserver.key",
+                       nginx_prefix / "etc/ssl/private/fett-webserver.key", mode="0600")
+        mtree.add_file(nginx_src / "common/certs/fett-webserver.crt",
+                       nginx_prefix / "etc/ssl/certs/fett-webserver.crt")
         mtree.add_file(src / "build/webserver/FreeBSD/rcfile",
                        "etc/rc.d/fett_nginx", mode="0555")
         mtree.add_dir(nginx_prefix / "post", uname="www", gname="www")
