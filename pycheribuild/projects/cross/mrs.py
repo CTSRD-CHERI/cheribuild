@@ -37,60 +37,71 @@ class MRS(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/mrs")
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
     cross_install_dir = DefaultInstallDir.ROOTFS
+
     # set --mrs/build-type <type> to control build type, default is RelWithDebInfo
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
-        cls.build_target= cls.add_config_option("build-target", kind=str, help="specify a target to build, or all")
+        cls.build_target = cls.add_config_option("build-target", kind=str, help="specify a target to build, or all")
 
         cls.debug = cls.add_bool_option("debug", help="enable debug output")
-        cls.offload_quarantine = cls.add_bool_option("offload-quarantine", help="process the quarantine in a separate worker thread")
+        cls.offload_quarantine = cls.add_bool_option("offload-quarantine",
+                                                     help="process the quarantine in a separate worker thread")
         cls.bypass_quarantine = cls.add_bool_option("bypass-quarantine", help="MADV_FREE freed page-size allocations")
-        cls.clear_on_alloc= cls.add_bool_option("clear-on-alloc", help="zero regions during allocation")
-        cls.clear_on_free= cls.add_bool_option("clear-on-free", help="zero regions as they come out of quarantine")
-        cls.print_stats= cls.add_bool_option("print-stats", help="print heap statistics on exit")
-        cls.print_caprevoke= cls.add_bool_option("print-caprevoke", help="print per-revocation statistics")
-        cls.concurrent_revocation_passes = cls.add_config_option("concurrent-revocation-passes", kind=int, help="enable N concurrent revocation passes before the stop-the-world pass")
-        cls.revoke_on_free = cls.add_bool_option("revoke-on-free", help="perform revocation on free rather than during allocation routines")
+        cls.clear_on_alloc = cls.add_bool_option("clear-on-alloc", help="zero regions during allocation")
+        cls.clear_on_free = cls.add_bool_option("clear-on-free", help="zero regions as they come out of quarantine")
+        cls.print_stats = cls.add_bool_option("print-stats", help="print heap statistics on exit")
+        cls.print_caprevoke = cls.add_bool_option("print-caprevoke", help="print per-revocation statistics")
+        cls.concurrent_revocation_passes = cls.add_config_option("concurrent-revocation-passes", kind=int,
+                                                                 help="enable N concurrent revocation passes before "
+                                                                      "the stop-the-world pass")
+        cls.revoke_on_free = cls.add_bool_option("revoke-on-free",
+                                                 help="perform revocation on free rather than during allocation "
+                                                      "routines")
 
         cls.just_interpose = cls.add_bool_option("just-interpose", help="just call the real functions")
         cls.just_bookkeeping = cls.add_bool_option("just-bookkeeping", help="just update data structures")
         cls.just_quarantine = cls.add_bool_option("just-quarantine", help="do bookkeeping and quarantining")
-        cls.just_paint_bitmap = cls.add_bool_option("just-paint-bitmap", help="do bookkeeping, quarantining, and bitmap painting")
+        cls.just_paint_bitmap = cls.add_bool_option("just-paint-bitmap",
+                                                    help="do bookkeeping, quarantining, and bitmap painting")
 
-        cls.quarantine_ratio = cls.add_config_option("quarantine-ratio", kind=int, help="limit the quarantine size to 1/QUARANTINE_RATIO times the size of the heap")
-        cls.quarantine_highwater = cls.add_config_option("quarantine-highwater", kind=int, help="limit the quarantine size to QUARANTINE_HIGHWATER bytes (supersedes QUARANTINE_RATIO)")
+        cls.quarantine_ratio = cls.add_config_option("quarantine-ratio", kind=int,
+                                                     help="limit the quarantine size to 1/QUARANTINE_RATIO times the "
+                                                          "size of the heap")
+        cls.quarantine_highwater = cls.add_config_option("quarantine-highwater", kind=int,
+                                                         help="limit the quarantine size to QUARANTINE_HIGHWATER "
+                                                              "bytes (supersedes QUARANTINE_RATIO)")
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
 
         if self.debug:
-            self.add_cmake_options(DEBUG="ON")
+            self.add_cmake_options(DEBUG=True)
         if self.offload_quarantine:
-            self.add_cmake_options(OFFLOAD_QUARANTINE="ON")
+            self.add_cmake_options(OFFLOAD_QUARANTINE=True)
         if self.bypass_quarantine:
-            self.add_cmake_options(BYPASS_QUARANTINE="ON")
+            self.add_cmake_options(BYPASS_QUARANTINE=True)
         if self.clear_on_alloc:
-            self.add_cmake_options(CLEAR_ON_ALLOC="ON")
+            self.add_cmake_options(CLEAR_ON_ALLOC=True)
         if self.clear_on_free:
-            self.add_cmake_options(CLEAR_ON_FREE="ON")
+            self.add_cmake_options(CLEAR_ON_FREE=True)
         if self.print_stats:
-            self.add_cmake_options(PRINT_STATS="ON")
+            self.add_cmake_options(PRINT_STATS=True)
         if self.print_caprevoke:
-            self.add_cmake_options(PRINT_CAPREVOKE="ON")
+            self.add_cmake_options(PRINT_CAPREVOKE=True)
         if self.revoke_on_free:
-            self.add_cmake_options(REVOKE_ON_FREE="ON")
+            self.add_cmake_options(REVOKE_ON_FREE=True)
 
         if self.just_interpose:
-            self.add_cmake_options(JUST_INTERPOSE="ON")
+            self.add_cmake_options(JUST_INTERPOSE=True)
         if self.just_bookkeeping:
-            self.add_cmake_options(JUST_BOOKKEEPING="ON")
+            self.add_cmake_options(JUST_BOOKKEEPING=True)
         if self.just_quarantine:
-            self.add_cmake_options(JUST_QUARANTINE="ON")
+            self.add_cmake_options(JUST_QUARANTINE=True)
         if self.just_paint_bitmap:
-            self.add_cmake_options(JUST_PAINT_BITMAP="ON")
+            self.add_cmake_options(JUST_PAINT_BITMAP=True)
 
         if self.quarantine_ratio:
             self.add_cmake_options(QUARANTINE_RATIO=self.quarantine_ratio)

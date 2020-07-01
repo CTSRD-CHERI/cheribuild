@@ -204,7 +204,7 @@ class BuildFettDiskImage(BuildCheriBSDDiskImage):
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
 
     @classproperty
-    def default_architecture(cls):
+    def default_architecture(self):
         return CompilationTargets.CHERIBSD_RISCV_PURECAP
 
     default_disk_image_path = ComputedDefaultValue(
