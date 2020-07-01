@@ -61,17 +61,19 @@ class BuildQEMUBase(AutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options()
-        cls.with_sanitizers = cls.add_bool_option("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)", default=False)
+        cls.with_sanitizers = cls.add_bool_option("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)",
+                                                  default=False)
         cls.use_smbd = cls.add_bool_option("use-smbd", show_help=False, default=True,
-                                         help="Don't require SMB support when building QEMU (warning: most --test "
-                                              "targets will fail without smbd support)")
+                                           help="Don't require SMB support when building QEMU (warning: most --test "
+                                                "targets will fail without smbd support)")
 
         cls.gui = cls.add_bool_option("gui", show_help=True, default=False,
-                                    help="Build a the graphical UI bits for QEMU (SDL,VNC)")
+                                      help="Build a the graphical UI bits for QEMU (SDL,VNC)")
         cls.qemu_targets = cls.add_config_option("targets",
-            show_help=True, help="Build QEMU for the following targets", default=cls.default_targets)
+                                                 show_help=True, help="Build QEMU for the following targets",
+                                                 default=cls.default_targets)
         cls.prefer_full_lto_over_thin_lto = cls.add_bool_option("full-lto", show_help=False, default=True,
-            help="Prefer full LTO over LLVM ThinLTO when using LTO")
+                                                                help="Prefer full LTO over LLVM ThinLTO when using LTO")
 
     @classmethod
     def qemu_cheri_binary(cls, caller: SimpleProject):
@@ -79,16 +81,18 @@ class BuildQEMUBase(AutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.add_required_system_tool("glibtoolize" if self.target_info.is_macos() else "libtoolize", homebrew="libtool")
+        self.add_required_system_tool("glibtoolize" if self.target_info.is_macos() else "libtoolize",
+                                      homebrew="libtool")
         self.add_required_system_tool("autoreconf", homebrew="autoconf")
         self.add_required_system_tool("aclocal", homebrew="automake")
 
         self.add_required_pkg_config("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",
-                                   freebsd="pixman")
+                                     freebsd="pixman")
         self.add_required_pkg_config("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
-                                   freebsd="glib")
+                                     freebsd="glib")
         # Tests require GNU sed
-        self.add_required_system_tool("sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed", freebsd="gsed")
+        self.add_required_system_tool("sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed",
+                                      freebsd="gsed")
 
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")
@@ -237,10 +241,10 @@ class BuildQEMU(BuildQEMUBase):
         cls.unaligned = cls.add_bool_option("unaligned", show_help=True, help="Permit un-aligned loads/stores",
                                             default=False)
         cls.statistics = cls.add_bool_option("statistics", show_help=True,
-                                           help="Collect statistics on out-of-bounds capability creation.")
+                                             help="Collect statistics on out-of-bounds capability creation.")
 
     @classmethod
-    def qemu_cheri_binary(cls, caller: SimpleProject, xtarget: CrossCompileTarget=None):
+    def qemu_cheri_binary(cls, caller: SimpleProject, xtarget: CrossCompileTarget = None):
         if xtarget is None:
             xtarget = caller.get_crosscompile_target(caller.config)
         if xtarget.is_riscv(include_purecap=True):
@@ -281,9 +285,11 @@ class BuildQEMU(BuildQEMUBase):
             tgt_info_riscv64 = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_RISCV64, fake_project)
             self.configure_args.extend([
                 "--cross-cc-mips=" + str(tgt_info_mips.c_compiler),
-                "--cross-cc-cflags-mips=" + commandline_to_str(tgt_info_mips.essential_compiler_and_linker_flags).replace("=", " "),
+                "--cross-cc-cflags-mips=" + commandline_to_str(
+                    tgt_info_mips.essential_compiler_and_linker_flags).replace("=", " "),
                 "--cross-cc-riscv64=" + str(tgt_info_riscv64.c_compiler),
-                "--cross-cc-cflags-riscv64=" + commandline_to_str(tgt_info_riscv64.essential_compiler_and_linker_flags).replace("=", " ")
+                "--cross-cc-cflags-riscv64=" + commandline_to_str(
+                    tgt_info_riscv64.essential_compiler_and_linker_flags).replace("=", " ")
                 ])
 
 

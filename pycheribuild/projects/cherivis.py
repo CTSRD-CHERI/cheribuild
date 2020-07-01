@@ -48,8 +48,10 @@ def gnuStepInstallInstructions():
         #         return """Somehow install GNUStep"""
         #     elif osRelease["ID"] == "opensuse":
         #         return """Try installing gnustep-make from the X11:/GNUstep project:
-        # sudo zypper addrepo http://download.opensuse.org/repositories/X11:/GNUstep/openSUSE_{OPENSUSE_VERSION}/ gnustep
-        # sudo zypper in libobjc2-devel gnustep-make gnustep-gui-devel gnustep-base-devel""".format(OPENSUSE_VERSION=osRelease["VERSION"])
+        # sudo zypper addrepo http://download.opensuse.org/repositories/X11:/GNUstep/openSUSE_{OPENSUSE_VERSION}/
+        # gnustep
+        # sudo zypper in libobjc2-devel gnustep-make gnustep-gui-devel gnustep-base-devel""".format(
+        # OPENSUSE_VERSION=osRelease["VERSION"])
 
 
 class BuildCheriVis(Project):
@@ -73,7 +75,7 @@ class BuildCheriVis(Project):
         self.gnustep_makefiles_dir = None  # type: typing.Optional[Path]
         if OSInfo.IS_MAC:
             self.make_args.set_command("xcodebuild", can_pass_j_flag=False,
-                install_instructions="Install Command Line Tools")
+                                       install_instructions="Install Command Line Tools")
             assert self.make_args.kind == MakeCommandKind.CustomMakeTool
         print("command = ", self.make_args.command)
 
@@ -114,7 +116,8 @@ class BuildCheriVis(Project):
 
         # has to be a relative path for some reason....
         # pathlib.relative_to() won't work if the prefix is not the same...
-        # cheritrace_rel_path = os.path.relpath(str(self.cheritrace_path.parent.resolve()), str(self.source_dir.resolve()))
+        # cheritrace_rel_path = os.path.relpath(str(self.cheritrace_path.parent.resolve()),
+        # str(self.source_dir.resolve()))
         self.make_args.set(CXX=self.CXX,
                            CC=self.CPP,
                            GNUSTEP_MAKEFILES=self.gnustep_makefiles_dir,
@@ -129,7 +132,7 @@ class BuildCheriVis(Project):
         # doesn't seem to be possible to use a out of source build
         self.run_make("clean", cwd=self.source_dir)
         self.clean_directory(self.cheritrace_subproject.build_dir)
-        return ThreadJoiner(None)   # can't be done async
+        return ThreadJoiner(None)  # can't be done async
 
     def compile(self, **kwargs):
         # First build the bundled cheritrace

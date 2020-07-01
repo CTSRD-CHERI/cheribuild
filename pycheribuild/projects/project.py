@@ -547,12 +547,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
         # noinspection PyTypeChecker
         return cls.add_config_option(name, default=default, kind=bool, shortname=shortname, action="store_true",
-            only_add_for_targets=only_add_for_targets, **kwargs)
+                                     only_add_for_targets=only_add_for_targets, **kwargs)
 
     @classmethod
     def add_path_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None, **kwargs) -> Path:
         return cls.add_config_option(name, kind=Path, shortname=shortname, only_add_for_targets=only_add_for_targets,
-            **kwargs)
+                                     **kwargs)
 
     __config_options_set = dict()  # typing.Dict[Type, bool]
 
@@ -587,23 +587,23 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                  zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(executable, False, freebsd=freebsd, zypper=zypper,
-                apt=apt,
-                homebrew=homebrew, cheribuild_target=cheribuild_target)
+                                                               apt=apt,
+                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__required_system_tools[executable] = install_instructions
 
     def add_required_pkg_config(self, package: str, install_instructions=None, freebsd: str = None, apt: str = None,
-                              zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
+                                zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
         self.add_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(package, True, freebsd=freebsd, zypper=zypper, apt=apt,
-                homebrew=homebrew, cheribuild_target=cheribuild_target)
+                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__required_pkg_config[package] = install_instructions
 
     def add_required_system_header(self, header: str, install_instructions=None, freebsd: str = None, apt: str = None,
-                                 zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
+                                   zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(header, True, freebsd=freebsd, zypper=zypper, apt=apt,
-                homebrew=homebrew, cheribuild_target=cheribuild_target)
+                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__required_system_headers[header] = install_instructions
 
     @staticmethod
@@ -628,7 +628,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def query_yes_no(self, message: str = "", *, default_result=False, force_result=True,
                      yes_no_str: str = None) -> bool:
         return self._query_yes_no(self.config, message, default_result=default_result, force_result=force_result,
-            yes_no_str=yes_no_str)
+                                  yes_no_str=yes_no_str)
 
     def ask_for_confirmation(self, message: str, error_message="Cannot continue.", default_result=True, **kwargs):
         if not self.query_yes_no(message, default_result=default_result, **kwargs):
@@ -733,7 +733,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             self.__run_process_with_filtered_output(make, logfile, stdout_filter, cmd_str)
 
     def __run_process_with_filtered_output(self, proc: subprocess.Popen, logfile: "typing.Optional[typing.IO]",
-                                       stdout_filter: "typing.Callable[[bytes], None]", cmd_str: str):
+                                           stdout_filter: "typing.Callable[[bytes], None]", cmd_str: str):
         logfile_lock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
         stderr_thread = None
         if logfile:
@@ -1109,7 +1109,7 @@ class ReuseOtherProjectRepository(SourceRepository):
 class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
     def __init__(self, source_project: "typing.Type[Project]", *, subdirectory="."):
         super().__init__(source_project, subdirectory=subdirectory,
-            repo_for_target=source_project.supported_architectures[0])
+                         repo_for_target=source_project.supported_architectures[0])
 
 
 # Use git-worktree to handle per-target branches:
@@ -1170,7 +1170,7 @@ class GitRepository(SourceRepository):
         if (src_dir / ".git").exists():
             return
         current_project.info("Creating git-worktree checkout of", default_src_dir, "with branch",
-            target_override.branch, "for", src_dir)
+                             target_override.branch, "for", src_dir)
 
         # Find the first valid remote
         per_target_url = target_override.url if target_override.url else self.url
@@ -1190,7 +1190,7 @@ class GitRepository(SourceRepository):
             if url == self.url:
                 break
             current_project.info("URL '", url, "' for remote ", remote_name, " does not match expected url '",
-                self.url, "'", sep="")
+                                 self.url, "'", sep="")
             if current_project.query_yes_no("Use this remote?"):
                 break
             remote_name = input("Please enter the correct remote: ")
@@ -1206,7 +1206,7 @@ class GitRepository(SourceRepository):
     def update(self, current_project: "Project", *, src_dir: Path, default_src_dir: Path = None, revision=None,
                skip_submodules=False):
         self.ensure_cloned(current_project, src_dir=src_dir, default_src_dir=default_src_dir,
-            skip_submodules=skip_submodules)
+                           skip_submodules=skip_submodules)
         if current_project.skip_update:
             return
         if not src_dir.exists():
@@ -1245,7 +1245,8 @@ class GitRepository(SourceRepository):
                     run_command("git", "checkout", self.default_branch, cwd=src_dir)
                 else:
                     current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
-                        error_message="Wrong branch: " + current_branch.decode("utf-8"))
+                                                         error_message="Wrong branch: " + current_branch.decode(
+                                                             "utf-8"))
 
         # We don't need to update if the upstream commit is an ancestor of the current HEAD.
         # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
@@ -1266,7 +1267,7 @@ class GitRepository(SourceRepository):
             current_project.warning("Unknown return code", is_ancestor)
             # some other error -> raise so that I can see what went wrong
             raise subprocess.CalledProcessError(is_ancestor.retcode, is_ancestor.args, output=is_ancestor.stdout,
-                stderr=is_ancestor.stderr)
+                                                stderr=is_ancestor.stderr)
 
         # make sure we run git stash if we discover any local changes
         has_changes = len(run_command("git", "diff", "--stat", "--ignore-submodules",
@@ -1286,7 +1287,7 @@ class GitRepository(SourceRepository):
             if current_project.config.force_update:
                 status_update("Updating", src_dir, "with autostash due to --force-update")
             elif not current_project.query_yes_no("Stash the changes, update and reapply?", default_result=True,
-                    force_result=True):
+                                                  force_result=True):
                 status_update("Skipping update of", src_dir)
                 return
             if not has_autostash:
@@ -1491,7 +1492,7 @@ class Project(SimpleProject):
     cross_install_dir = None  # type: typing.Optional[DefaultInstallDir]
     # For more precise control over the install dir it is possible to provide a callback function
     _default_install_dir_fn = ComputedDefaultValue(function=_default_install_dir_handler,
-        as_string=_default_install_dir_str)
+                                                   as_string=_default_install_dir_str)
     """ The default installation directory """
 
     @property
@@ -1600,24 +1601,26 @@ class Project(SimpleProject):
             if not isinstance(option, bool):
                 assert option is None or isinstance(option, ConfigOptionBase)
                 assert not issubclass(cls,
-                    CMakeProject), "generate_cmakelists option needed -> should not be a CMakeProject"
+                                      CMakeProject), "generate_cmakelists option needed -> should not be a CMakeProject"
                 cls.generate_cmakelists = cls.add_bool_option("generate-cmakelists",
-                    help="Generate a CMakeLists.txt that just calls cheribuild. "
-                         "Useful for IDEs that only support CMake")
+                                                              help="Generate a CMakeLists.txt that just calls "
+                                                                   "cheribuild. "
+                                                                   "Useful for IDEs that only support CMake")
             else:
                 assert issubclass(cls, CMakeProject), "Should be a CMakeProject: " + cls.__name__
 
         cls.use_lto = cls.add_bool_option("use-lto", help="Build with link-time optimization (LTO)",
-            default=cls.lto_by_default)
+                                          default=cls.lto_by_default)
         cls.use_cfi = False  # doesn't work yet
         cls._linkage = cls.add_config_option("linkage", default=Linkage.DEFAULT, kind=Linkage,
-            help="Build static or dynamic (or use the project default)")
+                                             help="Build static or dynamic (or use the project default)")
 
         cls.build_type = cls.add_config_option("build-type",
-            help="Optimization+debuginfo defaults (supports the same values as CMake (as well as 'DEFAULT' which"
-                 " does not pass any additional flags to the configure command).",
-            default=cls.default_build_type, kind=BuildType,
-            enum_choice_strings=[t.value for t in BuildType])  # type: BuildType
+                                               help="Optimization+debuginfo defaults (supports the same values as "
+                                               "CMake (as well as 'DEFAULT' which"
+                                                    " does not pass any additional flags to the configure command).",
+                                               default=cls.default_build_type, kind=BuildType,
+                                               enum_choice_strings=[t.value for t in BuildType])  # type: BuildType
 
     def linkage(self):
         if self.target_info.must_link_statically:
@@ -1770,7 +1773,7 @@ class Project(SimpleProject):
 
         if self.build_in_source_dir:
             self.verbose_print("Cannot build", self.project_name, "in a separate build dir, will build in",
-                self.source_dir)
+                               self.source_dir)
             self.build_dir = self.source_dir
 
         self.configure_command = ""
@@ -1909,7 +1912,7 @@ class Project(SimpleProject):
             self._lto_linker_flags.append("-fuse-ld=" + shlex.quote(str(lld)))
             if not llvm_ar or not llvm_ranlib or not llvm_nm:
                 self.warning("Could not find llvm-{ar,ranlib,nm}" + version_suffix,
-                    "-> disabling LTO (resulting binary will be a bit slower)")
+                             "-> disabling LTO (resulting binary will be a bit slower)")
                 return False
             ld = lld if self.lto_set_ld else None
             self.set_lto_binutils(ar=llvm_ar, ranlib=llvm_ranlib, nm=llvm_nm, ld=ld)
@@ -2008,7 +2011,7 @@ class Project(SimpleProject):
         if not make_command:
             make_command = self.make_args.command
         all_args = self._get_make_commandline(make_target, make_command, options, parallel=parallel,
-            compilation_db_name=compilation_db_name)
+                                              compilation_db_name=compilation_db_name)
         if not cwd:
             cwd = self.build_dir
         if not logfile_name:
@@ -2043,7 +2046,7 @@ class Project(SimpleProject):
             # This is a large repository, tell git to do whatever it can to speed up operations (new in 2.24):
             # https://git-scm.com/docs/git-config#Documentation/git-config.txt-featuremanyFiles
             self.run_cmd("git", "config", "--local", "feature.manyFiles", "true", cwd=self.source_dir,
-                print_verbose_only=True)
+                         print_verbose_only=True)
 
     _extra_git_clean_excludes = []
 
@@ -2112,7 +2115,7 @@ class Project(SimpleProject):
             self.fatal("Configure command ", _configure_path, "does not exist!")
         if _configure_path:
             self.run_with_logfile([_configure_path] + self.configure_args, logfile_name="configure", cwd=cwd,
-                env=self.configure_environment)
+                                  env=self.configure_environment)
 
     def compile(self, cwd: Path = None, parallel: bool = True):
         if cwd is None:
@@ -2150,7 +2153,7 @@ class Project(SimpleProject):
         return self._install_dir
 
     def run_make_install(self, *, options: MakeOptions = None, target="install", _stdout_filter=_default_stdout_filter,
-                       cwd=None, parallel=False, make_install_env=None, **kwargs):
+                         cwd=None, parallel=False, make_install_env=None, **kwargs):
         if options is None:
             options = self.make_args.copy()
         else:
@@ -2159,7 +2162,7 @@ class Project(SimpleProject):
             make_install_env = self.make_install_env
         options.env_vars.update(make_install_env)
         self.run_make(make_target=target, options=options, stdout_filter=_stdout_filter, cwd=cwd,
-            parallel=parallel, **kwargs)
+                      parallel=parallel, **kwargs)
 
     def install(self, _stdout_filter=_default_stdout_filter):
         self.run_make_install(_stdout_filter=_stdout_filter)
@@ -2195,7 +2198,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 create = False
             elif "Generated by cheribuild.py" not in existing_code:
                 print("A different CMakeLists.txt already exists. Contents:\n",
-                    coloured(AnsiColour.green, existing_code), end="")
+                      coloured(AnsiColour.green, existing_code), end="")
                 if not self.query_yes_no("Overwrite?", force_result=False):
                     create = False
         if create:
@@ -2258,7 +2261,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         self.makedirs(dest_libdir)
         for lib in ("usr/lib/librt.so.1", "usr/lib/libexecinfo.so.1", "lib/libgcc_s.so.1", "lib/libelf.so.2"):
             self.install_file(self.sdk_sysroot / lib, dest_libdir / Path(lib).name, force=True,
-                print_verbose_only=False)
+                              print_verbose_only=False)
 
     _check_install_dir_conflict = True
 
@@ -2285,7 +2288,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     parsed = int(line)
                     if latest_counter is not None and parsed < latest_counter:
                         self.warning(require_clean_path, ":", i + 1, ": parsed counter ", parsed,
-                            " is smaller than previous one: ", latest_counter, sep="")
+                                     " is smaller than previous one: ", latest_counter, sep="")
                     else:
                         latest_counter = parsed
                 except ValueError as e:
@@ -2324,7 +2327,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     break
             if not found_asan_lib:
                 self.fatal("Cannot find", libname, "library in sysroot dirs", asan_libdir_candidates,
-                    "-- Compilation will fail!")
+                           "-- Compilation will fail!")
                 found_asan_lib = Path("/some/invalid/path/to/lib")
             self.makedirs(expected_path)
             run_command("cp", "-av", found_asan_lib.parent, expected_path.parent)
@@ -2332,7 +2335,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             run_command("chmod", "-R", "u+w", expected_path.parent)
             if not (expected_path / libname).exists():
                 self.fatal("Cannot find", libname, "library in compiler dir", expected_path,
-                    "-- Compilation will fail!")
+                           "-- Compilation will fail!")
         install_dir_kind = self.get_default_install_dir_kind()
         if install_dir_kind != DefaultInstallDir.DO_NOT_INSTALL and self._check_install_dir_conflict:
             xtarget = self._xtarget  # type: CrossCompileTarget
@@ -2373,7 +2376,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     if not self.query_yes_no("Last build was for configuration" + last_build_kind +
                                              " but currently building" + self.build_configuration_suffix() +
                                              ". Will clean before build. Continue?", force_result=True,
-                            default_result=True):
+                                             default_result=True):
                         self.fatal("Cannot continue")
                         return
                     self._force_clean = True
@@ -2386,18 +2389,18 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             # build and increment the value in the build directory.
             if not last_clean_counter_path.is_file():
                 self.verbose_print("Forcing full rebuild since clean counter", last_clean_counter_path,
-                    "does not exist yet")
+                                   "does not exist yet")
                 self._force_clean = True
             else:
                 try:
                     clean_counter_in_build_dir = int(last_clean_counter_path.read_text().strip())
                     if clean_counter_in_build_dir < required_clean_counter:
                         self.info("Forcing full rebuild since clean counter in build dir (", clean_counter_in_build_dir,
-                            ") is less than required minimum ", required_clean_counter, sep="")
+                                  ") is less than required minimum ", required_clean_counter, sep="")
                         self._force_clean = True
                     else:
                         self.verbose_print("Not forcing clean build since clean counter in build dir",
-                            clean_counter_in_build_dir, "is >= required minimum", required_clean_counter)
+                                           clean_counter_in_build_dir, "is >= required minimum", required_clean_counter)
                 except Exception as e:
                     self.warning("Could not parse", last_clean_counter_path, "-> assuming clean build is required.", e)
                     self._force_clean = True
@@ -2703,7 +2706,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
                 instrs = "Use your package manager to install CMake > " + expected_str + \
                          " or run `cheribuild.py cmake` to install the latest version locally"
                 self.dependency_error("CMake version", version_str, "is too old (need at least", expected_str + ")",
-                    install_instructions=instrs)
+                                      install_instructions=instrs)
 
     @staticmethod
     def find_package(name: str) -> bool:

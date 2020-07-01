@@ -43,9 +43,12 @@ class LaunchFPGABase(SimpleProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.extra_base_options = cls.add_config_option("extra-options", default=[], kind=list, metavar="OPTIONS",
-                                                     help="Additional command line flags to pass to beri-fpga-bsd-boot")
-        cls.extra_bootonly_options = cls.add_config_option("extra-boot-options", default=[], kind=list, metavar="OPTIONS",
-                                                         help="Additional command line flags to pass to the bootonly subcommand of beri-fpga-bsd-boot")
+                                                       help="Additional command line flags to pass to "
+                                                            "beri-fpga-bsd-boot")
+        cls.extra_bootonly_options = cls.add_config_option("extra-boot-options", default=[], kind=list,
+                                                           metavar="OPTIONS",
+                                                           help="Additional command line flags to pass to the "
+                                                                "bootonly subcommand of beri-fpga-bsd-boot")
         cls.attach_only = cls.add_bool_option("attach-only", help="Connect to console instead of booting.")
 
     def __init__(self, config: CheriConfig):
@@ -93,8 +96,8 @@ source "{env_setup_script}"
 set -x
 export PATH="$PATH:{cherilibs_dir}/tools:{cherilibs_dir}/tools/debug"
 exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv {subcmd_and_args}
-            """.format(env_setup_script=env_setup_script, cherilibs_dir=cherilibs_dir, basic_args=commandline_to_str(basic_args),
-                       subcmd_and_args=commandline_to_str(subcmd_and_args), cheribuild_path=cheribuild_path)
+""".format(env_setup_script=env_setup_script, cherilibs_dir=cherilibs_dir, basic_args=commandline_to_str(basic_args),
+           subcmd_and_args=commandline_to_str(subcmd_and_args), cheribuild_path=cheribuild_path)
         self.run_shell_script(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
 
@@ -103,12 +106,12 @@ class LaunchCheriBSDOnFGPA(LaunchFPGABase):
     dependencies = ["cheribsd-mfs-root-kernel-mips-hybrid"]
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
 
-
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.benchmark_kernel = cls.add_bool_option("benchmark-kernel",
-                                                 help="Use the benchmark kernel instead of one with assertions enabled.")
+                                                   help="Use the benchmark kernel instead of one with assertions "
+                                                        "enabled.")
         cls.kernel_image = cls.add_config_option("kernel-image", kind=Path, help="Override the kernel image to boot")
 
     def process(self):

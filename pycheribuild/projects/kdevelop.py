@@ -76,5 +76,6 @@ class StartKDevelop(SimpleProject):
         kdevelop_binary = BuildKDevelop.get_install_dir(self) / "bin/start-kdevelop.py"
         if not kdevelop_binary.exists():
             self.dependency_error("KDevelop is missing:", kdevelop_binary,
-                install_instructions="Run `cheribuild.py kdevelop` or `cheribuild.py " + self.target + " -d`.")
+                                  install_instructions="Run `cheribuild.py kdevelop` or `cheribuild.py " +
+                                                       self.target + " -d`.")
         self.run_cmd(kdevelop_binary, "--ps")

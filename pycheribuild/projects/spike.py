@@ -40,7 +40,7 @@ class BuildCheriSpike(AutotoolsProject):
     target = "spike"
     project_name = "spike"
     repository = GitRepository("https://github.com/CTSRD-CHERI/riscv-isa-sim",
-        default_branch="cheri", force_branch=True)
+                               default_branch="cheri", force_branch=True)
     native_install_dir = DefaultInstallDir.CHERI_SDK
     default_build_type = BuildType.RELEASE
     lto_by_default = True
@@ -79,8 +79,9 @@ class RunCheriSpikeBase(SimpleProject):
         kernel = self._source_class.get_installed_kernel_path(self)
         self.run_cmd([BuildCheriSpike.get_simulator_binary(self), "+payload=" + str(kernel),
                       self._bbl_class.get_installed_kernel_path(self,
-                          cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP)], give_tty_control=True,
-            stdout=sys.stdout, stderr=sys.stderr)  # We always want output even with --quiet
+                                                                cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP)],
+                     give_tty_control=True,
+                     stdout=sys.stdout, stderr=sys.stderr)  # We always want output even with --quiet
 
 
 class RunCheriBsdSpike(RunCheriSpikeBase):

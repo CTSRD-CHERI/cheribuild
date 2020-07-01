@@ -118,8 +118,7 @@ class BuildSamba(Project):
             # We need readline and krb5 from homebrew:
             with set_env(PATH="/usr/local/opt/krb5/bin:/usr/local/opt/krb5/sbin:" + os.getenv("PATH", ""),
                          PKG_CONFIG_PATH="/usr/local/opt/krb5/lib/pkgconfig:/usr/local/opt/readline/lib/pkgconfig:" +
-                                         os.getenv(
-                             "PKG_CONFIG_PATH", ""),
+                                         os.getenv("PKG_CONFIG_PATH", ""),
                          LDFLAGS="-L/usr/local/opt/krb5/lib -L/usr/local/opt/readline/lib",
                          CPPFLAGS="-I/usr/local/opt/krb5/include -I/usr/local/opt/readline/include",
                          CFLAGS="-I/usr/local/opt/krb5/include -I/usr/local/opt/readline/include"):

@@ -64,4 +64,3 @@ class BuildSoaap(CMakeProject):
         self.add_cmake_options(LLVM_DIR=soaap_llvm.build_dir / "share/llvm/cmake")
         self.add_cmake_options(BUILD_SHARED_LIBS=build_shared_libs)
         super().configure(**kwargs)
-
