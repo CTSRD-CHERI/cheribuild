@@ -55,7 +55,7 @@ from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_mana
 from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str,
                      commandline_to_str, CompilerInfo, fatal_error, get_compiler_info, get_program_version,
                      get_version_output, include_local_file, is_jenkins_build, OSInfo, popen_handle_noexec,
-                     print_command, runCmd, status_update, ThreadJoiner, warning_message)
+                     print_command, run_command, status_update, ThreadJoiner, warning_message)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
@@ -465,9 +465,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def run_cmd(*args, capture_output=False, capture_error=False, input: typing.Union[str, bytes] = None, timeout=None,
                 print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False, no_print=False,
                 replace_env=False, **kwargs):
-        return runCmd(*args, capture_output=capture_output, capture_error=capture_error, input=input, timeout=timeout,
-                      print_verbose_only=print_verbose_only, run_in_pretend_mode=run_in_pretend_mode,
-                      raise_in_pretend_mode=raise_in_pretend_mode, no_print=no_print, replace_env=replace_env, **kwargs)
+        return run_command(*args, capture_output=capture_output, capture_error=capture_error, input=input,
+                           timeout=timeout,
+                           print_verbose_only=print_verbose_only, run_in_pretend_mode=run_in_pretend_mode,
+                           raise_in_pretend_mode=raise_in_pretend_mode, no_print=no_print, replace_env=replace_env,
+                           **kwargs)
 
     @classmethod
     def add_config_option(cls, name: str, *, show_help=False, shortname=None, _no_fallback_config_name: bool = False,
@@ -828,7 +830,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             del print_args["capture_output"]
         print_command(shell, "-xe" if self.config.verbose else "-e", "-c", script, **print_args)
         kwargs["no_print"] = True
-        return runCmd(shell, "-xe" if self.config.verbose else "-e", "-c", script, **kwargs)
+        return run_command(shell, "-xe" if self.config.verbose else "-e", "-c", script, **kwargs)
 
     def print(self, *args, **kwargs):
         if not self.config.quiet:
@@ -1173,15 +1175,15 @@ class GitRepository(SourceRepository):
         # Find the first valid remote
         per_target_url = target_override.url if target_override.url else self.url
         remote_name = "origin"
-        remotes = runCmd(["git", "-C", default_src_dir, "remote", "-v"], capture_output=True).stdout.decode(
+        remotes = run_command(["git", "-C", default_src_dir, "remote", "-v"], capture_output=True).stdout.decode(
             "utf-8")  # type: str
         for r in remotes.splitlines():
             if per_target_url in r:
                 remote_name = r.split()[0].strip()
         while True:
             try:
-                url = runCmd(["git", "-C", default_src_dir, "remote", "get-url", remote_name],
-                             capture_output=True).stdout.decode("utf-8").strip()
+                url = run_command(["git", "-C", default_src_dir, "remote", "get-url", remote_name],
+                                  capture_output=True).stdout.decode("utf-8").strip()
             except subprocess.CalledProcessError as e:
                 current_project.warning("Could not determine URL for remote", remote_name, str(e))
                 url = None
@@ -1192,8 +1194,8 @@ class GitRepository(SourceRepository):
             if current_project.query_yes_no("Use this remote?"):
                 break
             remote_name = input("Please enter the correct remote: ")
-        runCmd(["git", "worktree", "add", "--track", "-b", target_override.branch, src_dir,
-                remote_name + "/" + target_override.branch], cwd=default_src_dir)
+        run_command(["git", "worktree", "add", "--track", "-b", target_override.branch, src_dir,
+                     remote_name + "/" + target_override.branch], cwd=default_src_dir)
 
     def get_real_source_dir(self, caller: SimpleProject, default_src_dir: Path) -> Path:
         target_override = self.per_target_branches.get(caller.crosscompile_target, None)
@@ -1215,31 +1217,32 @@ class GitRepository(SourceRepository):
             # Update from the old url:
             for old_url in self.old_urls:
                 assert isinstance(old_url, bytes)
-                remote_url = runCmd("git", "remote", "get-url", "origin", capture_output=True,
-                                    cwd=src_dir).stdout.strip()
+                remote_url = run_command("git", "remote", "get-url", "origin", capture_output=True,
+                                         cwd=src_dir).stdout.strip()
                 if remote_url == old_url:
                     current_project.warning(current_project.project_name, "still points to old repository", remote_url)
                     if current_project.query_yes_no("Update to correct URL?"):
-                        runCmd("git", "remote", "set-url", "origin", self.url, run_in_pretend_mode=True, cwd=src_dir)
+                        run_command("git", "remote", "set-url", "origin", self.url, run_in_pretend_mode=True,
+                                    cwd=src_dir)
 
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
         # If there is no upstream, it will just return immediately.
-        runCmd("git", "fetch", cwd=src_dir)
+        run_command("git", "fetch", cwd=src_dir)
 
         # Handle forced branches now that we have fetched the latest changes
         if src_dir.exists() and self.force_branch:
             assert self.default_branch, "default_branch must be set if force_branch is true!"
             # TODO: move this to Project so it can also be used for other targets
-            status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                            capture_output=True, print_verbose_only=True, cwd=src_dir, run_in_pretend_mode=True)
+            status = run_command("git", "status", "-b", "-s", "--porcelain", "-u", "no",
+                                 capture_output=True, print_verbose_only=True, cwd=src_dir, run_in_pretend_mode=True)
             if status.stdout.startswith(b"## ") and not status.stdout.startswith(
                     b"## " + self.default_branch.encode("utf-8") + b"..."):
                 current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
                 current_project.warning("You are trying to build the", current_branch.decode("utf-8"),
                                         "branch. You should be using", self.default_branch)
                 if current_project.query_yes_no("Would you like to change to the " + self.default_branch + " branch?"):
-                    runCmd("git", "checkout", self.default_branch, cwd=src_dir)
+                    run_command("git", "checkout", self.default_branch, cwd=src_dir)
                 else:
                     current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
                         error_message="Wrong branch: " + current_branch.decode("utf-8"))
@@ -1247,10 +1250,10 @@ class GitRepository(SourceRepository):
         # We don't need to update if the upstream commit is an ancestor of the current HEAD.
         # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
         # Note: merge-base --is-ancestor exits with code 0/1 instead of printing output so we need a try/catch
-        is_ancestor = runCmd("git", "merge-base", "--is-ancestor", "@{upstream}", "HEAD", cwd=src_dir,
-                             print_verbose_only=True, capture_error=True, run_in_pretend_mode=True,
-                             raise_in_pretend_mode=True,
-                             allow_unexpected_returncode=True)
+        is_ancestor = run_command("git", "merge-base", "--is-ancestor", "@{upstream}", "HEAD", cwd=src_dir,
+                                  print_verbose_only=True, capture_error=True, run_in_pretend_mode=True,
+                                  raise_in_pretend_mode=True,
+                                  allow_unexpected_returncode=True)
         if is_ancestor.returncode == 0:
             current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is up-to-date or ahead of upstream."))
             return
@@ -1266,8 +1269,8 @@ class GitRepository(SourceRepository):
                 stderr=is_ancestor.stderr)
 
         # make sure we run git stash if we discover any local changes
-        has_changes = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
-                                 capture_output=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
+        has_changes = len(run_command("git", "diff", "--stat", "--ignore-submodules",
+                                      capture_output=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
 
         pull_cmd = ["git", "pull"]
         has_autostash = False
@@ -1288,8 +1291,8 @@ class GitRepository(SourceRepository):
                 return
             if not has_autostash:
                 # TODO: ask if we should continue?
-                stash_result = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
-                                      capture_output=True, cwd=src_dir, print_verbose_only=True).stdout
+                stash_result = run_command("git", "stash", "save", "Automatic stash by cheribuild.py",
+                                           capture_output=True, cwd=src_dir, print_verbose_only=True).stdout
                 # print("stash_result =", stash_result)
                 if "No local changes to save" in stash_result.decode("utf-8"):
                     # print("NO REAL CHANGES")
@@ -1298,13 +1301,13 @@ class GitRepository(SourceRepository):
         if not skip_submodules:
             pull_cmd.append("--recurse-submodules")
         rebase_flag = "--rebase=merges" if git_version >= (2, 18) else "--rebase=preserve"
-        runCmd(pull_cmd + [rebase_flag], cwd=src_dir, print_verbose_only=True)
+        run_command(pull_cmd + [rebase_flag], cwd=src_dir, print_verbose_only=True)
         if not skip_submodules:
-            runCmd("git", "submodule", "update", "--init", "--recursive", cwd=src_dir, print_verbose_only=True)
+            run_command("git", "submodule", "update", "--init", "--recursive", cwd=src_dir, print_verbose_only=True)
         if has_changes and not has_autostash:
-            runCmd("git", "stash", "pop", cwd=src_dir, print_verbose_only=True)
+            run_command("git", "stash", "pop", cwd=src_dir, print_verbose_only=True)
         if revision:
-            runCmd("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
+            run_command("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
 
 
 class DefaultInstallDir(Enum):
@@ -1507,9 +1510,9 @@ class Project(SimpleProject):
             return False  # lld does not work on MacOS
         if compiler not in cls.__can_use_lld_map:
             try:
-                runCmd([compiler, "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"], run_in_pretend_mode=True,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raise_in_pretend_mode=True,
-                       input="int main() { return 0; }\n", print_verbose_only=True)
+                run_command([compiler, "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"], run_in_pretend_mode=True,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raise_in_pretend_mode=True,
+                            input="int main() { return 0; }\n", print_verbose_only=True)
                 status_update(compiler, "supports -fuse-ld=lld, linking should be much faster!")
                 cls.__can_use_lld_map[compiler] = True
             except subprocess.CalledProcessError:
@@ -2060,7 +2063,7 @@ class Project(SimpleProject):
             if (
                     self.build_dir / "GNUmakefile").is_file() and self.make_kind != MakeCommandKind.BsdMake and \
                     self.target != "elftoolchain":
-                runCmd(self.make_args.command, "distclean", cwd=self.build_dir)
+                run_command(self.make_args.command, "distclean", cwd=self.build_dir)
             else:
                 assert self.source_dir == self.build_dir
                 self._git_clean_source_dir()
@@ -2219,7 +2222,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 with file.open("rb") as f:
                     if f.read(4) == b"\x7fELF":
                         self.verbose_print("Stripping ELF binary", file)
-                        runCmd(self.sdk_bindir / "llvm-strip", file)
+                        run_command(self.sdk_bindir / "llvm-strip", file)
         self.run_cmd("du", "-sh", benchmark_dir)
 
     @property
@@ -2324,9 +2327,9 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     "-- Compilation will fail!")
                 found_asan_lib = Path("/some/invalid/path/to/lib")
             self.makedirs(expected_path)
-            runCmd("cp", "-av", found_asan_lib.parent, expected_path.parent)
+            run_command("cp", "-av", found_asan_lib.parent, expected_path.parent)
             # For some reason they are 644 so we can't overwrite for the next build unless we chmod first
-            runCmd("chmod", "-R", "u+w", expected_path.parent)
+            run_command("chmod", "-R", "u+w", expected_path.parent)
             if not (expected_path / libname).exists():
                 self.fatal("Cannot find", libname, "library in compiler dir", expected_path,
                     "-- Compilation will fail!")
@@ -2707,7 +2710,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
         try:
             cmd = "cmake --find-package -DCOMPILER_ID=Clang -DLANGUAGE=CXX -DMODE=EXIST -DQUIET=TRUE".split()
             cmd.append("-DNAME=" + name)
-            return runCmd(cmd).returncode == 0
+            return run_command(cmd).returncode == 0
         except subprocess.CalledProcessError:
             return False
 

@@ -33,7 +33,7 @@ from pathlib import Path
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository, Linkage, MakeCommandKind)
-from ...utils import OSInfo, runCmd, status_update
+from ...utils import OSInfo, run_command, status_update
 
 
 class TemporarilyRemoveProgramsFromSdk(object):
@@ -46,14 +46,14 @@ class TemporarilyRemoveProgramsFromSdk(object):
         status_update('Temporarily moving', self.programs, "from", self.sdk_bindir)
         for prog in self.programs:
             if (self.sdk_bindir / prog).exists():
-                runCmd("mv", "-f", prog, prog + ".backup", cwd=self.sdk_bindir, print_verbose_only=True)
+                run_command("mv", "-f", prog, prog + ".backup", cwd=self.sdk_bindir, print_verbose_only=True)
         return self
 
     def __exit__(self, *exc):
         status_update('Restoring', self.programs, "in", self.sdk_bindir)
         for prog in self.programs:
             if (self.sdk_bindir / (prog + ".backup")).exists() or self.config.pretend:
-                runCmd("mv", "-f", prog + ".backup", prog, cwd=self.sdk_bindir, print_verbose_only=True)
+                run_command("mv", "-f", prog + ".backup", prog, cwd=self.sdk_bindir, print_verbose_only=True)
         return False
 
 

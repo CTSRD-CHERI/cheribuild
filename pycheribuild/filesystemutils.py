@@ -36,7 +36,7 @@ import typing
 from pathlib import Path
 
 from .config.chericonfig import CheriConfig
-from .utils import AnsiColour, fatal_error, print_command, runCmd, status_update, ThreadJoiner, warning_message
+from .utils import AnsiColour, fatal_error, print_command, run_command, status_update, ThreadJoiner, warning_message
 
 
 class FileSystemUtils(object):
@@ -51,7 +51,7 @@ class FileSystemUtils(object):
     def _delete_directories(self, *dirs):
         # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
         # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
-        runCmd("rm", "-rf", *dirs)
+        run_command("rm", "-rf", *dirs)
 
     def clean_directory(self, path: Path, keep_root=False, ensure_dir_exists=True) -> None:
         """ After calling this function path will be an empty directory
@@ -123,10 +123,10 @@ class FileSystemUtils(object):
                     all_entries = all_entries_new
                 all_entries = list(map(str, all_entries))
                 if all_entries:
-                    runCmd(["mv"] + all_entries + [str(tempdir)], print_verbose_only=True)
+                    run_command(["mv"] + all_entries + [str(tempdir)], print_verbose_only=True)
             else:
                 # rename the directory, create a new dir and then delete it in a background thread
-                runCmd("mv", path, tempdir)
+                run_command("mv", path, tempdir)
                 self.makedirs(path)
         if not self.config.pretend:
             assert path.is_dir()
@@ -157,15 +157,15 @@ class FileSystemUtils(object):
         # if we have rsync we can skip the copy if file is already up-to-date
         if shutil.which("rsync"):
             try:
-                runCmd("rsync", "-aviu", "--progress", remote_path, target_file)
+                run_command("rsync", "-aviu", "--progress", remote_path, target_file)
             except subprocess.CalledProcessError as err:
                 if err.returncode == 127:
                     warning_message("rysnc doesn't seem to be installed on remote machine, trying scp")
-                    runCmd("scp", remote_path, target_file)
+                    run_command("scp", remote_path, target_file)
                 else:
                     raise err
         else:
-            runCmd("scp", remote_path, target_file)
+            run_command("scp", remote_path, target_file)
 
     def read_file(self, file: Path) -> str:
         # just return an empty string in pretend mode
@@ -204,9 +204,9 @@ class FileSystemUtils(object):
                 src = os.path.relpath(str(src), str(dest.parent if dest.is_absolute() else cwd))
             if cwd is not None and cwd.is_dir():
                 dest = dest.relative_to(cwd)
-            runCmd("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only)
+            run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only)
         else:
-            runCmd("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only)
+            run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only)
 
     def move_file(self, src: Path, dest: Path, force=False, create_dirs=True):
         if not src.exists():
@@ -214,7 +214,7 @@ class FileSystemUtils(object):
         cmd = ["mv", "-f"] if force else ["mv"]
         if create_dirs and not dest.parent.exists():
             self.makedirs(dest.parent)
-        runCmd(cmd + [str(src), str(dest)])
+        run_command(cmd + [str(src), str(dest)])
 
     def install_file(self, src: Path, dest: Path, *, force=False, create_dirs=True, print_verbose_only=True, mode=None):
         if force:
@@ -278,7 +278,7 @@ class FileSystemUtils(object):
         # a prefixed tool_path was installed -> create link such as mips4-unknown-freebsd-ld -> ld
         if create_unprefixed_link:
             assert tool_path.name != tool_name
-            runCmd("ln", "-fsn", tool_path.name, tool_name, cwd=cwd, print_verbose_only=True)
+            run_command("ln", "-fsn", tool_path.name, tool_name, cwd=cwd, print_verbose_only=True)
 
         for target in self.triple_prefixes_for_binaries:
             link = tool_path.parent / (target + tool_name)  # type: Path
@@ -286,7 +286,7 @@ class FileSystemUtils(object):
                 # if self.config.verbose:
                 #    print(coloured(AnsiColour.yellow, "Not overwriting", link, "because it is the target"))
                 continue
-            runCmd("ln", "-fsn", tool_path.name, target + tool_name, cwd=cwd, print_verbose_only=True)
+            run_command("ln", "-fsn", tool_path.name, target + tool_name, cwd=cwd, print_verbose_only=True)
 
     @staticmethod
     # Not cached since another target could write to this dir: @functools.lru_cache(maxsize=20)

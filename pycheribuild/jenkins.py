@@ -47,7 +47,8 @@ from .projects.cross import *  # make sure all projects are loaded so that targe
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project, SimpleProject
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
-from .utils import (commandline_to_str, fatal_error, get_program_version, init_global_config, OSInfo, runCmd, set_env,
+from .utils import (commandline_to_str, fatal_error, get_program_version, init_global_config, OSInfo, run_command,
+                    set_env,
                     status_update, ThreadJoiner, warning_message)
 
 EXTRACT_SDK_TARGET = "extract-sdk"
@@ -96,8 +97,8 @@ class SdkArchive(object):
 
     def extract(self):
         assert self.archive.exists(), str(self.archive)
-        runCmd(["tar", "Jxf", self.archive, "-C", self.cheri_config.cheri_sdk_dir] + self.extra_args,
-            cwd=self.cheri_config.workspace)
+        run_command(["tar", "Jxf", self.archive, "-C", self.cheri_config.cheri_sdk_dir] + self.extra_args,
+                    cwd=self.cheri_config.workspace)
         self.check_required_files()
 
     def check_required_files(self, fatal=True) -> bool:
@@ -149,7 +150,7 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List
         warning_message("Project needs a full SDK archive but only clang archive was found and",
                         sysroot_archive.archive, "is missing. Will attempt to build anyway but build "
                                                  "will most likely fail.")
-        runCmd("ls", "-la", cwd=cheri_config.workspace)
+        run_command("ls", "-la", cwd=cheri_config.workspace)
         return [clang_archive]
     return [clang_archive, sysroot_archive]
 
@@ -340,14 +341,15 @@ def _jenkins_main():
         # Strip all ELF files:
         if cheri_config.strip_elf_files:
             strip_binaries(cheri_config, cheri_config.workspace / "tarball")
-        runCmd([tar_cmd, "--create", "--xz"] + owner_flags + ["-f", cheri_config.tarball_name, "-C", "tarball", "."],
+        run_command(
+            [tar_cmd, "--create", "--xz"] + owner_flags + ["-f", cheri_config.tarball_name, "-C", "tarball", "."],
             cwd=cheri_config.workspace)
-        runCmd("du", "-sh", cheri_config.workspace / cheri_config.tarball_name)
+        run_command("du", "-sh", cheri_config.workspace / cheri_config.tarball_name)
 
 
 def strip_binaries(cheri_config: JenkinsConfig, directory: Path):
     status_update("Tarball directory size before stripping ELF files:")
-    runCmd("du", "-sh", directory)
+    run_command("du", "-sh", directory)
     for root, dirs, filelist in os.walk(str(directory)):
         for file in filelist:
             # Try to shrink the size by stripping all elf binaries
@@ -358,11 +360,11 @@ def strip_binaries(cheri_config: JenkinsConfig, directory: Path):
                 with filepath.open("rb") as f:
                     if f.read(4) == b"\x7fELF":
                         # self.verbose_print("Stripping ELF binary", filepath)
-                        runCmd(cheri_config.cheri_sdk_bindir / "llvm-strip", filepath)
+                        run_command(cheri_config.cheri_sdk_bindir / "llvm-strip", filepath)
             except Exception as e:
                 warning_message("Failed to detect type of file:", filepath, e)
     status_update("Tarball directory size after stripping ELF files:")
-    runCmd("du", "-sh", directory)
+    run_command("du", "-sh", directory)
 
 
 def jenkins_main():

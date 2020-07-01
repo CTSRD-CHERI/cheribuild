@@ -49,7 +49,7 @@ from .projects.project import SimpleProject
 from .targets import target_manager
 from .utils import (AnsiColour, coloured, commandline_to_str, fatal_error, get_program_version,
                     have_working_internet_connection, init_global_config, print_command, status_update,
-                    runCmd)
+                    run_command)
 
 DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent.parent]
 
@@ -67,7 +67,7 @@ def _update_check(d: Path):
         return
     # check if new commits are available
     project_dir = str(d)
-    runCmd(["git", "fetch"], cwd=project_dir, timeout=5)
+    run_command(["git", "fetch"], cwd=project_dir, timeout=5)
     output = subprocess.check_output(["git", "status", "-uno"], cwd=project_dir)
     behind_index = output.find(b"Your branch is behind ")
     if behind_index > 0:

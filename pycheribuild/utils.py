@@ -50,7 +50,7 @@ from .colour import AnsiColour, coloured
 
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "print_command", "include_local_file", "CompilerInfo",  # no-combine
-           "runCmd", "status_update", "fatal_error", "coloured", "AnsiColour", "set_env",  # no-combine
+           "run_command", "status_update", "fatal_error", "coloured", "AnsiColour", "set_env",  # no-combine
            "init_global_config", "warning_message", "popen_handle_noexec", "extract_version",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "get_compiler_info", "latest_system_clang_tool",  # no-combine
            "get_program_version", "SafeDict", "keep_terminal_sane",  # no-combine
@@ -190,10 +190,11 @@ def _become_tty_foreground_process():
 
 
 # noinspection PyShadowingBuiltins
-def runCmd(*args, capture_output=False, capture_error=False, input: "typing.Union[str, bytes]" = None, timeout=None,
-           print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False, no_print=False,
-           replace_env=False, give_tty_control=False, expected_exit_code=0, allow_unexpected_returncode=False,
-           **kwargs):
+def run_command(*args, capture_output=False, capture_error=False, input: "typing.Union[str, bytes]" = None,
+                timeout=None,
+                print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False, no_print=False,
+                replace_env=False, give_tty_control=False, expected_exit_code=0, allow_unexpected_returncode=False,
+                **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
@@ -305,8 +306,8 @@ class CompilerInfo(object):
             if not self.path.exists() and GlobalConfig.PRETEND_MODE:
                 return Path("/unknown/resource/dir")  # avoid failing in jenkins
             # pretend to compile an existing source file and capture the -resource-dir output
-            cc1_cmd = runCmd(self.path, "-###", "-xc", "-c", "/dev/null",
-                             capture_error=True, print_verbose_only=True, run_in_pretend_mode=True)
+            cc1_cmd = run_command(self.path, "-###", "-xc", "-c", "/dev/null",
+                                  capture_error=True, print_verbose_only=True, run_in_pretend_mode=True)
             resource_dir_pat = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"')
             self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
         return self._resource_dir
@@ -362,8 +363,9 @@ def get_compiler_info(compiler: "typing.Union[str, Path]") -> CompilerInfo:
         try:
             # Use -v instead of --version to support both gcc and clang
             # Note: for clang-cpp/cpp we need to have stdin as devnull
-            version_cmd = runCmd(compiler, "-v", capture_error=True, print_verbose_only=True, run_in_pretend_mode=True,
-                                 stdin=subprocess.DEVNULL, capture_output=True)
+            version_cmd = run_command(compiler, "-v", capture_error=True, print_verbose_only=True,
+                                      run_in_pretend_mode=True,
+                                      stdin=subprocess.DEVNULL, capture_output=True)
         except subprocess.CalledProcessError as e:
             stderr = e.stderr if e.stderr else b"FAILED: " + str(e).encode("utf-8")
             version_cmd = CompletedProcess(e.cmd, e.returncode, e.output, stderr)
@@ -397,8 +399,8 @@ def get_compiler_info(compiler: "typing.Union[str, Path]") -> CompilerInfo:
 def get_version_output(program: Path, command_args: tuple = None) -> "bytes":
     if command_args is None:
         command_args = ["--version"]
-    prog = runCmd([str(program)] + list(command_args), stdin=subprocess.DEVNULL,
-                  stderr=subprocess.STDOUT, capture_output=True, run_in_pretend_mode=True)
+    prog = run_command([str(program)] + list(command_args), stdin=subprocess.DEVNULL,
+                       stderr=subprocess.STDOUT, capture_output=True, run_in_pretend_mode=True)
     return prog.stdout
 
 
