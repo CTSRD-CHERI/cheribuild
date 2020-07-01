@@ -103,8 +103,9 @@ class BODiagTestsuite(object):
 
         signaled = os.WIFSIGNALED(exit_code)
         exited = os.WIFEXITED(exit_code)
-        testcase.system_out = "WIFSIGNALED={} WIFEXITED={}, WTERMSIG={}, WEXITSTATUS={} WCOREDUMP={}".format(signaled,
-            exited, os.WTERMSIG(exit_code), os.WEXITSTATUS(exit_code), os.WCOREDUMP(exit_code))
+        testcase.system_out = "WIFSIGNALED={} WIFEXITED={}, WTERMSIG={}, WEXITSTATUS={}" \
+                              " WCOREDUMP={}".format(signaled, exited, os.WTERMSIG(exit_code),
+                                                     os.WEXITSTATUS(exit_code), os.WCOREDUMP(exit_code))
         # -ok testcases are expected to run succesfully -> exit code zero
         if stem.endswith("-ok"):
             if not exited or os.WEXITSTATUS(exit_code) != 0:
@@ -203,15 +204,14 @@ def run_bodiagsuite(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
     assert not args.use_valgrind, "Not support for CheriBSD"
 
     if not args.junit_xml_only:
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "rm -rf {}/run".format(LONG_NAME_FOR_BUILDDIR))
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "cd {} && mkdir -p run".format(LONG_NAME_FOR_BUILDDIR))
+        qemu.checked_run("rm -rf {}/run".format(LONG_NAME_FOR_BUILDDIR))
+        qemu.checked_run("cd {} && mkdir -p run".format(LONG_NAME_FOR_BUILDDIR))
         # Don't log all the CHERI traps while running (should speed up the tests a bit and produce shorter logfiles)
-        boot_cheribsd.run_cheribsd_command(qemu, "sysctl machdep.log_user_cheri_exceptions=0 || true")
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "{} -r -f {}/Makefile.bsd-run all".format(args.bmake_path,
-                                                                                                   LONG_NAME_FOR_BUILDDIR),
-                                                   timeout=120 * 60, ignore_cheri_trap=True)
+        qemu.run("sysctl machdep.log_user_cheri_exceptions=0 || true")
+        qemu.checked_run("{} -r -f {}/Makefile.bsd-run all".format(args.bmake_path, LONG_NAME_FOR_BUILDDIR),
+                         timeout=120 * 60, ignore_cheri_trap=True)
         # restore old behaviour
-        boot_cheribsd.run_cheribsd_command(qemu, "sysctl machdep.log_user_cheri_exceptions=1 || true")
+        qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || true")
 
     if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name, args.tools):
         return False

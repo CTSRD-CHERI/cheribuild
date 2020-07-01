@@ -112,9 +112,9 @@ def test_cross_compile_project_inherits():
     qtbase_class = target_manager.get_target_raw("qtbase").project_class
     qtbase_default = target_manager.get_target_raw("qtbase").get_or_create_project(None, config)  # type: BuildQtBase
     qtbase_native = target_manager.get_target_raw("qtbase-native").get_or_create_project(None,
-        config)  # type: BuildQtBase
+                                                                                         config)  # type: BuildQtBase
     qtbase_mips = target_manager.get_target_raw("qtbase-mips-hybrid").get_or_create_project(None,
-        config)  # type: BuildQtBase
+                                                                                            config)  # type: BuildQtBase
 
     # Check that project name is the same:
     assert qtbase_default.project_name == qtbase_native.project_name
@@ -205,14 +205,18 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     config = _parse_arguments(["--skip-configure"])
     cheribsd_class = target_manager.get_target_raw("cheribsd").project_class
     cheribsd_default_tgt = target_manager.get_target_raw("cheribsd").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                           config)  # type:
+    # BuildCHERIBSD
     assert cheribsd_default_tgt.target == "cheribsd-mips-hybrid"
     cheribsd_mips = target_manager.get_target_raw("cheribsd-mips-nocheri").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                                 config)  # type:
+    # BuildCHERIBSD
     cheribsd_cheri = target_manager.get_target_raw("cheribsd-mips-hybrid").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                                 config)  # type:
+    # BuildCHERIBSD
     cheribsd_purecap = target_manager.get_target_raw("cheribsd-mips-purecap").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                                    config)  # type:
+    # BuildCHERIBSD
 
     # Check that project name is the same:
     assert cheribsd_mips.project_name == cheribsd_cheri.project_name
@@ -312,44 +316,52 @@ def test_target_alias():
     # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
     # We should load config options for that target from
     cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                           config)  # type:
+    # BuildCHERIBSD
     assert str(cheribsd_cheri.mfs_root_image) == "/some/image"
     cheribsd_mips_hybrid = target_manager.get_target_raw("cheribsd-mips-hybrid").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                                       config)  #
+    # type: BuildCHERIBSD
     assert str(cheribsd_mips_hybrid.mfs_root_image) == "/some/image"
     # Try again with the other key:
     config = _parse_config_file_and_args(b'{"cheribsd-mips-hybrid/mfs-root-image": "/some/image"}')
     # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
     # We should load config options for that target from
     cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                           config)  # type:
+    # BuildCHERIBSD
     assert str(cheribsd_cheri.mfs_root_image) == "/some/image"
     cheribsd_mips_hybrid = target_manager.get_target_raw("cheribsd-mips-hybrid").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                                       config)  #
+    # type: BuildCHERIBSD
     assert str(cheribsd_mips_hybrid.mfs_root_image) == "/some/image"
 
     # Check command line aliases:
     config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/json/value"}',
-        "--cheribsd-cheri/mfs-root-image=/command/line/value")
+                                         "--cheribsd-cheri/mfs-root-image=/command/line/value")
     # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
     # We should load config options for that target from
     cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                           config)  # type:
+    # BuildCHERIBSD
     assert str(cheribsd_cheri.mfs_root_image) == "/command/line/value"
     cheribsd_mips_hybrid = target_manager.get_target_raw("cheribsd-mips-hybrid").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                                       config)  #
+    # type: BuildCHERIBSD
     assert str(cheribsd_mips_hybrid.mfs_root_image) == "/command/line/value"
 
     config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/json/value"}',
-        "--cheribsd-mips-hybrid/mfs-root-image=/command/line/value")
+                                         "--cheribsd-mips-hybrid/mfs-root-image=/command/line/value")
     # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
     # We should load config options for that target from
     cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                           config)  # type:
+    # BuildCHERIBSD
     mfs_option = inspect.getattr_static(cheribsd_cheri, "mfs_root_image")
     assert str(cheribsd_cheri.mfs_root_image) == "/command/line/value"
     cheribsd_mips_hybrid = target_manager.get_target_raw("cheribsd-mips-hybrid").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                                       config)  #
+    # type: BuildCHERIBSD
     assert str(cheribsd_mips_hybrid.mfs_root_image) == "/command/line/value"
 
 
@@ -359,10 +371,12 @@ def test_cheri_mips_purecap_alias():
     # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
     # We should load config options for that target from
     qtbase_cheri = target_manager.get_target_raw("qtbase-mips-purecap").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                              config)  # type:
+    # BuildCHERIBSD
     assert str(qtbase_cheri.build_dir) == "/some/build/dir"
     qtbase_mips_purecap = target_manager.get_target_raw("qtbase-mips-purecap").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                                     config)  # type:
+    # BuildCHERIBSD
     assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
 
 
@@ -452,18 +466,19 @@ def test_config_file_include():
         assert "/source/root/override" == str(result.source_root)
         # And again the root file wins:
         result = _get_config_with_include(config_dir,
-            b'{ "source-root": "/override/twice", "#include": "change-source-root.json"}')
+                                          b'{ "source-root": "/override/twice", "#include": "change-source-root.json"}')
         assert "/override/twice" == str(result.source_root)
         # no matter in which order it is written:
         result = _get_config_with_include(config_dir,
-            b'{ "#include": "change-source-root.json", "source-root": "/override/again"}')
+                                          b'{ "#include": "change-source-root.json", "source-root": "/override/again"}')
         assert "/override/again" == str(result.source_root)
 
         # Test merging of objects:
         (config_dir / "change-smb-dir.json").write_bytes(
             b'{ "run": { "smb-host-directory": "/some/path" }, "#include": "common.json" }')
         result = _get_config_with_include(config_dir,
-            b'{ "run": { "ssh-forwarding-port": 12345 }, "#include": "change-smb-dir.json" }')
+                                          b'{ "run": { "ssh-forwarding-port": 12345 }, "#include": '
+                                          b'"change-smb-dir.json" }')
         run_project = target_manager.get_target_raw("run").get_or_create_project(None, result)
         assert run_project.custom_qemu_smb_mount == Path("/some/path")
         assert run_project.ssh_forwarding_port == 12345
@@ -472,13 +487,13 @@ def test_config_file_include():
             # Check that relative paths work
             relpath = b"../" + str(Path(d).relative_to(Path(d2).parent)).encode("utf-8")
             result = _get_config_with_include(config_dir,
-                b'{ "#include": "' + relpath + b'/common.json" }', workdir=Path(d2))
+                                              b'{ "#include": "' + relpath + b'/common.json" }', workdir=Path(d2))
             assert "/this/is/a/unit/test" == str(result.source_root)
 
             # Check that absolute paths work as expected:
             abspath = b"" + str(Path(d)).encode("utf-8")
             result = _get_config_with_include(config_dir,
-                b'{ "#include": "' + abspath + b'/common.json" }', workdir=Path(d2))
+                                              b'{ "#include": "' + abspath + b'/common.json" }', workdir=Path(d2))
             assert "/this/is/a/unit/test" == str(result.source_root)
 
         # Nonexistant paths should raise an error
@@ -490,7 +505,7 @@ def test_config_file_include():
         # TODO: this could be supported but it might be better to accept a list instead?
         with pytest.raises(SyntaxError) as excinfo:
             _get_config_with_include(config_dir,
-                b'{ "#include": "128-common.json", "foo": "bar", "#include": "256-common.json"}')
+                                     b'{ "#include": "128-common.json", "foo": "bar", "#include": "256-common.json"}')
             assert re.search("duplicate key: '#include'", excinfo.value)
 
 
@@ -522,18 +537,18 @@ def test_libcxxrt_dependency_path():
     pytest.param("freebsd-mips", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
     pytest.param("freebsd-mips", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
     pytest.param("freebsd-mips", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
-        FreeBSDToolchainKind.BOOTSTRAP, []),
+                 FreeBSDToolchainKind.BOOTSTRAP, []),
     pytest.param("freebsd-mips", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
-        ["--freebsd-mips/toolchain-path", "/path/to/custom/toolchain"]),
+                 ["--freebsd-mips/toolchain-path", "/path/to/custom/toolchain"]),
 
     # CheriBSD-mips can be built with all these toolchains (but defaults to CHERI LLVM):
     pytest.param("cheribsd-mips-nocheri", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.DEFAULT_EXTERNAL, []),
     pytest.param("cheribsd-mips-nocheri", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
     pytest.param("cheribsd-mips-nocheri", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
     pytest.param("cheribsd-mips-nocheri", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
-        FreeBSDToolchainKind.BOOTSTRAP, []),
+                 FreeBSDToolchainKind.BOOTSTRAP, []),
     pytest.param("cheribsd-mips-nocheri", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
-        ["--cheribsd-mips-nocheri/toolchain-path", "/path/to/custom/toolchain"]),
+                 ["--cheribsd-mips-nocheri/toolchain-path", "/path/to/custom/toolchain"]),
     ])
 def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, extra_args):
     args = ["--" + target + "/toolchain", kind.value]
@@ -600,27 +615,27 @@ def test_freebsd_toolchains_cheribsd_purecap():
 
 @pytest.mark.parametrize("target,args,expected", [
     pytest.param("cheribsd", ["--foo"],
-        "cheribsd-mips-hybrid128-build"),
+                 "cheribsd-mips-hybrid128-build"),
     pytest.param("llvm", ["--foo"],
-        "llvm-project-build"),
+                 "llvm-project-build"),
     pytest.param("cheribsd-purecap", ["--foo"],
-        "cheribsd-purecap-128-build"),
+                 "cheribsd-purecap-128-build"),
     # --subobject debug should not have any effect if subobject bounds is disabled
     pytest.param("cheribsd-purecap", ["--subobject-bounds=conservative", "--subobject-debug"],
-        "cheribsd-purecap-128-build"),
+                 "cheribsd-purecap-128-build"),
     pytest.param("cheribsd-purecap", ["--subobject-bounds=subobject-safe", "--subobject-debug"],
-        "cheribsd-purecap-128-subobject-safe-build"),
+                 "cheribsd-purecap-128-subobject-safe-build"),
     pytest.param("cheribsd-purecap", ["--subobject-bounds=subobject-safe", "--no-subobject-debug"],
-        "cheribsd-purecap-128-subobject-safe-subobject-nodebug-build"),
+                 "cheribsd-purecap-128-subobject-safe-subobject-nodebug-build"),
     # No change for pcrel:
     pytest.param("cheribsd", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
-        "cheribsd-mips-hybrid128-build"),
+                 "cheribsd-mips-hybrid128-build"),
     # plt should be encoded
     pytest.param("cheribsd", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
-        "cheribsd-mips-hybrid128-plt-build"),
+                 "cheribsd-mips-hybrid128-plt-build"),
     # everything
     pytest.param("cheribsd-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
-        "cheribsd-purecap-128-plt-aggressive-hardfloat-build"),
+                 "cheribsd-purecap-128-plt-aggressive-hardfloat-build"),
     # plt should be encoded
     pytest.param("sqlite", [], "sqlite-128-build"),
     pytest.param("sqlite-mips-hybrid", [], "sqlite-mips-hybrid128-build"),

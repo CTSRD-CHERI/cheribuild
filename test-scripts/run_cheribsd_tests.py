@@ -52,7 +52,7 @@ def run_cheritest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, args: argpa
         #     ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
         # Generate JUnit XML:
         qemu.run("/bin/{} -a -x > /tmp/{}.xml".format(binary_name, binary_name),
-            ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
+                 ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
         qemu.sendline("echo EXITCODE=$?")
         qemu.expect(["EXITCODE=(\\d+)\r"], timeout=5, pretend_result=0)
         if boot_cheribsd.PRETEND:
@@ -268,7 +268,7 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--run-cheritest", dest="run_cheritest", action="store_true", default=None,
                         help="Run cheritest and cheriabitest")
     parser.add_argument("--minimal-image", action="store_true",
-        help="Set this if tests are being run on the minimal disk image rather than the full one")
+                        help="Set this if tests are being run on the minimal disk image rather than the full one")
     parser.add_argument("--no-run-cheritest", dest="run_cheritest", action="store_false",
                         help="Do not run cheritest and cheriabitest")
 

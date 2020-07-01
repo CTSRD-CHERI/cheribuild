@@ -3,6 +3,7 @@ import sys
 import io
 import os
 import tempfile
+
 try:
     import typing
 except ImportError:
@@ -225,7 +226,7 @@ def test_add_file():
 
 
 @pytest.yield_fixture(params=["/usr/bin", "/this/does/not/exist", "./testfile", "testfile", "/tmp/testfile",
-                        "../this/does/not/exist"], )
+                              "../this/does/not/exist"], )
 def temp_symlink():
     target = "/usr/bin"
     with tempfile.TemporaryDirectory() as td:
@@ -265,4 +266,3 @@ def test_symlink_infer_mode(temp_symlink):
 # END
 """.format(target=temp_symlink[2], testfile=str(temp_symlink[1]), symlink_perms=symlink_perms)
     assert expected == _get_as_str(mtree)
-

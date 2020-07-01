@@ -33,11 +33,11 @@ from run_tests_common import *
 def run_ros2_tests(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running ROS2 tests")
     boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cd /source && sh -xe ./run-ros2-tests.sh", timeout=240 * 60)
+    qemu.checked_run("cd /source && sh -xe ./run-ros2-tests.sh", timeout=240 * 60)
     return True
 
 
 if __name__ == '__main__':
     # we don't need ssh running to execute the tests
     run_tests_main(test_function=run_ros2_tests, need_ssh=False, should_mount_builddir=False,
-    should_mount_srcdir=True, should_mount_sysroot=True)
+                   should_mount_srcdir=True, should_mount_sysroot=True)

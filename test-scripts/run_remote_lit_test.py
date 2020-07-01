@@ -142,7 +142,7 @@ def run_remote_lit_tests_impl(testsuite: str, qemu: boot_cheribsd.CheriBSDInstan
     notify_main_process(args, MultiprocessStages.TESTING_SSH_CONNECTION, mp_q, barrier=barrier)
     if args.pretend and os.getenv("FAIL_RAISE_EXCEPTION") and args.internal_shard == 1:
         raise RuntimeError("SOMETHING WENT WRONG!")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cat /root/.ssh/authorized_keys", timeout=20)
+    qemu.checked_run("cat /root/.ssh/authorized_keys", timeout=20)
     port = args.ssh_port
     user = "root"  # TODO: run these tests as non-root!
     test_build_dir = Path(args.build_dir)

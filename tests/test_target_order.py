@@ -21,7 +21,8 @@ global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
 BuildCHERIBSD.crossbuild = True
 
 
-def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolchain=True, skip_sdk=False) -> "typing.List[str]":
+def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolchain=True,
+                  skip_sdk=False) -> "typing.List[str]":
     target_manager.reset()
     # print(real_targets)
     real_targets = list(target_manager.get_target(t, None, global_config, caller="_sort_targets") for t in targets)
@@ -80,9 +81,15 @@ def test_run_comes_last():
 
 def test_disk_image_comes_second_last():
     assert _sort_targets(["run", "disk-image"]) == ["disk-image-mips-hybrid", "run-mips-hybrid"]
-    assert _sort_targets(["run", "disk-image", "cheribsd"]) == ["cheribsd-mips-hybrid", "disk-image-mips-hybrid", "run-mips-hybrid"]
-    assert _sort_targets(["run", "gdb-mips-hybrid", "disk-image", "cheribsd"]) == ["cheribsd-mips-hybrid", "gdb-mips-hybrid", "disk-image-mips-hybrid", "run-mips-hybrid"]
-    assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd-mips-hybrid", "postgres-mips-purecap", "disk-image-mips-hybrid", "run-mips-hybrid"]
+    assert _sort_targets(["run", "disk-image", "cheribsd"]) == ["cheribsd-mips-hybrid", "disk-image-mips-hybrid",
+                                                                "run-mips-hybrid"]
+    assert _sort_targets(["run", "gdb-mips-hybrid", "disk-image", "cheribsd"]) == ["cheribsd-mips-hybrid",
+                                                                                   "gdb-mips-hybrid",
+                                                                                   "disk-image-mips-hybrid",
+                                                                                   "run-mips-hybrid"]
+    assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd-mips-hybrid",
+                                                                            "postgres-mips-purecap",
+                                                                            "disk-image-mips-hybrid", "run-mips-hybrid"]
 
 
 def test_cheribsd_default_aliases():
@@ -99,7 +106,7 @@ def test_all_run_deps():
 
 def test_run_disk_image():
     assert _sort_targets(["run", "disk-image", "run-freebsd-mips", "llvm", "disk-image-freebsd-amd64"]) == [
-                          "llvm-native", "disk-image-mips-hybrid", "disk-image-freebsd-amd64", "run-mips-hybrid", "run-freebsd-mips"]
+        "llvm-native", "disk-image-mips-hybrid", "disk-image-freebsd-amd64", "run-mips-hybrid", "run-freebsd-mips"]
 
 
 def test_remove_duplicates():
@@ -109,15 +116,16 @@ def test_remove_duplicates():
 def test_minimal_run():
     # Check that we build the mfs root first
     assert _sort_targets(["disk-image-minimal", "cheribsd-mfs-root-kernel", "run-minimal"]) == \
-                         ["disk-image-minimal-mips-hybrid", "cheribsd-mfs-root-kernel-mips-hybrid", "run-minimal-mips-hybrid"]
+           ["disk-image-minimal-mips-hybrid", "cheribsd-mfs-root-kernel-mips-hybrid", "run-minimal-mips-hybrid"]
     assert _sort_targets(["cheribsd-mfs-root-kernel", "disk-image-minimal", "run-minimal"]) == \
-                         ["disk-image-minimal-mips-hybrid", "cheribsd-mfs-root-kernel-mips-hybrid", "run-minimal-mips-hybrid"]
+           ["disk-image-minimal-mips-hybrid", "cheribsd-mfs-root-kernel-mips-hybrid", "run-minimal-mips-hybrid"]
 
 
 def _check_deps_not_cached(classes):
     for c in classes:
         with pytest.raises(ValueError, match="_cached_dependencies called before all_dependency_names()"):
             c._cached_dependencies()
+
 
 def _check_deps_cached(classes):
     for c in classes:
@@ -135,12 +143,14 @@ def test_webkit_cached_deps():
     _check_deps_not_cached((webkit_native, webkit_cheri, webkit_mips))
 
     cheri_target_names = list(sorted(webkit_cheri.all_dependency_names(config)))
-    assert cheri_target_names == ["icu4c-mips-purecap", "icu4c-native", "libxml2-mips-purecap", "qtbase-mips-purecap", "sqlite-mips-purecap"]
+    assert cheri_target_names == ["icu4c-mips-purecap", "icu4c-native", "libxml2-mips-purecap", "qtbase-mips-purecap",
+                                  "sqlite-mips-purecap"]
     _check_deps_not_cached([webkit_native, webkit_mips])
     _check_deps_cached([webkit_cheri])
 
     mips_target_names = list(sorted(webkit_mips.all_dependency_names(config)))
-    assert mips_target_names == ["icu4c-mips-hybrid", "icu4c-native", "libxml2-mips-hybrid", "qtbase-mips-hybrid", "sqlite-mips-hybrid"]
+    assert mips_target_names == ["icu4c-mips-hybrid", "icu4c-native", "libxml2-mips-hybrid", "qtbase-mips-hybrid",
+                                 "sqlite-mips-hybrid"]
     _check_deps_cached([webkit_cheri, webkit_mips])
     _check_deps_not_cached([webkit_native])
 
@@ -151,15 +161,17 @@ def test_webkit_cached_deps():
 
 def test_webkit_deps_2():
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=True) == \
-                         ["qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
+           ["qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
     # SDK should not add new targets
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=False) == \
-                         ["qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
+           ["qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
 
     assert _sort_targets(["qtwebkit-mips-hybrid"], add_dependencies=True, skip_sdk=True) == \
-                         ["qtbase-mips-hybrid", "icu4c-native", "icu4c-mips-hybrid", "libxml2-mips-hybrid", "sqlite-mips-hybrid", "qtwebkit-mips-hybrid"]
+           ["qtbase-mips-hybrid", "icu4c-native", "icu4c-mips-hybrid", "libxml2-mips-hybrid", "sqlite-mips-hybrid",
+            "qtwebkit-mips-hybrid"]
     assert _sort_targets(["qtwebkit-mips-purecap"], add_dependencies=True, skip_sdk=True) == \
-                         ["qtbase-mips-purecap", "icu4c-native", "icu4c-mips-purecap", "libxml2-mips-purecap", "sqlite-mips-purecap", "qtwebkit-mips-purecap"]
+           ["qtbase-mips-purecap", "icu4c-native", "icu4c-mips-purecap", "libxml2-mips-purecap", "sqlite-mips-purecap",
+            "qtwebkit-mips-purecap"]
 
 
 def test_riscv():
@@ -174,6 +186,7 @@ def test_riscv():
     assert _sort_targets(["run-riscv64"], add_dependencies=True, skip_sdk=False) == \
            ["qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64", "run-riscv64"]
 
+
 # Check that libcxx deps with skip sdk pick the matching -native/-mips versions
 # Also the libcxx target should resolve to libcxx-mips-purecap:
 @pytest.mark.parametrize("suffix,expected_suffix", [
@@ -183,9 +196,8 @@ def test_riscv():
     pytest.param("-mips-purecap", "-mips-purecap", id="mips-purecap"),
     # no suffix should resolve to the -cheri targets:
     pytest.param("", "-mips-purecap", id="no suffix"),
-])
+    ])
 def test_libcxx_deps(suffix, expected_suffix):
     expected = ["libunwind" + expected_suffix, "libcxxrt" + expected_suffix, "libcxx" + expected_suffix]
     # Now check that the cross-compile versions explicitly chose the matching target:
     assert expected == _sort_targets(["libcxx" + suffix], add_dependencies=True, skip_sdk=True)
-

@@ -209,6 +209,5 @@ class TestAsyncDelete(TestCase):
         assert not moved_builddir.exists()  # tempdir should be deleted now
 
 
-
 if __name__ == '__main__':
     unittest.main()

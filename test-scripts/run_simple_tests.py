@@ -38,9 +38,9 @@ def run_simple_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
     boot_cheribsd.info("Running tests")
     # TODO: copy over the logfile and enable coredumps?
     # Run tests with a two hour timeout:
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cd '{}'".format(qemu.smb_dirs[0].in_target), timeout=10)
-    boot_cheribsd.checked_run_cheribsd_command(qemu, args.test_command, timeout=args.test_timeout, pretend_result=0,
-                                               ignore_cheri_trap=args.ignore_cheri_trap)
+    qemu.checked_run("cd '{}'".format(qemu.smb_dirs[0].in_target), timeout=10)
+    qemu.checked_run(args.test_command, timeout=args.test_timeout, pretend_result=0,
+                     ignore_cheri_trap=args.ignore_cheri_trap)
     return True
 
 
