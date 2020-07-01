@@ -99,15 +99,20 @@ class CheriConfig(object):
         self.print_targets_only = loader.add_bool_option("print-targets-only", help_hidden=False, group=loader.actionGroup,
             help="Don't run the build but instead only print the targets that would be executed")
 
-        self.clangPath = loader.add_path_option("clang-path", shortname="-cc-path",
-              default=latest_system_clang_tool("clang", "cc"), group=loader.pathGroup,
-              help="The C compiler to use for host binaries (must be compatible with Clang >= 3.7)")
-        self.clangPlusPlusPath = loader.add_path_option("clang++-path", shortname="-c++-path",
-              default=latest_system_clang_tool("clang++", "c++"), group=loader.pathGroup,
-              help="The C++ compiler to use for host binaries (must be compatible with Clang >= 3.7)")
-        self.clangCppPath = loader.add_path_option("clang-cpp-path", shortname="-cpp-path",
-              default=latest_system_clang_tool("clang-cpp", "cpp"), group=loader.pathGroup,
-              help="The C preprocessor to use for host binaries (must be compatible with Clang >= 3.7)")
+        self.clang_path = loader.add_path_option("clang-path", shortname="-cc-path",
+                                                 default=latest_system_clang_tool("clang", "cc"),
+                                                 group=loader.pathGroup,
+                                                 help="The C compiler to use for host binaries (must be compatible "
+                                                      "with Clang >= 3.7)")
+        self.clang_plusplus_path = loader.add_path_option("clang++-path", shortname="-c++-path",
+                                                          default=latest_system_clang_tool("clang++", "c++"),
+                                                          group=loader.pathGroup,
+                                                          help="The C++ compiler to use for host binaries (must be "
+                                                               "compatible with Clang >= 3.7)")
+        self.clang_cpp_path = loader.add_path_option("clang-cpp-path", shortname="-cpp-path",
+                                                     default=latest_system_clang_tool("clang-cpp", "cpp"),
+                                                     group=loader.pathGroup,
+                                                     help="The C preprocessor to use for host binaries (must be compatible with Clang >= 3.7)")
 
         self.passDashKToMake = loader.add_commandline_only_bool_option("pass-k-to-make", "k",
                                                                    help="Pass the -k flag to make to continue after"
@@ -140,30 +145,32 @@ class CheriConfig(object):
                                                     choices=("pcrel", "plt", "legacy", "fn-desc"),
                                                     help="The ABI to use for cap-table mode")
         self.cross_target_suffix = loader.add_option("cross-target-suffix", help_hidden=True, default="",
-                                                    help="Add a suffix to the cross build and install directories. "
-                                                         "With VALUE=-pcrel it will use /opt/mips-purecap-pcrel/$PROJECT")
+                                                     help="Add a suffix to the cross build and install directories. "
+                                                          "With VALUE=-pcrel it will use "
+                                                          "/opt/mips-purecap-pcrel/$PROJECT")
 
         # Attributes for code completion:
         self.verbose = None  # type: Optional[bool]
-        self.debug_output = loader.add_commandline_only_bool_option("debug-output", "vv", help="Extremely verbose output")
+        self.debug_output = loader.add_commandline_only_bool_option("debug-output", "vv",
+                                                                    help="Extremely verbose output")
         self.quiet = None  # type: Optional[bool]
         self.clean = None  # type: Optional[bool]
         self.force = None  # type: Optional[bool]
         self.write_logfile = None  # type: Optional[bool]
-        self.skipUpdate = None  # type: Optional[bool]
-        self.skipClone = None  # type: Optional[bool]
-        self.skipConfigure = None  # type: Optional[bool]
-        self.forceConfigure = None  # type: Optional[bool]
+        self.skip_update = None  # type: Optional[bool]
+        self.skip_clone = None  # type: Optional[bool]
+        self.skip_configure = None  # type: Optional[bool]
+        self.force_configure = None  # type: Optional[bool]
         self.force_update = None  # type: Optional[bool]
         self.mips_float_abi = loader.add_option("mips-float-abi", default=MipsFloatAbi.SOFT, type=MipsFloatAbi,
-                                               group=loader.crossCompileOptionsGroup,
-                                               help="The floating point ABI to use for building MIPS+CHERI programs")
+                                                group=loader.crossCompileOptionsGroup,
+                                                help="The floating point ABI to use for building MIPS+CHERI programs")
         self.crosscompile_linkage = loader.add_option("cross-compile-linkage", default=Linkage.DYNAMIC, type=Linkage,
-                                                     group=loader.crossCompileOptionsGroup,
-                                                     enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
-                                                     help="Whether to link cross-compile projects static or dynamic by default")
+                                                      group=loader.crossCompileOptionsGroup,
+                                                      enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
+                                                      help="Whether to link cross-compile projects static or dynamic by default")
         self.csetbounds_stats = loader.add_bool_option("collect-csetbounds-stats",
-                                                     group=loader.crossCompileOptionsGroup, help_hidden=True,
+                                                       group=loader.crossCompileOptionsGroup, help_hidden=True,
                                                      help="Whether to log CSetBounds statistics in csv format")
         self.subobject_bounds = loader.add_option("subobject-bounds", type=str, group=loader.crossCompileOptionsGroup,
             choices=("conservative", "subobject-safe", "aggressive", "very-aggressive", "everywhere-unsafe"),
@@ -196,13 +203,13 @@ class CheriConfig(object):
         self.qemu_debug_program = loader.add_option("qemu-gdb-debug-userspace-program",
                                                     help="Print the command to debug the following userspace program "
                                                          "in GDB attaced to QEMU")
-        self.includeDependencies = None  # type: Optional[bool]
+        self.include_dependencies = None  # type: Optional[bool]
         self.include_toolchain_dependencies = True
         self.preferred_xtarget = None  # type: Optional[CrossCompileTarget]
-        self.makeWithoutNice = None  # type: Optional[bool]
+        self.make_without_nice = None  # type: Optional[bool]
 
         self.mips_cheri_bits = 128  # Backwards compat
-        self.makeJobs = None  # type: Optional[int]
+        self.make_jobs = None  # type: Optional[int]
 
         self.source_root = None  # type: Optional[Path]
         self.output_root = None  # type: Optional[Path]
@@ -306,16 +313,16 @@ class CheriConfig(object):
             self.verbose = True
         self.targets = self.loader.targets
         # If there is no clang, default to /usr/bin/cc
-        if self.clangCppPath is None and self.clangPlusPlusPath is None and self.clangPath is None:
-            self.clangPath = Path("/usr/bin/cc")
-            self.clangCppPath = Path("/usr/bin/cpp")
-            self.clangPlusPlusPath = Path("/usr/bin/c++")
-        if self.clangPath is None or not self.clangPath.exists():
-            self.clangPath = Path("/c/compiler/is/missing")
-        if self.clangPlusPlusPath is None or not self.clangPlusPlusPath.exists():
-            self.clangPlusPlusPath = Path("/c++/compiler/is/missing")
-        if self.clangCppPath is None or not self.clangCppPath.exists():
-            self.clangCppPath = Path("/cpp/is/missing")
+        if self.clang_cpp_path is None and self.clang_plusplus_path is None and self.clang_path is None:
+            self.clang_path = Path("/usr/bin/cc")
+            self.clang_cpp_path = Path("/usr/bin/cpp")
+            self.clang_plusplus_path = Path("/usr/bin/c++")
+        if self.clang_path is None or not self.clang_path.exists():
+            self.clang_path = Path("/c/compiler/is/missing")
+        if self.clang_plusplus_path is None or not self.clang_plusplus_path.exists():
+            self.clang_plusplus_path = Path("/c++/compiler/is/missing")
+        if self.clang_cpp_path is None or not self.clang_cpp_path.exists():
+            self.clang_cpp_path = Path("/cpp/is/missing")
 
         if self.test_extra_args is None:
             self.test_extra_args = []
@@ -340,9 +347,9 @@ class CheriConfig(object):
             self.action = real_action
 
         # turn on skip-update if we don't have a working internet connection to avoid errors in git pull
-        if not self.skipUpdate and not have_working_internet_connection():
+        if not self.skip_update and not have_working_internet_connection():
             warningMessage("No internet connection detected, will skip git updates!")
-            self.skipUpdate = True
+            self.skip_update = True
 
         # CLICOLOR environment variable can confuse ./configure scripts:
         os.unsetenv("CLICOLOR")
@@ -360,7 +367,7 @@ class CheriConfig(object):
 
     @property
     def makeJFlag(self):
-        return "-j" + str(self.makeJobs)
+        return "-j" + str(self.make_jobs)
 
     @property
     def mips_cheri_bits_str(self):

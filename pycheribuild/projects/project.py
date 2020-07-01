@@ -237,13 +237,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if config.skipSdk and dep_target.project_class.is_sdk_target:
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
-                        "since it is an SDK target and --skip-sdk was passed.")
+                                 "since it is an SDK target and --skip-sdk was passed.")
                 continue
-            if config.includeDependencies and (
+            if config.include_dependencies and (
                     not config.include_toolchain_dependencies and dep_target.project_class.is_toolchain_target()):
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
-                        "since it is a toolchain target and --include-toolchain-dependencies was not passed.")
+                                 "since it is a toolchain target and --include-toolchain-dependencies was not passed.")
                 continue
             # Now find the actual crosscompile targets for target aliases:
             if isinstance(dep_target, MultiArchTargetAlias):
@@ -1133,7 +1133,7 @@ class GitRepository(SourceRepository):
             default_src_dir = src_dir
         # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
         if not (default_src_dir / ".git").exists():
-            if current_project.config.skipClone:
+            if current_project.config.skip_clone:
                 current_project.fatal("Sources for", str(default_src_dir), " missing!")
             assert isinstance(self.url, str), self.url
             assert not self.url.startswith("<"), "Invalid URL " + self.url
@@ -1201,7 +1201,7 @@ class GitRepository(SourceRepository):
                skip_submodules=False):
         self.ensure_cloned(current_project, src_dir=src_dir, default_src_dir=default_src_dir,
             skip_submodules=skip_submodules)
-        if current_project.skipUpdate:
+        if current_project.skip_update:
             return
         if not src_dir.exists():
             return
@@ -1552,14 +1552,19 @@ class Project(SimpleProject):
         else:
             cls.use_asan = False
         cls.auto_var_init = cls.add_config_option("auto-var-init", kind=AutoVarInit,
-            default=ComputedDefaultValue(lambda config, proj: proj.default_auto_var_init,
-                lambda c: ("the value of the global --skip-update option (defaults to \"" +
-                           c.default_auto_var_init.value + "\")")),
-            help="Whether to initialize all local variables (currently only supported when compiling with clang)")
-        cls.skipUpdate = cls.add_bool_option("skip-update",
-            default=ComputedDefaultValue(lambda config, proj: config.skipUpdate,
-                "the value of the global --skip-update option"),
-            help="Override --skip-update/--no-skip-update for this target only ")
+                                                  default=ComputedDefaultValue(
+                                                      lambda config, proj: proj.default_auto_var_init,
+                                                      lambda c: (
+                                                                  "the value of the global --skip-update option ("
+                                                                  "defaults to \"" +
+                                                                  c.default_auto_var_init.value + "\")")),
+                                                  help="Whether to initialize all local variables (currently only "
+                                                  "supported when compiling with clang)")
+        cls.skip_update = cls.add_bool_option("skip-update",
+                                              default=ComputedDefaultValue(lambda config, proj: config.skip_update,
+                                                                           "the value of the global --skip-update "
+                                                                           "option"),
+                                              help="Override --skip-update/--no-skip-update for this target only ")
 
         if not install_directory_help:
             install_directory_help = "Override default install directory for " + cls.project_name
@@ -1969,7 +1974,7 @@ class Project(SimpleProject):
             all_args = [make_command] + options.all_commandline_args
         if parallel and options.can_pass_jflag:
             all_args.append(self.config.makeJFlag)
-        if not self.config.makeWithoutNice:
+        if not self.config.make_without_nice:
             all_args = ["nice"] + all_args
         if self.config.debug_output and options.kind == MakeCommandKind.Ninja:
             all_args.append("-v")
@@ -2023,7 +2028,7 @@ class Project(SimpleProject):
         print("Running", make_command, make_target, "took", time.time() - starttime, "seconds")
 
     def update(self):
-        if not self.repository and not self.config.skipUpdate:
+        if not self.repository and not self.config.skip_update:
             self.fatal("Cannot update", self.project_name, "as it is missing a repository source",
                        fatal_when_pretending=True)
         self.repository.update(self, src_dir=self.source_dir, default_src_dir=self.default_source_dir,
@@ -2069,7 +2074,7 @@ class Project(SimpleProject):
         return True
 
     def should_run_configure(self):
-        if self.config.forceConfigure or self.config.configureOnly:
+        if self.config.force_configure or self.config.configureOnly:
             return True
         if self.config.clean:
             return True
@@ -2341,7 +2346,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     other_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(
                         other_instance.install_dir)
 
-        if self.config.skipUpdate:
+        if self.config.skip_update:
             # When --skip-update is set (or we don't have working internet) only check that the repository exists
             if self.repository:
                 self.repository.ensure_cloned(self, src_dir=self.source_dir, default_src_dir=self.default_source_dir,
@@ -2408,7 +2413,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             # Clean completed
 
             # Configure step
-            if not self.config.skipConfigure or self.config.configureOnly:
+            if not self.config.skip_configure or self.config.configureOnly:
                 if self.should_run_configure():
                     statusUpdate("Configuring", self.display_name, "... ")
                     self.configure()
@@ -2559,7 +2564,7 @@ class CMakeProject(Project):
         self.add_cmake_options(CMAKE_AR=ar, CMAKE_RANLIB=ranlib)
 
     def needs_configure(self) -> bool:
-        if self.config.pretend and (self.config.forceConfigure or self.config.clean):
+        if self.config.pretend and (self.config.force_configure or self.config.clean):
             return True
         # CMake is smart enough to detect when it must be reconfigured -> skip configure if cache exists
         cmake_cache = self.build_dir / "CMakeCache.txt"
@@ -2656,7 +2661,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
         self.configure_args.extend(self.cmakeOptions)
         # make sure we get a completely fresh cache when --reconfigure is passed:
         cmake_cache = self.build_dir / "CMakeCache.txt"
-        if self.config.forceConfigure:
+        if self.config.force_configure:
             self.delete_file(cmake_cache)
         super().configure(**kwargs)
         if self.config.copy_compilation_db_to_source_dir and (self.build_dir / "compile_commands.json").exists():

@@ -217,13 +217,13 @@ class BuildFreeBSDBase(Project):
 
     def run_make(self, make_target="", *, options: MakeOptions = None, parallel=True, **kwargs):
         # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested
-        if parallel and self.config.makeJobs == 1:
+        if parallel and self.config.make_jobs == 1:
             parallel = False
         super().run_make(make_target, options=options, cwd=self.source_dir, parallel=parallel, **kwargs)
 
     @property
     def jflag(self) -> list:
-        return [self.config.makeJFlag] if self.config.makeJobs > 1 else []
+        return [self.config.makeJFlag] if self.config.make_jobs > 1 else []
 
     # Return the path the a potetial sysroot created from installing this project
     # Currently we only create sysroots for CheriBSD but we might change that in the future
@@ -1061,11 +1061,11 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
 
 # noinspection PyUnusedLocal
 def jflag_in_subjobs(config: CheriConfig, proj):
-    return max(1, config.makeJobs // 2)
+    return max(1, config.make_jobs // 2)
 
 # noinspection PyUnusedLocal
 def jflag_for_universe(config: CheriConfig, proj):
-    return max(1, config.makeJobs // 4)
+    return max(1, config.make_jobs // 4)
 
 
 # Build all targets (to test my changes)
@@ -1391,7 +1391,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         return BuildCHERIBSD.get_instance(self).crossbuild
 
     def update(self):
-        if not self.config.skipUpdate:
+        if not self.config.skip_update:
             statusUpdate("Not updating cheribsd repo when building mfs-root-kernel to avoid unwanted changes")
         pass
 

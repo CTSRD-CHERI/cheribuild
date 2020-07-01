@@ -400,7 +400,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         if OSInfo.IS_FREEBSD or source_class.get_instance(self).crossbuild:
             self.needsRemoteKernelCopy = False
         # same if skip-update was passed
-        elif self.skipKernelUpdate or self.config.skipUpdate:
+        elif self.skipKernelUpdate or self.config.skip_update:
             self.needsRemoteKernelCopy = False
 
     def _copy_kernel_image_from_remote_host(self):

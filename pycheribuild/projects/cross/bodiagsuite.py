@@ -175,7 +175,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         extra_args.extend(["--junit-testsuite-name", testsuite_prefix])
         if self.compiling_for_host():
             extra_args.extend(["--test-native", "--bmake-path", bmake,
-                               "--jobs", str(self.config.makeJobs),
+                               "--jobs", str(self.config.make_jobs),
                                "--build-dir", self.build_dir])
             self.run_cmd(self.get_test_script_path("run_bodiagsuite.py"), *extra_args)
         else:

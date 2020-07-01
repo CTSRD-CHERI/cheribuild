@@ -65,7 +65,7 @@ class DefaultCheriConfig(CheriConfig):
         assert isinstance(loader, JsonAndCommandLineConfigLoader)
         # The run mode:
         self.getConfigOption = loader.add_option("get-config-option", type=str, metavar="KEY", group=loader.actionGroup,
-                                                help="Print the value of config option KEY and exit")
+                                                 help="Print the value of config option KEY and exit")
         # boolean flags
         self.quiet = loader.add_bool_option("quiet", "q", help="Don't show stdout of the commands that are executed")
         self.verbose = loader.add_bool_option("verbose", "v", help="Print all commmands that are executed")
@@ -73,31 +73,37 @@ class DefaultCheriConfig(CheriConfig):
         self.force = loader.add_bool_option("force", "f", help="Don't prompt for user input but use the default action")
         self.write_logfile = loader.add_bool_option("logfile", help="Don't write a logfile for the build steps",
                                                     default=False)
-        self.skipUpdate = loader.add_bool_option("skip-update", help="Skip the git pull step")
-        self.skipClone = False
+        self.skip_update = loader.add_bool_option("skip-update", help="Skip the git pull step")
+        self.skip_clone = False
         self.force_update = loader.add_bool_option("force-update", help="Always update (with autostash) even if there "
                                                                         "are uncommitted changes")
-        self.skipConfigure = loader.add_bool_option("skip-configure", help="Skip the configure step",
-                                                  group=loader.configureGroup)
-        self.forceConfigure = loader.add_bool_option("reconfigure", "-force-configure",
-                                                   group=loader.configureGroup,
-                                                   help="Always run the configure step, even for CMake projects with a "
-                                                        "valid cache.")
-        self.includeDependencies = loader.add_bool_option("include-dependencies", "d",
-            help="Also build the dependencies of targets passed on the command line. Targets passed on thecommand "
-                 "line will be reordered and processed in an order that ensures dependencies are built before the "
-                 "real target. (run --list-targets for more information). By default this does not build toolchain "
-                 "targets such as LLVM. Pass --include-toolchain-dependencies to also build those.")
+        self.skip_configure = loader.add_bool_option("skip-configure", help="Skip the configure step",
+                                                     group=loader.configureGroup)
+        self.force_configure = loader.add_bool_option("reconfigure", "-force-configure",
+                                                      group=loader.configureGroup,
+                                                      help="Always run the configure step, even for CMake projects "
+                                                           "with a "
+                                                           "valid cache.")
+        self.include_dependencies = loader.add_bool_option("include-dependencies", "d",
+                                                           help="Also build the dependencies of targets passed on the "
+                                                                "command line. Targets passed on thecommand "
+                                                                "line will be reordered and processed in an order "
+                                                                "that ensures dependencies are built before the "
+                                                                "real target. (run --list-targets for more "
+                                                                "information). By default this does not build "
+                                                                "toolchain "
+                                                                "targets such as LLVM. Pass "
+                                                                "--include-toolchain-dependencies to also build those.")
         self.include_toolchain_dependencies = loader.add_bool_option("include-toolchain-dependencies", default=True,
-            help="Include toolchain targets such as LLVM and QEMU when --include-dependencies is set.")
+                                                                     help="Include toolchain targets such as LLVM and QEMU when --include-dependencies is set.")
 
         self.copy_compilation_db_to_source_dir = loader.add_commandline_only_bool_option("compilation-db-in-source-dir",
             help="Generate a compile_commands.json and also copy it to the source directory")
 
-        self.makeWithoutNice = loader.add_bool_option("make-without-nice", help="Run make/ninja without nice(1)")
+        self.make_without_nice = loader.add_bool_option("make-without-nice", help="Run make/ninja without nice(1)")
 
-        self.makeJobs = loader.add_option("make-jobs", "j", type=int, default=default_make_jobs_count(),
-                                          help="Number of jobs to use for compiling")
+        self.make_jobs = loader.add_option("make-jobs", "j", type=int, default=default_make_jobs_count(),
+                                           help="Number of jobs to use for compiling")
 
         # configurable paths
         self.source_root = loader.add_path_option("source-root",

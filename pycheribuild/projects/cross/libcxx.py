@@ -208,9 +208,10 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI])
         cls.qemu_user = cls.add_config_option("ssh-user", default="root", help="The CheriBSD used for running tests")
 
-        cls.test_jobs = cls.add_config_option("parallel-test-jobs", help="Number of QEMU instances spawned to run tests "
-                                                                       "(default: number of build jobs (-j flag) / 2)",
-                                            default=lambda c, p: c.makeJobs / 2, kind=int)
+        cls.test_jobs = cls.add_config_option("parallel-test-jobs",
+                                              help="Number of QEMU instances spawned to run tests "
+                                                   "(default: number of build jobs (-j flag) / 2)",
+                                              default=lambda c, p: c.make_jobs / 2, kind=int)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

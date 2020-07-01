@@ -130,9 +130,9 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List
     clang_archive = SdkArchive(cheri_config, clang_archive_name, required_globs=["bin/clang"],
         extra_args=["--strip-components", "1"])
     if not clang_archive.archive.exists():
-        warningMessage("Neither full SDK archive", cheri_config.sdkArchiveName, " nor clang archive",
-            clang_archive_name,
-            "exists, will use only existing $WORKSPACE/cherisdk")
+        warningMessage("Neither full SDK archive", cheri_config.sdk_archive_name, " nor clang archive",
+                       clang_archive_name,
+                       "exists, will use only existing $WORKSPACE/cherisdk")
         return []
     if not needs_cheribsd_sysroot or cheri_config.extract_compiler_only:
         return [clang_archive]  # only need the clang archive
@@ -245,7 +245,8 @@ def _jenkins_main():
                 continue
             cls = tgt.project_class
             if issubclass(cls, Project):
-                cls._default_install_dir_fn = Path(str(cheri_config.output_root) + str(cheri_config.installationPrefix))
+                cls._default_install_dir_fn = Path(
+                    str(cheri_config.output_root) + str(cheri_config.installation_prefix))
                 i = inspect.getattr_static(cls, "_install_dir")
                 assert isinstance(i, CommandLineConfigOption)
                 # But don't change it if it was specified on the command line. Note: This also does the config
@@ -255,7 +256,7 @@ def _jenkins_main():
                 if from_cmdline is not None:
                     statusUpdate("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
                 else:
-                    cls._install_dir = Path(str(cheri_config.output_root) + str(cheri_config.installationPrefix))
+                    cls._install_dir = Path(str(cheri_config.output_root) + str(cheri_config.installation_prefix))
                     cls._check_install_dir_conflict = False
                 # print(project.project_class.project_name, project.project_class.install_dir)
 
@@ -272,7 +273,7 @@ def _jenkins_main():
                        "when --cpu is set to", cheri_config.preferred_xtarget.name, fatal_when_pretending=True)
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheri_config.output_root
-            project._install_prefix = cheri_config.installationPrefix
+            project._install_prefix = cheri_config.installation_prefix
             project._install_dir = cheri_config.output_root
 
         if JenkinsAction.BUILD in cheri_config.action:
@@ -280,8 +281,8 @@ def _jenkins_main():
                 assert cheri_config.cheri_sdk_dir == Path("/cheri-sdk"), cheri_config.cheri_sdk_dir
             elif cheri_config.without_sdk:
                 statusUpdate("Not using CHERI SDK, only files from /usr")
-                assert cheri_config.clangPath.exists(), cheri_config.clangPath
-                assert cheri_config.clangPlusPlusPath.exists(), cheri_config.clangPlusPlusPath
+                assert cheri_config.clang_path.exists(), cheri_config.clang_path
+                assert cheri_config.clang_plusplus_path.exists(), cheri_config.clang_plusplus_path
             elif cheri_config.cheri_sdk_path:
                 expected_clang = cheri_config.cheri_sdk_bindir / "clang"
                 if not expected_clang.exists():
@@ -305,7 +306,7 @@ def _jenkins_main():
         # delete the install root:
         if JenkinsAction.BUILD in cheri_config.action:
             cleaning_task = cheri_config.FS.async_clean_directory(
-                cheri_config.output_root) if not cheri_config.keepInstallDir else ThreadJoiner(None)
+                cheri_config.output_root) if not cheri_config.keep_install_dir else ThreadJoiner(None)
             new_path = os.getenv("PATH", "")
             if not cheri_config.without_sdk:
                 new_path = str(cheri_config.cheri_sdk_bindir) + ":" + new_path

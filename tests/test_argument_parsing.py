@@ -63,23 +63,23 @@ def _parse_config_file_and_args(config_file_contents: bytes, *args) -> DefaultCh
 
 def test_skip_update():
     # default is false:
-    assert not _parse_arguments(["--skip-configure"]).skipUpdate
+    assert not _parse_arguments(["--skip-configure"]).skip_update
     # check that --no-foo and --foo work:
-    assert _parse_arguments(["--skip-update"]).skipUpdate
-    assert not _parse_arguments(["--no-skip-update"]).skipUpdate
+    assert _parse_arguments(["--skip-update"]).skip_update
+    assert not _parse_arguments(["--no-skip-update"]).skip_update
     # check config file
     with tempfile.NamedTemporaryFile() as t:
         config = Path(t.name)
         config.write_bytes(b'{ "skip-update": true}')
-        assert _parse_arguments([], config_file=config).skipUpdate
+        assert _parse_arguments([], config_file=config).skip_update
         # command line overrides config file:
-        assert _parse_arguments(["--skip-update"], config_file=config).skipUpdate
-        assert not _parse_arguments(["--no-skip-update"], config_file=config).skipUpdate
+        assert _parse_arguments(["--skip-update"], config_file=config).skip_update
+        assert not _parse_arguments(["--no-skip-update"], config_file=config).skip_update
         config.write_bytes(b'{ "skip-update": false}')
-        assert not _parse_arguments([], config_file=config).skipUpdate
+        assert not _parse_arguments([], config_file=config).skip_update
         # command line overrides config file:
-        assert _parse_arguments(["--skip-update"], config_file=config).skipUpdate
-        assert not _parse_arguments(["--no-skip-update"], config_file=config).skipUpdate
+        assert _parse_arguments(["--skip-update"], config_file=config).skip_update
+        assert not _parse_arguments(["--no-skip-update"], config_file=config).skip_update
 
 
 def test_per_project_override():

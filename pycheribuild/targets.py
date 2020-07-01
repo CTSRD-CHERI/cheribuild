@@ -364,7 +364,7 @@ class TargetManager(object):
         return list(OrderedDict((x, True) for x in sorted_targets).keys())
 
     def get_all_targets(self, explicit_targets: "typing.List[Target]", config: CheriConfig) -> "typing.List[Target]":
-        add_dependencies = config.includeDependencies
+        add_dependencies = config.include_dependencies
         chosen_targets = []  # type: typing.List[Target]
         remaining_targets_to_check = explicit_targets
         while remaining_targets_to_check:

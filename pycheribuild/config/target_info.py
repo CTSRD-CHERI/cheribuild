@@ -262,21 +262,21 @@ class TargetInfo(ABC):
         if config.use_sdk_clang_for_native_xbuild and not OSInfo.IS_MAC:
             # SDK clang doesn't work for native builds on macos
             return config.cheri_sdk_bindir / "clang"
-        return config.clangPath
+        return config.clang_path
 
     @staticmethod
     def host_cxx_compiler(config: "CheriConfig") -> Path:
         if config.use_sdk_clang_for_native_xbuild and not OSInfo.IS_MAC:
             # SDK clang doesn't work for native builds on macos
             return config.cheri_sdk_bindir / "clang++"
-        return config.clangPlusPlusPath
+        return config.clang_plusplus_path
 
     @staticmethod
     def host_c_preprocessor(config: "CheriConfig") -> Path:
         if config.use_sdk_clang_for_native_xbuild and not OSInfo.IS_MAC:
             # SDK clang doesn't work for native builds on macos
             return config.cheri_sdk_bindir / "clang-cpp"
-        return config.clangCppPath
+        return config.clang_cpp_path
 
 
 # https://reviews.llvm.org/rG14daa20be1ad89639ec209d969232d19cf698845

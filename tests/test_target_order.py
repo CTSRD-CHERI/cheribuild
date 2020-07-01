@@ -25,7 +25,7 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolc
     target_manager.reset()
     # print(real_targets)
     real_targets = list(target_manager.get_target(t, None, global_config, caller="_sort_targets") for t in targets)
-    global_config.includeDependencies = add_dependencies
+    global_config.include_dependencies = add_dependencies
     global_config.include_toolchain_dependencies = add_toolchain
     global_config.skipSdk = skip_sdk
     for t in real_targets:

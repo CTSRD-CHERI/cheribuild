@@ -223,7 +223,7 @@ class BuildSailFromOpam(ProjectUsingOpam):
         else:
             self.info("REMS opam repo already added")
 
-        if not self.config.skipUpdate:
+        if not self.config.skip_update:
             self.run_opam_cmd("update")
 
         if self.config.clean or True:
