@@ -52,7 +52,7 @@ class BuildLibObjC2(CMakeProject):
             # Don't install in the location that gnustep-config says, it might be a directory that is not writable by
             # the current user:
             "-DGNUSTEP_INSTALL_TYPE=NONE",
-        ])
+            ])
         # TODO: require libdispatch?
         self.add_required_system_tool("clang")
         self.add_required_system_tool("clang++")
@@ -120,7 +120,7 @@ class BuildGnuStep_Base(GnuStepModule):
             "--disable-mixedabi",
             # TODO: "--enable-libdispatch",
             # "--with-config-file=" + str(self.install_dir / "etc/GNUStep/GNUStep.conf")
-        ])
+            ])
 
 
 class BuildGnuStep_Gui(GnuStepModule):

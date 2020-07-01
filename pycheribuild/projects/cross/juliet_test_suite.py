@@ -47,8 +47,8 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
 
     def process(self):
         if self.build_type != BuildType.DEBUG:
-            self.warning("The Juliet test suite contains undefined behaviour that might be optimized away unless you compile"
-                         " at -O0.")
+            self.warning("The Juliet test suite contains undefined behaviour that might be optimized away unless "
+                         "you compile at -O0.")
             self.ask_for_confirmation("Are you sure you want to continue?")
         super().process()
 
@@ -94,22 +94,28 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
             args.append("--ld-preload-path")
             args.append(self.ld_preload_path)
 
-        self.target_info.run_cheribsd_test_script("run_juliet_tests.py", *args, mount_sourcedir=True, mount_sysroot=True, mount_builddir=True)
+        self.target_info.run_cheribsd_test_script("run_juliet_tests.py", *args, mount_sourcedir=True,
+                                                  mount_sysroot=True, mount_builddir=True)
+
 
 class BuildJulietCWE121(BuildJulietCWESubdir):
     project_name = "juliet-cwe-121"
     cwe_number = 121
-    repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE121_Stack_Based_Buffer_Overflow")
+    repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
+                                             subdirectory="testcases/CWE121_Stack_Based_Buffer_Overflow")
+
 
 class BuildJulietCWE126(BuildJulietCWESubdir):
     project_name = "juliet-cwe-126"
     cwe_number = 126
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE126_Buffer_Overread")
 
+
 class BuildJulietCWE415(BuildJulietCWESubdir):
     project_name = "juliet-cwe-415"
     cwe_number = 415
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE415_Double_Free")
+
 
 class BuildJulietCWE416(BuildJulietCWESubdir):
     project_name = "juliet-cwe-416"

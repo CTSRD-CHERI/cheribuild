@@ -44,16 +44,16 @@ class TemporarilyRemoveProgramsFromSdk(object):
 
     def __enter__(self):
         statusUpdate('Temporarily moving', self.programs, "from", self.sdk_bindir)
-        for l in self.programs:
-            if (self.sdk_bindir / l).exists():
-                runCmd("mv", "-f", l, l + ".backup", cwd=self.sdk_bindir, print_verbose_only=True)
+        for prog in self.programs:
+            if (self.sdk_bindir / prog).exists():
+                runCmd("mv", "-f", prog, prog + ".backup", cwd=self.sdk_bindir, print_verbose_only=True)
         return self
 
     def __exit__(self, *exc):
         statusUpdate('Restoring', self.programs, "in", self.sdk_bindir)
-        for l in self.programs:
-            if (self.sdk_bindir / (l + ".backup")).exists() or self.config.pretend:
-                runCmd("mv", "-f", l + ".backup", l, cwd=self.sdk_bindir, print_verbose_only=True)
+        for prog in self.programs:
+            if (self.sdk_bindir / (prog + ".backup")).exists() or self.config.pretend:
+                runCmd("mv", "-f", prog + ".backup", prog, cwd=self.sdk_bindir, print_verbose_only=True)
         return False
 
 
@@ -137,13 +137,13 @@ class BuildGDB(CrossCompileAutotoolsProject):
         else:
             self.configure_args.extend(["--without-python", "--without-expat", "--without-libunwind-ia64"])
             self.configure_environment.update(gl_cv_func_gettimeofday_clobber="no",
-                                             lt_cv_sys_max_cmd_len="262144",
-                                             # The build system run CC without any flags to detect dependency style...
-                                             # (ZW_PROG_COMPILER_DEPENDENCIES([CC])) -> for gcc3 mode which seems
-                                             # correct
-                                             am_cv_CC_dependencies_compiler_type="gcc3",
-                                             MAKEINFO="/bin/false"
-                                             )
+                                              lt_cv_sys_max_cmd_len="262144",
+                                              # The build system run CC without any flags to detect dependency style...
+                                              # (ZW_PROG_COMPILER_DEPENDENCIES([CC])) -> for gcc3 mode which seems
+                                              # correct
+                                              am_cv_CC_dependencies_compiler_type="gcc3",
+                                              MAKEINFO="/bin/false"
+                                              )
             self.COMMON_FLAGS.append("-static")  # seems like LDFLAGS is not enough
             # XXX: libtool wants to strip -static from some linker invocations,
             #      and because sbrk's availability is determined based on

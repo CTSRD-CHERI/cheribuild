@@ -82,7 +82,8 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
                                LIBUNWIND_TEST_CXX_ABI_LIB=BuildLibCXXRT.get_build_dir(self) / "lib/libcxxrt.a",
                                LIBUNWIND_ENABLE_ASSERTIONS=True,
                                )
-        # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
+        # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for
+        # libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
         if self.compiling_for_host():
             if OSInfo.IS_MAC or OSInfo.is_ubuntu():
@@ -181,6 +182,10 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
                                                           mount_builddir=True, mount_sysroot=True)
 
 
+def _default_ssh_port(c, p):
+    return LaunchCheriBSD.get_instance(p, c, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID).ssh_forwarding_port
+
+
 class BuildLibCXX(_CxxRuntimeCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libcxx")
@@ -191,22 +196,19 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.only_compile_tests = cls.add_bool_option("only-compile-tests",
-                                                   help="Don't attempt to run tests, only compile them")
+                                                     help="Don't attempt to run tests, only compile them")
         cls.exceptions = cls.add_bool_option("exceptions", default=True, help="Build with support for C++ exceptions")
         cls.collect_test_binaries = cls.add_path_option("collect-test-binaries", metavar="TEST_PATH",
-                                                      help="Instead of running tests copy them to $TEST_PATH")
-        cls.nfs_mounted_path = cls.add_path_option("nfs-mounted-path", metavar="PATH", help="Use a PATH as a directory"
-                                                                                          "that is NFS mounted inside QEMU instead of using scp to copy "
-                                                                                          "individual tests")
+                                                        help="Instead of running tests copy them to $TEST_PATH")
+        cls.nfs_mounted_path = cls.add_path_option("nfs-mounted-path", metavar="PATH",
+                                                   help="Use a PATH as a directorythat is NFS mounted inside QEMU "
+                                                        "instead of using scp to copy individual tests")
         cls.nfs_path_in_qemu = cls.add_path_option("nfs-mounted-path-in-qemu", metavar="PATH",
-                                                 help="The path used inside QEMU to refer to nfs-mounted-path")
+                                                   help="The path used inside QEMU to refer to nfs-mounted-path")
         cls.qemu_host = cls.add_config_option("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
-                                            default=lambda c, p: "localhost")
-        cls.qemu_port = cls.add_config_option("ssh-port",
-                                              help="The QEMU SSH port to connect to for running tests",
-                                              _allow_unknown_targets=True,
-                                              default=lambda c, p: LaunchCheriBSD.get_instance(p, c,
-                                                                                               cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID).ssh_forwarding_port,
+                                              default=lambda c, p: "localhost")
+        cls.qemu_port = cls.add_config_option("ssh-port", help="The QEMU SSH port to connect to for running tests",
+                                              _allow_unknown_targets=True, default=_default_ssh_port,
                                               only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP,
                                                                     CompilationTargets.CHERIBSD_MIPS_HYBRID,
                                                                     CompilationTargets.CHERIBSD_MIPS_NO_CHERI])
@@ -243,7 +245,8 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                           "/libcxx-test-results.xml --max-time 3600 --timeout 120 -s -vv" + self.libcxx_lit_jobs
             )
-        # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
+        # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for
+        # libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
         # select libcxxrt as the runtime library (except on macos where this doesn't seem to work very well)
         if not (self.compiling_for_host() and OSInfo.IS_MAC):
@@ -291,13 +294,12 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
                 LIBCXX_ENABLE_GLOBAL_FILESYSTEM_NAMESPACE=False,  # no filesystem on baremetal QEMU
                 # TODO: we should be able to implement this in QEMU
                 LIBCXX_ENABLE_MONOTONIC_CLOCK=False,  # no monotonic clock for now
-            )
+                )
             test_linker_flags += " -Wl,-T,qemu-malta.ld"
-
 
         self.add_cmake_options(LIBCXX_TEST_COMPILER_FLAGS=test_compile_flags,
                                LIBCXX_TEST_LINKER_FLAGS=test_linker_flags,
-                               LIBCXX_SLOW_TEST_HOST=True) # some tests need more tolerance/less iterations on QEMU
+                               LIBCXX_SLOW_TEST_HOST=True)  # some tests need more tolerance/less iterations on QEMU
 
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
@@ -312,7 +314,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             LIBCXX_INCLUDE_DOCS=False,
             # When cross compiling we link the ABI library statically (except baremetal since that doens;t have it yet)
             LIBCXX_ENABLE_STATIC_ABI_LIBRARY=not self.target_info.is_baremetal(),
-        )
+            )
         if self.only_compile_tests:
             executor = "CompileOnlyExecutor()"
         elif self.collect_test_binaries:
@@ -327,14 +329,13 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             executor = "PrefixExecutor(" + prefix_list + ", LocalExecutor())"
             print(executor)
         elif self.nfs_mounted_path:
-            self.libcxx_lit_jobs = " -j1" # We can only run one job here since we are using scp
-            executor = "SSHExecutorWithNFSMount(\\\"{host}\\\", nfs_dir=\\\"{nfs_dir}\\\", path_in_target=\\\"{nfs_in_target}\\\"," \
-                       " config=self, username=\\\"{user}\\\", port={port})".format(host=self.qemu_host, user=self.qemu_user,
-                                                                                    port=self.qemu_port,
-                                                                                    nfs_dir=self.nfs_mounted_path,
-                                                                                    nfs_in_target=self.nfs_path_in_qemu)
+            self.libcxx_lit_jobs = " -j1"  # We can only run one job here since we are using scp
+            executor = "SSHExecutorWithNFSMount(\\\"{host}\\\", nfs_dir=\\\"{nfs_dir}\\\"," \
+                       "path_in_target=\\\"{nfs_in_target}\\\", config=self, username=\\\"{user}\\\"," \
+                       " port={port})".format(host=self.qemu_host, user=self.qemu_user, port=self.qemu_port,
+                                              nfs_dir=self.nfs_mounted_path, nfs_in_target=self.nfs_path_in_qemu)
         else:
-            self.libcxx_lit_jobs = " -j1" # We can only run one job here since we are using scp
+            self.libcxx_lit_jobs = " -j1"  # We can only run one job here since we are using scp
             executor = "SSHExecutor('{host}', username='{user}', port={port}, config=self)".format(
                 host=self.qemu_host, user=self.qemu_user, port=self.qemu_port)
         if self.target_info.is_baremetal():
@@ -351,7 +352,6 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         if self.compiling_for_host():
             runCmd("ninja", "check-cxx", "-v", cwd=self.build_dir)
         else:
-            #  "--lit-debug-output"?
+            # long running test -> speed up by using a kernel without invariants
             self.target_info.run_cheribsd_test_script("run_libcxx_tests.py", "--parallel-jobs", self.test_jobs,
-                                          # long running test -> speed up by using a kernel without invariants
-                                          use_benchmark_kernel_by_default=True)
+                                                      use_benchmark_kernel_by_default=True)

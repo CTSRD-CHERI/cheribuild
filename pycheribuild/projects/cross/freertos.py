@@ -1,4 +1,4 @@
-#-
+#
 # SPDX-License-Identifier: BSD-2-Clause
 #
 # Author: Hesham Almatary <Hesham.Almatary@cl.cam.ac.uk>
@@ -38,25 +38,25 @@ from ...utils import get_compiler_info, set_env
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/FreeRTOS-mirror",
-        force_branch=True, default_branch="cheri")
+                               force_branch=True, default_branch="cheri")
     target = "freertos"
     project_name = "freertos"
     dependencies = ["newlib", "compiler-rt-builtins"]
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = [
-                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
-                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
     default_install_dir = DefaultInstallDir.SYSROOT
 
     # FreeRTOS Demos to build
     freertos_demos = [
-                      # Generic/simple (CHERI-)RISC-V Demo that runs main_blinky on simulators
-                      # and simple SoCs
-                      "RISC-V-Generic"]
+        # Generic/simple (CHERI-)RISC-V Demo that runs main_blinky on simulators
+        # and simple SoCs
+        "RISC-V-Generic"]
 
     # Map Demos and the FreeRTOS apps we support building/running for
-    demo_apps = {"RISC-V-Generic" : ["main_blinky"]}
+    demo_apps = {"RISC-V-Generic": ["main_blinky"]}
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -77,7 +77,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         self.make_args.set(SYSROOT=str(self.sdk_sysroot))
 
         # Add compiler-rt location to the search path
-        #self.make_args.set(LDFLAGS="-L"+str(self.compiler_resource / "lib"))
+        # self.make_args.set(LDFLAGS="-L"+str(self.compiler_resource / "lib"))
 
         if self.target_info.target.is_cheri_purecap():
             # CHERI-RISC-V sophisticated Demo with more advanced device drivers
@@ -91,28 +91,29 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         for demo in self.freertos_demos:
             if demo == "RISC-V-Generic":
                 # Build parametrized FreeRTOS to run on QEMU's virt machine
-                self.make_args.set(BSP="qemu_virt-"+self.target_info.riscv_arch_string+"-"+self.target_info.riscv_softfloat_abi)
+                self.make_args.set(
+                    BSP="qemu_virt-" + self.target_info.riscv_arch_string + "-" + self.target_info.riscv_softfloat_abi)
 
             for app in self.demo_apps[demo]:
                 # Need to clean before/between building apps, otherwise
                 # irrelevant objs will be picked up from incompatible apps/builds
-                self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/"+demo))
+                self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/" + demo))
                 self.make_args.set(PROG=app)
-                self.run_make(cwd=self.source_dir / str("FreeRTOS/Demo/"+demo))
-                self.move_file(self.source_dir / str("FreeRTOS/Demo/"+demo+"/"+app+".elf"),
-                              self.source_dir / str("FreeRTOS/Demo/"+demo+"/"+demo+app+".elf"))
+                self.run_make(cwd=self.source_dir / str("FreeRTOS/Demo/" + demo))
+                self.move_file(self.source_dir / str("FreeRTOS/Demo/" + demo + "/" + app + ".elf"),
+                               self.source_dir / str("FreeRTOS/Demo/" + demo + "/" + demo + app + ".elf"))
 
     def configure(self):
         pass
 
     def needs_configure(self):
-        return False 
+        return False
 
     def install(self, **kwargs):
         for demo in self.freertos_demos:
             for app in self.demo_apps[demo]:
-                self.install_file(self.source_dir / str("FreeRTOS/Demo/"+demo+"/"+demo+app+".elf"),
-                            self.real_install_root_dir / str("FreeRTOS/Demo/"+demo+"_"+app+".elf"))
+                self.install_file(self.source_dir / str("FreeRTOS/Demo/" + demo + "/" + demo + app + ".elf"),
+                                  self.real_install_root_dir / str("FreeRTOS/Demo/" + demo + "_" + app + ".elf"))
 
     def process(self):
         with set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),

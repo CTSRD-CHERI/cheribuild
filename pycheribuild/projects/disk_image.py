@@ -1073,6 +1073,7 @@ class BuildFreeBSDGFEDiskImage(BuildFreeBSDImage):
     _source_class = BuildFreeBSDGFE
     hide_options_from_help = True
 
+
 class BuildFreeBSDDeviceModelDiskImage(BuildFreeBSDWithDefaultOptionsDiskImage):
     project_name = "disk-image-freebsd-device-model"
     _source_class = BuildFreeBSDDeviceModel
