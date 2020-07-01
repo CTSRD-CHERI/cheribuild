@@ -81,6 +81,8 @@ class BuildFettConfig(CrossCompileProject):
         nginx_prefix = BuildFettNginx.get_instance(self)._install_prefix.relative_to('/')
         mtree.add_file(nginx_src / "common/conf/nginx.conf",
                        nginx_prefix / "conf/nginx.conf")
+        mtree.add_file(nginx_src / "common/conf/mime.types",
+                       nginx_prefix / "conf/mime.types")
         mtree.add_dir(nginx_prefix / "conf/sites")
         mtree.add_dir(nginx_prefix / "logs")
         # XXX: make private key dir 700?
@@ -115,14 +117,40 @@ class BuildFettConfig(CrossCompileProject):
 
         # voting app
         voting_src = src / "build/voting"
+        voting_prefix = Path("fett/var/www")
+        mtree.add_file(voting_src / "common/conf/sites/voting-mime.types",
+                       nginx_prefix / "conf/sites/voting-mime.types")
         # /fett/var/www/(cgi-bin|bvrs) added implicitly in fett-voting
-        # mtree.add_dir("fett/var/www")
-        # mtree.add_dir("fett/var/www/cgi-bin")
-        # mtree.add_dir("fett/var/www/bvrs")
+        # mtree.add_dir(voting_prefix)
+        # mtree.add_dir(voting_prefix / "cgi-bin")
+        mtree.add_dir(voting_prefix / "bvrs")
+        mtree.add_dir(voting_prefix / "bvrs/bvrs")
         mtree.add_file(voting_src / "common/static/index.html",
-                       "fett/var/www/bvrs/index.html")
-        mtree.add_dir("fett/var/www/data", uname="www", gname="www", mode="0770")
-        mtree.add_dir("fett/var/www/run")
+                       voting_prefix / "bvrs/index.html")
+        html_files = [
+            "election_official_home.html",
+            "election_official_login.html",
+            "election_official_new_voter_registration.html",
+            "election_official_query.html",
+            "index.html",
+            "index.js",
+            "jquery-3.5.1.min.js",
+            "pure-min.css",
+            "query.js",
+            "registration_verification.js",
+            "style.css",
+            "voter_home.html",
+            "voter_registration.html",
+            "voter_registration_confirmation.html",
+            "voter_registration_update.html",
+            "voter_registration_update_login.html",
+            "voter_registration_verification.html",
+            ]
+        for file in html_files:
+            mtree.add_file(voting_src / "common/static/bvrs" / file,
+                              voting_prefix / "bvrs/bvrs" / file)
+        mtree.add_dir(voting_prefix / "data", uname="www", gname="www", mode="0770")
+        mtree.add_dir(voting_prefix / "run")
         mtree.add_file(voting_src / "common/conf/fastcgi.conf",
                        nginx_prefix / "conf/fastcgi.conf")
         mtree.add_file(voting_src / "common/conf/sites/voting.conf",
@@ -174,28 +202,6 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
         if not self.compiling_for_host():
             self.install_file(self.build_dir / "source/src/bvrs", self.real_install_root_dir / "var/www/cgi-bin/bvrs")
             self.install_file(self.build_dir / "source/src/bvrs.sql", self.real_install_root_dir / "share/bvrs.sql")
-            html_files = [
-                "election_official_home.html",
-                "election_official_login.html",
-                "election_official_new_voter_registration.html",
-                "election_official_query.html",
-                "index.html",
-                "index.js",
-                "jquery-3.5.1.min.js",
-                "pure-min.css",
-                "query.js",
-                "registration_verification.js",
-                "style.css",
-                "voter_home.html",
-                "voter_registration.html",
-                "voter_registration_confirmation.html",
-                "voter_registration_update.html",
-                "voter_registration_update_login.html",
-                "voter_registration_verification.html",
-                ]
-            for file in html_files:
-                self.install_file(self.build_dir / "public/bvrs" / file,
-                                  self.real_install_root_dir / "var/www/bvrs/bvrs" / file)
 
 
 class BuildFettDiskImage(BuildCheriBSDDiskImage):

@@ -133,6 +133,11 @@ class BuildFettNginx(FettProjectMixin, BuildNginx):
 
     def install(self):
         super().install()
-        nginx_conf = self.install_dir / "conf/nginx.conf"
-        if nginx_conf.is_file():
-            self.delete_file(nginx_conf)
+        # Remove files we need to replace later
+        remove_files = [
+            self.install_dir / "conf/nginx.conf",
+            self.install_dir / "conf/mime.types",
+            ]
+        for file in remove_files:
+            if file.is_file():
+                self.delete_file(file)
