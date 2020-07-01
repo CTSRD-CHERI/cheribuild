@@ -157,7 +157,7 @@ class ConfigLoaderBase(object):
     def add_commandline_only_bool_option(self, *args, default=False, **kwargs) -> bool:
         # noinspection PyTypeChecker
         return self.add_option(*args, option_cls=CommandLineConfigOption, default=default, action="store_true",
-            type=bool, **kwargs)
+                               type=bool, **kwargs)
 
     @staticmethod
     def __is_enum_type(value_type):
@@ -190,7 +190,7 @@ class ConfigLoaderBase(object):
 
         # noinspection PyArgumentList
         result = option_cls(name, shortname, default, type, _owning_class, _loader=self, group=group,
-            help_hidden=help_hidden, _fallback_names=_fallback_names, **kwargs)
+                            help_hidden=help_hidden, _fallback_names=_fallback_names, **kwargs)
         assert name not in self.options  # make sure we don't add duplicate options
         self.options[name] = result
         # noinspection PyTypeChecker
@@ -342,8 +342,8 @@ class ConfigOptionBase(object):
                 string_value = result
                 result = shlex.split(string_value)
                 print(coloured(AnsiColour.magenta, "Config option ", self.full_option_name, " (", string_value,
-                    ") should be a list, got a string instead -> assuming the correct value is ",
-                    result, sep=""))
+                               ") should be a list, got a string instead -> assuming the correct value is ",
+                               result, sep=""))
         if isinstance(self.value_type, type) and issubclass(self.value_type, Path):
             expanded = os.path.expanduser(os.path.expandvars(str(result)))
             # print("Expanding env vars in", result, "->", expanded, os.environ)
@@ -409,7 +409,7 @@ class CommandLineConfigOption(ConfigOptionBase):
                     negated_help = "Do not " + negated_help
                 action.help = argparse.SUPPRESS
             neg = parser_obj.add_argument("--" + negated_name, dest=action.dest, default=None, action="store_false",
-                help=negated_help)
+                                          help=negated_help)
             # change the default action value
             neg.default = None
             action.default = None
@@ -459,7 +459,7 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
         if from_json[0] is not None:
             if config.verbose or True:
                 print(coloured(AnsiColour.blue, "Overriding default value for", target_option_name,
-                    "with value from JSON key", from_json[1], "->", from_json[0]))
+                               "with value from JSON key", from_json[1], "->", from_json[0]))
             return from_json[0]
         return None  # not found -> fall back to default
 
@@ -498,7 +498,7 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
             result = self._loader._json.get(self.action.dest, None)
             if result is not None:
                 print(coloured(AnsiColour.cyan, "Old JSON key", self.action.dest, "used, please use",
-                    full_option_name, "instead"))
+                               full_option_name, "instead"))
         return result, used_key
 
     # def __get__(self, instance, owner):
@@ -569,7 +569,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
 
     def finalize_options(self, available_targets: list, **kwargs):
         target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
-            help="The targets to build", choices=available_targets + [[]])
+                                                  help="The targets to build", choices=available_targets + [[]])
         if argcomplete and self._completing_arguments:
             # if OSInfo.IS_FREEBSD: # FIXME: for some reason this won't work
             self.completion_excludes = ["-t", "--skip-dependencies"]
@@ -584,7 +584,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             # make sure we get target completion for the unparsed args too by adding another zero_or more options
             # not sure why this works but it's a nice hack
             unparsed = self._parser.add_argument("targets", metavar="TARGET", type=list, nargs=argparse.ZERO_OR_MORE,
-                help=argparse.SUPPRESS, choices=available_targets)
+                                                 help=argparse.SUPPRESS, choices=available_targets)
             unparsed.completer = target_completer
 
     def __load_json_with_comments(self, config_path: Path) -> "typing.Dict[str, typing.Any]":

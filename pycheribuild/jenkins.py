@@ -69,8 +69,8 @@ class JenkinsConfigLoader(ConfigLoaderBase):
 
     def finalize_options(self, available_targets: list, **kwargs):
         target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.OPTIONAL,
-            help="The target to build",
-            choices=available_targets + [EXTRACT_SDK_TARGET])
+                                                  help="The target to build",
+                                                  choices=available_targets + [EXTRACT_SDK_TARGET])
         if self._completing_arguments:
             try:
                 import argcomplete
@@ -124,12 +124,12 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List
         if needs_cheribsd_sysroot:
             required_globs.append("sysroot/usr/include")
         return [SdkArchive(cheri_config, cheri_config.sdk_archive_path.name, extra_args=["--strip-components", "1"],
-            required_globs=required_globs)]
+                           required_globs=required_globs)]
 
     llvm_cpu = os.getenv("LLVM_CPU", "cheri-multi")
     clang_archive_name = "{}-{}-clang-llvm.tar.xz".format(llvm_cpu, os.getenv("LLVM_BRANCH", "master"))
     clang_archive = SdkArchive(cheri_config, clang_archive_name, required_globs=["bin/clang"],
-        extra_args=["--strip-components", "1"])
+                               extra_args=["--strip-components", "1"])
     if not clang_archive.archive.exists():
         warning_message("Neither full SDK archive", cheri_config.sdk_archive_name, " nor clang archive",
                         clang_archive_name,
@@ -139,13 +139,13 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List
         return [clang_archive]  # only need the clang archive
     # if we only extracted the compiler, extract the sysroot now
     cheri_sysroot_archive_name = "{}-{}-cheribsd-world.tar.xz".format(cheri_config.sdk_cpu,
-        cheri_config.cheri_sdk_isa_name)
+                                                                      cheri_config.cheri_sdk_isa_name)
     extra_args = ["--strip-components", "1"]
     # Don't extract FreeBSD binaries on a linux host:
     if not OSInfo.IS_FREEBSD:
         extra_args += ["--exclude", "bin/*"]
     sysroot_archive = SdkArchive(cheri_config, cheri_sysroot_archive_name, required_globs=["sysroot/usr/include"],
-        extra_args=extra_args)
+                                 extra_args=extra_args)
     if not sysroot_archive.archive.exists():
         warning_message("Project needs a full SDK archive but only clang archive was found and",
                         sysroot_archive.archive, "is missing. Will attempt to build anyway but build "
@@ -177,7 +177,7 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[Sdk
             else:
                 # otherwise fall back to the /usr/bin version
                 cheri_config.FS.create_symlink(Path(shutil.which(tool)), cheri_config.cheri_sdk_bindir / tool,
-                    relative=False)
+                                               relative=False)
     if not (cheri_config.cheri_sdk_bindir / "ld").exists():
         status_update("Adding missing $SDK/ld link to ld.lld")
         cheri_config.FS.create_symlink(cheri_config.cheri_sdk_bindir / "ld.lld",
@@ -221,7 +221,7 @@ def _jenkins_main():
         # pprint.pprint(config_loader.options)
         pass
     init_global_config(test_mode=False, pretend_mode=cheri_config.pretend,
-        verbose_mode=cheri_config.verbose, quiet_mode=cheri_config.quiet)
+                       verbose_mode=cheri_config.verbose, quiet_mode=cheri_config.quiet)
 
     # special target to extract the sdk
     if JenkinsAction.EXTRACT_SDK in cheri_config.action or (
@@ -268,7 +268,8 @@ def _jenkins_main():
         assert project
         cross_target = project.get_crosscompile_target(cheri_config)
         if isinstance(target,
-                MultiArchTargetAlias) and cross_target is not None and cross_target != cheri_config.preferred_xtarget\
+                      MultiArchTargetAlias) and cross_target is not None and cross_target != \
+                cheri_config.preferred_xtarget \
                 and cheri_config.preferred_xtarget is not None:
             fatal_error("Cannot build project", project.target, "with cross compile target", cross_target.name,
                         "when --cpu is set to", cheri_config.preferred_xtarget.name, fatal_when_pretending=True)
