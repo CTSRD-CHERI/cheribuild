@@ -272,7 +272,7 @@ def _jenkins_main():
                        "when --cpu is set to", cheri_config.preferred_xtarget.name, fatal_when_pretending=True)
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheri_config.outputRoot
-            project._installPrefix = cheri_config.installationPrefix
+            project._install_prefix = cheri_config.installationPrefix
             project._install_dir = cheri_config.outputRoot
 
         if JenkinsAction.BUILD in cheri_config.action:

@@ -63,7 +63,7 @@ class BuildSyzkaller(CrossCompileProject):
             "syscall descriptions.")
 
     def __init__(self, config):
-        self._installPrefix = config.cheri_sdk_dir
+        self._install_prefix = config.cheri_sdk_dir
         self._install_dir = config.cheri_sdk_dir
         self.destdir = ""
         super().__init__(config)
@@ -88,7 +88,7 @@ class BuildSyzkaller(CrossCompileProject):
     def syzkaller_binary(self):
         return self.config.cheri_sdk_bindir / "syz-manager"
 
-    def needsConfigure(self) -> bool:
+    def needs_configure(self) -> bool:
         return False
 
     def compile(self, **kwargs):

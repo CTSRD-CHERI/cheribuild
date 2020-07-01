@@ -51,9 +51,9 @@ class BuildSQLbox(CrossCompileAutotoolsProject):
 
     def setup(self):
         super().setup()
-        self.configureArgs.append("PREFIX=" + str(self.installPrefix))
+        self.configureArgs.append("PREFIX=" + str(self.install_prefix))
 
-    def needsConfigure(self):
+    def needs_configure(self):
         return not (self.build_dir / "config.h").exists()
 
 

@@ -75,7 +75,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
     def install(self, **kwargs):
         super().install()
 
-    def needsConfigure(self):
+    def needs_configure(self):
         return not (self.build_dir / "Makefile").exists()
 
 

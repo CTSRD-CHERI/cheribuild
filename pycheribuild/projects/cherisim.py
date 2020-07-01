@@ -80,7 +80,7 @@ class BuildCheriSim(Project):
         # TODO: move this to project
         self.add_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
         self.add_required_system_tool("bsc", cheribuild_target="bluespec-compiler")
-        self._addRequiredSystemHeader("mpfr.h", apt="libmpfr-dev")
+        self.add_required_system_header("mpfr.h", apt="libmpfr-dev")
         self.make_args.set(COP1="1" if self.build_fpu else "0")
         if self.build_cheri:
             if self.config.mips_cheri_bits == 128:

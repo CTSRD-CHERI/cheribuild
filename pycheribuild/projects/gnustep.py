@@ -83,10 +83,10 @@ class GnuStepModule(AutotoolsProject):
     def __init__(self, config: CheriConfig, moduleName: str):
         self.repository = GitRepository("https://github.com/gnustep/libs-" + moduleName + ".git")
         super().__init__(config)
-        self._addRequiredPkgConfig("gnutls")
+        self.add_required_pkg_config("gnutls")
         # Ubuntu puts libtiff-4 is in libtiff5-dev...
-        self._addRequiredPkgConfig("libtiff-4", apt="libtiff5-dev")
-        self._addRequiredPkgConfig("freetype2", apt="libfreetype6-dev")
+        self.add_required_pkg_config("libtiff-4", apt="libtiff5-dev")
+        self.add_required_pkg_config("freetype2", apt="libfreetype6-dev")
 
     def configure(self):
         if not shutil.which("gnustep-config"):

@@ -43,7 +43,7 @@ class BuildMakefsOnLinux(Project):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         if OSInfo.IS_LINUX:
-            self._addRequiredSystemHeader("bsd/bsd.h")
+            self.add_required_system_header("bsd/bsd.h")
         if not OSInfo.IS_FREEBSD:
             self.add_required_system_tool("bmake", homebrew="bmake", cheribuild_target="bmake")
 

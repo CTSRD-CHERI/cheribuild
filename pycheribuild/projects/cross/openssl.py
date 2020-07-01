@@ -53,7 +53,7 @@ class BuildOpenSSL(CrossCompileProject):
         self.configureArgs.append("-shared")
         self.configureArgs.append("--install-prefix=" + str(self.destdir))
         if not self._xtarget.is_native():
-            self.configureArgs.append("--openssldir=" + str(self._installPrefix))
+            self.configureArgs.append("--openssldir=" + str(self._install_prefix))
 
     def compile(self, **kwargs):
         # link errors at -j40

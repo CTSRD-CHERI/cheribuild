@@ -66,17 +66,17 @@ class BuildNginx(CrossCompileAutotoolsProject):
 
     def install(self, **kwargs):
         # We have to run make inside the source directory
-        self.runMakeInstall(cwd=self.source_dir)
+        self.run_make_install(cwd=self.source_dir)
         self.install_file(self.source_dir / "fetchbench", self.real_install_root_dir / "sbin/fetchbench")
         # install the benchmark script
         benchmark = self.read_file(self.source_dir / "nginx-benchmark.sh")
         if not self.compiling_for_host():
-            benchmark = re.sub(r'NGINX=.*', "NGINX=\"" + str(self.installPrefix / "sbin/nginx") + "\"", benchmark)
-            benchmark = re.sub(r'FETCHBENCH=.*', "FETCHBENCH=\"" + str(self.installPrefix / "sbin/fetchbench") + "\"",
+            benchmark = re.sub(r'NGINX=.*', "NGINX=\"" + str(self.install_prefix / "sbin/nginx") + "\"", benchmark)
+            benchmark = re.sub(r'FETCHBENCH=.*', "FETCHBENCH=\"" + str(self.install_prefix / "sbin/fetchbench") + "\"",
                                benchmark)
         self.write_file(self.real_install_root_dir / "nginx-benchmark.sh", benchmark, overwrite=True, mode=0o755)
 
-    def needsConfigure(self):
+    def needs_configure(self):
         return not (self.build_dir / "Makefile").exists()
 
     def configure(self):
@@ -125,7 +125,7 @@ class BuildFettNginx(FettProjectMixin, BuildNginx):
     dependencies = ["fett-openssl"]
 
     def configure(self):
-        openssl_dir = str(BuildFettOpenSSL.get_instance(self)._installPrefix)
+        openssl_dir = str(BuildFettOpenSSL.get_instance(self)._install_prefix)
         self.configureEnvironment["NGX_OPENSSL_fett_path"] = str(
             BuildFettOpenSSL.get_instance(self).destdir) + openssl_dir
         self.configureEnvironment["NGX_OPENSSL_fett_rpath"] = openssl_dir + "/lib"

@@ -176,7 +176,7 @@ class BuildOlden(CrossCompileProject):
                            CHERI_SDK=self.target_info.sdk_root_dir)
         with set_env(**new_env):
             if not self.compiling_for_host():
-                self.make_args.set(SYSROOT_DIRNAME=self.crossSysrootPath.name)
+                self.make_args.set(SYSROOT_DIRNAME=self.cross_sysroot_path.name)
             self.make_args.add_flags("-f", "Makefile.jenkins")
             self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))

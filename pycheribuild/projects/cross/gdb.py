@@ -86,7 +86,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
     def setup(self):
         super().setup()
-        install_root = self.install_dir if self.compiling_for_host() else self.installPrefix
+        install_root = self.install_dir if self.compiling_for_host() else self.install_prefix
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
         # ./configure flags
         self.configureArgs.extend([
@@ -189,10 +189,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.run_make(make_target="all-gdb", cwd=self.build_dir)
 
     def install(self, **kwargs):
-        self.runMakeInstall(target="install-gdb")
+        self.run_make_install(target="install-gdb")
         if self.target_info.is_cheribsd() and self.compiling_for_cheri_hybrid():
             # If we are building a hybrid GDB, also install it to the purecap rootfs
-            make_install_env = self.makeInstallEnv.copy()
+            make_install_env = self.make_install_env.copy()
             purecap_target = self.crosscompile_target.get_cheri_purecap_target()
             rootfs_project = self.target_info.get_rootfs_project(xtarget=purecap_target)
             purecap_rootfs = rootfs_project.install_dir
@@ -200,7 +200,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
                 self.info("Also installing to", purecap_rootfs)
                 assert "DESTDIR" in make_install_env, "DESTDIR must be set in install"
                 make_install_env["DESTDIR"] = str(purecap_rootfs)
-                self.runMakeInstall(target="install-gdb", make_install_env=make_install_env)
+                self.run_make_install(target="install-gdb", make_install_env=make_install_env)
             else:
                 self.info("Not installing to purecap rootfs", purecap_rootfs, "since it doesn't exist")
         # Install the binutils prefixed with g (like homebrew does it on MacOS)

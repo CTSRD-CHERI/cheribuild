@@ -100,26 +100,26 @@ class ProjectSubclassDefinitionHook(type):
             project_name = clsdict["project_name"]
         else:
             # fall back to name of target then infer from class name
-            # if targetName:
-            #     project_name = targetName
+            # if target_name:
+            #     project_name = target_name
             if name.startswith("Build"):
                 project_name = name[len("Build"):].replace("_", "-")
             cls.project_name = project_name
 
         # load "target" field first then check project name (as that might default to target)
-        targetName = None
+        target_name = None
         if "target" in clsdict:
-            targetName = clsdict["target"]
+            target_name = clsdict["target"]
         elif project_name:
-            targetName = project_name.lower()
-            cls.target = targetName
+            target_name = project_name.lower()
+            cls.target = target_name
 
-        if not targetName:
+        if not target_name:
             sys.exit("target name is not set and cannot infer from class " + name +
                      " -- set project_name=, target= or doNotAddToTargets=True")
         if cls.__dict__.get("dependenciesMustBeBuilt"):
             if not cls.dependencies:
-                sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
+                sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
         supported_archs = cls.supported_architectures
         assert supported_archs, "Must not be empty: " + str(supported_archs)
         assert isinstance(supported_archs, list)
@@ -128,7 +128,7 @@ class ProjectSubclassDefinitionHook(type):
         # TODO: if len(cls.supported_architectures) > 1:
         if cls._always_add_suffixed_targets or len(supported_archs) > 1:
             # Add a the target for the default architecture
-            base_target = MultiArchTargetAlias(targetName, cls)
+            base_target = MultiArchTargetAlias(target_name, cls)
             target_manager.add_target(base_target)
             assert cls._xtarget is None, "Should not be set!"
             # assert cls._should_not_be_instantiated, "multiarch base classes should not be instantiated"
@@ -137,9 +137,9 @@ class ProjectSubclassDefinitionHook(type):
                 # create a new class to ensure different build dirs and config name strings
                 if hasattr(cls, "custom_target_name"):
                     assert callable(cls.custom_target_name)
-                    new_name = cls.custom_target_name(targetName, arch)
+                    new_name = cls.custom_target_name(target_name, arch)
                 else:
-                    new_name = targetName + "-" + arch.generic_suffix
+                    new_name = target_name + "-" + arch.generic_suffix
                 new_dict = cls.__dict__.copy()
                 new_dict["_xtarget"] = arch
                 new_dict["_should_not_be_instantiated"] = False  # unlike the subclass we can instantiate these
@@ -154,8 +154,8 @@ class ProjectSubclassDefinitionHook(type):
             # Only one target is supported:
             cls._xtarget = supported_archs[0]
             cls._should_not_be_instantiated = False  # can be instantiated
-            target_manager.add_target(Target(targetName, cls))
-        # print("Adding target", targetName, "with deps:", cls.dependencies)
+            target_manager.add_target(Target(target_name, cls))
+        # print("Adding target", target_name, "with deps:", cls.dependencies)
 
 
 class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
@@ -205,7 +205,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     __cached_deps = None  # type: typing.List[Target]
 
     @classmethod
-    def allDependencyNames(cls, config: CheriConfig) -> "typing.List[str]":
+    def all_dependency_names(cls, config: CheriConfig) -> "typing.List[str]":
         assert cls._xtarget is not None
         return [t.name for t in cls.recursive_dependencies(config)]
 
@@ -293,7 +293,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # look only in __dict__ to avoid parent class lookup
         _cached = cls.__dict__.get("_cached_deps", None)
         if _cached is None:
-            raise ValueError("_cached_dependencies called before allDependencyNames()")
+            raise ValueError("_cached_dependencies called before all_dependency_names()")
         return _cached
 
     @classmethod
@@ -448,7 +448,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         raise LookupError("Invalid arch " + str(arch) + " for class " + str(cls))
 
     @property
-    def crossSysrootPath(self):
+    def cross_sysroot_path(self):
         assert self.target_info is not None, "called from invalid class " + str(self.__class__)
         return self.target_info.sysroot_dir
 
@@ -579,7 +579,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredSystemTools[executable] = install_instructions
 
-    def _addRequiredPkgConfig(self, package: str, install_instructions=None, freebsd: str = None, apt: str = None,
+    def add_required_pkg_config(self, package: str, install_instructions=None, freebsd: str = None, apt: str = None,
                               zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
         self.add_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
         if not install_instructions:
@@ -587,7 +587,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredPkgConfig[package] = install_instructions
 
-    def _addRequiredSystemHeader(self, header: str, install_instructions=None, freebsd: str = None, apt: str = None,
+    def add_required_system_header(self, header: str, install_instructions=None, freebsd: str = None, apt: str = None,
                                  zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(header, True, freebsd=freebsd, zypper=zypper, apt=apt,
@@ -702,7 +702,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 check_call_handle_noexec(args, cwd=str(cwd), env=new_env)
             else:
                 make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, env=new_env)
-                self.__runProcessWithFilteredOutput(make, None, stdout_filter, cmd_str)
+                self.__run_process_with_filtered_output(make, None, stdout_filter, cmd_str)
             return
 
         # open file in append mode
@@ -718,18 +718,18 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 check_call_handle_noexec(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=new_env)
                 return
             make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=new_env)
-            self.__runProcessWithFilteredOutput(make, logfile, stdout_filter, cmd_str)
+            self.__run_process_with_filtered_output(make, logfile, stdout_filter, cmd_str)
 
-    def __runProcessWithFilteredOutput(self, proc: subprocess.Popen, logfile: "typing.Optional[typing.IO]",
+    def __run_process_with_filtered_output(self, proc: subprocess.Popen, logfile: "typing.Optional[typing.IO]",
                                        stdout_filter: "typing.Callable[[bytes], None]", cmdStr: str):
-        logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
-        stderrThread = None
+        logfile_lock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
+        stderr_thread = None
         if logfile:
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
-            stderrThread = threading.Thread(target=self._handle_stderr, args=(logfile, proc.stderr, logfileLock, self))
-            stderrThread.start()
+            stderr_thread = threading.Thread(target=self._handle_stderr, args=(logfile, proc.stderr, logfile_lock, self))
+            stderr_thread.start()
         for line in proc.stdout:
-            with logfileLock:  # make sure we don't interleave stdout and stderr lines
+            with logfile_lock:  # make sure we don't interleave stdout and stderr lines
                 if logfile:
                     logfile.write(line)
                 if stdout_filter:
@@ -738,20 +738,20 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     sys.stdout.buffer.write(line)
                     flush_stdio(sys.stdout)
         retcode = proc.wait()
-        if stderrThread:
-            stderrThread.join()
+        if stderr_thread:
+            stderr_thread.join()
         # Not sure if the remaining call is needed
-        remainingErr, remainingOut = proc.communicate()
-        if remainingErr:
-            print("Process had remaining stderr:", remainingErr)
-            sys.stderr.buffer.write(remainingErr)
+        remaining_err, remaining_out = proc.communicate()
+        if remaining_err:
+            print("Process had remaining stderr:", remaining_err)
+            sys.stderr.buffer.write(remaining_err)
             if logfile:
-                logfile.write(remainingOut)
-        if remainingOut:
-            print("Process had remaining stdout:", remainingOut)
-            sys.stdout.buffer.write(remainingOut)
+                logfile.write(remaining_out)
+        if remaining_out:
+            print("Process had remaining stdout:", remaining_out)
+            sys.stdout.buffer.write(remaining_out)
             if logfile:
-                logfile.write(remainingErr)
+                logfile.write(remaining_err)
         if stdout_filter and self._lastStdoutLineCanBeOverwritten:
             # add the final new line after the filtering
             sys.stdout.buffer.write(b"\n")
@@ -845,7 +845,7 @@ def install_dir_not_specified(config: CheriConfig, project: "Project"):
     raise RuntimeError("install_dir_not_specified! dummy impl must not be called: " + str(project))
 
 
-def _defaultBuildDir(config: CheriConfig, project: "SimpleProject"):
+def _default_build_dir(config: CheriConfig, project: "SimpleProject"):
     assert isinstance(project, Project)
     target = project.get_crosscompile_target(config)
     return project.build_dir_for_target(target)
@@ -1383,7 +1383,7 @@ class Project(SimpleProject):
         return result
 
     @classmethod
-    def projectBuildDirHelpStr(cls):
+    def project_build_dir_help(cls):
         result = "$BUILD_ROOT/" + cls.project_name.lower()
         if cls._xtarget is not BasicCompilationTargets.NATIVE or cls.add_build_dir_suffix_for_native:
             result += "-$TARGET"
@@ -1391,7 +1391,7 @@ class Project(SimpleProject):
         return result
 
     defaultBuildDir = ComputedDefaultValue(
-        function=_defaultBuildDir, as_string=lambda cls: cls.projectBuildDirHelpStr())
+        function=_default_build_dir, as_string=lambda cls: cls.project_build_dir_help())
 
     make_kind = MakeCommandKind.DefaultMake
     """
@@ -1484,13 +1484,13 @@ class Project(SimpleProject):
         return self.project_name.lower()
 
     # useful for cross compile projects that use a prefix and DESTDIR
-    _installPrefix = None
+    _install_prefix = None
     destdir = None
 
     __can_use_lld_map = dict()  # type: typing.Dict[Path, bool]
 
     @classmethod
-    def canUseLLd(cls, compiler: Path):
+    def can_use_lld(cls, compiler: Path):
         if OSInfo.IS_MAC:
             return False  # lld does not work on MacOS
         if compiler not in cls.__can_use_lld_map:
@@ -1509,7 +1509,7 @@ class Project(SimpleProject):
     def can_use_lto(cls, ccinfo: CompilerInfo):
         if ccinfo.compiler == "apple-clang":
             return True
-        elif ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0) and cls.canUseLLd(ccinfo.path):
+        elif ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0) and cls.can_use_lld(ccinfo.path):
             return True
         else:
             return False
@@ -1780,12 +1780,12 @@ class Project(SimpleProject):
                     DefaultInstallDir.SYSROOT_AND_ROOTFS:
                 if self.target_info.is_baremetal():
                     self.destdir = self.sdk_sysroot.parent
-                    self._installPrefix = Path("/", self.target_info.target_triple)
+                    self._install_prefix = Path("/", self.target_info.target_triple)
                 elif self.target_info.is_rtems():
                     self.destdir = self.sdk_sysroot.parent
-                    self._installPrefix = Path("/", self.target_info.target_triple)
+                    self._install_prefix = Path("/", self.target_info.target_triple)
                 else:
-                    self._installPrefix = Path("/", self.target_info.sysroot_install_prefix_relative)
+                    self._install_prefix = Path("/", self.target_info.sysroot_install_prefix_relative)
                     self.destdir = self._install_dir
                 if install_dir_kind == DefaultInstallDir.SYSROOT_AND_ROOTFS:
                     self.rootfs_path = self.target_info.get_rootfs_project().install_dir
@@ -1794,17 +1794,17 @@ class Project(SimpleProject):
                 relative_to_rootfs = os.path.relpath(str(self._install_dir), str(self.rootfs_path))
                 if relative_to_rootfs.startswith(os.path.pardir):
                     self.verbose_print("Custom install dir", self._install_dir, "-> using / as install prefix")
-                    self._installPrefix = Path("/")
+                    self._install_prefix = Path("/")
                     self.destdir = self._install_dir
                 else:
-                    self._installPrefix = Path("/", relative_to_rootfs)
+                    self._install_prefix = Path("/", relative_to_rootfs)
                     self.destdir = self.rootfs_path
             elif install_dir_kind in (None, DefaultInstallDir.DO_NOT_INSTALL, DefaultInstallDir.COMPILER_RESOURCE_DIR,
                                       DefaultInstallDir.IN_BUILD_DIRECTORY, DefaultInstallDir.CUSTOM_INSTALL_DIR):
-                self._installPrefix = self._install_dir
+                self._install_prefix = self._install_dir
                 self.destdir = None
             else:
-                assert self._installPrefix and self.destdir is not None, "both must be set!"
+                assert self._install_prefix and self.destdir is not None, "both must be set!"
 
         # convert the tuples into mutable lists (this is needed to avoid modifying class variables)
         # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
@@ -1832,7 +1832,7 @@ class Project(SimpleProject):
             self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
         assert self.install_dir, "must be set"
-        self.verbose_print(self.target, "INSTALLDIR = ", self._install_dir, "INSTALL_PREFIX=", self._installPrefix,
+        self.verbose_print(self.target, "INSTALLDIR = ", self._install_dir, "INSTALL_PREFIX=", self._install_prefix,
                            "DESTDIR=", self.destdir)
 
         if self.should_include_debug_info:
@@ -1899,7 +1899,7 @@ class Project(SimpleProject):
         else:
             self._lto_compiler_flags.append("-flto=thin")
             self._lto_linker_flags.append("-flto=thin")
-            if self.canUseLLd(ccinfo.path):
+            if self.can_use_lld(ccinfo.path):
                 thinlto_cache_flag = "--thinlto-cache-dir="
             else:
                 # Apple ld uses a different flag for the thinlto cache dir
@@ -1925,8 +1925,8 @@ class Project(SimpleProject):
         # self.__dict__[name] = value
         if self.__dict__.get("_preventAssign"):
             # assert name not in ("source_dir", "build_dir", "install_dir")
-            assert name != "install_dir", "install_dir should not be modified, only _install_dir or _installPrefix"
-            assert name != "installPrefix", "installPrefix should not be modified, only _install_dir or _installPrefix"
+            assert name != "install_dir", "install_dir should not be modified, only _install_dir or _install_prefix"
+            assert name != "install_prefix", "install_prefix should not be modified, only _install_dir or _install_prefix"
             if name in self._no_overwrite_allowed:
                 import traceback
                 traceback.print_stack()
@@ -2052,7 +2052,7 @@ class Project(SimpleProject):
             return self.async_clean_directory(self.build_dir, keep_root=True)
         return ThreadJoiner(None)
 
-    def needsConfigure(self) -> bool:
+    def needs_configure(self) -> bool:
         """
         :return: Whether the configure command needs to be run (by default assume yes)
         """
@@ -2063,7 +2063,7 @@ class Project(SimpleProject):
             return True
         if self.config.clean:
             return True
-        return self.needsConfigure()
+        return self.needs_configure()
 
     def add_configure_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
         if value is None:
@@ -2099,7 +2099,7 @@ class Project(SimpleProject):
         self.run_make("all", cwd=cwd, parallel=parallel)
 
     @property
-    def makeInstallEnv(self):
+    def make_install_env(self):
         if self.destdir:
             env = self.make_args.env_vars.copy()
             if "DESTDIR" not in env:
@@ -2114,8 +2114,8 @@ class Project(SimpleProject):
          return /tmp/benchdir/usr/local
         """
         if self.destdir is not None:
-            assert self._installPrefix
-            return self.destdir / Path(self._installPrefix).relative_to(Path("/"))
+            assert self._install_prefix
+            return self.destdir / Path(self._install_prefix).relative_to(Path("/"))
         return self._install_dir
 
     @property
@@ -2123,31 +2123,31 @@ class Project(SimpleProject):
         return self.real_install_root_dir
 
     @property
-    def installPrefix(self) -> Path:
-        if self._installPrefix is not None:
-            return self._installPrefix
+    def install_prefix(self) -> Path:
+        if self._install_prefix is not None:
+            return self._install_prefix
         return self._install_dir
 
-    def runMakeInstall(self, *, options: MakeOptions = None, target="install", _stdout_filter=_default_stdout_filter,
+    def run_make_install(self, *, options: MakeOptions = None, target="install", _stdout_filter=_default_stdout_filter,
                        cwd=None, parallel=False, make_install_env=None, **kwargs):
         if options is None:
             options = self.make_args.copy()
         else:
             options = options.copy()
         if make_install_env is None:
-            make_install_env = self.makeInstallEnv
+            make_install_env = self.make_install_env
         options.env_vars.update(make_install_env)
         self.run_make(make_target=target, options=options, stdout_filter=_stdout_filter, cwd=cwd,
             parallel=parallel, **kwargs)
 
     def install(self, _stdout_filter=_default_stdout_filter):
-        self.runMakeInstall(_stdout_filter=_stdout_filter)
+        self.run_make_install(_stdout_filter=_stdout_filter)
         if self.get_default_install_dir_kind() == DefaultInstallDir.SYSROOT_AND_ROOTFS:
             # Also install to the rootfs:
-            make_install_env = self.makeInstallEnv.copy()
+            make_install_env = self.make_install_env.copy()
             assert "DESTDIR" in make_install_env, "DESTDIR must be set in install env for SYSROOT_AND_ROOTFS to work!"
             make_install_env["DESTDIR"] = self.rootfs_path
-            self.runMakeInstall(_stdout_filter=_stdout_filter, make_install_env=make_install_env)
+            self.run_make_install(_stdout_filter=_stdout_filter, make_install_env=make_install_env)
 
     def _do_generate_cmakelists(self):
         assert not isinstance(self, CMakeProject), self
@@ -2381,11 +2381,11 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     self._force_clean = True
 
         # run the rm -rf <build dir> in the background
-        cleaningTask = self.clean() if (self._force_clean or self.config.clean) else ThreadJoiner(None)
-        if cleaningTask is None:
-            cleaningTask = ThreadJoiner(None)
-        assert isinstance(cleaningTask, ThreadJoiner), ""
-        with cleaningTask:
+        cleaning_task = self.clean() if (self._force_clean or self.config.clean) else ThreadJoiner(None)
+        if cleaning_task is None:
+            cleaning_task = ThreadJoiner(None)
+        assert isinstance(cleaning_task, ThreadJoiner), ""
+        with cleaning_task:
             if not self.build_dir.is_dir():
                 self.makedirs(self.build_dir)
             # Clean has been performed -> write the last clean counter now (if needed).
@@ -2546,13 +2546,13 @@ class CMakeProject(Project):
         # LD is never invoked directly, so the -fuse-ld= flag is sufficient
         self.add_cmake_options(CMAKE_AR=ar, CMAKE_RANLIB=ranlib)
 
-    def needsConfigure(self) -> bool:
+    def needs_configure(self) -> bool:
         if self.config.pretend and (self.config.forceConfigure or self.config.clean):
             return True
         # CMake is smart enough to detect when it must be reconfigured -> skip configure if cache exists
-        cmakeCache = self.build_dir / "CMakeCache.txt"
-        buildFile = "build.ninja" if self.generator == CMakeProject.Generator.Ninja else "Makefile"
-        return not cmakeCache.exists() or not (self.build_dir / buildFile).exists()
+        cmake_cache = self.build_dir / "CMakeCache.txt"
+        build_file = "build.ninja" if self.generator == CMakeProject.Generator.Ninja else "Makefile"
+        return not cmake_cache.exists() or not (self.build_dir / build_file).exists()
 
     def generate_cmake_toolchain_file(self, file: Path):
         # CMAKE_CROSSCOMPILING will be set when we change CMAKE_SYSTEM_NAME:
@@ -2591,9 +2591,9 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
             )
 
     def configure(self, **kwargs):
-        if self.installPrefix != self.install_dir:
+        if self.install_prefix != self.install_dir:
             assert self.destdir, "custom install prefix requires DESTDIR being set!"
-            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installPrefix)
+            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.install_prefix)
         else:
             self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.install_dir)
         custom_ldflags = self.default_ldflags + self.LDFLAGS
@@ -2642,9 +2642,9 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
         # Add the options from the config file:
         self.configureArgs.extend(self.cmakeOptions)
         # make sure we get a completely fresh cache when --reconfigure is passed:
-        cmakeCache = self.build_dir / "CMakeCache.txt"
+        cmake_cache = self.build_dir / "CMakeCache.txt"
         if self.config.forceConfigure:
-            self.delete_file(cmakeCache)
+            self.delete_file(cmake_cache)
         super().configure(**kwargs)
         if self.config.copy_compilation_db_to_source_dir and (self.build_dir / "compile_commands.json").exists():
             self.install_file(self.build_dir / "compile_commands.json", self.source_dir / "compile_commands.json",
@@ -2671,19 +2671,18 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
                 self.configureCommand = abspath
         super().check_system_dependencies()
         if self.__minimum_cmake_version:
-            # try to find cmake 3.4 or newer
-            versionComponents = self._get_cmake_version()
+            version_components = self._get_cmake_version()
             # noinspection PyTypeChecker
-            if versionComponents < self.__minimum_cmake_version:
-                versionStr = ".".join(map(str, versionComponents))
-                expectedStr = ".".join(map(str, self.__minimum_cmake_version))
-                instrs = "Use your package manager to install CMake > " + expectedStr + \
+            if version_components < self.__minimum_cmake_version:
+                version_str = ".".join(map(str, version_components))
+                expected_str = ".".join(map(str, self.__minimum_cmake_version))
+                instrs = "Use your package manager to install CMake > " + expected_str + \
                          " or run `cheribuild.py cmake` to install the latest version locally"
-                self.dependency_error("CMake version", versionStr, "is too old (need at least", expectedStr + ")",
+                self.dependency_error("CMake version", version_str, "is too old (need at least", expected_str + ")",
                     install_instructions=instrs)
 
     @staticmethod
-    def findPackage(name: str) -> bool:
+    def find_package(name: str) -> bool:
         try:
             cmd = "cmake --find-package -DCOMPILER_ID=Clang -DLANGUAGE=CXX -DMODE=EXIST -DQUIET=TRUE".split()
             cmd.append("-DNAME=" + name)
@@ -2714,16 +2713,16 @@ class AutotoolsProject(Project):
 
     def configure(self, **kwargs):
         if self._configure_supports_prefix:
-            if self.installPrefix != self.install_dir:
+            if self.install_prefix != self.install_dir:
                 assert self.destdir, "custom install prefix requires DESTDIR being set!"
-                self.configureArgs.append("--prefix=" + str(self.installPrefix))
+                self.configureArgs.append("--prefix=" + str(self.install_prefix))
             else:
                 self.configureArgs.append("--prefix=" + str(self.install_dir))
         if self.extraConfigureFlags:
             self.configureArgs.extend(self.extraConfigureFlags)
         super().configure(**kwargs)
 
-    def needsConfigure(self):
+    def needs_configure(self):
         return not (self.build_dir / "Makefile").exists()
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):

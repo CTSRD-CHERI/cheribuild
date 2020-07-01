@@ -105,7 +105,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     def configure(self):
         pass
 
-    def needsConfigure(self):
+    def needs_configure(self):
         return False 
 
     def install(self, **kwargs):

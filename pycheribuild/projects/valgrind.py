@@ -42,8 +42,8 @@ class BuildValgrind(AutotoolsProject):
         super().__init__(config)
         # Need the i386 kernel headers
         if OSInfo.is_ubuntu() or OSInfo.is_debian():
-            self._addRequiredSystemHeader("/usr/include/i386-linux-gnu/asm/types.h", apt="linux-libc-dev:i386")
-            self._addRequiredSystemHeader("/usr/include/x86_64-linux-gnu/asm/types.h", apt="linux-libc-dev:amd64")
+            self.add_required_system_header("/usr/include/i386-linux-gnu/asm/types.h", apt="linux-libc-dev:i386")
+            self.add_required_system_header("/usr/include/x86_64-linux-gnu/asm/types.h", apt="linux-libc-dev:amd64")
             # 32-bit headers not available on ubuntu
             # self.configureArgs.append("--enable-only64bit")
 

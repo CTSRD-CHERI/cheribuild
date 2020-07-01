@@ -139,7 +139,7 @@ class BuildElftoolchain(Project):
             self.makedirs(self.install_dir / i)
         first_call = True  # recreate logfile on first call, after that append
         for tgt in self.programsToBuild:
-            self.runMakeInstall(cwd=self.source_dir / tgt, logfile_name="install", append_to_logfile=not first_call,
+            self.run_make_install(cwd=self.source_dir / tgt, logfile_name="install", append_to_logfile=not first_call,
                                 parallel=False)
             first_call = False
 

@@ -65,9 +65,9 @@ class BuildNewlib(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._installPrefix = self._installPrefix.parent  # newlib install already appends the triple
+        self._install_prefix = self._install_prefix.parent  # newlib install already appends the triple
         self._install_dir = self._install_dir.parent  # newlib install already appends the triple
-        self.verbose_print("install_dir=", self.install_dir, "_installPrefix=", self._installPrefix, "_install_dir=",
+        self.verbose_print("install_dir=", self.install_dir, "_install_prefix=", self._install_prefix, "_install_dir=",
                            self._install_dir, "dest=", self.destdir, "real=", self.real_install_root_dir)
         # self.configureCommand = Path("/this/path/does/not/exist")
         self.configureCommand = self.source_dir / "configure"
@@ -78,15 +78,15 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         self.COMMON_FLAGS.extend(["--sysroot", "/this/path/does/not/exist"])
 
     # def install(self, **kwargs):
-    #     # self.runMakeInstall(cwd=self.build_dir / "newlib")
-    #     self.runMakeInstall(cwd=self.build_dir / "libgloss")
+    #     # self.run_make_install(cwd=self.build_dir / "newlib")
+    #     self.run_make_install(cwd=self.build_dir / "libgloss")
 
     # def compile(self, **kwargs):
     #     # super().compile(cwd=self.build_dir / "newlib")
     #     self.make_args.env_vars["MULTILIB"] = self.target_cflags + " -mabicalls"
     #     super().compile(cwd=self.build_dir / "libgloss")
 
-    def needsConfigure(self):
+    def needs_configure(self):
         return not (self.build_dir / "Makefile").exists()
 
     def add_configure_vars(self, **kwargs):

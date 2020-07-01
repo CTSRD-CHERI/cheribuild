@@ -127,5 +127,5 @@ class BuildSamba(Project):
         else:
             super().process()
 
-    def needsConfigure(self):
+    def needs_configure(self):
         return True

@@ -179,7 +179,7 @@ class BuildFreeBSDBase(Project):
             self.make_args.set_command(self.source_dir / "tools/build/make.py")
 
         # if not OSInfo.IS_FREEBSD:
-        #     self._addRequiredSystemHeader("archive.h", apt="libarchive-dev", homebrew="libarchive")
+        #     self.add_required_system_header("archive.h", apt="libarchive-dev", homebrew="libarchive")
         self.make_args.set(
             DB_FROM_SRC=True,  # don't use the system passwd file
             NO_CLEAN=True,  # don't clean, we have the --clean flag for that
@@ -449,7 +449,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.target_info._sdk_root_dir = self._cross_toolchain_root
         self._setup_make_args_called = False
         self.destdir = self.install_dir
-        self._installPrefix = Path("/")
+        self._install_prefix = Path("/")
         self.kernel_toolchain_exists = False
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
         assert self.kernelConfig is not None
@@ -664,7 +664,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def _installkernel(self, kernconf, destdir: str = None, extra_make_args=None):
         # don't use multiple jobs here
         install_kernel_args = self.kernel_make_args_for_config(kernconf, extra_make_args)
-        install_kernel_args.env_vars.update(self.makeInstallEnv)
+        install_kernel_args.env_vars.update(self.make_install_env)
         # Also install all other kernels that were potentially built
         install_kernel_args.set(NO_INSTALLEXTRAKERNELS="no")
         # also install the debug files
@@ -783,7 +783,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     @property
     def installworld_args(self):
         result = self.buildworld_args
-        result.env_vars.update(self.makeInstallEnv)
+        result.env_vars.update(self.make_install_env)
         return result
 
     def install(self, all_kernel_configs: str = None, sysroot_only=False, install_with_subdir_override=False,
@@ -1549,7 +1549,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         # FIXME: should no longer be needed
         fixlinks_src = include_local_file("files/fixlinks.c")
         runCmd("cc", "-x", "c", "-", "-o", self.install_dir / "bin/fixlinks", input=fixlinks_src)
-        runCmd(self.install_dir / "bin/fixlinks", cwd=self.crossSysrootPath / "usr/lib")
+        runCmd(self.install_dir / "bin/fixlinks", cwd=self.cross_sysroot_path / "usr/lib")
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
@@ -1576,10 +1576,10 @@ class BuildCheriBsdSysroot(SimpleProject):
             help="Override for the sysroot install directory")
 
     @property
-    def crossSysrootPath(self) -> Path:
+    def cross_sysroot_path(self) -> Path:
         if self.install_dir_override:
             return self.install_dir_override
-        return super().crossSysrootPath
+        return super().cross_sysroot_path
 
     def copySysrootFromRemoteMachine(self):
         statusUpdate("Copying sysroot from remote system.")
@@ -1596,9 +1596,9 @@ class BuildCheriBsdSysroot(SimpleProject):
             return
 
         # now copy the files
-        self.makedirs(self.crossSysrootPath)
+        self.makedirs(self.cross_sysroot_path)
         self.copy_remote_file(remote_sysroot_archive, self.sysroot_archive)
-        runCmd("tar", "xzf", self.sysroot_archive, cwd=self.crossSysrootPath.parent)
+        runCmd("tar", "xzf", self.sysroot_archive, cwd=self.cross_sysroot_path.parent)
 
     @property
     def sysroot_archive_name(self):
@@ -1606,11 +1606,11 @@ class BuildCheriBsdSysroot(SimpleProject):
 
     @property
     def sysroot_archive(self):
-        return self.crossSysrootPath.parent / self.sysroot_archive_name
+        return self.cross_sysroot_path.parent / self.sysroot_archive_name
 
     def createSysroot(self):
         # we need to add include files and libraries to the sysroot directory
-        self.makedirs(self.crossSysrootPath / "usr")
+        self.makedirs(self.cross_sysroot_path / "usr")
         # use tar+untar to copy all necessary files listed in metalog to the sysroot dir
         # Since we are using the metalog argument we need to use BSD tar and not GNU tar!
         bsdtar_path = shutil.which(str(self.bsdtar_cmd))
@@ -1638,16 +1638,16 @@ class BuildCheriBsdSysroot(SimpleProject):
         if not self.config.pretend:
             tar_cwd = str(rootfs_dir)
             with subprocess.Popen(tar_cmd, stdout=subprocess.PIPE, cwd=tar_cwd) as tar:
-                runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.crossSysrootPath)
-        if not (self.crossSysrootPath / "lib/libc.so.7").is_file():
-            self.fatal(self.crossSysrootPath, "is missing the libc library, install seems to have failed!")
+                runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.cross_sysroot_path)
+        if not (self.cross_sysroot_path / "lib/libc.so.7").is_file():
+            self.fatal(self.cross_sysroot_path, "is missing the libc library, install seems to have failed!")
 
         # fix symbolic links in the sysroot:
         print("Fixing absolute paths in symbolic links inside lib directory...")
         self.fixSymlinks()
         # create an archive to make it easier to copy the sysroot to another machine
         self.delete_file(self.sysroot_archive, print_verbose_only=True)
-        runCmd("tar", "-czf", self.sysroot_archive, self.crossSysrootPath.name, cwd=self.crossSysrootPath.parent)
+        runCmd("tar", "-czf", self.sysroot_archive, self.cross_sysroot_path.name, cwd=self.cross_sysroot_path.parent)
         print("Successfully populated sysroot")
 
     def process(self):
@@ -1655,15 +1655,15 @@ class BuildCheriBsdSysroot(SimpleProject):
             statusUpdate("Not building sysroot because --skip-buildworld was passed")
             return
 
-        with self.async_clean_directory(self.crossSysrootPath):
+        with self.async_clean_directory(self.cross_sysroot_path):
             building_on_host = OSInfo.IS_FREEBSD or self.rootfs_source_class.get_instance(self).crossbuild
             if self.copy_remote_sysroot or not building_on_host:
                 self.copySysrootFromRemoteMachine()
             else:
                 self.createSysroot()
-            if (self.crossSysrootPath / "usr/libcheri/").is_dir():
+            if (self.cross_sysroot_path / "usr/libcheri/").is_dir():
                 # clang++ expects libgcc_eh to exist:
-                libgcc_eh = self.crossSysrootPath / "usr/libcheri/libgcc_eh.a"
+                libgcc_eh = self.cross_sysroot_path / "usr/libcheri/libgcc_eh.a"
                 if not libgcc_eh.is_file():
                     warningMessage("CHERI libgcc_eh missing! You should probably update CheriBSD")
                     runCmd("ar", "rc", libgcc_eh)

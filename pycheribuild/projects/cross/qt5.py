@@ -97,7 +97,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
             if self.crosscompile_target.is_cheri_purecap():
                 # Note: we are using the hybrid sysroot, so base system libraries are in usr/libcheri:
-                self.configureArgs.append("QMAKE_LIBDIR=" + str(self.crossSysrootPath / "usr/libcheri"))
+                self.configureArgs.append("QMAKE_LIBDIR=" + str(self.cross_sysroot_path / "usr/libcheri"))
             elif self.compiling_for_mips(include_purecap=False):
                 # self.configureArgs.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
                 pass
@@ -113,7 +113,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-device-option", "CROSS_COMPILE={}/{}-".format(self.sdk_bindir, cross_compile_prefix),
                 "-device-option", "COMPILER_FLAGS=" + commandline_to_str(compiler_flags),
                 "-device-option", "LINKER_FLAGS=" + commandline_to_str(linker_flags),
-                "-sysroot", self.crossSysrootPath,
+                "-sysroot", self.cross_sysroot_path,
                 "-prefix", "/usr/local/" + self._xtarget.generic_suffix
                 ])
 
@@ -191,7 +191,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         self.delete_file(self.build_dir / "config.status")
         super().configure()
 
-    def needsConfigure(self):
+    def needs_configure(self):
         return not (self.build_dir / "Makefile").exists()
 
 
@@ -415,7 +415,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         if not self.compiling_for_host():
             # we need to find the installed Qt
             self.add_cmake_options(
-                Qt5_DIR=self.crossSysrootPath / ("usr/local/" + self._xtarget.generic_suffix) / "lib/cmake/Qt5")
+                Qt5_DIR=self.cross_sysroot_path / ("usr/local/" + self._xtarget.generic_suffix) / "lib/cmake/Qt5")
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
             self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.get_source_dir(self) / "src/3rdparty/libpng")
             if self.force_static_linkage:

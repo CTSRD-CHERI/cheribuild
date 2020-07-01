@@ -173,7 +173,7 @@ class BuildBubbleWrap(AutotoolsProject):
 
     def __init__(self, config):
         super().__init__(config)
-        self._addRequiredSystemHeader("sys/capability.h", apt="libcap-dev")
+        self.add_required_system_header("sys/capability.h", apt="libcap-dev")
         self.configureCommand = self.source_dir / "autogen.sh"
         self.configureArgs.append("--with-bash-completion-dir=no")
 
@@ -270,7 +270,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
     def __init__(self, config):
         super().__init__(config)
         # not always found in /usr/include
-        # self._addRequiredSystemHeader("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        # self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -323,7 +323,7 @@ class BuildSailRISCV(ProjectUsingOpam):
 
     def __init__(self, config):
         super().__init__(config)
-        self._addRequiredSystemHeader("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -356,7 +356,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
 
     def __init__(self, config):
         super().__init__(config)
-        self._addRequiredSystemHeader("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     @classmethod
     def setup_config_options(cls, **kwargs):

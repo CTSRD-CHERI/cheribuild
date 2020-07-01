@@ -182,7 +182,7 @@ class Target(object):
         # otherwise just keep everything in order
         return False
         # This was previously done
-        # ownDeps = self.projectClass.allDependencyNames()
+        # ownDeps = self.projectClass.all_dependency_names()
         # if len(ownDeps) < len(otherDeps):
         #     return True
         # if len(ownDeps) > len(otherDeps):
@@ -404,7 +404,7 @@ class TargetManager(object):
         for target in chosenTargets:
             if config.print_targets_only:
                 statusUpdate("Will build target", coloured(AnsiColour.yellow, target.name))
-                print("    Dependencies for", target.name, "are", target.projectClass.allDependencyNames(config))
+                print("    Dependencies for", target.name, "are", target.projectClass.all_dependency_names(config))
             else:
                 target.execute(config)
 

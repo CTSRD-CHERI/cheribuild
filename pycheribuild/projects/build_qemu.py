@@ -83,9 +83,9 @@ class BuildQEMUBase(AutotoolsProject):
         self.add_required_system_tool("autoreconf", homebrew="autoconf")
         self.add_required_system_tool("aclocal", homebrew="automake")
 
-        self._addRequiredPkgConfig("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",
+        self.add_required_pkg_config("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",
                                    freebsd="pixman")
-        self._addRequiredPkgConfig("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
+        self.add_required_pkg_config("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
                                    freebsd="glib")
         # Tests require GNU sed
         self.add_required_system_tool("sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed", freebsd="gsed")

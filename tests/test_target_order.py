@@ -116,7 +116,7 @@ def test_minimal_run():
 
 def _check_deps_not_cached(classes):
     for c in classes:
-        with pytest.raises(ValueError, match="_cached_dependencies called before allDependencyNames()"):
+        with pytest.raises(ValueError, match="_cached_dependencies called before all_dependency_names()"):
             c._cached_dependencies()
 
 def _check_deps_cached(classes):
@@ -134,17 +134,17 @@ def test_webkit_cached_deps():
     # Check that the deps are not cached yet
     _check_deps_not_cached((webkit_native, webkit_cheri, webkit_mips))
 
-    cheri_target_names = list(sorted(webkit_cheri.allDependencyNames(config)))
+    cheri_target_names = list(sorted(webkit_cheri.all_dependency_names(config)))
     assert cheri_target_names == ["icu4c-mips-purecap", "icu4c-native", "libxml2-mips-purecap", "qtbase-mips-purecap", "sqlite-mips-purecap"]
     _check_deps_not_cached([webkit_native, webkit_mips])
     _check_deps_cached([webkit_cheri])
 
-    mips_target_names = list(sorted(webkit_mips.allDependencyNames(config)))
+    mips_target_names = list(sorted(webkit_mips.all_dependency_names(config)))
     assert mips_target_names == ["icu4c-mips-hybrid", "icu4c-native", "libxml2-mips-hybrid", "qtbase-mips-hybrid", "sqlite-mips-hybrid"]
     _check_deps_cached([webkit_cheri, webkit_mips])
     _check_deps_not_cached([webkit_native])
 
-    native_target_names = list(sorted(webkit_native.allDependencyNames(config)))
+    native_target_names = list(sorted(webkit_native.all_dependency_names(config)))
     assert native_target_names == ["icu4c-native", "libxml2-native", "qtbase-native", "sqlite-native"]
     _check_deps_cached([webkit_cheri, webkit_mips, webkit_native])
 

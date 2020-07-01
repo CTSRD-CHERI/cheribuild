@@ -78,7 +78,7 @@ class BuildFettConfig(CrossCompileProject):
 
         # nginx bits
         nginx_src = src / "build/webserver"
-        nginx_prefix = BuildFettNginx.get_instance(self)._installPrefix.relative_to('/')
+        nginx_prefix = BuildFettNginx.get_instance(self)._install_prefix.relative_to('/')
         mtree.add_file(nginx_src / "common/conf/nginx.conf",
                        nginx_prefix / "conf/nginx.conf")
         mtree.add_dir(nginx_prefix / "conf/sites")
@@ -104,7 +104,7 @@ class BuildFettConfig(CrossCompileProject):
                            nginx_prefix / "html" / file)
 
         # sshd bits
-        ssh_prefix = BuildFettOpenSSH.get_instance(self)._installPrefix.relative_to('/')
+        ssh_prefix = BuildFettOpenSSH.get_instance(self)._install_prefix.relative_to('/')
         keyfiles = ["ssh_host_dsa_key", "ssh_host_ecdsa_key", "ssh_host_ed25519_key", "ssh_host_rsa_key"]
         for keyfile in keyfiles:
             mtree.add_file(Path("/etc/ssh", keyfile), ssh_prefix / "etc/" / keyfile, symlink=True)

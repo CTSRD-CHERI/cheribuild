@@ -118,7 +118,7 @@ class BuildOpenSBI(Project):
         for platform in self.all_platforms:
             args = self.make_args.copy()
             args.set(PLATFORM=platform)
-            self.runMakeInstall(cwd=self.source_dir, options=args)
+            self.run_make_install(cwd=self.source_dir, options=args)
 
     def _fw_jump_path(self) -> Path:
         # share/opensbi/lp64/generic/firmware//fw_payload.bin

@@ -116,7 +116,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         if self.crosscompile_target.is_cheri_purecap() and self._configure_supports_libdir:
             # Install to lib and not libcheri since we have a separate prefix and that makes it
             # easier to handle build systems that assume that library are always in /lib
-            self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/lib")
+            self.configureArgs.append("--libdir=" + str(self.install_prefix) + "/lib")
 
     def configure(self, **kwargs):
         if self._autotools_add_default_compiler_args:

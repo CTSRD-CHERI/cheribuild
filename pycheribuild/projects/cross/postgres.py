@@ -94,12 +94,12 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         super().install()
         install_tests_args = self.make_args.copy()
         install_tests_args.add_flags("-C", "src/test/regress")
-        self.runMakeInstall(target="install-tests", options=install_tests_args)
+        self.run_make_install(target="install-tests", options=install_tests_args)
         # install the benchmark script
         for benchname in ("postgres-benchmark.sh", "postgres-initdb-benchmark.sh"):
             benchmark = self.read_file(self.source_dir / benchname)
-            if self.installPrefix:
-                pg_root = str(self.installPrefix)
+            if self.install_prefix:
+                pg_root = str(self.install_prefix)
             else:
                 pg_root = str(self.install_dir)
             benchmark = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + pg_root + "\"", benchmark)
@@ -117,7 +117,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     def should_use_extra_c_compat_flags(self):
         return True
 
-    def needsConfigure(self):
+    def needs_configure(self):
         return not (self.build_dir / "GNUmakefile").exists()
 
     def run_tests(self):
@@ -127,7 +127,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         else:
             locale_dir = self.rootfs_dir / "usr/share/locale"
             self.target_info.run_cheribsd_test_script("run_postgres_tests.py", "--smb-mount-directory",
-                                                      str(self.install_dir) + ":" + str(self.installPrefix),
+                                                      str(self.install_dir) + ":" + str(self.install_prefix),
                                                       "--locale-files-dir", locale_dir, mount_builddir=False,
                                                       # long running test -> speed up by using a kernel without
                                                       # invariants

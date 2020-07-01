@@ -387,7 +387,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             if "--install-destdir" not in self.config.test_extra_args:
                 cmd.extend(["--install-destdir", self.project.destdir])
             if "--install-prefix" not in self.config.test_extra_args:
-                cmd.extend(["--install-prefix", self.project.installPrefix])
+                cmd.extend(["--install-prefix", self.project.install_prefix])
         if disk_image_path and "--disk-image" not in self.config.test_extra_args:
             cmd.extend(["--disk-image", disk_image_path])
         if self.config.tests_interact:

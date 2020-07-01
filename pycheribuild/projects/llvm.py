@@ -154,7 +154,7 @@ class BuildLLVMBase(CMakeProject):
                                    LLVM_TOOL_LLVM_EXEGESIS_BUILD=False,
                                    LLVM_TOOL_LLVM_RC_BUILD=False,
                                    )
-        if self.canUseLLd(self.CC):
+        if self.can_use_lld(self.CC):
             self.add_cmake_options(LLVM_ENABLE_LLD=True, _replace=False)  # Don't set to true if LTO set it to false
             # Add GDB index to speed up debugging
             if self.should_include_debug_info:
@@ -163,7 +163,7 @@ class BuildLLVMBase(CMakeProject):
                 # This should also speed up link time:
                 self.add_cmake_options(LLVM_USE_SPLIT_DWARF=True)
         if self.add_default_sysroot:
-            self.add_cmake_options(DEFAULT_SYSROOT=self.crossSysrootPath,
+            self.add_cmake_options(DEFAULT_SYSROOT=self.cross_sysroot_path,
                                    LLVM_DEFAULT_TARGET_TRIPLE="mips64-unknown-freebsd")
         # when making a debug or asserts build speed it up by building a release tablegen
         # Actually it seems like the time spent in CMake is longer than that spent running tablegen, disable for now
@@ -193,7 +193,7 @@ class BuildLLVMBase(CMakeProject):
     def add_lto_build_options(self, ccinfo: CompilerInfo) -> bool:
         if not super().add_lto_build_options(ccinfo):
             return False  # can't use LTO
-        if self.canUseLLd(self.CC) and not self.prefer_full_lto_over_thin_lto:
+        if self.can_use_lld(self.CC) and not self.prefer_full_lto_over_thin_lto:
             self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
         else:
             self.add_cmake_options(LLVM_ENABLE_LTO=True)
