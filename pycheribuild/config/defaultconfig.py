@@ -65,7 +65,7 @@ class DefaultCheriConfig(CheriConfig):
         assert isinstance(loader, JsonAndCommandLineConfigLoader)
         # The run mode:
         self.get_config_option = loader.add_option("get-config-option", type=str, metavar="KEY",
-                                                   group=loader.actionGroup,
+                                                   group=loader.action_group,
                                                    help="Print the value of config option KEY and exit")
         # boolean flags
         self.quiet = loader.add_bool_option("quiet", "q", help="Don't show stdout of the commands that are executed")
@@ -79,12 +79,11 @@ class DefaultCheriConfig(CheriConfig):
         self.force_update = loader.add_bool_option("force-update", help="Always update (with autostash) even if there "
                                                                         "are uncommitted changes")
         self.skip_configure = loader.add_bool_option("skip-configure", help="Skip the configure step",
-                                                     group=loader.configureGroup)
+                                                     group=loader.configure_group)
         self.force_configure = loader.add_bool_option("reconfigure", "-force-configure",
-                                                      group=loader.configureGroup,
+                                                      group=loader.configure_group,
                                                       help="Always run the configure step, even for CMake projects "
-                                                           "with a "
-                                                           "valid cache.")
+                                                           "with a valid cache.")
         self.include_dependencies = loader.add_bool_option("include-dependencies", "d",
                                                            help="Also build the dependencies of targets passed on the "
                                                                 "command line. Targets passed on thecommand "
@@ -108,20 +107,20 @@ class DefaultCheriConfig(CheriConfig):
 
         # configurable paths
         self.source_root = loader.add_path_option("source-root",
-                                                  default=Path(os.path.expanduser("~/cheri")), group=loader.pathGroup,
+                                                  default=Path(os.path.expanduser("~/cheri")), group=loader.path_group,
                                                   help="The directory to store all sources")
         self.output_root = loader.add_path_option("output-root",
                                                   default=lambda p, cls: (p.source_root / "output"),
-                                                  group=loader.pathGroup,
+                                                  group=loader.path_group,
                                                   help="The directory to store all output (default: "
                                                        "'<SOURCE_ROOT>/output')")
         self.build_root = loader.add_path_option("build-root",
                                                  default=lambda p, cls: (p.source_root / "build"),
-                                                 group=loader.pathGroup,
+                                                 group=loader.path_group,
                                                  help="The directory for all the builds (default: "
                                                       "'<SOURCE_ROOT>/build')")
         self.tools_root = loader.add_path_option("tools-root",
-                                                 default=lambda p, cls: p.output_root, group=loader.pathGroup,
+                                                 default=lambda p, cls: p.output_root, group=loader.path_group,
                                                  help="The directory to find sdk and bootstrap tools (default: "
                                                       "'<OUTPUT_ROOT>')")
         loader.finalize_options(available_targets)

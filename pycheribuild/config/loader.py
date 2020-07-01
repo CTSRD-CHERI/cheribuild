@@ -136,17 +136,17 @@ class ConfigLoaderBase(object):
             self._parser = argparse.ArgumentParser(
                 formatter_class=lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
 
-        self.actionGroup = self._parser.add_argument_group("Actions to be performed")
-        self.pathGroup = self._parser.add_argument_group("Configuration of default paths")
-        self.crossCompileOptionsGroup = self._parser.add_argument_group(
+        self.action_group = self._parser.add_argument_group("Actions to be performed")
+        self.path_group = self._parser.add_argument_group("Configuration of default paths")
+        self.cross_compile_options_group = self._parser.add_argument_group(
             "Adjust flags used when compiling MIPS/CHERI projects")
-        self.testsGroup = self._parser.add_argument_group("Configuration for running tests")
-        self.benchmarkGroup = self._parser.add_argument_group("Configuration for running benchmarks")
+        self.tests_group = self._parser.add_argument_group("Configuration for running tests")
+        self.benchmark_group = self._parser.add_argument_group("Configuration for running benchmarks")
         self.run_group = self._parser.add_argument_group("Configuration for launching QEMU (and other simulators)")
 
         # put this one right at the end since it is not that useful
-        self.freebsdGroup = self._parser.add_argument_group("FreeBSD and CheriBSD build configuration")
-        self.dockerGroup = self._parser.add_argument_group("Options controlling the use of docker for building")
+        self.freebsd_group = self._parser.add_argument_group("FreeBSD and CheriBSD build configuration")
+        self.docker_group = self._parser.add_argument_group("Options controlling the use of docker for building")
 
     def add_commandline_only_option(self, *args, **kwargs):
         """
@@ -549,17 +549,17 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         # that pick up the right config file in ~/.config
         config_prefix = self.get_config_prefix()
         # print("Name is:", program, "prefix:", config_prefix)
-        self.defaultConfigPath = Path(self.configdir, config_prefix + "cheribuild.json")
-        self.pathGroup.add_argument("--config-file", metavar="FILE", type=str, default=str(self.defaultConfigPath),
-            action=ArgparseSetGivenAction,
-            help="The config file that is used to load the default settings (default: '" +
-                 str(self.defaultConfigPath) + "')")
+        self.default_config_path = Path(self.configdir, config_prefix + "cheribuild.json")
+        self.path_group.add_argument("--config-file", metavar="FILE", type=str, default=str(self.default_config_path),
+                                     action=ArgparseSetGivenAction,
+                                     help="The config file that is used to load the default settings (default: '" +
+                                          str(self.default_config_path) + "')")
         self._parser.add_argument("--help-all", "--help-hidden", action="help", help="Show all help options, including"
                                                                                      " the target-specific ones.")
         # argument groups:
         # self.deprecatedOptionsGroup = _parser.add_argument_group("Old deprecated options", "These should not be
         # used any more")
-        self.configureGroup = self._parser.add_mutually_exclusive_group()
+        self.configure_group = self._parser.add_mutually_exclusive_group()
         self.completion_excludes = []
 
     @staticmethod
