@@ -54,12 +54,13 @@ class BuildBluespecCompiler(Project):
     def compile(self, **kwargs):
         try:
             self.run_make("all")
-        except:
+        except Exception:
             self.info("Compilation failed. If it complains about missing packages try running:\n"
                       "\tcabal install regex-compat syb old-time split\n"
                       "If this doesn't fix the issue `v1-install` instead of `install` (e.g. macOS).")
             if OSInfo.IS_MAC:
-                self.info("Alternatively, try running:", self.source_dir / ".github/workflows/install_dependencies_macos.sh")
+                self.info("Alternatively, try running:",
+                          self.source_dir / ".github/workflows/install_dependencies_macos.sh")
             elif OSInfo.is_ubuntu():
                 self.info("Alternatively, try running:",
                           self.source_dir / ".github/workflows/install_dependencies_ubuntu.sh")
@@ -72,7 +73,7 @@ class BuildCheriSim(Project):
     dependencies = ["bluespec-compiler"]
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-cpu")
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    build_in_source_dir = True      # Needs to build in the source dir
+    build_in_source_dir = True  # Needs to build in the source dir
     make_kind = MakeCommandKind.GnuMake
 
     def __init__(self, config: CheriConfig):
@@ -93,7 +94,8 @@ class BuildCheriSim(Project):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.build_fpu = cls.add_bool_option("fpu", default=True, help="include the FPU code")
-        cls.build_cheri = cls.add_bool_option("cheri", default=True, help="include the CHERI code in the simulator. If false build BERI")
+        cls.build_cheri = cls.add_bool_option("cheri", default=True,
+                                              help="include the CHERI code in the simulator. If false build BERI")
 
     def clean(self):
         self.run_make("clean", parallel=False, cwd=self.source_dir / "cheri")
@@ -106,8 +108,9 @@ class BuildCheriSim(Project):
         if not setup_sh.exists():
             self.fatal("Could not find setup.sh, please set --cheri-sim/source-directory or --fpga-env-setup-script")
         source_cmd = "source {setup_script}".format(setup_script=setup_sh)
-        self.run_shell_script(source_cmd + " && " + commandline_to_str(self.get_make_commandline("sim", parallel=False)),
-                            cwd=self.source_dir / "cheri", shell="bash")
+        self.run_shell_script(
+            source_cmd + " && " + commandline_to_str(self.get_make_commandline("sim", parallel=False)),
+            cwd=self.source_dir / "cheri", shell="bash")
 
     def install(self, **kwargs):
         pass
@@ -125,12 +128,12 @@ class BuildBeriCtl(Project):
     target = "berictl"
     repository = ReuseOtherProjectRepository(source_project=BuildCheriSim, subdirectory="cherilibs/tools/debug")
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    build_in_source_dir = True      # Needs to build in the source dir
+    build_in_source_dir = True  # Needs to build in the source dir
     make_kind = MakeCommandKind.GnuMake
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.make_args.set(JTAG_ATLANTIC=1) # MUCH faster
+        self.make_args.set(JTAG_ATLANTIC=1)  # MUCH faster
 
     def clean(self):
         self.run_make("clean", parallel=False, cwd=self.source_dir)
@@ -143,8 +146,9 @@ class BuildBeriCtl(Project):
             setup_sh = self.config.fpga_custom_env_setup_script
         if not setup_sh.exists():
             self.fatal("Could not find setup.sh")
-        self.run_shell_script("source {} && ".format(shlex.quote(str(setup_sh))) + commandline_to_str(self.get_make_commandline(None, parallel=False)),
-                            cwd=self.source_dir, shell="bash")
+        self.run_shell_script("source {} && ".format(shlex.quote(str(setup_sh))) + commandline_to_str(
+            self.get_make_commandline(None, parallel=False)),
+                              cwd=self.source_dir, shell="bash")
 
     def install(self, **kwargs):
         pass

@@ -48,13 +48,16 @@ class BuildAflCheriNinja(Project):
         self.make_args.env_vars["XCC"] = self.config.cheri_sdk_bindir / "clang"
         self.make_args.env_vars["LLVM_CONFIG"] = self.config.cheri_sdk_bindir / "llvm-config"
         cheri_mips_sysroot = BuildCHERIBSD.get_instance(self,
-            cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID).target_info.sysroot_dir
-        base_xcflags = "-target mips64-unknown-freebsd13 -mcpu=beri -integrated-as -msoft-float --sysroot=" + str(cheri_mips_sysroot)
+                                                        cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID).target_info.sysroot_dir
+        base_xcflags = "-target mips64-unknown-freebsd13 -mcpu=beri -integrated-as -msoft-float --sysroot=" + str(
+            cheri_mips_sysroot)
         base_flags = self.make_args.copy()
         base_flags.env_vars["XCFLAGS"] = base_xcflags + " -mabi=n64"
-        #  $  XCC=${SDK_PATH}/bin/clang XCFLAGS='-cheri-linker -target mips64-unknown-freebsd -mcpu=mips3 -integrated-as -msoft-float' gmake
+        #  $  XCC=${SDK_PATH}/bin/clang XCFLAGS='-cheri-linker -target mips64-unknown-freebsd -mcpu=mips3
+        #  -integrated-as -msoft-float' gmake
         self.run_make(options=base_flags, cwd=self.source_dir)
-        #  $  XCC=${SDK_PATH}/bin/clang XCFLAGS='-cheri-linker -target mips64-unknown-freebsd -mcpu=mips3 -integrated-as -msoft-float' gmake
+        #  $  XCC=${SDK_PATH}/bin/clang XCFLAGS='-cheri-linker -target mips64-unknown-freebsd -mcpu=mips3
+        #  -integrated-as -msoft-float' gmake
         llvm_mode_flags = self.make_args.copy()
         llvm_mode_flags.env_vars["XCFLAGS"] = base_xcflags + " -mabi=purecap"
         self.run_make(options=llvm_mode_flags, cwd=self.source_dir / "llvm_mode")

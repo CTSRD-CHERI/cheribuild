@@ -40,9 +40,10 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     project_name = "compiler-rt"
     default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
-                              CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + \
-                              CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
+    supported_architectures = \
+        CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
+        CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + \
+        CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

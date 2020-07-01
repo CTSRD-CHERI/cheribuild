@@ -154,6 +154,7 @@ class BuildCheriVis(Project):
         else:
             self.run_make("install", cwd=self.source_dir)
 
+
 #
 # Some of these settings seem required:
 """

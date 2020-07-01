@@ -83,20 +83,20 @@ class BuildNginx(CrossCompileAutotoolsProject):
         if self.should_include_debug_info:
             self.configure_args.append("--with-debug")
         self.configure_args.extend(["--without-pcre",
-                                   "--without-http_rewrite_module",
-                                   "--with-http_v2_module",
-                                   "--with-http_ssl_module",
-                                   "--without-http_gzip_module",
-                                   "--without-http_rewrite_module",
-                                   "--without-pcre",
-                                   "--builddir=" + str(self.build_dir)])
+                                    "--without-http_rewrite_module",
+                                    "--with-http_v2_module",
+                                    "--with-http_ssl_module",
+                                    "--without-http_gzip_module",
+                                    "--without-http_rewrite_module",
+                                    "--without-pcre",
+                                    "--builddir=" + str(self.build_dir)])
         if not self.compiling_for_host():
             self.LDFLAGS.append("-v")
             self.configure_args.extend(["--crossbuild=FreeBSD:12.0-CURRENT:mips",
-                                       "--with-cc-opt=" + commandline_to_str(self.default_compiler_flags),
-                                       "--with-ld-opt=" + commandline_to_str(self.default_ldflags),
-                                       "--sysroot=" + str(self.sdk_sysroot),
-                                       ])
+                                        "--with-cc-opt=" + commandline_to_str(self.default_compiler_flags),
+                                        "--with-ld-opt=" + commandline_to_str(self.default_ldflags),
+                                        "--sysroot=" + str(self.sdk_sysroot),
+                                        ])
             self.configure_environment["CC_TEST_FLAGS"] = commandline_to_str(self.default_compiler_flags)
             self.configure_environment["NGX_TEST_LD_OPT"] = commandline_to_str(self.default_ldflags)
             self.configure_environment["NGX_SIZEOF_int"] = "4"
