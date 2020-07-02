@@ -125,7 +125,7 @@ class Target(object):
             # TODO: make this an error once I have a clean solution for the pseudo targets
             warning_message(self.name, "has already been tested!")
             return
-        self._do_run(config, msg="Ran benchmarks", func=lambda project: project.run_benchmarks())
+        self._do_run(config, msg="Ran tests", func=lambda project: project.run_tests())
         self._tests_have_run = True
 
     def run_benchmarks(self, config: "CheriConfig"):
@@ -133,7 +133,7 @@ class Target(object):
             # TODO: make this an error once I have a clean solution for the pseudo targets
             warning_message(self.name, "has already been tested!")
             return
-        self._do_run(config, msg="Ran tests", func=lambda project: project.run_tests())
+        self._do_run(config, msg="Ran benchmarks", func=lambda project: project.run_benchmarks())
         self._benchmarks_have_run = True
 
     def reset(self):
