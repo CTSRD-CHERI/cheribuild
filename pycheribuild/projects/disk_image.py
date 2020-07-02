@@ -305,7 +305,8 @@ class _BuildDiskImageBase(SimpleProject):
             SRCPATH=self.config.source_root, ROOTFS_DIR=self.rootfs_dir)
         self.create_file_for_image("/sbin/qemu-do-reroot.sh", contents=do_reroot_script,
                                    mode=0o755, show_contents_non_verbose=False)
-
+        self.create_file_for_image("/sbin/startup-benchmark.sh", mode=0o755, show_contents_non_verbose=False,
+                                   contents=include_local_file("files/cheribsd/startup-benchmark.sh"))
         # Add a script to launch gdb, run a program and get a backtrace:
         self.create_file_for_image("/usr/bin/gdb-run.sh", contents=include_local_file("files/cheribsd/gdb-run.sh"),
                                    mode=0o755, show_contents_non_verbose=False)

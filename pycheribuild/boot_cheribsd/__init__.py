@@ -632,9 +632,15 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
                                              trap_on_unrepresentable=trap_on_unrepresentable,  # For debugging
                                              add_virtio_rng=True  # faster entropy gathering
                                              )
+    kernel_commandline = []
+    if kernel_init_only:
+        kernel_commandline.append("init_path=/sbin/startup-benchmark.sh")
     if skip_ssh_setup:
+        kernel_commandline.append("cheribuild.skip_sshd=1")
+        kernel_commandline.append("cheribuild.skip_entropy=1")
+    if kernel_commandline:
         qemu_args.append("-append")
-        qemu_args.append("cheribuild.skip_sshd=1 cheribuild.skip_entropy=1")
+        qemu_args.append(" ".join(kernel_commandline))
     success("Starting QEMU: ", " ".join(qemu_args))
     qemu_starttime = datetime.datetime.now()
     global _SSH_SOCKET_PLACEHOLDER
@@ -658,6 +664,14 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    if kernel_init_only:
+        # To test kernel startup time
+        child.expect_exact("Uptime: ", timeout=60)
+        i = child.expect([pexpect.TIMEOUT, "Please press any key to reboot.", pexpect.EOF], timeout=240)
+        if i == 0:
+            failure("QEMU didn't exit after shutdown!")
+        return child
     try:
         # BOOTVERBOSE is off for the amd64 kernel so we don't see the STARTING_INIT message
         bootverbose = child.xtarget.is_mips(include_purecap=True) or child.xtarget.is_riscv(include_purecap=True)
@@ -679,9 +693,6 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
                 success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
 
         userspace_starttime = datetime.datetime.now()
-        if kernel_init_only:
-            # To test kernel startup time
-            return child
         # TODO: add bad mountroot messages rather than waiting for timeout
         boot_expect_strings = [LOGIN, SHELL_OPEN, BOOT_FAILURE]
         i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=15 * 60,
