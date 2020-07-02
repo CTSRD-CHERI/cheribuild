@@ -155,6 +155,10 @@ class BuildFettConfig(CrossCompileProject):
                        nginx_prefix / "conf/fastcgi.conf")
         mtree.add_file(voting_src / "common/conf/sites/voting.conf",
                        nginx_prefix / "conf/sites/voting.conf")
+        mtree.add_file(nginx_src / "common/keys/fett-voting.key",
+                       nginx_prefix / "etc/ssl/private/fett-voting.key", mode="0600")
+        mtree.add_file(nginx_src / "common/certs/fett-voting.crt",
+                       nginx_prefix / "etc/ssl/certs/fett-voting.crt")
         mtree.add_file(voting_src / "freebsd/fett_bvrs.sh",
                        "etc/rc.d/fett_bvrs", mode="0555")
 
