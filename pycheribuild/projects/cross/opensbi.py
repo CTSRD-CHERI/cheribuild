@@ -30,6 +30,7 @@
 
 from pathlib import Path
 
+from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CPUArchitecture, DefaultInstallDir, GitRepository,
                        MakeCommandKind, Project)
 from ...config.compilation_targets import CompilationTargets
@@ -119,6 +120,13 @@ class BuildOpenSBI(Project):
             args = self.make_args.copy()
             args.set(PLATFORM=platform)
             self.run_make_install(cwd=self.source_dir, options=args)
+        # Only install BuildBBLNoPayload as the QEMU bios and not the GFE version by checking build_dir_suffix
+        if self.crosscompile_target.is_cheri_hybrid() and not self.build_dir_suffix:
+            # Install into the QEMU firware directory so that `-bios default` works
+            qemu_fw_dir = BuildQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "share/qemu/"
+            self.makedirs(qemu_fw_dir)
+            self.run_cmd(self.sdk_bindir / "llvm-objcopy", "-S", "-O", "binary",
+                         self._fw_jump_path(), qemu_fw_dir / "opensbi-riscv64cheri-virt-fw_jump.bin")
 
     def _fw_jump_path(self) -> Path:
         # share/opensbi/lp64/generic/firmware//fw_payload.bin
