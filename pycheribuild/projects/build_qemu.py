@@ -232,7 +232,7 @@ class BuildQEMU(BuildQEMUBase):
                                force_branch=True)
     default_targets = "cheri128-softmmu,mips64-softmmu," \
                       "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu," \
-                      "x86_64-softmmu"
+                      "x86_64-softmmu,aarch64-softmmu"
 
     @classmethod
     def setup_config_options(cls, **kwargs):
