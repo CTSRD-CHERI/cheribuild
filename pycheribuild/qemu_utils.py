@@ -63,7 +63,7 @@ class QemuOptions:
         elif xtarget.is_aarch64():
             self.qemu_arch_sufffix = "aarch64"
             self.can_boot_kernel_directly = False  # boot from disk
-            self.machine_flags = ["-M", "virt"]
+            self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "cortex-a72", "-bios", "edk2-aarch64-code.fd"]
         else:
             raise ValueError("Unknown target " + str(xtarget))
 
