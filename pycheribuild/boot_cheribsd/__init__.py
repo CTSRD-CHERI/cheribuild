@@ -67,6 +67,7 @@ SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHER
                                                          CompilationTargets.CHERIBSD_RISCV_HYBRID,
                                                          CompilationTargets.CHERIBSD_RISCV_PURECAP,
                                                          CompilationTargets.CHERIBSD_X86_64,
+                                                         CompilationTargets.CHERIBSD_AARCH64,
                                                          )}
 
 STARTING_INIT = "start_init: trying /sbin/init"
@@ -1003,7 +1004,7 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
     else:
         args.qemu_cmd = qemu_options.get_qemu_binary()
         if args.qemu_cmd is None:
-            failure("ERROR: Cannot find QEMU binary for target", qemu_options.qemu_arch_sufffix, exit=True)
+            failure("ERROR: Cannot find QEMU binary for target ", qemu_options.qemu_arch_sufffix, exit=True)
 
     global PRETEND
     if args.pretend:

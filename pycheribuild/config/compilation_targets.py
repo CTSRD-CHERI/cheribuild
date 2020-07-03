@@ -332,10 +332,9 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         # mount_sysroot may be needed for projects such as QtWebkit where the minimal image doesn't contain all the
         # necessary libraries
         xtarget = self.target
-        # Only supported for CheriBSD-MIPS,RISC-V and x86-64 right now:
-        if not xtarget.is_mips(include_purecap=True) and not xtarget.is_riscv(
-                include_purecap=True) and not xtarget.is_x86_64(include_purecap=True):
-            self.project.warning("CheriBSD test scripts currently only work for MIPS, RISC-V and x86-64")
+        if xtarget.cpu_architecture not in (CPUArchitecture.MIPS64, CPUArchitecture.RISCV64,
+                                            CPUArchitecture.X86_64, CPUArchitecture.AARCH64):
+            self.project.warning("CheriBSD test scripts currently only work for MIPS, RISC-V, AArch64 and x86-64")
             return
         if kernel_path is None and "--kernel" not in self.config.test_extra_args:
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
@@ -373,11 +372,18 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if "--kernel" not in self.config.test_extra_args:
             cmd.extend(["--kernel", kernel_path])
         if "--qemu-cmd" not in self.config.test_extra_args:
+            qemu_path = None
             if xtarget.is_riscv(include_purecap=True) or xtarget.is_mips(include_purecap=True):
                 from ..projects.build_qemu import BuildQEMU
                 qemu_path = BuildQEMU.qemu_cheri_binary(self.project)
                 if not qemu_path.exists():
                     self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
+            else:
+                from ..qemu_utils import QemuOptions
+                binary_name = "qemu-system-" + QemuOptions(xtarget).qemu_arch_sufffix
+                if (self.config.qemu_bindir / binary_name).is_file():
+                    qemu_path = self.config.qemu_bindir / binary_name
+            if qemu_path is not None:
                 cmd.extend(["--qemu-cmd", qemu_path])
         if mount_builddir and self.project.build_dir and "--build-dir" not in self.config.test_extra_args:
             cmd.extend(["--build-dir", self.project.build_dir])
