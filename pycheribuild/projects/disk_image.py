@@ -558,7 +558,7 @@ class _BuildDiskImageBase(SimpleProject):
         # AArch64 and x86 require different disk images:
         if self.crosscompile_target.is_aarch64(include_purecap=True):
             self.make_aarch64_disk_image()
-        if self.is_x86:
+        elif self.is_x86:
             root_partition = self.disk_image_path.with_suffix(".partition.img")
             self.make_rootfs_image(root_partition)
             self.build_gpt_image(root_partition)
