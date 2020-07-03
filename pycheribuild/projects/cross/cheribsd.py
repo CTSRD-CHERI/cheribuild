@@ -912,10 +912,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.crosscompile_target.is_any_x86():
             # seems to be missing some include paths which appears to work on freebsd
             self.make_args.set_with_options(BHYVE=False)
-            # BOOT is required
-            self.make_args.set_with_options(BOOT=True)
-        else:
-            self.make_args.set_with_options(BOOT=False)
+        # BOOT is required for x86 and aarch64
+        self.make_args.set_with_options(BOOT=True)
 
     def libcompat_name(self) -> str:
         if self.crosscompile_target.is_cheri_purecap():
