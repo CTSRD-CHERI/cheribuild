@@ -519,7 +519,7 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
 
 
 class BuildLMBench(CrossCompileProject):
-    repository = GitRepository("git@github.com:qwattash/lmbench")
+    repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-lmbench", default_branch="cheri-lmbench")
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS
     project_name = "lmbench"
@@ -602,7 +602,7 @@ class BuildLMBench(CrossCompileProject):
 
 
 class BuildUnixBench(CrossCompileProject):
-    repository = GitRepository("git@github.com:qwattash/byte-unixbench")
+    repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-unixbench", default_branch="cheri-unixbench")
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS
     project_name = "unixbench"
@@ -675,7 +675,7 @@ class BuildUnixBench(CrossCompileProject):
 
 
 class NetPerfBench(CrossCompileAutotoolsProject):
-    repository = GitRepository("git@github.com:qwattash/netperf", default_branch="cheri")
+    repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-netperf", default_branch="cheri-netperf")
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     project_name = "netperf"
