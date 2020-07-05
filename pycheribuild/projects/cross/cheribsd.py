@@ -1322,21 +1322,21 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         super().setup_config_options(**kwargs)
         cls.build_fpga_kernels = cls.add_bool_option("build-fpga-kernels", show_help=True, _allow_unknown_targets=True,
                                                      default=True, help="Also build kernels for the FPGA.")
-        cls.purecap_kernel = cls.add_bool_option("pure-cap-kernel", show_help=True, _allow_unknown_targets=True,
-                                                 only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP],
-                                                 help="Build kernel with pure capability ABI (experimental)")
 
-    def process(self):
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         from ..disk_image import BuildMinimalCheriBSDDiskImage
-        minimal_image_instance = BuildMinimalCheriBSDDiskImage.get_instance(self)
-        image = minimal_image_instance.disk_image_path
+        self.minimal_image_instance = BuildMinimalCheriBSDDiskImage.get_instance(self)
         # Re-use the same build directory as the CheriBSD target that was used for the disk image
         # This ensure that the kernel build tools can be found in the build directory
-        build_cheribsd_instance = minimal_image_instance.cheribsd_class.get_instance(self)
-        default_kernconf = self._get_kernconf_to_build(build_cheribsd_instance)
+        self.image = self.minimal_image_instance.disk_image_path
+        self.build_cheribsd_instance = self.minimal_image_instance.cheribsd_class.get_instance(self)
+
+    def process(self):
+        default_kernconf = self._get_kernconf_to_build(self.build_cheribsd_instance)
         kernel_configs = [default_kernconf]
         # TODO: add the benchmark ones for RISCV
-        has_benchmark_kernel = build_cheribsd_instance.crosscompile_target.is_mips(include_purecap=True)
+        has_benchmark_kernel = self.build_cheribsd_instance.crosscompile_target.is_mips(include_purecap=True)
         # also build the benchmark kernel:
         if has_benchmark_kernel:
             kernel_configs.append(default_kernconf + "_BENCHMARK")
@@ -1347,18 +1347,19 @@ class BuildCheriBsdMfsKernel(SimpleProject):
                 kernel_configs.append(fpga_conf + "_BENCHMARK")
         if self.config.clean:
             for kernconf in kernel_configs:
-                kernel_dir = build_cheribsd_instance.kernel_objdir(kernconf)
+                kernel_dir = self.build_cheribsd_instance.kernel_objdir(kernconf)
                 if kernel_dir:
                     with self.async_clean_directory(kernel_dir):
                         self.verbose_print("Cleaning ", kernel_dir)
-        self._build_and_install_kernel_binaries(build_cheribsd_instance, kernconfs=kernel_configs, image=image)
+        self._build_and_install_kernel_binaries(
+            self.build_cheribsd_instance, kernconfs=kernel_configs, image=self.image)
 
     @property
     def fpga_kernconf(self):
         if self.compiling_for_mips(include_purecap=True):
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
                 prefix = "CHERI_" if self.config.mips_cheri_bits == 128 else "CHERI"
-                purecap = "PURECAP_" if self.purecap_kernel else ""
+                purecap = "PURECAP_" if self.build_cheribsd_instance.purecap_kernel else ""
                 return "{}{}DE4_MFS_ROOT".format(prefix, purecap)
             return "BERI_DE4_MFS_ROOT"
         elif self.compiling_for_riscv(include_purecap=True):
