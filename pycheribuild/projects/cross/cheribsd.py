@@ -1631,7 +1631,8 @@ class BuildCheriBsdSysroot(SimpleProject):
         if not bsdtar_path:
             bsdtar_path = str(self.bsdtar_cmd)
         tar_cmd = [bsdtar_path, "cf", "-", "--include=./lib/", "--include=./usr/include/",
-                   "--include=./usr/lib/", "--include=./usr/libdata/", "--include=./usr/libcheri",
+                   "--include=./usr/lib/", "--include=./usr/libdata/",
+                   "--include=./usr/libcheri", "--include=./usr/lib32", "--include=./usr/lib64",
                    # only pack those files that are mentioned in METALOG
                    "@METALOG"]
         if self.compiling_for_mips(include_purecap=False) and self.use_cheri_sysroot_for_mips:
