@@ -136,13 +136,11 @@ class BuildFettConfig(CrossCompileProject):
             "index.js",
             "jquery-3.5.1.min.js",
             "pure-min.css",
-            "query.js",
             "registration_verification.js",
             "style.css",
             "voter_home.html",
             "voter_registration.html",
             "voter_registration_confirmation.html",
-            "voter_registration_update.html",
             "voter_registration_update_login.html",
             "voter_registration_verification.html",
             ]
