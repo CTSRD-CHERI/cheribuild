@@ -1365,9 +1365,8 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     def fpga_kernconf(self):
         if self.compiling_for_mips(include_purecap=True):
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                prefix = "CHERI_" if self.config.mips_cheri_bits == 128 else "CHERI"
                 purecap = "PURECAP_" if self.build_cheribsd_instance.purecap_kernel else ""
-                return "{}{}DE4_MFS_ROOT".format(prefix, purecap)
+                return "CHERI_{}DE4_MFS_ROOT".format(purecap)
             return "BERI_DE4_MFS_ROOT"
         elif self.compiling_for_riscv(include_purecap=True):
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
