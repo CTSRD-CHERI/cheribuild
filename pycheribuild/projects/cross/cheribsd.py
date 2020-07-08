@@ -64,6 +64,8 @@ def default_kernel_config(_: CheriConfig, project: SimpleProject) -> str:
     elif xtarget.is_riscv(include_purecap=True):
         # TODO: purecap/hybrid kernel
         if xtarget.is_hybrid_or_purecap_cheri():
+            if project.purecap_kernel:
+                return "CHERI-PURECAP-QEMU"
             return "CHERI_QEMU"
         return "QEMU"  # default to the QEMU config
     elif xtarget.is_aarch64(include_purecap=True):
@@ -1195,7 +1197,9 @@ class BuildCHERIBSD(BuildFreeBSD):
         # We also want to add this config option to the fake "cheribsd" target (to keep the config file manageable)
         cls.purecap_kernel = cls.add_bool_option("pure-cap-kernel", show_help=True, _allow_unknown_targets=True,
                                                  only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP,
-                                                                       CompilationTargets.CHERIBSD_MIPS_HYBRID],
+                                                                       CompilationTargets.CHERIBSD_MIPS_HYBRID,
+                                                                       CompilationTargets.CHERIBSD_RISCV_PURECAP,
+                                                                       CompilationTargets.CHERIBSD_RISCV_HYBRID],
                                                  help="Build kernel with pure capability ABI (experimental)")
 
     def __init__(self, config: CheriConfig):
@@ -1240,7 +1244,10 @@ class BuildCHERIBSD(BuildFreeBSD):
                     self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT_BENCHMARK")
             elif self.compiling_for_riscv(include_purecap=True):
                 if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                    self.extra_kernels_with_mfs.append("CHERI_GFE")
+                    if self.purecap_kernel:
+                        self.extra_kernels_with_mfs.append("CHERI-PURECAP-GFE")
+                    else:
+                        self.extra_kernels_with_mfs.append("CHERI_GFE")
                 else:
                     self.extra_kernels_with_mfs.append("GFE")
             else:
@@ -1363,7 +1370,11 @@ class BuildCheriBsdMfsKernel(SimpleProject):
                 return "{}{}DE4_MFS_ROOT".format(prefix, purecap)
             return "BERI_DE4_MFS_ROOT"
         elif self.compiling_for_riscv(include_purecap=True):
-            return "CHERI_GFE" if self.crosscompile_target.is_hybrid_or_purecap_cheri() else "GFE"
+            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                if self.build_cheribsd_instance.purecap_kernel:
+                    return "CHERI-PURECAP-GFE"
+                return "CHERI_GFE"
+            return "GFE"
         else:
             self.fatal("Invalid ARCH")
             return "INVALID_KERNCONF"
