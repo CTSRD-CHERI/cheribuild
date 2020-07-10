@@ -451,6 +451,17 @@ class _BuildDiskImageBase(SimpleProject):
                         ], cwd=self.rootfs_dir)
         self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
 
+    def build_riscv_gpt_image(self, root_partition: Path):
+        assert self.crosscompile_target.is_riscv(include_purecap=True)
+        # See mk_nogeli_gpt_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
+        self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
+                        # "-f", "raw",  # raw disk image instead of qcow2
+                        "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
+                        "-p", "freebsd-swap/swap::2G",
+                        "-o", self.disk_image_path  # output file
+                        ], cwd=self.rootfs_dir)
+        self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
+
     def make_aarch64_disk_image(self):
         assert self.crosscompile_target.is_aarch64(include_purecap=True)
         root_partition = self.disk_image_path.with_suffix(".partition.img")
@@ -562,6 +573,11 @@ class _BuildDiskImageBase(SimpleProject):
             root_partition = self.disk_image_path.with_suffix(".partition.img")
             self.make_rootfs_image(root_partition)
             self.build_gpt_image(root_partition)
+            self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
+        elif self.crosscompile_target.is_riscv(include_purecap=True):
+            root_partition = self.disk_image_path.with_suffix(".partition.img")
+            self.make_rootfs_image(root_partition)
+            self.build_riscv_gpt_image(root_partition)
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
         else:
             self.make_rootfs_image(self.disk_image_path)
