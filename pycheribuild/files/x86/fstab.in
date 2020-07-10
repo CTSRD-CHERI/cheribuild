@@ -1,5 +1,5 @@
 # Device        Mountpoint      FStype  Options                     Dump    Pass#
-/dev/vtbd0p2     /               ufs     rw,noatime                 1   	1
+/dev/ufs/root     /               ufs     rw,noatime                 1   	1
 # MBR: /dev/ada0s1a	/            ufs     rw,noatime,async,failok    1       1
 {tmpfsrem}tmpfs /tmp            tmpfs   rw,failok                   0       0
 

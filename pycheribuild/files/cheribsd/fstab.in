@@ -1,4 +1,4 @@
-/dev/ada0 / ufs rw,noatime,async,failok 1 1
+/dev/ufs/root / ufs rw,noatime,async,failok 1 1
 {tmpfsrem}tmpfs /tmp tmpfs rw,failok 0 0
 
 # Uncomment to automount the default QEMU smbfs
