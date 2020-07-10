@@ -127,6 +127,8 @@ class BuildFettConfig(CrossCompileProject):
         mtree.add_dir(voting_prefix / "bvrs/bvrs")
         mtree.add_file(voting_src / "common/static/index.html",
                        voting_prefix / "bvrs/index.html")
+        mtree.add_file(src / "build/webserver/common/html/favicon.ico",
+                       voting_prefix / "bvrs/favicon.ico")
         html_files = [
             "election_official_home.html",
             "election_official_login.html",
