@@ -517,10 +517,10 @@ class _BuildDiskImageBase(SimpleProject):
             extra_flags = []
             if self.is_x86:
                 # x86: -t ffs -f 200000 -s 8g -o version=2,bsize=32768,fsize=4096
-                extra_flags = ["-o", "bsize=32768,fsize=4096"]
+                extra_flags = ["-o", "bsize=32768,fsize=4096,label=root"]
             self.run_cmd([self.makefs_cmd] + debug_options + extra_flags + [
                 "-t", "ffs",  # BSD fast file system
-                "-o", "version=2",  # UFS2
+                "-o", "version=2,label=root",  # UFS2
                 "-o", "softupdates=1",  # Enable soft updates journaling
                 "-Z",  # sparse file output
                 # For the minimal image 2mb of free space and 1k inodes should be enough
@@ -967,7 +967,7 @@ class _X86FileTemplates(_AdditionalFileTemplates):
 class _AArch64FileTemplates(_AdditionalFileTemplates):
     def get_fstab_template(self):
         return """
-/dev/vtbd0s2	/	ufs	rw,noatime,async	1	1
+/dev/ufs/root	/	ufs	rw,noatime,async	1	1
 {tmpfsrem}tmpfs /tmp tmpfs rw,failok 0 0
 """
 
