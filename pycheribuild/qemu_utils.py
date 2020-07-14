@@ -59,7 +59,8 @@ class QemuOptions:
         elif xtarget.is_any_x86():
             self.qemu_arch_sufffix = "x86_64" if xtarget.is_x86_64() else "i386"
             self.can_boot_kernel_directly = False  # boot from disk
-            self.machine_flags = []  # default CPU (and NOT -M virt!)
+            # Try to use KVM instead of TCG if possible to speed up emulation
+            self.machine_flags = ["-M", "accel=kvm:xen:hax:tcg"]  # default CPU (and NOT -M virt!)
         elif xtarget.is_aarch64():
             self.qemu_arch_sufffix = "aarch64"
             self.can_boot_kernel_directly = False  # boot from disk
