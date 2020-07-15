@@ -1255,7 +1255,10 @@ class BuildCHERIBSD(BuildFreeBSD):
         if self.build_fett_kernels:
             if self.compiling_for_riscv(include_purecap=True):
                 if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                    self.extra_kernels.append("CHERI_FETT")
+                    if self.purecap_kernel:
+                        self.extra_kernels_with_mfs.append("CHERI-PURECAP-FETT")
+                    else:
+                        self.extra_kernels_with_mfs.append("CHERI_FETT")
                 else:
                     self.extra_kernels.append("FETT")
             else:
