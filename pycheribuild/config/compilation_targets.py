@@ -267,9 +267,9 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if is_jenkins_build():
             # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
             return self.config.cheri_sdk_dir / "sysroot"
-        return self.get_cheribsd_sysroot_path()
+        return self.get_cheribsd_sysroot_path(separate_cheri_sysroots=True)
 
-    def get_cheribsd_sysroot_path(self, separate_cheri_sysroots=False) -> Path:
+    def get_cheribsd_sysroot_path(self, separate_cheri_sysroots) -> Path:
         """
         :param separate_cheri_sysroots: If true will use a separate sysroot dir for purecap and hybrid sysroots. The
         default behaviour is to use the hybrid sysroot for both purecap and hybrid applications.
