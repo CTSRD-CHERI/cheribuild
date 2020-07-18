@@ -238,15 +238,8 @@ class BuildFreeBSDBase(Project):
     # Return the path the a potetial sysroot created from installing this project
     # Currently we only create sysroots for CheriBSD but we might change that in the future
     def get_corresponding_sysroot(self) -> "typing.Optional[Path]":
-        if self.target_info.is_cheribsd():
-            # Note: we can't use self.target_info.sysroot_dir here since we currently build
-            # both purecap and hybrid targets against the same sysroot.
-            # For MIPS self.target_info.sysroot_dir is $CHERI_SDK/sysroot128 in both cases, but we
-            # want to install the purecap one (with default ABI == purecap) to sysroot-purecap128
-            return self.target_info.get_cheribsd_sysroot_path(separate_cheri_sysroots=True)
-        else:
-            assert not self.has_installsysroot_target, "Not implemented yet"
-            return self.target_info.sysroot_dir
+        assert self.has_installsysroot_target, "Not implemented yet"
+        return self.target_info.sysroot_dir
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
         self.fatal("Building FreeBSD/CheriBSD with LTO is not supported (yet).")

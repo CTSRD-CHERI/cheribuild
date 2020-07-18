@@ -267,22 +267,19 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if is_jenkins_build():
             # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
             return self.config.cheri_sdk_dir / "sysroot"
-        return self.get_cheribsd_sysroot_path(separate_cheri_sysroots=True)
+        return self.get_cheribsd_sysroot_path()
 
-    def get_cheribsd_sysroot_path(self, separate_cheri_sysroots) -> Path:
+    def get_cheribsd_sysroot_path(self) -> Path:
         """
-        :param separate_cheri_sysroots: If true will use a separate sysroot dir for purecap and hybrid sysroots. The
-        default behaviour is to use the hybrid sysroot for both purecap and hybrid applications.
         :return: The sysroot path
         """
         config = self.config
         if self.target.is_mips(include_purecap=True):
-            return self._sysroot_path(config.cheri_sdk_dir, separate_cheri_sysroots,
-                                      purecap_prefix="-purecap", hybrid_prefix="", nocheri_name="-mips")
+            return self._sysroot_path(config.cheri_sdk_dir, purecap_prefix="-purecap", hybrid_prefix="",
+                                      nocheri_name="-mips")
         elif self.target.is_riscv(include_purecap=True):
-            return self._sysroot_path(config.cheri_sdk_dir, separate_cheri_sysroots,
-                                      purecap_prefix="-riscv64-purecap", hybrid_prefix="-riscv64-hybrid",
-                                      nocheri_name="-riscv64")
+            return self._sysroot_path(config.cheri_sdk_dir, purecap_prefix="-riscv64-purecap",
+                                      hybrid_prefix="-riscv64-hybrid", nocheri_name="-riscv64")
         elif self.target.is_aarch64():
             return config.cheri_sdk_dir / "sysroot-aarch64"
         elif self.target.is_x86_64():
@@ -290,12 +287,10 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         else:
             assert False, "Invalid cross_compile_target: " + str(self.target)
 
-    def _sysroot_path(self, root_dir: Path, separate_cheri_sysroots: bool, *, purecap_prefix: str,
-                      hybrid_prefix: str, nocheri_name: str):
-        if self.target.is_cheri_hybrid() or (self.target.is_cheri_purecap() and not separate_cheri_sysroots):
+    def _sysroot_path(self, root_dir: Path, *, purecap_prefix: str, hybrid_prefix: str, nocheri_name: str):
+        if self.target.is_cheri_hybrid():
             return root_dir / ("sysroot" + hybrid_prefix + self.target.cheri_config_suffix(self.config))
         elif self.target.is_cheri_purecap():
-            assert separate_cheri_sysroots, "Logic error?"
             return root_dir / ("sysroot" + purecap_prefix + self.target.cheri_config_suffix(self.config))
         assert not self.target.is_hybrid_or_purecap_cheri()
         return root_dir / ("sysroot" + nocheri_name)
