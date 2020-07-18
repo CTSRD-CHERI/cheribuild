@@ -768,7 +768,7 @@ class CompilationTargets(BasicCompilationTargets):
                                                           hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
     # FreeBSD targets
     FREEBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, FreeBSDTargetInfo)
-    FREEBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, FreeBSDTargetInfo)
+    FREEBSD_RISCV = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, FreeBSDTargetInfo)
     FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, FreeBSDTargetInfo)
     FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, FreeBSDTargetInfo)
     FREEBSD_X86_64 = CrossCompileTarget("amd64", CPUArchitecture.X86_64, FreeBSDTargetInfo)
