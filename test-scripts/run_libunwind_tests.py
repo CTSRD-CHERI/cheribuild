@@ -72,9 +72,9 @@ def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Nam
 
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
-    parser.add_argument("--lit-debug-output", action="store_true")
-    parser.add_argument("--llvm-lit-path")
-    parser.add_argument("--xunit-output", default="qemu-libunwind-test-results.xml")
+    # Only 10 tests, don't do the multiprocessing here
+    run_remote_lit_test.add_common_cmdline_args(parser, default_xunit_output="qemu-libunwind-test-results.xml",
+                                                allow_multiprocessing=False)
 
 
 def set_cmdline_args(args: argparse.Namespace):

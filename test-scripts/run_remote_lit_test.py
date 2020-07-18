@@ -62,6 +62,21 @@ class MultiprocessStages(Enum):
 CURRENT_STAGE = MultiprocessStages.FINDING_SSH_PORT  # type: MultiprocessStages
 
 
+def add_common_cmdline_args(parser: argparse.ArgumentParser, default_xunit_output: str, allow_multiprocessing: bool):
+    parser.add_argument("--ssh-executor-script", help="Path to the ssh.py executor script", required=True)
+    parser.add_argument("--use-shared-mount-for-tests", action="store_true", default=False)     # Not supported yet
+    parser.add_argument("--llvm-lit-path")
+    parser.add_argument("--xunit-output", default=default_xunit_output)
+    parser.add_argument("--lit-debug-output", action="store_true")
+    # For the parallel jobs
+    if allow_multiprocessing:
+        parser.add_argument("--multiprocessing-debug", action="store_true")
+        parser.add_argument("--parallel-jobs", metavar="N", type=int,
+                            help="Split up the testsuite into N parallel jobs")
+        parser.add_argument("--internal-num-shards", type=int, help=argparse.SUPPRESS)
+        parser.add_argument("--internal-shard", type=int, help=argparse.SUPPRESS)
+
+
 def mp_debug(cmdline_args: argparse.Namespace, *args, **kwargs):
     if cmdline_args.multiprocessing_debug:
         boot_cheribsd.info(*args, **kwargs)
@@ -202,14 +217,22 @@ Host cheribsd-test-instance
     if args.pretend:
         time.sleep(2.5)
 
-    # slow executor using scp:
-    # executor = 'SSHExecutor("localhost", username="{user}", port={port})'.format(user=user, port=port)
-    executor = 'SSHExecutorWithNFSMount("cheribsd-test-instance", username="{user}", port={port}, ' \
-               'nfs_dir="{host_dir}", path_in_target="/build/tmp",' \
-               'extra_ssh_flags=["-F", "{tempdir}/config", "-n", "-4"], ' \
-               'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port,
-                                                                    host_dir=str(test_build_dir / "tmp"),
-                                                                    tempdir=tempdir)
+    extra_ssh_args = commandline_to_str(("-n", "-4", "-F", "{tempdir}/config".format(tempdir=tempdir)))
+    extra_scp_args = commandline_to_str(("-F", "{tempdir}/config".format(tempdir=tempdir)))
+    if args.use_shared_mount_for_tests:
+        # FIXME: support NFS mount for new executor
+        boot_cheribsd.failure("use_shared_mount_for_tests not implemented yet!")
+        executor = "/bin/false"
+        # executor = 'SSHExecutorWithNFSMount("cheribsd-test-instance", username="{user}", port={port}, ' \
+        #            'nfs_dir="{host_dir}", path_in_target="/build/tmp",' \
+        #            'extra_ssh_flags=extra_ssh_args, ["-F", "{tempdir}/config", ], ' \
+        #            'extra_scp_flags=extra_scp_args)'.format(user=user, port=port,
+        #                                                                 host_dir=str(test_build_dir / "tmp"),
+        #                                                                 tempdir=tempdir)
+    else:
+        # slow executor using scp:
+        executor = commandline_to_str([args.ssh_executor_script, "--host", "cheribsd-test-instance",
+                                       "--extra-ssh-args=" + extra_ssh_args, "--extra-scp-args=" + extra_scp_args])
     # TODO: I was previously passing -t -t to ssh. Is this actually needed?
     boot_cheribsd.success("Running", testsuite, "tests with executor", executor)
     notify_main_process(args, MultiprocessStages.RUNNING_TESTS, mp_q)

@@ -548,7 +548,8 @@ def _set_pexpect_sh_prompt(child):
 class FakeSpawn(CheriBSDInstance):
     def __init__(self, qemu_config: QemuOptions, *args, **kwargs):
         # Just start cat for --pretend mode
-        super().__init__(qemu_config, "cat", **kwargs)
+        kwargs["timeout"] = 1
+        super().__init__(qemu_config, "cat", use_poll=True, **kwargs)
 
     def expect(self, *args, pretend_result=None, **kwargs):
         print("Expecting", args, file=sys.stderr, flush=True)

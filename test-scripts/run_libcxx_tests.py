@@ -50,13 +50,8 @@ from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
-    parser.add_argument("--lit-debug-output", action="store_true")
-    parser.add_argument("--multiprocessing-debug", action="store_true")
-    parser.add_argument("--xunit-output", default="qemu-libcxx-test-results.xml")
-    parser.add_argument("--parallel-jobs", metavar="N", type=int, help="Split up the testsuite into N parallel jobs")
-    # For the parallel jobs
-    parser.add_argument("--internal-num-shards", type=int, help=argparse.SUPPRESS)
-    parser.add_argument("--internal-shard", type=int, help=argparse.SUPPRESS)
+    run_remote_lit_test.add_common_cmdline_args(parser, default_xunit_output="qemu-libcxx-test-results.xml",
+                                                allow_multiprocessing=True)
 
 
 def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, disk_image, build_dir):

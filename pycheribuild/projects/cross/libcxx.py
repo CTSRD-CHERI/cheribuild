@@ -57,12 +57,7 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)  # Adding -ldl won't work: no libdl in /usr/libcheri
-        self.lit_path = BuildCheriLLVM.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit"
-        self.add_cmake_options(
-            LLVM_PATH=BuildCheriLLVM.get_source_dir(self, cross_target=CompilationTargets.NATIVE) / "llvm",
-            LLVM_EXTERNAL_LIT=self.lit_path,
-            )
+        # self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)  # Adding -ldl won't work: no libdl in /usr/libcheri
 
     def configure(self, **kwargs):
         # TODO: should share some code with libcxx
@@ -94,8 +89,10 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
         else:
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=False,
                                    LIBUNWIND_ENABLE_SHARED=True)
-            collect_test_binaries = self.build_dir / "test-output"
-            executor = "CollectBinariesExecutor(\\\"{path}\\\", self)".format(path=collect_test_binaries)
+            # collect_test_binaries = self.build_dir / "test-output"
+            # executor = commandline_to_str([self.source_dir / "../libcxx/utils/copy_files.py",
+            #                                "--output-dir", collect_test_binaries])
+            executor = commandline_to_str([self.source_dir / "../libcxx/utils/compile_only.py"])
             self.add_cmake_options(
                 LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                               "/libunwind-test-results.xml --max-time 3600 --timeout 120 -s -vv -j1",
@@ -124,7 +121,9 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
             # Check that the four tests compile and then attempt to run them:
             self.run_make("check-unwind", cwd=self.build_dir)
             self.target_info.run_cheribsd_test_script("run_libunwind_tests.py", "--lit-debug-output",
-                                                      "--llvm-lit-path", self.lit_path, mount_sysroot=True)
+                                                      "--ssh-executor-script",
+                                                      self.source_dir / "../libcxx/utils/ssh.py",
+                                                      mount_sysroot=True)
 
 
 class BuildLibCXXRT(_CxxRuntimeCMakeProject):
@@ -237,9 +236,6 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         self.add_cmake_options(
             CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
             LIBCXX_INCLUDE_TESTS=True,
-            LLVM_PATH=BuildCheriLLVM.get_source_dir(self, cross_target=CompilationTargets.NATIVE) / "llvm",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.get_build_dir(self,
-                                                           cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                           "/libcxx-test-results.xml --max-time 3600 --timeout 120 -s -vv" + self.libcxx_lit_jobs
@@ -315,9 +311,10 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             LIBCXX_ENABLE_STATIC_ABI_LIBRARY=not self.target_info.is_baremetal(),
             )
         if self.only_compile_tests:
-            executor = "CompileOnlyExecutor()"
+            executor = commandline_to_str([self.source_dir / "utils/compile_only.py"])
         elif self.collect_test_binaries:
-            executor = "CollectBinariesExecutor(\\\"{path}\\\", self)".format(path=self.collect_test_binaries)
+            executor = commandline_to_str([self.source_dir / "utils/copy_files.py",
+                                           "--output-dir", self.collect_test_binaries])
         elif self.target_info.is_baremetal():
             run_qemu_script = self.target_info.sdk_root_dir / "baremetal/mips64-qemu-elf/bin/run_with_qemu.py"
             if not run_qemu_script.exists():
@@ -326,17 +323,19 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             prefix = [str(run_qemu_script), "--qemu", str(BuildQEMU.qemu_cheri_binary(self)), "--timeout", "20"]
             prefix_list = '[\\\"' + "\\\", \\\"".join(prefix) + "\\\"]"
             executor = "PrefixExecutor(" + prefix_list + ", LocalExecutor())"
-            print(executor)
         elif self.nfs_mounted_path:
             self.libcxx_lit_jobs = " -j1"  # We can only run one job here since we are using scp
+            self.fatal("nfs_mounted_path not portend to new libc++ test infrastructure yet")
             executor = "SSHExecutorWithNFSMount(\\\"{host}\\\", nfs_dir=\\\"{nfs_dir}\\\"," \
                        "path_in_target=\\\"{nfs_in_target}\\\", config=self, username=\\\"{user}\\\"," \
                        " port={port})".format(host=self.qemu_host, user=self.qemu_user, port=self.qemu_port,
                                               nfs_dir=self.nfs_mounted_path, nfs_in_target=self.nfs_path_in_qemu)
         else:
             self.libcxx_lit_jobs = " -j1"  # We can only run one job here since we are using scp
-            executor = "SSHExecutor('{host}', username='{user}', port={port}, config=self)".format(
-                host=self.qemu_host, user=self.qemu_user, port=self.qemu_port)
+            executor = commandline_to_str([self.source_dir / "utils/ssh.py",
+                                           "--host", "{user}@{host}:{port}".format(host=self.qemu_host,
+                                                                                   user=self.qemu_user,
+                                                                                   port=self.qemu_port)])
         if self.target_info.is_baremetal():
             target_info = "libcxx.test.target_info.BaremetalNewlibTI"
         else:
@@ -353,4 +352,5 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         else:
             # long running test -> speed up by using a kernel without invariants
             self.target_info.run_cheribsd_test_script("run_libcxx_tests.py", "--parallel-jobs", self.test_jobs,
+                                                      "--ssh-executor-script", self.source_dir / "utils/ssh.py",
                                                       use_benchmark_kernel_by_default=True)
