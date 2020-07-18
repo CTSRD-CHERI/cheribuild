@@ -584,13 +584,13 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     pytest.param("disk-image-minimal-riscv64-purecap", "cheribsd-minimal-riscv64-purecap.img"),
     # FreeBSD
     pytest.param("disk-image-freebsd-mips", "freebsd-mips.img"),
-    pytest.param("disk-image-freebsd-riscv", "freebsd-riscv.img"),
+    pytest.param("disk-image-freebsd-riscv64", "freebsd-riscv64.img"),
     # pytest.param("disk-image-freebsd-aarch64", "freebsd-aarch64.img"),
     # pytest.param("disk-image-freebsd-i386", "freebsd-i386.img"),
     pytest.param("disk-image-freebsd-amd64", "freebsd-amd64.img"),
     # FreeBSD with default options
     pytest.param("disk-image-freebsd-with-default-options-mips", "freebsd-mips.img"),
-    pytest.param("disk-image-freebsd-with-default-options-riscv", "freebsd-riscv.img"),
+    pytest.param("disk-image-freebsd-with-default-options-riscv64", "freebsd-riscv64.img"),
     # pytest.param("disk-image-freebsd-with-default-options-aarch64", "freebsd-aarch64.img"),
     pytest.param("disk-image-freebsd-with-default-options-i386", "freebsd-i386.img"),
     pytest.param("disk-image-freebsd-with-default-options-amd64", "freebsd-amd64.img"),

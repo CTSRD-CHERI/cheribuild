@@ -87,7 +87,7 @@ def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
     elif target.is_aarch64():
         return config.output_root / "freebsd-aarch64"
     elif target.is_riscv(include_purecap=False):
-        return config.output_root / "freebsd-riscv"
+        return config.output_root / "freebsd-riscv64"
     elif target.is_i386():
         return config.output_root / "freebsd-i386"
     else:
