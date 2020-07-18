@@ -107,7 +107,6 @@ class Target(object):
         with set_env(**new_env):
             func(project)
         status_update(msg, "for target '" + self.name + "' in", time.time() - starttime, "seconds")
-        self._tests_have_run = True
 
     def execute(self, config: CheriConfig):
         if self._completed:
@@ -131,7 +130,7 @@ class Target(object):
     def run_benchmarks(self, config: "CheriConfig"):
         if self._benchmarks_have_run:
             # TODO: make this an error once I have a clean solution for the pseudo targets
-            warning_message(self.name, "has already been tested!")
+            warning_message(self.name, "has already been benchmarked!")
             return
         self._do_run(config, msg="Ran benchmarks", func=lambda project: project.run_benchmarks())
         self._benchmarks_have_run = True
