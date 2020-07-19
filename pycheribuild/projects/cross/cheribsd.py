@@ -830,9 +830,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
                                  "_build_metadata, build system has changed!")
             # By default also create a sysroot when installing world
             installsysroot_args = install_world_args.copy()
-            # No need for the files in /usr/share and the METALOG file
-            installsysroot_args.set(NO_SHARE=True)
-            installsysroot_args.set_env(DESTDIR=self.get_corresponding_sysroot())
+            if self.has_installsysroot_target:
+                # No need for the files in /usr/share and the METALOG file
+                installsysroot_args.set(NO_SHARE=True)
+                installsysroot_args.set_env(DESTDIR=self.get_corresponding_sysroot())
             if sysroot_only:
                 if not self.has_installsysroot_target:
                     self.fatal("Can't use installsysroot here")
