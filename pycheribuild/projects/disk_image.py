@@ -574,7 +574,8 @@ class _BuildDiskImageBase(SimpleProject):
             self.make_rootfs_image(root_partition)
             self.build_gpt_image(root_partition)
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
-        elif self.crosscompile_target.is_riscv(include_purecap=True) and self.target_info.is_cheribsd() and not self.is_minimal:
+        elif self.crosscompile_target.is_riscv(
+                include_purecap=True) and self.target_info.is_cheribsd() and not self.is_minimal:
             root_partition = self.disk_image_path.with_suffix(".partition.img")
             self.make_rootfs_image(root_partition)
             self.build_riscv_gpt_image(root_partition)
