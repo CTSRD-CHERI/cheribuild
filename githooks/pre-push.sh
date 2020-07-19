@@ -24,13 +24,17 @@ url="$2"
 
 z40=0000000000000000000000000000000000000000
 
+try_run_verbose() {
+    set -x
+    if ! $@ ; then
+        echo "Failed to run $@, don't push this!"
+        exit 1
+    fi
+}
+
 try_run() {
     if [ -n "$VERBOSE" ]; then
-        set -x
-        if ! $@ ; then
-            echo "Failed to run $@, don't push this!"
-            exit 1
-        fi
+        try_run_verbose "$@"
     else
         if ! $@ 2>/dev/null >/dev/null; then
             echo "Failed to run $@, don't push this!"
@@ -61,8 +65,9 @@ do
 			# Update to existing branch, examine new commits
 			range="$remote_sha..$local_sha"
 		fi
+		set -e
 		# check for errors that would fail the GitHub CI:
-		flake8 pycheribuild/ --count --max-line-length=127 --show-source --statistics
+		try_run_verbose flake8 pycheribuild/ --count --max-line-length=127 --show-source --statistics
 
 		# check that there are no obvious mistakes:
 		try_run ./cheribuild.py -p __run_everything__ --freebsd/crossbuild --clean
