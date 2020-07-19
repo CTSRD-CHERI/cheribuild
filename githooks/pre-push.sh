@@ -25,9 +25,9 @@ url="$2"
 z40=0000000000000000000000000000000000000000
 
 try_run_verbose() {
-    set -x
-    if ! $@ ; then
-        echo "Failed to run $@, don't push this!"
+    echo "Running: $*"
+    if ! "$@" ; then
+        echo "Failed to run $*, don't push this!"
         exit 1
     fi
 }
@@ -36,8 +36,8 @@ try_run() {
     if [ -n "$VERBOSE" ]; then
         try_run_verbose "$@"
     else
-        if ! $@ 2>/dev/null >/dev/null; then
-            echo "Failed to run $@, don't push this!"
+        if ! "$@" 2>/dev/null >/dev/null; then
+            echo "Failed to run $*, don't push this!"
             exit 1
         fi
     fi
