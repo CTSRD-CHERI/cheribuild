@@ -1961,8 +1961,8 @@ class Project(SimpleProject):
                                    self.__class__.__name__)
         self.__dict__[name] = value
 
-    def _get_make_commandline(self, make_target, make_command, options: MakeOptions, parallel: bool = True,
-                              compilation_db_name: str = None):
+    def _get_make_commandline(self, make_target: "typing.Union[str, typing.List[str]]", make_command,
+                              options: MakeOptions, parallel: bool = True, compilation_db_name: str = None):
         assert options is not None
         assert make_command is not None
         options = options.copy()
@@ -1981,7 +1981,11 @@ class Project(SimpleProject):
             make_command = options.command
 
         if make_target:
-            all_args = [make_command] + options.all_commandline_args + [make_target]
+            all_args = [make_command] + options.all_commandline_args
+            if isinstance(make_target, str):
+                all_args.append(make_target)
+            else:
+                all_args.extend(make_target)
         else:
             all_args = [make_command] + options.all_commandline_args
         if parallel and options.can_pass_jflag:
@@ -1997,16 +2001,17 @@ class Project(SimpleProject):
                 all_args.append("50")
         return all_args
 
-    def get_make_commandline(self, make_target, make_command: str = None, options: MakeOptions = None,
-                             parallel: bool = True, compilation_db_name: str = None) -> list:
+    def get_make_commandline(self, make_target: "typing.Union[str, typing.List[str]]", make_command: str = None,
+                             options: MakeOptions = None, parallel: bool = True,
+                             compilation_db_name: str = None) -> list:
         if not options:
             options = self.make_args
         if not make_command:
             make_command = self.make_args.command
         return self._get_make_commandline(make_target, make_command, options, parallel, compilation_db_name)
 
-    def run_make(self, make_target="", *, make_command: str = None, options: MakeOptions = None,
-                 logfile_name: str = None, cwd: Path = None, append_to_logfile=False,
+    def run_make(self, make_target: "typing.Union[str, typing.List[str]]" = "", *, make_command: str = None,
+                 options: MakeOptions = None, logfile_name: str = None, cwd: Path = None, append_to_logfile=False,
                  compilation_db_name="compile_commands.json", parallel: bool = True,
                  stdout_filter: "typing.Optional[typing.Callable[[bytes], None]]" = _default_stdout_filter) -> None:
         if not options:
@@ -2020,7 +2025,7 @@ class Project(SimpleProject):
         if not logfile_name:
             logfile_name = Path(make_command).name
             if make_target:
-                logfile_name += "." + make_target
+                logfile_name += "." + (make_target if isinstance(make_target, str) else "_".join(make_target))
 
         starttime = time.time()
         if not self.config.write_logfile and stdout_filter == _default_stdout_filter:
@@ -2155,8 +2160,9 @@ class Project(SimpleProject):
             return self._install_prefix
         return self._install_dir
 
-    def run_make_install(self, *, options: MakeOptions = None, target="install", _stdout_filter=_default_stdout_filter,
-                         cwd=None, parallel=False, make_install_env=None, **kwargs):
+    def run_make_install(self, *, options: MakeOptions = None, _stdout_filter=_default_stdout_filter, cwd=None,
+                         parallel=False, target: "typing.Union[str, typing.List[str]]" = "install",
+                         make_install_env=None, **kwargs):
         if options is None:
             options = self.make_args.copy()
         else:
