@@ -329,10 +329,14 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def c_compiler(self) -> Path:
+        if hasattr(self.project, "custom_c_compiler"):
+            return self.project.custom_c_compiler
         return self.host_c_compiler(self.config)
 
     @property
     def cxx_compiler(self) -> Path:
+        if hasattr(self.project, "custom_cxx_compiler"):
+            return self.project.custom_cxx_compiler
         return self.host_cxx_compiler(self.config)
 
     @property
@@ -347,6 +351,8 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def c_preprocessor(self) -> Path:
+        if hasattr(self.project, "custom_c_preprocessor"):
+            return self.project.custom_c_preprocessor
         return self.host_c_preprocessor(self.config)
 
     @classmethod

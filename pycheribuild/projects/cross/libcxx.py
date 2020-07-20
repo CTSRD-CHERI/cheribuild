@@ -34,8 +34,9 @@ from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileC
                                   GitRepository)
 from ..build_qemu import BuildQEMU
 from ..llvm import BuildCheriLLVM
-from ..project import ReuseOtherProjectDefaultTargetRepository
+from ..project import CMakeProject, ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD
+from ...config.chericonfig import BuildType
 from ...utils import commandline_to_str, OSInfo, set_env
 
 
@@ -354,3 +355,57 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             self.target_info.run_cheribsd_test_script("run_libcxx_tests.py", "--parallel-jobs", self.test_jobs,
                                                       "--ssh-executor-script", self.source_dir / "utils/ssh.py",
                                                       use_benchmark_kernel_by_default=True)
+
+
+class BuildLlvmLibs(CMakeProject):
+    target = "llvm-libs"
+    project_name = "llvm-libs"
+    # TODO: add an option to allow upstream llvm?
+    llvm_project = BuildCheriLLVM
+    repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="llvm")
+    # TODO: support cross-compilation
+    supported_architectures = [CompilationTargets.NATIVE]
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    dependencies = ["llvm"]
+    default_build_type = BuildType.DEBUG
+
+    @property
+    def custom_c_preprocessor(self):
+        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang-cpp"
+
+    @property
+    def custom_c_compiler(self):
+        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang"
+
+    @property
+    def custom_cxx_compiler(self):
+        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang++"
+
+    def setup(self):
+        super().setup()
+        lit_args = "--xunit-xml-output " + os.getenv("WORKSPACE", ".") + \
+                   "/test-results.xml --max-time 3600 --timeout 120 -s -vv"
+        self.add_cmake_options(LLVM_ENABLE_PROJECTS="libunwind;libcxxabi;libcxx",
+                               # ;compiler-rt
+                               LIBCXX_ENABLE_SHARED=True,
+                               LIBCXX_ENABLE_STATIC=True,
+                               # LIBCXX_ENABLE_STATIC_ABI_LIBRARY=True,
+                               LIBCXX_USE_COMPILER_RT=True,
+                               LIBCXXABI_USE_LLVM_UNWINDER=True,
+                               CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
+                               LIBCXX_INCLUDE_TESTS=True,
+                               LLVM_LIT_ARGS=lit_args,
+                               LIBCXX_ENABLE_EXCEPTIONS=True,
+                               LIBCXX_ENABLE_RTTI=True,
+                               )
+        if not self.target_info.is_macos():
+            self.add_cmake_options(LIBCXX_ENABLE_STATIC_ABI_LIBRARY=True)
+
+    def compile(self, **kwargs):
+        self.run_make(["unwind", "cxxabi", "cxx"])
+
+    def install(self, **kwargs):
+        self.run_make_install(target=["install-unwind", "install-cxxabi", "install-cxx"])
+
+    def run_tests(self):
+        self.run_make(["check-unwind", "check-cxxabi", "check-cxx"], cwd=self.build_dir)
