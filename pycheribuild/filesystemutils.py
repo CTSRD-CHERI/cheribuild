@@ -44,8 +44,8 @@ class FileSystemUtils(object):
         self.config = config
 
     def makedirs(self, path: Path):
+        print_command("mkdir", "-p", path, print_verbose_only=True)
         if not self.config.pretend and not path.is_dir():
-            print_command("mkdir", "-p", path, print_verbose_only=True)
             os.makedirs(str(path), exist_ok=True)
 
     def _delete_directories(self, *dirs):
