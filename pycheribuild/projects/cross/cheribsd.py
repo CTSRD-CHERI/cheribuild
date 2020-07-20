@@ -1411,8 +1411,8 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         pass
 
     @classmethod
-    def get_kernel_config(cls, caller: SimpleProject) -> str:
-        build_cheribsd = BuildCHERIBSD.get_instance(caller)
+    def get_kernel_config(cls, caller: SimpleProject, cross_target: CrossCompileTarget) -> str:
+        build_cheribsd = BuildCHERIBSD.get_instance(caller, cross_target=cross_target)
         return cls._get_kernconf_to_build(build_cheribsd)
 
     @classmethod
@@ -1431,22 +1431,28 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     @classmethod
     def get_installed_kernel_path(cls, caller: SimpleProject, config: CheriConfig = None,
                                   cross_target: CrossCompileTarget = None) -> Path:
-        return cls.installed_kernel_for_config(caller, cls.get_kernel_config(caller), config, cross_target)
+        return cls.installed_kernel_for_config(caller, cls.get_kernel_config(caller, cross_target), config, cross_target)
 
     @classmethod
     def get_installed_benchmark_kernel_path(cls, caller: SimpleProject, config: CheriConfig = None,
                                             cross_target: CrossCompileTarget = None) -> Path:
-        return cls.installed_kernel_for_config(caller, cls.get_kernel_config(caller) + "_BENCHMARK", config,
-                                               cross_target)
+        return cls.installed_kernel_for_config(caller, cls.get_kernel_config(caller, cross_target), config,
+                                               cross_target, prefer_benchmark_kernel=True)
 
     @staticmethod
     def installed_kernel_for_config(caller: SimpleProject, kernconf: str, config: CheriConfig = None,
-                                    cross_target: CrossCompileTarget = None) -> Path:
+                                    cross_target: CrossCompileTarget = None, prefer_benchmark_kernel=False) -> Path:
         if config is None:
             config = caller.config
         if cross_target is None:
             cross_target = caller.crosscompile_target
-        return config.cheribsd_image_root / ("kernel" + cross_target.build_suffix(config) + "." + kernconf)
+        guess = config.cheribsd_image_root / ("kernel" + cross_target.build_suffix(config) + "." + kernconf)
+        if prefer_benchmark_kernel:
+            for benchmark_suffix in ("-BENCHMARK", "-NODEBUG", "_BENCHMARK", "_NODEBUG"):
+                benchmark_guess = guess.with_name(guess.name + benchmark_suffix)
+                if benchmark_guess.exists():
+                    return benchmark_guess
+        return guess
 
 
 # def cheribsd_minimal_install_dir(config: CheriConfig, project: SimpleProject):
