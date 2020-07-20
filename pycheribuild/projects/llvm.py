@@ -30,6 +30,7 @@
 import os
 import sys
 import typing
+from pathlib import Path
 
 from .project import BuildType, CMakeProject, DefaultInstallDir, GitRepository
 from ..config.compilation_targets import CheriBSDTargetInfo, CompilationTargets
@@ -273,6 +274,12 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
                                                  create_unprefixed_link=False)
             for tool in ("clang", "clang++", "clang-cpp"):
                 self.create_triple_prefixed_symlinks(self.install_dir / "bin" / tool)
+
+            # Ensure that the installed clang can find the C++ headers:
+            if OSInfo.IS_MAC and Path("/Library/Developer/CommandLineTools/usr/include/c++/v1").is_dir():
+                self.makedirs(self.install_dir / "include/c++")
+                self.create_symlink(Path("/Library/Developer/CommandLineTools/usr/include/c++/v1"),
+                                    self.install_dir / "include/c++/v1", relative=False)
 
         # Use the LLVM versions of all binutils by default
         if "llvm" in self.included_projects:
