@@ -33,7 +33,7 @@ import sys
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
                                   GitRepository)
 from ..build_qemu import BuildQEMU
-from ..llvm import BuildCheriLLVM
+from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import CMakeProject, ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD
 from ...config.chericonfig import BuildType
@@ -360,9 +360,8 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
 class BuildLlvmLibs(CMakeProject):
     target = "llvm-libs"
     project_name = "llvm-libs"
-    # TODO: add an option to allow upstream llvm?
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="llvm")
     llvm_project = BuildCheriLLVM
-    repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="llvm")
     # TODO: support cross-compilation
     supported_architectures = [CompilationTargets.NATIVE]
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
@@ -390,7 +389,7 @@ class BuildLlvmLibs(CMakeProject):
                                LIBCXX_ENABLE_SHARED=True,
                                LIBCXX_ENABLE_STATIC=True,
                                # LIBCXX_ENABLE_STATIC_ABI_LIBRARY=True,
-                               LIBCXX_USE_COMPILER_RT=True,
+                               LIBCXX_USE_COMPILER_RT=False,
                                LIBCXXABI_USE_LLVM_UNWINDER=True,
                                CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
                                LIBCXX_INCLUDE_TESTS=True,
@@ -409,3 +408,10 @@ class BuildLlvmLibs(CMakeProject):
 
     def run_tests(self):
         self.run_make(["check-unwind", "check-cxxabi", "check-cxx"], cwd=self.build_dir)
+
+
+class BuildUpstreamLlvmLibs(BuildLlvmLibs):
+    target = "upstream-llvm-libs"
+    project_name = "upstream-llvm-libs"
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildUpstreamLLVM, subdirectory="llvm")
+    llvm_project = BuildUpstreamLLVM
