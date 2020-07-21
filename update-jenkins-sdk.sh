@@ -8,21 +8,20 @@ cd "$JENKINS_TEST_DIR"
 
 if [ -z "$SKIP_DOWNLOAD" ]; then
     if [ "$(uname -s)" = "Linux" ]; then
-        curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/Toolchain/job/CLANG-LLVM-master/CPU=cheri-multi,label=linux/lastSuccessfulBuild/artifact/cheri-multi-master-clang-llvm.tar.xz
+        curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/job/CLANG-LLVM-linux/job/dev/lastSuccessfulBuild/artifact/cheri-clang-llvm.tar.xz
     elif [ "$(uname -s)" = "FreeBSD" ]; then
-        curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/Toolchain/job/CLANG-LLVM-master/CPU=cheri-multi,label=freebsd/lastSuccessfulBuild/artifact/cheri-multi-master-clang-llvm.tar.xz
+        curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/job/CLANG-LLVM-freebsd/job/dev/lastSuccessfulBuild/artifact/cheri-clang-llvm.tar.xz
     fi
-    curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/Toolchain/job/CLANG-LLVM-master/CPU=cheri-multi,label=linux/lastSuccessfulBuild/artifact/cheri-multi-master-clang-include.tar.xz
 
-    # sysroots:
-    for cpu in mips cheri128 cheri256; do
-        curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/Toolchain/job/CHERIBSD-WORLD/CPU=${cpu},ISA=cap-table-pcrel/lastSuccessfulBuild/artifact/${cpu}-cap-table-pcrel-cheribsd-world.tar.xz
-    done
-
-    # minimal kernel images:
-    curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/CheriBSD/job/CheriBSD-allkernels-multi/BASE_ABI=n64,CPU=mips,ISA=vanilla,label=freebsd/lastSuccessfulBuild/artifact/ctsrd/cheribsd/trunk/bsdtools/freebsd-malta64-mfs-root-jenkins_bluehive-kernel.bz2
-    curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/CheriBSD/job/CheriBSD-allkernels-multi/BASE_ABI=n64,CPU=cheri128,ISA=vanilla,label=freebsd/lastSuccessfulBuild/artifact/ctsrd/cheribsd/trunk/bsdtools/cheribsd128-cheri128-malta64-mfs-root-jenkins_bluehive-kernel.bz2
-    curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/CheriBSD/job/CheriBSD-allkernels-multi/BASE_ABI=n64,CPU=cheri256,ISA=vanilla,label=freebsd/lastSuccessfulBuild/artifact/ctsrd/cheribsd/trunk/bsdtools/cheribsd-cheri-malta64-mfs-root-jenkins_bluehive-kernel.bz2
+    # # sysroots (TODO)
+    # for cpu in mips cheri128 cheri256; do
+    #     curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/Toolchain/job/CHERIBSD-WORLD/CPU=${cpu},ISA=cap-table-pcrel/lastSuccessfulBuild/artifact/${cpu}-cap-table-pcrel-cheribsd-world.tar.xz
+    # done
+    # 
+    # # minimal kernel images:
+    # curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/CheriBSD/job/CheriBSD-allkernels-multi/BASE_ABI=n64,CPU=mips,ISA=vanilla,label=freebsd/lastSuccessfulBuild/artifact/ctsrd/cheribsd/trunk/bsdtools/freebsd-malta64-mfs-root-jenkins_bluehive-kernel.bz2
+    # curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/CheriBSD/job/CheriBSD-allkernels-multi/BASE_ABI=n64,CPU=cheri128,ISA=vanilla,label=freebsd/lastSuccessfulBuild/artifact/ctsrd/cheribsd/trunk/bsdtools/cheribsd128-cheri128-malta64-mfs-root-jenkins_bluehive-kernel.bz2
+    # curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/CheriBSD/job/CheriBSD-allkernels-multi/BASE_ABI=n64,CPU=cheri256,ISA=vanilla,label=freebsd/lastSuccessfulBuild/artifact/ctsrd/cheribsd/trunk/bsdtools/cheribsd-cheri-malta64-mfs-root-jenkins_bluehive-kernel.bz2
 
 
     # QEMU
@@ -71,17 +70,3 @@ fi
 
 ls -la cherisdk/bin
 ls -la cherisdk
-
-
-# TODO: QEMU symlinks
-
-if [ -e "$WORKSPACE/cherisdk/bin" ]; then
-    (cd $WORKSPACE/cherisdk/bin && touch clang-check opt llc lli llvm-lto2 llvm-lto llvm-c-test \
-         llvm-dsymutil llvm-dwp llvm-nm llvm-ar llvm-rtdyld \
-         llvm-extract llvm-xray llvm-split llvm-cov llvm-symbolizer llvm-dwarfdump \
-         llvm-link llvm-stress llvm-cxxdump llvm-cvtres llvm-cat llvm-as \
-         llvm-diff llvm-modextract llvm-dis llvm-pdbdump llvm-profdata \
-         llvm-opt-report llvm-bcanalyzer llvm-mcmarkup llvm-lib llvm-ranlib llvm-tblgen \
-         verify-uselistorder sanstats clang-offload-bundler c-index-test \
-         clang-import-test bugpoint sancov obj2yaml yaml2obj)
-fi
