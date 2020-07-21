@@ -206,8 +206,10 @@ class BuildFreeBSDBase(Project):
         # the creation of disk-image (METALOG is invalid)
         self.make_args.set_with_options(TESTS=self.build_tests)
 
-        if not self.config.verbose and not self.config.quiet:
-            # By default we only want to print the status updates -> use make -s so we have to do less filtering
+        # By default we only want to print the status updates -> use make -s so we have to do less filtering
+        # However, jenkins builds default to --verbose and this amount of output is only useful when building
+        # with -j1 so also disable it by default for jenkins builds
+        if not self.config.verbose or (is_jenkins_build() and self.config.make_jobs != 1):
             self.make_args.add_flags("-s")
 
         # print detailed information about the failed target (including the command that was executed)
