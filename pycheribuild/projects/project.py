@@ -1711,17 +1711,18 @@ class Project(SimpleProject):
                            # "-Xclang", "-cheri-bounds=everywhere-unsafe"])
                            ])
         # Add mxcaptable for projects that need it
-        if self.compiling_for_cheri():
-            if self.force_static_linkage and self.needs_mxcaptable_static:
-                result.append("-mxcaptable")
-            if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
-                result.append("-mxcaptable")
-        # Do the same for MIPS to get even performance comparisons
-        elif self.compiling_for_mips(include_purecap=False):
-            if self.force_static_linkage and self.needs_mxcaptable_static:
-                result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
-            if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
-                result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
+        if self.compiling_for_mips():
+            if self.compiling_for_cheri():
+                if self.force_static_linkage and self.needs_mxcaptable_static:
+                    result.append("-mxcaptable")
+                if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
+                    result.append("-mxcaptable")
+            # Do the same for MIPS to get even performance comparisons
+            else:
+                if self.force_static_linkage and self.needs_mxcaptable_static:
+                    result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
+                if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
+                    result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
         return result
 
     @property
