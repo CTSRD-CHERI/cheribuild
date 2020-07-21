@@ -176,9 +176,9 @@ class JenkinsConfig(CheriConfig):
 
     @property
     def cheri_sdk_isa_name(self):
-        guessed_abi_suffix = "cap-table-" + self.cheri_cap_table_abi
-        if self.cheri_cap_table_abi == "legacy":
-            guessed_abi_suffix = "legacy"
+        guessed_abi_suffix = ""
+        if self.cheri_cap_table_abi:
+            guessed_abi_suffix = "cap-table-" + self.cheri_cap_table_abi
         return os.getenv("ISA", guessed_abi_suffix)
 
     @property

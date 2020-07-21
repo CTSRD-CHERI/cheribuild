@@ -408,7 +408,6 @@ class MipsFloatAbi(Enum):
 
 class CrossCompileTarget(object):
     # Currently the same for all targets
-    DEFAULT_CAP_TABLE_ABI = "pcrel"
     DEFAULT_SUBOBJECT_BOUNDS = "conservative"
 
     def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[TargetInfo]",
@@ -491,7 +490,7 @@ class CrossCompileTarget(object):
             # MIPS supports 128/256 -> include that in the configuration
             result += config.mips_cheri_bits_str
         if self.is_hybrid_or_purecap_cheri():
-            if config.cheri_cap_table_abi != self.DEFAULT_CAP_TABLE_ABI:
+            if config.cheri_cap_table_abi:
                 result += "-" + str(config.cheri_cap_table_abi)
             if config.subobject_bounds is not None and config.subobject_bounds != self.DEFAULT_SUBOBJECT_BOUNDS:
                 result += "-" + str(config.subobject_bounds)

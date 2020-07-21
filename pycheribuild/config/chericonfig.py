@@ -158,8 +158,8 @@ class CheriConfig(object):
             "libcompat-buildenv", "-libcheri-buildenv", group=loader.freebsd_group,
             help="Open a shell with the right environment for building compat libraries.")
 
-        self.cheri_cap_table_abi = loader.add_option("cap-table-abi", help_hidden=True, default="pcrel",
-                                                     choices=("pcrel", "plt", "legacy", "fn-desc"),
+        self.cheri_cap_table_abi = loader.add_option("cap-table-abi", help_hidden=True,
+                                                     choices=("pcrel", "plt", "fn-desc"),
                                                      help="The ABI to use for cap-table mode")
         self.cross_target_suffix = loader.add_option("cross-target-suffix", help_hidden=True, default="",
                                                      help="Add a suffix to the cross build and install directories. "
@@ -409,7 +409,8 @@ class CheriConfig(object):
     def _initialize_derived_paths(self):
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
         os.environ["CHERI_BITS"] = self.mips_cheri_bits_str
-        os.environ["CHERI_CAPTABLE_ABI"] = self.cheri_cap_table_abi
+        if self.cheri_cap_table_abi:
+            os.environ["CHERI_CAPTABLE_ABI"] = self.cheri_cap_table_abi
 
     @property
     def dollar_path_with_other_tools(self) -> str:
