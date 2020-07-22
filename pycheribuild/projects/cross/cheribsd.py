@@ -48,32 +48,6 @@ from ...utils import (classproperty, commandline_to_str, get_compiler_info, incl
                       OSInfo, print_command, ThreadJoiner)
 
 
-def default_kernel_config(_: CheriConfig, project: SimpleProject) -> str:
-    assert isinstance(project, BuildFreeBSD)
-    xtarget = project.crosscompile_target
-    if xtarget.is_any_x86():
-        return "GENERIC"
-    elif xtarget.is_mips(include_purecap=True):
-        if xtarget.is_hybrid_or_purecap_cheri():
-            # use purecap kernel if selected
-            assert isinstance(project, BuildCHERIBSD)
-            kernconf_name = "CHERI{pure}_MALTA64"
-            cheri_pure = "_PURECAP" if project.purecap_kernel else ""
-            return kernconf_name.format(pure=cheri_pure)
-        return "MALTA64"
-    elif xtarget.is_riscv(include_purecap=True):
-        # TODO: purecap/hybrid kernel
-        if xtarget.is_hybrid_or_purecap_cheri():
-            if project.purecap_kernel:
-                return "CHERI-PURECAP-QEMU"
-            return "CHERI_QEMU"
-        return "QEMU"  # default to the QEMU config
-    elif xtarget.is_aarch64(include_purecap=True):
-        return "GENERIC-UP"
-    else:
-        assert False, "should be unreachable"
-
-
 def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
     assert isinstance(project, BuildFreeBSD)
     target = project.get_crosscompile_target(config)
@@ -179,7 +153,6 @@ class BuildFreeBSDBase(Project):
 
     def __init__(self, config):
         super().__init__(config)
-
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.build_dir)}
         # TODO? Avoid lots of nested child directories by using MAKEOBJDIR instead of MAKEOBJDIRPREFIX
         # self.make_args.env_vars = {"MAKEOBJDIR": str(self.build_dir)}
@@ -314,7 +287,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         cls.kernel_config = cls.add_config_option(
             "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
-            default=ComputedDefaultValue(function=default_kernel_config, as_string="target-dependent default"),
+            default=ComputedDefaultValue(function=lambda _, p: p.default_kernel_config(),
+                                         as_string="target-dependent default"),
             help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64)")  # type: str
 
         if cls._xtarget is not None and cls._xtarget.is_hybrid_or_purecap_cheri():
@@ -357,6 +331,31 @@ class BuildFreeBSD(BuildFreeBSDBase):
                                                        "compile with an assertions-enabled LLVM.")
         cls.fast_rebuild = cls.add_bool_option("fast",
                                                help="Skip some (usually) unnecessary build steps to speed up rebuilds")
+
+    def default_kernel_config(self):
+        xtarget = self.crosscompile_target
+        if xtarget.is_any_x86():
+            return "GENERIC"
+        elif xtarget.is_mips(include_purecap=True):
+            if xtarget.is_hybrid_or_purecap_cheri():
+                # use purecap kernel if selected
+                assert isinstance(self, BuildCHERIBSD)
+                kernconf_name = "CHERI{pure}_MALTA64"
+                cheri_pure = "_PURECAP" if self.purecap_kernel else ""
+                return kernconf_name.format(pure=cheri_pure)
+            return "MALTA64"
+        elif xtarget.is_riscv(include_purecap=True):
+            # TODO: purecap/hybrid kernel
+            if xtarget.is_hybrid_or_purecap_cheri():
+                assert isinstance(self, BuildCHERIBSD)
+                if self.purecap_kernel:
+                    return "CHERI-PURECAP-QEMU"
+                return "CHERI_QEMU"
+            return "QEMU"  # default to the QEMU config
+        elif xtarget.is_aarch64(include_purecap=True):
+            return "GENERIC-UP"
+        else:
+            assert False, "should be unreachable"
 
     def _stdout_filter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
