@@ -407,7 +407,13 @@ class BuildLlvmLibs(CMakeProject):
         self.run_make_install(target=["install-unwind", "install-cxxabi", "install-cxx"])
 
     def run_tests(self):
-        self.run_make(["check-unwind", "check-cxxabi", "check-cxx"], cwd=self.build_dir)
+        # We can't use check-all since that will (currently) also build and test LLVM and using the
+        # individual check-* targets will overwrite the XML output.
+        # We could rename and merge the output files, but it seems simpler to invoke lit directly:
+        # self.run_make(["check-unwind", "check-cxxabi", "check-cxx"], cwd=self.build_dir)
+        self.run_cmd([sys.executable, "./bin/llvm-lit", "--xunit-xml-output", "./llvm-libs-test-results.xml",
+                      "--max-time", "3600", "--timeout", "120", "-s", "-vv",
+                      "projects/libcxx/test", "projects/libcxxabi/test", "projects/libunwind/test"], cwd=self.build_dir)
 
 
 class BuildUpstreamLlvmLibs(BuildLlvmLibs):
