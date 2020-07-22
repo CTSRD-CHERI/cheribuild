@@ -322,18 +322,21 @@ def _jenkins_main():
     if JenkinsAction.CREATE_TARBALL in cheri_config.action:
         bsdtar_path = shutil.which("bsdtar")
         tar_cmd = None
-        owner_flags = ["--invalid-flag"]
+        tar_flags = ["--invalid-flag"]
         if bsdtar_path:
             bsdtar_version = get_program_version(Path(bsdtar_path), regex=b"bsdtar\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?")
             if bsdtar_version > (3, 0, 0):
                 # Only newer versions support --uid/--gid
                 tar_cmd = bsdtar_path
-                owner_flags = ["--uid=0", "--gid=0", "--numeric-owner"]
+                tar_flags = ["--uid=0", "--gid=0", "--numeric-owner"]
+            if bsdtar_version > (3, 2, 0):
+                # Use parallel xz compression
+                tar_flags.append("--options=xz:threads=" + str(cheri_config.make_jobs))
 
         if not tar_cmd and (shutil.which("gtar") or OSInfo.IS_LINUX):
             # GNU tar
             tar_cmd = "tar" if OSInfo.IS_LINUX else "gtar"
-            owner_flags = ["--owner=0", "--group=0", "--numeric-owner"]
+            tar_flags = ["--owner=0", "--group=0", "--numeric-owner"]
 
         # bsdtar too old and GNU tar not found
         if not tar_cmd:
@@ -344,7 +347,7 @@ def _jenkins_main():
         if cheri_config.strip_elf_files:
             strip_binaries(cheri_config, cheri_config.workspace / "tarball")
         run_command(
-            [tar_cmd, "--create", "--xz"] + owner_flags + ["-f", cheri_config.tarball_name, "-C", "tarball", "."],
+            [tar_cmd, "--create", "--xz"] + tar_flags + ["-f", cheri_config.tarball_name, "-C", "tarball", "."],
             cwd=cheri_config.workspace)
         run_command("du", "-sh", cheri_config.workspace / cheri_config.tarball_name)
 
