@@ -1711,8 +1711,8 @@ class Project(SimpleProject):
                            # "-Xclang", "-cheri-bounds=everywhere-unsafe"])
                            ])
         # Add mxcaptable for projects that need it
-        if self.compiling_for_mips():
-            if self.compiling_for_cheri():
+        if self.compiling_for_mips(include_purecap=True):
+            if self.crosscompile_target.is_cheri_purecap():
                 if self.force_static_linkage and self.needs_mxcaptable_static:
                     result.append("-mxcaptable")
                 if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
