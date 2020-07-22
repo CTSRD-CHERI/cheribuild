@@ -406,12 +406,6 @@ class CheriConfig(object):
         if "CLICOLOR" in os.environ:
             del os.environ["CLICOLOR"]
 
-    def _initialize_derived_paths(self):
-        # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
-        os.environ["CHERI_BITS"] = self.mips_cheri_bits_str
-        if self.cheri_cap_table_abi:
-            os.environ["CHERI_CAPTABLE_ABI"] = self.cheri_cap_table_abi
-
     @property
     def dollar_path_with_other_tools(self) -> str:
         return str(self.other_tools_dir / "bin") + ":" + os.getenv("PATH")
