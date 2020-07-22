@@ -627,9 +627,10 @@ def test_freebsd_toolchains_cheribsd_purecap():
                  "cheribsd-purecap-128-subobject-safe-build"),
     pytest.param("cheribsd-purecap", ["--subobject-bounds=subobject-safe", "--no-subobject-debug"],
                  "cheribsd-purecap-128-subobject-safe-subobject-nodebug-build"),
-    # No change for pcrel:
+    # Passing "--cap-table-abi=pcrel" also changes the build dir even though it's (currently) the default for all
+    # architectures.
     pytest.param("cheribsd", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
-                 "cheribsd-mips-hybrid128-build"),
+                 "cheribsd-mips-hybrid128-pcrel-build"),
     # plt should be encoded
     pytest.param("cheribsd", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
                  "cheribsd-mips-hybrid128-plt-build"),
