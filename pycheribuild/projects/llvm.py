@@ -102,7 +102,7 @@ class BuildLLVMBase(CMakeProject):
         # this must be added after check_system_dependencies
         link_jobs = 2 if self.use_lto else 4
         if os.cpu_count() >= 24:
-            link_jobs *= 2  # Increase number of link jobs for powerful servers
+            link_jobs *= 4  # Increase number of link jobs for powerful servers
         # non-shared debug builds take lots of ram -> use fewer parallel jobs
         if self.should_include_debug_info and "-DBUILD_SHARED_LIBS=ON" not in self.cmake_options:
             link_jobs //= 4
