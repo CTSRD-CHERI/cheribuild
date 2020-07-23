@@ -388,7 +388,7 @@ class BuildLlvmLibs(CMakeProject):
                                # ;compiler-rt
                                LIBCXX_ENABLE_SHARED=True,
                                LIBCXX_ENABLE_STATIC=True,
-                               # LIBCXX_ENABLE_STATIC_ABI_LIBRARY=True,
+                               LIBCXX_CXX_ABI="libcxxabi",
                                LIBCXX_USE_COMPILER_RT=False,
                                LIBCXXABI_USE_LLVM_UNWINDER=True,
                                CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
