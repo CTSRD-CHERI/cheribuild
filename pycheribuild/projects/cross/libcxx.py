@@ -28,6 +28,8 @@
 # SUCH DAMAGE.
 #
 import os
+import platform
+import subprocess
 import sys
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
@@ -400,6 +402,13 @@ class BuildLlvmLibs(CMakeProject):
         if not self.target_info.is_macos():
             self.add_cmake_options(LIBCXX_ENABLE_STATIC_ABI_LIBRARY=True)
 
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.test_localhost_via_ssh = cls.add_bool_option("test-localhost-via-ssh",
+                                                         help="Use the ssh.py executor for localhost (to check that "
+                                                              "it works correctly)")
+
     def compile(self, **kwargs):
         self.run_make(["unwind", "cxxabi", "cxx"])
 
@@ -411,9 +420,18 @@ class BuildLlvmLibs(CMakeProject):
         # individual check-* targets will overwrite the XML output.
         # We could rename and merge the output files, but it seems simpler to invoke lit directly:
         # self.run_make(["check-unwind", "check-cxxabi", "check-cxx"], cwd=self.build_dir)
-        self.run_cmd([sys.executable, "./bin/llvm-lit", "--xunit-xml-output", "./llvm-libs-test-results.xml",
-                      "--max-time", "3600", "--timeout", "120", "-s", "-vv",
-                      "projects/libcxx/test", "projects/libcxxabi/test", "projects/libunwind/test"], cwd=self.build_dir)
+        args = ["--xunit-xml-output", "./llvm-libs-test-results.xml",
+                "--max-time", "3600", "--timeout", "120", "-s", "-vv",
+                "projects/libcxx/test", "projects/libcxxabi/test", "projects/libunwind/test"]
+        if self.test_localhost_via_ssh:
+            ssh_host = self.config.get_user_name() + "@" + platform.node()
+            try:
+                self.run_cmd(["ssh", ssh_host, "--", "echo Success."])
+            except subprocess.CalledProcessError as e:
+                self.fatal(self.target + "/test-localhost-via-ssh selected but cannot ssh to", ssh_host)
+            executor = commandline_to_str([self.source_dir / "../libcxx/utils/ssh.py", "--host", ssh_host])
+            args.append("-Dexecutor=" + executor)
+        self.run_cmd([sys.executable, "./bin/llvm-lit"] + args, cwd=self.build_dir)
 
 
 class BuildUpstreamLlvmLibs(BuildLlvmLibs):
