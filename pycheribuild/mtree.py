@@ -182,7 +182,7 @@ class MtreeFile(object):
                      reference_dir=reference_dir, print_status=print_status)
         if symlink_dest is not None:
             mtree_type = "link"
-            last_attrib = ("link", str(file))
+            last_attrib = ("link", str(symlink_dest))
         elif file.is_symlink():
             mtree_type = "link"
             last_attrib = ("link", os.readlink(str(file)))
