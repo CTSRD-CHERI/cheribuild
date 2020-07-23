@@ -64,7 +64,8 @@ CURRENT_STAGE = MultiprocessStages.FINDING_SSH_PORT  # type: MultiprocessStages
 
 def add_common_cmdline_args(parser: argparse.ArgumentParser, default_xunit_output: str, allow_multiprocessing: bool):
     parser.add_argument("--ssh-executor-script", help="Path to the ssh.py executor script", required=True)
-    parser.add_argument("--use-shared-mount-for-tests", action="store_true", default=False)     # Not supported yet
+    parser.add_argument("--use-shared-mount-for-tests", action="store_true", default=True)
+    parser.add_argument("--no-use-shared-mount-for-tests", dest="use-shared-mount-for-tests", action="store_false")
     parser.add_argument("--llvm-lit-path")
     parser.add_argument("--xunit-output", default=default_xunit_output)
     parser.add_argument("--lit-debug-output", action="store_true")
@@ -219,20 +220,16 @@ Host cheribsd-test-instance
 
     extra_ssh_args = commandline_to_str(("-n", "-4", "-F", "{tempdir}/config".format(tempdir=tempdir)))
     extra_scp_args = commandline_to_str(("-F", "{tempdir}/config".format(tempdir=tempdir)))
+    ssh_executor_args = [args.ssh_executor_script, "--host", "cheribsd-test-instance",
+                         "--extra-ssh-args=" + extra_ssh_args]
     if args.use_shared_mount_for_tests:
-        # FIXME: support NFS mount for new executor
-        boot_cheribsd.failure("use_shared_mount_for_tests not implemented yet!")
-        executor = "/bin/false"
-        # executor = 'SSHExecutorWithNFSMount("cheribsd-test-instance", username="{user}", port={port}, ' \
-        #            'nfs_dir="{host_dir}", path_in_target="/build/tmp",' \
-        #            'extra_ssh_flags=extra_ssh_args, ["-F", "{tempdir}/config", ], ' \
-        #            'extra_scp_flags=extra_scp_args)'.format(user=user, port=port,
-        #                                                                 host_dir=str(test_build_dir / "tmp"),
-        #                                                                 tempdir=tempdir)
+        # If we have a shared directory use that to massively speed up running tests
+        ssh_executor_args.append("--shared-mount-local-path=" + str(test_build_dir / "tmp"))
+        ssh_executor_args.append("--shared-mount-remote-path=/build/tmp")
     else:
         # slow executor using scp:
-        executor = commandline_to_str([args.ssh_executor_script, "--host", "cheribsd-test-instance",
-                                       "--extra-ssh-args=" + extra_ssh_args, "--extra-scp-args=" + extra_scp_args])
+        ssh_executor_args.append("--extra-scp-args=" + extra_scp_args)
+    executor = commandline_to_str(ssh_executor_args)
     # TODO: I was previously passing -t -t to ssh. Is this actually needed?
     boot_cheribsd.success("Running", testsuite, "tests with executor", executor)
     notify_main_process(args, MultiprocessStages.RUNNING_TESTS, mp_q)
@@ -240,7 +237,7 @@ Host cheribsd-test-instance
     if llvm_lit_path is None:
         llvm_lit_path = str(test_build_dir / "bin/llvm-lit")
     # Note: we require python 3 since otherwise it seems to deadlock in Jenkins
-    lit_cmd = ["python3", llvm_lit_path, "-j1", "-vv", "-Dexecutor=" + executor, "test"]
+    lit_cmd = [sys.executable, llvm_lit_path, "-j1", "-vv", "-Dexecutor=" + executor, "test"]
     if lit_extra_args:
         lit_cmd.extend(lit_extra_args)
     if args.lit_debug_output:
