@@ -90,7 +90,7 @@ class BuildFettConfig(CrossCompileProject):
                        nginx_prefix / "etc/ssl/private/fett-webserver.key", mode="0600")
         mtree.add_file(nginx_src / "common/certs/fett-webserver.crt",
                        nginx_prefix / "etc/ssl/certs/fett-webserver.crt")
-        mtree.add_file(src / "build/webserver/FreeBSD/rcfile",
+        mtree.add_file(src / "build/webserver/FreeBSD/nginx.sh",
                        "etc/rc.d/fett_nginx", mode="0555")
         mtree.add_dir(nginx_prefix / "post", uname="www", gname="www")
         html_files = [
@@ -159,7 +159,7 @@ class BuildFettConfig(CrossCompileProject):
                        nginx_prefix / "etc/ssl/private/fett-voting.key", mode="0600")
         mtree.add_file(nginx_src / "common/certs/fett-voting.crt",
                        nginx_prefix / "etc/ssl/certs/fett-voting.crt")
-        mtree.add_file(voting_src / "freebsd/fett_bvrs.sh",
+        mtree.add_file(voting_src / "FreeBSD/bvrs.sh",
                        "etc/rc.d/fett_bvrs", mode="0555")
 
         mtree.write(self.METALOG)
