@@ -31,9 +31,9 @@ import stat
 import tempfile
 from pathlib import Path
 
-from .crosscompileproject import (CompilationTargets, CrossCompileProject, DefaultInstallDir, GitRepository,
-                                  MakeCommandKind, CrossCompileAutotoolsProject)
-from ..project import ExternallyManagedSourceRepository, ComputedDefaultValue
+from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, CrossCompileProject,
+                                  DefaultInstallDir, GitRepository, MakeCommandKind)
+from ..project import ComputedDefaultValue, ExternallyManagedSourceRepository
 from ...config.target_info import CPUArchitecture
 from ...utils import commandline_to_str, is_jenkins_build, set_env
 
@@ -595,7 +595,8 @@ class BuildLMBench(CrossCompileProject):
             self.fatal("running x86 tests is not implemented yet")
             return
         # testing, not benchmarking -> run only once
-        test_command = "cd '/build/{dirname}' && ./run_jenkins-bluehive.sh -d0 -r1 -s".format(dirname=self.bundle_dir.name)
+        test_command = "cd '/build/{dirname}' && ./run_jenkins-bluehive.sh -d0 -r1 -s".format(
+            dirname=self.bundle_dir.name)
         self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
                                                   "--test-timeout", str(120 * 60), mount_builddir=True)
 

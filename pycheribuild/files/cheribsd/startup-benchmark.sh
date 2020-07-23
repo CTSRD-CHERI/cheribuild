@@ -10,8 +10,6 @@
 #     -kernel ~/cheri/output/kernel-riscv64-purecap.CHERI_QEMU_MFS_ROOT -device virtio-net-device,netdev=net0 \
 #     -netdev user,id=net0,ipv6=off,hostfwd=tcp::12345-:22 -append init_path=/sbin/startup-benchmark.sh
 
-
-
 # Avoid 5 second sleep before shutdown
 sysctl kern.shutdown.poweroff_delay=0
 # Note: `poweroff` will panic the kernel with "going nowhere without my init!"

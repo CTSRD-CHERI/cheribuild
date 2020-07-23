@@ -1,6 +1,6 @@
 #!/bin/sh -xe
 
-if command -v kyua > /dev/null; then
+if command -v kyua >/dev/null; then
     echo "kyua is already installed"
     exit 0
 fi
@@ -8,7 +8,7 @@ fi
 # TODO: sysctl kern.corefile=/rootfs/%N.%P.core
 
 # The QEMU user DNS server appears to be broken for the version that we are using:
-echo 'nameserver 8.8.8.8' > /etc/resolv.conf
+echo 'nameserver 8.8.8.8' >/etc/resolv.conf
 # See https://github.com/freebsd/pkg/blob/master/libpkg/pkg_config.c for options
 export NAMESERVER=8.8.8.8
 

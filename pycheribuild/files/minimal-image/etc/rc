@@ -42,14 +42,14 @@ if [ -n "$(kenv -q cheribuild.skip_entropy)" ]; then
 elif [ ! -w "/dev/random" ]; then
     echo "Not seeding initial entropy since /dev/random is not writable"
 else
-	for f in /boot/entropy /entropy /var/db/entropy/*; do
-		if [ -f "$f" ] && [ -r "$f" ] && [ -s "$f" ]; then
-			if dd if="$f" of=/dev/random bs=4096 2>/dev/null ; then
-				echo "entropy read from $f"
-				rm -f "$f"
-			fi
-		fi
-	done
+    for f in /boot/entropy /entropy /var/db/entropy/*; do
+        if [ -f "$f" ] && [ -r "$f" ] && [ -s "$f" ]; then
+            if dd if="$f" of=/dev/random bs=4096 2>/dev/null; then
+                echo "entropy read from $f"
+                rm -f "$f"
+            fi
+        fi
+    done
 fi
 
 MDSZ=500m
@@ -69,7 +69,7 @@ setup_network() {
 }
 
 setup_network atse0 polling # FPGA needs polling
-setup_network le0  # QEMU
+setup_network le0           # QEMU
 
 echo "set up loopback"
 /sbin/ifconfig lo0 inet 127.0.0.1 up
@@ -82,7 +82,7 @@ if [ -n "$(kenv -q cheribuild.skip_sshd)" ]; then
     echo "Not starting sshd since cheribuild.skip_sshd was set"
 else
     echo "generate host keys"
-    for alg in rsa ecdsa ed25519 ; do
+    for alg in rsa ecdsa ed25519; do
         keyfile="/etc/ssh/ssh_host_${alg}_key"
         if [ ! -e "$keyfile" ]; then
             ssh-keygen -t $alg -f "$keyfile" -N ""

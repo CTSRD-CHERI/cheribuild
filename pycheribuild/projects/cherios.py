@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 
-from .project import CMakeProject, BuildType, GitRepository, CheriConfig
+from .project import BuildType, CheriConfig, CMakeProject, GitRepository
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
 
