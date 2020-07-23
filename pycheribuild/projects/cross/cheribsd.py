@@ -353,7 +353,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 return "CHERI_QEMU"
             return "QEMU"  # default to the QEMU config
         elif xtarget.is_aarch64(include_purecap=True):
-            return "GENERIC-UP"
+            return "GENERIC"
         else:
             assert False, "should be unreachable"
 
