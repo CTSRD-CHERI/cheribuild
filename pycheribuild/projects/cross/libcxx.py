@@ -69,7 +69,9 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
         test_linker_flags = commandline_to_str(self.default_ldflags)
 
         cxx_instance = BuildLibCXX.get_instance(self)
-
+        if self.compiling_for_mips(include_purecap=True) and self.target_info.is_freebsd():
+            # libcxxrt requires __floatundidf/__fixunsdfdi
+            test_linker_flags += " -lcompiler_rt"
         self.add_cmake_options(LIBUNWIND_LIBCXX_PATH=cxx_instance.source_dir,
                                # Should use libc++ from sysroot
                                # LIBUNWIND_LIBCXX_LIBRARY_PATH=BuildLibCXX.get_build_dir(self) / "lib",
@@ -77,7 +79,7 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
                                LIBUNWIND_TEST_LINKER_FLAGS=test_linker_flags,
                                LIBUNWIND_TEST_COMPILER_FLAGS=test_compiler_flags,
                                # For the test binaries we link libcxxrt statically
-                               LIBUNWIND_TEST_CXX_ABI_LIB=BuildLibCXXRT.get_build_dir(self) / "lib/libcxxrt.a",
+                               LIBUNWIND_TEST_CXX_ABI_LIB_PATH=BuildLibCXXRT.get_build_dir(self) / "lib/libcxxrt.a",
                                LIBUNWIND_ENABLE_ASSERTIONS=True,
                                )
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for

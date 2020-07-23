@@ -78,6 +78,17 @@ def add_common_cmdline_args(parser: argparse.ArgumentParser, default_xunit_outpu
         parser.add_argument("--internal-shard", type=int, help=argparse.SUPPRESS)
 
 
+def adjust_common_cmdline_args(args: argparse.Namespace):
+    if args.use_shared_mount_for_tests:
+        # If we have a shared directory use that to massively speed up running tests
+        tmpdir_name = "local-tmp" if not args.internal_shard else "local-tmp-shard-" + str(args.internal_shard)
+        shared_tmpdir = Path(args.build_dir, tmpdir_name)
+        os.makedirs(str(shared_tmpdir), exist_ok=True)
+        args.shared_tmpdir_local = shared_tmpdir
+        args.smb_mount_directories.append(
+            boot_cheribsd.SmbMount(shared_tmpdir, readonly=False, in_target="/shared-tmpdir"))
+
+
 def mp_debug(cmdline_args: argparse.Namespace, *args, **kwargs):
     if cmdline_args.multiprocessing_debug:
         boot_cheribsd.info(*args, **kwargs)
@@ -162,7 +173,6 @@ def run_remote_lit_tests_impl(testsuite: str, qemu: boot_cheribsd.CheriBSDInstan
     port = args.ssh_port
     user = "root"  # TODO: run these tests as non-root!
     test_build_dir = Path(args.build_dir)
-    (test_build_dir / "tmp").mkdir(exist_ok=True)
     # TODO: move this to boot_cheribsd.py
     config_contents = """
 Host cheribsd-test-instance
@@ -224,8 +234,9 @@ Host cheribsd-test-instance
                          "--extra-ssh-args=" + extra_ssh_args]
     if args.use_shared_mount_for_tests:
         # If we have a shared directory use that to massively speed up running tests
-        ssh_executor_args.append("--shared-mount-local-path=" + str(test_build_dir / "tmp"))
-        ssh_executor_args.append("--shared-mount-remote-path=/build/tmp")
+        tmpdir_name = args.shared_tmpdir_local.name
+        ssh_executor_args.append("--shared-mount-local-path=" + str(args.shared_tmpdir_local))
+        ssh_executor_args.append("--shared-mount-remote-path=/build/" + tmpdir_name)
     else:
         # slow executor using scp:
         ssh_executor_args.append("--extra-scp-args=" + extra_scp_args)

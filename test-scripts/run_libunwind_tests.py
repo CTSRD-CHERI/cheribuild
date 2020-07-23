@@ -73,16 +73,17 @@ def add_cmdline_args(parser: argparse.ArgumentParser):
                                                 allow_multiprocessing=False)
 
 
-def set_cmdline_args(args: argparse.Namespace):
+def adjust_cmdline_args(args: argparse.Namespace):
     # We don't support parallel jobs but are reusing libcxx infrastructure -> set the expected vars
     args.internal_shard = None
     args.parallel_jobs = None
+    run_remote_lit_test.adjust_common_cmdline_args(args)
 
 
 if __name__ == '__main__':
     try:
         run_tests_main(test_function=run_libunwind_tests, need_ssh=True,  # we need ssh running to execute the tests
-                       argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args,
+                       argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=adjust_cmdline_args,
                        should_mount_sysroot=True, should_mount_builddir=True, test_setup_function=setup_libunwind_env)
     finally:
         print("Finished running ", " ".join(sys.argv))

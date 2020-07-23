@@ -88,6 +88,7 @@ def libcxx_main(barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue:
         if args.interact and (shard_num is not None or args.internal_num_shards or args.parallel_jobs):
             boot_cheribsd.failure("Cannot use --interact with multiple shards")
             sys.exit()
+        run_remote_lit_test.adjust_common_cmdline_args(args)
 
     def run_libcxx_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
         with tempfile.TemporaryDirectory(prefix="cheribuild-libcxx-tests-") as tempdir:
@@ -98,7 +99,8 @@ def libcxx_main(barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue:
 
     try:
         run_tests_main(test_function=run_libcxx_tests, need_ssh=True,  # we need ssh running to execute the tests
-                       argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args)
+                       should_mount_builddir=True, argparse_setup_callback=add_cmdline_args,
+                       argparse_adjust_args_callback=set_cmdline_args)
     except Exception as e:
         if mp_queue:
             boot_cheribsd.failure("GOT EXCEPTION in shard ", shard_num, ": ", sys.exc_info(), exit=False)
