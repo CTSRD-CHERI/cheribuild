@@ -24,4 +24,8 @@ if [ -e /fett ]; then
 	# What dhcp gets in qemu...
 	ifconfig_vtnet0="inet 10.0.2.15 netmask 255.255.255.0"
 	defaultrouter="10.0.2.2"
+	rpcbind_enable="YES"
+	nfs_server_enable="YES"
+	nfsv4_server_enable="YES"
+	mountd_enable="YES"
 fi
