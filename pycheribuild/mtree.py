@@ -159,28 +159,27 @@ class MtreeFile(object):
             return "0600"
         return result
 
-    def add_file(self, file: "typing.Optional[Path]", path_in_image, mode=None, uname="root", gname="wheel",
-                 print_status=True, parent_dir_mode=None, symlink_dest: str = None):
+    def add_file(self, file: Path, path_in_image, mode=None, uname="root", gname="wheel", print_status=True,
+                 parent_dir_mode=None, symlink=False):
         if isinstance(path_in_image, Path):
             path_in_image = str(path_in_image)
         assert not path_in_image.startswith("/")
         assert not path_in_image.startswith("./") and not path_in_image.startswith("..")
         if mode is None:
-            if symlink_dest is not None:
+            if symlink:
                 mode = "0755"
             else:
                 mode = self.infer_mode_string(file, False)
         mode = self._ensure_mtree_mode_fmt(mode)
         mtree_path = self._ensure_mtree_path_fmt(path_in_image)
         assert mtree_path != ".", "files should not have name ."
-        if symlink_dest is not None:
-            assert file is None
+        if symlink:
             reference_dir = None
         else:
             reference_dir = file.parent
         self.add_dir(str(Path(path_in_image).parent), mode=parent_dir_mode, uname=uname, gname=gname,
                      reference_dir=reference_dir, print_status=print_status)
-        if symlink_dest is not None:
+        if symlink:
             mtree_type = "link"
             last_attrib = ("link", str(file))
         elif file.is_symlink():
@@ -194,19 +193,8 @@ class MtreeFile(object):
             last_attrib = ("contents", contents_path)
         attribs = OrderedDict([("type", mtree_type), ("uname", uname), ("gname", gname), ("mode", mode), last_attrib])
         if print_status:
-            if symlink_dest is not None or file.is_symlink():
-                status_update("Adding symlink to", symlink_dest, "to mtree as", mtree_path, file=sys.stderr)
-            else:
-                status_update("Adding file", file, "to mtree as", mtree_path, file=sys.stderr)
+            status_update("Adding file", file, "to mtree as", mtree_path, file=sys.stderr)
         self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
-
-    def add_symlink(self, *, src_symlink: Path = None, symlink_dest=None, path_in_image: str, **kwargs):
-        if src_symlink is not None:
-            assert symlink_dest is None
-            self.add_file(src_symlink, path_in_image, **kwargs)
-        else:
-            assert src_symlink is None
-            self.add_file(None, path_in_image, symlink_dest=str(symlink_dest), **kwargs)
 
     def add_dir(self, path, mode=None, uname="root", gname="wheel", print_status=True, reference_dir=None):
         if isinstance(path, Path):

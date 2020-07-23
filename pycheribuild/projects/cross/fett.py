@@ -110,7 +110,7 @@ class BuildFettConfig(CrossCompileProject):
         ssh_prefix = BuildFettOpenSSH.get_instance(self)._install_prefix.relative_to('/')
         keyfiles = ["ssh_host_dsa_key", "ssh_host_ecdsa_key", "ssh_host_ed25519_key", "ssh_host_rsa_key"]
         for keyfile in keyfiles:
-            mtree.add_symlink(path_in_image=ssh_prefix / "etc" / keyfile, symlink_dest=Path("/etc/ssh", keyfile))
+            mtree.add_file(Path("/etc/ssh", keyfile), ssh_prefix / "etc/" / keyfile, symlink=True)
         mtree.add_file(src / "build/ssh/FreeBSD/fett_sshd", "etc/rc.d/fett_sshd", mode="0555")
 
         # sqlite bits
