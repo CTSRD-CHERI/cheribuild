@@ -231,16 +231,18 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
 
     def __init__(self, config):
         super().__init__(config)
-        self.host_target = self.get_class_for_target(CompilationTargets.NATIVE)
 
     def process(self):
-        if not self.compiling_for_host() and not (self.host_target.get_build_dir(self) / "bin/icupkg").exists():
-            self.fatal("Missing host build directory", self.host_target.get_build_dir(self), " (needed for cross-compiling)",
+        if not self.compiling_for_host() and not (self.host_target.build_dir / "bin/icupkg").exists():
+            self.fatal("Missing host build directory", self.host_target.build_dir, " (needed for cross-compiling)",
                        fixit_hint="Run `cheribuild.py " + self.target + "-native`")
         super().process()
 
     def setup(self):
         super().setup()
+        # noinspection PyAttributeOutsideInit
+        self.host_target = self.get_instance(self, cross_target=CompilationTargets.NATIVE)
+
         if self.compiling_for_mips(include_purecap=False) and self.force_static_linkage:
             assert "-mxgot" in self.default_compiler_flags
         if self.force_static_linkage:
