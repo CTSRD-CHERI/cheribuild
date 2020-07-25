@@ -195,6 +195,99 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         return not (self.build_dir / "Makefile").exists()
 
 
+class BuildQtBaseDev(CrossCompileCMakeProject):
+    project_name = "qtbase"
+    target = "qtbase-dev"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="dev", force_branch=True)
+    is_large_source_repository = True
+    default_source_dir = ComputedDefaultValue(
+        function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
+        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
+    native_install_dir = DefaultInstallDir.CHERI_SDK
+    cross_install_dir = DefaultInstallDir.SYSROOT
+    needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
+    # default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
+    default_build_type = BuildType.DEBUG
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig):
+        deps = super().dependencies(config)
+        target = cls.get_crosscompile_target(config)
+        # QtBase needs a native buid to cross-compile:
+        if not target.is_native():
+            deps.append("qtbase-dev-native")
+        return deps
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.build_tests = cls.add_bool_option("build-tests", default=True, show_help=True, help="build the Qt unit tests")
+        cls.build_examples = cls.add_bool_option("build-examples", show_help=True, help="build the Qt examples")
+        cls.assertions = cls.add_bool_option("assertions", default=True, show_help=True, help="Include assertions")
+        cls.minimal = cls.add_bool_option("minimal", show_help=True, default=True, help="Don't build QtWidgets or QtGui, etc")
+        cls.optimized_debug_build = cls.add_bool_option("optimized-debug-build",
+                                                        help="Don't build with -Os instead of -O0 for debug info "
+                                                             "builds")
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.host_target = self.get_class_for_target(CompilationTargets.NATIVE)
+
+    def process(self):
+        if not self.compiling_for_host() and not (self.host_target.get_build_dir(self) / "bin/icupkg").exists():
+            self.fatal("Missing host build directory", self.host_target.get_build_dir(self), " (needed for cross-compiling)",
+                       fixit_hint="Run `cheribuild.py " + self.target + "-native`")
+        super().process()
+
+    def setup(self):
+        super().setup()
+        if self.compiling_for_mips(include_purecap=False) and self.force_static_linkage:
+            assert "-mxgot" in self.default_compiler_flags
+        if self.force_static_linkage:
+            self.add_cmake_options(BUILD_SHARED_LIBS=False)
+
+        if not self.compiling_for_host():
+            self.add_cmake_options(QT_HOST_PATH=self.host_target.get_build_dir(self))
+
+        # Disable most libraries for now (we only test qtcore)
+        if self.minimal:
+            self.add_cmake_options(
+                QT_FEATURE_sql=False,
+                QT_FEATURE_network=False,
+                # QT_FEATURE_xml=False,  disabling this breaks the build
+                QT_FEATURE_dbus=False,
+                # Disable all GUI libs
+                QT_FEATURE_gui=False, QT_FEATURE_opengl=False, QT_FEATURE_widgets=False)
+
+            self.add_cmake_options(QT_FEATURE_png=False, QT_FEATURE_freetype=False)
+
+        if not self.compiling_for_host():
+            self.add_cmake_options(FEATURE_use_lld_linker=True)
+        # disable Werror? WARNINGS_ARE_ERRORS=False
+        # TODO: Still needed? "-no-evdev"
+        # TODO: require ICU "-icu",
+        # TODO: "-no-iconv"
+        if self.target_info.is_macos():
+            self.add_cmake_options(QT_FEATURE_icu=False)  # Not linked correctly -> tests fail to run
+        if self.build_tests:
+            self.add_cmake_options(FEATURE_developer_build=True)
+            if OSInfo.IS_MAC:
+                # Otherwise we get "ERROR: debug-only framework builds are not supported. Configure with -no-framework
+                # if you want a pure debug build."
+                self.add_cmake_options(FEATURE_framework=False)
+        else:
+            self.add_cmake_options(BUILD_TESTING=False)
+        self.add_cmake_options(BUILD_EXAMPLES=self.build_examples)
+
+        # currently causes build failures:
+        self.add_cmake_options(QT_FEATURE_system_png=False)
+
+        if self.assertions:
+            self.add_cmake_options(FEATURE_force_asserts=True)
+        self.add_cmake_options(BUILD_WITH_PCH=False)  # slows down build but gives useful crash testcases
+        # QT_FEATURE_reduce_relocations
+
+
 class BuildQt5(BuildQtWithConfigureScript):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qt5", default_branch="5.10", force_branch=True)
     skip_git_submodules = True  # init-repository does it for us
@@ -233,9 +326,8 @@ class BuildQtBase(BuildQtWithConfigureScript):
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
         as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
 
-    def __init__(self, config):
-        super().__init__(config)
-        # self.COMMON_FLAGS.extend(self.extra_c_compat_flags)
+    def setup(self):
+        super().setup()
         self.cross_warning_flags += ["-Wno-shadow",
                                      "-Wno-error=cheri-bitwise-operations"]  # FIXME: remove after update to 5.12
 
