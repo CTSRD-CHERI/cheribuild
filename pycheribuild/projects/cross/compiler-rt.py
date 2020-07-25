@@ -28,6 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+from pycheribuild.projects.llvm import BuildUpstreamLLVM
 from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
 from ..llvm import BuildCheriLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
@@ -36,7 +37,8 @@ from ...utils import classproperty, is_jenkins_build
 
 class BuildCompilerRt(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
-    repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
+    llvm_project = BuildCheriLLVM
+    repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
     project_name = "compiler-rt"
     default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
@@ -45,8 +47,8 @@ class BuildCompilerRt(CrossCompileCMakeProject):
         CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + \
         CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
 
         if self.target_info.is_rtems() or self.target_info.is_baremetal():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")  # RTEMS only needs static libs
@@ -56,12 +58,13 @@ class BuildCompilerRt(CrossCompileCMakeProject):
         self.add_cmake_options(
             LLVM_CONFIG_PATH=self.sdk_bindir / "llvm-config" if is_jenkins_build() and not self.compiling_for_host()
             else
-            BuildCheriLLVM.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
             LLVM_EXTERNAL_LIT=self.sdk_bindir / "llvm-lit" if is_jenkins_build() and not self.compiling_for_host() else
-            BuildCheriLLVM.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
+            self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=True,
             COMPILER_RT_BUILD_XRAY=False,
+            COMPILER_RT_INCLUDE_TESTS=True,
             COMPILER_RT_BUILD_LIBFUZZER=True,
             COMPILER_RT_BUILD_PROFILE=False,
             COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal(),
@@ -95,10 +98,23 @@ class BuildCompilerRt(CrossCompileCMakeProject):
                 self.create_symlink(rt_runtime_path,
                                     self.target_info.sysroot_dir / "lib/libclang_rt.builtins-riscv64.a")
 
+    def run_tests(self):
+        self.run_make("check-compiler-rt")
+
+
+class BuildUpstreamCompilerRt(BuildCompilerRt):
+    llvm_project = BuildUpstreamLLVM
+    repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
+    project_name = "upstream-compiler-rt"
+    # TODO: default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
+    default_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    supported_architectures = [CompilationTargets.NATIVE]
+
 
 class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
-    repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
+    llvm_project = BuildCheriLLVM
+    repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
     project_name = "compiler-rt-builtins"
     _check_install_dir_conflict = False
     is_sdk_target = True
@@ -131,9 +147,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         self.add_cmake_options(
             LLVM_CONFIG_PATH=self.sdk_bindir / "llvm-config" if is_jenkins_build() and not self.compiling_for_host()
             else
-            BuildCheriLLVM.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
             LLVM_EXTERNAL_LIT=self.sdk_bindir / "llvm-lit" if is_jenkins_build() and not self.compiling_for_host() else
-            BuildCheriLLVM.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
+            self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=False,
             COMPILER_RT_BUILD_XRAY=False,
