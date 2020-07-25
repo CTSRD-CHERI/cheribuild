@@ -189,10 +189,9 @@ class BuildFreeBSDBase(Project):
         self.make_args.add_flags("-de")
 
         for option in self.extra_make_args:
-            if not self._xtarget.is_cheri_purecap() and "CHERI_" in option:
-                self.warning("Not adding CHERI specific make option", option, "for", self.target,
-                             " -- consider setting separate", self.target + "/make-options in the config file.")
-                continue
+            if not self.crosscompile_target.is_hybrid_or_purecap_cheri() and "CHERI_" in option:
+                self.warning("Should not be adding CHERI specific make option", option, "for", self.target,
+                             " -- consider setting separate", self.target + "/build-options in the config file.")
             if "=" in option:
                 key, value = option.split("=")
                 args = {key: value}
