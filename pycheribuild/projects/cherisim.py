@@ -126,7 +126,8 @@ class BuildCheriSim(Project):
 
 class BuildBeriCtl(Project):
     target = "berictl"
-    repository = ReuseOtherProjectRepository(source_project=BuildCheriSim, subdirectory="cherilibs/tools/debug")
+    repository = ReuseOtherProjectRepository(source_project=BuildCheriSim, subdirectory="cherilibs/tools/debug",
+                                             do_update=True)
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Needs to build in the source dir
     make_kind = MakeCommandKind.GnuMake
