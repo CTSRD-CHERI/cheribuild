@@ -176,6 +176,8 @@ class BuildLLVMBase(CMakeProject):
         if "LLVM_ENABLE_ASSERTIONS" not in "".join(self.cmake_options):
             self.add_cmake_options(LLVM_ENABLE_ASSERTIONS=self.enable_assertions)
         self.add_cmake_options(LLVM_LIT_ARGS="--max-time 3600 --timeout 300 -s -vv")
+        if self.build_type == BuildType.DEBUG and "compiler-rt" in self.included_projects:
+            self.add_cmake_options(COMPILER_RT_DEBUG=True)  # Enable ASAN, etc assertions
         if self.build_minimal_toolchain:
             if self.build_everything:
                 self.fatal(self.target, "/build-everything is incompatible with ", self.target,
