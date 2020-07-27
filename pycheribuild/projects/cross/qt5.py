@@ -203,11 +203,17 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
         as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
-    native_install_dir = DefaultInstallDir.CHERI_SDK
+    # native_install_dir = DefaultInstallDir.CHERI_SDK
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.SYSROOT
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     # default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
     default_build_type = BuildType.DEBUG
+
+    @property
+    def needs_mxcaptable_dynamic(self):
+        # Debug build: 35927 entries to .captable but current maximum is 32768
+        return self.build_type == BuildType.DEBUG
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
@@ -231,11 +237,12 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
 
     def __init__(self, config):
         super().__init__(config)
+        self.set_minimum_cmake_version(3, 18)
 
     def process(self):
-        if not self.compiling_for_host() and not (self.host_target.build_dir / "bin/icupkg").exists():
-            self.fatal("Missing host build directory", self.host_target.build_dir, " (needed for cross-compiling)",
-                       fixit_hint="Run `cheribuild.py " + self.target + "-native`")
+        if not self.compiling_for_host() and not (self.host_target.install_dir / "bin/moc").exists():
+            self.fatal("Missing host build moc tool", self.host_target.install_dir / "bin/moc",
+                       " (needed for cross-compiling)", fixit_hint="Run `cheribuild.py " + self.target + "-native`")
         super().process()
 
     def setup(self):
@@ -249,7 +256,12 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
             self.add_cmake_options(BUILD_SHARED_LIBS=False)
 
         if not self.compiling_for_host():
-            self.add_cmake_options(QT_HOST_PATH=self.host_target.get_build_dir(self))
+            assert self.target_info.is_freebsd(), "Not other targets supported yet"
+            self.add_cmake_options(QT_HOST_PATH=self.host_target.install_dir,
+                                   QT_QMAKE_TARGET_MKSPEC="freebsd-clang")
+        if self.compiling_for_cheri():
+            # Not ported to CHERI purecap
+            self.add_cmake_options(PCRE2_DISABLE_JIT=True)
 
         # Disable most libraries for now (we only test qtcore)
         if self.minimal:
@@ -263,14 +275,16 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
 
             self.add_cmake_options(QT_FEATURE_png=False, QT_FEATURE_freetype=False)
 
-        if not self.compiling_for_host():
-            self.add_cmake_options(FEATURE_use_lld_linker=True)
+        # if not self.compiling_for_host():
+        # Seems to break the build
+        #    self.add_cmake_options(FEATURE_use_lld_linker=True)
         # disable Werror? WARNINGS_ARE_ERRORS=False
         # TODO: Still needed? "-no-evdev"
         # TODO: require ICU "-icu",
         # TODO: "-no-iconv"
         if self.target_info.is_macos():
             self.add_cmake_options(QT_FEATURE_icu=False)  # Not linked correctly -> tests fail to run
+            self.add_cmake_options(CMAKE_PREFIX_PATH="/usr/local")  # Find homebrew libraries
         if self.build_tests:
             self.add_cmake_options(FEATURE_developer_build=True)
             if OSInfo.IS_MAC:
