@@ -438,7 +438,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.make_args.set(LOCAL_XTOOL_DIRS="lib/libnetbsd usr.sbin/makefs usr.bin/mkimg")
             # Don't build ZFS for CHERI hybrid/purecap kernels. It's marked as broken in the kernel build so no
             # point building it for userspace
-            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            if self.crosscompile_target.is_hybrid_or_purecap_cheri() and \
+               self.crosscompile_target.is_mips(include_purecap=True):
                 self.make_args.set_with_options(ZFS=False)
 
         self._setup_make_args_called = True
