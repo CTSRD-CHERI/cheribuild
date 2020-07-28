@@ -1239,7 +1239,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                     if self.purecap_kernel:
                         self.extra_kernels_with_mfs.append("CHERI-PURECAP-GFE")
                     else:
-                        self.extra_kernels_with_mfs.append("CHERI_GFE")
+                        self.extra_kernels_with_mfs.append("CHERI-GFE")
                 else:
                     self.extra_kernels_with_mfs.append("GFE")
             else:
@@ -1250,7 +1250,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                     if self.purecap_kernel:
                         self.extra_kernels.append("CHERI-PURECAP-FETT")
                     else:
-                        self.extra_kernels.append("CHERI_FETT")
+                        self.extra_kernels.append("CHERI-FETT")
                 else:
                     self.extra_kernels.append("FETT")
             else:
