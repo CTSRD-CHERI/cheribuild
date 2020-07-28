@@ -588,10 +588,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.compiling_for_mips(include_purecap=True):
             # Don't build kernel modules for MIPS
             kernel_options.set(NO_MODULES="yes")
-        # XXX: Work around https://bugs.llvm.org/show_bug.cgi?id=44351
         if self.compiling_for_riscv(include_purecap=True):
-            kernel_options.set(NO_MODULES="yes")  # FIXME: remove
             kernel_options.set_with_options(CTF=False)  # FIXME: restore once debugged
+            # XXX: Work around https://bugs.llvm.org/show_bug.cgi?id=44351
             kernel_options.set(WITHOUT_MODULES="malo")
         if not self.use_bootstrapped_toolchain:
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
