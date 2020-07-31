@@ -1722,3 +1722,9 @@ class BuildFreeBSDDeviceModel(BuildFreeBSDWithDefaultOptions):
     def compile(self, **kwargs):
         self.kernel_config = "BERI_DE4_USBROOT"
         super().compile(all_kernel_configs=self.kernel_config, **kwargs)
+
+class BuildCheriBsdDeviceModel(BuildCHERIBSD):
+    target = "device-model-cheribsd"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git",
+                               default_branch="device-model")
+
