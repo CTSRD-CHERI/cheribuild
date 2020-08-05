@@ -1727,4 +1727,12 @@ class BuildCheriBsdDeviceModel(BuildCHERIBSD):
     target = "device-model-cheribsd"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git",
                                default_branch="device-model")
+    #kernel_config = "CHERI_DE4_USBROOT"
+    default_extra_make_options = [
+        "DM_IOMMU=1",
+        "DM_PCI=1"
+    ]
+    #def compile(self, **kwargs):
+    #    self.kernel_config = "CHERI_DE4_USBROOT"
+    #    super().compile(all_kernel_configs=self.kernel_config, **kwargs)
 
