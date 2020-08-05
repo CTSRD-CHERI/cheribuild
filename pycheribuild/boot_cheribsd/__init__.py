@@ -704,7 +704,7 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
             success("===> got login prompt")
             child.sendline("root")
 
-            i = child.expect([INITIAL_PROMPT_CSH, INITIAL_PROMPT_SH], timeout=3 * 60,
+            i = child.expect([INITIAL_PROMPT_CSH, INITIAL_PROMPT_SH], timeout=10 * 60,
                              timeout_msg="timeout awaiting command prompt ")  # give CheriABI csh 3 minutes to start
             if i == 0:  # /bin/csh prompt
                 success("===> got csh command prompt, starting POSIX sh")
