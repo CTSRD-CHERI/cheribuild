@@ -439,7 +439,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Don't build ZFS for CHERI hybrid/purecap kernels. It's marked as broken in the kernel build so no
             # point building it for userspace
             if self.crosscompile_target.is_hybrid_or_purecap_cheri() and \
-               self.crosscompile_target.is_mips(include_purecap=True):
+                    self.crosscompile_target.is_mips(include_purecap=True):
                 self.make_args.set_with_options(ZFS=False)
 
         self._setup_make_args_called = True
@@ -1721,16 +1721,13 @@ class BuildFreeBSDDeviceModel(BuildFreeBSDWithDefaultOptions):
         self.kernel_config = "BERI_DE4_USBROOT"
         super().compile(all_kernel_configs=self.kernel_config, **kwargs)
 
+
 class BuildCheriBsdDeviceModel(BuildCHERIBSD):
     target = "device-model-cheribsd"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git",
                                default_branch="device-model")
-    #kernel_config = "CHERI_DE4_USBROOT"
-    default_extra_make_options = [
-        "DM_IOMMU=1",
-        "DM_PCI=1"
-    ]
-    #def compile(self, **kwargs):
+    # kernel_config = "CHERI_DE4_USBROOT"
+    default_extra_make_options = ["DM_IOMMU=1", "DM_PCI=1"]
+    # def compile(self, **kwargs):
     #    self.kernel_config = "CHERI_DE4_USBROOT"
     #    super().compile(all_kernel_configs=self.kernel_config, **kwargs)
-
