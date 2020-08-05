@@ -303,6 +303,13 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
         self.add_cmake_options(BUILD_WITH_PCH=False)  # slows down build but gives useful crash testcases
         # QT_FEATURE_reduce_relocations
 
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.run_make("check", cwd=self.build_dir)
+        else:
+            self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=False,
+                                                      mount_sysroot=True)
+
 
 class BuildQt5(BuildQtWithConfigureScript):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qt5", default_branch="5.10", force_branch=True)
@@ -363,7 +370,8 @@ class BuildQtBase(BuildQtWithConfigureScript):
         if self.compiling_for_host():
             self.run_cmd("make", "check", cwd=self.build_dir)
         else:
-            self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True)
+            self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True,
+                                                      mount_sysroot=True)
 
 
 # Webkit needs ICU (and recommended for QtBase too):

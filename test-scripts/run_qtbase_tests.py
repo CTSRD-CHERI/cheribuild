@@ -31,15 +31,19 @@
 #
 import argparse
 
-from run_tests_common import *
+from run_tests_common import boot_cheribsd, run_tests_main
 
 
 def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace):
     print("Running qtbase tests")
-    qemu.run("/mnt/tests/auto/corelib/global/qtendian/tst_qtendian")
+    boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
+    boot_cheribsd.prepend_ld_library_path(qemu, "/build/lib")
+    qemu.run("/build/tests/auto/corelib/tools/qarraydata/tst_qarraydata")
+    qemu.run("/build/tests/auto/corelib/global/qtendian/tst_qtendian")
     # TODO: -o /path/to/file,xunitxml
     return True
 
 
 if __name__ == '__main__':
-    run_tests_main(test_function=run_qtbase_tests, need_ssh=False)  # we don't need ssh running to execute the tests
+    # we don't need ssh running to execute the tests, but we do need the sysroot for libexecinfo+libelf
+    run_tests_main(test_function=run_qtbase_tests, need_ssh=False, should_mount_sysroot=True)
