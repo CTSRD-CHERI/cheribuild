@@ -348,7 +348,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if xtarget.is_hybrid_or_purecap_cheri():
                 assert isinstance(self, BuildCHERIBSD)
                 if self.purecap_kernel:
-                    return "CHERI-PURECAP-QEMU"
+                    return "CHERI-PURECAP-QEMU-NODEBUG"
                 return "CHERI_QEMU"
             return "QEMU"  # default to the QEMU config
         elif xtarget.is_aarch64(include_purecap=True):
@@ -1248,7 +1248,7 @@ class BuildCHERIBSD(BuildFreeBSD):
             if self.compiling_for_riscv(include_purecap=True):
                 if self.crosscompile_target.is_hybrid_or_purecap_cheri():
                     if self.purecap_kernel:
-                        self.extra_kernels.append("CHERI-PURECAP-FETT")
+                        self.extra_kernels.append("CHERI-PURECAP-FETT-NODEBUG")
                     else:
                         self.extra_kernels.append("CHERI-FETT")
                 else:
