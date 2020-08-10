@@ -233,8 +233,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
     crossbuild = False
     needs_sysroot = False  # We are building the full OS so we don't need a sysroot
     # TODO: test more architectures (e.g. RISCV)
-    supported_architectures = [CompilationTargets.FREEBSD_X86_64, CompilationTargets.FREEBSD_MIPS,
-                               CompilationTargets.FREEBSD_RISCV, CompilationTargets.FREEBSD_AARCH64]
+    supported_architectures = [CompilationTargets.FREEBSD_X86_64, CompilationTargets.FREEBSD_I386,
+                               CompilationTargets.FREEBSD_MIPS, CompilationTargets.FREEBSD_RISCV,
+                               CompilationTargets.FREEBSD_AARCH64]
 
     _default_install_dir_fn = ComputedDefaultValue(function=freebsd_install_dir,
                                                    as_string="$INSTALL_ROOT/freebsd-{mips/x86}")
@@ -992,7 +993,7 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     add_custom_make_options = False
 
     # also try to support building for RISCV
-    supported_architectures = BuildFreeBSD.supported_architectures + [CompilationTargets.FREEBSD_I386]
+    supported_architectures = BuildFreeBSD.supported_architectures
     if not OSInfo.IS_FREEBSD:
         crossbuild = True
 
