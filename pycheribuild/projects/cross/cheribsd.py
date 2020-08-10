@@ -859,55 +859,17 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self._installkernel(kernconf=all_kernel_configs)
 
     def add_cross_build_options(self):
-        # Tell glibc functions to be POSIX compatible
-        # Would be ideal, but it seems like there is too much that depends on non-posix flags
-        # self.common_options.env_vars["POSIXLY_CORRECT"] = "1"
-        # self.make_args.set(PATH=build_path)
-
         self.make_args.set_env(CC=self.host_CC, CXX=self.host_CXX, CPP=self.host_CPP)
-
-        # We might not build elftoolchain during buildworld so for the kernel we need to set these variables
-        if not self.crosscompile_target.is_aarch64(include_purecap=True):
-            # The AArch64 kernel needs elftoolchain objcopy due to unsupported flags
-            self.make_args.set_env(OBJCOPY=self.sdk_bindir / "llvm-objcopy")
-
-        # This is not actually the path to the strip binary but rather a flag to install
-        # self.make_args.env_vars["STRIP"] = self.sdk_bindir / "strip"
-
-        # don't build all the bootstrap tools (just pretend we are running freebsd 42):
-        # self.make_args.env_vars["OSRELDATE"] = "4204345"
-
-        # These all seem to work now
-        # self.make_args.set_with_options(SYSCONS=False, USB=False, GPL_DTC=False)
-        # self.make_args.set_with_options(CDDL=False)  # lots of bootstrap tools issues
-
-        self.make_args.set_with_options(BINUTILS=True, CLANG=False, GCC=False, GDB=False, LLD=False, LLDB=False)
-
-        # TODO: build these for zoneinfo setup
-        # "zic", "tzsetup"
-        # self.make_args.set_with_options(ZONEINFO=False)
-
-        # self.make_args.set_with_options(KERBEROS=False)  # needs some more work with bootstrap tools
-
-        # won't work with CHERI
-        # self.common_options.add(DIALOG=False)
-
         # won't work on a case-insensitive file system and is also really slow (and missing tools on linux)
         self.make_args.set_with_options(MAN=False)
         # links from /usr/bin/mail to /usr/bin/Mail won't work on case-insensitve fs
         self.make_args.set_with_options(MAIL=False)
-        self.make_args.set_with_options(SENDMAIL=False)  # libexec somehow won't compile
-
-        self.make_args.set_with_options(VT=False)
 
         # We don't want separate .debug for now
         self.make_args.set_with_options(DEBUG_FILES=False)
-
         if self.crosscompile_target.is_any_x86():
             # seems to be missing some include paths which appears to work on freebsd
             self.make_args.set_with_options(BHYVE=False)
-        # BOOT is required for x86 and aarch64
-        self.make_args.set_with_options(BOOT=True)
 
     def libcompat_name(self) -> str:
         if self.crosscompile_target.is_cheri_purecap():
