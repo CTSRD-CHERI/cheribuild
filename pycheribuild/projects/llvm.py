@@ -396,7 +396,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
         super().setup()
         if not self.build_all_targets:
             # Save some time by only building the targets that we need.
-            self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips;RISCV;host")
+            self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips;RISCV;X86;host")
 
     def install(self, **kwargs):
         super().install(**kwargs)
