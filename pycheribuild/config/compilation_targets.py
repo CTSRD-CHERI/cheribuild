@@ -85,6 +85,10 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         return self._compiler_dir / "llvm-ar"
 
     @property
+    def strip_tool(self) -> Path:
+        return self._compiler_dir / "llvm-strip"
+
+    @property
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:
         # noinspection PyProtectedMember
         if not self.project._setup_called:

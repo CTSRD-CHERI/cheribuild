@@ -126,6 +126,11 @@ class TargetInfo(ABC):
 
     @property
     @abstractmethod
+    def strip_tool(self) -> Path:
+        ...
+
+    @property
+    @abstractmethod
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:
         """
         :return: flags such as -target + -mabi which are needed for both compiler and linker
@@ -348,6 +353,10 @@ class NativeTargetInfo(TargetInfo):
     def ar(self) -> Path:
         # Should rarely be needed
         return self.c_compiler.parent / "ar"
+
+    @property
+    def strip_tool(self) -> Path:
+        return self.c_compiler.parent / "strip"
 
     @property
     def c_preprocessor(self) -> Path:

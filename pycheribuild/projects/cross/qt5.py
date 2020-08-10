@@ -578,12 +578,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         # create a stripped version of DumpRenderTree and jsc since the one with debug info is too big
         if not self.build_jsc_only:
             dump_render_tree = self.build_dir / "bin/DumpRenderTree"  # type: Path
-            if dump_render_tree.is_file():
-                self.run_cmd(self.llvm_binutils_dir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"),
-                             dump_render_tree)
+            self.maybe_strip_elf_file(dump_render_tree, output_path=dump_render_tree.with_suffix(".stripped"),
+                                      print_verbose_only=False)
         jsc = self.build_dir / "bin/jsc"  # type: Path
-        if jsc.is_file():
-            self.run_cmd(self.llvm_binutils_dir / "llvm-strip", "-o", jsc.with_suffix(".stripped"), jsc)
+        self.maybe_strip_elf_file(jsc, output_path=jsc.with_suffix(".stripped"), print_verbose_only=False)
         self.info("Not installing qtwebit since it uses too much space. If you really want this run `ninja install`")
 
     def run_tests(self):

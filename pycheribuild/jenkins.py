@@ -345,14 +345,17 @@ def _jenkins_main():
         status_update("Creating tarball", cheri_config.tarball_name)
         # Strip all ELF files:
         if cheri_config.strip_elf_files:
-            strip_binaries(cheri_config, cheri_config.workspace / "tarball")
+            target = target_manager.get_target_raw(cheri_config.targets[0])
+            Target.instantiating_targets_should_warn = False
+            project = target.get_or_create_project(cheri_config.preferred_xtarget, cheri_config)
+            strip_binaries(cheri_config, project, cheri_config.workspace / "tarball")
         run_command(
             [tar_cmd, "--create", "--xz"] + tar_flags + ["-f", cheri_config.tarball_name, "-C", "tarball", "."],
             cwd=cheri_config.workspace)
         run_command("du", "-sh", cheri_config.workspace / cheri_config.tarball_name)
 
 
-def strip_binaries(cheri_config: JenkinsConfig, directory: Path):
+def strip_binaries(cheri_config: JenkinsConfig, project: SimpleProject, directory: Path):
     status_update("Tarball directory size before stripping ELF files:")
     run_command("du", "-sh", directory)
     for root, dirs, filelist in os.walk(str(directory)):
@@ -361,13 +364,7 @@ def strip_binaries(cheri_config: JenkinsConfig, directory: Path):
             filepath = Path(root, file)
             if filepath.is_symlink():
                 continue
-            try:
-                with filepath.open("rb") as f:
-                    if f.read(4) == b"\x7fELF":
-                        # self.verbose_print("Stripping ELF binary", filepath)
-                        run_command(cheri_config.cheri_sdk_bindir / "llvm-strip", filepath)
-            except Exception as e:
-                warning_message("Failed to detect type of file:", filepath, e)
+            project.maybe_strip_elf_file(filepath)
     status_update("Tarball directory size after stripping ELF files:")
     run_command("du", "-sh", directory)
 

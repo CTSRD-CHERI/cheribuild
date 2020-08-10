@@ -168,16 +168,12 @@ class _BuildDiskImageBase(SimpleProject):
             path_in_target = os.path.relpath(str(file), str(base_directory))
         assert not str(path_in_target).startswith(".."), path_in_target
 
-        if self.strip_binaries and file.exists():
+        if self.strip_binaries:
             # Try to shrink the size by stripping all elf binaries
-            with file.open("rb") as f:
-                if f.read(4) == b"\x7fELF":
-                    self.verbose_print("Stripping ELF binary", file)
-                    stripped_path = self.tmpdir / path_in_target
-                    self.makedirs(stripped_path.parent)
-                    self.run_cmd(self.sdk_bindir / "llvm-strip", file, "-o", stripped_path, print_verbose_only=True)
-                    # self.run_cmd("file", stripped_path)
-                    file = stripped_path
+            stripped_path = self.tmpdir / path_in_target
+            if self.maybe_strip_elf_file(file, output_path=stripped_path):
+                self.verbose_print("Stripped ELF binary", file)
+                file = stripped_path
 
         if not self.config.quiet:
             self.info(file, " -> /", path_in_target, sep="")

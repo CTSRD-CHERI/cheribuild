@@ -773,6 +773,31 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 message += "See " + logfile.name + " for details."
             raise SystemExit(message)
 
+    def maybe_strip_elf_file(self, file: Path, *, output_path: Path = None, print_verbose_only=True) -> bool:
+        """Runs llvm-strip on the file if it is an ELF file and it is safe to do so."""
+        if not file.is_file():
+            return False
+        try:
+            with file.open("rb") as f:
+                if f.read(4) == b"\x7fELF" and self.should_strip_elf_file_for_tarball(file):
+                    self.verbose_print("Stripping ELF binary", file)
+                    cmd = [self.target_info.strip_tool, file]
+                    if output_path:
+                        cmd += ["-o", output_path]
+                    run_command(cmd, print_verbose_only=print_verbose_only)
+                    return True
+        except IOError as e:
+            self.warning("Failed to detect file type for", file, e)
+        return False
+
+    def should_strip_elf_file_for_tarball(self, f: Path):
+        if f.suffix == ".o":
+            # We musn't strip crt1.o, etc. sice if we do the linker can't find essential symbols such as __start
+            # __programe or environ.
+            self.verbose_print("Not stripping", f, "since the symbol table is probably required!")
+            return False
+        return True
+
     def dependency_error(self, *args, install_instructions: str = None):
         self._system_deps_checked = True  # make sure this is always set
         if callable(install_instructions):
@@ -2237,10 +2262,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     # TODO: make this an error since we should have deleted them
                     self.warning("Will copy a .dump file to the FPGA:", file)
                 # Try to reduce the amount of copied data
-                with file.open("rb") as f:
-                    if f.read(4) == b"\x7fELF":
-                        self.verbose_print("Stripping ELF binary", file)
-                        run_command(self.sdk_bindir / "llvm-strip", file)
+                self.maybe_strip_elf_file(file)
         self.run_cmd("du", "-sh", benchmark_dir)
 
     @property
