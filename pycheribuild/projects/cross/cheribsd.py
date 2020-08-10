@@ -224,6 +224,7 @@ class FreeBSDToolchainKind(Enum):
     BOOTSTRAP = "bootstrap"
     UPSTREAM_LLVM = "upstream-llvm"
     CHERI_LLVM = "cheri-llvm"
+    SYSTEM_CLANG = "system-clang"
     CUSTOM = "custom"
 
 
@@ -456,6 +457,20 @@ class BuildFreeBSD(BuildFreeBSDBase):
         elif self.build_toolchain == FreeBSDToolchainKind.CHERI_LLVM:
             self.target_info._sdk_root_dir = BuildCheriLLVM.get_install_dir(self,
                                                                             cross_target=CompilationTargets.NATIVE)
+        elif self.build_toolchain == FreeBSDToolchainKind.SYSTEM_CLANG:
+            if OSInfo.IS_MAC:
+                # Don't use apple_clang from /usr/bin
+                compiler_path = shutil.which("clang", path="/usr/local/opt/llvm/bin:/usr/local/bin:/usr/bin")
+                if not compiler_path or get_compiler_info(compiler_path).is_apple_clang:
+                    self.fatal("Cannot build FreeBSD with Apple clang.",
+                               fixit_hint="Please install upstream clang (e.g. with homebrew) or use the custom "
+                                          "toolchain option")
+            else:
+                compiler_path = shutil.which("clang")
+            if not compiler_path or get_compiler_info(compiler_path).version < (10, 0):
+                self.fatal("Cannot build FreeBSD with Clang < 10.0 (using clang =", compiler_path, ")",
+                           fixit_hint="Please install upstream clang 10 or newer or use the custom toolchain option")
+            self.target_info._sdk_root_dir = Path(compiler_path).parent.parent
         elif self.build_toolchain == FreeBSDToolchainKind.CUSTOM:
             if self._cross_toolchain_root is None:
                 self.fatal("Requested custom toolchain but path is not set.")
