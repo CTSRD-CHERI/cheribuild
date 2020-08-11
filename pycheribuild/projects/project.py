@@ -783,6 +783,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     self.verbose_print("Stripping ELF binary", file)
                     cmd = [self.target_info.strip_tool, file]
                     if output_path:
+                        self.makedirs(output_path.parent)
                         cmd += ["-o", output_path]
                     run_command(cmd, print_verbose_only=print_verbose_only)
                     return True
