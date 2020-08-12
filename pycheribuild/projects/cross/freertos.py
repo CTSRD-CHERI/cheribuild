@@ -34,6 +34,7 @@ import os
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository)
 from ...utils import get_compiler_info, set_env
+from ...config.loader import ComputedDefaultValue
 
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
@@ -50,17 +51,23 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     default_install_dir = DefaultInstallDir.SYSROOT
 
     # FreeRTOS Demos to build
-    freertos_demos = [
+    supported_freertos_demos = [
         # Generic/simple (CHERI-)RISC-V Demo that runs main_blinky on simulators
         # and simple SoCs
         "RISC-V-Generic"]
 
     # Map Demos and the FreeRTOS apps we support building/running for
-    demo_apps = {"RISC-V-Generic": ["main_blinky"]}
+    supported_demo_apps = {"RISC-V-Generic": ["main_blinky"]}
+
+    default_demo = "RISC-V-Generic"
+    default_demo_app = "main_blinky"
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.compiler_resource = get_compiler_info(self.CC).get_resource_dir()
+
+        self.default_demo_app = "qemu_virt-" + self.target_info.riscv_arch_string + \
+                                self.target_info.riscv_softfloat_abi
 
         # We only support building FreeRTOS with llvm from cheribuild
         self.make_args.set(TOOLCHAIN="llvm")
@@ -82,26 +89,48 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         if self.target_info.target.is_cheri_purecap():
             # CHERI-RISC-V sophisticated Demo with more advanced device drivers
             # and currently only runs on FPGA-GFE, purecap
-            self.freertos_demos.append("RISC-V_Galois_P1")
-            self.demo_apps["RISC-V_Galois_P1"] = ["main_blinky", "main_netboot"]
+            self.supported_freertos_demos.append("RISC-V_Galois_P1")
+            self.supported_demo_apps["RISC-V_Galois_P1"] = ["main_blinky", "main_netboot"]
 
             self.make_args.set(EXTENSION="cheri")
 
-    def compile(self, **kwargs):
-        for demo in self.freertos_demos:
-            if demo == "RISC-V-Generic":
-                # Build parametrized FreeRTOS to run on QEMU's virt machine
-                self.make_args.set(
-                    BSP="qemu_virt-" + self.target_info.riscv_arch_string + "-" + self.target_info.riscv_softfloat_abi)
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(add_common_cross_options=False, **kwargs)
 
-            for app in self.demo_apps[demo]:
-                # Need to clean before/between building apps, otherwise
-                # irrelevant objs will be picked up from incompatible apps/builds
-                self.make_args.set(PROG=app)
-                self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/" + demo))
-                self.run_make(cwd=self.source_dir / str("FreeRTOS/Demo/" + demo))
-                self.move_file(self.source_dir / str("FreeRTOS/Demo/" + demo + "/" + app + ".elf"),
-                               self.source_dir / str("FreeRTOS/Demo/" + demo + "/" + demo + app + ".elf"))
+        cls.demo = cls.add_config_option(
+            "demo", metavar="DEMO", show_help=True,
+            default=cls.default_demo,
+            help="The FreeRTOS Demo build.")  # type: str
+
+        cls.demo_app = cls.add_config_option(
+            "prog", metavar="PROG", show_help=True,
+            default=cls.default_demo_app,
+            help="The FreeRTOS program to build.")  # type: str
+
+        cls.demo_bsp = cls.add_config_option(
+            "bsp", metavar="BSP", show_help=True,
+            default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
+                                         as_string="target-dependent default"),
+            help="The FreeRTOS BSP to build. This is only valid for the "
+                 "paramterized RISC-V-Generic. The BSP option chooses "
+                 "platform, RISC-V arch and RISC-V abi in the "
+                 "$platform-$arch-$abi format. See RISC-V-Generic/README for more details")
+
+    def default_demo_bsp(self):
+        return "qemu_virt-" + self.target_info.riscv_arch_string + "-" + \
+               self.target_info.riscv_softfloat_abi
+
+    def compile(self, **kwargs):
+        self.make_args.set(BSP=self.demo_bsp)
+
+        # Need to clean before/between building apps, otherwise
+        # irrelevant objs will be picked up from incompatible apps/builds
+        self.make_args.set(PROG=self.demo_app)
+        self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
+        self.run_make(cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
+        self.move_file(self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo_app + ".elf"),
+                       self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"))
 
     def configure(self):
         pass
@@ -110,12 +139,17 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         return False
 
     def install(self, **kwargs):
-        for demo in self.freertos_demos:
-            for app in self.demo_apps[demo]:
-                self.install_file(self.source_dir / str("FreeRTOS/Demo/" + demo + "/" + demo + app + ".elf"),
-                                  self.real_install_root_dir / str("FreeRTOS/Demo/" + demo + "_" + app + ".elf"))
+        self.install_file(self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"),
+                          self.real_install_root_dir / str("FreeRTOS/Demo/" + self.demo + "_" + self.demo_app + ".elf"))
 
     def process(self):
+
+        if self.demo not in self.supported_freertos_demos:
+            self.fatal("Demo " + self.demo + "is not supported")
+
+        if self.demo_app not in self.supported_demo_apps[self.demo]:
+            self.fatal(self.demo + " Demo doesn't support/have " + self.demo_app)
+
         with set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
                      # Add compiler-rt location to the search path
                      LDFLAGS="-L" + str(self.compiler_resource / "lib")):
