@@ -38,8 +38,8 @@ from ...config.loader import ComputedDefaultValue
 
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/FreeRTOS-mirror",
-                               force_branch=True, default_branch="cheri")
+    repository = GitRepository("https://github.com/dodsonmg/FreeRTOS-mirror.git",
+                               force_branch=True, default_branch="modbus")
     target = "freertos"
     project_name = "freertos"
     dependencies = ["newlib", "compiler-rt-builtins"]
@@ -57,7 +57,12 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         "RISC-V-Generic"]
 
     # Map Demos and the FreeRTOS apps we support building/running for
-    supported_demo_apps = {"RISC-V-Generic": ["main_blinky"]}
+    supported_demo_apps = {"RISC-V-Generic": [
+                            "main_blinky",
+                            "modbus_baseline",
+                            "modbus_baseline_microbenchmark",
+                            "modbus_macaroons_layer",
+                            "modbus_macaroons_layer_microbenchmark"]}
 
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
@@ -92,6 +97,12 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             self.supported_freertos_demos.append("RISC-V_Galois_P1")
             self.supported_demo_apps["RISC-V_Galois_P1"] = ["main_blinky", "main_netboot"]
 
+            self.supported_demo_apps["RISC-V-Generic"].append(
+                                      ["modbus_cheri_layer",
+                                      "modbus_cheri_layer_microbenchmark",
+                                      "modbus_cheri_macaroons_layers",
+                                      "modbus_cheri_macaroons_layers_microbenchmark"])
+
             self.make_args.set(EXTENSION="cheri")
 
     @classmethod
@@ -124,13 +135,19 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     def compile(self, **kwargs):
         self.make_args.set(BSP=self.demo_bsp)
 
+        self.demo_dir = str("FreeRTOS/Demo/" + self.demo)
+        self.app_dir = self.demo_dir
+
+        if("modbus" in self.demo_app):
+            self.app_dir = self.demo_dir + "/modbus_demo"
+
         # Need to clean before/between building apps, otherwise
         # irrelevant objs will be picked up from incompatible apps/builds
         self.make_args.set(PROG=self.demo_app)
-        self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
-        self.run_make(cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
-        self.move_file(self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo_app + ".elf"),
-                       self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"))
+        self.run_make("clean", cwd=self.source_dir / self.app_dir)
+        self.run_make(cwd=self.source_dir / self.app_dir)
+        self.move_file(self.source_dir / str(self.app_dir + "/" + self.demo_app + ".elf"),
+                       self.source_dir / str(self.app_dir + "/" + self.demo + self.demo_app + ".elf"))
 
     def configure(self):
         pass
@@ -139,8 +156,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         return False
 
     def install(self, **kwargs):
-        self.install_file(self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"),
-                          self.real_install_root_dir / str("FreeRTOS/Demo/" + self.demo + "_" + self.demo_app + ".elf"))
+        self.install_file(self.source_dir / str(self.app_dir + "/" + self.demo + self.demo_app + ".elf"),
+                          self.real_install_root_dir / str(self.app_dir + self.demo + "_" + self.demo_app + ".elf"))
 
     def process(self):
 
