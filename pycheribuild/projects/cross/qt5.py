@@ -236,7 +236,8 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
                                                              "builds")
 
     def __init__(self, config):
-        super().__init__(config)
+        # Use makefiles so we can run `make check` on the guest
+        super().__init__(config, generator=CrossCompileCMakeProject.Generator.Makefiles)
         self.set_minimum_cmake_version(3, 18)
 
     def process(self):
