@@ -430,7 +430,8 @@ class BuildLlvmLibs(CMakeProject):
             try:
                 self.run_cmd(["ssh", ssh_host, "--", "echo Success."])
             except subprocess.CalledProcessError:
-                self.fatal(self.target + "/test-localhost-via-ssh selected but cannot ssh to", ssh_host)
+                self.fatal(self.get_config_option_name("test_localhost_via_ssh"), "selected but cannot ssh to",
+                           ssh_host)
             executor = commandline_to_str([self.source_dir / "../libcxx/utils/ssh.py", "--host", ssh_host])
             args.append("-Dexecutor=" + executor)
         self.run_cmd([sys.executable, "./bin/llvm-lit"] + args, cwd=self.build_dir)

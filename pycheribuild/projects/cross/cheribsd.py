@@ -191,7 +191,8 @@ class BuildFreeBSDBase(Project):
         for option in self.extra_make_args:
             if not self.crosscompile_target.is_hybrid_or_purecap_cheri() and "CHERI_" in option:
                 self.warning("Should not be adding CHERI specific make option", option, "for", self.target,
-                             " -- consider setting separate", self.target + "/build-options in the config file.")
+                             " -- consider setting separate", self.get_config_option_name("extra_make_args"),
+                             "in the config file.")
             if "=" in option:
                 key, value = option.split("=")
                 args = {key: value}
@@ -1555,7 +1556,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         super().check_system_dependencies()
         if not OSInfo.IS_FREEBSD and not self.remote_path and not self.rootfs_source_class.get_instance(
                 self).crossbuild:
-            config_option = "'--" + self.target + "/" + "remote-sdk-path'"
+            config_option = "'--" + self.get_config_option_name("remote_path") + "'"
             self.fatal("Path to the remote SDK is not set, option", config_option,
                        "must be set to a path that scp understands (e.g. vica:~foo/cheri/output/sdk)")
             if not self.config.pretend:
