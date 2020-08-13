@@ -97,8 +97,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             for app in self.demo_apps[demo]:
                 # Need to clean before/between building apps, otherwise
                 # irrelevant objs will be picked up from incompatible apps/builds
-                self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/" + demo))
                 self.make_args.set(PROG=app)
+                self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/" + demo))
                 self.run_make(cwd=self.source_dir / str("FreeRTOS/Demo/" + demo))
                 self.move_file(self.source_dir / str("FreeRTOS/Demo/" + demo + "/" + app + ".elf"),
                                self.source_dir / str("FreeRTOS/Demo/" + demo + "/" + demo + app + ".elf"))
