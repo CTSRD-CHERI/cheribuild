@@ -647,6 +647,11 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
 
         return result
 
+    @property
+    def config_file_path(self) -> Path:
+        assert self._config_path is not None
+        return self._config_path
+
     def _load_json_config_file(self) -> None:
         self._json = {}
         if not self._config_path:

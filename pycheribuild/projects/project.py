@@ -471,6 +471,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                            **kwargs)
 
     @classmethod
+    def get_config_option_name(cls, option: str) -> str:
+        option = inspect.getattr_static(cls, option)
+        assert isinstance(option, ConfigOptionBase)
+        return option.full_option_name
+
+    @classmethod
     def add_config_option(cls, name: str, *, show_help=False, shortname=None, _no_fallback_config_name: bool = False,
                           kind: "Union[typing.Type[Type_T], Callable[[str], Type_T]]" = str,
                           default: "Union[ComputedDefaultValue[Type_T], Type_T, Callable[[], Type_T]]" = None,

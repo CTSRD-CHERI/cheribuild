@@ -634,7 +634,12 @@ class _BuildDiskImageBase(SimpleProject):
             # only show prompt if we can actually input something to stdin
             if not self.config.clean and not self.force_overwrite:
                 # with --clean always delete the image
-                print("An image already exists (" + str(self.disk_image_path) + "). ", end="")
+                opt = self.get_config_option_name("force_overwrite")
+                self.info("An image already exists (" + str(self.disk_image_path) + "). ", end="")
+                self.info("Note: Pass", coloured(AnsiColour.yellow, "--" + opt),
+                          coloured(AnsiColour.cyan, "to skip this prompt or add"),
+                          coloured(AnsiColour.yellow, "\"" + opt + "\": true"),
+                          coloured(AnsiColour.cyan, "to", self.config.loader.config_file_path))
                 if not self.query_yes_no("Overwrite?", default_result=True):
                     return  # we are done here
             self.delete_file(self.disk_image_path)
