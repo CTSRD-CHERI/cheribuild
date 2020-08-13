@@ -1278,6 +1278,10 @@ class BuildCheriBSDFett(BuildCHERIBSD):
     target = "cheribsd-fett"
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
 
+    def __init__(self, config):
+        super().__init__(config)
+        self.make_args.set_with_options(CHERI_CAPREVOKE=True, DLMALLOC=True)
+
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
