@@ -352,7 +352,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 assert isinstance(self, BuildCHERIBSD)
                 if self.purecap_kernel:
                     return "CHERI-PURECAP-QEMU-NODEBUG"
-                return "CHERI_QEMU"
+                return "CHERI-QEMU"
             return "QEMU"  # default to the QEMU config
         elif xtarget.is_aarch64(include_purecap=True):
             return "GENERIC"
@@ -1350,7 +1350,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
                 if self.build_cheribsd_instance.purecap_kernel:
                     return "CHERI-PURECAP-GFE"
-                return "CHERI_GFE"
+                return "CHERI-GFE"
             return "GFE"
         else:
             self.fatal("Invalid ARCH")
