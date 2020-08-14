@@ -1321,15 +1321,19 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         default_kernconf = self._get_kernconf_to_build(self.build_cheribsd_instance)
         kernel_configs = [default_kernconf]
         # TODO: add the benchmark ones for RISCV
-        has_benchmark_kernel = self.build_cheribsd_instance.crosscompile_target.is_mips(include_purecap=True)
+        benchmark_suffix = None
+        if self.build_cheribsd_instance.crosscompile_target.is_mips(include_purecap=True):
+            benchmark_suffix = "_BENCHMARK"
+        elif self.build_cheribsd_instance.crosscompile_target.is_riscv(include_purecap=True):
+            benchmark_suffix = "-NODEBUG"
         # also build the benchmark kernel:
-        if has_benchmark_kernel:
-            kernel_configs.append(default_kernconf + "_BENCHMARK")
+        if benchmark_suffix:
+            kernel_configs.append(default_kernconf + benchmark_suffix)
         if self.build_fpga_kernels:
             fpga_conf = self.fpga_kernconf
             kernel_configs.append(fpga_conf)
-            if has_benchmark_kernel:
-                kernel_configs.append(fpga_conf + "_BENCHMARK")
+            if benchmark_suffix:
+                kernel_configs.append(fpga_conf + benchmark_suffix)
         if self.config.clean:
             for kernconf in kernel_configs:
                 kernel_dir = self.build_cheribsd_instance.kernel_objdir(kernconf)
@@ -1402,11 +1406,10 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         if xtarget.is_mips(include_purecap=True):
             return build_cheribsd.kernel_config + "_MFS_ROOT"
         elif xtarget.is_riscv(include_purecap=True):
-            print(build_cheribsd.source_dir)
-            # Use the SPIKE kernel config for older cheribsd versions that don't have QEMU_MFS_ROOT yet
-            if (build_cheribsd.source_dir / "sys/riscv/conf/QEMU_MFS_ROOT").exists():
-                return "CHERI_QEMU_MFS_ROOT" if xtarget.is_hybrid_or_purecap_cheri() else "QEMU_MFS_ROOT"
-            return "CHERI_SPIKE" if xtarget.is_hybrid_or_purecap_cheri() else "SPIKE"
+            conf = build_cheribsd.kernel_config
+            if conf.endswith("-NODEBUG"):
+                conf = conf[0:-len("-NODEBUG")]
+            return conf + "-MFS-ROOT"
         return build_cheribsd.kernel_config
 
     @classmethod
