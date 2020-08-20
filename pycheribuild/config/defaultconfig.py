@@ -124,6 +124,9 @@ class DefaultCheriConfig(CheriConfig):
                                                  default=lambda p, cls: p.output_root, group=loader.path_group,
                                                  help="The directory to find sdk and bootstrap tools (default: "
                                                       "'<OUTPUT_ROOT>')")
+        self.sysroot_pfx = loader.add_path_option("sysroot-install-dir",
+                                                  default=lambda p, cls: p.tools_root, group=loader.path_group,
+                                                  help="Sysroot prefix (default: '<TOOLS_ROOT>')")
         loader.finalize_options(available_targets)
 
     def load(self):
@@ -131,6 +134,7 @@ class DefaultCheriConfig(CheriConfig):
         self.preferred_xtarget = None
         # now set some generic derived config options
         self.cheri_sdk_dir = self.tools_root / self.cheri_sdk_directory_name  # qemu and binutils (and llvm/clang)
+        self.sysroot_install_dir = self.sysroot_pfx / self.cheri_sdk_directory_name
         self.other_tools_dir = self.tools_root / "bootstrap"
         self.cheribsd_image_root = self.output_root  # TODO: allow this to be different?
 
