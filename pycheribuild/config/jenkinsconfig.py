@@ -222,6 +222,7 @@ class JenkinsConfig(CheriConfig):
             self.cheri_sdk_dir = Path("/cheri-sdk")
         else:
             self.cheri_sdk_dir = self.workspace / self.cheri_sdk_directory_name
+        self.sysroot_install_dir = self.cheri_sdk_dir
         self.preferred_xtarget = None  # type: typing.Optional[CrossCompileTarget]
         if self.cpu == "default":
             self.preferred_xtarget = None

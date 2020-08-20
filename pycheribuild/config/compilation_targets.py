@@ -215,7 +215,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def sysroot_dir(self):
-        return Path(self.sdk_root_dir, "sysroot-freebsd-" + str(self.target.cpu_architecture.value))
+        return Path(self.config.sysroot_install_dir, "sysroot-freebsd-" + str(self.target.cpu_architecture.value))
 
     @classmethod
     def is_freebsd(cls):
@@ -270,7 +270,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def sysroot_dir(self):
         if is_jenkins_build():
             # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
-            return self.config.cheri_sdk_dir / "sysroot"
+            return self.config.sysroot_install_dir / "sysroot"
         return self.get_cheribsd_sysroot_path()
 
     def get_cheribsd_sysroot_path(self) -> Path:
@@ -279,15 +279,15 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         """
         config = self.config
         if self.target.is_mips(include_purecap=True):
-            return self._sysroot_path(config.cheri_sdk_dir, purecap_prefix="-purecap", hybrid_prefix="",
+            return self._sysroot_path(config.sysroot_install_dir, purecap_prefix="-purecap", hybrid_prefix="",
                                       nocheri_name="-mips")
         elif self.target.is_riscv(include_purecap=True):
-            return self._sysroot_path(config.cheri_sdk_dir, purecap_prefix="-riscv64-purecap",
+            return self._sysroot_path(config.sysroot_install_dir, purecap_prefix="-riscv64-purecap",
                                       hybrid_prefix="-riscv64-hybrid", nocheri_name="-riscv64")
         elif self.target.is_aarch64():
-            return config.cheri_sdk_dir / "sysroot-aarch64"
+            return config.sysroot_install_dir / "sysroot-aarch64"
         elif self.target.is_x86_64():
-            return config.cheri_sdk_dir / "sysroot-amd64"
+            return config.sysroot_install_dir / "sysroot-amd64"
         else:
             assert False, "Invalid cross_compile_target: " + str(self.target)
 
@@ -580,7 +580,7 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
 
     @property
     def sysroot_dir(self):
-        return self.sdk_root_dir / "sysroot"
+        return self.config.sysroot_install_dir / "sysroot"
 
     @classmethod
     def is_cheribsd(cls):
@@ -632,7 +632,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
     @property
     def sysroot_dir(self):
         # Install to target triple as RTEMS' LLVM/Clang Driver expects
-        return self.sdk_root_dir / ("sysroot-" + self.target.generic_suffix) / self.target_triple
+        return self.config.sysroot_install_dir / ("sysroot-" + self.target.generic_suffix) / self.target_triple
 
     def _get_sdk_root_dir_lazy(self) -> Path:
         return self.config.cheri_sdk_dir
@@ -674,7 +674,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
             suffix = "cheri" + self.config.mips_cheri_bits_str
         else:
             suffix = self.target.generic_suffix
-        return self.config.cheri_sdk_dir / "baremetal" / suffix / self.target_triple
+        return self.config.sysroot_install_dir / "baremetal" / suffix / self.target_triple
 
     @property
     def must_link_statically(self):

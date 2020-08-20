@@ -54,6 +54,7 @@ class MockConfig(CheriConfig):
         self.build_root = source_root / "build"
         self.output_root = source_root / "output"
         self.cheri_sdk_dir = self.output_root / "sdk"
+        self.sysroot_install_dir = self.cheri_sdk_dir
         self.other_tools_dir = self.output_root / "other"
 
         assert self._ensure_required_properties_set()
