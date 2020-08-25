@@ -216,3 +216,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.install_file(self.build_dir / "binutils/cxxfilt", bindir / "gc++filt")
             self.install_file(self.build_dir / "binutils/nm-new", bindir / "gnm")
             self.install_file(self.build_dir / "binutils/strip-new", bindir / "gstrip")
+
+
+class BuildKGDB(BuildGDB):
+    repository = GitRepository("https://github.com/CTSRD-CHERI/gdb.git",
+                               # Branch name is changed for every major GDB release:
+                               default_branch="mips_cheri-8.3-kgdb", force_branch=True,
+                               old_urls=[b'https://github.com/bsdjhb/gdb.git'])
