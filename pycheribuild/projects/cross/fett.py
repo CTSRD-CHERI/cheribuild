@@ -235,6 +235,7 @@ class BuildFettDiskImage(BuildCheriBSDDiskImage):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.hostname = "cheri-fett"
+        cls.include_kgdb = True
 
 
 class LaunchFett(LaunchCheriBSD):
