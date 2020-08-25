@@ -162,9 +162,6 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             )
         if self.should_include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
-        if self.compiling_for_mips(include_purecap=True):
-            # self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH="mips")
-            self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ONLY=True)
 
     def configure(self, **kwargs):
         self.configure_args[0] = str(self.source_dir / "lib/builtins")
