@@ -38,7 +38,7 @@ from pathlib import Path
 
 from .cross.cheribsd import (BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDDeviceModel, BuildFreeBSDGFE,
                              BuildFreeBSDWithDefaultOptions)
-from .cross.gdb import BuildGDB
+from .cross.gdb import (BuildKGDB, BuildGDB)
 from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget,
                       DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets
@@ -127,6 +127,8 @@ class _BuildDiskImageBase(SimpleProject):
                                                     "of interest in rare cases, like extra-files on smbfs.")
         cls.include_gdb = cls.add_bool_option("include-gdb", default=True,
                                               help="Include GDB in the disk image (if it exists)")
+        cls.include_kgdb = cls.add_bool_option("include-kgdb", default=False,
+                                               help="Include KGDB in the disk image (if it exists)")
         assert cls.default_disk_image_path is not None
         cls.disk_image_path = cls.add_path_option("path", default=cls.default_disk_image_path, metavar="IMGPATH",
                                                   help="The output path for the QEMU disk image", show_help=True)
@@ -350,7 +352,7 @@ class _BuildDiskImageBase(SimpleProject):
                         self.run_cmd("chmod", "0700", authorized_keys.parent.parent, authorized_keys.parent)
                         self.run_cmd("chmod", "0600", authorized_keys)
 
-        if self.include_gdb:
+        if self.include_gdb or self.include_kgdb:
             cross_target = self.source_project.get_crosscompile_target(self.config)
             # We always want to include the MIPS GDB for CHERI targets (purecap doesn't work and would be slower):
             if cross_target.is_cheri_purecap():
@@ -358,7 +360,10 @@ class _BuildDiskImageBase(SimpleProject):
             if not any(x is cross_target for x in BuildGDB.supported_architectures):
                 self.warning("GDB cannot be built for architecture ", cross_target, " -> not addding it")
             else:
-                gdb_instance = BuildGDB.get_instance_for_cross_target(cross_target, self.config)  # type: BuildGDB
+                if self.include_kgdb:
+                    gdb_instance = BuildKGDB.get_instance_for_cross_target(cross_target, self.config)  # type: BuildGDB
+                else:
+                    gdb_instance = BuildGDB.get_instance_for_cross_target(cross_target, self.config)  # type: BuildGDB
                 gdb_path = gdb_instance.real_install_root_dir
                 gdb_binary = gdb_path / "bin/gdb"
                 if not gdb_binary.exists():
@@ -368,6 +373,14 @@ class _BuildDiskImageBase(SimpleProject):
                 if gdb_binary.exists():
                     self.info("Adding GDB binary", gdb_binary, "to disk image")
                     self.add_file_to_image(gdb_binary, mode=0o755, path_in_target="usr/bin/gdb")
+                if self.include_kgdb:
+                    kgdb_binary = gdb_path / "bin/kgdb"
+                    if not kgdb_binary.exists():
+                        # try to add KGDB from the build directory
+                        kgdb_binary = gdb_instance.build_dir / "gdb/kgdb"
+                    if kgdb_binary.exists():
+                        self.info("Adding KGDB binary", kgdb_binary, "to disk image")
+                        self.add_file_to_image(kgdb_binary, mode=0o755, path_in_target="usr/bin/kgdb")
 
         loader_conf_contents = "beastie_disable=\"yes\"\n"
         if self.is_x86:
