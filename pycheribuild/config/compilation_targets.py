@@ -352,8 +352,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 else:
                     self.project.fatal("Could not find kernel image", kernel_path, "and jenkins path",
                                        jenkins_kernel_path, "is also missing")
-        if kernel_path is None or not kernel_path.exists():
-            self.project.fatal("Could not find kernel image", kernel_path)
+            if kernel_path is None or not kernel_path.exists():
+                self.project.fatal("Could not find kernel image", kernel_path)
         script = self.project.get_test_script_path(script_name)
         if not script.exists():
             self.project.fatal("Could not find test script", script)
