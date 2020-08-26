@@ -346,16 +346,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                     use_benchmark_kernel_by_default and use_benchmark_config_option.is_default_value)
             kernel_path = self._get_mfs_root_kernel(use_benchmark_kernel=want_benchmark_kernel)
             if not kernel_path.exists() and is_jenkins_build():
-                cheribsd_image = "cheribsd128-cheri128-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
-                freebsd_image = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
-                if xtarget.is_mips(include_purecap=False) and not xtarget.is_hybrid_or_purecap_cheri():
-                    guessed_archive = freebsd_image
-                elif xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
-                    guessed_archive = cheribsd_image
-                else:
-                    self.project.fatal("Could not guess path to kernel image for CheriBSD")
-                    guessed_archive = "invalid path"
-                jenkins_kernel_path = self.config.cheribsd_image_root / guessed_archive
+                jenkins_kernel_path = self.config.cheribsd_image_root / "kernel.xz"
                 if jenkins_kernel_path.exists():
                     kernel_path = jenkins_kernel_path
                 else:
