@@ -37,7 +37,7 @@ import typing
 from pathlib import Path
 
 from .cross.cheribsd import (BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDDeviceModel, BuildFreeBSDGFE,
-                             BuildFreeBSDWithDefaultOptions)
+                             BuildFreeBSDWithDefaultOptions, BuildCheriBsdDeviceModel)
 from .cross.gdb import (BuildKGDB, BuildGDB)
 from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget,
                       DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
@@ -1114,7 +1114,13 @@ class BuildFreeBSDGFEDiskImage(BuildFreeBSDImage):
 
 class BuildFreeBSDDeviceModelDiskImage(BuildFreeBSDWithDefaultOptionsDiskImage):
     project_name = "disk-image-freebsd-device-model"
-    _source_class = BuildFreeBSDDeviceModel
+    _source_class = BuildFreeBSDWithDefaultOptionsDiskImage
+    hide_options_from_help = True
+
+
+class BuildCheriBSDDeviceModelDiskImage(BuildCheriBSDDiskImage):
+    project_name = "disk-image-cheribsd-device-model"
+    _source_class = BuildCheriBsdDeviceModel
     hide_options_from_help = True
 
 
