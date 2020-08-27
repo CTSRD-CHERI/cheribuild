@@ -352,6 +352,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 assert isinstance(self, BuildCHERIBSD)
                 if self.purecap_kernel:
                     return "CHERI-PURECAP-QEMU-NODEBUG"
+                if self.build_fett_kernels:
+                    return "CHERI-QEMU-FETT"
                 return "CHERI-QEMU"
             return "QEMU"  # default to the QEMU config
         elif xtarget.is_aarch64(include_purecap=True):
