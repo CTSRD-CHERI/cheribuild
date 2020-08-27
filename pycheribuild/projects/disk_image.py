@@ -1031,7 +1031,7 @@ class BuildMultiArchDiskImage(_BuildDiskImageBase):
     def __init__(self, config: CheriConfig):
         # TODO: different extra-files directory
         src_class = self._source_class.get_class_for_target(self.get_crosscompile_target(config))
-        assert issubclass(src_class, BuildFreeBSD)
+        assert issubclass(src_class, BuildFreeBSD), src_class
         super().__init__(config, source_class=src_class)
         if self.get_crosscompile_target(config).is_riscv(include_purecap=True):
             self.file_templates = _RISCVFileTemplates()
@@ -1114,7 +1114,7 @@ class BuildFreeBSDGFEDiskImage(BuildFreeBSDImage):
 
 class BuildFreeBSDDeviceModelDiskImage(BuildFreeBSDWithDefaultOptionsDiskImage):
     project_name = "disk-image-freebsd-device-model"
-    _source_class = BuildFreeBSDWithDefaultOptionsDiskImage
+    _source_class = BuildFreeBSDDeviceModel
     hide_options_from_help = True
 
 
