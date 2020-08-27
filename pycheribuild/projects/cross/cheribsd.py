@@ -350,6 +350,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # TODO: purecap/hybrid kernel
             if xtarget.is_hybrid_or_purecap_cheri():
                 assert isinstance(self, BuildCHERIBSD)
+                if self.caprevoke_kernel:
+                    if self.build_fett_kernels:
+                        return "CHERI-CAPREVOKE-QEMU-FETT"
+                    return "CHERI-CAPREVOKE-QEMU"
                 if self.purecap_kernel:
                     return "CHERI-PURECAP-QEMU-NODEBUG"
                 if self.build_fett_kernels:
@@ -1174,6 +1178,12 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                                        CompilationTargets.CHERIBSD_RISCV_PURECAP,
                                                                        CompilationTargets.CHERIBSD_RISCV_HYBRID],
                                                  help="Build kernel with pure capability ABI (experimental)")
+        cls.caprevoke_kernel = cls.add_bool_option("caprevoke-kernel", show_help=True, _allow_unknown_targets=True,
+                                                   only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP,
+                                                                         CompilationTargets.CHERIBSD_MIPS_HYBRID,
+                                                                         CompilationTargets.CHERIBSD_RISCV_PURECAP,
+                                                                         CompilationTargets.CHERIBSD_RISCV_HYBRID],
+                                                   help="Build kernel with caprevoke support (experimental)")
 
     def __init__(self, config: CheriConfig):
         self.install_as_root = os.getuid() == 0
@@ -1228,7 +1238,9 @@ class BuildCHERIBSD(BuildFreeBSD):
         if self.build_fett_kernels:
             if self.compiling_for_riscv(include_purecap=True):
                 if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                    if self.purecap_kernel:
+                    if self.caprevoke_kernel:
+                        self.extra_kernels.append("CHERI-CAPREVOKE-FETT")
+                    elif self.purecap_kernel:
                         self.extra_kernels.append("CHERI-PURECAP-FETT-NODEBUG")
                     else:
                         self.extra_kernels.append("CHERI-FETT")
