@@ -146,15 +146,6 @@ def real_main():
     assert any(x in cheri_config.action for x in (CheribuildAction.TEST, CheribuildAction.PRINT_CHOSEN_TARGETS,
                                                   CheribuildAction.BUILD, CheribuildAction.BENCHMARK))
 
-    # create the required directories
-    for d in (cheri_config.source_root, cheri_config.output_root, cheri_config.build_root):
-        if d.exists():
-            continue
-        if not cheri_config.pretend:
-            if cheri_config.verbose:
-                print_command("mkdir", "-p", str(d))
-            os.makedirs(str(d), exist_ok=True)
-
     if cheri_config.docker:
         cheribuild_dir = str(Path(__file__).absolute().parent.parent)
         # we can't pass all args
@@ -221,6 +212,16 @@ def real_main():
     if not cheri_config.quiet:
         print("Sources will be stored in", cheri_config.source_root)
         print("Build artifacts will be stored in", cheri_config.output_root)
+    
+    # create the required directories
+    for d in (cheri_config.source_root, cheri_config.output_root, cheri_config.build_root):
+        if d.exists():
+            continue
+        if not cheri_config.pretend:
+            if cheri_config.verbose:
+                print_command("mkdir", "-p", str(d))
+            os.makedirs(str(d), exist_ok=True)
+
     # Don't do the update check when tab-completing (otherwise it freezes)
     if "_ARGCOMPLETE" not in os.environ and not cheri_config.skip_update:  # no-combine
         try:  # no-combine
