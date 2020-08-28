@@ -212,7 +212,7 @@ def real_main():
     if not cheri_config.quiet:
         print("Sources will be stored in", cheri_config.source_root)
         print("Build artifacts will be stored in", cheri_config.output_root)
-    
+
     # create the required directories
     for d in (cheri_config.source_root, cheri_config.output_root, cheri_config.build_root):
         if d.exists():
