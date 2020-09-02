@@ -56,7 +56,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         "RISC-V-Generic"]
 
     # Map Demos and the FreeRTOS apps we support building/running for
-    supported_demo_apps = {"RISC-V-Generic": ["main_blinky"]}
+    supported_demo_apps = {"RISC-V-Generic": ["main_blinky", "main_compartment_test"]}
 
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
@@ -91,6 +91,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             # and currently only runs on FPGA-GFE, purecap
             self.supported_freertos_demos.append("RISC-V_Galois_P1")
             self.supported_demo_apps["RISC-V_Galois_P1"] = ["main_blinky", "main_netboot"]
+            self.supported_demo_apps["RISC-V-Generic"].append("main_compartment_test")
 
             self.make_args.set(EXTENSION="cheri")
 
@@ -121,11 +122,16 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         return "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True) + "-" + \
                self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
 
+    def run_compartmentalize(self, *args, **kwargs):
+        cmdline = ["./compartmentalize.py"]
+        return self.run_cmd(cmdline, cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo), **kwargs)
+
     def compile(self, **kwargs):
         self.make_args.set(BSP=self.demo_bsp)
 
         # Need to clean before/between building apps, otherwise
         # irrelevant objs will be picked up from incompatible apps/builds
+        self.run_compartmentalize()
         self.make_args.set(PROG=self.demo_app)
         self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
         self.run_make(cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
