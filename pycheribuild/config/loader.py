@@ -116,6 +116,20 @@ class NoOpHelpFormatter(argparse.HelpFormatter):
         return "TAB-COMPLETING, THIS STRING SHOULD NOT BE VISIBLE"
 
 
+def get_argcomplete_prefix():
+    if "_ARGCOMPLETE_BENCHMARK" in os.environ:
+        os.environ["_ARGCOMPLETE_IFS"] = "\n"
+        # os.environ["COMP_LINE"] = "cheribuild.py " # return all targets
+        os.environ["COMP_LINE"] = "cheribuild.py foo --sq"  # return all options starting with --sq
+        # os.environ["COMP_LINE"] = "cheribuild.py foo --no-s"  # return all options
+        os.environ["COMP_POINT"] = str(len(os.environ["COMP_LINE"]))
+    comp_line = argcomplete.ensure_str(os.environ["COMP_LINE"])
+    result = argcomplete.split_line(comp_line, int(os.environ["COMP_POINT"]))[1]
+    if "_ARGCOMPLETE_BENCHMARK" in os.environ:
+        print("argcomplete_prefix =", result)
+    return result
+
+
 class ConfigLoaderBase(object):
     # will be set later...
     _cheri_config = None  # type: CheriConfig
@@ -124,6 +138,8 @@ class ConfigLoaderBase(object):
     _parsed_args = None
     _json = {}  # type: dict
     _completing_arguments = "_ARGCOMPLETE" in os.environ
+    _argcomplete_prefix = get_argcomplete_prefix() if _completing_arguments else None
+    _argcomplete_prefix_includes_slash = "/" in _argcomplete_prefix if _argcomplete_prefix else None
 
     show_all_help = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or _completing_arguments
 
@@ -169,12 +185,31 @@ class ConfigLoaderBase(object):
                    type: "typing.Union[typing.Type[T], typing.Callable[[str], T]]" = str, group=None, help_hidden=False,
                    _owning_class: "typing.Type" = None, _fallback_names: "typing.List[str]" = None,
                    option_cls: "typing.Type[ConfigOptionBase]" = None, **kwargs) -> T:
+        comp_prefix = self._argcomplete_prefix
+        while comp_prefix is not None:  # fake loop to allow early return
+            if comp_prefix.startswith("--") and name.startswith(comp_prefix[2:]):
+                # print("comp_prefix '", comp_prefix, "' matches name: ", name, sep="")
+                break  # Okay, prefix matches long name
+            elif shortname is not None and comp_prefix.startswith("-") and shortname.startswith(comp_prefix[1:]):
+                # print("comp_prefix '", comp_prefix, "' matches shortname: ", shortname, sep="")
+                break  # Okay, prefix matches shortname
+            elif type is bool and (comp_prefix.startswith("--no-") or self._argcomplete_prefix_includes_slash):
+                slash_index = name.rfind("/")
+                negated_name = name[:slash_index + 1] + "no-" + name[slash_index + 1:]
+                if negated_name.startswith(comp_prefix[2:]):
+                    # print("comp_prefix '", comp_prefix, "' matches negated option: ", negated_name, sep="")
+                    break  # Okay, prefix matches negated long name
+            # We are autocompleting and there is a prefix that won't match this option, so we just return the
+            # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
+            # print("Skipping option", name)
+            return kwargs.get("default", None)
+
         if option_cls is None:
             option_cls = self.__option_cls
 
         if self.__is_enum_type(type):
             assert "action" not in kwargs or kwargs[
-                "action"] == "append", "action should be none or appendfor Enum options"
+                "action"] == "append", "action should be none or append for Enum options"
             assert "choices" not in kwargs, "for enum options choices are the enum names (or set enum_choices)!"
             if "enum_choices" in kwargs:
                 kwargs["choices"] = tuple(t.name.lower() for t in kwargs["enum_choices"])
@@ -669,10 +704,6 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     def load(self):
         if argcomplete and self._completing_arguments:
             if "_ARGCOMPLETE_BENCHMARK" in os.environ:
-                os.environ["_ARGCOMPLETE_IFS"] = "\n"
-                # os.environ["COMP_LINE"] = "cheribuild.py " # return all targets
-                os.environ["COMP_LINE"] = "cheribuild.py foo --sq"  # return all options
-                os.environ["COMP_POINT"] = str(len(os.environ["COMP_LINE"]))
                 with open(os.devnull, "wb") as output:
                     # with open("/dev/stdout", "wb") as output:
                     # sys.stdout.buffer
