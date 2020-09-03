@@ -1456,7 +1456,9 @@ class Project(SimpleProject):
     """
 
     # A per-project config option to generate a CMakeLists.txt that just has a custom taget that calls cheribuild.py
-    generate_cmakelists = None
+    @property
+    def generate_cmakelists(self):
+        return self.config.generate_cmakelists
 
     # TODO: remove these three
     @classmethod
@@ -1634,21 +1636,6 @@ class Project(SimpleProject):
             #     setattr(namespace, self.dest, values)
             cls._repository_url = cls.add_config_option("repository", kind=str, help="The URL of the git repository",
                                                         default=cls.repository.url, metavar="REPOSITORY")
-        if "generate_cmakelists" not in cls.__dict__:
-            # Make sure not to dereference a parent class descriptor here -> use getattr_static
-            option = inspect.getattr_static(cls, "generate_cmakelists")
-            # If option is not a fixed bool then we need a command line option:
-            if not isinstance(option, bool):
-                assert option is None or isinstance(option, ConfigOptionBase)
-                assert not issubclass(cls,
-                                      CMakeProject), "generate_cmakelists option needed -> should not be a CMakeProject"
-                cls.generate_cmakelists = cls.add_bool_option("generate-cmakelists",
-                                                              help="Generate a CMakeLists.txt that just calls "
-                                                                   "cheribuild. "
-                                                                   "Useful for IDEs that only support CMake")
-            else:
-                assert issubclass(cls, CMakeProject), "Should be a CMakeProject: " + cls.__name__
-
         cls.use_lto = cls.add_bool_option("use-lto", help="Build with link-time optimization (LTO)",
                                           default=cls.lto_by_default)
         cls.use_cfi = False  # doesn't work yet

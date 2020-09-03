@@ -94,11 +94,12 @@ class DefaultCheriConfig(CheriConfig):
             "include-toolchain-dependencies", default=True,
             help="Include toolchain targets such as LLVM and QEMU when --include-dependencies is set.")
 
-        self.copy_compilation_db_to_source_dir = loader.add_commandline_only_bool_option("compilation-db-in-source-dir",
-                                                                                         help="Generate a "
-                                                                                              "compile_commands.json "
-                                                                                              "and also copy it to "
-                                                                                              "the source directory")
+        self.copy_compilation_db_to_source_dir = loader.add_commandline_only_bool_option(
+            "compilation-db-in-source-dir",
+            help="Generate a compile_commands.json and also copy it to the source directory")
+        self.generate_cmakelists = loader.add_bool_option(
+            "generate-cmakelists",
+            help="Generate a CMakeLists.txt that just calls cheribuild. Useful for IDEs that only support CMake")
 
         self.make_without_nice = loader.add_bool_option("make-without-nice", help="Run make/ninja without nice(1)")
 
