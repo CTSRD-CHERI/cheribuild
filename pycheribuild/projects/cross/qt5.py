@@ -305,8 +305,10 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
 
     def run_tests(self):
         if self.compiling_for_host():
-            self.run_make("check", cwd=self.build_dir)
+            # TODO: ctest -V?
+            self.run_make("test", cwd=self.build_dir)
         else:
+            # TODO: run `ctest --show-only=json-v1` to get list of tests
             self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=False,
                                                       mount_sysroot=True)
 
