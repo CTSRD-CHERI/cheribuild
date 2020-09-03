@@ -1247,7 +1247,7 @@ class GitRepository(SourceRepository):
                skip_submodules=False):
         self.ensure_cloned(current_project, src_dir=src_dir, default_src_dir=default_src_dir,
                            skip_submodules=skip_submodules)
-        if current_project.skip_update:
+        if current_project.config.skip_update:
             return
         if not src_dir.exists():
             return
@@ -1609,12 +1609,6 @@ class Project(SimpleProject):
                                                               c.default_auto_var_init.value + "\")")),
                                                   help="Whether to initialize all local variables (currently only "
                                                        "supported when compiling with clang)")
-        cls.skip_update = cls.add_bool_option("skip-update",
-                                              default=ComputedDefaultValue(lambda config, proj: config.skip_update,
-                                                                           "the value of the global --skip-update "
-                                                                           "option"),
-                                              help="Override --skip-update/--no-skip-update for this target only ")
-
         if not install_directory_help:
             install_directory_help = "Override default install directory for " + cls.project_name
         cls._install_dir = cls.add_path_option("install-directory", metavar="DIR", help=install_directory_help,
