@@ -249,6 +249,9 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
         super().setup()
         # noinspection PyAttributeOutsideInit
         self.host_target = self.get_instance(self, cross_target=CompilationTargets.NATIVE)
+        compiler_info = get_compiler_info(self.CC)
+        if compiler_info.is_clang and not compiler_info.is_apple_clang and compiler_info.version > (10, 0):
+            self.add_cmake_options(WARNINGS_ARE_ERRORS=False)  # -Werror,-Wunused-private-field
 
         if self.compiling_for_mips(include_purecap=False) and self.force_static_linkage:
             assert "-mxgot" in self.default_compiler_flags
