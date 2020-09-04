@@ -636,27 +636,20 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def clean(self) -> ThreadJoiner:
         cleaning_kerneldir = False
+        builddir = self.build_dir
         if self.config.skip_buildworld:
-            root_builddir = self.objdir
             kernel_dir = self.kernel_objdir(self.kernel_config)
             print(kernel_dir)
             if kernel_dir and kernel_dir.parent.exists():
                 builddir = kernel_dir
                 cleaning_kerneldir = True
+                if kernel_dir.exists() and self.build_dir.exists():
+                    assert not os.path.relpath(str(kernel_dir.resolve()), str(self.build_dir.resolve())).startswith(
+                        ".."), builddir
             else:
                 self.warning("Do not know the full path to the kernel build directory, will clean the whole tree!")
-                builddir = root_builddir
-        else:
-            # builddir = root_builddir
-            # Clean up pre-MAKEOBJDIR change directories for now
-            # The only advantage of only deleting .OBJDIR is that it doesn't confuse a shell in that
-            # directory but I doubt that is a compelling usecase
-            builddir = self.build_dir
-        if builddir.exists() and self.build_dir.exists():
-            assert not os.path.relpath(str(builddir.resolve()), str(self.build_dir.resolve())).startswith(
-                ".."), builddir
         if self.crossbuild:
-            # avoid rebuilding bmake and libbsd when crossbuilding:
+            # avoid rebuilding bmake when crossbuilding:
             return self.async_clean_directory(builddir, keep_root=not cleaning_kerneldir, keep_dirs=["bmake-install"])
         else:
             return self.async_clean_directory(builddir)
