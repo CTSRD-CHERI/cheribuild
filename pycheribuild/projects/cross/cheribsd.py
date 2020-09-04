@@ -896,9 +896,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def libcompat_name(self) -> str:
         if self.crosscompile_target.is_cheri_purecap():
-            if self.crosscompile_target.is_riscv(include_purecap=True):
-                self.info("RISCV currently doesn't have COMPAT_64")
-                return ""
             return "lib64"
         elif self.crosscompile_target.is_cheri_hybrid():
             return "libcheri"
