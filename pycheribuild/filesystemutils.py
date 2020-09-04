@@ -251,7 +251,8 @@ class FileSystemUtils(object):
             f.writelines(map(lambda line: line + '\n', lines))
             f.truncate()
 
-    def add_unique_line_to_file(self, file: Path, line):
+    def add_unique_line_to_file(self, file: Path, line: str):
+        status_update("Adding '", line, "' to ", file, sep="")
         self.rewrite_file(file, lambda lines: lines if line in lines else (lines + [line]))
 
     @property
