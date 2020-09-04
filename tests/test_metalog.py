@@ -49,7 +49,7 @@ def _create_dir(parent: Path, name: str, mode: int) -> Path:
 
 def _get_as_str(mtree: MtreeFile) -> str:
     output = io.StringIO()
-    mtree.write(output)
+    mtree.write(output, pretend=False)
     return output.getvalue()
 
 
