@@ -936,16 +936,19 @@ class BuildFreeBSD(BuildFreeBSDBase):
             make_in_subdir += "-k "
         install_to_sysroot_cmd = ""
         if is_lib:
+            # We have to override INSTALL so that the sysroot installations don't end up in METALOG
+            # This happens after https://github.com/freebsd/freebsd/commit/5496ab2ac950813edbd55d73c967184e033bea2f
+            install_nometalog = "INSTALL=\"install -N " + str(self.source_dir / "etc") + " -U\""
             if install_to_internal_sysroot:
                 # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
                 sysroot_var = "\"$$$${SYSROOT}\""
-                install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install MK_TESTS=no DESTDIR={sysroot}; " \
-                                         "fi".format(make=make_in_subdir, sysroot=sysroot_var)
+                install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install {i} MK_TESTS=no DESTDIR={sysroot};" \
+                                         " fi".format(make=make_in_subdir, sysroot=sysroot_var, i=install_nometalog)
             if self.config.install_subdir_to_sysroot and self.get_corresponding_sysroot() is not None:
                 if install_to_sysroot_cmd:
                     install_to_sysroot_cmd += " && "
-                install_to_sysroot_cmd += "{make} install MK_TESTS=no DESTDIR={sysroot}".format(
-                    make=make_in_subdir, sysroot=self.get_corresponding_sysroot())
+                install_to_sysroot_cmd += "{make} install {i} MK_TESTS=no DESTDIR={sysroot}".format(
+                    make=make_in_subdir, sysroot=self.get_corresponding_sysroot(), i=install_nometalog)
 
         if skip_install:
             if install_to_sysroot_cmd:
