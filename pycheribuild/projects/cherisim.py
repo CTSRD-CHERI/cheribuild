@@ -148,8 +148,7 @@ class BuildBeriCtl(Project):
         if not setup_sh.exists():
             self.fatal("Could not find setup.sh")
         self.run_shell_script("source {} && ".format(shlex.quote(str(setup_sh))) + commandline_to_str(
-            self.get_make_commandline(None, parallel=False)),
-                              cwd=self.source_dir, shell="bash")
+            self.get_make_commandline("", parallel=False)), cwd=self.source_dir, shell="bash")
 
     def install(self, **kwargs):
         pass

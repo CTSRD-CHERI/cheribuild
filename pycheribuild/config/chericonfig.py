@@ -246,6 +246,7 @@ class CheriConfig(object):
         self.cheribsd_image_root = None  # type: Optional[Path]
         self.cheri_sdk_dir = None  # type: Optional[Path]
         self.other_tools_dir = None  # type: Optional[Path]
+        self.sysroot_install_dir = None  # type: Optional[Path]
         self.docker = loader.add_bool_option("docker", help="Run the build inside a docker container",
                                              group=loader.docker_group)
         self.docker_container = loader.add_option("docker-container", help="Name of the docker container to use",
