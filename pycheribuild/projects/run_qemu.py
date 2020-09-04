@@ -48,6 +48,7 @@ from ..config.compilation_targets import CompilationTargets
 from ..qemu_utils import qemu_supports_9pfs, QemuOptions, riscv_bios_arguments
 from ..targets import target_manager
 from ..utils import AnsiColour, classproperty, coloured, find_free_port, OSInfo
+from ..config.loader import ComputedDefaultValue
 
 
 def get_default_ssh_forwarding_port(addend: int):
@@ -563,13 +564,40 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     _enable_smbfs_support = False
     _add_virtio_rng = False
 
+    default_demo = "RISC-V-Generic"
+    default_demo_app = "main_blinky"
+
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(defaultSshPort=None, **kwargs)
 
+        cls.demo = cls.add_config_option(
+            "demo", metavar="DEMO", show_help=True,
+            default=cls.default_demo,
+            help="The FreeRTOS Demo to run.")  # type: str
+
+        cls.demo_app = cls.add_config_option(
+            "prog", metavar="PROG", show_help=True,
+            default=cls.default_demo_app,
+            help="The FreeRTOS program to run.")  # type: str
+
+        cls.demo_bsp = cls.add_config_option(
+            "bsp", metavar="BSP", show_help=True,
+            default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
+                                         as_string="target-dependent default"),
+            help="The FreeRTOS BSP to run. This is only valid for the "
+                 "paramterized RISC-V-Generic. The BSP option chooses "
+                 "platform, RISC-V arch and RISC-V abi in the "
+                 "$platform-$arch-$abi format. See RISC-V-Generic/README for more details")
+
+    def default_demo_bsp(self):
+        return "qemu_virt-" + self.target_info.riscv_arch_string + "-" + \
+            self.target_info.riscv_softfloat_abi
+
     def get_riscv_bios_args(self) -> typing.List[str]:
-        # Run a simple FreeRTOS blinky demo application (run in machine mode using the -bios QEMU argument)
-        return ["-bios", str(BuildFreeRTOS.get_install_dir(self) / "FreeRTOS/Demo/RISC-V-Generic_main_blinky.elf")]
+        # Run a FreeRTOS demo application (run in machine mode using the -bios QEMU argument)
+        return ["-bios", str(BuildFreeRTOS.get_install_dir(self)) + "/FreeRTOS/Demo/" +
+                self.demo + "_" + self.demo_app + ".elf"]
 
     def process(self):
         super().process()
