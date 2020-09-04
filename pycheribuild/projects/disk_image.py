@@ -499,9 +499,6 @@ class _BuildDiskImageBase(SimpleProject):
                                    mode=0o644)
                 efi_mtree.write(tmp_mtree, pretend=self.config.pretend)
                 tmp_mtree.flush()  # ensure the file is actually written
-                mtree_contents = self.read_file(Path(tmp_mtree.name))
-                assert mtree_contents, "Didn't write file??"
-                print(mtree_contents)
                 self.run_cmd("cat", tmp_mtree.name)
                 self.run_cmd([self.makefs_cmd, "-t", "msdos", "-s", "1m",  # 1 MB
                               # "-d", "0x2fffffff",  # super verbose output
