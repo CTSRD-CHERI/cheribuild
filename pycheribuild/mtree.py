@@ -193,8 +193,8 @@ class MtreeFile(object):
             last_attrib = ("contents", contents_path)
         attribs = OrderedDict([("type", mtree_type), ("uname", uname), ("gname", gname), ("mode", mode), last_attrib])
         if print_status:
-            if symlink_dest is not None or file.is_symlink():
-                status_update("Adding symlink to", symlink_dest, "to mtree as", mtree_path, file=sys.stderr)
+            if "link" in attribs:
+                status_update("Adding symlink to", attribs["link"], "to mtree as", mtree_path, file=sys.stderr)
             else:
                 status_update("Adding file", file, "to mtree as", mtree_path, file=sys.stderr)
         self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
