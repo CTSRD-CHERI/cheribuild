@@ -935,20 +935,20 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.config.pass_dash_k_to_make:
             make_in_subdir += "-k "
         install_to_sysroot_cmd = ""
+        # We have to override INSTALL so that the sysroot installations don't end up in METALOG
+        # This happens after https://github.com/freebsd/freebsd/commit/5496ab2ac950813edbd55d73c967184e033bea2f
+        install_nometalog_cmd = "INSTALL=\"install -N " + str(self.source_dir / "etc") + " -U\""
         if is_lib:
-            # We have to override INSTALL so that the sysroot installations don't end up in METALOG
-            # This happens after https://github.com/freebsd/freebsd/commit/5496ab2ac950813edbd55d73c967184e033bea2f
-            install_nometalog = "INSTALL=\"install -N " + str(self.source_dir / "etc") + " -U\""
             if install_to_internal_sysroot:
                 # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
                 sysroot_var = "\"$$$${SYSROOT}\""
                 install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install {i} MK_TESTS=no DESTDIR={sysroot};" \
-                                         " fi".format(make=make_in_subdir, sysroot=sysroot_var, i=install_nometalog)
+                                         " fi".format(make=make_in_subdir, sysroot=sysroot_var, i=install_nometalog_cmd)
             if self.config.install_subdir_to_sysroot and self.get_corresponding_sysroot() is not None:
                 if install_to_sysroot_cmd:
                     install_to_sysroot_cmd += " && "
                 install_to_sysroot_cmd += "{make} install {i} MK_TESTS=no DESTDIR={sysroot}".format(
-                    make=make_in_subdir, sysroot=self.get_corresponding_sysroot(), i=install_nometalog)
+                    make=make_in_subdir, sysroot=self.get_corresponding_sysroot(), i=install_nometalog_cmd)
 
         if skip_install:
             if install_to_sysroot_cmd:
@@ -960,7 +960,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # updated static lib
             if install_to_sysroot_cmd:
                 install_to_sysroot_cmd += " &&  "
-            install_cmd = install_to_sysroot_cmd + make_in_subdir + "install"
+            install_cmd = install_to_sysroot_cmd + make_in_subdir + "install " + install_nometalog_cmd
         if self.crosscompile_target.is_cheri_purecap() and not is_lib:
             # for non-library targets we need to set WANT_CHERI=pure in the environment to get the binary
             # to build as a CHERI binary
