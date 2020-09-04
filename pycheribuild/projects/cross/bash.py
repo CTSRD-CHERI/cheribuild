@@ -26,7 +26,6 @@
 from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
-from ...mtree import MtreeFile
 
 
 class BuildBash(CrossCompileAutotoolsProject):
@@ -64,14 +63,7 @@ class BuildBash(CrossCompileAutotoolsProject):
         super().install(**kwargs)
 
         if not self.compiling_for_host():
-            metalog = self.destdir / "METALOG"
-            if not metalog.exists():
-                self.fatal("METALOG", metalog, "does not exist")
-                return
-            mtree = MtreeFile(metalog)
             self.create_symlink(Path("/usr/local/bin/bash"), self.destdir / "bin/bash", relative=False)
-            mtree.add_file(self.destdir / "bin/bash", "bin/bash")
-            mtree.write(metalog, pretend=self.config.pretend)
             self.add_unique_line_to_file(self.destdir / "etc/shells", "/usr/local/bin/bash")
             if self.set_as_root_shell:
                 def rewrite(old):

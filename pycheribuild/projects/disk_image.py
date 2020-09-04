@@ -141,7 +141,7 @@ class _BuildDiskImageBase(SimpleProject):
         # this means we can create a disk image without root privilege
         self.manifest_file = None  # type: typing.Optional[Path]
         self.extra_files = []  # type: typing.List[Path]
-        self.auto_prefixes = ["usr/local/", "opt/", "extra/"]
+        self.auto_prefixes = ["usr/local/", "opt/", "extra/", "bin/bash"]
         self.add_required_system_tool("ssh-keygen")
 
         self.makefs_cmd = None  # type: typing.Optional[Path]
