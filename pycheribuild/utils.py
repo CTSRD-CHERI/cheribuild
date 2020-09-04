@@ -41,6 +41,7 @@ import sys
 import tempfile
 import termios
 import threading
+import time
 import traceback
 import typing
 from pathlib import Path
@@ -65,6 +66,8 @@ class GlobalConfig:
     PRETEND_MODE = False
     VERBOSE_MODE = False
     QUIET_MODE = False
+    internet_connection_last_checked_at = None  # type: typing.Optional[float]
+    internet_connection_last_check_result = False
 
 
 def init_global_config(*, test_mode: bool, pretend_mode: bool, verbose_mode: bool, quiet_mode: bool):
@@ -519,6 +522,12 @@ def include_local_file(path: str) -> str:
 def have_working_internet_connection():
     if GlobalConfig.TEST_MODE:
         return True
+    current_check_time = time.time()
+    if GlobalConfig.internet_connection_last_checked_at:
+        if current_check_time < GlobalConfig.internet_connection_last_checked_at + 60.0:
+            # Assume that the detected values remains the same for 60 seconds to avoid repeated checks.
+            # This saves around 50ms startup time.
+            return GlobalConfig.internet_connection_last_check_result
     # Try to connect to google DNS server at 8.8.8.8 to check if we have a working internet connection
     # Don't make a DNS request since that could be broken for other reasons!
     # From https://stackoverflow.com/questions/3764291/checking-network-connection/33117579#33117579
@@ -526,19 +535,23 @@ def have_working_internet_connection():
     port = 53
     timeout = 3
     x = None
+    result = False
     try:
         x = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         x.settimeout(timeout)
         x.connect((host, port))
-        return True
+        result = True
     except OSError:
-        return False
+        result = False
     except Exception as ex:
-        fatal_error("Something went wrong  while checking for internet connection", ex)
-        return False
+        fatal_error("Something went wrong while checking for internet connection", ex)
+        result = False
     finally:
         if x:
             x.close()
+        GlobalConfig.internet_connection_last_check_result = result
+        GlobalConfig.internet_connection_last_checked_at = current_check_time
+        return result
 
 
 def is_case_sensitive_dir(d: Path):
