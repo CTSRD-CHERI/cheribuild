@@ -825,7 +825,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
 
-    def _have_cplusplus_support(self, libdirs: "typing.List[str]"):
+    def _have_cplusplus_support(self, _: "typing.List[str]"):
         # C++ runtime was not available for RISC-V purecap due to https://github.com/CTSRD-CHERI/llvm-project/issues/379
         # This has now been fixed, but could be an issue again in the future so keep this function around.
         return True

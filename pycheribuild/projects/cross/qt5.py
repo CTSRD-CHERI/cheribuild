@@ -227,10 +227,12 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.build_tests = cls.add_bool_option("build-tests", default=True, show_help=True, help="build the Qt unit tests")
+        cls.build_tests = cls.add_bool_option("build-tests", default=True, show_help=True,
+                                              help="build the Qt unit tests")
         cls.build_examples = cls.add_bool_option("build-examples", show_help=True, help="build the Qt examples")
         cls.assertions = cls.add_bool_option("assertions", default=True, show_help=True, help="Include assertions")
-        cls.minimal = cls.add_bool_option("minimal", show_help=True, default=True, help="Don't build QtWidgets or QtGui, etc")
+        cls.minimal = cls.add_bool_option("minimal", show_help=True, default=True,
+                                          help="Don't build QtWidgets or QtGui, etc")
         cls.optimized_debug_build = cls.add_bool_option("optimized-debug-build",
                                                         help="Don't build with -Os instead of -O0 for debug info "
                                                              "builds")
