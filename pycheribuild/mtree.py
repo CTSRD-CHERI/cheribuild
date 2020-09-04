@@ -190,7 +190,6 @@ class MtreeFile(object):
             mtree_type = "file"
             # now add the actual entry (with contents=/path/to/file)
             contents_path = str(file.absolute())
-            assert shlex.quote(contents_path) == contents_path, "Invalid special chars: " + contents_path
             last_attrib = ("contents", contents_path)
         attribs = OrderedDict([("type", mtree_type), ("uname", uname), ("gname", gname), ("mode", mode), last_attrib])
         if print_status:
