@@ -497,7 +497,7 @@ class _BuildDiskImageBase(SimpleProject):
                 efi_mtree = MtreeFile()
                 efi_mtree.add_file(self.rootfs_dir / "boot/boot1.efi", path_in_image="efi/boot/bootaa64.efi",
                                    mode=0o644)
-                efi_mtree.write(tmp_mtree)
+                efi_mtree.write(tmp_mtree, pretend=self.config.pretend)
                 tmp_mtree.flush()  # ensure the file is actually written
                 mtree_contents = self.read_file(Path(tmp_mtree.name))
                 assert mtree_contents, "Didn't write file??"
@@ -528,7 +528,7 @@ class _BuildDiskImageBase(SimpleProject):
 
     def make_rootfs_image(self, rootfs_img: Path):
         # write out the manifest file:
-        self.mtree.write(self.manifest_file)
+        self.mtree.write(self.manifest_file, pretend=self.config.pretend)
         # print(self.manifest_file.read_text())
         debug_options = []
         if self.config.debug_output:
@@ -983,7 +983,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
         # self.run_cmd(["sh", "-c", "du -ah " + shlex.quote(str(self.tmpdir)) + " | sort -h"])
         if self.config.debug_output:
-            self.mtree.write(sys.stderr)
+            self.mtree.write(sys.stderr, pretend=self.config.pretend)
         if self.config.verbose:
             self.run_cmd("du", "-ah", self.tmpdir)
             self.run_cmd("sh", "-c", "du -ah '{}' | sort -h".format(self.tmpdir))

@@ -71,7 +71,7 @@ class BuildBash(CrossCompileAutotoolsProject):
             mtree = MtreeFile(metalog)
             self.create_symlink(Path("/usr/local/bin/bash"), self.destdir / "bin/bash", relative=False)
             mtree.add_file(self.destdir / "bin/bash", "bin/bash")
-            mtree.write(metalog)
+            mtree.write(metalog, pretend=self.config.pretend)
             self.add_unique_line_to_file(self.destdir / "etc/shells", "/usr/local/bin/bash")
             if self.set_as_root_shell:
                 def rewrite(old):

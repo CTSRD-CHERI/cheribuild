@@ -163,7 +163,7 @@ class BuildFettConfig(CrossCompileProject):
         mtree.add_file(voting_src / "FreeBSD/bvrs.sh",
                        "etc/rc.d/fett_bvrs", mode="0555")
 
-        mtree.write(self.METALOG)
+        mtree.write(self.METALOG, pretend=self.config.pretend)
 
 
 class BuildFettVoting(FettProjectMixin, CrossCompileProject):

@@ -251,10 +251,12 @@ class MtreeFile(object):
         import pprint
         return "<MTREE: " + pprint.pformat(self._mtree) + ">"
 
-    def write(self, output: "typing.Union[io.StringIO,Path,typing.IO]"):
+    def write(self, output: "typing.Union[io.StringIO,Path,typing.IO]", *, pretend):
+        if pretend:
+            return
         if isinstance(output, Path):
             with output.open("w") as f:
-                self.write(f)
+                self.write(f, pretend=pretend)
                 return
         output.write("#mtree 2.0\n")
         for path in sorted(self._mtree.keys()):
