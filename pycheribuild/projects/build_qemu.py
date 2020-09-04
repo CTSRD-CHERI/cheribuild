@@ -220,7 +220,7 @@ class BuildQEMUBase(AutotoolsProject):
         # the build sometimes modifies the po/ subdirectory
         # reset that directory by checking out the HEAD revision there
         # this is better than git reset --hard as we don't lose any other changes
-        if (self.source_dir / "po").is_dir() and not self.config.skip_update:
+        if (self.source_dir / "po").is_dir() and not self.skip_update:
             self.run_cmd("git", "checkout", "HEAD", "po/", cwd=self.source_dir, print_verbose_only=True)
         if (self.source_dir / "pixman/pixman").exists():
             self.warning("QEMU might build the broken pixman submodule, run `git submodule deinit -f pixman` to clean")

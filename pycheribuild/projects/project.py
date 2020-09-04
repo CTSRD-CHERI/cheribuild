@@ -2071,7 +2071,7 @@ class Project(SimpleProject):
         print("Running", make_command, make_target, "took", time.time() - starttime, "seconds")
 
     def update(self):
-        if not self.repository and not self.config.skip_update:
+        if not self.repository and not self.skip_update:
             self.fatal("Cannot update", self.project_name, "as it is missing a repository source",
                        fatal_when_pretending=True)
         self.repository.update(self, src_dir=self.source_dir, default_src_dir=self._initial_source_dir,
@@ -2387,7 +2387,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     other_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(
                         other_instance.install_dir)
 
-        if self.config.skip_update:
+        if self.skip_update:
             # When --skip-update is set (or we don't have working internet) only check that the repository exists
             if self.repository:
                 self.repository.ensure_cloned(self, src_dir=self.source_dir, default_src_dir=self._initial_source_dir,
