@@ -56,7 +56,7 @@ def fixup_kyua_generated_junit_xml(xml_file: Path):
             xml_str = xml_str.replace(chr(i), "\\x" + format(i, '02x') + ";")
     with tempfile.NamedTemporaryFile("wb") as tf:
         # create a temporary file first to avoid clobbering the original one if we fail to parse it
-        tf.write(xml_str.encode("ascii", errors="xmlcharrefreplace").decode("ascii"))
+        tf.write(xml_str.encode("ascii", errors="xmlcharrefreplace"))
         tf.flush()
         xml = junitparser.JUnitXml.fromfile(tf.name)
         xml.update_statistics()
