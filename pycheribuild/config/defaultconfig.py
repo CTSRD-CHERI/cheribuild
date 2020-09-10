@@ -32,7 +32,7 @@ from enum import Enum
 from pathlib import Path
 
 from .chericonfig import CheriConfig
-from .loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
+from .loader import ComputedDefaultValue, ConfigLoaderBase, JsonAndCommandLineConfigLoader
 from ..utils import default_make_jobs_count
 
 
@@ -124,6 +124,11 @@ class DefaultCheriConfig(CheriConfig):
                                                  default=lambda p, cls: p.output_root, group=loader.path_group,
                                                  help="The directory to find sdk and bootstrap tools (default: "
                                                       "'<OUTPUT_ROOT>')")
+        default_morello_sdk = ComputedDefaultValue(function=lambda p, cls: (p.output_root / "morello-sdk"),
+                                                   as_string="'<OUTPUT_ROOT>/morello-sdk'")
+        self.morello_sdk_dir = loader.add_path_option("morello-sdk-root",
+                                                      default=default_morello_sdk, group=loader.path_group,
+                                                      help="The directory to find/install the Morello SDK")
         self.sysroot_pfx = loader.add_path_option("sysroot-install-dir",
                                                   default=lambda p, cls: p.tools_root, group=loader.path_group,
                                                   help="Sysroot prefix (default: '<TOOLS_ROOT>')")

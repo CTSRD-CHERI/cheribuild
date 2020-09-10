@@ -33,7 +33,7 @@ import typing
 from pathlib import Path
 
 from .project import BuildType, CMakeProject, DefaultInstallDir, GitRepository
-from ..config.compilation_targets import CheriBSDTargetInfo, CompilationTargets
+from ..config.compilation_targets import CheriBSDMorelloTargetInfo, CheriBSDTargetInfo, CompilationTargets
 from ..config.loader import ComputedDefaultValue
 from ..config.target_info import CrossCompileTarget
 from ..utils import CompilerInfo, get_compiler_info, is_jenkins_build, OSInfo, set_env, ThreadJoiner
@@ -445,6 +445,25 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
                                                  include_version=False),
             ]
         return [x + "-" for x in triples]
+
+
+class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
+    repository = GitRepository("You must set --morello-llvm/source-directory for now!")
+    project_name = "morello-llvm-project"
+    target = "morello-llvm"
+    skip_cheri_symlinks = False  # add target-specific symlinks
+    is_sdk_target = True
+    native_install_dir = DefaultInstallDir.MORELLO_SDK
+    supported_architectures = [CompilationTargets.NATIVE]
+
+    def configure(self, **kwargs):
+        # Unless we set the default target triple, CMake will not be able to determine the compiler ID.
+        # The other alternative to fix this problem is to build the host backend. To save build time we do the former.
+        self.add_cmake_options(LLVM_DEFAULT_TARGET_TRIPLE=CheriBSDMorelloTargetInfo.triple_for_target(
+            CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config, include_version=True))
+        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="AArch64")
+        # self.add_cmake_options(LLVM_TARGETS_TO_BUILD="AArch64;host")
+        super().configure(**kwargs)
 
 
 class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):

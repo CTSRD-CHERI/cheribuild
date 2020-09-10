@@ -1363,6 +1363,7 @@ class DefaultInstallDir(Enum):
     SYSROOT = "The sysroot for this target"
     SYSROOT_AND_ROOTFS = "The sysroot for this target and the sysroot"
     CHERI_SDK = "The CHERI SDK directory"
+    MORELLO_SDK = "The Morello SDK directory"
     BOOTSTRAP_TOOLS = "The bootstap tools directory"
     CUSTOM_INSTALL_DIR = "Custom install directory"
     SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE = "Sysroot for baremetal projects, rootfs otherwise"
@@ -1400,6 +1401,10 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         assert project.compiling_for_host(), "CHERI_SDK is only a valid install dir for native, " \
                                              "use SYSROOT/ROOTFS for cross"
         return config.cheri_sdk_dir
+    elif install_dir == DefaultInstallDir.MORELLO_SDK:
+        assert project.compiling_for_host(), "MORELLO_SDK is only a valid install dir for native, " \
+                                             "use SYSROOT/ROOTFS for cross"
+        return config.morello_sdk_dir
     elif install_dir == DefaultInstallDir.BOOTSTRAP_TOOLS:
         assert project.compiling_for_host(), "BOOTSTRAP_TOOLS is only a valid install dir for native, " \
                                              "use SYSROOT/ROOTS for cross"
