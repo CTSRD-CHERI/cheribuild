@@ -560,6 +560,52 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
 
 
+class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
+    shortname = "CheriBSD-Morello"
+
+    def _get_sdk_root_dir_lazy(self):
+        return self.config.morello_sdk_dir
+
+    def get_cheribsd_sysroot_path(self) -> Path:
+        if self.target.is_aarch64(include_purecap=True):
+            return self._sysroot_path(self.sdk_root_dir, purecap_prefix="-morello-purecap",
+                                      hybrid_prefix="-morello-hybrid", nocheri_name="-aarch64")
+        return super().get_cheribsd_sysroot_path()
+
+    @classmethod
+    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version):
+        if target.is_hybrid_or_purecap_cheri():
+            assert target.is_aarch64(include_purecap=True), "AArch64 is the only CHERI target supported " \
+                                                            "with the Morello toolchain"
+            return "aarch64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
+        return super().triple_for_target(target, config, include_version)
+
+    @property
+    def linker(self) -> Path:
+        return self._compiler_dir / "ld.lld"
+
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig"):
+        return ["morello-llvm"]
+
+    @property
+    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+        result = super().essential_compiler_and_linker_flags
+        if self.target.is_aarch64(include_purecap=True):
+            if self.target.is_cheri_hybrid():
+                result += ["-march=morello"]
+            elif self.target.is_cheri_purecap():
+                result += ["-march=morello+c64", "-mabi=purecap"]
+            # emulated TLS is currently required for purecap, turn it on for non-purecap to
+            # allow performance comparisons
+            result.append("-femulated-tls")
+        return result
+
+    @property
+    def must_link_statically(self):
+        return True  # dynamic linking is still experimental
+
+
 # FIXME: This is completely wrong since cherios is not cheribsd, but should work for now:
 class CheriOSTargetInfo(CheriBSDTargetInfo):
     shortname = "CheriOS"
@@ -742,6 +788,13 @@ class CompilationTargets(BasicCompilationTargets):
     CHERIBSD_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
                                                 is_cheri_purecap=True, hybrid_target=CHERIBSD_RISCV_HYBRID)
     CHERIBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriBSDTargetInfo)
+    # XXX: Do we want a morello-nocheri variant that uses the morello compiler for AArch64 instead of CHERI LLVM?
+    CHERIBSD_MORELLO_PURECAP = CrossCompileTarget("morello-purecap", CPUArchitecture.AARCH64,
+                                                  CheriBSDMorelloTargetInfo, is_cheri_purecap=True)
+    CHERIBSD_MORELLO_HYBRID = CrossCompileTarget("morello-hybrid", CPUArchitecture.AARCH64,
+                                                 CheriBSDMorelloTargetInfo, is_cheri_hybrid=True,
+                                                 check_conflict_with=CHERIBSD_MORELLO_PURECAP,
+                                                 purecap_target=CHERIBSD_MORELLO_PURECAP)
     CHERIBSD_X86_64 = CrossCompileTarget("amd64", CPUArchitecture.X86_64, CheriBSDTargetInfo)
 
     CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips", CPUArchitecture.MIPS64, CheriOSTargetInfo, is_cheri_purecap=True)
