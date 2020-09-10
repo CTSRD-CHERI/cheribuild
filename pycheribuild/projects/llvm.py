@@ -456,6 +456,16 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
     native_install_dir = DefaultInstallDir.MORELLO_SDK
     supported_architectures = [CompilationTargets.NATIVE]
 
+    @property
+    def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
+        triples = [
+            CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config,
+                                                        include_version=False),
+            CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config,
+                                                        include_version=True),
+            ]
+        return [x + "-" for x in triples]
+
     def configure(self, **kwargs):
         # Unless we set the default target triple, CMake will not be able to determine the compiler ID.
         # The other alternative to fix this problem is to build the host backend. To save build time we do the former.
