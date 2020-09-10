@@ -208,7 +208,7 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
     cross_install_dir = DefaultInstallDir.SYSROOT
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     # default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
-    default_build_type = BuildType.DEBUG
+    default_build_type = BuildType.RELWITHDEBINFO
 
     @property
     def needs_mxcaptable_dynamic(self):
@@ -268,6 +268,10 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
             # Not ported to CHERI purecap
             self.add_cmake_options(PCRE2_DISABLE_JIT=True)
 
+        # Debug info makes libraries massive and makes running tests from SMBFS really slow
+        self.add_cmake_options(QT_FEATURE_separate_debug_info=True)
+        # Enable --gdb-index to make debugging less painfully slow
+        self.add_cmake_options(QT_FEATURE_enable_gdb_index=True)
         # Disable most libraries for now (we only test qtcore)
         if self.minimal:
             self.add_cmake_options(
