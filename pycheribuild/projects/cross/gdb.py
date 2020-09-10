@@ -32,7 +32,7 @@ import typing
 from pathlib import Path
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
-                                  GitRepository, Linkage, MakeCommandKind)
+                                  GitRepository, Linkage, MakeCommandKind, BuildType)
 from ...utils import OSInfo, run_command, status_update
 
 
@@ -67,6 +67,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
                                old_urls=[b'https://github.com/bsdjhb/gdb.git'])
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
+    default_build_type = BuildType.RELEASE
     supported_architectures = [CompilationTargets.NATIVE,
                                CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_RISCV_HYBRID,
                                CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
@@ -95,12 +96,11 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "--disable-ld",  # "--enable-ld",
             "--enable-64-bit-bfd",
             "--without-gnu-as",
-            "--with-separate-debug-dir=/usr/lib/debug",
             "--mandir=" + str(install_root / "man"),
             "--infodir=" + str(install_root / "info"),
             # "--disable-sim",
             "--disable-werror",
-            "MAKEINFO=/bin/false",
+            "MAKEINFO=/usr/bin/false",
             "--with-gdb-datadir=" + str(install_root / "share/gdb"),
             "--disable-libstdcxx",
             "--with-guile=no",
@@ -124,6 +124,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "-Wno-unknown-warning-option",  # caused by the build passing -Wshadow=local
             ])
         self.CXXFLAGS.append("-Wno-mismatched-tags")
+        if self.should_include_debug_info:
+            self.COMMON_FLAGS.append("-g")
         self.COMMON_FLAGS.append("-fcommon")
         # TODO: we should fix this:
         self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")
