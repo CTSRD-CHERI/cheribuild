@@ -1,0 +1,8 @@
+-- See https://github.com/freebsd/freebsd-ci/blob/master/scripts/build/config-head/testvm/append/etc/kyua/kyua.conf
+test_suites.FreeBSD.ci = 'true'
+test_suites.FreeBSD.fibs = '1 2'
+test_suites.FreeBSD.allow_sysctl_side_effects = '1'
+-- TODO: test_suites.FreeBSD.cam_test_device = '/dev/ada2'
+-- TODO: test_suites.FreeBSD.disks = '/dev/ada2 /dev/ada3 /dev/ada4 /dev/ada5 /dev/ada6'
+-- Disable slow tests by default
+test_suites.FreeBSD.include_slow_tests = 'false'

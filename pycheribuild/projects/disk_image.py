@@ -318,6 +318,20 @@ class _BuildDiskImageBase(SimpleProject):
                                    contents=include_local_file("files/cheribsd/prepare-benchmark-environment.sh"),
                                    mode=0o755, show_contents_non_verbose=False)
 
+        # Update test suite config to skip tests disabled in FreeBSD CI and skip slow tests by default.
+        # For example, the mkimg tests take almost 6 hours out of 22 total on RISCV purecap.
+        kyua_config_path = "etc/kyua/kyua.conf"
+        kyua_config = self.rootfs_dir / kyua_config_path
+        if not kyua_config.exists():
+            self.info("SSHD not installed, not changing sshd_config")
+        else:
+            self.info("Adding kyua configuration variables for CI to", kyua_config.relative_to(self.rootfs_dir))
+            # make sure we can login as root with pubkey auth:
+            new_kyua_config_contents = self.read_file(kyua_config)
+            new_kyua_config_contents += include_local_file("files/cheribsd/kyua.conf.append")
+            self.create_file_for_image("/" + kyua_config_path, contents=new_kyua_config_contents,
+                                       show_contents_non_verbose=False)
+
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
         self.generate_ssh_host_keys()
