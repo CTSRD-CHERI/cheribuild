@@ -38,7 +38,8 @@ from pathlib import Path
 
 from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
-                       MakeCommandKind, MakeOptions, Project, SimpleProject, TargetAliasWithDependencies)
+                       MakeCommandKind, MakeOptions, Project, SimpleProject, TargetAliasWithDependencies,
+                       TargetBranchInfo)
 from ...config.compilation_targets import CompilationTargets
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CrossCompileTarget, MipsFloatAbi
@@ -85,7 +86,11 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
         elif xtarget.is_cheri_hybrid():
             return config.output_root / ("rootfs-riscv64-hybrid" + project.cheri_config_suffix)
         return config.output_root / "rootfs-riscv64"
-    elif project.crosscompile_target.is_aarch64():
+    elif project.crosscompile_target.is_aarch64(include_purecap=True):
+        if xtarget == CompilationTargets.CHERIBSD_MORELLO_PURECAP:
+            return config.output_root / "rootfs-morello-purecap"
+        elif xtarget == CompilationTargets.CHERIBSD_MORELLO_HYBRID:
+            return config.output_root / "rootfs-morello-hybrid"
         return config.output_root / "rootfs-aarch64"
     else:
         assert project.crosscompile_target.is_x86_64()
@@ -352,6 +357,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 return "CHERI-QEMU"
             return "QEMU"  # default to the QEMU config
         elif xtarget.is_aarch64(include_purecap=True):
+            if xtarget in (CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP):
+                return "GENERIC-MORELLO"
             return "GENERIC"
         else:
             assert False, "should be unreachable"
@@ -396,12 +403,21 @@ class BuildFreeBSD(BuildFreeBSDBase):
             result = {"TARGET": "riscv", "TARGET_ARCH": target_arch}
         elif self.crosscompile_target.is_i386():
             result = {"TARGET": "i386", "TARGET_ARCH": "i386"}
-        elif self.crosscompile_target.is_aarch64():
+        elif self.crosscompile_target.is_aarch64(include_purecap=True):
             result = {"TARGET": "arm64", "TARGET_ARCH": "aarch64"}
+            if self.crosscompile_target.is_cheri_purecap():
+                result["TARGET_ARCH"] = "morello"  # TODO: aarch64c?
+            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                # FIXME: still needed?
+                result["WITH_CHERI"] = True
+                result["WITH_CHERI128"] = True
         else:
             assert False, "This should not be reached!"
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-            result["TARGET_CPUTYPE"] = "cheri"
+            if self.crosscompile_target.is_aarch64(include_purecap=True):
+                result["TARGET_CPUTYPE"] = "morello"
+            else:
+                result["TARGET_CPUTYPE"] = "cheri"
         return result
 
     def setup(self):
@@ -565,7 +581,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.cross_toolchain_config.set_with_options(BINUTILS_BOOTSTRAP=False)
 
     def _setup_arch_specific_options(self):
-        if self.crosscompile_target.is_any_x86() or self.crosscompile_target.is_aarch64():
+        if self.crosscompile_target.is_any_x86() or self.crosscompile_target.is_aarch64(include_purecap=True):
             target_flags = ""
             self.linker_for_kernel = "lld"  # bfd won't work here
             self.linker_for_world = "lld"
@@ -604,8 +620,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.compiling_for_mips(include_purecap=True):
             # Don't build kernel modules for MIPS
             kernel_options.set(NO_MODULES="yes")
-        if self.compiling_for_riscv(include_purecap=True):
+        elif self.compiling_for_riscv(include_purecap=True):
             kernel_options.set_with_options(CTF=False)  # FIXME: restore once debugged
+        elif self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            # Morello is currently not WERROR-clean:
+            kernel_options.set(WERROR="", NO_WERROR="yes")
+            # Only build SMB module (since e.g. Linux module is broken)
+            kernel_options.set(MODULES_OVERRIDE="smbfs libiconv libmchain")
         if not self.use_bootstrapped_toolchain:
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
             kernel_options.update(self.cross_toolchain_config)
@@ -1115,12 +1136,20 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
 class BuildCHERIBSD(BuildFreeBSD):
     project_name = "cheribsd"
     target = "cheribsd"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git")
+    repository = GitRepository(
+        url="https://github.com/CTSRD-CHERI/cheribsd.git",
+        per_target_branches={
+            CompilationTargets.CHERIBSD_MORELLO_HYBRID: TargetBranchInfo(branch="morello",
+                                                                         directory_name="morello-cheribsd"),
+            CompilationTargets.CHERIBSD_MORELLO_PURECAP: TargetBranchInfo(branch="morello",
+                                                                          directory_name="morello-cheribsd")
+            })
     _default_install_dir_fn = cheribsd_install_dir
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
                                CompilationTargets.CHERIBSD_RISCV_NO_CHERI, CompilationTargets.CHERIBSD_RISCV_HYBRID,
                                CompilationTargets.CHERIBSD_X86_64, CompilationTargets.CHERIBSD_AARCH64,
                                CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_RISCV_PURECAP,
+                               CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP,
                                ]
     is_sdk_target = True
     hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
