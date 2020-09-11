@@ -71,10 +71,11 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
             self.configure_args.append("--with-abi=l64pc128")
             # Enable CHERI extensions
             self.configure_args.append("--with-arch=rv64imafdcxcheri")
-            self.configure_args.append("--with-mem-start=" + self.mem_start)
         else:
             self.configure_args.append("--with-abi=lp64")
             self.configure_args.append("--with-arch=rv64imafdc")
+
+        self.configure_args.append("--with-mem-start=" + self.mem_start)
 
         if self.build_type == BuildType.DEBUG:
             self.configure_args.append("--enable-logo")  # For debugging
