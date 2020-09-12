@@ -45,10 +45,10 @@ from .disk_image import (BuildCheriBSDDiskImage, BuildFreeBSDGFEDiskImage, Build
                          BuildFreeBSDWithDefaultOptionsDiskImage)
 from .project import CheriConfig, commandline_to_str, CPUArchitecture, SimpleProject
 from ..config.compilation_targets import CompilationTargets
+from ..config.loader import ComputedDefaultValue
 from ..qemu_utils import qemu_supports_9pfs, QemuOptions, riscv_bios_arguments
 from ..targets import target_manager
 from ..utils import AnsiColour, classproperty, coloured, find_free_port, OSInfo
-from ..config.loader import ComputedDefaultValue
 
 
 def get_default_ssh_forwarding_port(addend: int):
@@ -120,7 +120,7 @@ class LaunchQEMUBase(SimpleProject):
         elif xtarget.is_mips(include_purecap=True):
             self.qemu_binary = BuildQEMU.qemu_cheri_binary(self)
             self._can_provide_src_via_smb = True
-        elif xtarget.is_any_x86() or xtarget.is_aarch64():
+        elif xtarget.is_any_x86() or xtarget.is_aarch64(include_purecap=False):
             # Use the system QEMU instead of CHERI QEMU (for now)
             # Note: x86_64 can be either CHERI QEMU or system QEMU:
             self.add_required_system_tool("qemu-system-" + self.qemu_options.qemu_arch_sufffix)
@@ -457,6 +457,13 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
 class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     project_name = "run"
     _source_class = BuildCheriBSDDiskImage
+
+    @classproperty
+    def supported_architectures(self):
+        # We don't have QEMU for Morello (yet)
+        unsupported_targets = (CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP)
+        result = filter(lambda x: x not in unsupported_targets, self._source_class.supported_architectures)
+        return list(result)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
