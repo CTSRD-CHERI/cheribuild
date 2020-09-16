@@ -35,6 +35,7 @@ from pathlib import Path
 from .project import BuildType, CMakeProject, DefaultInstallDir, GitRepository
 from ..config.compilation_targets import CheriBSDTargetInfo, CompilationTargets
 from ..config.loader import ComputedDefaultValue
+from ..config.target_info import CrossCompileTarget
 from ..utils import CompilerInfo, get_compiler_info, is_jenkins_build, OSInfo, set_env, ThreadJoiner
 
 _true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
@@ -398,30 +399,30 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
             # Save some time by only building the targets that we need.
             self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips;RISCV;host")
 
+    def add_compiler_with_config_file(self, prefix: str, target: CrossCompileTarget):
+        cross_instance = self.get_instance_for_cross_target(cross_target=target, config=self.config, caller=self)
+        # We only want the compiler flags, don't check whether required files exist
+        assert isinstance(cross_instance.target_info, CheriBSDTargetInfo)
+        flags = cross_instance.target_info.essential_compiler_and_linker_flags_impl(perform_sanity_checks=False,
+                                                                                    default_flags_only=True)
+        config_file_contents = "\n".join(flags)
+        self.makedirs(self.install_dir / "utils")
+        self.write_file(self.install_dir / "utils" / (prefix + ".cfg"), config_file_contents, overwrite=True,
+                        mode=0o644)
+        self.create_symlink(self.install_dir / "bin/clang", self.install_dir / "utils" / (prefix + "-clang"))
+        self.create_symlink(self.install_dir / "bin/clang++", self.install_dir / "utils" / (prefix + "-clang++"))
+        self.create_symlink(self.install_dir / "bin/clang-cpp", self.install_dir / "utils" / (prefix + "-clang-cpp"))
+
     def install(self, **kwargs):
         super().install(**kwargs)
         # Create symlinks that hardcode the sdk and the ABI to easily compile binaries
-        config_file_template = """-target mips64-unknown-freebsd13
--integrated-as
--G0
--msoft-float
--cheri={cheri_bits}
--mcpu=cheri{cheri_bits}
---sysroot={sdk_dir}/sysroot{cheri_bits}
--B{sdk_dir}/bin
--mabi={abi}
-"""
-        for cheri_bits in [128]:
-            for abi in ("purecap", "n64"):
-                prefix = "cheribsd" + str(cheri_bits) + abi
-                config_file_contents = config_file_template.format(cheri_bits=cheri_bits, abi=abi,
-                                                                   sdk_dir=self.install_dir)
-                self.write_file(self.install_dir / "bin" / (prefix + ".cfg"), config_file_contents, overwrite=True,
-                                mode=0o644)
-                self.create_symlink(self.install_dir / "bin/clang", self.install_dir / "bin" / (prefix + "-clang"))
-                self.create_symlink(self.install_dir / "bin/clang++", self.install_dir / "bin" / (prefix + "-clang++"))
-                self.create_symlink(self.install_dir / "bin/clang-cpp",
-                                    self.install_dir / "bin" / (prefix + "-clang-cpp"))
+        # Note: This works as long as the first component of the name is not a recognized LLVM triple architecture, so
+        # we use cheribsd-<arch>-<suffix>-clang instead of <arch>-cheribsd-<suffix>-clang
+        self.add_compiler_with_config_file("cheribsd-mips-hybrid", CompilationTargets.CHERIBSD_MIPS_HYBRID)
+        self.add_compiler_with_config_file("cheribsd-mips-purecap", CompilationTargets.CHERIBSD_MIPS_PURECAP)
+        self.add_compiler_with_config_file("cheribsd-riscv64-hybrid", CompilationTargets.CHERIBSD_RISCV_HYBRID)
+        self.add_compiler_with_config_file("cheribsd-riscv64-purecap", CompilationTargets.CHERIBSD_RISCV_PURECAP)
+
         # llvm-objdump currently doesn't infer the available features
         # This depends on https://reviews.llvm.org/D74023
         self.write_file(self.install_dir / "bin/riscv64cheri-objdump",
