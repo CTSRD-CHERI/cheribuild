@@ -88,23 +88,22 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     def strip_tool(self) -> Path:
         return self._compiler_dir / "llvm-strip"
 
-    @property
-    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+    def essential_compiler_and_linker_flags_impl(self, *, perform_sanity_checks=True, default_flags_only=False):
         # noinspection PyProtectedMember
-        if not self.project._setup_called:
+        if perform_sanity_checks and not self.project._setup_called:
             self.project.fatal("essential_compiler_and_linker_flags should not be called in __init__, use setup()!",
                                fatal_when_pretending=True)
-        # However, when cross compiling we need at least -target=
+        # When cross compiling we need at least -target=
         result = ["-target", self.target_triple, "-pipe"]
         # And usually also --sysroot
         if self.project.needs_sysroot:
             result.append("--sysroot=" + str(self.sysroot_dir))
-            if self.project.is_nonexistent_or_empty_dir(self.sysroot_dir):
+            if perform_sanity_checks and self.project.is_nonexistent_or_empty_dir(self.sysroot_dir):
                 self.project.fatal("Project", self.project.target, "needs a sysroot, but", self.sysroot_dir,
                                    " is empty or does not exist.")
         result += ["-B" + str(self._compiler_dir)]
 
-        if self.project.auto_var_init != AutoVarInit.NONE:
+        if not default_flags_only and self.project.auto_var_init != AutoVarInit.NONE:
             compiler = get_compiler_info(self.c_compiler)
             valid_clang_version = compiler.is_clang and compiler.version >= (8, 0)
             # We should have at least 8.0.0 unless the user explicitly selected an incompatible clang
@@ -169,6 +168,10 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         else:
             self.project.warning("Compiler flags might be wong, only native + MIPS checked so far")
         return result
+
+    @property
+    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+        return self.essential_compiler_and_linker_flags_impl()
 
     @property
     def riscv_arch_string(self):
