@@ -122,13 +122,13 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.common_warning_flags.extend([
             "-Wno-mismatched-tags",
             "-Wno-unknown-warning-option",  # caused by the build passing -Wshadow=local
+            "-Werror=implicit-function-declaration"
             ])
         self.CXXFLAGS.append("-Wno-mismatched-tags")
         if self.should_include_debug_info:
             self.COMMON_FLAGS.append("-g")
         self.COMMON_FLAGS.append("-fcommon")
         # TODO: we should fix this:
-        self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")
         self.cross_warning_flags.append("-Wno-error=format")
         self.cross_warning_flags.append("-Wno-error=incompatible-pointer-types")
         self.configure_args.append("--enable-targets=all")
