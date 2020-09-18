@@ -985,10 +985,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # If we are building a library, we want to build both the CHERI and the mips version (unless the
         # user explicitly specified --libcompat-buildenv)
         if has_libcompat and not noncheri_only and self.libcompat_name():
-            compat_buildenv_target = self.libcompat_name() + "buildenv"
-            self.info("Building", subdir, "using", compat_buildenv_target, "target")
-            self.run_cmd([self.make_args.command] + make_args.all_commandline_args + [compat_buildenv_target],
-                         env=make_args.env_vars, cwd=self.source_dir)
+            compat_target = self.libcompat_name() + "buildenv"
+            self.info("Building", subdir, "using", compat_target, "target")
+            extra_flags = ["MK_TESTS=no"]  # don't build tests since they will overwrite the non-compat ones
+            self.run_cmd([self.make_args.command] + make_args.all_commandline_args + extra_flags + [compat_target],
+                env=make_args.env_vars, cwd=self.source_dir)
 
 
 class BuildFreeBSDGFE(BuildFreeBSD):
