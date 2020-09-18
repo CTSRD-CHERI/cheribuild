@@ -37,10 +37,9 @@ from ..utils import OSInfo, ThreadJoiner
 
 def gnustep_install_instructions():
     if OSInfo.IS_FREEBSD:
-        return "Try running `pkg install gnustep-make gnustep-gui` or `cheribuild.py gnustep` to build from source"
+        return "Try running `pkg install gnustep-make gnustep-gui`"
     if OSInfo.IS_LINUX:
-        return ("Try running `cheribuild.py gnustep`. It might also be possible to use distribution packages but they"
-                " will probably be too old.")
+        return "It might be possible to use distribution packages."
         # packaged versions don't seem to work
         #     osRelease = parseOSRelease()
         #     print(osRelease)
