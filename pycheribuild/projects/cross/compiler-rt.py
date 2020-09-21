@@ -67,6 +67,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             COMPILER_RT_INCLUDE_TESTS=True,
             COMPILER_RT_BUILD_LIBFUZZER=True,
             COMPILER_RT_BUILD_PROFILE=False,
+            COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN=False,
             COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal(),
             # COMPILER_RT_DEFAULT_TARGET_ONLY=True,
             # BUILTIN_SUPPORTED_ARCH="mips64",
