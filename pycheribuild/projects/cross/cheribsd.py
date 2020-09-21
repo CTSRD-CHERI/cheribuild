@@ -989,7 +989,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.info("Building", subdir, "using", compat_target, "target")
             extra_flags = ["MK_TESTS=no"]  # don't build tests since they will overwrite the non-compat ones
             self.run_cmd([self.make_args.command] + make_args.all_commandline_args + extra_flags + [compat_target],
-                env=make_args.env_vars, cwd=self.source_dir)
+                         env=make_args.env_vars, cwd=self.source_dir)
 
 
 class BuildFreeBSDGFE(BuildFreeBSD):
