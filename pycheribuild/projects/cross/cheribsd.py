@@ -105,11 +105,9 @@ class BuildFreeBSDBase(Project):
     do_not_add_to_targets = True  # base class only
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     make_kind = MakeCommandKind.BsdMake
-    crossbuild = None
     skip_buildworld = False
     is_large_source_repository = True
     has_installsysroot_target = False
-
     default_extra_make_options = [
         # "-DWITHOUT_HTML",  # should not be needed
         # "-DWITHOUT_SENDMAIL", "-DWITHOUT_MAIL",  # no need for sendmail
@@ -121,6 +119,10 @@ class BuildFreeBSDBase(Project):
         # "-DWITH_DIRDEPS_BUILD", "-DWITH_DIRDEPS_CACHE",  # experimental fast build options
         # "-DWITH_LIBCHERI_JEMALLOC"  # use jemalloc instead of -lmalloc_simple
         ]
+
+    @property
+    def crossbuild(self):
+        return not OSInfo.IS_FREEBSD
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -141,16 +143,6 @@ class BuildFreeBSDBase(Project):
 
         cls.debug_kernel = cls.add_bool_option("debug-kernel", help="Build the kernel with -O0 and verbose boot output",
                                                show_help=False)
-        if OSInfo.IS_FREEBSD:
-            cls.crossbuild = False
-        elif is_jenkins_build():
-            cls.crossbuild = True
-        else:
-            cross = inspect.getattr_static(cls, "crossbuild")
-            if cross is not True:
-                cls.crossbuild = cls.add_bool_option("crossbuild",
-                                                     help="Try to compile FreeBSD on non-FreeBSD machines")
-
     def __init__(self, config):
         super().__init__(config)
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.build_dir)}
@@ -232,7 +224,6 @@ class FreeBSDToolchainKind(Enum):
 class BuildFreeBSD(BuildFreeBSDBase):
     target = "freebsd"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
-    crossbuild = False
     needs_sysroot = False  # We are building the full OS so we don't need a sysroot
     # TODO: test more architectures (e.g. RISCV)
     supported_architectures = [CompilationTargets.FREEBSD_X86_64, CompilationTargets.FREEBSD_I386,
@@ -897,9 +888,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return ""
 
     def process(self):
-        if not OSInfo.IS_FREEBSD and not self.crossbuild:
-            self.info("Can't build FreeBSD on a non-FreeBSD host (yet)!")
-            return
+        if not OSInfo.IS_FREEBSD:
+            assert self.crossbuild
         _clear_dangerous_make_env_vars()
 
         if self.explicit_subdirs_only:
@@ -1132,7 +1122,6 @@ class BuildCHERIBSD(BuildFreeBSD):
                                ]
     is_sdk_target = True
     hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
-    crossbuild = True  # changes have been merged into master
     use_llvm_binutils = True
     has_installsysroot_target = True
 
