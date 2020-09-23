@@ -39,7 +39,7 @@ from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture,
                           TargetInfo)
 from ..utils import commandline_to_str, find_free_port, get_compiler_info, is_jenkins_build, SocketAndPort
 
-if typing.TYPE_CHECKING:
+if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine
     from ..projects.project import Project, SimpleProject  # no-combine
 

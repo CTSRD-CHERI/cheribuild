@@ -64,24 +64,32 @@ def insert_local_file(line: str, _: Path):
     lines.append("\"\"\"" + line[match.end():])
 
 
-def handle_line(line: str, src_file: Path):
+def handle_line(line: str, src_file: Path, continued_import: bool):
+    if line.startswith("#"):
+        # TODO: ignore all comments?
+        return False  # ignore top-level comments (e.g. copyright headers)
     global empty_lines
+    if continued_import:
+        if line.strip().endswith(")"):
+            return False
+        return True  # continued import line
     if line.endswith("# no-combine\n"):
-        return
+        return False
     if line.startswith("import "):
         imports.append(line)
-        return
+        return False
     if line.startswith("from "):
         # no need to add the local imports if we are combining
         if not line.startswith("from ."):
             from_imports.append(line)
-        return
+        return "import (" in line and not line.strip().endswith(")")  # continued if there is an opening paren
     elif line.lstrip().startswith("from ."):
-        return  # skip relative imports inside functions
+        # skip relative imports inside functions
+        return "import (" in line and not line.strip().endswith(")")  # continued if there is an opening paren
     if len(line.strip()) == 0:
         empty_lines += 1
         if empty_lines > 2:
-            return  # don't add more than 2 empty lines
+            return False  # don't add more than 2 empty lines
     else:
         empty_lines = 0
 
@@ -89,6 +97,7 @@ def handle_line(line: str, src_file: Path):
         insert_local_file(line, src_file)
     else:
         lines.append(line)
+    return False
 
 
 def add_filtered_file(p: Path):
@@ -96,8 +105,9 @@ def add_filtered_file(p: Path):
     handled_files.append(p)
     # TODO: filter
     with p.open("r") as f:
+        continued_import = False
         for line in f.readlines():
-            handle_line(line, p)
+            continued_import = handle_line(line, p, continued_import)
 
 
 def check_all_files_used(directory: Path):
@@ -121,6 +131,8 @@ add_filtered_file(script_dir / "config/defaultconfig.py")
 add_filtered_file(script_dir / "targets.py")
 add_filtered_file(script_dir / "filesystemutils.py")
 add_filtered_file(script_dir / "projects/project.py")
+add_filtered_file(script_dir / "qemu_utils.py")
+add_filtered_file(script_dir / "config/compilation_targets.py")
 
 # for now keep the original order
 add_filtered_file(script_dir / "projects/build_qemu.py")
@@ -139,7 +151,6 @@ add_filtered_file(script_dir / "projects/qtcreator.py")
 add_filtered_file(script_dir / "projects/kdevelop.py")
 add_filtered_file(script_dir / "projects/bear.py")
 add_filtered_file(script_dir / "projects/cherivis.py")
-add_filtered_file(script_dir / "projects/gnustep.py")
 add_filtered_file(script_dir / "projects/go.py")
 add_filtered_file(script_dir / "projects/sail.py")
 add_filtered_file(script_dir / "projects/soaap.py")
@@ -147,16 +158,15 @@ add_filtered_file(script_dir / "projects/effectivesan.py")
 add_filtered_file(script_dir / "projects/softboundcets.py")
 add_filtered_file(script_dir / "projects/valgrind.py")
 add_filtered_file(script_dir / "projects/ninja.py")
+add_filtered_file(script_dir / "projects/openradtool.py")
 add_filtered_file(script_dir / "projects/cheri_afl.py")
-
-# cross compilation targets
-add_filtered_file(script_dir / "projects/cross/cheribsd.py")
-add_filtered_file(script_dir / "projects/cross/crosscompileproject.py")
 
 # First three need to be in order, then add all others
 cross_files = [(script_dir / "projects/cross/cheribsd.py").resolve(),
                (script_dir / "projects/cross/crosscompileproject.py").resolve()]
 for file in sorted((script_dir / "projects/cross").glob("*.py")):
+    if file.name == "fett.py":
+        continue
     path = file.resolve()
     if path not in cross_files:
         cross_files.append(path)
@@ -171,6 +181,7 @@ add_filtered_file(script_dir / "projects/sdk.py")
 add_filtered_file(script_dir / "projects/spike.py")
 add_filtered_file(script_dir / "projects/run_qemu.py")
 add_filtered_file(script_dir / "projects/run_fpga.py")
+add_filtered_file(script_dir / "projects/cross/fett.py")  # depends on disk_image.py and run_qemu.py
 
 # this one should not be needed
 add_filtered_file(script_dir / "projects/samba.py")
