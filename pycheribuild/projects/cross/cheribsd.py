@@ -142,6 +142,7 @@ class BuildFreeBSDBase(Project):
 
         cls.debug_kernel = cls.add_bool_option("debug-kernel", help="Build the kernel with -O0 and verbose boot output",
                                                show_help=False)
+
     def __init__(self, config):
         super().__init__(config)
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.build_dir)}
@@ -934,7 +935,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 sysroot_var = "\"$$$${SYSROOT}\""
                 install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install {i} MK_TESTS=no DESTDIR={sysroot};" \
                                          " fi".format(make=make_in_subdir, sysroot=sysroot_var, i=install_nometalog_cmd)
-            if self.config.install_subdir_to_sysroot and self.has_installsysroot_target and self.get_corresponding_sysroot() is not None:
+            if self.config.install_subdir_to_sysroot and self.has_installsysroot_target and \
+                    self.get_corresponding_sysroot() is not None:
                 if install_to_sysroot_cmd:
                     install_to_sysroot_cmd += " && "
                 install_to_sysroot_cmd += "{make} install {i} MK_TESTS=no DESTDIR={sysroot}".format(
