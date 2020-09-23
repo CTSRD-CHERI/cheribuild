@@ -671,7 +671,8 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
         return child
     try:
         # BOOTVERBOSE is off for the amd64 kernel so we don't see the STARTING_INIT message
-        bootverbose = child.xtarget.is_mips(include_purecap=True) or child.xtarget.is_riscv(include_purecap=True)
+        # TODO: it would be nice if we had a message to detect userspace startup without requiring bootverbose
+        bootverbose = False
         boot_messages = [STARTING_INIT, "Hit \\[Enter\\] to boot immediately", "Trying to mount root from.+\\r\\n",
                          BOOT_FAILURE, BOOT_FAILURE2] + FATAL_ERROR_MESSAGES
         i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
