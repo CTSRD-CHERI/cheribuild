@@ -424,6 +424,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.make_args.set(DEBUG_FLAGS="-g")
 
         if self.add_custom_make_options:
+            self.make_args.set_with_options(PROFILE=False)  # PROFILE is useless and just slows down the build
             # Don't split the debug info from the binary, just keep it as part of the binary
             # This means we can just scp the file over to a cheribsd instace, run gdb and get symbols and sources.
             self.make_args.set_with_options(DEBUG_FILES=False)
