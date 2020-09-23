@@ -61,7 +61,6 @@ class BuildCheriVis(Project):
         build_in_source_dir = True
         make_kind = MakeCommandKind.CustomMakeTool
     else:
-        dependencies = ["gnustep"]
         make_kind = MakeCommandKind.GnuMake
 
     # TODO: allow external cheritrace
