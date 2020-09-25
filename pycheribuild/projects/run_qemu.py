@@ -114,7 +114,6 @@ class LaunchQEMUBase(SimpleProject):
         xtarget = self.crosscompile_target
         self._can_provide_src_via_smb = False
         if xtarget.is_riscv(include_purecap=True):
-            self._add_virtio_rng = False
             self.bios_flags += self.get_riscv_bios_args()
             self.qemu_binary = BuildQEMU.qemu_cheri_binary(self)
             self._can_provide_src_via_smb = True
