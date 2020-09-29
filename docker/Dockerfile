@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y \
   git \
   python3-minimal \
   lsb-release \
-  wget
+  wget \
+  samba
 
 # RUN git config --global http.sslVerify false
 # RUN cd /tmp && git clone https://github.com/arichardson/bmake && cd bmake \
