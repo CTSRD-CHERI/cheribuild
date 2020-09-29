@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import shutil
 import sys
 import typing
 from pathlib import Path
@@ -100,7 +101,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "--infodir=" + str(install_root / "info"),
             # "--disable-sim",
             "--disable-werror",
-            "MAKEINFO=/usr/bin/false",
+            "MAKEINFO=" + str(shutil.which("false")),
             "--with-gdb-datadir=" + str(install_root / "share/gdb"),
             "--disable-libstdcxx",
             "--with-guile=no",
