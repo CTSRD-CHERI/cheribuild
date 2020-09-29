@@ -1235,10 +1235,11 @@ class BuildCHERIBSD(BuildFreeBSD):
                 self.warning("Unsupported architecture for FETT kernels")
 
     def _remove_schg_flag(self, *paths: "typing.Iterable[str]"):
-        for i in paths:
-            file = self.install_dir / i
-            if file.exists():
-                self.run_cmd("chflags", "noschg", str(file))
+        if shutil.which("chflags"):
+            for i in paths:
+                file = self.install_dir / i
+                if file.exists():
+                    self.run_cmd("chflags", "noschg", str(file))
 
     def _remove_old_rootfs(self):
         if not self.config.skip_buildworld:

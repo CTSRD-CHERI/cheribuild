@@ -168,7 +168,7 @@ def real_main():
             docker_dir_mappings = [
                 # map cheribuild and the sources read-only into the container
                 "-v", cheribuild_dir + ":/cheribuild:ro",
-                "-v", str(cheri_config.source_root.absolute()) + ":/source:ro",
+                "-v", str(cheri_config.source_root.absolute()) + ":/source",
                 # build and output are read-write:
                 "-v", str(cheri_config.build_root.absolute()) + ":/build",
                 "-v", str(cheri_config.output_root.absolute()) + ":/output",
