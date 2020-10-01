@@ -226,9 +226,7 @@ class BuildSailFromOpam(ProjectUsingOpam):
         if not self.skip_update:
             self.run_opam_cmd("update")
 
-        if self.config.clean or True:
-            if not self.config.clean:
-                self.info("opam --destdir does not work with update -> doing full reinstall instead of update")
+        if self.config.clean or self.use_git_version:
             self.run_opam_cmd("uninstall", "--verbose", "sail",
                               "--destdir=" + str(self.config.cheri_sdk_dir / "sailprefix"))
             self.run_opam_cmd("uninstall", "--verbose", "sail")
@@ -238,9 +236,9 @@ class BuildSailFromOpam(ProjectUsingOpam):
         if self.use_git_version:
             # Force installation from latest git (pin repo now, but pass --no-action since we need to install with
             # --destdir)
-            self.run_opam_cmd("pin", "add", "sail", self.source_dir, "--verbose", "--no-action")
+            self.run_opam_cmd("pin", "add", "-y", "sail", self.source_dir, "--no-action")
         try:
-            self.run_opam_cmd("install", "-y", "--verbose", "sail", "--destdir=" + str(self.config.cheri_sdk_dir))
+            self.run_opam_cmd("install", "-y", "--verbose", "sail")
             # I bet this will not work as intended... Probably better to just uninstall and reinstall
             self.run_opam_cmd("upgrade", "-y", "--verbose", "sail")  # "--destdir=" + str(self.config.cheri_sdk_dir))
         finally:
