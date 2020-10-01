@@ -448,7 +448,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
 
 
 class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
-    repository = GitRepository("You must set --morello-llvm/source-directory for now!")
+    repository = GitRepository("https://git.morello-project.org/morello/llvm-project.git")
     project_name = "morello-llvm-project"
     target = "morello-llvm"
     skip_cheri_symlinks = False  # add target-specific symlinks
