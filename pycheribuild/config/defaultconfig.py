@@ -124,8 +124,9 @@ class DefaultCheriConfig(CheriConfig):
                                                  default=lambda p, cls: p.output_root, group=loader.path_group,
                                                  help="The directory to find sdk and bootstrap tools (default: "
                                                       "'<OUTPUT_ROOT>')")
-        default_morello_sdk = ComputedDefaultValue(function=lambda p, cls: (p.output_root / "morello-sdk"),
-                                                   as_string="'<OUTPUT_ROOT>/morello-sdk'")
+        default_morello_sdk = ComputedDefaultValue(
+            function=lambda p, cls: (p.output_root / p.default_morello_sdk_directory_name),
+            as_string="'<OUTPUT_ROOT>/morello-sdk'")
         self.morello_sdk_dir = loader.add_path_option("morello-sdk-root",
                                                       default=default_morello_sdk, group=loader.path_group,
                                                       help="The directory to find/install the Morello SDK")
@@ -138,8 +139,8 @@ class DefaultCheriConfig(CheriConfig):
         super().load()
         self.preferred_xtarget = None
         # now set some generic derived config options
-        self.cheri_sdk_dir = self.tools_root / self.cheri_sdk_directory_name  # qemu and binutils (and llvm/clang)
-        self.sysroot_install_dir = self.sysroot_pfx / self.cheri_sdk_directory_name
+        self.cheri_sdk_dir = self.tools_root / self.default_cheri_sdk_directory_name
+        self.sysroot_install_dir = self.sysroot_pfx / self.default_cheri_sdk_directory_name
         self.other_tools_dir = self.tools_root / "bootstrap"
         self.cheribsd_image_root = self.output_root  # TODO: allow this to be different?
 

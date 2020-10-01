@@ -245,6 +245,7 @@ class CheriConfig(object):
         # Path to kernel/disk images (this is the same as output_root by default but different in Jenkins)
         self.cheribsd_image_root = None  # type: Optional[Path]
         self.cheri_sdk_dir = None  # type: Optional[Path]
+        self.morello_sdk_dir = None  # type: Optional[Path]
         self.other_tools_dir = None  # type: Optional[Path]
         self.sysroot_install_dir = None  # type: Optional[Path]
         self.docker = loader.add_bool_option("docker", help="Run the build inside a docker container",
@@ -421,8 +422,12 @@ class CheriConfig(object):
         return str(self.mips_cheri_bits)
 
     @property
-    def cheri_sdk_directory_name(self) -> str:
+    def default_cheri_sdk_directory_name(self) -> str:
         return "sdk"
+
+    @property
+    def default_morello_sdk_directory_name(self) -> str:
+        return "morello-sdk"
 
     @property
     def cheri_sdk_bindir(self):

@@ -119,9 +119,12 @@ class JenkinsConfig(CheriConfig):
             "without-sdk", help="Don't use the CHERI SDK -> only /usr (for native builds)")
         self.strip_elf_files = loader.add_commandline_only_bool_option(
             "strip-elf-files", help="Strip ELF files before creating the tarball", default=True)
-        self.cheri_sdk_path = loader.add_commandline_only_option("cheri-sdk-path", default=None, type=Path,
-                                                                 help="Override the path to the CHERI SDK (default is "
-                                                                      "$WORKSPACE/cherisdk)")  # type: Path
+        self.cheri_sdk_path = loader.add_commandline_only_option(
+            "cheri-sdk-path", default=None, type=Path,
+            help="Override the path to the CHERI SDK (default is $WORKSPACE/cherisdk)")  # type: Path
+        self.morello_sdk_path = loader.add_commandline_only_option(
+            "morello-sdk-path", default=None, type=Path,
+            help="Override the path to the Morello SDK (default is $WORKSPACE/morello-sdk)")  # type: Path
         self.extract_compiler_only = loader.add_commandline_only_bool_option("extract-compiler-only",
                                                                              help="Don't attempt to extract the "
                                                                                   "CheriBSD sysroot")
@@ -151,7 +154,7 @@ class JenkinsConfig(CheriConfig):
         self.FS = FileSystemUtils(self)
 
     @property
-    def cheri_sdk_directory_name(self):
+    def default_cheri_sdk_directory_name(self):
         return "cherisdk"
 
     @property
@@ -215,13 +218,21 @@ class JenkinsConfig(CheriConfig):
         self.cheribsd_image_root = self.workspace
 
         self.other_tools_dir = self.workspace / "bootstrap"
-        # check for ctsrd/cheri-sdk-{cheri128,mips} docker image
+
         if self.cheri_sdk_path is not None:
             self.cheri_sdk_dir = self.cheri_sdk_path
-        elif Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
+        elif Path("/cheri-sdk/bin/clang").exists():  # check for ctsrd/cheri-sdk docker image
             self.cheri_sdk_dir = Path("/cheri-sdk")
         else:
-            self.cheri_sdk_dir = self.workspace / self.cheri_sdk_directory_name
+            self.cheri_sdk_dir = self.workspace / self.default_cheri_sdk_directory_name
+
+        if self.morello_sdk_path is not None:
+            self.morello_sdk_dir = self.morello_sdk_path
+        elif Path("/morello-sdk/bin/clang").exists():  # check for docker image
+            self.morello_sdk_dir = Path("/morello-sdk")
+        else:
+            self.morello_sdk_dir = self.workspace / self.default_morello_sdk_directory_name
+
         self.sysroot_install_dir = self.cheri_sdk_dir
         self.preferred_xtarget = None  # type: typing.Optional[CrossCompileTarget]
         if self.cpu == "default":
