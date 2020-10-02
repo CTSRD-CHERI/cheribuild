@@ -410,7 +410,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
                 # FIXME: still needed?
                 result["WITH_CHERI"] = True
-                result["WITH_CHERI128"] = True
         else:
             assert False, "This should not be reached!"
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
