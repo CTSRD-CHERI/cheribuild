@@ -623,6 +623,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
         elif self.compiling_for_riscv(include_purecap=True):
             kernel_options.set_with_options(CTF=False)  # FIXME: restore once debugged
         elif self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            # Disable CTF for now to avoid the following errors:
+            # ERROR: cam_periph.c: die 25130: unknown base type encoding 0xffffffffffffffa1
+            kernel_options.set_with_options(CTF=False)
             # Morello is currently not WERROR-clean:
             kernel_options.set(WERROR="", NO_WERROR="yes")
             # Only build SMB module (since e.g. Linux module is broken)
