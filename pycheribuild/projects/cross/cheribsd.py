@@ -626,8 +626,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Disable CTF for now to avoid the following errors:
             # ERROR: cam_periph.c: die 25130: unknown base type encoding 0xffffffffffffffa1
             kernel_options.set_with_options(CTF=False)
-            # Morello is currently not WERROR-clean:
-            kernel_options.set(WERROR="", NO_WERROR="yes")
             # Only build SMB module (since e.g. Linux module is broken)
             kernel_options.set(MODULES_OVERRIDE="smbfs libiconv libmchain")
         if not self.use_bootstrapped_toolchain:
