@@ -442,3 +442,25 @@ class BuildUpstreamLlvmLibs(BuildLlvmLibs):
     project_name = "upstream-llvm-libs"
     repository = ReuseOtherProjectDefaultTargetRepository(BuildUpstreamLLVM, subdirectory="llvm")
     llvm_project = BuildUpstreamLLVM
+
+
+class BuildUpstreamLlvmLibsWithHostCompiler(BuildLlvmLibs):
+    target = "upstream-llvm-libs-with-host-compiler"
+    project_name = "upstream-llvm-libs-with-host-compiler"
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildUpstreamLLVM, subdirectory="llvm")
+    llvm_project = BuildUpstreamLLVM
+
+    @property
+    def custom_c_preprocessor(self):
+        assert self.compiling_for_host()
+        return self.target_info.host_c_preprocessor(self.config)
+
+    @property
+    def custom_c_compiler(self):
+        assert self.compiling_for_host()
+        return self.target_info.host_c_compiler(self.config)
+
+    @property
+    def custom_cxx_compiler(self):
+        assert self.compiling_for_host()
+        return self.target_info.host_cxx_compiler(self.config)
