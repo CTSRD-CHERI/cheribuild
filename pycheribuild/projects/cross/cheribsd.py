@@ -57,7 +57,7 @@ def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
             return config.output_root / "freebsd-mipshf"
         return config.output_root / "freebsd-mips"
     elif target.is_x86_64():
-        return config.output_root / "freebsd-x86"
+        return config.output_root / "freebsd-amd64"
     elif target.is_aarch64():
         return config.output_root / "freebsd-aarch64"
     elif target.is_riscv(include_purecap=False):
@@ -94,7 +94,7 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
         return config.output_root / "rootfs-aarch64"
     else:
         assert project.crosscompile_target.is_x86_64()
-        return config.output_root / "rootfs-x86"
+        return config.output_root / "rootfs-amd64"
 
 
 def _clear_dangerous_make_env_vars():
@@ -1478,7 +1478,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 #         return config.output_root / "rootfs-minimal-riscv64"
 #     else:
 #         assert project.crosscompile_target.is_x86_64()
-#         return config.output_root / "rootfs-minimal-x86"
+#         return config.output_root / "rootfs-minimal-amd64"
 #
 #
 # class BuildCHERIBSDMinimal(BuildCHERIBSD):
@@ -1490,7 +1490,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 #     _should_not_be_instantiated = False
 #     build_dir_suffix = "-minimal"
 #     _default_install_dir_fn = ComputedDefaultValue(function=cheribsd_minimal_install_dir,
-#                                              as_string="$INSTALL_ROOT/rootfs-minmal{128,-mips,-x86}")
+#                                              as_string="$INSTALL_ROOT/rootfs-minmal{128,-mips,-amd64}")
 #
 #     @classmethod
 #     def setup_config_options(cls, **kwargs):
