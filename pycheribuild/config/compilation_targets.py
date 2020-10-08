@@ -568,8 +568,8 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
 
     def get_cheribsd_sysroot_path(self) -> Path:
         if self.target.is_aarch64(include_purecap=True):
-            return self._sysroot_path(self.sdk_root_dir, purecap_prefix="-morello-purecap",
-                                      hybrid_prefix="-morello-hybrid", nocheri_name="-aarch64")
+            return self._sysroot_path(self.sdk_root_dir, purecap_prefix="-aarch64-purecap",
+                                      hybrid_prefix="-aarch64-hybrid", nocheri_name="-aarch64")
         return super().get_cheribsd_sysroot_path()
 
     @classmethod
