@@ -38,8 +38,7 @@ from pathlib import Path
 
 from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
-                       MakeCommandKind, MakeOptions, Project, SimpleProject, TargetAliasWithDependencies,
-                       TargetBranchInfo)
+                       MakeCommandKind, MakeOptions, Project, SimpleProject, TargetBranchInfo)
 from ...config.compilation_targets import CompilationTargets
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CrossCompileTarget, MipsFloatAbi
@@ -1068,7 +1067,6 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     project_name = "freebsd-universe"
     target = "freebsd-universe"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
-    # already in the project name:    build_dir_suffix = "universe"
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
 
     @classmethod
@@ -1155,12 +1153,6 @@ class BuildCHERIBSD(BuildFreeBSD):
     hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
     use_llvm_binutils = True
     has_installsysroot_target = True
-
-    @property
-    def build_dir_suffix(self):
-        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            return "-purecap"
-        return super().build_dir_suffix
 
     @classmethod
     def setup_config_options(cls, install_directory_help=None, **kwargs):
@@ -1284,6 +1276,13 @@ class BuildCHERIBSD(BuildFreeBSD):
         super()._remove_old_rootfs()
 
     def compile(self, **kwargs):
+        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            self._cleanup_old_files(self.build_dir, self.build_dir.name,
+                                    ["cheribsd-purecap-128-build", "cheribsd-purecap-256-build"])
+        elif self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.MIPS64]):
+            self._cleanup_old_files(self.build_dir, self.build_dir.name,
+                                    ["cheribsd-obj-128", "cheribsd-128-build", "cheribsd-mips-hybrid128-build",
+                                     "cheribsd-obj-256", "cheribsd-256-build", "cheribsd-mips-hybrid256-build"])
         # We could also just pass all values in KERNCONF to build all those kernels. However, if MFS_ROOT is set
         # that will apply to all those kernels and embed the rootfs even if not needed
         super().compile(all_kernel_configs=self.kernel_config, mfs_root_image=self.mfs_root_image,

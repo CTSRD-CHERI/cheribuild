@@ -491,10 +491,6 @@ class CrossCompileTarget(object):
         options
         """
         result = ""
-        if self.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
-            # MIPS supports 128/256 -> include that in the configuration
-            # FIXME: remove this
-            result += config.mips_cheri_bits_str
         if self.is_hybrid_or_purecap_cheri():
             if config.cheri_cap_table_abi:
                 result += "-" + str(config.cheri_cap_table_abi)
