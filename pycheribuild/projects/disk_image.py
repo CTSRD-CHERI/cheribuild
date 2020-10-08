@@ -1073,9 +1073,9 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
                 result.append("gdb-riscv64")
         if xtarget.is_mips(include_purecap=True):
             if xtarget.is_hybrid_or_purecap_cheri():
-                result.append("gdb-mips-hybrid")
+                result.append("gdb-mips64-hybrid")
             else:
-                result.append("gdb-mips-nocheri")
+                result.append("gdb-mips64")
         return result
 
     @classmethod
@@ -1136,7 +1136,7 @@ class BuildCheriBSDDeviceModelDiskImage(BuildCheriBSDDiskImage):
 
 
 # Backwards compatibility:
-target_manager.add_target_alias("disk-image-purecap", "disk-image-mips-purecap", deprecated=True)
-target_manager.add_target_alias("disk-image-minimal-purecap", "disk-image-minimal-mips-purecap", deprecated=True)
+target_manager.add_target_alias("disk-image-purecap", "disk-image-mips64-purecap", deprecated=True)
+target_manager.add_target_alias("disk-image-minimal-purecap", "disk-image-minimal-mips64-purecap", deprecated=True)
 target_manager.add_target_alias("disk-image-native", "disk-image-amd64", deprecated=True)
 target_manager.add_target_alias("disk-image-x86_64", "disk-image-amd64", deprecated=True)

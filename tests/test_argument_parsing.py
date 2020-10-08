@@ -122,7 +122,7 @@ def test_cross_compile_project_inherits():
     qtbase_class = target_manager.get_target_raw("qtbase").project_class
     qtbase_default = _get_target_instance("qtbase", config, BuildQtBase)
     qtbase_native = _get_target_instance("qtbase-native", config, BuildQtBase)
-    qtbase_mips = _get_target_instance("qtbase-mips-hybrid", config, BuildQtBase)
+    qtbase_mips = _get_target_instance("qtbase-mips64-hybrid", config, BuildQtBase)
 
     # Check that project name is the same:
     assert qtbase_default.project_name == qtbase_native.project_name
@@ -215,10 +215,10 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     config = _parse_arguments(["--skip-configure"])
     cheribsd_class = target_manager.get_target_raw("cheribsd").project_class
     cheribsd_default_tgt = _get_cheribsd_instance("cheribsd", config)
-    assert cheribsd_default_tgt.target == "cheribsd-mips-hybrid"
-    cheribsd_mips = _get_cheribsd_instance("cheribsd-mips-nocheri", config)
-    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips-hybrid", config)
-    cheribsd_mips_purecap = _get_cheribsd_instance("cheribsd-mips-purecap", config)
+    assert cheribsd_default_tgt.target == "cheribsd-mips64-hybrid"
+    cheribsd_mips = _get_cheribsd_instance("cheribsd-mips64", config)
+    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
+    cheribsd_mips_purecap = _get_cheribsd_instance("cheribsd-mips64-purecap", config)
 
     # Check that project name is the same:
     assert cheribsd_mips.project_name == cheribsd_mips_hybrid.project_name
@@ -228,18 +228,18 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assert cheribsd_mips_hybrid.synthetic_base == cheribsd_class
     assert hasattr(cheribsd_mips_purecap, "synthetic_base")
 
-    _parse_arguments(["--cheribsd-mips-nocheri/debug-kernel"])
+    _parse_arguments(["--cheribsd-mips64/debug-kernel"])
     assert not cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap debug-kernel should default to false"
     assert not cheribsd_mips_hybrid.debug_kernel, "cheribsd-mips-hybrid debug-kernel should default to false"
-    assert cheribsd_mips.debug_kernel, "cheribsd-mips-nocheri debug-kernel should be set on cmdline"
+    assert cheribsd_mips.debug_kernel, "cheribsd-mips64 debug-kernel should be set on cmdline"
     _parse_arguments(["--cheribsd-purecap/debug-kernel"])
     assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap debug-kernel should be set on cmdline"
     assert not cheribsd_mips_hybrid.debug_kernel, "cheribsd-mips-hybrid debug-kernel should default to false"
-    assert not cheribsd_mips.debug_kernel, "cheribsd-mips-nocheri debug-kernel should default to false"
+    assert not cheribsd_mips.debug_kernel, "cheribsd-mips64 debug-kernel should default to false"
     _parse_arguments(["--cheribsd-cheri/debug-kernel"])
     assert not cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap debug-kernel should default to false"
     assert cheribsd_mips_hybrid.debug_kernel, "cheribsd-cheri debug-kernel should be set on cmdline"
-    assert not cheribsd_mips.debug_kernel, "cheribsd-mips-nocheri debug-kernel should default to false"
+    assert not cheribsd_mips.debug_kernel, "cheribsd-mips64 debug-kernel should default to false"
 
     # If the base cheribsd option is set but no per-target one use both cheribsd-cheri and cheribsd-purecap should
     # inherit basic one:
@@ -319,7 +319,7 @@ def test_target_alias():
     # We should load config options for that target from
     cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
     assert str(cheribsd_cheri.mfs_root_image) == "/some/image"
-    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips-hybrid", config)
+    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
     assert str(cheribsd_mips_hybrid.mfs_root_image) == "/some/image"
     # Try again with the other key:
     config = _parse_config_file_and_args(b'{"cheribsd-mips-hybrid/mfs-root-image": "/some/image"}')
@@ -327,7 +327,7 @@ def test_target_alias():
     # We should load config options for that target from
     cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
     assert str(cheribsd_cheri.mfs_root_image) == "/some/image"
-    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips-hybrid", config)
+    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
     assert str(cheribsd_mips_hybrid.mfs_root_image) == "/some/image"
 
     # Check command line aliases:
@@ -337,7 +337,7 @@ def test_target_alias():
     # We should load config options for that target from
     cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
     assert str(cheribsd_cheri.mfs_root_image) == "/command/line/value"
-    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips-hybrid", config)
+    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
     assert str(cheribsd_mips_hybrid.mfs_root_image) == "/command/line/value"
 
     config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/json/value"}',
@@ -346,18 +346,8 @@ def test_target_alias():
     # We should load config options for that target from
     cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
     assert str(cheribsd_cheri.mfs_root_image) == "/command/line/value"
-    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips-hybrid", config)
+    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
     assert str(cheribsd_mips_hybrid.mfs_root_image) == "/command/line/value"
-
-
-def test_mips_purecap_legacy_config_alias():
-    config = _parse_config_file_and_args(b'{"qtbase-mips-purecap/build-directory": "/some/build/dir"}')
-    # Check that qtbase-mips-purecap is a (deprecated) target alias for qtbase-mips64-purecap
-    # and that we still load config options for that old target name
-    qtbase_mips_purecap = _get_target_instance("qtbase-mips64-purecap", config, BuildQtBase)
-    assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
-    qtbase_mips_purecap = _get_target_instance("qtbase-mips-purecap", config, BuildQtBase)
-    assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
 
 
 def test_kernconf():
@@ -365,7 +355,7 @@ def test_kernconf():
     # check default values
     config = _parse_arguments([])
     cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
-    cheribsd_mips = _get_cheribsd_instance("cheribsd-mips-nocheri", config)
+    cheribsd_mips = _get_cheribsd_instance("cheribsd-mips64", config)
     freebsd_mips = _get_target_instance("freebsd-mips", config, BuildFreeBSD)
     freebsd_native = _get_target_instance("freebsd-amd64", config, BuildFreeBSD)
     assert config.freebsd_kernconf is None
@@ -495,14 +485,14 @@ def test_libcxxrt_dependency_path():
 
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
-    check_libunwind_path(config.output_root / "rootfs-purecap128/opt/mips-purecap/c++/lib", "libcxxrt-mips-purecap")
-    check_libunwind_path(config.output_root / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt-mips-hybrid")
+    check_libunwind_path(config.output_root / "rootfs-purecap128/opt/mips64-purecap/c++/lib", "libcxxrt-mips64-purecap")
+    check_libunwind_path(config.output_root / "rootfs128/opt/mips64-hybrid/c++/lib", "libcxxrt-mips64-hybrid")
     # Check the defaults:
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
     config = _parse_arguments(["--skip-configure", "--no-use-hybrid-sysroot-for-mips"])
-    check_libunwind_path(config.output_root / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt-mips-hybrid")
-    check_libunwind_path(config.output_root / "rootfs-mips/opt/mips-nocheri/c++/lib", "libcxxrt-mips-nocheri")
+    check_libunwind_path(config.output_root / "rootfs128/opt/mips64-hybrid/c++/lib", "libcxxrt-mips64-hybrid")
+    check_libunwind_path(config.output_root / "rootfs-mips/opt/mips64/c++/lib", "libcxxrt-mips64")
 
 
 @pytest.mark.parametrize("target,expected_path,kind,extra_args", [
@@ -516,13 +506,13 @@ def test_libcxxrt_dependency_path():
                  ["--freebsd-mips/toolchain-path", "/path/to/custom/toolchain"]),
 
     # CheriBSD-mips can be built with all these toolchains (but defaults to CHERI LLVM):
-    pytest.param("cheribsd-mips-nocheri", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.DEFAULT_EXTERNAL, []),
-    pytest.param("cheribsd-mips-nocheri", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
-    pytest.param("cheribsd-mips-nocheri", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
-    pytest.param("cheribsd-mips-nocheri", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
+    pytest.param("cheribsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.DEFAULT_EXTERNAL, []),
+    pytest.param("cheribsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
+    pytest.param("cheribsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
+    pytest.param("cheribsd-mips64", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
                  FreeBSDToolchainKind.BOOTSTRAP, []),
-    pytest.param("cheribsd-mips-nocheri", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
-                 ["--cheribsd-mips-nocheri/toolchain-path", "/path/to/custom/toolchain"]),
+    pytest.param("cheribsd-mips64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
+                 ["--cheribsd-mips64/toolchain-path", "/path/to/custom/toolchain"]),
     ])
 def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, extra_args):
     args = ["--" + target + "/toolchain", kind.value]
@@ -541,16 +531,16 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
 
 @pytest.mark.parametrize("target,expected_name", [
     # CheriBSD
-    pytest.param("disk-image-mips-nocheri", "cheribsd-mips-nocheri.img"),
-    pytest.param("disk-image-mips-hybrid", "cheribsd-mips-hybrid128.img"),
+    pytest.param("disk-image-mips64", "cheribsd-mips64.img"),
+    pytest.param("disk-image-mips64-hybrid", "cheribsd-mips-hybrid128.img"),
     pytest.param("disk-image-purecap", "cheribsd-mips-purecap128.img"),
     pytest.param("disk-image-riscv64", "cheribsd-riscv64.img"),
     pytest.param("disk-image-riscv64-hybrid", "cheribsd-riscv64-hybrid.img"),
     pytest.param("disk-image-riscv64-purecap", "cheribsd-riscv64-purecap.img"),
     pytest.param("disk-image-amd64", "cheribsd-amd64.img"),
     # Minimal image
-    pytest.param("disk-image-minimal-mips-nocheri", "cheribsd-minimal-mips-nocheri.img"),
-    pytest.param("disk-image-minimal-mips-hybrid", "cheribsd-minimal-mips-hybrid128.img"),
+    pytest.param("disk-image-minimal-mips64", "cheribsd-minimal-mips64.img"),
+    pytest.param("disk-image-minimal-mips64-hybrid", "cheribsd-minimal-mips-hybrid128.img"),
     pytest.param("disk-image-minimal-purecap", "cheribsd-minimal-mips-purecap128.img"),
     pytest.param("disk-image-minimal-riscv64", "cheribsd-minimal-riscv64.img"),
     pytest.param("disk-image-minimal-riscv64-hybrid", "cheribsd-minimal-riscv64-hybrid.img"),
@@ -580,14 +570,14 @@ def test_freebsd_toolchains_cheribsd_purecap():
     with pytest.raises(SystemExit, match=r'2$'):
         for i in FreeBSDToolchainKind:
             test_freebsd_toolchains("cheribsd-purecap", "/wrong/path", i, [])
-            test_freebsd_toolchains("cheribsd-mips-hybrid", "/wrong/path", i, [])
+            test_freebsd_toolchains("cheribsd-mips64-hybrid", "/wrong/path", i, [])
             test_freebsd_toolchains("cheribsd-riscv64-hybrid", "/wrong/path", i, [])
             test_freebsd_toolchains("cheribsd-riscv64-purecap", "/wrong/path", i, [])
 
 
 @pytest.mark.parametrize("target,args,expected", [
     pytest.param("cheribsd", ["--foo"],
-                 "cheribsd-mips-hybrid128-build"),
+                 "cheribsd-mips64-hybrid128-build"),
     pytest.param("llvm", ["--foo"],
                  "llvm-project-build"),
     pytest.param("cheribsd-purecap", ["--foo"],
@@ -602,16 +592,16 @@ def test_freebsd_toolchains_cheribsd_purecap():
     # Passing "--cap-table-abi=pcrel" also changes the build dir even though it's (currently) the default for all
     # architectures.
     pytest.param("cheribsd", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
-                 "cheribsd-mips-hybrid128-pcrel-build"),
+                 "cheribsd-mips64-hybrid128-pcrel-build"),
     # plt should be encoded
     pytest.param("cheribsd", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
-                 "cheribsd-mips-hybrid128-plt-build"),
+                 "cheribsd-mips64-hybrid128-plt-build"),
     # everything
     pytest.param("cheribsd-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
                  "cheribsd-purecap-128-plt-aggressive-hardfloat-build"),
     # plt should be encoded
     pytest.param("sqlite", [], "sqlite-128-build"),
-    pytest.param("sqlite-mips-hybrid", [], "sqlite-mips-hybrid128-build"),
+    pytest.param("sqlite-mips64-hybrid", [], "sqlite-mips64-hybrid128-build"),
     pytest.param("sqlite-native", [], "sqlite-native-build"),
     ])
 def test_default_build_dir(target: str, args: list, expected: str):
@@ -621,3 +611,13 @@ def test_default_build_dir(target: str, args: list, expected: str):
     builddir = target.get_or_create_project(None, config).build_dir
     assert isinstance(builddir, Path)
     assert builddir.name == expected
+
+
+def test_backwards_compat_old_suffixes():
+    config = _parse_config_file_and_args(b'{"qtbase-mips-purecap/build-directory": "/some/build/dir"}')
+    # Check that qtbase-mips-purecap is a (deprecated) target alias for qtbase-mips64-purecap
+    # and that we still load config options for that old target name
+    qtbase_mips_purecap = _get_target_instance("qtbase-mips64-purecap", config, BuildQtBase)
+    assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
+    qtbase_mips_purecap = _get_target_instance("qtbase-mips-purecap", config, BuildQtBase)
+    assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"

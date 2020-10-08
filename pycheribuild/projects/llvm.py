@@ -420,8 +420,8 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
         # Create symlinks that hardcode the sdk and the ABI to easily compile binaries
         # Note: This works as long as the first component of the name is not a recognized LLVM triple architecture, so
         # we use cheribsd-<arch>-<suffix>-clang instead of <arch>-cheribsd-<suffix>-clang
-        self.add_compiler_with_config_file("cheribsd-mips-hybrid", CompilationTargets.CHERIBSD_MIPS_HYBRID)
-        self.add_compiler_with_config_file("cheribsd-mips-purecap", CompilationTargets.CHERIBSD_MIPS_PURECAP)
+        self.add_compiler_with_config_file("cheribsd-mips64-hybrid", CompilationTargets.CHERIBSD_MIPS_HYBRID)
+        self.add_compiler_with_config_file("cheribsd-mips64-purecap", CompilationTargets.CHERIBSD_MIPS_PURECAP)
         self.add_compiler_with_config_file("cheribsd-riscv64-hybrid", CompilationTargets.CHERIBSD_RISCV_HYBRID)
         self.add_compiler_with_config_file("cheribsd-riscv64-purecap", CompilationTargets.CHERIBSD_RISCV_PURECAP)
 

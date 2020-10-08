@@ -665,9 +665,9 @@ class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
 
 
 # Backwards compatibility:
-target_manager.add_target_alias("run-cheri", "run-mips-hybrid", deprecated=True)
-target_manager.add_target_alias("run-purecap", "run-mips-purecap", deprecated=True)
-target_manager.add_target_alias("run-minimal-cheri", "run-minimal-mips-hybrid", deprecated=True)
-target_manager.add_target_alias("run-minimal-purecap", "run-minimal-mips-purecap", deprecated=True)
+target_manager.add_target_alias("run-cheri", "run-mips64-hybrid", deprecated=True)
+target_manager.add_target_alias("run-purecap", "run-mips64-purecap", deprecated=True)
+target_manager.add_target_alias("run-minimal-cheri", "run-minimal-mips64-hybrid", deprecated=True)
+target_manager.add_target_alias("run-minimal-purecap", "run-minimal-mips64-purecap", deprecated=True)
 target_manager.add_target_alias("run-native", "run-amd64", deprecated=True)
 target_manager.add_target_alias("run-x86_64", "run-amd64", deprecated=True)

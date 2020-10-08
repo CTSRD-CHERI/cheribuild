@@ -39,7 +39,7 @@ from ..utils import include_local_file, OSInfo, set_env
 
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
     target = "cheribsd-sdk"
-    dependencies = ["freestanding-sdk", "cheribsd-mips-hybrid"]
+    dependencies = ["freestanding-sdk", "cheribsd-mips64-hybrid"]
     is_sdk_target = True
 
 

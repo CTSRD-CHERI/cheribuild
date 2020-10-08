@@ -151,10 +151,10 @@ class ProjectSubclassDefinitionHook(type):
                 target_manager.add_target(MultiArchTarget(new_name, new_type, arch, base_target))
                 # Temporary: add deprecated aliases: mips-* -> mips64*
                 if arch.is_mips(include_purecap=True) and (
-                        new_name.endswith("-mips-purecap") or new_name.endswith("-mips-hybrid")):
-                    target_manager.add_target_alias(new_name.replace("-mips-", "-mips64-"), new_name, deprecated=True)
-                elif arch.is_mips(include_purecap=False) and (new_name.endswith("-mips-nocheri")):
-                    target_manager.add_target_alias(new_name.replace("-mips-nocheri", "-mips64"), new_name,
+                        new_name.endswith("-mips64-purecap") or new_name.endswith("-mips64-hybrid")):
+                    target_manager.add_target_alias(new_name.replace("-mips64-", "-mips-"), new_name, deprecated=True)
+                elif arch.is_mips(include_purecap=False) and (new_name.endswith("-mips64")):
+                    target_manager.add_target_alias(new_name.replace("-mips64", "-mips-nocheri"), new_name,
                                                     deprecated=True)
         else:
             assert len(supported_archs) == 1
@@ -2828,4 +2828,4 @@ class TargetAliasWithDependencies(TargetAlias):
 
 
 class BuildAll(TargetAliasWithDependencies):
-    dependencies = ["qemu", "sdk", "disk-image-mips-hybrid", "run-mips-hybrid"]
+    dependencies = ["qemu", "sdk", "disk-image-mips64-hybrid", "run-mips64-hybrid"]

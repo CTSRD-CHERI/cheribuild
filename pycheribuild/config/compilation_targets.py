@@ -529,7 +529,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         # Purecap (currently) builds against the hybrid sysroot:
         if target.is_cheri_purecap():
             if target.is_mips(include_purecap=True):
-                return ["cheribsd-mips-hybrid"]
+                return ["cheribsd-mips64-hybrid"]
             elif target.is_riscv(include_purecap=True):
                 return ["cheribsd-riscv64-hybrid"]
             else:
@@ -774,11 +774,11 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
 
 class CompilationTargets(BasicCompilationTargets):
-    CHERIBSD_MIPS_NO_CHERI = CrossCompileTarget("mips-nocheri", CPUArchitecture.MIPS64, CheriBSDTargetInfo)
-    CHERIBSD_MIPS_HYBRID = CrossCompileTarget("mips-hybrid", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
+    CHERIBSD_MIPS_NO_CHERI = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, CheriBSDTargetInfo)
+    CHERIBSD_MIPS_HYBRID = CrossCompileTarget("mips64-hybrid", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
                                               is_cheri_hybrid=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI,
                                               non_cheri_target=CHERIBSD_MIPS_NO_CHERI)
-    CHERIBSD_MIPS_PURECAP = CrossCompileTarget("mips-purecap", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
+    CHERIBSD_MIPS_PURECAP = CrossCompileTarget("mips64-purecap", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
                                                is_cheri_purecap=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI,
                                                hybrid_target=CHERIBSD_MIPS_HYBRID)
 
@@ -801,7 +801,7 @@ class CompilationTargets(BasicCompilationTargets):
 
     # Baremetal targets
     BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips", CPUArchitecture.MIPS64, NewlibBaremetalTargetInfo)
-    BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-mips-purecap", CPUArchitecture.MIPS64,
+    BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-mips64-purecap", CPUArchitecture.MIPS64,
                                                          NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                          non_cheri_target=BAREMETAL_NEWLIB_MIPS64)
     BAREMETAL_NEWLIB_RISCV64 = CrossCompileTarget("baremetal-riscv64", CPUArchitecture.RISCV64,
