@@ -155,26 +155,3 @@ class BuildBBLNoPayloadFETT(BuildBBLNoPayloadGFE):
 
     _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
                                                    as_string="$SDK_ROOT/bbl-fett/riscv{32,64}{,-purecap}")
-
-# class BuildBBLFreeBSDRISCV(BuildBBLBase):
-#     project_name = "bbl"  # reuse same source dir
-#     target = "bbl-freebsd"
-#     build_dir_suffix = "freebsd"
-#     supported_architectures = [CompilationTargets.FREEBSD_RISCV]
-#     kernel_class = BuildFreeBSD
-#
-#
-# class BuildBBLFreeBSDWithDefaultOptionsRISCV(BuildBBLBase):
-#     project_name = "bbl"  # reuse same source dir
-#     target = "bbl-freebsd-with-default-options"
-#     build_dir_suffix = "freebsd-with-default-options"
-#     supported_architectures = [CompilationTargets.FREEBSD_RISCV]
-#     kernel_class = BuildFreeBSDWithDefaultOptions
-#
-#
-# class BuildBBLCheriBSDRISCV(BuildBBLBase):
-#     project_name = "bbl"  # reuse same source dir
-#     target = "bbl-cheribsd"
-#     build_dir_suffix = "cheribsd"
-#     supported_architectures = [CompilationTargets.CHERIBSD_RISCV_HYBRID, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
-#     kernel_class = BuildCHERIBSD
