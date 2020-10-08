@@ -350,14 +350,12 @@ def test_target_alias():
     assert str(cheribsd_mips_hybrid.mfs_root_image) == "/command/line/value"
 
 
-@pytest.mark.skip(reason="Needs updating")
-def test_cheri_mips_purecap_alias():
-    # # For other targets we currently keep -cheri suffixed aliases for the -mips-purecap versions
+def test_mips_purecap_legacy_config_alias():
     config = _parse_config_file_and_args(b'{"qtbase-mips-purecap/build-directory": "/some/build/dir"}')
-    # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
-    # We should load config options for that target from
-    qtbase_cheri = _get_target_instance("qtbase-cheri", config, BuildQtBase)
-    assert str(qtbase_cheri.build_dir) == "/some/build/dir"
+    # Check that qtbase-mips-purecap is a (deprecated) target alias for qtbase-mips64-purecap
+    # and that we still load config options for that old target name
+    qtbase_mips_purecap = _get_target_instance("qtbase-mips64-purecap", config, BuildQtBase)
+    assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
     qtbase_mips_purecap = _get_target_instance("qtbase-mips-purecap", config, BuildQtBase)
     assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
 

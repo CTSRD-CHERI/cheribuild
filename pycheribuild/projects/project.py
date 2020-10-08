@@ -149,6 +149,13 @@ class ProjectSubclassDefinitionHook(type):
                 # noinspection PyTypeChecker
                 new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
                 target_manager.add_target(MultiArchTarget(new_name, new_type, arch, base_target))
+                # Temporary: add deprecated aliases: mips-* -> mips64*
+                if arch.is_mips(include_purecap=True) and (
+                        new_name.endswith("-mips-purecap") or new_name.endswith("-mips-hybrid")):
+                    target_manager.add_target_alias(new_name.replace("-mips-", "-mips64-"), new_name, deprecated=True)
+                elif arch.is_mips(include_purecap=False) and (new_name.endswith("-mips-nocheri")):
+                    target_manager.add_target_alias(new_name.replace("-mips-nocheri", "-mips64"), new_name,
+                                                    deprecated=True)
         else:
             assert len(supported_archs) == 1
             # Only one target is supported:
