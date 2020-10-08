@@ -812,6 +812,21 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             return False
         return True
 
+    def _cleanup_old_files(self, current_path: Path, current_suffix: str, old_suffixes: typing.List[str]):
+        """Remove old build directories/disk-images, etc. to avoid wasted disk space after renaming targets"""
+        for old_suffix in old_suffixes:
+            old_name = current_path.name.replace(current_suffix, old_suffix)
+            if old_name != current_path.name:
+                old_path = current_path.with_name(old_name)
+                if old_path.is_dir():
+                    self.warning("Found old directory", old_name, "that has since been renamed to", current_path.name)
+                    if self.query_yes_no("Would you like to remove the old directory" + str(old_path)):
+                        self._delete_directories(old_path)
+                elif old_path.is_file():
+                    self.warning("Found old file", old_name, "that has since been renamed to", current_path.name)
+                    if self.query_yes_no("Would you like to remove the old file " + str(old_path)):
+                        self.delete_file(old_path)
+
     def dependency_error(self, *args, install_instructions: str = None):
         self._system_deps_checked = True  # make sure this is always set
         if callable(install_instructions):
@@ -2348,21 +2363,6 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
     def prepare_install_dir_for_archiving(self):
         """Perform cleanup to reduce the size of the tarball that jenkins creates"""
         self.info("No project-specific cleanup for", self.target)
-
-    def _cleanup_old_files(self, current_dir: Path, current_suffix: str, old_suffixes: typing.List[str]):
-        """Remove old build directories/disk-images, etc. to avoid wasted disk space after renaming targets"""
-        for old_suffix in old_suffixes:
-            old_name = current_dir.name.replace(current_suffix, old_suffix)
-            if old_name != current_dir.name:
-                old_path = current_dir.with_name(old_name)
-                if old_path.is_dir():
-                    self.warning("Found old directory", old_name, "that has since been renamed to", current_dir.name)
-                    if self.query_yes_no("Would you like to remove the old directory" + str(old_path)):
-                        self._delete_directories(old_path)
-                elif old_path.is_file():
-                    self.warning("Found old file", old_name, "that has since been renamed to", current_dir.name)
-                    if self.query_yes_no("Would you like to remove the old file " + str(old_path)):
-                        self.delete_file(old_path)
 
     def process(self):
         if self.generate_cmakelists:

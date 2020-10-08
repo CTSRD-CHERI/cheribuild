@@ -36,9 +36,9 @@ import tempfile
 import typing
 from pathlib import Path
 
-from .cross.cheribsd import (BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDDeviceModel, BuildFreeBSDGFE,
-                             BuildFreeBSDWithDefaultOptions, BuildCheriBsdDeviceModel)
-from .cross.gdb import (BuildKGDB, BuildGDB)
+from .cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdDeviceModel, BuildFreeBSD, BuildFreeBSDDeviceModel,
+                             BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions)
+from .cross.gdb import (BuildGDB, BuildKGDB)
 from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget,
                       DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets
@@ -1110,6 +1110,13 @@ class BuildFreeBSDImage(BuildMultiArchDiskImage):
         # TODO: different extra-files directory
         self.minimum_image_size = "256m"
 
+    def process(self):
+        super().process()
+        if self.crosscompile_target.is_x86_64(include_purecap=False):
+            # remove the old -x86, -x86_64 and -native disk images
+            self._cleanup_old_files(self.disk_image_path,
+                                    "-" + self.crosscompile_target.generic_suffix + self.cheri_config_suffix,
+                                    ["-x86", "-x86_64", "-native"])
 
 class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
     project_name = "disk-image-freebsd-with-default-options"
