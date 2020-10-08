@@ -19,6 +19,12 @@ apt-get install libtool pkg-config clang bison cmake ninja-build samba flex texi
 
 Older versions of Ubuntu may report errors when trying to install `libarchive-tools`. In this case try using `apt-get install bsdtar` instead.
 
+If you are building CHERI on a RHEL/Fedora-based machine, please install the following packages:
+
+```shell
+dnf install libtool clang-devel bison cmake ninja-build samba flex texinfo glib2-devel pixman-devel libarchive-devel bsdtar bzip2-devel libattr-devel libcap-ng-devel expat-devel
+```
+
 # Basic usage
 
 If you want to start up a QEMU VM running CheriBSD run `cheribuild.py run -d` (-d means build all dependencies).
