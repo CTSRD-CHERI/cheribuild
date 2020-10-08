@@ -2349,6 +2349,21 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         """Perform cleanup to reduce the size of the tarball that jenkins creates"""
         self.info("No project-specific cleanup for", self.target)
 
+    def _cleanup_old_files(self, current_dir: Path, current_suffix: str, old_suffixes: typing.List[str]):
+        """Remove old build directories/disk-images, etc. to avoid wasted disk space after renaming targets"""
+        for old_suffix in old_suffixes:
+            old_name = current_dir.name.replace(current_suffix, old_suffix)
+            if old_name != current_dir.name:
+                old_path = current_dir.with_name(old_name)
+                if old_path.is_dir():
+                    self.warning("Found old directory", old_name, "that has since been renamed to", current_dir.name)
+                    if self.query_yes_no("Would you like to remove the old directory" + str(old_path)):
+                        self._delete_directories(old_path)
+                elif old_path.is_file():
+                    self.warning("Found old file", old_name, "that has since been renamed to", current_dir.name)
+                    if self.query_yes_no("Would you like to remove the old file " + str(old_path)):
+                        self.delete_file(old_path)
+
     def process(self):
         if self.generate_cmakelists:
             self._do_generate_cmakelists()
@@ -2460,6 +2475,18 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         with cleaning_task:
             if not self.build_dir.is_dir():
                 self.makedirs(self.build_dir)
+            # Delete some old build dirs to save disk space:
+            # TODO: remove this code after a few weeks
+            old_suffixes = []
+            if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+                old_suffixes = ("128-build", "-128-build", "256-build", "-256-build")
+            elif self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.MIPS64]):
+                old_suffixes = ("-mips-hybrid128-build", "-mips-hybrid256-build")
+            elif self.crosscompile_target.is_mips(include_purecap=False):
+                old_suffixes = ["-mips-build"]
+            current_suffix = self.build_configuration_suffix(self.crosscompile_target) + "-build"
+            self._cleanup_old_files(self.build_dir, current_suffix, old_suffixes)
+
             # Clean has been performed -> write the last clean counter now (if needed).
             if required_clean_counter is not None and clean_counter_in_build_dir != required_clean_counter:
                 self.write_file(last_clean_counter_path, str(required_clean_counter), overwrite=True)
