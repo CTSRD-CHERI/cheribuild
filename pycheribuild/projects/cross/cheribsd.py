@@ -49,51 +49,16 @@ from ...utils import (classproperty, commandline_to_str, get_compiler_info, incl
 
 def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
     assert isinstance(project, BuildFreeBSD)
-    target = project.get_crosscompile_target(config)
-    assert not target.is_cheri_purecap(), "Should not reach this code!"
-    if target.is_mips(include_purecap=False):
-        if config.mips_float_abi == MipsFloatAbi.HARD:
-            return config.output_root / "freebsd-mipshf"
-        return config.output_root / "freebsd-mips"
-    elif target.is_x86_64():
-        return config.output_root / "freebsd-amd64"
-    elif target.is_aarch64():
-        return config.output_root / "freebsd-aarch64"
-    elif target.is_riscv(include_purecap=False):
-        return config.output_root / "freebsd-riscv64"
-    elif target.is_i386():
-        return config.output_root / "freebsd-i386"
-    else:
-        assert False, "should not be reached"
+    xtarget = project.get_crosscompile_target(config)
+    assert not xtarget.is_hybrid_or_purecap_cheri(), "FreeBSD does not build for CHERI (yet?)"
+    return config.output_root / ("freebsd-" + xtarget.build_suffix(config))
 
 
 # noinspection PyProtectedMember
 def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     assert isinstance(project, BuildCHERIBSD)
     xtarget = project.crosscompile_target
-    if xtarget.is_mips(include_purecap=True):
-        if xtarget.is_cheri_purecap():
-            return config.output_root / ("rootfs-purecap" + project.cheri_config_suffix)
-        elif xtarget.is_cheri_hybrid():
-            return config.output_root / ("rootfs" + project.cheri_config_suffix)
-        if config.mips_float_abi == MipsFloatAbi.HARD:
-            return config.output_root / "rootfs-mipshf"
-        return config.output_root / "rootfs-mips"
-    elif xtarget.is_riscv(include_purecap=True):
-        if xtarget.is_cheri_purecap():
-            return config.output_root / ("rootfs-riscv64-purecap" + project.cheri_config_suffix)
-        elif xtarget.is_cheri_hybrid():
-            return config.output_root / ("rootfs-riscv64-hybrid" + project.cheri_config_suffix)
-        return config.output_root / "rootfs-riscv64"
-    elif project.crosscompile_target.is_aarch64(include_purecap=True):
-        if xtarget == CompilationTargets.CHERIBSD_MORELLO_PURECAP:
-            return config.output_root / "rootfs-morello-purecap"
-        elif xtarget == CompilationTargets.CHERIBSD_MORELLO_HYBRID:
-            return config.output_root / "rootfs-morello-hybrid"
-        return config.output_root / "rootfs-aarch64"
-    else:
-        assert project.crosscompile_target.is_x86_64()
-        return config.output_root / "rootfs-amd64"
+    return config.output_root / ("rootfs-" + xtarget.build_suffix(config))
 
 
 def _clear_dangerous_make_env_vars():
@@ -873,6 +838,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 if self.crosscompile_target.is_x86_64(include_purecap=False):
                     # remove the old -x86/-native rootfs dirs
                     self._cleanup_old_files(self.install_dir, "-amd64", ["-x86", "-native"])
+                elif self.crosscompile_target.is_mips(include_purecap=False):
+                    # remove the old -mips rootfs dir (hybrid/purecap handled in cheribsd)
+                    if not self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                        self._cleanup_old_files(self.install_dir, "-mips64", ["-mips"])
                 self.run_make("installworld", options=install_world_args)
                 self.run_make("distribution", options=install_world_args)
                 if self.has_installsysroot_target:
@@ -1301,6 +1270,13 @@ class BuildCHERIBSD(BuildFreeBSD):
     def install(self, **kwargs):
         # If we build the FPGA kernels also install them into boot:
         all_kernel_configs = " ".join([self.kernel_config] + self.extra_kernels + self.extra_kernels_with_mfs)
+        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            # remove the old rootfs-purecap128/256 rootfs dirs
+            self._cleanup_old_files(self.install_dir, "rootfs-mips64-purecap",
+                                    ["rootfs-purecap128", "rootfs-purecap256"])
+        elif self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.MIPS64]):
+            # remove the old rootfs128/256 rootfs dirs
+            self._cleanup_old_files(self.install_dir, "rootfs-mips64-hybrid", ["rootfs128", "rootfs256"])
         super().install(all_kernel_configs=all_kernel_configs, sysroot_only=self.sysroot_only, **kwargs)
 
 
