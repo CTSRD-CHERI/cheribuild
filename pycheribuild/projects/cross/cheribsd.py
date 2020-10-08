@@ -1715,11 +1715,6 @@ target_manager.add_target_alias("cheribsd-native", "cheribsd-amd64", deprecated=
 target_manager.add_target_alias("cheribsd-x86_64", "cheribsd-amd64", deprecated=True)
 
 
-class BuildCheriBsdAndSysroot(TargetAliasWithDependencies):
-    target = "cheribsd-with-sysroot"
-    dependencies = ["cheribsd-mips-hybrid"]
-
-
 class BuildFreeBSDDeviceModel(BuildFreeBSDWithDefaultOptions):
     target = "device-model-freebsd"
     repository = GitRepository("https://github.com/CTSRD-CHERI/device-model-freebsd.git",
