@@ -80,6 +80,7 @@ class BuildLLVMBase(CMakeProject):
                                                         "documentation,examples and bindings)")
         cls.use_llvm_cxx = cls.add_bool_option("use-in-tree-cxx-libs", default=False,
                                                help="Use in-tree, not host, C++ runtime")
+        cls.use_ccache = cls.add_bool_option("use-ccache", default=False, help="Build with CCache")
         cls.dylib = cls.add_bool_option("dylib", default=False, help="Build dynamic-link LLVM")
         cls.install_toolchain_only = cls.add_bool_option("install-toolchain-only", default=False,
                                                          help="Install only toolchain binaries (i.e. no test tools)")
@@ -116,6 +117,7 @@ class BuildLLVMBase(CMakeProject):
             # For debug builds we default to enabling expensive checks (override using --llvm/cmake-options)
             self.add_cmake_options(LLVM_ENABLE_EXPENSIVE_CHECKS=True)
 
+        self.add_cmake_options(LLVM_CCACHE_BUILD=self.use_ccache)
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for
         # libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
