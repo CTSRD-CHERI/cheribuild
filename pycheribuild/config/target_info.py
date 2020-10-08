@@ -482,11 +482,7 @@ class CrossCompileTarget(object):
 
     def build_suffix(self, config: "CheriConfig"):
         assert self.target_info_cls is not None
-        if self._is_cheri_purecap and self.target_info_cls.is_cheribsd() and self.is_mips(include_purecap=True):
-            result = "-"  # only -128 for legacy build dir compat
-        else:
-            result = "-" + self.generic_suffix
-        result += self.cheri_config_suffix(config)
+        result = "-" + self.generic_suffix + self.cheri_config_suffix(config)
         return result
 
     def cheri_config_suffix(self, config: "CheriConfig"):
