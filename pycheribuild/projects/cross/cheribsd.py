@@ -870,6 +870,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 # Don't try to install the kernel if we are only building a sysroot
                 return
             else:
+                if self.crosscompile_target.is_x86_64(include_purecap=False):
+                    # remove the old -x86/-native rootfs dirs
+                    self._cleanup_old_files(self.install_dir, "-amd64", ["-x86", "-native"])
                 self.run_make("installworld", options=install_world_args)
                 self.run_make("distribution", options=install_world_args)
                 if self.has_installsysroot_target:
