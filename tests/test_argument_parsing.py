@@ -491,7 +491,7 @@ def test_libcxxrt_dependency_path():
     # Check the defaults:
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
-    config = _parse_arguments(["--skip-configure", "--no-use-hybrid-sysroot-for-mips"])
+    config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.output_root / "rootfs-mips64-hybrid/opt/mips64-hybrid/c++/lib", "libcxxrt-mips64-hybrid")
     check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib", "libcxxrt-mips64")
 
@@ -579,12 +579,9 @@ def test_freebsd_toolchains_cheribsd_purecap():
 
 
 @pytest.mark.parametrize("target,args,expected", [
-    pytest.param("cheribsd", ["--foo"],
-                 "cheribsd-mips64-hybrid-build"),
-    pytest.param("llvm", ["--foo"],
-                 "llvm-project-build"),
-    pytest.param("cheribsd-purecap", ["--foo"],
-                 "cheribsd-mips64-purecap-build"),
+    pytest.param("cheribsd", [], "cheribsd-mips64-hybrid-build"),
+    pytest.param("llvm", [], "llvm-project-build"),
+    pytest.param("cheribsd-purecap", [], "cheribsd-mips64-purecap-build"),
     # --subobject debug should not have any effect if subobject bounds is disabled
     pytest.param("cheribsd-purecap", ["--subobject-bounds=conservative", "--subobject-debug"],
                  "cheribsd-mips64-purecap-build"),
