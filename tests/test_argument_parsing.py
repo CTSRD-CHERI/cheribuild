@@ -44,7 +44,10 @@ def _get_cheribsd_instance(target_name: str, config) -> BuildCHERIBSD:
 
 
 # noinspection PyProtectedMember
-def _parse_arguments(args, *, config_file=Path("/this/does/not/exist"), allow_unknown_options=False) -> DefaultCheriConfig:
+def _parse_arguments(args: typing.List[str], *, config_file=Path("/this/does/not/exist"),
+                     allow_unknown_options=False) -> DefaultCheriConfig:
+    assert isinstance(args, list)
+    assert all(isinstance(arg, str) for arg in args), "Invalid argv " + str(args)
     global _targets_registered
     # noinspection PyGlobalUndefined
     global _cheri_config
@@ -65,7 +68,8 @@ def _parse_arguments(args, *, config_file=Path("/this/does/not/exist"), allow_un
     return ConfigLoaderBase._cheri_config
 
 
-def _parse_config_file_and_args(config_file_contents: bytes, *args, allow_unknown_options=False) -> DefaultCheriConfig:
+def _parse_config_file_and_args(config_file_contents: bytes, *args: str,
+                                allow_unknown_options=False) -> DefaultCheriConfig:
     with tempfile.NamedTemporaryFile() as t:
         config = Path(t.name)
         config.write_bytes(config_file_contents)
@@ -147,7 +151,7 @@ def test_cross_compile_project_inherits():
     assert qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
 
     # But target-specific ones should override
-    _parse_arguments(["--qtbase/build-tests", "--qtbase-mips-hybrid/no-build-tests"])
+    _parse_arguments(["--qtbase/build-tests", "--qtbase-mips64-hybrid/no-build-tests"])
     assert qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline"
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
@@ -170,7 +174,7 @@ def test_cross_compile_project_inherits():
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
 
     # And that cmdline still overrides JSON:
-    _parse_config_file_and_args(b'{"qtbase/build-tests": true }', "--qtbase-mips-hybrid/no-build-tests")
+    _parse_config_file_and_args(b'{"qtbase/build-tests": true }', "--qtbase-mips64-hybrid/no-build-tests")
     assert qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline"
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
@@ -203,14 +207,16 @@ def test_cross_compile_project_inherits():
     assert_build_dirs_different()
 
     # Should not inherit from the default one:
-    _parse_arguments(["--qtbase/build-directory=/foo/bar", "--qtbase-mips-hybrid/build-directory=/bar/foo"])
+    _parse_arguments(["--qtbase/build-directory=/foo/bar", "--qtbase-mips64-hybrid/build-directory=/bar/foo"])
     assert_build_dirs_different()
     _parse_config_file_and_args(b'{"qtbase/build-directory": "/foo/bar",'
                                 b' "qtbase-mips-hybrid/build-directory": "/bar/foo"}')
     assert_build_dirs_different()
 
 
-# FIXME: cheribsd-cheri/kernel-config should use the cheribsd/kernel-config value
+# FIXME: cheribsd-mips64-hybrid/kernel-config should use the cheribsd/kernel-config value
+
+
 def test_cheribsd_purecap_inherits_config_from_cheribsd():
     # Parse args once to ensure target_manager is initialized
     config = _parse_arguments(["--skip-configure"])
@@ -225,60 +231,61 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assert cheribsd_mips.project_name == cheribsd_mips_hybrid.project_name
     assert cheribsd_mips_hybrid.project_name == cheribsd_mips_purecap.project_name
 
-    # cheribsd-cheri is a synthetic class, but cheribsd-purecap inst:
+    # noinspection PyUnresolvedReferences
     assert cheribsd_mips_hybrid.synthetic_base == cheribsd_class
-    assert hasattr(cheribsd_mips_purecap, "synthetic_base")
+    # noinspection PyUnresolvedReferences
+    assert cheribsd_mips_purecap.synthetic_base == cheribsd_class
 
     _parse_arguments(["--cheribsd-mips64/debug-kernel"])
     assert not cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap debug-kernel should default to false"
     assert not cheribsd_mips_hybrid.debug_kernel, "cheribsd-mips-hybrid debug-kernel should default to false"
     assert cheribsd_mips.debug_kernel, "cheribsd-mips64 debug-kernel should be set on cmdline"
-    _parse_arguments(["--cheribsd-purecap/debug-kernel"])
+    _parse_arguments(["--cheribsd-mips64-purecap/debug-kernel"])
     assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap debug-kernel should be set on cmdline"
     assert not cheribsd_mips_hybrid.debug_kernel, "cheribsd-mips-hybrid debug-kernel should default to false"
     assert not cheribsd_mips.debug_kernel, "cheribsd-mips64 debug-kernel should default to false"
-    _parse_arguments(["--cheribsd-cheri/debug-kernel"])
+    _parse_arguments(["--cheribsd-mips64-hybrid/debug-kernel"])
     assert not cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap debug-kernel should default to false"
-    assert cheribsd_mips_hybrid.debug_kernel, "cheribsd-cheri debug-kernel should be set on cmdline"
+    assert cheribsd_mips_hybrid.debug_kernel, "cheribsd-mips64-hybrid debug-kernel should be set on cmdline"
     assert not cheribsd_mips.debug_kernel, "cheribsd-mips64 debug-kernel should default to false"
 
-    # If the base cheribsd option is set but no per-target one use both cheribsd-cheri and cheribsd-purecap should
-    # inherit basic one:
+    # If the base cheribsd option is set but no per-target one use both cheribsd-mips64-hybrid and cheribsd-purecap
+    # should    # inherit basic one:
     _parse_arguments(["--cheribsd/debug-kernel"])
-    assert cheribsd_mips_hybrid.debug_kernel, "cheribsd-cheri should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should inherit debug-kernel from cheribsd(default)"
     assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
 
     # But target-specific ones should override
-    _parse_arguments(["--cheribsd/debug-kernel", "--cheribsd-purecap/no-debug-kernel"])
-    assert cheribsd_mips_hybrid.debug_kernel, "cheribsd-cheri should inherit debug-kernel from cheribsd(default)"
+    _parse_arguments(["--cheribsd/debug-kernel", "--cheribsd-mips64-purecap/no-debug-kernel"])
+    assert cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should inherit debug-kernel from cheribsd(default)"
     assert not cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should have a false override for debug-kernel"
 
-    _parse_arguments(["--cheribsd/debug-kernel", "--cheribsd-cheri/no-debug-kernel"])
+    _parse_arguments(["--cheribsd/debug-kernel", "--cheribsd-mips64-hybrid/no-debug-kernel"])
     assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
-    assert not cheribsd_mips_hybrid.debug_kernel, "cheribsd-cheri should have a false override for debug-kernel"
+    assert not cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should have a false override for debug-kernel"
 
     # Check that we hav ethe same behaviour when loading from json:
     _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true }')
     assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
-    assert cheribsd_mips_hybrid.debug_kernel, "cheribsd-cheri should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should inherit debug-kernel from cheribsd(default)"
     assert cheribsd_mips.debug_kernel, "cheribsd-mips should inherit debug-kernel from cheribsd(default)"
 
     # But target-specific ones should override
-    _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true, "cheribsd-cheri/debug-kernel": false }')
+    _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true, "cheribsd-mips64-hybrid/debug-kernel": false }')
     assert cheribsd_mips.debug_kernel, "cheribsd-mips debug-kernel should be inherited on cmdline"
     assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
-    assert not cheribsd_mips_hybrid.debug_kernel, "cheribsd-cheri should have a false override for debug-kernel"
+    assert not cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should have a false override for debug-kernel"
 
     # And that cmdline still overrides JSON:
-    _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true }', "--cheribsd-cheri/no-debug-kernel")
+    _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true }', "--cheribsd-mips64-hybrid/no-debug-kernel")
     assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
     assert cheribsd_mips.debug_kernel, "cheribsd-mips debug-kernel should be inherited from cheribsd(default)"
-    assert not cheribsd_mips_hybrid.debug_kernel, "cheribsd-cheri should have a false override for debug-kernel"
+    assert not cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should have a false override for debug-kernel"
     # But if a per-target option is set in the json that still overrides the default set on the cmdline
-    _parse_config_file_and_args(b'{"cheribsd-cheri/debug-kernel": false }', "--cheribsd/debug-kernel")
+    _parse_config_file_and_args(b'{"cheribsd-mips64-hybrid/debug-kernel": false }', "--cheribsd/debug-kernel")
     assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
     assert cheribsd_mips.debug_kernel, "cheribsd-mips debug-kernel should be inherited from cheribsd(default)"
-    assert not cheribsd_mips_hybrid.debug_kernel, "cheribsd-cheri should have a JSON false override for debug-kernel"
+    assert not cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should have a JSON false override for debug-kernel"
 
     # However, don't inherit for build_dir since that doesn't make sense:
     def assert_build_dirs_different():
@@ -288,13 +295,13 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
 
     assert_build_dirs_different()
     # overriding native build dir is fine:
-    _parse_arguments(["--cheribsd-purecap/build-directory=/foo/bar"])
+    _parse_arguments(["--cheribsd-mips64-purecap/build-directory=/foo/bar"])
     assert cheribsd_mips_purecap.build_dir == Path("/foo/bar")
     assert_build_dirs_different()
     _parse_config_file_and_args(b'{"cheribsd-purecap/build-directory": "/foo/bar"}')
     assert cheribsd_mips_purecap.build_dir == Path("/foo/bar")
     assert_build_dirs_different()
-    # cheribsd-cheri should inherit from the default one, but not cheribsd-purecap:
+    # cheribsd-mips64-hybrid should inherit from the default one, but not cheribsd-purecap:
     _parse_arguments(["--cheribsd/build-directory=/foo/bar"])
     assert cheribsd_mips_hybrid.build_dir == Path("/foo/bar")
     assert cheribsd_mips_purecap.build_dir != Path("/foo/bar")
@@ -304,17 +311,17 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assert cheribsd_mips_purecap.build_dir != Path("/foo/bar")
     assert_build_dirs_different()
 
-    # cheribsd-cheri/builddir should have higher prirority:
-    _parse_arguments(["--cheribsd/build-directory=/foo/bar", "--cheribsd-cheri/build-directory=/bar/foo"])
+    # cheribsd-mips64-hybrid/builddir should have higher prirority:
+    _parse_arguments(["--cheribsd/build-directory=/foo/bar", "--cheribsd-mips64-hybrid/build-directory=/bar/foo"])
     assert cheribsd_mips_hybrid.build_dir == Path("/bar/foo")
     assert_build_dirs_different()
     _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar",'
-                                b' "cheribsd-cheri/build-directory": "/bar/foo"}')
+                                b' "cheribsd-mips64-hybrid/build-directory": "/bar/foo"}')
     assert cheribsd_mips_hybrid.build_dir == Path("/bar/foo")
     assert_build_dirs_different()
 
 
-def test_target_alias():
+def test_legacy_cheri_suffix_target_alias():
     config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/some/image"}')
     # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
     # We should load config options for that target from
@@ -324,7 +331,7 @@ def test_target_alias():
     assert str(cheribsd_mips_hybrid.mfs_root_image) == "/some/image"
     # Try again with the other key:
     config = _parse_config_file_and_args(b'{"cheribsd-mips-hybrid/mfs-root-image": "/some/image"}')
-    # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
+    # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips64-hybrid
     # We should load config options for that target from
     cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
     assert str(cheribsd_cheri.mfs_root_image) == "/some/image"
@@ -333,7 +340,7 @@ def test_target_alias():
 
     # Check command line aliases:
     config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/json/value"}',
-                                         "--cheribsd-cheri/mfs-root-image=/command/line/value")
+                                         "--cheribsd-mips64-hybrid/mfs-root-image=/command/line/value")
     # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
     # We should load config options for that target from
     cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
@@ -342,7 +349,7 @@ def test_target_alias():
     assert str(cheribsd_mips_hybrid.mfs_root_image) == "/command/line/value"
 
     config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/json/value"}',
-                                         "--cheribsd-mips-hybrid/mfs-root-image=/command/line/value")
+                                         "--cheribsd-mips64-hybrid/mfs-root-image=/command/line/value")
     # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
     # We should load config options for that target from
     cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
@@ -355,7 +362,7 @@ def test_kernconf():
     # Parse args once to ensure target_manager is initialized
     # check default values
     config = _parse_arguments([])
-    cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
+    cheribsd_cheri = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
     cheribsd_mips = _get_cheribsd_instance("cheribsd-mips64", config)
     freebsd_mips = _get_target_instance("freebsd-mips64", config, BuildFreeBSD)
     freebsd_native = _get_target_instance("freebsd-amd64", config, BuildFreeBSD)
@@ -374,7 +381,7 @@ def test_kernconf():
     assert cheribsd_cheri.kernel_config == "LINT"
     assert freebsd_native.kernel_config == "LINT"
 
-    config = _parse_arguments(["--kernconf=LINT", "--cheribsd-cheri/kernel-config=SOMETHING"])
+    config = _parse_arguments(["--kernconf=LINT", "--cheribsd-mips64-hybrid/kernel-config=SOMETHING"])
     assert config.freebsd_kernconf == "LINT"
     assert freebsd_mips.kernel_config == "LINT"
     assert cheribsd_cheri.kernel_config == "SOMETHING"
@@ -688,8 +695,8 @@ def test_backwards_compat_old_suffixes():
     assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
 
 
-def _check_build_dir(target: str, expected: str, config_file: bytes, cmdline):
-    config = _parse_config_file_and_args(config_file, cmdline)
+def _check_build_dir(target: str, expected: str, config_file: bytes, cmdline: typing.List[str]):
+    config = _parse_config_file_and_args(config_file, *cmdline)
     project = _get_target_instance(target, config)
     assert str(project.build_dir) == expected
 
@@ -716,3 +723,7 @@ def test_backwards_compat_old_suffixes_freebsd_mips():
                      b'{"cheribsd-mips-hybrid/build-directory": "/from/json"}', [])
     _check_build_dir("cheribsd-mips64-purecap", "/from/json",
                      b'{"cheribsd-mips-purecap/build-directory": "/from/json"}', [])
+
+    # Finally, using the old name on the command line should be an error:
+    with pytest.raises(SystemExit, match="^2$"):
+        _ = _parse_config_file_and_args(b'{}', "--freebsd-mips/build-directory=/cmdline")

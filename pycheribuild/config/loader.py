@@ -416,6 +416,7 @@ class CommandLineConfigOption(ConfigOptionBase):
         kwargs["help"] = argparse.SUPPRESS
         self.alias_actions = []
         if _alias_names:
+            assert len(set(_alias_names)) == len(_alias_names), "Found duplicates in" + str(_alias_names)
             for alias in _alias_names:
                 self.alias_actions.append(self._add_argparse_action(alias, None, default, group, kwargs))
 
@@ -480,7 +481,11 @@ class CommandLineConfigOption(ConfigOptionBase):
 # noinspection PyProtectedMember
 class JsonAndCommandLineConfigOption(CommandLineConfigOption):
     def __init__(self, *args, **kwargs):
+        # Note: we ignore _alias_names for command line options and only load them from the JSON
+        alias_names = kwargs.pop("_alias_names", tuple())
         super().__init__(*args, **kwargs)
+        assert not self.alias_actions and not self.alias_names, "Should not have added command line aliases"
+        self.alias_names = alias_names
 
     def _load_option_impl(self, config: "CheriConfig", target_option_name: str):
         # First check the value specified on the command line, then load JSON and then fallback to the default
