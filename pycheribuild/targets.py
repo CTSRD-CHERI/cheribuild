@@ -249,8 +249,9 @@ class MultiArchTargetAlias(_TargetAliasBase):
         assert self.derived_targets, "derived targets must not be empty"
         if cross_target is None:
             # Use the default target:
-            cross_target = self.project_class.get_crosscompile_target(config)
-        assert cross_target is not None
+            cross_target = self.project_class.default_architecture
+        if cross_target is None:
+            raise ValueError("ERROR:", self.name, "does not have a default_architecture value!")
         # find the correct derived project:
         for tgt in self.derived_targets:
             if tgt.target_arch is cross_target:
@@ -301,6 +302,11 @@ class DeprecatedTargetAlias(SimpleTargetAlias):
 class TargetManager(object):
     def __init__(self):
         self._all_targets = {}  # type: typing.Dict[str, Target]
+        self._targets_for_command_line_options_only = {}  # type: typing.Dict[str, MultiArchTargetAlias]
+
+    def add_target_for_config_options_only(self, target: MultiArchTargetAlias):
+        # TODO remove this ugly hack
+        self._targets_for_command_line_options_only[target.name] = target
 
     def add_target(self, target: Target) -> None:
         assert target.name not in self._all_targets
@@ -321,6 +327,10 @@ class TargetManager(object):
         for tgt in self._all_targets.values():
             if not isinstance(tgt, SimpleTargetAlias):
                 tgt.project_class.setup_config_options()
+        # Ugly hack to keep registering the command line arguments for the fallback option name: for example,
+        # cherisd-mips64-hybrid/foo loads the value from cheribsd/foo if it's not found.
+        for tgt in self._targets_for_command_line_options_only.values():
+            tgt.project_class.setup_config_options()
 
     @property
     def target_names(self):
@@ -338,7 +348,10 @@ class TargetManager(object):
 
     def get_target_raw(self, name: str) -> Target:
         # return the actual target without resolving MultiArchTargetAlias
-        return self._all_targets[name]
+        try:
+            return self._all_targets[name]
+        except KeyError:
+            return self._targets_for_command_line_options_only[name]
 
     def get_target(self, name: str, arch: typing.Optional[CrossCompileTarget], config: CheriConfig,
                    caller: "typing.Union[SimpleProject, str]") -> Target:

@@ -72,6 +72,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
     supported_architectures = [CompilationTargets.NATIVE,
                                CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_RISCV_HYBRID,
                                CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
+    default_architecture = CompilationTargets.NATIVE
 
     @classmethod
     def setup_config_options(cls, **kwargs):

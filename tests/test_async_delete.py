@@ -15,12 +15,12 @@ class MockProject(Project):
     do_not_add_to_targets = True
     project_name = "FAKE"
     target = "FAKE"
+    _xtarget = CompilationTargets.NATIVE
     _should_not_be_instantiated = False
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     repository = ExternallyManagedSourceRepository()
 
     def __init__(self, config: MockConfig, name: str):
-        self._xtarget = CompilationTargets.NATIVE
         self.project_name = name
         expected_src = config.source_root / "sources" / name  # type: Path
         self._initial_source_dir = expected_src

@@ -13,12 +13,9 @@ from pycheribuild.targets import target_manager
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that target_manager gets populated
 from pycheribuild.projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
-from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD
 from .setup_mock_chericonfig import setup_mock_chericonfig
 
 global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
-# Init code:
-BuildCHERIBSD.crossbuild = True
 
 
 def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolchain=True,
@@ -59,10 +56,9 @@ def test_sdk(target_name, expected_list):
 
 
 @pytest.mark.parametrize("target_name,expected_name", [
-    pytest.param("cheribsd", "cheribsd-mips64-hybrid"),
-    pytest.param("freebsd", "freebsd-amd64"),
+    pytest.param("disk-image-fett", "disk-image-fett-riscv64-purecap"),
+    pytest.param("llvm", "llvm-native"),
     pytest.param("gdb", "gdb-native"),
-    pytest.param("libcxx", "libcxx-mips64-purecap"),
     ])
 def test_alias_resolving(target_name, expected_name):
     # test that we select the default target for multi projects:
@@ -71,44 +67,48 @@ def test_alias_resolving(target_name, expected_name):
 
 def test_reordering():
     # GDB is a cross compiled project so cheribsd should be built first
-    assert _sort_targets(["cheribsd", "gdb-mips64-hybrid"]) == ["cheribsd-mips64-hybrid", "gdb-mips64-hybrid"]
-    assert _sort_targets(["gdb-mips64-hybrid", "cheribsd"]) == ["cheribsd-mips64-hybrid", "gdb-mips64-hybrid"]
+    assert _sort_targets(["cheribsd-mips64-hybrid", "gdb-mips64-hybrid"]) == ["cheribsd-mips64-hybrid",
+                                                                              "gdb-mips64-hybrid"]
+    assert _sort_targets(["gdb-mips64-hybrid", "cheribsd-mips64-hybrid"]) == ["cheribsd-mips64-hybrid",
+                                                                              "gdb-mips64-hybrid"]
     assert _sort_targets(["gdb-mips64-hybrid", "cheribsd-cheri"]) == ["cheribsd-mips64-hybrid", "gdb-mips64-hybrid"]
 
 
 def test_run_comes_last():
-    assert _sort_targets(["run", "disk-image"]) == ["disk-image-mips64-hybrid", "run-mips64-hybrid"]
+    assert _sort_targets(["run-mips64-hybrid", "disk-image-mips64-hybrid"]) == [
+        "disk-image-mips64-hybrid", "run-mips64-hybrid"]
 
 
 def test_disk_image_comes_second_last():
-    assert _sort_targets(["run", "disk-image"]) == ["disk-image-mips64-hybrid", "run-mips64-hybrid"]
-    assert _sort_targets(["run", "disk-image", "cheribsd"]) == ["cheribsd-mips64-hybrid", "disk-image-mips64-hybrid",
-                                                                "run-mips64-hybrid"]
-    assert _sort_targets(["run", "gdb-mips64-hybrid", "disk-image", "cheribsd"]) == ["cheribsd-mips64-hybrid",
-                                                                                   "gdb-mips64-hybrid",
-                                                                                   "disk-image-mips64-hybrid",
-                                                                                   "run-mips64-hybrid"]
-    assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd-mips64-hybrid",
-                                                                            "postgres-mips64-purecap",
-                                                                            "disk-image-mips64-hybrid", "run-mips64-hybrid"]
+    assert _sort_targets(["run-mips64-hybrid", "disk-image-mips64-hybrid"]) == ["disk-image-mips64-hybrid",
+                                                                                "run-mips64-hybrid"]
+    assert _sort_targets(["run-mips64-hybrid", "disk-image-mips64-hybrid", "cheribsd-mips64-hybrid"]) == [
+        "cheribsd-mips64-hybrid", "disk-image-mips64-hybrid", "run-mips64-hybrid"]
+    assert _sort_targets(
+        ["run-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid", "cheribsd-mips64-hybrid"]) == [
+               "cheribsd-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid", "run-mips64-hybrid"]
+    assert _sort_targets(
+        ["run-mips64-hybrid", "disk-image-mips64-hybrid", "postgres-mips64-purecap", "cheribsd-mips64-hybrid"]) == [
+               "cheribsd-mips64-hybrid", "postgres-mips64-purecap", "disk-image-mips64-hybrid", "run-mips64-hybrid"]
 
 
 def test_cheribsd_default_aliases():
-    assert _sort_targets(["run"]) == ["run-mips64-hybrid"]
-    assert _sort_targets(["disk-image"]) == ["disk-image-mips64-hybrid"]
-    assert _sort_targets(["cheribsd"]) == ["cheribsd-mips64-hybrid"]
+    assert _sort_targets(["run-mips64-hybrid"]) == ["run-mips64-hybrid"]
+    assert _sort_targets(["disk-image-mips64-hybrid"]) == ["disk-image-mips64-hybrid"]
+    assert _sort_targets(["cheribsd-mips64-hybrid"]) == ["cheribsd-mips64-hybrid"]
 
 
 def test_all_run_deps():
-    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm-native", "cheribsd-mips64-hybrid",
-                                                             "gdb-mips64-hybrid", "disk-image-mips64-hybrid",
-                                                             "run-mips64-hybrid"]
+    assert _sort_targets(["run-mips64-hybrid"], add_dependencies=True) == [
+        "qemu", "llvm-native", "cheribsd-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid",
+        "run-mips64-hybrid"]
 
 
 def test_run_disk_image():
-    assert _sort_targets(["run", "disk-image", "run-freebsd-mips64", "llvm", "disk-image-freebsd-amd64"]) == [
-        "llvm-native", "disk-image-mips64-hybrid", "disk-image-freebsd-amd64", "run-mips64-hybrid",
-        "run-freebsd-mips64"]
+    assert _sort_targets(["run-mips64-hybrid", "disk-image-mips64-hybrid", "run-freebsd-mips64", "llvm",
+                          "disk-image-freebsd-amd64"]) == [
+               "llvm-native", "disk-image-mips64-hybrid", "disk-image-freebsd-amd64", "run-mips64-hybrid",
+               "run-freebsd-mips64"]
 
 
 def test_remove_duplicates():
@@ -117,10 +117,15 @@ def test_remove_duplicates():
 
 def test_minimal_run():
     # Check that we build the mfs root first
-    assert _sort_targets(["disk-image-minimal", "cheribsd-mfs-root-kernel", "run-minimal"]) == [
-        "disk-image-minimal-mips64-hybrid", "cheribsd-mfs-root-kernel-mips64-hybrid", "run-minimal-mips64-hybrid"]
-    assert _sort_targets(["cheribsd-mfs-root-kernel", "disk-image-minimal", "run-minimal"]) == [
-        "disk-image-minimal-mips64-hybrid", "cheribsd-mfs-root-kernel-mips64-hybrid", "run-minimal-mips64-hybrid"]
+    assert _sort_targets(["disk-image-minimal-mips64-hybrid",
+                          "cheribsd-mfs-root-kernel-mips64-hybrid",
+                          "run-minimal-mips64-hybrid"]) == ["disk-image-minimal-mips64-hybrid",
+                                                            "cheribsd-mfs-root-kernel-mips64-hybrid",
+                                                            "run-minimal-mips64-hybrid"]
+    assert _sort_targets(["cheribsd-mfs-root-kernel-mips64-hybrid", "disk-image-minimal-mips64-hybrid",
+                          "run-minimal-mips64-hybrid"]) == ["disk-image-minimal-mips64-hybrid",
+                                                            "cheribsd-mfs-root-kernel-mips64-hybrid",
+                                                            "run-minimal-mips64-hybrid"]
 
 
 def _check_deps_not_cached(classes):
@@ -147,7 +152,8 @@ def test_webkit_cached_deps():
     _check_deps_not_cached((webkit_native, webkit_cheri, webkit_mips))
 
     cheri_target_names = list(sorted(webkit_cheri.all_dependency_names(config)))
-    assert cheri_target_names == ["icu4c-mips64-purecap", "icu4c-native", "libxml2-mips64-purecap", "qtbase-mips64-purecap",
+    assert cheri_target_names == ["icu4c-mips64-purecap", "icu4c-native", "libxml2-mips64-purecap",
+                                  "qtbase-mips64-purecap",
                                   "sqlite-mips64-purecap"]
     _check_deps_not_cached([webkit_native, webkit_mips])
     _check_deps_cached([webkit_cheri])
@@ -174,13 +180,14 @@ def test_webkit_deps_2():
         "qtbase-mips64-hybrid", "icu4c-native", "icu4c-mips64-hybrid", "libxml2-mips64-hybrid", "sqlite-mips64-hybrid",
         "qtwebkit-mips64-hybrid"]
     assert _sort_targets(["qtwebkit-mips64-purecap"], add_dependencies=True, skip_sdk=True) == [
-        "qtbase-mips64-purecap", "icu4c-native", "icu4c-mips64-purecap", "libxml2-mips64-purecap", "sqlite-mips64-purecap",
+        "qtbase-mips64-purecap", "icu4c-native", "icu4c-mips64-purecap", "libxml2-mips64-purecap",
+        "sqlite-mips64-purecap",
         "qtwebkit-mips64-purecap"]
 
 
 def test_riscv():
     assert _sort_targets(["bbl-baremetal-riscv64", "cheribsd-riscv64"], add_dependencies=False, skip_sdk=False) == [
-           "bbl-baremetal-riscv64", "cheribsd-riscv64"]
+        "bbl-baremetal-riscv64", "cheribsd-riscv64"]
     assert _sort_targets(["run-riscv64"], add_dependencies=True, skip_sdk=True) == ["disk-image-riscv64", "run-riscv64"]
     assert _sort_targets(["run-riscv64-purecap"], add_dependencies=True, skip_sdk=True) == [
         "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"]
@@ -201,9 +208,6 @@ def test_riscv():
     pytest.param("-mips-nocheri", "-mips64", id="mips-nocheri"),
     pytest.param("-mips64-hybrid", "-mips64-hybrid", id="mips-hybrid"),
     pytest.param("-mips-purecap", "-mips64-purecap", id="mips-purecap"),
-    # no suffix should resolve to the -cheri targets:
-    # FIXME: The default should be removed!
-    pytest.param("", "-mips64-purecap", id="no suffix"),
     ])
 def test_libcxx_deps(suffix, expected_suffix):
     expected = ["libunwind" + expected_suffix, "libcxxrt" + expected_suffix, "libcxx" + expected_suffix]

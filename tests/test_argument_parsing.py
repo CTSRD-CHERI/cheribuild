@@ -9,6 +9,7 @@ import pytest
 
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
+from pycheribuild.config.compilation_targets import CompilationTargets
 from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
 from pycheribuild.projects.run_qemu import LaunchCheriBSD
 
@@ -16,7 +17,7 @@ _loader = JsonAndCommandLineConfigLoader()
 from pycheribuild.projects.project import SimpleProject
 
 SimpleProject._config_loader = _loader
-from pycheribuild.targets import target_manager, Target
+from pycheribuild.targets import MultiArchTargetAlias, target_manager, Target
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that target_manager gets populated
@@ -100,36 +101,78 @@ def test_per_project_override():
     config = _parse_arguments(["--skip-configure"])
     source_root = config.source_root
     assert config.cheri_sdk_dir is not None
-    assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == source_root / "extra-files"
+    xtarget = CompilationTargets.CHERIBSD_RISCV_PURECAP
+    project = BuildCheriBSDDiskImage.get_instance(None, config, cross_target=xtarget)
+    assert project.extra_files_dir == source_root / "extra-files"
     _parse_arguments(["--disk-image/extra-files=/foo/bar"])
-    assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == Path("/foo/bar/")
+    assert project.extra_files_dir == Path("/foo/bar/")
     _parse_arguments(["--disk-image/extra-files", "/bar/foo"])
-    assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == Path("/bar/foo/")
+    assert project.extra_files_dir == Path("/bar/foo/")
     # different source root should affect the value:
     _parse_arguments(["--source-root=/tmp"])
-    assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == Path("/tmp/extra-files")
+    assert project.extra_files_dir == Path("/tmp/extra-files")
 
     with tempfile.NamedTemporaryFile() as t:
         config_path = Path(t.name)
         config_path.write_bytes(b'{ "source-root": "/x"}')
         _parse_arguments([], config_file=config_path)
-        assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == Path("/x/extra-files")
+        assert project.extra_files_dir == Path("/x/extra-files")
 
         # check that source root can be overridden
         _parse_arguments(["--source-root=/y"])
-        assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == Path("/y/extra-files")
+        assert project.extra_files_dir == Path("/y/extra-files")
+
+
+@pytest.mark.parametrize("target_name,resolved_target", [
+    pytest.param("llvm", "llvm-native"),
+    pytest.param("gdb", "gdb-native"),
+    pytest.param("upstream-llvm", "upstream-llvm"),  # no -native target for upstream-llvm
+    pytest.param("qemu", "qemu"),  # same for QEMU
+
+    # These used to have defaults but that is confusing now. So check that they no longe rhave default values
+    pytest.param("cheribsd", None),
+    pytest.param("disk-image", None),
+    pytest.param("run", None),
+    pytest.param("freebsd", None),
+    pytest.param("disk-image-freebsd", None),
+    pytest.param("disk-image-freebsd", None),
+    pytest.param("qtbase", None),
+    pytest.param("libcxx", None),
+
+    # The only exception are the fett-* targets which should target riscv64-purecap by default
+    pytest.param("fett-sqlite", "fett-sqlite-riscv64-purecap"),
+    pytest.param("fett-sqlite", "fett-sqlite-riscv64-purecap"),
+    pytest.param("fett-sqlite", "fett-sqlite-riscv64-purecap"),
+    pytest.param("run-fett", "run-fett-riscv64-purecap"),
+    pytest.param("disk-image-fett", "disk-image-fett-riscv64-purecap"),
+    pytest.param("cheribsd-fett", "cheribsd-fett-riscv64-purecap"),
+    ])
+def test_target_aliases_default_target(target_name, resolved_target):
+    # Check that only some targets (e.g. llvm) have a default target and that we have to explicitly
+    # specify the target name for e.g. cheribsd-* run-*, etc
+    if resolved_target is None:
+        # The target should not exist in the list of targets accepted on the command line
+        assert target_name not in target_manager.target_names
+        # However, if we use get_target_raw we should get the TargetAlias
+        assert isinstance(target_manager.get_target_raw(target_name), MultiArchTargetAlias)
+        assert target_manager.get_target_raw(target_name).project_class.default_architecture is None
+    else:
+        assert target_name in target_manager.target_names
+        raw_target = target_manager.get_target_raw(target_name)
+        assert isinstance(raw_target, MultiArchTargetAlias) or raw_target.name == resolved_target
+        target = target_manager.get_target(target_name, None, _parse_arguments([]),
+                                           caller="test_target_aliases_default_target")
+        assert target.name == resolved_target
 
 
 def test_cross_compile_project_inherits():
     # Parse args once to ensure target_manager is initialized
     config = _parse_arguments(["--skip-configure"])
     qtbase_class = target_manager.get_target_raw("qtbase").project_class
-    qtbase_default = _get_target_instance("qtbase", config, BuildQtBase)
     qtbase_native = _get_target_instance("qtbase-native", config, BuildQtBase)
     qtbase_mips = _get_target_instance("qtbase-mips64-hybrid", config, BuildQtBase)
 
     # Check that project name is the same:
-    assert qtbase_default.project_name == qtbase_native.project_name
     assert qtbase_mips.project_name == qtbase_native.project_name
     # These classes were generated:
     # noinspection PyUnresolvedReferences
@@ -140,57 +183,46 @@ def test_cross_compile_project_inherits():
 
     # Now check a property that should be inherited:
     _parse_arguments(["--qtbase-native/build-tests"])
-    assert not qtbase_default.build_tests, "qtbase-default build-tests should default to false"
     assert qtbase_native.build_tests, "qtbase-native build-tests should be set on cmdline"
     assert not qtbase_mips.build_tests, "qtbase-mips build-tests should default to false"
     # If the base qtbase option is set but no per-target one use the basic one:
     _parse_arguments(["--qtbase/build-tests"])
-    assert qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline"
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
 
     # But target-specific ones should override
     _parse_arguments(["--qtbase/build-tests", "--qtbase-mips64-hybrid/no-build-tests"])
-    assert qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline"
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
 
     # Check that we hav ethe same behaviour when loading from json:
     _parse_config_file_and_args(b'{"qtbase-native/build-tests": true }')
-    assert not qtbase_default.build_tests, "qtbase-default build-tests should default to false"
     assert qtbase_native.build_tests, "qtbase-native build-tests should be set on cmdline"
     assert not qtbase_mips.build_tests, "qtbase-mips build-tests should default to false"
     # If the base qtbase option is set but no per-target one use the basic one:
     _parse_config_file_and_args(b'{"qtbase/build-tests": true }')
-    assert qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline"
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
 
     # But target-specific ones should override
     _parse_config_file_and_args(b'{"qtbase/build-tests": true, "qtbase-mips-hybrid/build-tests": false }')
-    assert qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline"
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
 
     # And that cmdline still overrides JSON:
     _parse_config_file_and_args(b'{"qtbase/build-tests": true }', "--qtbase-mips64-hybrid/no-build-tests")
-    assert qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline"
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
     # But if a per-target option is set in the json that still overrides the default set on the cmdline
     _parse_config_file_and_args(b'{"qtbase-mips-hybrid/build-tests": false }', "--qtbase/build-tests")
-    assert qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline"
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a JSON false override for build-tests"
 
     # However, don't inherit for build_dir since that doesn't make sense:
     def assert_build_dirs_different():
         # Default should be CHERI purecap
-        # print("Default build dir:", qtbase_default.build_dir)
         # print("Native build dir:", qtbase_native.build_dir)
         # print("Mips build dir:", qtbase_mips.build_dir)
-        assert qtbase_default.build_dir != qtbase_native.build_dir
-        assert qtbase_default.build_dir != qtbase_mips.build_dir
         assert qtbase_mips.build_dir != qtbase_native.build_dir
 
     assert_build_dirs_different()
@@ -220,8 +252,6 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     # Parse args once to ensure target_manager is initialized
     config = _parse_arguments(["--skip-configure"])
     cheribsd_class = target_manager.get_target_raw("cheribsd").project_class
-    cheribsd_default_tgt = _get_cheribsd_instance("cheribsd", config)
-    assert cheribsd_default_tgt.target == "cheribsd-mips64-hybrid"
     cheribsd_mips = _get_cheribsd_instance("cheribsd-mips64", config)
     cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
     cheribsd_mips_purecap = _get_cheribsd_instance("cheribsd-mips64-purecap", config)
@@ -290,22 +320,20 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     def assert_build_dirs_different():
         assert cheribsd_mips_hybrid.build_dir != cheribsd_mips_purecap.build_dir
         assert cheribsd_mips_hybrid.build_dir != cheribsd_mips.build_dir
-        assert cheribsd_mips_hybrid.build_dir == cheribsd_default_tgt.build_dir
 
     assert_build_dirs_different()
     # overriding native build dir is fine:
     _parse_arguments(["--cheribsd-mips64-purecap/build-directory=/foo/bar"])
     assert cheribsd_mips_purecap.build_dir == Path("/foo/bar")
     assert_build_dirs_different()
-    _parse_config_file_and_args(b'{"cheribsd-purecap/build-directory": "/foo/bar"}')
+    _parse_config_file_and_args(b'{"cheribsd-mips64-purecap/build-directory": "/foo/bar"}')
     assert cheribsd_mips_purecap.build_dir == Path("/foo/bar")
     assert_build_dirs_different()
-    # cheribsd-mips64-hybrid should inherit from the default one, but not cheribsd-purecap:
-    _parse_arguments(["--cheribsd/build-directory=/foo/bar"])
+    _parse_arguments(["--cheribsd-mips64-hybrid/build-directory=/foo/bar"])
     assert cheribsd_mips_hybrid.build_dir == Path("/foo/bar")
     assert cheribsd_mips_purecap.build_dir != Path("/foo/bar")
     assert_build_dirs_different()
-    _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar"}')
+    _parse_config_file_and_args(b'{"cheribsd-mips-hybrid/build-directory": "/foo/bar"}')
     assert cheribsd_mips_hybrid.build_dir == Path("/foo/bar")
     assert cheribsd_mips_purecap.build_dir != Path("/foo/bar")
     assert_build_dirs_different()
@@ -449,7 +477,7 @@ def test_config_file_include():
         result = _get_config_with_include(config_dir,
                                           b'{ "run": { "ssh-forwarding-port": 12345 }, "#include": '
                                           b'"change-smb-dir.json" }')
-        run_project = _get_target_instance("run", result, LaunchCheriBSD)
+        run_project = _get_target_instance("run-riscv64-purecap", result, LaunchCheriBSD)
         assert run_project.custom_qemu_smb_mount == Path("/some/path")
         assert run_project.ssh_forwarding_port == 12345
 
@@ -585,7 +613,7 @@ def test_freebsd_toolchains_cheribsd_purecap():
 
 
 @pytest.mark.parametrize("target,args,expected", [
-    pytest.param("cheribsd", [], "cheribsd-mips64-hybrid-build"),
+    pytest.param("cheribsd-mips64-hybrid", [], "cheribsd-mips64-hybrid-build"),
     pytest.param("llvm", [], "llvm-project-build"),
     pytest.param("cheribsd-purecap", [], "cheribsd-mips64-purecap-build"),
     # --subobject debug should not have any effect if subobject bounds is disabled
@@ -597,16 +625,15 @@ def test_freebsd_toolchains_cheribsd_purecap():
                  "cheribsd-mips64-purecap-subobject-safe-subobject-nodebug-build"),
     # Passing "--cap-table-abi=pcrel" also changes the build dir even though it's (currently) the default for all
     # architectures.
-    pytest.param("cheribsd", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
+    pytest.param("cheribsd-mips64-hybrid", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
                  "cheribsd-mips64-hybrid-pcrel-build"),
     # plt should be encoded
-    pytest.param("cheribsd", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
+    pytest.param("cheribsd-mips64-hybrid", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
                  "cheribsd-mips64-hybrid-plt-build"),
     # everything
-    pytest.param("cheribsd-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
+    pytest.param("cheribsd-mips64-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
                  "cheribsd-mips64-purecap-plt-aggressive-hardfloat-build"),
     # plt should be encoded
-    pytest.param("sqlite", [], "sqlite-mips64-purecap-build"),  # FIXME: non-suffixed target should be removed
     pytest.param("sqlite-mips64-hybrid", [], "sqlite-mips64-hybrid-build"),
     pytest.param("sqlite-native", [], "sqlite-native-build"),
     ])

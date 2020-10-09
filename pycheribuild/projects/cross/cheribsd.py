@@ -1299,6 +1299,7 @@ class BuildCheriBSDFett(BuildCHERIBSD):
     project_name = "cheribsd"  # reuse working directory
     target = "cheribsd-fett"
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
 
     def __init__(self, config):
         super().__init__(config)

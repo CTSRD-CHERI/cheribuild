@@ -130,7 +130,13 @@ class ProjectSubclassDefinitionHook(type):
         if cls._always_add_suffixed_targets or len(supported_archs) > 1:
             # Add a the target for the default architecture
             base_target = MultiArchTargetAlias(target_name, cls)
-            target_manager.add_target(base_target)
+            # Add aliases for targets that support multiple architectures and have a clear default value.
+            # E.g. llvm -> llvm-native, but not cheribsd since it's not clear which variant should be built there.
+            if cls.default_architecture is not None:
+                target_manager.add_target(base_target)
+            else:
+                target_manager.add_target_for_config_options_only(base_target)
+
             assert cls._xtarget is None, "Should not be set!"
             # assert cls._should_not_be_instantiated, "multiarch base classes should not be instantiated"
             for arch in supported_archs:
@@ -374,12 +380,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return result
 
     @classproperty
-    def default_architecture(self) -> CrossCompileTarget:
-        result = self._default_architecture
-        if result is not None:
-            return result
-        # otherwise pick the first supported arch:
-        return self.supported_architectures[0]
+    def default_architecture(self) -> "typing.Optional[CrossCompileTarget]":
+        return self._default_architecture
 
     @property
     def crosscompile_target(self):

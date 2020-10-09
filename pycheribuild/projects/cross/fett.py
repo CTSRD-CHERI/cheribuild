@@ -216,7 +216,7 @@ class BuildFettDiskImage(BuildCheriBSDDiskImage):
 
     @classproperty
     def default_architecture(self):
-        return CompilationTargets.CHERIBSD_RISCV_PURECAP
+        return CompilationTargets.FETT_DEFAULT_ARCHITECTURE
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
