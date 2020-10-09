@@ -722,7 +722,19 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                     exclude=self.completion_excludes,  # hide these options from the output
                     print_suppressed=True,  # also include target-specific options
                     )
-        self._parsed_args = self._parser.parse_intermixed_args()
+        # Handle cases such as cheribuild.py target1 --arg target2
+        # Ideally we would use parse_intermixed_args() but that requires python3.7
+        # so we work around it using parse_known_args().
+        self._parsed_args, trailing = self._parser.parse_known_args()
+        # TODO: python 3.7 self._parsed_args = self._parser.parse_intermixed_args()
+        # print(self._parsed_args, trailingTargets)
+        for x in trailing:
+            # filter out unknown options (like -b)
+            # exit with error
+            if x.startswith('-'):
+                self._parser.error("unknown argument " + x)
+        self._parsed_args.targets += trailing
+
         self._load_json_config_file()
         # Now validate the config file
         self._validate_config_file()
