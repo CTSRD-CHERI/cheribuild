@@ -44,7 +44,7 @@ fi
 ./cheribuild.py --help-all > /dev/null
 
 # Remove all debug messages (contains ansi escape sequences and the Available targets message:)
-targets=$(./cheribuild.py --list-targets | grep -v Available | grep -v "$(printf "\x1b")")
+targets=$(./cheribuild.py --list-targets | grep -v "available targets:" | grep -v "$(printf "\x1b")")
 # echo "targets=$targets"
 for i in $targets; do
   WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=default -p "$i" > /dev/null;
