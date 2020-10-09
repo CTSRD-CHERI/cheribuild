@@ -737,7 +737,18 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             # filter out unknown options (like -b)
             # exit with error
             if x.startswith('-'):
-                self._parser.error("unknown argument " + x)
+                import difflib
+                # There is no officially supported API to get back all option strings, but fortunately we store
+                # all the actions here anyway
+                all_options = getattr(self._parser, "_option_string_actionss", {}).keys()
+                if not all_options:
+                    warning_message("Internal argparse API change, cannot detect available command line options.")
+                    all_options = ["--" + opt for opt in self.options.keys()]
+                suggestions = difflib.get_close_matches(x, all_options)
+                errmsg = "unknown argument '" + x + "'"
+                if suggestions:
+                    errmsg += " Did you mean " + " or ".join(suggestions) + "?"
+                self._parser.error(errmsg)
         self._parsed_args.targets += trailing
 
         self._load_json_config_file()
