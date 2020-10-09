@@ -438,8 +438,15 @@ class TargetManager(object):
         explicitly_chosen_targets = []  # type: typing.List[Target]
         for target_name in config.targets:
             if target_name not in self._all_targets:
-                sys.exit(coloured(AnsiColour.red, "Target", target_name, "does not exist. Valid choices are",
-                                  ",".join(self.target_names)))
+                import difflib
+                errmsg = coloured(AnsiColour.red, "Target", target_name, "does not exist.")
+                suggestions = difflib.get_close_matches(target_name, self._all_targets)
+                if suggestions:
+                    errmsg += " Did you mean " + " or ".join(coloured(AnsiColour.blue, s) for s in suggestions) + "?"
+                else:
+                    errmsg += " See " + coloured(AnsiColour.yellow, os.path.basename(sys.argv[0]), "--list-targets") + \
+                              " for the list of available targets."
+                sys.exit(errmsg)
             explicitly_chosen_targets.append(self.get_target(target_name, None, config, caller="cmdline parsing"))
         chosen_targets = self.get_all_targets(explicitly_chosen_targets, config)
         print("Will execute the following targets:\n  ", "\n   ".join(t.name for t in chosen_targets))
