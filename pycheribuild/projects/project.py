@@ -814,7 +814,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def _cleanup_old_files(self, current_path: Path, current_suffix: str, old_suffixes: typing.List[str]):
         """Remove old build directories/disk-images, etc. to avoid wasted disk space after renaming targets"""
-        assert current_suffix in current_path.name
+        if not old_suffixes:
+            return
+        if current_suffix not in current_path.name:
+            self.info("Warning:", current_path.name, "does not include expected suffix", current_suffix,
+                      "-- either it was set in the config file or this is a logic error.")
+            # raise ValueError((current_path, current_suffix))
         for old_suffix in old_suffixes:
             old_name = current_path.name.replace(current_suffix, old_suffix)
             if old_name != current_path.name:
@@ -2488,8 +2493,8 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     old_suffixes = ("-mips-hybrid128-build", "-mips-hybrid256-build")
             elif self.crosscompile_target.is_mips(include_purecap=False):
                 old_suffixes = ["-mips-build", "-mips-nocheri-build"]
-            self._cleanup_old_files(self.build_dir,
-                                    self.build_configuration_suffix(self.crosscompile_target) + "-build", old_suffixes)
+            if self.build_dir != self.source_dir:
+                self._cleanup_old_files(self.build_dir, self.build_configuration_suffix(self.crosscompile_target) + "-build", old_suffixes)
 
             # Clean has been performed -> write the last clean counter now (if needed).
             if required_clean_counter is not None and clean_counter_in_build_dir != required_clean_counter:

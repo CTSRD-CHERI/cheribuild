@@ -41,7 +41,7 @@ from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_st
                        MakeCommandKind, MakeOptions, Project, SimpleProject, TargetBranchInfo)
 from ...config.compilation_targets import CompilationTargets
 from ...config.loader import ComputedDefaultValue
-from ...config.target_info import AutoVarInit, CrossCompileTarget, MipsFloatAbi
+from ...config.target_info import AutoVarInit, CrossCompileTarget
 from ...targets import target_manager
 from ...utils import (classproperty, commandline_to_str, get_compiler_info, include_local_file, is_jenkins_build,
                       OSInfo, print_command, ThreadJoiner)
@@ -51,14 +51,14 @@ def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
     assert isinstance(project, BuildFreeBSD)
     xtarget = project.get_crosscompile_target(config)
     assert not xtarget.is_hybrid_or_purecap_cheri(), "FreeBSD does not build for CHERI (yet?)"
-    return config.output_root / ("freebsd-" + xtarget.build_suffix(config))
+    return config.output_root / ("freebsd" + xtarget.build_suffix(config))
 
 
 # noinspection PyProtectedMember
 def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     assert isinstance(project, BuildCHERIBSD)
     xtarget = project.crosscompile_target
-    return config.output_root / ("rootfs-" + xtarget.build_suffix(config))
+    return config.output_root / ("rootfs" + xtarget.build_suffix(config))
 
 
 def _clear_dangerous_make_env_vars():
@@ -837,11 +837,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
             else:
                 if self.crosscompile_target.is_x86_64(include_purecap=False):
                     # remove the old -x86/-native rootfs dirs
-                    self._cleanup_old_files(self.install_dir, "-amd64", ["-x86", "-native"])
+                    self._cleanup_old_files(self.install_dir, self.crosscompile_target.build_suffix(self.config),
+                                            ["-x86", "-native"])
                 elif self.crosscompile_target.is_mips(include_purecap=False):
                     # remove the old -mips rootfs dir (hybrid/purecap handled in cheribsd)
                     if not self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                        self._cleanup_old_files(self.install_dir, "-mips64", ["-mips"])
+                        self._cleanup_old_files(self.install_dir, self.crosscompile_target.build_suffix(self.config),
+                                                ["-mips"])
                 self.run_make("installworld", options=install_world_args)
                 self.run_make("distribution", options=install_world_args)
                 if self.has_installsysroot_target:
@@ -1130,7 +1132,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     def setup_config_options(cls, install_directory_help=None, **kwargs):
         if install_directory_help is None:
             install_directory_help = "Install directory for CheriBSD root file system (default: " \
-                                     "<OUTPUT>/rootfs128 or <OUTPUT>/rootfs-riscv64-purecap, etc. depending on target)"
+                                     "<OUTPUT>/rootfs-mips64-hybrid or <OUTPUT>/rootfs-riscv64-purecap, etc. depending on target)"
         super().setup_config_options(install_directory_help=install_directory_help, use_upstream_llvm=False)
         cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=True,
                                                help="Only build a sysroot instead of the full system. This will only "
@@ -1248,10 +1250,10 @@ class BuildCHERIBSD(BuildFreeBSD):
         super()._remove_old_rootfs()
 
     def compile(self, **kwargs):
-        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+        if self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_PURECAP:
             self._cleanup_old_files(self.build_dir, self.build_dir.name,
                                     ["cheribsd-purecap-128-build", "cheribsd-purecap-256-build"])
-        elif self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.MIPS64]):
+        elif self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_HYBRID:
             self._cleanup_old_files(self.build_dir, self.build_dir.name,
                                     ["cheribsd-obj-128", "cheribsd-128-build", "cheribsd-mips-hybrid128-build",
                                      "cheribsd-obj-256", "cheribsd-256-build", "cheribsd-mips-hybrid256-build"])
@@ -1270,11 +1272,11 @@ class BuildCHERIBSD(BuildFreeBSD):
     def install(self, **kwargs):
         # If we build the FPGA kernels also install them into boot:
         all_kernel_configs = " ".join([self.kernel_config] + self.extra_kernels + self.extra_kernels_with_mfs)
-        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+        if self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_PURECAP:
             # remove the old rootfs-purecap128/256 rootfs dirs
             self._cleanup_old_files(self.install_dir, "rootfs-mips64-purecap",
                                     ["rootfs-purecap128", "rootfs-purecap256"])
-        elif self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.MIPS64]):
+        elif self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_HYBRID:
             # remove the old rootfs128/256 rootfs dirs
             self._cleanup_old_files(self.install_dir, "rootfs-mips64-hybrid", ["rootfs128", "rootfs256"])
         super().install(all_kernel_configs=all_kernel_configs, sysroot_only=self.sysroot_only, **kwargs)
