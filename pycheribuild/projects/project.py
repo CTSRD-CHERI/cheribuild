@@ -173,6 +173,8 @@ class ProjectSubclassDefinitionHook(type):
                 elif arch.is_mips(include_purecap=False) and (new_name.endswith("-mips64")):
                     target_manager.add_target_alias(new_name.replace("-mips64", "-mips-nocheri"), new_name,
                                                     deprecated=True)
+                if len(set(new_cls._config_file_aliases)) != len(new_cls._config_file_aliases):
+                    raise ValueError()
         else:
             assert len(supported_archs) == 1
             # Only one target is supported:
