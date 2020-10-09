@@ -356,7 +356,7 @@ def test_kernconf():
     config = _parse_arguments([])
     cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
     cheribsd_mips = _get_cheribsd_instance("cheribsd-mips64", config)
-    freebsd_mips = _get_target_instance("freebsd-mips", config, BuildFreeBSD)
+    freebsd_mips = _get_target_instance("freebsd-mips64", config, BuildFreeBSD)
     freebsd_native = _get_target_instance("freebsd-amd64", config, BuildFreeBSD)
     assert config.freebsd_kernconf is None
     assert freebsd_mips.kernel_config == "MALTA64"
@@ -364,7 +364,7 @@ def test_kernconf():
     assert freebsd_native.kernel_config == "GENERIC"
 
     # Check that --kernconf is used as the fallback
-    config = _parse_arguments(["--kernconf=LINT", "--freebsd-mips/kernel-config=NOTMALTA64"])
+    config = _parse_arguments(["--kernconf=LINT", "--freebsd-mips64/kernel-config=NOTMALTA64"])
     assert config.freebsd_kernconf == "LINT"
     attr = inspect.getattr_static(freebsd_mips, "kernel_config")
     # previously we would replace the command line attribute with a string -> check this is no longer true
@@ -497,13 +497,13 @@ def test_libcxxrt_dependency_path():
 
 @pytest.mark.parametrize("target,expected_path,kind,extra_args", [
     # FreeBSD targets default to upstream LLVM:
-    pytest.param("freebsd-mips", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.DEFAULT_EXTERNAL, []),
-    pytest.param("freebsd-mips", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
-    pytest.param("freebsd-mips", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
-    pytest.param("freebsd-mips", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
+    pytest.param("freebsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.DEFAULT_EXTERNAL, []),
+    pytest.param("freebsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
+    pytest.param("freebsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
+    pytest.param("freebsd-mips64", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
                  FreeBSDToolchainKind.BOOTSTRAP, []),
-    pytest.param("freebsd-mips", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
-                 ["--freebsd-mips/toolchain-path", "/path/to/custom/toolchain"]),
+    pytest.param("freebsd-mips64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
+                 ["--freebsd-mips64/toolchain-path", "/path/to/custom/toolchain"]),
 
     # CheriBSD-mips can be built with all these toolchains (but defaults to CHERI LLVM):
     pytest.param("cheribsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.DEFAULT_EXTERNAL, []),
@@ -548,13 +548,13 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     pytest.param("disk-image-minimal-riscv64-hybrid", "cheribsd-minimal-riscv64-hybrid.img"),
     pytest.param("disk-image-minimal-riscv64-purecap", "cheribsd-minimal-riscv64-purecap.img"),
     # FreeBSD
-    pytest.param("disk-image-freebsd-mips", "freebsd-mips.img"),
+    pytest.param("disk-image-freebsd-mips64", "freebsd-mips64.img"),
     pytest.param("disk-image-freebsd-riscv64", "freebsd-riscv64.img"),
     # pytest.param("disk-image-freebsd-aarch64", "freebsd-aarch64.img"),
     # pytest.param("disk-image-freebsd-i386", "freebsd-i386.img"),
     pytest.param("disk-image-freebsd-amd64", "freebsd-amd64.img"),
     # FreeBSD with default options
-    pytest.param("disk-image-freebsd-with-default-options-mips", "freebsd-mips.img"),
+    pytest.param("disk-image-freebsd-with-default-options-mips64", "freebsd-mips64.img"),
     pytest.param("disk-image-freebsd-with-default-options-riscv64", "freebsd-riscv64.img"),
     # pytest.param("disk-image-freebsd-with-default-options-aarch64", "freebsd-aarch64.img"),
     pytest.param("disk-image-freebsd-with-default-options-i386", "freebsd-i386.img"),

@@ -106,8 +106,9 @@ def test_all_run_deps():
 
 
 def test_run_disk_image():
-    assert _sort_targets(["run", "disk-image", "run-freebsd-mips", "llvm", "disk-image-freebsd-amd64"]) == [
-        "llvm-native", "disk-image-mips64-hybrid", "disk-image-freebsd-amd64", "run-mips64-hybrid", "run-freebsd-mips"]
+    assert _sort_targets(["run", "disk-image", "run-freebsd-mips64", "llvm", "disk-image-freebsd-amd64"]) == [
+        "llvm-native", "disk-image-mips64-hybrid", "disk-image-freebsd-amd64", "run-mips64-hybrid",
+        "run-freebsd-mips64"]
 
 
 def test_remove_duplicates():
