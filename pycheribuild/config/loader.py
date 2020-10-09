@@ -164,6 +164,7 @@ class ConfigLoaderBase(object):
         # put this one right at the end since it is not that useful
         self.freebsd_group = self._parser.add_argument_group("FreeBSD and CheriBSD build configuration")
         self.docker_group = self._parser.add_argument_group("Options controlling the use of docker for building")
+        self.unknown_config_option_is_error = False
 
     def add_commandline_only_option(self, *args, **kwargs):
         """
@@ -752,6 +753,8 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                     return True
 
         print(coloured(AnsiColour.red, "Unknown config option '", fullname, "' in ", self._config_path, sep=""))
+        if self.unknown_config_option_is_error:
+            raise ValueError("Unknown config option '" + fullname + "'")
         return False
 
     def _validate_config_file(self):

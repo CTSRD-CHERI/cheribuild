@@ -44,7 +44,7 @@ def _get_cheribsd_instance(target_name: str, config) -> BuildCHERIBSD:
 
 
 # noinspection PyProtectedMember
-def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> DefaultCheriConfig:
+def _parse_arguments(args, *, config_file=Path("/this/does/not/exist"), allow_unknown_options=False) -> DefaultCheriConfig:
     global _targets_registered
     # noinspection PyGlobalUndefined
     global _cheri_config
@@ -57,18 +57,19 @@ def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> Defau
     target_manager.reset()
     ConfigLoaderBase._cheri_config.loader._config_path = config_file
     sys.argv = ["cheribuild.py"] + args
-    ConfigLoaderBase._cheri_config.loader.reload()
+    ConfigLoaderBase._cheri_config.loader.reset()
+    ConfigLoaderBase._cheri_config.loader.unknown_config_option_is_error = not allow_unknown_options
     ConfigLoaderBase._cheri_config.load()
     # pprint.pprint(vars(ret))
     assert ConfigLoaderBase._cheri_config
     return ConfigLoaderBase._cheri_config
 
 
-def _parse_config_file_and_args(config_file_contents: bytes, *args) -> DefaultCheriConfig:
+def _parse_config_file_and_args(config_file_contents: bytes, *args, allow_unknown_options=False) -> DefaultCheriConfig:
     with tempfile.NamedTemporaryFile() as t:
         config = Path(t.name)
         config.write_bytes(config_file_contents)
-        return _parse_arguments(list(args), config_file=config)
+        return _parse_arguments(list(args), config_file=config, allow_unknown_options=allow_unknown_options)
 
 
 def test_skip_update():
