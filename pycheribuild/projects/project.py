@@ -84,6 +84,7 @@ def _default_stdout_filter(_: bytes):
 
 
 class ProjectSubclassDefinitionHook(type):
+    # noinspection PyProtectedMember
     def __init__(cls, name: str, bases, clsdict):
         super().__init__(name, bases, clsdict)
         if typing.TYPE_CHECKING:  # no-combine
@@ -147,8 +148,24 @@ class ProjectSubclassDefinitionHook(type):
                 new_dict["target"] = new_name
                 new_dict["synthetic_base"] = cls  # We are already adding it here
                 # noinspection PyTypeChecker
-                new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
-                target_manager.add_target(MultiArchTarget(new_name, new_type, arch, base_target))
+                new_cls = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
+                assert issubclass(new_cls, SimpleProject)
+                target_manager.add_target(MultiArchTarget(new_name, new_cls, arch, base_target))
+                # Handle old names in the config file:
+                # old_names = cls.__dict__.get("_config_file_aliases", tuple())
+                if arch.target_info_cls.is_freebsd():
+                    if arch.target_info_cls.is_cheribsd():
+                        if arch.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
+                            new_cls._config_file_aliases += (new_name.replace("-mips64-", "-mips-"),)
+                        elif arch.is_mips(include_purecap=False):
+                            new_cls._config_file_aliases += (new_name.replace("-mips64", "-mips-nocheri"),)
+                    else:
+                        # FreeBSD target suffixes have also changed over time
+                        if arch.is_mips(include_purecap=False):
+                            new_cls._config_file_aliases += (new_name.replace("-mips64", "-mips"),)
+                        elif arch.is_x86_64(include_purecap=False):
+                            new_cls._config_file_aliases += (new_name.replace("-amd64", "-x86"),
+                                                             new_name.replace("-amd64", "-x86_64"))
                 # Temporary: add deprecated aliases: mips-* -> mips64*
                 if arch.is_mips(include_purecap=True) and (
                         new_name.endswith("-mips64-purecap") or new_name.endswith("-mips64-hybrid")):
@@ -171,6 +188,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
     project_name = None
+    _config_file_aliases = tuple()  # Old names in the config file (per-architecture) for backwards compat
     dependencies = []  # type: typing.List[str]
     dependencies_must_be_built = False
     is_alias = False
@@ -548,12 +566,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         fallback_config_names.append(fallback_name_base + "/" + name)
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
-        alias_target_names = [prefix + "/" + name for prefix in cls.__dict__.get("_alias_target_names", tuple())]
+        alias_target_names = [prefix + "/" + name for prefix in cls.__dict__.get("_config_file_aliases", tuple())]
         return cls._config_loader.add_option(config_option_key + "/" + name, shortname, default=default, type=kind,
                                              _owning_class=cls, group=cls._commandline_option_group,
-                                             help_hidden=help_hidden,
-                                             _fallback_names=fallback_config_names, _alias_names=alias_target_names,
-                                             **kwargs)
+                                             help_hidden=help_hidden, _fallback_names=fallback_config_names,
+                                             _alias_names=alias_target_names, **kwargs)
 
     @classmethod
     def add_bool_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None,

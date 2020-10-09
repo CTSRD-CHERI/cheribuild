@@ -180,7 +180,8 @@ class Target(object):
 
 # XXX: can't call this CrossCompileTarget since that is already the name of the enum
 class MultiArchTarget(Target):
-    def __init__(self, name, project_class, target_arch: "CrossCompileTarget", base_target: "MultiArchTargetAlias"):
+    def __init__(self, name, project_class: "typing.Type[SimpleProject]", target_arch: "CrossCompileTarget",
+                 base_target: "MultiArchTargetAlias"):
         super().__init__(name, project_class)
         assert target_arch is not None
         self.target_arch = target_arch
@@ -259,6 +260,7 @@ class MultiArchTargetAlias(_TargetAliasBase):
 
 
 class SimpleTargetAlias(_TargetAliasBase):
+    # noinspection PyProtectedMember
     def __init__(self, name, real_target_name: str, t: "TargetManager"):
         self._real_target = t.get_target_raw(real_target_name)
         real_cls = self._real_target.project_class
@@ -267,9 +269,12 @@ class SimpleTargetAlias(_TargetAliasBase):
         super().__init__(name, real_cls)
         self.real_target_name = real_target_name
         # Add the alias name for config lookups so that old configs remain valid
-        # Note: we can't modify _alias_target_names since otherwise we change it for all classes
-        # noinspection PyProtectedMember
-        real_cls._alias_target_names = getattr(real_cls, "_alias_target_names", tuple()) + (self.name,)
+        # Note: we can't modify _config_file_aliases since otherwise we change it for all classes
+        config_aliases = real_cls.__dict__.get("_config_file_aliases", tuple())
+        if self.name not in config_aliases:
+            real_cls._config_file_aliases = config_aliases + (self.name,)
+            if len(set(real_cls._config_file_aliases)) != len(real_cls._config_file_aliases):
+                raise ValueError()
 
     def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:

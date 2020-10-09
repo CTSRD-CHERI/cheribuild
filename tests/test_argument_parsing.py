@@ -686,3 +686,33 @@ def test_backwards_compat_old_suffixes():
     assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
     qtbase_mips_purecap = _get_target_instance("qtbase-mips-purecap", config, BuildQtBase)
     assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
+
+
+def _check_build_dir(target: str, expected: str, config_file: bytes, cmdline):
+    config = _parse_config_file_and_args(config_file, cmdline)
+    project = _get_target_instance(target, config)
+    assert str(project.build_dir) == expected
+
+
+def test_backwards_compat_old_suffixes_freebsd_mips():
+    # Check that we still load the value from the deprecated key name from the JSON config file
+    _check_build_dir("freebsd-mips64", "/from/json",
+                     b'{"freebsd-mips/build-directory": "/from/json"}', [])
+
+    # It should also override a command line value for the un-suffixed target
+    _check_build_dir("freebsd-mips64", "/from/json",
+                     b'{"freebsd-mips/build-directory": "/from/json"}',
+                     ["--freebsd/build-directory=/fallback/from/cmdline/"])
+
+    # The new key name should have priority:
+    _check_build_dir("freebsd-mips64", "/new/dir",
+                     b'{"freebsd-mips/build-directory": "/old/dir",'
+                     b' "freebsd-mips64/build-directory": "/new/dir" }', [])
+
+    # Also check the CheriBSD names:
+    _check_build_dir("cheribsd-mips64", "/from/json",
+                     b'{"cheribsd-mips-nocheri/build-directory": "/from/json"}', [])
+    _check_build_dir("cheribsd-mips64-hybrid", "/from/json",
+                     b'{"cheribsd-mips-hybrid/build-directory": "/from/json"}', [])
+    _check_build_dir("cheribsd-mips64-purecap", "/from/json",
+                     b'{"cheribsd-mips-purecap/build-directory": "/from/json"}', [])
