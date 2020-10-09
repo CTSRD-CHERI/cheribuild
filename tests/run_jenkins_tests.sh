@@ -39,7 +39,7 @@ if [ ! -e "../$test_prefix-results.xml" ]; then
 fi
 # env | sort
 # Run all targets
-./cheribuild.py -p __run_everything__ --freebsd/crossbuild > /dev/null
+./cheribuild.py -p __run_everything__ > /dev/null
 ./cheribuild.py --help > /dev/null
 ./cheribuild.py --help-all > /dev/null
 
