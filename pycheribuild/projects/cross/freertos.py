@@ -33,8 +33,8 @@ import os
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository)
-from ...utils import get_compiler_info, set_env
 from ...config.loader import ComputedDefaultValue
+from ...utils import get_compiler_info, set_env
 
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
@@ -139,8 +139,9 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         return False
 
     def install(self, **kwargs):
-        self.install_file(self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"),
-                          self.real_install_root_dir / str("FreeRTOS/Demo/" + self.demo + "_" + self.demo_app + ".elf"))
+        self.install_file(
+            self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"),
+            self.real_install_root_dir / str("FreeRTOS/Demo/" + self.demo + "_" + self.demo_app + ".elf"))
 
     def process(self):
 

@@ -32,8 +32,8 @@ import sys
 import typing
 from pathlib import Path
 
-from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
-                                  GitRepository, Linkage, MakeCommandKind, BuildType)
+from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
+                                  DefaultInstallDir, GitRepository, Linkage, MakeCommandKind)
 from ...utils import OSInfo, run_command, status_update
 
 

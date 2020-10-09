@@ -37,9 +37,8 @@ from .kcgi import BuildFettKCGI
 from .nginx import BuildFettNginx
 from .openssh import BuildFettOpenSSH
 from .sqlbox import BuildFettSQLbox
-from ..disk_image import _default_disk_image_name, BuildCheriBSDDiskImage
+from ..disk_image import BuildCheriBSDDiskImage
 from ..run_qemu import LaunchCheriBSD
-from ...config.loader import ComputedDefaultValue
 from ...mtree import MtreeFile
 from ...utils import classproperty, commandline_to_str
 

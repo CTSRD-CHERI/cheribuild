@@ -1123,6 +1123,7 @@ class BuildFreeBSDImage(BuildMultiArchDiskImage):
                                     "-" + self.crosscompile_target.generic_suffix + self.cheri_config_suffix,
                                     ["-x86", "-x86_64", "-native"])
 
+
 class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
     project_name = "disk-image-freebsd-with-default-options"
     _source_class = BuildFreeBSDWithDefaultOptions

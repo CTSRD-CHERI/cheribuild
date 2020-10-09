@@ -598,7 +598,7 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
 
     def default_demo_bsp(self):
         return "qemu_virt-" + self.target_info.riscv_arch_string + "-" + \
-            self.target_info.riscv_softfloat_abi
+               self.target_info.riscv_softfloat_abi
 
     def get_riscv_bios_args(self) -> typing.List[str]:
         # Run a FreeRTOS demo application (run in machine mode using the -bios QEMU argument)

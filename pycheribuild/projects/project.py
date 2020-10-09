@@ -2494,7 +2494,9 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             elif self.crosscompile_target.is_mips(include_purecap=False):
                 old_suffixes = ["-mips-build", "-mips-nocheri-build"]
             if self.build_dir != self.source_dir:
-                self._cleanup_old_files(self.build_dir, self.build_configuration_suffix(self.crosscompile_target) + "-build", old_suffixes)
+                self._cleanup_old_files(self.build_dir,
+                                        self.build_configuration_suffix(self.crosscompile_target) + "-build",
+                                        old_suffixes)
 
             # Clean has been performed -> write the last clean counter now (if needed).
             if required_clean_counter is not None and clean_counter_in_build_dir != required_clean_counter:
