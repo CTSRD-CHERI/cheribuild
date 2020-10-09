@@ -355,7 +355,7 @@ def _jenkins_main():
         run_command("du", "-sh", cheri_config.workspace / cheri_config.tarball_name)
 
 
-def strip_binaries(cheri_config: JenkinsConfig, project: SimpleProject, directory: Path):
+def strip_binaries(_: JenkinsConfig, project: SimpleProject, directory: Path):
     status_update("Tarball directory size before stripping ELF files:")
     run_command("du", "-sh", directory)
     for root, dirs, filelist in os.walk(str(directory)):

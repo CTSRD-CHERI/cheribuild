@@ -216,6 +216,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         assert cls._xtarget is not None
         return [t.name for t in cls.recursive_dependencies(config)]
 
+    # noinspection PyCallingNonCallable
     @classmethod
     def direct_dependencies(cls, config: CheriConfig) -> "typing.Generator[Target]":
         assert cls._xtarget is not None
@@ -227,9 +228,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             raise ValueError("Cannot call direct_dependencies() on a target alias")
         if callable(dependencies):
             if inspect.ismethod(dependencies):
-                # noinspection PyCallingNonCallable
                 dependencies = cls.dependencies(config)
             else:
+                # noinspection PyCallingNonCallable  (false positive, we used if callable() above)
                 dependencies = dependencies(cls, config)
         assert isinstance(dependencies, list), "Expected a list and not " + str(type(dependencies))
         for dep_name in dependencies:
