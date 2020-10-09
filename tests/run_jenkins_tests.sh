@@ -47,6 +47,5 @@ fi
 targets=$(./cheribuild.py --list-targets | grep -v "available targets:" | grep -v "$(printf "\x1b")")
 # echo "targets=$targets"
 for i in $targets; do
-  WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=default -p "$i" > /dev/null;
-  WORKSPACE=/tmp ./jenkins-cheri-build.py --test --cpu=default -p "$i" > /dev/null;
+  WORKSPACE=/tmp ./jenkins-cheri-build.py --build --test --cpu=default -p "$i" > /dev/null;
 done
