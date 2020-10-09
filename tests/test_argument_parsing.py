@@ -655,12 +655,26 @@ def test_default_build_dir(target: str, args: list, expected: str):
                  "sdk/sysroot-mips64-purecap-plt", "rootfs-mips64-purecap-plt"),
     pytest.param("cheribsd-mips64-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
                  "sdk/sysroot-mips64-purecap-plt-aggressive-hardfloat", "rootfs-mips64-purecap-plt-aggressive-hardfloat"),
+
+
+    # FreeBSD
+    pytest.param("freebsd-aarch64", [],
+                 "sdk/sysroot-freebsd-aarch64", "freebsd-aarch64"),
+    pytest.param("freebsd-amd64", [],
+                 "sdk/sysroot-freebsd-amd64", "freebsd-amd64"),
+    pytest.param("freebsd-i386", [],
+                 "sdk/sysroot-freebsd-i386", "freebsd-i386"),
+    pytest.param("freebsd-mips64", [],
+                 "sdk/sysroot-freebsd-mips64", "freebsd-mips64"),
+    pytest.param("freebsd-riscv64", [],
+                 "sdk/sysroot-freebsd-riscv64", "freebsd-riscv64"),
     ])
 def test_default_rootfs_and_sysroot_dir(target: str, args: list, expected_sysroot: str, expected_rootfs: str):
     # Check that the cheribsd build dir is correct
     config = _parse_arguments(args)
-    project = _get_target_instance(target, config, BuildCHERIBSD)
+    project = _get_target_instance(target, config, BuildFreeBSD)
     sysroot_dir = project.cross_sysroot_path
+    assert sysroot_dir == project.target_info.sysroot_dir
     assert str(sysroot_dir.relative_to(config.output_root)) == expected_sysroot
     rootfs_dir = project.install_dir
     assert str(rootfs_dir.relative_to(config.output_root)) == expected_rootfs

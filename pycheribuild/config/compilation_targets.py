@@ -218,7 +218,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def sysroot_dir(self):
-        return Path(self.config.sysroot_install_dir, "sysroot-freebsd-" + str(self.target.cpu_architecture.value))
+        return Path(self.config.sysroot_install_dir, "sysroot-freebsd" + self.target.build_suffix(self.config))
 
     @classmethod
     def is_freebsd(cls):
@@ -794,7 +794,7 @@ class CompilationTargets(BasicCompilationTargets):
                                                           NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                           hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
     # FreeBSD targets
-    FREEBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, FreeBSDTargetInfo)
+    FREEBSD_MIPS = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, FreeBSDTargetInfo)
     FREEBSD_RISCV = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, FreeBSDTargetInfo)
     FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, FreeBSDTargetInfo)
     FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, FreeBSDTargetInfo)
