@@ -212,15 +212,12 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
 class BuildFettDiskImage(BuildCheriBSDDiskImage):
     project_name = "disk-image-fett"
     dependencies = ["bash", "fett-config"]
+    disk_image_prefix = "fett-cheribsd"
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
 
     @classproperty
     def default_architecture(self):
         return CompilationTargets.CHERIBSD_RISCV_PURECAP
-
-    default_disk_image_path = ComputedDefaultValue(
-        function=lambda conf, proj: _default_disk_image_name(conf, conf.output_root, proj, "fett-cheribsd-"),
-        as_string="$OUTPUT_ROOT/fett-$arch_prefix-disk.img.")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

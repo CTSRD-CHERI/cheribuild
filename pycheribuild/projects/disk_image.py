@@ -95,13 +95,21 @@ class _AdditionalFileTemplates(object):
         return include_local_file("files/cheribsd/dot.bash_profile.in")
 
 
+def _default_disk_image_name(config: CheriConfig, directory: Path, project: "_BuildDiskImageBase"):
+    xtarget = project.get_crosscompile_target(config)
+    return directory / (project.disk_image_prefix + xtarget.build_suffix(config) + ".img")
+
+
 class _BuildDiskImageBase(SimpleProject):
     do_not_add_to_targets = True
     disk_image_path = None  # type: Path
     _freebsd_build_class = None
     strip_binaries = False  # True by default for minimal disk-image
     is_minimal = False  # To allow building a much smaller image
-    default_disk_image_path = None
+    disk_image_prefix = None  # type: str
+    default_disk_image_path = ComputedDefaultValue(
+        function=lambda conf, proj: _default_disk_image_name(conf, conf.output_root, proj),
+        as_string=lambda cls: "$OUTPUT_ROOT/" + cls.disk_image_prefix + "-<TARGET>-disk.img depending on architecture")
 
     @classmethod
     def setup_config_options(cls, *, default_hostname, extra_files_suffix="", **kwargs):
@@ -636,6 +644,16 @@ class _BuildDiskImageBase(SimpleProject):
         self.copy_remote_file(self.remote_path, self.disk_image_path)
 
     def process(self):
+        # Remove some old disk image names:
+        old_names = []
+        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            old_names = ["-mips-purecap128", "-mips-purecap256"]
+        elif self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.MIPS64]):
+            old_names = ["-mips-hybrid128", "-mips-hybrid256"]
+        elif self.crosscompile_target.is_x86_64(include_purecap=False):
+            old_names = ["-native", "-x86-64"]
+        self._cleanup_old_files(self.disk_image_path, self.crosscompile_target.build_suffix(self.config), old_names)
+
         if not OSInfo.IS_FREEBSD and self.cross_build_image:
             with set_env(PATH=str(self.config.output_root / "freebsd-cross/bin") + ":" + os.getenv("PATH")):
                 self.__process()
@@ -768,25 +786,9 @@ class _BuildDiskImageBase(SimpleProject):
             self.add_file_to_image(public_key, base_directory=self.extra_files_dir, mode="0644")
 
 
-def _default_disk_image_name(config: CheriConfig, directory: Path, project: SimpleProject, img_prefix=""):
-    # old name for cheribsd:
-    xtarget = project.get_crosscompile_target(config)
-    if xtarget.is_mips(include_purecap=True):
-        # Backwards compat (different prefix for hybrid+purecap images):
-        if xtarget.is_cheri_hybrid():
-            return directory / (img_prefix + "mips-hybrid" + project.cheri_config_suffix + ".img")
-        if xtarget.is_cheri_purecap():
-            return directory / (img_prefix + "mips-purecap" + project.cheri_config_suffix + ".img")
-    suffix = (xtarget.generic_suffix if xtarget else "<TARGET>") + project.cheri_config_suffix
-    return config.output_root / (img_prefix + suffix + ".img")
-
-
-def _default_freebsd_disk_image_name(config: CheriConfig, project: SimpleProject):
-    return _default_disk_image_name(config, config.output_root, project, "freebsd-")
-
-
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     project_name = "disk-image-minimal"
+    disk_image_prefix = "cheribsd-minimal"
     dependencies = ["qemu", "cheribsd"]  # TODO: include gdb?
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
                                CompilationTargets.CHERIBSD_MIPS_PURECAP,
@@ -800,10 +802,6 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
         def get_rc_conf_template(self):
             return include_local_file("files/minimal-image/etc/rc.conf.in")
-
-    default_disk_image_path = ComputedDefaultValue(
-        function=lambda conf, proj: _default_disk_image_name(conf, conf.output_root, proj, "cheribsd-minimal-"),
-        as_string="$OUTPUT_ROOT/minimal-<TARGET>-disk.img depending on architecture")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -1056,10 +1054,7 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
     project_name = "disk-image"
     _source_class = BuildCHERIBSD
     _always_add_suffixed_targets = True  # preparation for future multi-target support
-
-    default_disk_image_path = ComputedDefaultValue(
-        function=lambda conf, proj: _default_disk_image_name(conf, conf.output_root, proj, "cheribsd-"),
-        as_string="$OUTPUT_ROOT/$arch_prefix-disk.img.")
+    disk_image_prefix = "cheribsd"
 
     @classmethod
     def dependencies(cls, config):
@@ -1091,13 +1086,23 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
         super().__init__(config)
         self.minimum_image_size = "256m"  # let's try to shrink the image size
 
+    def process(self):
+        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            # Clean up old inconsistent disk image names
+            self._cleanup_old_files(self.disk_image_path, self.disk_image_path.name,
+                                    ["purecap-128-disk.img", "purecap-cheri128-disk.img",
+                                     "purecap-256-disk.img", "purecap-256-disk.img"])
+        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            # Clean up old inconsistent disk image names
+            self._cleanup_old_files(self.disk_image_path, self.disk_image_path.name,
+                                    ["cheri128-disk.img", "cheri256-disk.img"])
+        super().process()
+
 
 class BuildFreeBSDImage(BuildMultiArchDiskImage):
     target = "disk-image-freebsd"
     _source_class = BuildFreeBSD
-
-    default_disk_image_path = ComputedDefaultValue(function=_default_freebsd_disk_image_name,
-                                                   as_string="$OUTPUT_ROOT/freebsd-$SUFFIX.img")
+    disk_image_prefix = "freebsd"
 
     @classmethod
     def setup_config_options(cls, **kwargs):
