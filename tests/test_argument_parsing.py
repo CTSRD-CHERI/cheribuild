@@ -485,14 +485,14 @@ def test_libcxxrt_dependency_path():
 
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
-    check_libunwind_path(config.output_root / "rootfs-purecap128/opt/mips64-purecap/c++/lib", "libcxxrt-mips64-purecap")
-    check_libunwind_path(config.output_root / "rootfs128/opt/mips64-hybrid/c++/lib", "libcxxrt-mips64-hybrid")
+    check_libunwind_path(config.output_root / "rootfs-mips64-purecap/opt/mips64-purecap/c++/lib", "libcxxrt-mips64-purecap")
+    check_libunwind_path(config.output_root / "rootfs-mips64-hybrid/opt/mips64-hybrid/c++/lib", "libcxxrt-mips64-hybrid")
     # Check the defaults:
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
     config = _parse_arguments(["--skip-configure", "--no-use-hybrid-sysroot-for-mips"])
-    check_libunwind_path(config.output_root / "rootfs128/opt/mips64-hybrid/c++/lib", "libcxxrt-mips64-hybrid")
-    check_libunwind_path(config.output_root / "rootfs-mips/opt/mips64/c++/lib", "libcxxrt-mips64")
+    check_libunwind_path(config.output_root / "rootfs-mips64-hybrid/opt/mips64-hybrid/c++/lib", "libcxxrt-mips64-hybrid")
+    check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib", "libcxxrt-mips64")
 
 
 @pytest.mark.parametrize("target,expected_path,kind,extra_args", [
@@ -532,16 +532,18 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
 @pytest.mark.parametrize("target,expected_name", [
     # CheriBSD
     pytest.param("disk-image-mips64", "cheribsd-mips64.img"),
-    pytest.param("disk-image-mips64-hybrid", "cheribsd-mips-hybrid128.img"),
-    pytest.param("disk-image-purecap", "cheribsd-mips-purecap128.img"),
+    pytest.param("disk-image-mips64-hybrid", "cheribsd-mips64-hybrid.img"),
+    pytest.param("disk-image-purecap", "cheribsd-mips64-purecap.img"),
     pytest.param("disk-image-riscv64", "cheribsd-riscv64.img"),
     pytest.param("disk-image-riscv64-hybrid", "cheribsd-riscv64-hybrid.img"),
     pytest.param("disk-image-riscv64-purecap", "cheribsd-riscv64-purecap.img"),
     pytest.param("disk-image-amd64", "cheribsd-amd64.img"),
+    pytest.param("disk-image-morello-hybrid", "cheribsd-morello-hybrid.img"),
+    pytest.param("disk-image-morello-purecap", "cheribsd-morello-purecap.img"),
     # Minimal image
     pytest.param("disk-image-minimal-mips64", "cheribsd-minimal-mips64.img"),
-    pytest.param("disk-image-minimal-mips64-hybrid", "cheribsd-minimal-mips-hybrid128.img"),
-    pytest.param("disk-image-minimal-purecap", "cheribsd-minimal-mips-purecap128.img"),
+    pytest.param("disk-image-minimal-mips64-hybrid", "cheribsd-minimal-mips64-hybrid.img"),
+    pytest.param("disk-image-minimal-purecap", "cheribsd-minimal-mips64-purecap.img"),
     pytest.param("disk-image-minimal-riscv64", "cheribsd-minimal-riscv64.img"),
     pytest.param("disk-image-minimal-riscv64-hybrid", "cheribsd-minimal-riscv64-hybrid.img"),
     pytest.param("disk-image-minimal-riscv64-purecap", "cheribsd-minimal-riscv64-purecap.img"),
@@ -577,31 +579,31 @@ def test_freebsd_toolchains_cheribsd_purecap():
 
 @pytest.mark.parametrize("target,args,expected", [
     pytest.param("cheribsd", ["--foo"],
-                 "cheribsd-mips64-hybrid128-build"),
+                 "cheribsd-mips64-hybrid-build"),
     pytest.param("llvm", ["--foo"],
                  "llvm-project-build"),
     pytest.param("cheribsd-purecap", ["--foo"],
-                 "cheribsd-purecap-128-build"),
+                 "cheribsd-mips64-purecap-build"),
     # --subobject debug should not have any effect if subobject bounds is disabled
     pytest.param("cheribsd-purecap", ["--subobject-bounds=conservative", "--subobject-debug"],
-                 "cheribsd-purecap-128-build"),
+                 "cheribsd-mips64-purecap-build"),
     pytest.param("cheribsd-purecap", ["--subobject-bounds=subobject-safe", "--subobject-debug"],
-                 "cheribsd-purecap-128-subobject-safe-build"),
+                 "cheribsd-mips64-purecap-subobject-safe-build"),
     pytest.param("cheribsd-purecap", ["--subobject-bounds=subobject-safe", "--no-subobject-debug"],
-                 "cheribsd-purecap-128-subobject-safe-subobject-nodebug-build"),
+                 "cheribsd-mips64-purecap-subobject-safe-subobject-nodebug-build"),
     # Passing "--cap-table-abi=pcrel" also changes the build dir even though it's (currently) the default for all
     # architectures.
     pytest.param("cheribsd", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
-                 "cheribsd-mips64-hybrid128-pcrel-build"),
+                 "cheribsd-mips64-hybrid-pcrel-build"),
     # plt should be encoded
     pytest.param("cheribsd", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
-                 "cheribsd-mips64-hybrid128-plt-build"),
+                 "cheribsd-mips64-hybrid-plt-build"),
     # everything
     pytest.param("cheribsd-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
-                 "cheribsd-purecap-128-plt-aggressive-hardfloat-build"),
+                 "cheribsd-mips64-purecap-plt-aggressive-hardfloat-build"),
     # plt should be encoded
-    pytest.param("sqlite", [], "sqlite-128-build"),
-    pytest.param("sqlite-mips64-hybrid", [], "sqlite-mips64-hybrid128-build"),
+    pytest.param("sqlite", [], "sqlite-mips64-purecap-build"),  # FIXME: non-suffixed target should be removed
+    pytest.param("sqlite-mips64-hybrid", [], "sqlite-mips64-hybrid-build"),
     pytest.param("sqlite-native", [], "sqlite-native-build"),
     ])
 def test_default_build_dir(target: str, args: list, expected: str):
