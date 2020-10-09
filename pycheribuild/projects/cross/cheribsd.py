@@ -850,6 +850,18 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     if is_jenkins_build():
                         installsysroot_args.set_env(DESTDIR=self.target_info.sysroot_dir)
                     self.run_make("installsysroot", options=installsysroot_args)
+                    # remove the old sysroot dirs
+                    old_suffixes = []
+                    if self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_PURECAP:
+                        old_suffixes = ["-purecap128", "-purecap256"]
+                    elif self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_PURECAP:
+                        old_suffixes = ["128", "256"]
+                    elif self.crosscompile_target.is_mips(include_purecap=False):
+                        old_suffixes = ["-mips"]
+                    elif self.crosscompile_target.is_x86_64(include_purecap=False):
+                        old_suffixes = ["-native", "-x86_64", "-x86"]
+                    self._cleanup_old_files(self.target_info.sysroot_dir,
+                                            self.crosscompile_target.build_suffix(self.config), old_suffixes)
 
         if skip_kernel:
             return
