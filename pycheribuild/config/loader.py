@@ -606,7 +606,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
 
     def finalize_options(self, available_targets: list, **kwargs):
         target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
-                                                  help="The targets to build", choices=available_targets + [[]])
+                                                  help="The targets to build")
         if argcomplete and self._completing_arguments:
             # if OSInfo.IS_FREEBSD: # FIXME: for some reason this won't work
             self.completion_excludes = ["-t", "--skip-dependencies"]
@@ -722,9 +722,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                     exclude=self.completion_excludes,  # hide these options from the output
                     print_suppressed=True,  # also include target-specific options
                     )
-        self._parsed_args, trailingTargets = self._parser.parse_known_args()
-        # print(self._parsed_args, trailingTargets)
-        self._parsed_args.targets += trailingTargets
+        self._parsed_args = self._parser.parse_intermixed_args()
         self._load_json_config_file()
         # Now validate the config file
         self._validate_config_file()

@@ -418,14 +418,11 @@ class TargetManager(object):
         # assert self._all_targets["disk-image"] > self._all_targets["qemu"]
         # assert self._all_targets["sdk"] > self._all_targets["sdk-sysroot"]
         explicitly_chosen_targets = []  # type: typing.List[Target]
-        for targetName in config.targets:
-            if targetName not in self._all_targets:
-                if targetName.startswith("-"):
-                    sys.exit(coloured(AnsiColour.red, "Unknown command line option '" + targetName + "'"))
-                else:
-                    sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
-                                      ",".join(self.target_names)))
-            explicitly_chosen_targets.append(self.get_target(targetName, None, config, caller="cmdline parsing"))
+        for target_name in config.targets:
+            if target_name not in self._all_targets:
+                sys.exit(coloured(AnsiColour.red, "Target", target_name, "does not exist. Valid choices are",
+                                  ",".join(self.target_names)))
+            explicitly_chosen_targets.append(self.get_target(target_name, None, config, caller="cmdline parsing"))
         chosen_targets = self.get_all_targets(explicitly_chosen_targets, config)
         print("Will execute the following targets:\n  ", "\n   ".join(t.name for t in chosen_targets))
         # now that the chosen targets have been resolved run them
