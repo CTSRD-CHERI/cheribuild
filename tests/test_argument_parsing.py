@@ -615,6 +615,57 @@ def test_default_build_dir(target: str, args: list, expected: str):
     assert builddir.name == expected
 
 
+@pytest.mark.parametrize("target,args,expected_sysroot,expected_rootfs", [
+    pytest.param("cheribsd-mips64", [],
+                 "sdk/sysroot-mips64", "rootfs-mips64"),
+    pytest.param("cheribsd-mips64-hybrid", [],
+                 "sdk/sysroot-mips64-hybrid", "rootfs-mips64-hybrid"),
+    pytest.param("cheribsd-mips64-purecap", [],
+                 "sdk/sysroot-mips64-purecap", "rootfs-mips64-purecap"),
+    pytest.param("cheribsd-riscv64", [],
+                 "sdk/sysroot-riscv64", "rootfs-riscv64"),
+    pytest.param("cheribsd-riscv64-hybrid", [],
+                 "sdk/sysroot-riscv64-hybrid", "rootfs-riscv64-hybrid"),
+    pytest.param("cheribsd-riscv64-purecap", [],
+                 "sdk/sysroot-riscv64-purecap", "rootfs-riscv64-purecap"),
+    pytest.param("cheribsd-aarch64", [],
+                 "sdk/sysroot-aarch64", "rootfs-aarch64"),
+    pytest.param("cheribsd-amd64", [],
+                 "sdk/sysroot-amd64", "rootfs-amd64"),
+    # Morello uses a different SDK dir
+    # TODO: pytest.param("cheribsd-morello"/"cheribsd-morello-nocheri"
+    pytest.param("cheribsd-morello-hybrid", [],
+                 "morello-sdk/sysroot-morello-hybrid", "rootfs-morello-hybrid"),
+    pytest.param("cheribsd-morello-purecap", [],
+                 "morello-sdk/sysroot-morello-purecap", "rootfs-morello-purecap"),
+
+    # Check that various global flags are encoded
+    # --subobject debug should not have any effect if subobject bounds is disabled
+    pytest.param("cheribsd-riscv64-purecap", ["--subobject-bounds=conservative", "--subobject-debug"],
+                 "sdk/sysroot-riscv64-purecap", "rootfs-riscv64-purecap"),
+    pytest.param("cheribsd-riscv64-purecap", ["--subobject-bounds=subobject-safe", "--subobject-debug"],
+                 "sdk/sysroot-riscv64-purecap-subobject-safe", "rootfs-riscv64-purecap-subobject-safe"),
+    pytest.param("cheribsd-riscv64-purecap", ["--subobject-bounds=subobject-safe", "--no-subobject-debug"],
+                 "sdk/sysroot-riscv64-purecap-subobject-safe-subobject-nodebug", "rootfs-riscv64-purecap-subobject-safe-subobject-nodebug"),
+
+    # Passing "--cap-table-abi=pcrel" also changes the dir even though it's the default for all architectures.
+    pytest.param("cheribsd-mips64-purecap", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
+                 "sdk/sysroot-mips64-purecap-pcrel", "rootfs-mips64-purecap-pcrel"),
+    pytest.param("cheribsd-mips64-purecap", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
+                 "sdk/sysroot-mips64-purecap-plt", "rootfs-mips64-purecap-plt"),
+    pytest.param("cheribsd-mips64-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
+                 "sdk/sysroot-mips64-purecap-plt-aggressive-hardfloat", "rootfs-mips64-purecap-plt-aggressive-hardfloat"),
+    ])
+def test_default_rootfs_and_sysroot_dir(target: str, args: list, expected_sysroot: str, expected_rootfs: str):
+    # Check that the cheribsd build dir is correct
+    config = _parse_arguments(args)
+    project = _get_target_instance(target, config, BuildCHERIBSD)
+    sysroot_dir = project.cross_sysroot_path
+    assert str(sysroot_dir.relative_to(config.output_root)) == expected_sysroot
+    rootfs_dir = project.install_dir
+    assert str(rootfs_dir.relative_to(config.output_root)) == expected_rootfs
+
+
 def test_backwards_compat_old_suffixes():
     config = _parse_config_file_and_args(b'{"qtbase-mips-purecap/build-directory": "/some/build/dir"}')
     # Check that qtbase-mips-purecap is a (deprecated) target alias for qtbase-mips64-purecap

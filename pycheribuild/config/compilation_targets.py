@@ -280,27 +280,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         """
         :return: The sysroot path
         """
-        config = self.config
-        if self.target.is_mips(include_purecap=True):
-            return self._sysroot_path(config.sysroot_install_dir, purecap_prefix="-purecap", hybrid_prefix="",
-                                      nocheri_name="-mips")
-        elif self.target.is_riscv(include_purecap=True):
-            return self._sysroot_path(config.sysroot_install_dir, purecap_prefix="-riscv64-purecap",
-                                      hybrid_prefix="-riscv64-hybrid", nocheri_name="-riscv64")
-        elif self.target.is_aarch64():
-            return config.sysroot_install_dir / "sysroot-aarch64"
-        elif self.target.is_x86_64():
-            return config.sysroot_install_dir / "sysroot-amd64"
-        else:
-            assert False, "Invalid cross_compile_target: " + str(self.target)
-
-    def _sysroot_path(self, root_dir: Path, *, purecap_prefix: str, hybrid_prefix: str, nocheri_name: str):
-        if self.target.is_cheri_hybrid():
-            return root_dir / ("sysroot" + hybrid_prefix + self.target.cheri_config_suffix(self.config))
-        elif self.target.is_cheri_purecap():
-            return root_dir / ("sysroot" + purecap_prefix + self.target.cheri_config_suffix(self.config))
-        assert not self.target.is_hybrid_or_purecap_cheri()
-        return root_dir / ("sysroot" + nocheri_name)
+        return self.config.sysroot_install_dir / ("sysroot" + self.target.build_suffix(self.config))
 
     @classmethod
     def is_cheribsd(cls):
@@ -566,12 +546,6 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     def _get_sdk_root_dir_lazy(self):
         return self.config.morello_sdk_dir
 
-    def get_cheribsd_sysroot_path(self) -> Path:
-        if self.target.is_aarch64(include_purecap=True):
-            return self._sysroot_path(self.sdk_root_dir, purecap_prefix="-morello-purecap",
-                                      hybrid_prefix="-morello-hybrid", nocheri_name="-aarch64")
-        return super().get_cheribsd_sysroot_path()
-
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version):
         if target.is_hybrid_or_purecap_cheri():
@@ -579,6 +553,12 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
                                                             "with the Morello toolchain"
             return "aarch64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
         return super().triple_for_target(target, config, include_version)
+
+    def get_cheribsd_sysroot_path(self) -> Path:
+        """
+        :return: The sysroot path
+        """
+        return self.config.morello_sdk_dir / ("sysroot" + self.target.build_suffix(self.config))
 
     @property
     def linker(self) -> Path:
