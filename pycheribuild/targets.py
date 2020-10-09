@@ -414,8 +414,11 @@ class TargetManager(object):
         explicitly_chosen_targets = []  # type: typing.List[Target]
         for targetName in config.targets:
             if targetName not in self._all_targets:
-                sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
-                                  ",".join(self.target_names)))
+                if targetName.startswith("-"):
+                    sys.exit(coloured(AnsiColour.red, "Unknown command line option '" + targetName + "'"))
+                else:
+                    sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
+                                      ",".join(self.target_names)))
             explicitly_chosen_targets.append(self.get_target(targetName, None, config, caller="cmdline parsing"))
         chosen_targets = self.get_all_targets(explicitly_chosen_targets, config)
         print("Will execute the following targets:\n  ", "\n   ".join(t.name for t in chosen_targets))
