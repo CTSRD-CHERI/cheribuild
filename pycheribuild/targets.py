@@ -322,6 +322,12 @@ class TargetManager(object):
         return self._all_targets.keys()
 
     @property
+    def non_alias_target_names(self) -> "typing.Generator[str]":
+        for name, value in self._all_targets.items():
+            if not isinstance(value, _TargetAliasBase):
+                yield name
+
+    @property
     def targets(self) -> "typing.Iterable[Target]":
         return self._all_targets.values()
 

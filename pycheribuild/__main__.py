@@ -128,7 +128,9 @@ def real_main():
                 "Running cheribuild in docker with the default source/output/build directories is not supported")
 
     if CheribuildAction.LIST_TARGETS in cheri_config.action:
-        print("Available targets are:\n ", "\n  ".join(all_target_names))
+        # Skip target aliases to avoid printing too much output
+        names = list(target_manager.non_alias_target_names)
+        print("There are", len(names), "available targets:\n ", "\n  ".join(names))
         sys.exit()
     elif CheribuildAction.DUMP_CONFIGURATION in cheri_config.action:
         print(cheri_config.get_options_json())
