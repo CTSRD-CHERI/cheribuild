@@ -1,5 +1,4 @@
 import inspect
-import re
 import sys
 import tempfile
 import typing
@@ -396,9 +395,8 @@ def test_kernconf():
 
 
 def test_duplicate_key():
-    with pytest.raises(SyntaxError) as excinfo:
+    with pytest.raises(SyntaxError, match="duplicate key: 'output-root'"):
         _parse_config_file_and_args(b'{ "output-root": "/foo", "some-other-key": "abc", "output-root": "/bar" }')
-        assert re.search("duplicate key: 'output-root'", str(excinfo.value))
 
 
 def _get_config_with_include(tmpdir: Path, config_json: bytes, workdir: Path = None):
@@ -469,16 +467,14 @@ def test_config_file_include():
             assert "/this/is/a/unit/test" == str(result.source_root)
 
         # Nonexistant paths should raise an error
-        with pytest.raises(FileNotFoundError) as excinfo:
+        with pytest.raises(FileNotFoundError, match="No such file or directory"):
             _get_config_with_include(config_dir, b'{ "#include": "bad-path.json"}')
-            assert re.search("No such file or directory", str(excinfo.value))
 
         # Currently only one #include per config file is allowed
         # TODO: this could be supported but it might be better to accept a list instead?
-        with pytest.raises(SyntaxError) as excinfo:
+        with pytest.raises(SyntaxError, match="duplicate key: '#include'"):
             _get_config_with_include(config_dir,
                                      b'{ "#include": "128-common.json", "foo": "bar", "#include": "256-common.json"}')
-            assert re.search("duplicate key: '#include'", str(excinfo.value))
 
 
 def test_libcxxrt_dependency_path():
@@ -493,13 +489,16 @@ def test_libcxxrt_dependency_path():
 
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
-    check_libunwind_path(config.output_root / "rootfs-mips64-purecap/opt/mips64-purecap/c++/lib", "libcxxrt-mips64-purecap")
-    check_libunwind_path(config.output_root / "rootfs-mips64-hybrid/opt/mips64-hybrid/c++/lib", "libcxxrt-mips64-hybrid")
+    check_libunwind_path(config.output_root / "rootfs-mips64-purecap/opt/mips64-purecap/c++/lib",
+                         "libcxxrt-mips64-purecap")
+    check_libunwind_path(config.output_root / "rootfs-mips64-hybrid/opt/mips64-hybrid/c++/lib",
+                         "libcxxrt-mips64-hybrid")
     # Check the defaults:
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
     config = _parse_arguments(["--skip-configure"])
-    check_libunwind_path(config.output_root / "rootfs-mips64-hybrid/opt/mips64-hybrid/c++/lib", "libcxxrt-mips64-hybrid")
+    check_libunwind_path(config.output_root / "rootfs-mips64-hybrid/opt/mips64-hybrid/c++/lib",
+                         "libcxxrt-mips64-hybrid")
     check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib", "libcxxrt-mips64")
 
 
@@ -577,7 +576,7 @@ def test_disk_image_path(target, expected_name):
 def test_freebsd_toolchains_cheribsd_purecap():
     # Targets that need CHERI don't have the --toolchain option:
     # Argparse should exit with exit code 2
-    with pytest.raises(SystemExit, match=r'2$'):
+    with pytest.raises(SystemExit, match=r'^2$'):
         for i in FreeBSDToolchainKind:
             test_freebsd_toolchains("cheribsd-purecap", "/wrong/path", i, [])
             test_freebsd_toolchains("cheribsd-mips64-hybrid", "/wrong/path", i, [])
@@ -651,16 +650,18 @@ def test_default_build_dir(target: str, args: list, expected: str):
     pytest.param("cheribsd-riscv64-purecap", ["--subobject-bounds=subobject-safe", "--subobject-debug"],
                  "sdk/sysroot-riscv64-purecap-subobject-safe", "rootfs-riscv64-purecap-subobject-safe"),
     pytest.param("cheribsd-riscv64-purecap", ["--subobject-bounds=subobject-safe", "--no-subobject-debug"],
-                 "sdk/sysroot-riscv64-purecap-subobject-safe-subobject-nodebug", "rootfs-riscv64-purecap-subobject-safe-subobject-nodebug"),
+                 "sdk/sysroot-riscv64-purecap-subobject-safe-subobject-nodebug",
+                 "rootfs-riscv64-purecap-subobject-safe-subobject-nodebug"),
 
     # Passing "--cap-table-abi=pcrel" also changes the dir even though it's the default for all architectures.
     pytest.param("cheribsd-mips64-purecap", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
                  "sdk/sysroot-mips64-purecap-pcrel", "rootfs-mips64-purecap-pcrel"),
     pytest.param("cheribsd-mips64-purecap", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
                  "sdk/sysroot-mips64-purecap-plt", "rootfs-mips64-purecap-plt"),
-    pytest.param("cheribsd-mips64-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
-                 "sdk/sysroot-mips64-purecap-plt-aggressive-hardfloat", "rootfs-mips64-purecap-plt-aggressive-hardfloat"),
-
+    pytest.param("cheribsd-mips64-purecap",
+                 ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
+                 "sdk/sysroot-mips64-purecap-plt-aggressive-hardfloat",
+                 "rootfs-mips64-purecap-plt-aggressive-hardfloat"),
 
     # FreeBSD
     pytest.param("freebsd-aarch64", [],
