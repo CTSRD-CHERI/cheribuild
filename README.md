@@ -5,7 +5,7 @@ For example `cheribuild.py [options] sdk` will create a SDK that can be
 used to compile software for the CHERI CPU and `cheribuild.py [options] run-riscv64-purecap`
 will start an instance of [CheriBSD](https://github.com/CTSRD-CHERI/cheribsd) built for RISC-V in [QEMU](https://github.com/CTSRD-CHERI/qemu).
 
-`cheribuild.py` also allows building software Arm's adaption of CHERI, [the Morello platform](https://developer.arm.com/architectures/cpu-architecture/a-profile/morello), however not all targets are supported yet.
+`cheribuild.py` also allows building software for Arm's adaption of CHERI, [the Morello platform](https://developer.arm.com/architectures/cpu-architecture/a-profile/morello), however not all targets are supported yet.
 
 ## Supported operating systems
 `cheribuild.py` has been tested and should work on FreeBSD 11 and 12.
