@@ -31,7 +31,6 @@ dnf install libtool clang-devel bison cmake ninja-build samba flex texinfo glib2
 If you want to start up a QEMU VM running CheriBSD run `cheribuild.py run-riscv64-purecap -d` (-d means build all dependencies).
 If you would like the VM to have all userspace binaries to be built as plain RISC-V binaries instead of CHERI pure-capability ones use `cheribuild.py run-riscv64-hybrid -d`.
 This will build the CHERI compiler, QEMU, CheriBSD, create a disk image and boot that in QEMU.
-By default this builds the 128-bit version of CheriBSD.
 
 By default `cheribuild.py` will clone all projects in `~/cheri`, use `~/cheri/build` for build directories
 and install into `~/cheri/output`. However, these directories are all configurable (see below for details).
@@ -104,8 +103,8 @@ SSH public keys to the `/root/.ssh/authorized_keys` file in the CheriBSD image. 
 generate SSH host keys for the image so that those don't change everytime the image is rebuilt.
 A suitable `/etc/rc.conf` and `/etc/fstab` will also be added to this directory and can then be customized.
 
-The default path for the disk image is `~/cheri/output/cheri128-disk.img` for 128-bit.
-The pure-capability images will be installed to `~/cheri/output/purecap-cheri128-disk.img`.
+The default path for the disk image is `~/cheri/output/cheribsd-<architecture>.img`, i.e.
+`cheribsd-riscv64-purecap.img` for pure-capability RISC-V or `cheribsd-mips64.img` for MIPS without CHERI support.
 
 ### CheriBSD SSH ports
 
