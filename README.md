@@ -88,6 +88,9 @@ For the `cheribsd`, `disk-image` and `run` targets the hybrid vs purecap distinc
 - `cmake` builds and installs latest [CMake](https://github.com/Kitware/CMake)
 - `cherios` builds and installs [CTSRD-CHERI/cherios](https://github.com/CTSRD-CHERI/cherios)
 - `cheritrace` builds and installs [CTSRD-CHERI/cheritrace](https://github.com/CTSRD-CHERI/cheritrace)
+- `sqlite-<architecture>` builds and installs [CTSRD-CHERI/sqlite](https://github.com/CTSRD-CHERI/sqlite)
+- `nginx-<architecture>` builds and installs [CTSRD-CHERI/nginx](https://github.com/CTSRD-CHERI/nginx)
+- `postgres-<architecture>` builds and installs [CTSRD-CHERI/postgres](https://github.com/CTSRD-CHERI/postgres)
 
 ## Building the compiler and QEMU
 
