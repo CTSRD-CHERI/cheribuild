@@ -438,9 +438,15 @@ class TargetManager(object):
         explicitly_chosen_targets = []  # type: typing.List[Target]
         for target_name in config.targets:
             if target_name not in self._all_targets:
-                import difflib
-                errmsg = coloured(AnsiColour.red, "Target", target_name, "does not exist.")
-                suggestions = difflib.get_close_matches(target_name, self._all_targets)
+                # See if it was a target alias without a default
+                if target_name in self._targets_for_command_line_options_only:
+                    alias = self._targets_for_command_line_options_only[target_name]
+                    errmsg = coloured(AnsiColour.red, "Target", target_name, "is ambiguous.")
+                    suggestions = sorted([tgt.name for tgt in alias.derived_targets])
+                else:
+                    import difflib
+                    errmsg = coloured(AnsiColour.red, "Target", target_name, "does not exist.")
+                    suggestions = difflib.get_close_matches(target_name, self._all_targets)
                 if suggestions:
                     errmsg += " Did you mean " + " or ".join(coloured(AnsiColour.blue, s) for s in suggestions) + "?"
                 else:
