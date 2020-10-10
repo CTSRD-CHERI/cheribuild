@@ -16,7 +16,7 @@ macOS 10.14 and newer is also supported.
 #### macOS
 When building on macOS the following packages are required:
 ```shell
-brew install cmake ninja libarchive git glib automake autoconf coreutils
+brew install cmake ninja libarchive git glib automake autoconf coreutils llvm
 ```
 
 
@@ -96,6 +96,9 @@ Most projects (the ones that don't build a full OS, but just a program or librar
 For the `cheribsd`, `disk-image` and `run` targets the hybrid vs purecap distinction applies means that the userspace space (see [below for more details](#building-and-running-cheribsd)).
 
 #### Other targets
+- `freebsd-<architecture>` builds and installs [freebsd/freebsd](https://github.com/freebsd/freebsd).
+- `disk-image-freebsd-<architecture>` creates a FreeBSD disk-image.
+- `run-freebsd-<architecture>` launches QEMU with the FreeBSD disk image.
 - `cmake` builds and installs latest [CMake](https://github.com/Kitware/CMake)
 - `cherios` builds and installs [CTSRD-CHERI/cherios](https://github.com/CTSRD-CHERI/cherios)
 - `cheritrace` builds and installs [CTSRD-CHERI/cheritrace](https://github.com/CTSRD-CHERI/cheritrace)
