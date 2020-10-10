@@ -2,12 +2,13 @@
 
 This script automates all the steps required to build various [CHERI](http://www.chericpu.com)-related software.
 For example `cheribuild.py [options] sdk` will create a SDK that can be
-used to compile software for the CHERI CPU and `cheribuild.py [options] run`
-will start an instance of [CheriBSD](https://github.com/CTSRD-CHERI/cheribsd) in [QEMU](https://github.com/CTSRD-CHERI/qemu).
+used to compile software for the CHERI CPU and `cheribuild.py [options] run-riscv64-purecap`
+will start an instance of [CheriBSD](https://github.com/CTSRD-CHERI/cheribsd) built for RISC-V in [QEMU](https://github.com/CTSRD-CHERI/qemu).
 
-It has been tested and should work on FreeBSD 10, 11 and 12.
+## Supported operating systems
+`cheribuild.py` has been tested and should work on FreeBSD 11 and 12.
 On Linux, Ubuntu 16.04, Ubuntu 18.04 and OpenSUSE Tumbleweed are supported. Ubuntu 14.04 may also work but is no longer tested.
-macOS 10.14 is also supported.
+macOS 10.14 and newer is also supported.
 
 # Pre-Build Setup
 
@@ -27,8 +28,8 @@ dnf install libtool clang-devel bison cmake ninja-build samba flex texinfo glib2
 
 # Basic usage
 
-If you want to start up a QEMU VM running CheriBSD run `cheribuild.py run -d` (-d means build all dependencies).
-If you would like the VM to have all userspace binaries to be built for CheriABI use `cheribuild.py run-purecap -d`.
+If you want to start up a QEMU VM running CheriBSD run `cheribuild.py run-riscv64-purecap -d` (-d means build all dependencies).
+If you would like the VM to have all userspace binaries to be built as plain RISC-V binaries instead of CHERI pure-capability ones use `cheribuild.py run-riscv64-hybrid -d`.
 This will build the CHERI compiler, QEMU, CheriBSD, create a disk image and boot that in QEMU.
 By default this builds the 128-bit version of CheriBSD.
 
