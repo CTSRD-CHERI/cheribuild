@@ -62,7 +62,7 @@ However, some targets (e.g. `all`, `sdk`) will always build their dependencies b
 #### The following main targets are available
 
 - `qemu` builds and installs [CTSRD-CHERI/qemu](https://github.com/CTSRD-CHERI/qemu)
-- `llvm` builds and installs [CTSRD-CHERI/llvm](https://github.com/CTSRD-CHERI/llvm) and [CTSRD-CHERI/clang](https://github.com/CTSRD-CHERI/clang) and [CTSRD-CHERI/lld](https://github.com/CTSRD-CHERI/lld)
+- `llvm` builds and installs the [CTSRD-CHERI/llvm-project](https://github.com/CTSRD-CHERI/llvm-project) toolchain (includes compiler, linker, and all required binutils).
 - `cheribsd-<architecture>` builds and installs [CTSRD-CHERI/cheribsd](https://github.com/CTSRD-CHERI/cheribsd) and creates a sysroot for cross-compilation.
 - `disk-image-<architecture>` creates a CheriBSD disk-image.
 - `run-<architecture>` launches QEMU with the CheriBSD disk image.
