@@ -1729,6 +1729,7 @@ class BuildCheriBsdDeviceModel(BuildCHERIBSD):
                                default_branch="device-model")
     # kernel_config = "CHERI_DE4_USBROOT"
     default_extra_make_options = ["DM_IOMMU=1", "DM_PCI=1"]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
     hide_options_from_help = True
 
     # def compile(self, **kwargs):

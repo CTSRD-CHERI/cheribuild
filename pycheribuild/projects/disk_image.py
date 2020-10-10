@@ -286,12 +286,15 @@ class _BuildDiskImageBase(SimpleProject):
         purecap_cheri_dirname = "purecap-cheri-rootfs-not-found"
 
         def path_relative_to_outputroot(xtarget) -> Path:
+            if xtarget not in self.supported_architectures:
+                return Path("/target/not/supported")
             install_dir = self.source_project.get_install_dir(self, cross_target=xtarget)
             try:
                 return install_dir.relative_to(self.config.output_root)
             except ValueError:
                 self.info(install_dir, "is not relative to", self.config.output_root,
                           "-- qemu-mount-rootfs.sh may not mount it")
+                return Path("/invalid/path")
 
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
             non_cheri_dirname = path_relative_to_outputroot(self.crosscompile_target.get_non_cheri_target())
