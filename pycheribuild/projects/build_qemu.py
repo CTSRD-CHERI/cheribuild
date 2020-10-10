@@ -301,7 +301,7 @@ class BuildCheriOSQEMU(BuildQEMU):
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.output_root / "cherios-sdk",
         as_string="$INSTALL_ROOT/cherios-sdk")
-    skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
+    hide_options_from_help = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

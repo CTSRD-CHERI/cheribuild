@@ -496,6 +496,7 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
     _default_install_dir_fn = ComputedDefaultValue(function=lambda config, project: config.output_root / "cherios-sdk",
                                                    as_string="$INSTALL_ROOT/cherios-sdk")
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
+    hide_options_from_help = True
 
     def configure(self, **kwargs):
         self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips;host")
