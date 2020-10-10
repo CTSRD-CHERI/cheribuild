@@ -60,23 +60,33 @@ However, some targets (e.g. `all`, `sdk`) will always build their dependencies b
 
 - `qemu` builds and installs [CTSRD-CHERI/qemu](https://github.com/CTSRD-CHERI/qemu)
 - `llvm` builds and installs [CTSRD-CHERI/llvm](https://github.com/CTSRD-CHERI/llvm) and [CTSRD-CHERI/clang](https://github.com/CTSRD-CHERI/clang) and [CTSRD-CHERI/lld](https://github.com/CTSRD-CHERI/lld)
-- `cheribsd` builds and installs [CTSRD-CHERI/cheribsd](https://github.com/CTSRD-CHERI/cheribsd). **NOTE**: most userspace binaries will be MIPS binaries and not CheriABI.
-- `cheribsd-purecap` builds and installs [CTSRD-CHERI/cheribsd](https://github.com/CTSRD-CHERI/cheribsd) with all userspace binaries built for CheriABI.
-- `disk-image` creates a CHERIBSD disk-image (MIPS userspace)
-- `disk-image-purecap` creates a CHERIBSD disk-image (CheriABI userspace)
-- `run` launches QEMU with the CHERIBSD disk image (MIPS userspace)
-- `run-purecap` launches QEMU with the CHERIBSD disk image (CheriABI userspace)
-- `cheribsd-sysroot` creates a CheriBSD sysroot.
-- `freestanding-sdk` builds everything required to build and run `-ffreestanding` binaries: compiler, binutils and qemu
-- `cheribsd-sdk` builds everything required to compile binaries for CheriBSD: `freestanding-sdk` and `cheribsd-sysroot`
-- `sdk` is an alias for `cheribsd-sdk`
-- `all`: runs all the targets listed so far (`run` comes last so you can then interact with QEMU)
+- `cheribsd-<architecture>` builds and installs [CTSRD-CHERI/cheribsd](https://github.com/CTSRD-CHERI/cheribsd) and creates a sysroot for cross-compilation.
+- `disk-image-<architecture>` creates a CheriBSD disk-image.
+- `run-<architecture>` launches QEMU with the CheriBSD disk image.
+- `freestanding-sdk` builds everything required to build and run `-ffreestanding` binaries: compiler, linker and qemu
+- `cheribsd-sdk-<architecture>` builds everything required to compile binaries for CheriBSD: `freestanding-sdk` and `cheribsd-sysroot`
+- `sdk-<architecture>` is an alias for `cheribsd-sdk-<architecture>`
+- `all-<architecture>`: runs all the targets listed so far (`run-<architecture>` comes last so you can interact with QEMU)
+
+##### Supported architectures
+- `riscv64`: RISC-V without CHERI support
+- `riscv64-hybrid`: RISC-V with CHERI support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
+- `riscv64-purecap`: [pure-capability](https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-947.html) RISC-V: all pointers are CHERI capabilities.
+- `mips64`: MIPS without CHERI support
+- `mips64-hybrid`: MIPS with CHERI support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
+- `mips64-purecap`: [pure-capability](https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-947.html) MIPS: all pointers are CHERI capabilities.
+- `aarch64`: AArch64 without CHERI support
+- `amd64`: 64-bit Intel x86.
+
+Most projects (the ones that don't build a full OS, but just a program or library) also support `-native` configuration
+  that builds for the host. This can be useful to verify that changes made for CHERI have not broken the native builds.
+
+For the `cheribsd`, `disk-image` and `run` targets the hybrid vs purecap distinction applies means that the userspace space (see [below for more details](#building-and-running-cheribsd)).
 
 #### Other targets
 - `cmake` builds and installs latest [CMake](https://github.com/Kitware/CMake)
 - `cherios` builds and installs [CTSRD-CHERI/cherios](https://github.com/CTSRD-CHERI/cherios)
 - `cheritrace` builds and installs [CTSRD-CHERI/cheritrace](https://github.com/CTSRD-CHERI/cheritrace)
-- `cherivis` builds and installs [CTSRD-CHERI/cherivis](https://github.com/CTSRD-CHERI/cherivis)
 
 ## Building the compiler and QEMU
 
@@ -87,10 +97,15 @@ All binaries will by default be installed to `~/cheri/sdk/bin`.
 
 ## Building and running CheriBSD
 
-To build CheriBSD run `cheribuild.py cheribsd` or `cheribuild.py cheribsd-purecap`.
-
-If you would like to build all binaries in CheriBSD as pure capability programs can use the `cheribsd-purecap`
-target instead.
+To build CheriBSD run `cheribuild.py cheribsd-<architecture>`, with architecture being one of
+- `riscv64`: Kernel and userspace are RISC-V without CHERI support.
+- `riscv64-hybrid`: Kernel is RISC-V with CHERI support (hybrid), but most programs built as plain RISC-V.
+- `riscv64-purecap`: Kernel is RISC-V with CHERI support (hybrid), and all userspace programs built as pure-capability CHERI binaries.
+- `mips64`: Kernel and userspace are MIPS without CHERI support.
+- `mips64-hybrid`: Kernel is MIPS with CHERI support (hybrid), but most programs built as plain RISC-V.
+- `mips64-purecap`: Kernel is MIPS with CHERI support (hybrid), and all userspace programs built as pure-capability CHERI binaries.
+- `aarch64`: Kernel and userspace are AArch64 without CHERI support.
+- `amd64`: Kernel and userspace are 64-bit Intel x86.
 
 ### Disk image
 
