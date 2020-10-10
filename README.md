@@ -34,6 +34,7 @@ This will build the CHERI compiler, QEMU, CheriBSD, create a disk image and boot
 
 By default `cheribuild.py` will clone all projects in `~/cheri`, use `~/cheri/build` for build directories
 and install into `~/cheri/output`. However, these directories are all configurable (see below for details).
+When building for the first time, `cheribuild.py` will request user input multiple times, but the `--force`/`-f` flag can be used to accept the default.
 
 
 If you would like to see what the script would do run it with the `--pretend` or `-p` option.
