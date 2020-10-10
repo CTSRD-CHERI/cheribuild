@@ -94,8 +94,7 @@ target instead.
 
 ### Disk image
 
-The disk image is created by the `cheribuild.py disk-image` target and can then be used as a boot disk by QEMU.
-To boot the pure-capability userspace you can use `cheribuild.py disk-image-purecap` instead.
+The disk image is created by the `cheribuild.py disk-image-<architecture>` target and can then be used as a boot disk by QEMU.
 
 In order to customize the disk image it will add all files under (by default) `~/cheri/extra-files/`
 to the resulting image. When building the image cheribuild will ask you whether it should add your
@@ -112,13 +111,13 @@ Since cheribuild.py was designed to be run by multiple users on a shared build s
 to listen on a port on localhost that depends on the user ID to avoid conflicts.
 It will print a message such as `Listening for SSH connections on localhost:12374`, i.e. you will need
 to use `ssh -p 12374 root@localhost` to connect to CheriBSD.
-This can be changed using `cheribuild.py --run/ssh-forwarding-port <portno> run` or be made persistent
+This can be changed using `cheribuild.py --run/ssh-forwarding-port <portno> run-<architecture>` or be made persistent
 with the following configuration file (see below for more details on the config file format and path):
 ```json
 {
-    "run": {
+    "run-riscv64-hybrid": {
         "ssh-forwarding-port": 12345
-    }, "run-purecap": {
+    }, "run-riscv64-purecap": {
         "ssh-forwarding-port": 12346
     }
 }
@@ -128,7 +127,7 @@ with the following configuration file (see below for more details on the config 
 Connecting to CheriBSD via ssh can take a few seconds. Further connections after the first can
 be sped up by using the openssh ControlMaster setting:
 ```
-Host cheribsd
+Host cheribsd-riscv
   User root
   Port 12345
   HostName localhost
@@ -136,7 +135,7 @@ Host cheribsd
   ControlMaster auto
   StrictHostKeyChecking no
   
-Host cheribsd-purecap
+Host cheribsd-riscv-purecap
   User root
   Port 12346
   HostName localhost
