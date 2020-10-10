@@ -149,9 +149,10 @@ class ConfigLoaderBase(object):
             # noinspection PyTypeChecker
             self._parser = argparse.ArgumentParser(formatter_class=NoOpHelpFormatter)
         else:
+            terminal_width = shutil.get_terminal_size(fallback=(120, 24))[0]
             # noinspection PyTypeChecker
             self._parser = argparse.ArgumentParser(
-                formatter_class=lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
+                formatter_class=lambda prog: argparse.HelpFormatter(prog, width=terminal_width))
 
         self.action_group = self._parser.add_argument_group("Actions to be performed")
         self.path_group = self._parser.add_argument_group("Configuration of default paths")
