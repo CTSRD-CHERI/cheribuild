@@ -5,6 +5,8 @@ For example `cheribuild.py [options] sdk` will create a SDK that can be
 used to compile software for the CHERI CPU and `cheribuild.py [options] run-riscv64-purecap`
 will start an instance of [CheriBSD](https://github.com/CTSRD-CHERI/cheribsd) built for RISC-V in [QEMU](https://github.com/CTSRD-CHERI/qemu).
 
+`cheribuild.py` also allows building software Arm's adaption of CHERI, [the Morello platform](https://developer.arm.com/architectures/cpu-architecture/a-profile/morello), however not all targets are supported yet.
+
 ## Supported operating systems
 `cheribuild.py` has been tested and should work on FreeBSD 11 and 12.
 On Linux, Ubuntu 16.04, Ubuntu 18.04 and OpenSUSE Tumbleweed are supported. Ubuntu 14.04 may also work but is no longer tested.
@@ -77,6 +79,8 @@ However, some targets (e.g. `all`, `sdk`) will always build their dependencies b
 - `mips64-hybrid`: MIPS with CHERI support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
 - `mips64-purecap`: [pure-capability](https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-947.html) MIPS: all pointers are CHERI capabilities.
 - `aarch64`: AArch64 without CHERI support
+- `morello-hybrid`: AArch64 with CHERI (Morello) support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
+- `morello-purecap`: [pure-capability](https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-947.html) AArch64 (Morello): all pointers are CHERI capabilities.
 - `amd64`: 64-bit Intel x86.
 
 Most projects (the ones that don't build a full OS, but just a program or library) also support `-native` configuration
@@ -109,6 +113,8 @@ To build CheriBSD run `cheribuild.py cheribsd-<architecture>`, with architecture
 - `mips64-hybrid`: Kernel is MIPS with CHERI support (hybrid), but most programs built as plain RISC-V.
 - `mips64-purecap`: Kernel is MIPS with CHERI support (hybrid), and all userspace programs built as pure-capability CHERI binaries.
 - `aarch64`: Kernel and userspace are AArch64 without CHERI support.
+- `morello-hybrid`: Kernel is AArch64 with CHERI (Morello) support (hybrid), but most programs built as plain AArch64.
+- `morello-purecap`: Kernel is AArch64 with CHERI (Morello) support (hybrid), and all userspace programs built as pure-capability CHERI binaries.
 - `amd64`: Kernel and userspace are 64-bit Intel x86.
 
 ### Disk image
