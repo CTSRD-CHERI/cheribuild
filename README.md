@@ -148,10 +148,10 @@ Host cheribsd-purecap
 ## Building GDB
 
 You can also build a [version of GDB that understands CHERI capabilities](https://github.com/bsdjhb/gdb/tree/mips_cheri-8.0.1)
-either as a binary for the host (`cheribuild.py gdb-native`) to debug coredumps or as a MIPS binary to use
-for live debugging in CheriBSD (`cheribuild.py gdb-mips`).
-The MIPS binary will be installed in `usr/local/bin/gdb` under your CheriBSD rootfs and will be included
-when you build a new disk image (`cheribuild.py disk-image`).
+either as a binary for the host (`cheribuild.py gdb-native`) to debug coredumps or as a gues binary to use
+for live debugging in CheriBSD (`cheribuild.py gdb-mips64-hybrid` for MIPS and `cheribuild.py gdb-riscv64-hybrid` for RISC-V).
+The guest binary will be installed in `usr/local/bin/gdb` under your CheriBSD rootfs and will be included
+when you build a new disk image (`cheribuild.py disk-image-<arch>`).
 The native GDB will be installed to your SDK binary directory (`~/cheri/sdk/bin` by default).
 
 ## Cross-compiling for CheriBSD
