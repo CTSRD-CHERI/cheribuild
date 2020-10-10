@@ -186,7 +186,7 @@ For example if you want cheribuild.py to behave as if you had passed
   "output-root": "/build/cheri",
   "make-jobs": 4,
   "cheribsd": {
-    "build-options": ["-DWITH_CHERI_PURE", "FOO=bar"]
+    "build-options": ["-DWITHOUT_ZFS", "FOO=bar"]
   }
 }
 ```
@@ -198,18 +198,18 @@ debug and release builds of e.g. LLVM or build CheriBSD with various different f
 
 ### Including config files
 
-If you have many config files (e.g. cheribsd-purecap, debug, release, etc.) it is now
+If you have many config files (e.g. cheribsd-stable, -debug, -release, etc.) it is also
 possible to `#include` a base config file and only write the settings that are different.
 
-For example a `~/.config/purecap-cheribuild.json` could look like this:
+For example a `~/.config/stable-cheribuild.json` could look like this:
 
 ```json
 {
-	"build-root": "/build-purecap",
+	"build-root": "/build-stable",
 	"#include": "cheribuild-common.json",
 	"cheribsd": {
-		"build-options": ["-DWITH_CHERI_PURE"]
-	}
+		"source-directory": "/my/other/cheribsd/worktree/with/the/stable/branch"
+    }
 }
 ```
 
