@@ -171,7 +171,7 @@ This can be done by running `cheribuild.py libcxx-baremetal -d`.
 ## Adapting the build configuration
 There are a lot of options to customize the behaviour of this script: e.g. the directory for
 the cloned sources can be changed from the default of `$HOME/cheri` using the `--source-root=` option.
-A full list of the available options with descriptions can be found [towards the end of this document](#full-list-of-options).
+A full list of the available options with descriptions can be found [towards the end of this document](#list-of-options---help-output).
 
 The options can also be made persistent by storing them in a JSON config file (`~/.config/cheribuild.json`).
 Options passed on the command line will override those read from the config file.
