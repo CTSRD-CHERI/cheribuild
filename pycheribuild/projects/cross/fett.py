@@ -43,12 +43,11 @@ from ...mtree import MtreeFile
 from ...utils import classproperty, commandline_to_str
 
 
-class BuildFettConfig(CrossCompileProject):
+class BuildFettConfig(FettProjectMixin, CrossCompileProject):
     project_name = "fett-config"
     repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Target.git", default_branch="cheri")
     skip_git_submodules = True
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
-
     dependencies = ["fett-nginx", "fett-openssh", "fett-sqlite", "fett-voting"]
 
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
@@ -213,6 +212,7 @@ class BuildFettDiskImage(BuildCheriBSDDiskImage):
     dependencies = ["bash", "fett-config"]
     disk_image_prefix = "fett-cheribsd"
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+    hide_options_from_help = True
 
     @classproperty
     def default_architecture(self):
@@ -238,6 +238,7 @@ class LaunchFett(LaunchCheriBSD):
     project_name = "run-fett"
     _source_class = BuildFettDiskImage
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+    hide_options_from_help = True
 
     @classmethod
     def get_cross_target_index(cls):

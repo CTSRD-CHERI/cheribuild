@@ -1300,6 +1300,7 @@ class BuildCheriBSDFett(BuildCHERIBSD):
     target = "cheribsd-fett"
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
+    hide_options_from_help = True
 
     def __init__(self, config):
         super().__init__(config)
@@ -1715,6 +1716,7 @@ class BuildFreeBSDDeviceModel(BuildFreeBSDWithDefaultOptions):
                                default_branch="dma")
     supported_architectures = [CompilationTargets.FREEBSD_MIPS]
     kernel_config = "BERI_DE4_USBROOT"
+    hide_options_from_help = True
 
     def compile(self, **kwargs):
         self.kernel_config = "BERI_DE4_USBROOT"
@@ -1727,6 +1729,7 @@ class BuildCheriBsdDeviceModel(BuildCHERIBSD):
                                default_branch="device-model")
     # kernel_config = "CHERI_DE4_USBROOT"
     default_extra_make_options = ["DM_IOMMU=1", "DM_PCI=1"]
+    hide_options_from_help = True
 
     # def compile(self, **kwargs):
     #    self.kernel_config = "CHERI_DE4_USBROOT"

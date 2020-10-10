@@ -162,3 +162,4 @@ class FettProjectMixin:
     default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
     # We default to zero-initializing all stack variables for FETT projects
     default_auto_var_init = AutoVarInit.ZERO
+    hide_options_from_help = True
