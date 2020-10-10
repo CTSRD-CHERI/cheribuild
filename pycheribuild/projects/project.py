@@ -2885,7 +2885,3 @@ class TargetAliasWithDependencies(TargetAlias):
     do_not_add_to_targets = True
     dependencies_must_be_built = True
     hasSourceFiles = False
-
-
-class BuildAll(TargetAliasWithDependencies):
-    dependencies = ["qemu", "sdk", "disk-image-mips64-hybrid", "run-mips64-hybrid"]

@@ -31,22 +31,31 @@ import datetime
 import os
 import subprocess
 
+from .cross.cheribsd import BuildCHERIBSD
 from .project import (CheriConfig, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject,
                       TargetAliasWithDependencies)
 from ..targets import target_manager
-from ..utils import include_local_file, OSInfo, set_env
+from ..utils import classproperty, include_local_file, OSInfo, set_env
 
 
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
     target = "cheribsd-sdk"
-    dependencies = ["freestanding-sdk", "cheribsd-mips64-hybrid"]
+    dependencies = ["freestanding-sdk", "cheribsd"]
     is_sdk_target = True
+
+    @classproperty
+    def supported_architectures(self):
+        return BuildCHERIBSD.supported_architectures
 
 
 class BuildSdk(TargetAliasWithDependencies):
     target = "sdk"
     dependencies = ["cheribsd-sdk"]
     is_sdk_target = True
+
+    @classproperty
+    def supported_architectures(self):
+        return BuildCheriBSDSdk.supported_architectures
 
 
 class BuildCheriCompressedCaps(CMakeProject):

@@ -43,7 +43,7 @@ from .cross.gdb import BuildGDB
 from .cross.rtems import BuildRtems
 from .disk_image import (BuildCheriBSDDiskImage, BuildFreeBSDGFEDiskImage, BuildFreeBSDImage,
                          BuildFreeBSDWithDefaultOptionsDiskImage)
-from .project import CheriConfig, commandline_to_str, CPUArchitecture, SimpleProject
+from .project import CheriConfig, commandline_to_str, CPUArchitecture, SimpleProject, TargetAliasWithDependencies
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
 from ..qemu_utils import qemu_supports_9pfs, QemuOptions, riscv_bios_arguments
@@ -671,3 +671,12 @@ target_manager.add_target_alias("run-minimal-cheri", "run-minimal-mips64-hybrid"
 target_manager.add_target_alias("run-minimal-purecap", "run-minimal-mips64-purecap", deprecated=True)
 target_manager.add_target_alias("run-native", "run-amd64", deprecated=True)
 target_manager.add_target_alias("run-x86_64", "run-amd64", deprecated=True)
+
+
+class BuildAll(TargetAliasWithDependencies):
+    target = "all"
+    dependencies = ["qemu", "sdk", "disk-image", "run"]
+
+    @classproperty
+    def supported_architectures(self):
+        return LaunchCheriBSD.supported_architectures
