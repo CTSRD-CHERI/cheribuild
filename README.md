@@ -13,7 +13,14 @@ On Linux, Ubuntu 16.04, Ubuntu 18.04 and OpenSUSE Tumbleweed are supported. Ubun
 macOS 10.14 and newer is also supported.
 
 # Pre-Build Setup
+#### macOS
+When building on macOS the following packages are required:
+```shell
+brew install cmake ninja libarchive git glib automake autoconf coreutils
+```
 
+
+#### Ubuntu
 If you are building CHERI on a Debian/Ubuntu-based machine, please install the following packages:
 
 ```shell
@@ -21,7 +28,7 @@ apt-get install libtool pkg-config clang bison cmake ninja-build samba flex texi
 ```
 
 Older versions of Ubuntu may report errors when trying to install `libarchive-tools`. In this case try using `apt-get install bsdtar` instead.
-
+#### RHEL/Fedora
 If you are building CHERI on a RHEL/Fedora-based machine, please install the following packages:
 
 ```shell
