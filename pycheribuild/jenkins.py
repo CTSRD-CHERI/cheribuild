@@ -61,15 +61,11 @@ class JenkinsConfigLoader(ConfigLoaderBase):
     """
 
     def load(self):
-        self._parsed_args = self._parser.parse_args()
-        if self._parsed_args.targets is None:
-            self._parsed_args.targets = []
-        if isinstance(self._parsed_args.targets, str):
-            self._parsed_args.targets = [self._parsed_args.targets]
+        self._load_command_line_args()
         assert isinstance(self._parsed_args.targets, list)
 
     def finalize_options(self, available_targets: list, **kwargs):
-        target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.OPTIONAL,
+        target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
                                                   help="The target to build",
                                                   choices=available_targets + [EXTRACT_SDK_TARGET])
         if self._completing_arguments:
@@ -234,14 +230,12 @@ def _jenkins_main():
         fatal_error("No action specified, did you mean to pass --build?")
         sys.exit()
 
-    if len(cheri_config.targets) != 1:
-        fatal_error("Expected exactly one target!")
+    if JenkinsAction.CREATE_TARBALL in cheri_config.action and len(cheri_config.targets) != 1:
+        fatal_error("--create-tarball expects exactly one target!")
         sys.exit()
 
     if JenkinsAction.BUILD in cheri_config.action or JenkinsAction.TEST in cheri_config.action:
-        assert len(cheri_config.targets) == 1
-        target = target_manager.get_target_raw(cheri_config.targets[0])
-
+        # Ugly workaround to override all install dirs to go to the tarball
         for tgt in target_manager.targets:
             if isinstance(tgt, SimpleTargetAlias):
                 continue
@@ -263,6 +257,16 @@ def _jenkins_main():
                 # print(project.project_class.project_name, project.project_class.install_dir)
 
         Target.instantiating_targets_should_warn = False
+        for target in cheri_config.targets:
+            build_target(cheri_config, target_manager.get_target_raw(target))
+
+    if JenkinsAction.CREATE_TARBALL in cheri_config.action:
+        create_tarball(cheri_config)
+
+
+def build_target(cheri_config, target: Target):
+    # Note: This if exists for now to avoid a large diff.
+    if True:
         target.check_system_deps(cheri_config)
         # need to set destdir after check_system_deps:
         project = target.get_or_create_project(cheri_config.preferred_xtarget, cheri_config)
@@ -319,7 +323,9 @@ def _jenkins_main():
         if JenkinsAction.TEST in cheri_config.action:
             target.run_tests(cheri_config)
 
-    if JenkinsAction.CREATE_TARBALL in cheri_config.action:
+
+def create_tarball(cheri_config):
+    if True:  # Note: This if exists for now to avoid a large whitespace diff.
         bsdtar_path = shutil.which("bsdtar")
         tar_cmd = None
         tar_flags = ["--invalid-flag"]
@@ -345,6 +351,8 @@ def _jenkins_main():
         status_update("Creating tarball", cheri_config.tarball_name)
         # Strip all ELF files:
         if cheri_config.strip_elf_files:
+            # TODO: we only accept one target name to infer the correct llvm-strip binary path
+            assert len(cheri_config.targets) == 1, "--create-tarball only accepts one target name"
             target = target_manager.get_target_raw(cheri_config.targets[0])
             Target.instantiating_targets_should_warn = False
             project = target.get_or_create_project(cheri_config.preferred_xtarget, cheri_config)

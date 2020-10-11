@@ -166,6 +166,51 @@ class ConfigLoaderBase(object):
         self.freebsd_group = self._parser.add_argument_group("FreeBSD and CheriBSD build configuration")
         self.docker_group = self._parser.add_argument_group("Options controlling the use of docker for building")
         self.unknown_config_option_is_error = False
+        self.completion_excludes = []
+
+    def _load_command_line_args(self):
+        if argcomplete and self._completing_arguments:
+            if "_ARGCOMPLETE_BENCHMARK" in os.environ:
+                with open(os.devnull, "wb") as output:
+                    # with open("/dev/stdout", "wb") as output:
+                    # sys.stdout.buffer
+                    argcomplete.autocomplete(
+                        self._parser,
+                        always_complete_options=None,  # don't print -/-- by default
+                        exclude=self.completion_excludes,  # hide these options from the output
+                        print_suppressed=True,  # also include target-specific options
+                        output_stream=output,
+                        exit_method=sys.exit)  # ensure that cprofile data is written
+            else:
+                argcomplete.autocomplete(
+                    self._parser,
+                    always_complete_options=None,  # don't print -/-- by default
+                    exclude=self.completion_excludes,  # hide these options from the output
+                    print_suppressed=True,  # also include target-specific options
+                    )
+        # Handle cases such as cheribuild.py target1 --arg target2
+        # Ideally we would use parse_intermixed_args() but that requires python3.7
+        # so we work around it using parse_known_args().
+        self._parsed_args, trailing = self._parser.parse_known_args()
+        # TODO: python 3.7 self._parsed_args = self._parser.parse_intermixed_args()
+        # print(self._parsed_args, trailingTargets)
+        for x in trailing:
+            # filter out unknown options (like -b)
+            # exit with error
+            if x.startswith('-'):
+                import difflib
+                # There is no officially supported API to get back all option strings, but fortunately we store
+                # all the actions here anyway
+                all_options = getattr(self._parser, "_option_string_actionss", {}).keys()
+                if not all_options:
+                    warning_message("Internal argparse API change, cannot detect available command line options.")
+                    all_options = ["--" + opt for opt in self.options.keys()]
+                suggestions = difflib.get_close_matches(x, all_options)
+                errmsg = "unknown argument '" + x + "'"
+                if suggestions:
+                    errmsg += " Did you mean " + " or ".join(suggestions) + "?"
+                self._parser.error(errmsg)
+        self._parsed_args.targets += trailing
 
     def add_commandline_only_option(self, *args, **kwargs):
         """
@@ -600,7 +645,6 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         self._parser.add_argument("--help-all", "--help-hidden", action="help", help="Show all help options, including"
                                                                                      " the target-specific ones.")
         self.configure_group = self._parser.add_mutually_exclusive_group()
-        self.completion_excludes = []
 
     @staticmethod
     def get_config_prefix():
@@ -709,48 +753,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                            "does not exist, using only command line arguments."), file=sys.stderr)
 
     def load(self):
-        if argcomplete and self._completing_arguments:
-            if "_ARGCOMPLETE_BENCHMARK" in os.environ:
-                with open(os.devnull, "wb") as output:
-                    # with open("/dev/stdout", "wb") as output:
-                    # sys.stdout.buffer
-                    argcomplete.autocomplete(
-                        self._parser,
-                        always_complete_options=None,  # don't print -/-- by default
-                        exclude=self.completion_excludes,  # hide these options from the output
-                        print_suppressed=True,  # also include target-specific options
-                        output_stream=output,
-                        exit_method=sys.exit)  # ensure that cprofile data is written
-            else:
-                argcomplete.autocomplete(
-                    self._parser,
-                    always_complete_options=None,  # don't print -/-- by default
-                    exclude=self.completion_excludes,  # hide these options from the output
-                    print_suppressed=True,  # also include target-specific options
-                    )
-        # Handle cases such as cheribuild.py target1 --arg target2
-        # Ideally we would use parse_intermixed_args() but that requires python3.7
-        # so we work around it using parse_known_args().
-        self._parsed_args, trailing = self._parser.parse_known_args()
-        # TODO: python 3.7 self._parsed_args = self._parser.parse_intermixed_args()
-        # print(self._parsed_args, trailingTargets)
-        for x in trailing:
-            # filter out unknown options (like -b)
-            # exit with error
-            if x.startswith('-'):
-                import difflib
-                # There is no officially supported API to get back all option strings, but fortunately we store
-                # all the actions here anyway
-                all_options = getattr(self._parser, "_option_string_actionss", {}).keys()
-                if not all_options:
-                    warning_message("Internal argparse API change, cannot detect available command line options.")
-                    all_options = ["--" + opt for opt in self.options.keys()]
-                suggestions = difflib.get_close_matches(x, all_options)
-                errmsg = "unknown argument '" + x + "'"
-                if suggestions:
-                    errmsg += " Did you mean " + " or ".join(suggestions) + "?"
-                self._parser.error(errmsg)
-        self._parsed_args.targets += trailing
+        self._load_command_line_args()
 
         self._load_json_config_file()
         # Now validate the config file
