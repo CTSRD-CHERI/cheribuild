@@ -466,7 +466,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.target_info._sdk_root_dir = clang_root
         elif self.build_toolchain == FreeBSDToolchainKind.CUSTOM:
             if self._cross_toolchain_root is None:
-                self.fatal("Requested custom toolchain but path is not set.")
+                self.fatal("Requested custom toolchain but", self.get_config_option_name("_cross_toolchain_root"),
+                           "is not set.")
             self.target_info._sdk_root_dir = self._cross_toolchain_root
         else:
             assert self.build_toolchain == FreeBSDToolchainKind.DEFAULT_EXTERNAL
