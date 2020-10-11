@@ -530,9 +530,15 @@ def test_libcxxrt_dependency_path():
     check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib", "libcxxrt-mips64")
 
 
+class SystemClangIfExistsElse:
+    def __init__(self, fallback: str):
+        self.fallback = fallback
+
+
 @pytest.mark.parametrize("target,expected_path,kind,extra_args", [
-    # FreeBSD targets default to upstream LLVM:
-    pytest.param("freebsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.DEFAULT_EXTERNAL, []),
+    # FreeBSD targets default to system clang if it exists, otherwise LLVM:
+    pytest.param("freebsd-mips64", SystemClangIfExistsElse("$OUTPUT$/upstream-llvm/bin/clang"),
+                 FreeBSDToolchainKind.DEFAULT_EXTERNAL, []),
     pytest.param("freebsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
     pytest.param("freebsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
     pytest.param("freebsd-mips64", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
@@ -553,8 +559,11 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     args = ["--" + target + "/toolchain", kind.value]
     args.extend(extra_args)
     config = _parse_arguments(args)
-    expected_path = expected_path.replace("$OUTPUT$", str(config.output_root))
     project = _get_target_instance(target, config, BuildFreeBSD)
+    if isinstance(expected_path, SystemClangIfExistsElse):
+        clang_root, _, _ = project._try_find_compatible_system_clang()
+        expected_path = str(clang_root / "bin/clang") if clang_root is not None else expected_path.fallback
+    expected_path = expected_path.replace("$OUTPUT$", str(config.output_root))
     assert str(project.CC) == str(expected_path)
     if kind == FreeBSDToolchainKind.BOOTSTRAP:
         assert "XCC" not in project.buildworld_args.env_vars
