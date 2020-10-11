@@ -300,7 +300,7 @@ class CompilerInfo(object):
         self.compiler = compiler
         self.version = version
         self.default_target = default_target
-        self._resource_dir = None
+        self._resource_dir = None  # type: typing.Optional[Path]
         assert compiler in ("unknown compiler", "clang", "apple-clang", "gcc"), "unknown type: " + compiler
 
     def get_resource_dir(self):
@@ -308,11 +308,18 @@ class CompilerInfo(object):
         if not self._resource_dir:
             if not self.path.exists() and GlobalConfig.PRETEND_MODE:
                 return Path("/unknown/resource/dir")  # avoid failing in jenkins
-            # pretend to compile an existing source file and capture the -resource-dir output
-            cc1_cmd = run_command(self.path, "-###", "-xc", "-c", "/dev/null",
-                                  capture_error=True, print_verbose_only=True, run_in_pretend_mode=True)
-            resource_dir_pat = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"')
-            self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
+            # Clang 5.0 added the -print-resource-dir flag
+            if self.is_clang and self.version >= (5, 0):
+                resource_dir = run_command(self.path, "-print-resource-dir", print_verbose_only=True,
+                                           capture_output=True, run_in_pretend_mode=True).stdout.decode("utf-8").strip()
+                assert resource_dir, "-print-resource-dir no longer works?"
+                self._resource_dir = Path(resource_dir)
+            else:
+                # pretend to compile an existing source file and capture the -resource-dir output
+                cc1_cmd = run_command(self.path, "-###", "-xc", "-c", "/dev/null",
+                                      capture_error=True, print_verbose_only=True, run_in_pretend_mode=True)
+                resource_dir_pat = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"')
+                self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
         return self._resource_dir
 
     def get_matching_binutil(self, binutil):
@@ -356,6 +363,8 @@ _cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
 
 def get_compiler_info(compiler: "typing.Union[str, Path]") -> CompilerInfo:
     assert compiler is not None
+    compiler = Path(compiler)
+    assert compiler.is_absolute()
     if compiler not in _cached_compiler_infos:
         clang_version_pattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         gcc_version_pattern = re.compile(b"gcc version (\\d+)\\.(\\d+)\\.?(\\d+)?")
