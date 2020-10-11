@@ -331,7 +331,7 @@ class CompilerInfo(object):
             if name.startswith(basename):
                 version_suffix = name[len(basename):]
         # Try to find a binutil with the same version suffix first
-        real_compiler_path = self.path.resolve()
+        real_compiler_path = self.path.resolve() if self.path.exists() else self.path
         result = real_compiler_path.parent / (binutil + version_suffix)
         if result.exists():
             return result
@@ -372,7 +372,7 @@ def get_compiler_info(compiler: "typing.Union[str, Path]") -> CompilerInfo:
 
     if compiler not in _cached_compiler_infos:
         # Avoid querying the same compiler twice if it is a symlink
-        compiler_realpath = compiler.resolve()
+        compiler_realpath = compiler.resolve() if compiler.exists() else compiler
         if compiler_realpath in _cached_compiler_infos:
             _cached_compiler_infos[compiler] = _cached_compiler_infos[compiler_realpath]
         compiler = compiler_realpath
