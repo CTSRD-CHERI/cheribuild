@@ -207,6 +207,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     # The compiler to use for building freebsd (bundled/upstream-llvm/cheri-llvm/custom)
     build_toolchain = FreeBSDToolchainKind.DEFAULT_EXTERNAL
+    can_build_with_system_clang = True  # Not true for CheriBSD
 
     @property
     def use_bootstrapped_toolchain(self):
@@ -267,12 +268,17 @@ class BuildFreeBSD(BuildFreeBSDBase):
             cls.linker_for_kernel = "should-not-be-used"
             cls.linker_for_world = "should-not-be-used"
         else:
+            # Prefer using system clang for FreeBSD builds rather than a self-built snapshot of LLVM since that might
+            # have new warnings that break the -Werror build.
+            if cls.can_build_with_system_clang:
+                default_toolchain_kind = FreeBSDToolchainKind.SYSTEM_CLANG
+            else:
+                default_toolchain_kind = FreeBSDToolchainKind.DEFAULT_EXTERNAL
             cls.build_toolchain = cls.add_config_option("toolchain", kind=FreeBSDToolchainKind,
-                                                        default=FreeBSDToolchainKind.DEFAULT_EXTERNAL,
+                                                        default=default_toolchain_kind,
                                                         enum_choice_strings=[t.value for t in FreeBSDToolchainKind],
                                                         help="The toolchain to use for building FreeBSD. When set to "
-                                                             "'custom', the 'cross-toolchain-path' "
-                                                             "option must also be set")
+                                                             "'custom', the 'toolchain-path' option must also be set")
             cls._cross_toolchain_root = cls.add_path_option("toolchain-path",
                                                             help="Path to the cross toolchain tools", default=None)
             # override in CheriBSD
@@ -1132,6 +1138,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
 class BuildCHERIBSD(BuildFreeBSD):
     project_name = "cheribsd"
     target = "cheribsd"
+    can_build_with_system_clang = False  # We need CHERI LLVM for most architectures
     repository = GitRepository(
         url="https://github.com/CTSRD-CHERI/cheribsd.git",
         per_target_branches={
