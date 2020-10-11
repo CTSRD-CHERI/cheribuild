@@ -295,15 +295,16 @@ def find_free_port() -> SocketAndPort:
 
 
 class CompilerInfo(object):
-    def __init__(self, path: Path, compiler, version, default_target):
+    def __init__(self, path: Path, compiler: str, version: "typing.Tuple[int]", version_str: str, default_target: str):
         self.path = path
         self.compiler = compiler
         self.version = version
+        self.version_str = version_str
         self.default_target = default_target
         self._resource_dir = None  # type: typing.Optional[Path]
         assert compiler in ("unknown compiler", "clang", "apple-clang", "gcc"), "unknown type: " + compiler
 
-    def get_resource_dir(self):
+    def get_resource_dir(self) -> Path:
         # assert self.is_clang, self.compiler
         if not self._resource_dir:
             if not self.path.exists() and GlobalConfig.PRETEND_MODE:
@@ -388,21 +389,25 @@ def get_compiler_info(compiler: "typing.Union[str, Path]") -> CompilerInfo:
         target = target_pattern.search(version_cmd.stderr)
         kind = "unknown compiler"
         version = (0, 0, 0)
+        version_str = "unknown version"
         target_string = target.group(1).decode("utf-8") if target else ""
         if gcc_version:
             kind = "gcc"
             version = tuple(map(int, gcc_version.groups()))
+            version_str = gcc_version.group(0).decode("utf-8")
         elif apple_llvm_version:
             kind = "apple-clang"
             version = tuple(map(int, apple_llvm_version.groups()))
+            version_str = apple_llvm_version.group(0).decode("utf-8")
         elif clang_version:
             kind = "clang"
             version = tuple(map(int, clang_version.groups()))
+            version_str = clang_version.group(0).decode("utf-8")
         else:
             warning_message("Could not detect compiler info for", compiler, "- output was", version_cmd.stderr)
         if GlobalConfig.VERBOSE_MODE:
             print(compiler, "is", kind, "version", version, "with default target", target_string)
-        _cached_compiler_infos[compiler] = CompilerInfo(compiler, kind, version, target_string)
+        _cached_compiler_infos[compiler] = CompilerInfo(compiler, kind, version, version_str, target_string)
     return _cached_compiler_infos[compiler]
 
 
@@ -441,9 +446,9 @@ def extract_version(output: bytes, component_kind: "typing.Type[Type_T]" = int, 
     return tuple(map(component_kind, match.groups()))
 
 
-def latest_system_clang_tool(basename: str, fallback_basename: str) -> Path:
+def latest_system_clang_tool(basename: str, fallback_basename: "typing.Optional[str]") -> typing.Optional[Path]:
     if "_ARGCOMPLETE" in os.environ:  # Avoid expensive lookup when tab-completing
-        return Path(fallback_basename)
+        return None if fallback_basename is None else Path(fallback_basename)
 
     # Only search in /usr/bin/ and /usr/local/bin by default.
     # If users want to use other versions they should explicitly pass --cc-path, etc
@@ -469,8 +474,10 @@ def latest_system_clang_tool(basename: str, fallback_basename: str) -> Path:
                 continue
             results.append((candidate, info.is_apple_clang, info.version))
     if not results:
+        if fallback_basename is None:
+            return None
         fullpath = shutil.which(fallback_basename)
-        return Path(fullpath) if fullpath else Path(basename)
+        return Path(fullpath) if fullpath else Path("/could/not/find", fallback_basename)
     # Find the newest version (and prefer apple-clang to non-apple clang
     # since it is required on macOS to build any binary
     # print("Candidates for", basename, results)
