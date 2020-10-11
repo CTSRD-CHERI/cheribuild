@@ -365,7 +365,17 @@ _cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
 def get_compiler_info(compiler: "typing.Union[str, Path]") -> CompilerInfo:
     assert compiler is not None
     compiler = Path(compiler)
-    assert compiler.is_absolute()
+    if not compiler.is_absolute():
+        found_in_path = shutil.which(str(compiler))
+        assert found_in_path is not None, "Called with non-existent compiler " + str(compiler)
+        compiler = Path(found_in_path)
+
+    if compiler not in _cached_compiler_infos:
+        # Avoid querying the same compiler twice if it is a symlink
+        compiler_realpath = compiler.resolve()
+        if compiler_realpath in _cached_compiler_infos:
+            _cached_compiler_infos[compiler] = _cached_compiler_infos[compiler_realpath]
+        compiler = compiler_realpath
     if compiler not in _cached_compiler_infos:
         clang_version_pattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         gcc_version_pattern = re.compile(b"gcc version (\\d+)\\.(\\d+)\\.?(\\d+)?")
