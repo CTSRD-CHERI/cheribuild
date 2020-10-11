@@ -180,7 +180,7 @@ class ProjectSubclassDefinitionHook(type):
                     target_manager.add_target_alias(new_name.replace("-mips64", "-mips-nocheri"), new_name,
                                                     deprecated=True)
                 if len(set(new_cls._config_file_aliases)) != len(new_cls._config_file_aliases):
-                    raise ValueError()
+                    raise ValueError("Duplicate aliases for {}: {}".format(new_name, new_cls._config_file_aliases))
         else:
             assert len(supported_archs) == 1
             # Only one target is supported:
