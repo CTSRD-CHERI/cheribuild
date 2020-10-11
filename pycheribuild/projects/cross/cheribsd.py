@@ -44,7 +44,7 @@ from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CrossCompileTarget
 from ...targets import target_manager
 from ...utils import (classproperty, commandline_to_str, get_compiler_info, include_local_file, is_jenkins_build,
-                      OSInfo, print_command, ThreadJoiner)
+                      latest_system_clang_tool, OSInfo, print_command, ThreadJoiner)
 
 
 def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
@@ -436,7 +436,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.target_info._sdk_root_dir = BuildCheriLLVM.get_install_dir(self,
                                                                             cross_target=CompilationTargets.NATIVE)
         elif self.build_toolchain == FreeBSDToolchainKind.SYSTEM_CLANG:
-            if OSInfo.IS_MAC:
+            min_version = (10, 0)
+            host_cc_info = get_compiler_info(self.host_CC)
+            if host_cc_info.is_clang and not host_cc_info.is_apple_clang and host_cc_info.version >= min_version:
+                compiler_path = host_cc_info.path
+            elif OSInfo.IS_MAC:
                 # Don't use apple_clang from /usr/bin
                 compiler_path = shutil.which("clang", path="/usr/local/opt/llvm/bin:/usr/local/bin:/usr/bin")
                 if not compiler_path or get_compiler_info(compiler_path).is_apple_clang:
@@ -444,15 +448,23 @@ class BuildFreeBSD(BuildFreeBSDBase):
                                fixit_hint="Please install upstream clang (e.g. with homebrew) or use the custom "
                                           "toolchain option")
             else:
-                compiler_path = shutil.which("clang")
+                # Try using the latest installed clang
+                compiler_path = latest_system_clang_tool("clang", "clang")
             if not compiler_path or get_compiler_info(compiler_path).version < (10, 0):
                 self.fatal("Cannot build FreeBSD with Clang < 10.0 (using clang =", compiler_path, ")",
                            fixit_hint="Please install upstream clang 10 or newer or use the custom toolchain option")
-            self.target_info._sdk_root_dir = Path(compiler_path).parent.parent
+            # Note: FreeBSD installs shell script wrappers for clang, so we can't just use
+            # Path(compiler_path).resolve().parent.parent since that will try to use /usr/local/bin/clang. Instead
+            # we print the resource dir (<clang-root>/lib/clang/<version>) and go up three levels from there.
+            clang_root = get_compiler_info(compiler_path).get_resource_dir().parent.parent.parent
+            self.target_info._sdk_root_dir = clang_root
         elif self.build_toolchain == FreeBSDToolchainKind.CUSTOM:
             if self._cross_toolchain_root is None:
                 self.fatal("Requested custom toolchain but path is not set.")
             self.target_info._sdk_root_dir = self._cross_toolchain_root
+        else:
+            assert self.build_toolchain == FreeBSDToolchainKind.DEFAULT_EXTERNAL
+
         self._setup_make_args_called = False
         self.destdir = self.install_dir
         self._install_prefix = Path("/")
