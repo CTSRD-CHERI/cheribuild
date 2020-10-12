@@ -1163,9 +1163,9 @@ class BuildCHERIBSD(BuildFreeBSD):
     repository = GitRepository(
         url="https://github.com/CTSRD-CHERI/cheribsd.git",
         per_target_branches={
-            CompilationTargets.CHERIBSD_MORELLO_HYBRID: TargetBranchInfo(branch="morello",
+            CompilationTargets.CHERIBSD_MORELLO_HYBRID: TargetBranchInfo(branch="morello-dev",
                                                                          directory_name="morello-cheribsd"),
-            CompilationTargets.CHERIBSD_MORELLO_PURECAP: TargetBranchInfo(branch="morello",
+            CompilationTargets.CHERIBSD_MORELLO_PURECAP: TargetBranchInfo(branch="morello-dev",
                                                                           directory_name="morello-cheribsd")
             })
     _default_install_dir_fn = cheribsd_install_dir
