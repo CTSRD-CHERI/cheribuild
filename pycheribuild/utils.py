@@ -54,7 +54,7 @@ __all__ = ["typing", "print_command", "include_local_file", "CompilerInfo",  # n
            "run_command", "status_update", "fatal_error", "coloured", "AnsiColour", "set_env",  # no-combine
            "init_global_config", "warning_message", "popen_handle_noexec", "extract_version",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "get_compiler_info", "latest_system_clang_tool",  # no-combine
-           "get_program_version", "SafeDict", "keep_terminal_sane",  # no-combine
+           "get_program_version", "SafeDict", "keep_terminal_sane", "error_message",  # no-combine
            "default_make_jobs_count", "commandline_to_str", "OSInfo", "is_jenkins_build",  # no-combine
            "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
            "is_case_sensitive_dir", "SocketAndPort"]  # no-combine
@@ -517,6 +517,11 @@ def status_update(*args, sep=" ", **kwargs):
 def warning_message(*args, sep=" "):
     # we ignore fatal errors when simulating a run
     print(coloured(AnsiColour.magenta, maybe_add_space("Warning:", sep) + args, sep=sep), file=sys.stderr, flush=True)
+
+
+def error_message(*args, sep=" "):
+    # we ignore fatal errors when simulating a run
+    print(coloured(AnsiColour.red, maybe_add_space("Error:", sep) + args, sep=sep), file=sys.stderr, flush=True)
 
 
 def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exit_code=3):

@@ -41,7 +41,7 @@ try:
 except ImportError:
     argcomplete = None
 
-from ..utils import fatal_error, warning_message
+from ..utils import fatal_error, status_update, warning_message, error_message
 from ..colour import AnsiColour, coloured
 from pathlib import Path
 from enum import Enum
@@ -126,7 +126,7 @@ def get_argcomplete_prefix():
     comp_line = argcomplete.ensure_str(os.environ["COMP_LINE"])
     result = argcomplete.split_line(comp_line, int(os.environ["COMP_POINT"]))[1]
     if "_ARGCOMPLETE_BENCHMARK" in os.environ:
-        print("argcomplete_prefix =", result)
+        print("argcomplete_prefix =", result, file=sys.stderr)
     return result
 
 
@@ -193,7 +193,7 @@ class ConfigLoaderBase(object):
         # so we work around it using parse_known_args().
         self._parsed_args, trailing = self._parser.parse_known_args()
         # TODO: python 3.7 self._parsed_args = self._parser.parse_intermixed_args()
-        # print(self._parsed_args, trailingTargets)
+        # print(self._parsed_args, trailingTargets, file=sys.stderr)
         for x in trailing:
             # filter out unknown options (like -b)
             # exit with error
@@ -203,7 +203,7 @@ class ConfigLoaderBase(object):
                 # all the actions here anyway
                 all_options = getattr(self._parser, "_option_string_actionss", {}).keys()
                 if not all_options:
-                    warning_message("Internal argparse API change, cannot detect available command line options.")
+                    error_message("Internal argparse API change, cannot detect available command line options.")
                     all_options = ["--" + opt for opt in self.options.keys()]
                 suggestions = difflib.get_close_matches(x, all_options)
                 errmsg = "unknown argument '" + x + "'"
@@ -235,20 +235,20 @@ class ConfigLoaderBase(object):
         comp_prefix = self._argcomplete_prefix
         while comp_prefix is not None:  # fake loop to allow early return
             if comp_prefix.startswith("--") and name.startswith(comp_prefix[2:]):
-                # print("comp_prefix '", comp_prefix, "' matches name: ", name, sep="")
+                # self.debug_msg("comp_prefix '", comp_prefix, "' matches name: ", name, sep="")
                 break  # Okay, prefix matches long name
             elif shortname is not None and comp_prefix.startswith("-") and shortname.startswith(comp_prefix[1:]):
-                # print("comp_prefix '", comp_prefix, "' matches shortname: ", shortname, sep="")
+                # self.debug_msg("comp_prefix '", comp_prefix, "' matches shortname: ", shortname, sep="")
                 break  # Okay, prefix matches shortname
             elif type is bool and (comp_prefix.startswith("--no-") or self._argcomplete_prefix_includes_slash):
                 slash_index = name.rfind("/")
                 negated_name = name[:slash_index + 1] + "no-" + name[slash_index + 1:]
                 if negated_name.startswith(comp_prefix[2:]):
-                    # print("comp_prefix '", comp_prefix, "' matches negated option: ", negated_name, sep="")
+                    # self.debug_msg("comp_prefix '", comp_prefix, "' matches negated option: ", negated_name, sep="")
                     break  # Okay, prefix matches negated long name
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
-            # print("Skipping option", name)
+            # self.debug_msg("Skipping option", name)
             return kwargs.get("default", None)
 
         if option_cls is None:
@@ -304,6 +304,10 @@ class ConfigLoaderBase(object):
         for option in self.options.values():
             option._cached = None
 
+    def debug_msg(self, *args, sep=" ", **kwargs):
+        if self._parsed_args and self._parsed_args.verbose is True:
+            print(coloured(AnsiColour.cyan, *args, sep=sep), file=sys.stderr, **kwargs)
+
     @property
     def targets(self) -> "typing.List[str]":
         return self._parsed_args.targets
@@ -353,8 +357,7 @@ class ConfigOptionBase(object):
             for alias_name in self.alias_names:
                 result = self._load_option_impl(config, alias_name)
                 if result is not None:
-                    if config.verbose:
-                        print("Using alias config option value", alias_name, "for", self.name, "->", result)
+                    self.debug_msg("Using alias config option value", alias_name, "for", self.name, "->", result)
                     break
         if result is None and self._fallback_names is not None:
             for fallback_name in self._fallback_names:
@@ -362,8 +365,7 @@ class ConfigOptionBase(object):
                 assert fallback_option is not None
                 result = fallback_option._load_option_impl(config, fallback_name)
                 if result is not None:
-                    if config.verbose:
-                        print("Using fallback config option value", fallback_name, "for", self.name, "->", result)
+                    self.debug_msg("Using fallback config option value", fallback_name, "for", self.name, "->", result)
                     break
 
         if result is None:  # If no option is set fall back to the default
@@ -383,6 +385,9 @@ class ConfigOptionBase(object):
     def _load_option_impl(self, config: "CheriConfig", target_option_name) -> "typing.Optional[typing.Any]":
         # target_option_name may not be the same as self.full_option_name if we are loading the fallback value
         raise NotImplementedError()
+
+    def debug_msg(self, *args, **kwargs):
+        self._loader.debug_msg(*args, **kwargs)
 
     @property
     def full_option_name(self):
@@ -418,18 +423,17 @@ class ConfigOptionBase(object):
         # check for None to make sure we don't call str(None) which would result in "None"
         if result is None:
             return None
-        # print("Converting", result, "to", self.value_type)
+        # self.debug_msg("Converting", result, "to", self.value_type)
         # if the requested type is list, tuple, etc. use shlex.split() to convert strings to lists
         if self.value_type != str and isinstance(result, str):
             if isinstance(self.value_type, type) and issubclass(self.value_type, collections.abc.Sequence):
                 string_value = result
                 result = shlex.split(string_value)
-                print(coloured(AnsiColour.magenta, "Config option ", self.full_option_name, " (", string_value,
-                               ") should be a list, got a string instead -> assuming the correct value is ",
-                               result, sep=""))
+                warning_message("Config option ", self.full_option_name, " (", string_value, ") should be a list, ",
+                                "got a string instead -> assuming the correct value is ", result, sep="")
         if isinstance(self.value_type, type) and issubclass(self.value_type, Path):
             expanded = os.path.expanduser(os.path.expandvars(str(result)))
-            # print("Expanding env vars in", result, "->", expanded, os.environ)
+            # self.debug_msg("Expanding env vars in", result, "->", expanded, os.environ)
             result = Path(expanded).absolute()
         else:
             result = self.value_type(result)  # make sure it has the right type (e.g. Path, int, bool, str)
@@ -536,18 +540,17 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
     def _load_option_impl(self, config: "CheriConfig", target_option_name: str):
         # First check the value specified on the command line, then load JSON and then fallback to the default
         from_cmd_line = self._load_from_commandline()
-        # print(full_option_name, "from cmdline:", from_cmd_line)
+        # config_debug(full_option_name, "from cmdline:", from_cmd_line)
         if from_cmd_line is not None:
             if from_cmd_line != self.action.default:
                 return from_cmd_line
-            # print("From command line == default:", from_cmd_line, self.action.default, "-> trying JSON")
+            # config_debug("Command line == default:", from_cmd_line, self.action.default, "-> trying JSON")
         # try loading it from the JSON file:
         from_json = self._load_from_json(target_option_name)
-        # print(full_option_name, "from JSON:", from_json)
+        # self.debug_msg(full_option_name, "from JSON:", from_json)
         if from_json[0] is not None:
-            if config.verbose or True:
-                print(coloured(AnsiColour.blue, "Overriding default value for", target_option_name,
-                               "with value from JSON key", from_json[1], "->", from_json[0]))
+            status_update("Overriding default value for", target_option_name, "with value from JSON key", from_json[1],
+                          "->", from_json[0], file=sys.stderr)
             return from_json[0]
         return None  # not found -> fall back to default
 
@@ -585,14 +588,8 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
             # also check action.dest (as a fallback so I don't have to update all my config files right now)
             result = self._loader._json.get(self.action.dest, None)
             if result is not None:
-                print(coloured(AnsiColour.cyan, "Old JSON key", self.action.dest, "used, please use",
-                               full_option_name, "instead"))
+                warning_message("Old JSON key", self.action.dest, "used, please use", full_option_name, "instead")
         return result, used_key
-
-    # def __get__(self, instance, owner):
-    #     ret = super().__get__(instance, owner)
-    #     print(self.full_option_name, "=", ret, "--", type(ret))
-    #     return ret
 
 
 class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
@@ -636,7 +633,6 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         # This allows me to have symlinks for e.g. stable-cheribuild.py release-cheribuild.py debug-cheribuild.py
         # that pick up the right config file in ~/.config
         config_prefix = self.get_config_prefix()
-        # print("Name is:", program, "prefix:", config_prefix)
         self.default_config_path = Path(self.configdir, config_prefix + "cheribuild.json")
         self.path_group.add_argument("--config-file", metavar="FILE", type=str, default=str(self.default_config_path),
                                      action=ArgparseSetGivenAction,
@@ -686,10 +682,8 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 stripped = line.strip()
                 if not stripped.startswith("#") and not stripped.startswith("//"):
                     json_lines.append(line)
-            # print("".join(jsonLines))
             result = json.loads("".join(json_lines), object_pairs_hook=dict_raise_on_duplicates)
-            if self._parsed_args and self._parsed_args.verbose is True:
-                print("Parsed", config_path, "as", coloured(AnsiColour.cyan, json.dumps(result)))
+            self.debug_msg("Parsed", config_path, "as", coloured(AnsiColour.cyan, json.dumps(result)))
             return result
 
     # Based on https://stackoverflow.com/a/7205107/894271
@@ -704,9 +698,9 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 if isinstance(a[key], dict) and isinstance(b[key], dict):
                     self.merge_dict_recursive(a[key], b[key], included_file, base_file, path + [str(key)])
                 elif a[key] != b[key]:
-                    if self._parsed_args and self._parsed_args.verbose is True:
-                        print("Overriding '" + '.'.join(path + [str(key)]) + "' value", b[key], " from", included_file,
-                              "with value ", a[key], "from", base_file)
+                    if self._parsed_args:
+                        self.debug_msg("Overriding '" + '.'.join(path + [str(key)]) + "' value", b[key], " from",
+                                       included_file, "with value ", a[key], "from", base_file)
                 else:
                     pass  # same leaf value
             else:
@@ -718,7 +712,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         try:
             result = self.__load_json_with_comments(config_path)
         except Exception as e:
-            print(coloured(AnsiColour.red, "Could not load config file", config_path, "-", e), file=sys.stderr)
+            error_message("Could not load config file ", config_path, ": ", e, sep="")
             if not sys.__stdin__.isatty() or not input("Invalid config file " + str(config_path) +
                                                        ". Continue? y/[N]").lower().startswith("y"):
                 raise
@@ -727,9 +721,8 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             included_path = config_path.parent / include_value
             included_json = self.__load_json_with_includes(included_path)
             result = self.merge_dict_recursive(result, included_json, included_path, config_path)
-            if self._parsed_args and self._parsed_args.verbose is True:
-                print(coloured(AnsiColour.cyan, "Merging JSON config file", included_path))
-                print("New result is", coloured(AnsiColour.cyan, json.dumps(result)))
+            self.debug_msg(coloured(AnsiColour.cyan, "Merging JSON config file", included_path))
+            self.debug_msg("New result is", coloured(AnsiColour.cyan, json.dumps(result)))
 
         return result
 
@@ -745,12 +738,11 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         if self._config_path.exists():
             self._json = self.__load_json_with_includes(self._config_path)
         elif hasattr(self._parsed_args, "config_file_given"):
-            print(coloured(AnsiColour.red, "Configuration file", self._config_path,
-                           "does not exist, using only command line arguments."), file=sys.stderr)
+            error_message("Configuration file", self._config_path, "does not exist, using only command line arguments.")
             raise FileNotFoundError(self._parsed_args.config_file)
         else:
-            print(coloured(AnsiColour.green, "Configuration file", self._config_path,
-                           "does not exist, using only command line arguments."), file=sys.stderr)
+            warning_message(coloured(AnsiColour.green, "Configuration file", self._config_path,
+                                     "does not exist, using only command line arguments."))
 
     def load(self):
         self._load_command_line_args()
@@ -782,7 +774,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 if fullname in option.alias_names:
                     return True
 
-        print(coloured(AnsiColour.red, "Unknown config option '", fullname, "' in ", self._config_path, sep=""))
+        error_message("Unknown config option '", fullname, "' in ", self._config_path, sep="")
         if self.unknown_config_option_is_error:
             raise ValueError("Unknown config option '" + fullname + "'")
         return False
