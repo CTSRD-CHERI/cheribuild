@@ -36,6 +36,7 @@ try_run() {
     if [ -n "$VERBOSE" ]; then
         try_run_verbose "$@"
     else
+        echo "Running: $*"
         if ! "$@" 2>/dev/null >/dev/null; then
             echo >&2 "Failed to run $*, don't push this!"
             exit 1
