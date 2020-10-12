@@ -131,6 +131,8 @@ class BuildFreeBSDBase(Project):
             NO_ROOT=True,  # use this even if current user is root, as without it the METALOG file is not created
             BUILD_WITH_STRICT_TMPPATH=True,  # This can catch lots of depdency errors
             )
+        # FreeBSD has renamed NO_CLEAN to WITHOUT_CLEAN, so set both to silence the annoying warning
+        self.make_args.set_with_options(CLEAN=False)
 
         if self.minimal:
             self.make_args.set_with_options(MAN=False, KERBEROS=False, SVN=False, SVNLITE=False, MAIL=False, ZFS=False,
