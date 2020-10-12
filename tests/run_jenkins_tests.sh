@@ -45,3 +45,4 @@ fi
 
 # Run jenkins --build --test for all targets and check there are not exceptions
 ./cheribuild.py --list-targets | grep -v "available targets:" | xargs env WORKSPACE=/tmp ./jenkins-cheri-build.py --allow-more-than-one-target --build --test --cpu=default -p > /dev/null
+env WORKSPACE=/tmp ./jenkins-cheri-build.py --help
