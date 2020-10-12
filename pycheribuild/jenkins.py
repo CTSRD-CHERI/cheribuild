@@ -64,6 +64,7 @@ class JenkinsConfigLoader(ConfigLoaderBase):
     def load(self):
         self._load_command_line_args()
         assert isinstance(self._parsed_args.targets, list)
+        self._parsed_args.verbose = True
 
     def finalize_options(self, available_targets: list, **kwargs):
         target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
