@@ -53,6 +53,7 @@ from .utils import (commandline_to_str, fatal_error, get_program_version, init_g
                     status_update, ThreadJoiner, warning_message)
 
 EXTRACT_SDK_TARGET = "extract-sdk"
+RUN_EVERYTHING_TARGET = "__run_everything__"
 
 
 class JenkinsConfigLoader(ConfigLoaderBase):
@@ -67,7 +68,7 @@ class JenkinsConfigLoader(ConfigLoaderBase):
     def finalize_options(self, available_targets: list, **kwargs):
         target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
                                                   help="The target to build",
-                                                  choices=available_targets + [EXTRACT_SDK_TARGET])
+                                                  choices=available_targets + [EXTRACT_SDK_TARGET, RUN_EVERYTHING_TARGET])
         if self._completing_arguments:
             try:
                 import argcomplete
@@ -225,6 +226,9 @@ def _jenkins_main():
             len(cheri_config.targets) > 0 and cheri_config.targets[0] == EXTRACT_SDK_TARGET):
         create_sdk_from_archives(cheri_config, not cheri_config.extract_compiler_only)
         sys.exit()
+
+    if RUN_EVERYTHING_TARGET in cheri_config.targets:
+        cheri_config.targets = list(target_manager.target_names)
 
     if cheri_config.action == [""]:
         fatal_error("No action specified, did you mean to pass --build?")
