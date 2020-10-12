@@ -230,8 +230,16 @@ def _jenkins_main():
         fatal_error("No action specified, did you mean to pass --build?")
         sys.exit()
 
+    if len(cheri_config.targets) < 1:
+        fatal_error("Missing target?")
+        sys.exit()
+
     if JenkinsAction.CREATE_TARBALL in cheri_config.action and len(cheri_config.targets) != 1:
         fatal_error("--create-tarball expects exactly one target!")
+        sys.exit()
+
+    if len(cheri_config.targets) != 1 and not cheri_config.allow_more_than_one_target:
+        fatal_error("More than one target is not supported yet.")
         sys.exit()
 
     if JenkinsAction.BUILD in cheri_config.action or JenkinsAction.TEST in cheri_config.action:
@@ -283,6 +291,7 @@ def build_target(cheri_config, target: Target):
             project._install_prefix = cheri_config.installation_prefix
             project._install_dir = cheri_config.output_root
 
+        # FIXME: only do the SDK setup once for multiple targets
         if JenkinsAction.BUILD in cheri_config.action:
             if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
                 assert cheri_config.cheri_sdk_dir == Path("/cheri-sdk"), cheri_config.cheri_sdk_dir

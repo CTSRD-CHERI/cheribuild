@@ -103,6 +103,7 @@ do
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --test --tarball --cpu=cheri128 -p llvm-native
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --test --tarball --cpu=cheri128 -p llvm-native --without-sdk
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --cpu=cheri128 --test run-minimal-mips64-hybrid --keep-install-dir --install-prefix=/rootfs --cheribsd/build-fpga-kernels --no-clean -p
+		try_run ./cheribuild.py --list-targets | grep -v "available targets:" | xargs env WORKSPACE=/tmp ./jenkins-cheri-build.py --allow-more-than-one-target --build --test --cpu=default -p
 
 		# Run python tests before pushing
 		if [ -e pytest.ini ]; then

@@ -150,6 +150,10 @@ class JenkinsConfig(CheriConfig):
         self.skip_configure = loader.add_bool_option("skip-configure", help="Skip the configure step")
         self.force_configure = True
         self.include_dependencies = False
+        self.allow_more_than_one_target = loader.add_commandline_only_bool_option(
+            "allow-more-than-one-target", help_hidden=True,
+            help="Allow more than one target on the command line. This should only be used for testing since "
+                 "dependencies are not resolved!")
         loader.finalize_options(available_targets)
         self.FS = FileSystemUtils(self)
 

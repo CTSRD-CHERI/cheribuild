@@ -43,8 +43,5 @@ fi
 ./cheribuild.py --help > /dev/null
 ./cheribuild.py --help-all > /dev/null
 
-targets=$(./cheribuild.py --list-targets | grep -v "available targets:")
-# echo "targets=$targets"
-for i in $targets; do
-  WORKSPACE=/tmp ./jenkins-cheri-build.py --build --test --cpu=default -p "$i" > /dev/null;
-done
+# Run jenkins --build --test for all targets and check there are not exceptions
+./cheribuild.py --list-targets | grep -v "available targets:" | xargs env WORKSPACE=/tmp ./jenkins-cheri-build.py --allow-more-than-one-target --build --test --cpu=default -p > /dev/null
