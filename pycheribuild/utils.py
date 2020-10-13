@@ -57,7 +57,7 @@ __all__ = ["typing", "print_command", "include_local_file", "CompilerInfo",  # n
            "get_program_version", "SafeDict", "keep_terminal_sane", "error_message",  # no-combine
            "default_make_jobs_count", "commandline_to_str", "OSInfo", "is_jenkins_build",  # no-combine
            "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
-           "is_case_sensitive_dir", "SocketAndPort"]  # no-combine
+           "is_case_sensitive_dir", "SocketAndPort", "replace_one"]  # no-combine
 Type_T = typing.TypeVar("Type_T")
 
 
@@ -823,6 +823,14 @@ class ThreadJoiner(object):
             if self.thread.is_alive():
                 status_update("Waiting for '", self.thread.name, "' to complete", sep="")
             self.thread.join()
+
+
+def replace_one(s: str, old, new):
+    """Like str.replace() but raises an exception if old is not in s"""
+    result = s.replace(old, new, 1)
+    if result == s:
+        raise ValueError(old + " not contained in " + s)
+    return result
 
 
 # A dictionary for string formatting (format_map) that preserves values not

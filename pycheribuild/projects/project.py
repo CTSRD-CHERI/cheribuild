@@ -52,9 +52,9 @@ from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchi
 from ..filesystemutils import FileSystemUtils
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str, CompilerInfo,
-                     fatal_error, get_compiler_info, get_program_version,
-                     get_version_output, include_local_file, is_jenkins_build, OSInfo, popen_handle_noexec,
-                     print_command, run_command, status_update, ThreadJoiner, warning_message)
+                     fatal_error, get_compiler_info, get_program_version, get_version_output, include_local_file,
+                     is_jenkins_build, OSInfo, popen_handle_noexec, print_command, replace_one, run_command,
+                     status_update, ThreadJoiner, warning_message)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
@@ -157,27 +157,26 @@ class ProjectSubclassDefinitionHook(type):
                 new_cls = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
                 assert issubclass(new_cls, SimpleProject)
                 target_manager.add_target(MultiArchTarget(new_name, new_cls, arch, base_target))
-                # Handle old names in the config file:
-                # old_names = cls.__dict__.get("_config_file_aliases", tuple())
-                if arch.target_info_cls.is_freebsd():
+                # Handle old names for FreeBSD/CheriBSD targets in the config file:
+                if arch.target_info_cls.is_freebsd() and not arch.target_info_cls.is_native():
                     if arch.target_info_cls.is_cheribsd():
                         if arch.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
-                            new_cls._config_file_aliases += (new_name.replace("-mips64-", "-mips-"),)
+                            new_cls._config_file_aliases += (replace_one(new_name, "-mips64-", "-mips-"),)
                         elif arch.is_mips(include_purecap=False):
-                            new_cls._config_file_aliases += (new_name.replace("-mips64", "-mips-nocheri"),)
+                            new_cls._config_file_aliases += (replace_one(new_name, "-mips64", "-mips-nocheri"),)
                     else:
                         # FreeBSD target suffixes have also changed over time
                         if arch.is_mips(include_purecap=False):
-                            new_cls._config_file_aliases += (new_name.replace("-mips64", "-mips"),)
+                            new_cls._config_file_aliases += (replace_one(new_name, "-mips64", "-mips"),)
                         elif arch.is_x86_64(include_purecap=False):
-                            new_cls._config_file_aliases += (new_name.replace("-amd64", "-x86"),
-                                                             new_name.replace("-amd64", "-x86_64"))
+                            new_cls._config_file_aliases += (replace_one(new_name, "-amd64", "-x86"),
+                                                             replace_one(new_name, "-amd64", "-x86_64"))
                 # Temporary: add deprecated aliases: mips-* -> mips64*
                 if arch.is_mips(include_purecap=True) and (
                         new_name.endswith("-mips64-purecap") or new_name.endswith("-mips64-hybrid")):
-                    target_manager.add_target_alias(new_name.replace("-mips64-", "-mips-"), new_name, deprecated=True)
+                    target_manager.add_target_alias(replace_one(new_name, "-mips64-", "-mips-"), new_name, deprecated=True)
                 elif arch.is_mips(include_purecap=False) and (new_name.endswith("-mips64")):
-                    target_manager.add_target_alias(new_name.replace("-mips64", "-mips-nocheri"), new_name,
+                    target_manager.add_target_alias(replace_one(new_name, "-mips64", "-mips-nocheri"), new_name,
                                                     deprecated=True)
                 if len(set(new_cls._config_file_aliases)) != len(new_cls._config_file_aliases):
                     raise ValueError("Duplicate aliases for {}: {}".format(new_name, new_cls._config_file_aliases))
