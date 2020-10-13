@@ -596,7 +596,7 @@ class _BuildDiskImageBase(SimpleProject):
                 self.info("qemu-img from CHERI SDK not found, falling back to system qemu-img")
                 qemu_img_command = Path(system_qemu_img)
             else:
-                self.warning("qemu-img command was not found! Make sure to build target qemu first.")
+                self.info("qemu-img command was not found. Will not be able to create QCOW2 images")
         # AArch64 and x86 require different disk images:
         if self.crosscompile_target.is_aarch64(include_purecap=True):
             self.make_aarch64_disk_image()
@@ -792,7 +792,7 @@ class _BuildDiskImageBase(SimpleProject):
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     project_name = "disk-image-minimal"
     disk_image_prefix = "cheribsd-minimal"
-    dependencies = ["qemu", "cheribsd"]  # TODO: include gdb?
+    dependencies = ["cheribsd"]  # TODO: include gdb?
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
                                CompilationTargets.CHERIBSD_MIPS_PURECAP,
                                CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_RISCV_HYBRID,
@@ -1035,7 +1035,7 @@ class BuildMultiArchDiskImage(_BuildDiskImageBase):
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
-        return ["qemu", cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
+        return [cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
 
     @property
     def is_x86(self):

@@ -192,7 +192,7 @@ def test_riscv():
     assert _sort_targets(["run-riscv64-purecap"], add_dependencies=True, skip_sdk=True) == [
         "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"]
     assert _sort_targets(["disk-image-riscv64"], add_dependencies=True, skip_sdk=False) == [
-        "qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64"]
+        "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64"]
     assert _sort_targets(["run-riscv64"], add_dependencies=True, skip_sdk=False) == [
         "qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64", "run-riscv64"]
 
