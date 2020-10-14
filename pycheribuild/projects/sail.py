@@ -121,8 +121,8 @@ class OpamMixin(object):
             opam_env["OPAM_USER_PATH_RO"] = Path(self.opam_binary).parent
         if not (self.opamroot / "opam-init").exists():
             # noinspection PyUnresolvedReferences
-            self.run_cmd(self.opam_binary, "init", "--root=" + str(self.opamroot), "--no-setup", cwd="/",
-                         env=opam_env)  # pytype: disable=attribute-error
+            self.run_cmd(self.opam_binary, "init", "--disable-sandboxing", "--root=" + str(self.opamroot), "--no-setup",
+                         cwd="/", env=opam_env)  # pytype: disable=attribute-error
         return opam_env, cwd
 
     def run_in_ocaml_env(self, command: str, cwd=None, print_verbose_only=False, **kwargs):
@@ -156,7 +156,7 @@ class Opam2(SimpleProject):
         if OSInfo.IS_LINUX:
             self.makedirs(self.config.other_tools_dir / "bin")
             # NOTE: 2.0.2 won't work for me
-            self.run_cmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.6/opam-2.0.6-x86_64-linux", "-O",
+            self.run_cmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.7/opam-2.0.7-x86_64-linux", "-O",
                          self.config.other_tools_dir / "bin/opam")
             # Make it executable
             if not self.config.pretend:
