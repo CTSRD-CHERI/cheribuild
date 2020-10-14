@@ -31,6 +31,7 @@
 import os
 import shutil
 from pathlib import Path
+from operator import add
 
 from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..utils import OSInfo, set_env
@@ -115,13 +116,17 @@ class BuildSamba(Project):
 
     def process(self):
         if OSInfo.IS_MAC:
-            # We need readline and krb5 from homebrew:
-            with set_env(PATH="/usr/local/opt/krb5/bin:/usr/local/opt/krb5/sbin:" + os.getenv("PATH", ""),
-                         PKG_CONFIG_PATH="/usr/local/opt/krb5/lib/pkgconfig:/usr/local/opt/readline/lib/pkgconfig:" +
+            # We need icu4c, krb5 and readline from homebrew:
+            homebrew_keg_only_packages = ['icu4c', 'krb5', 'readline']
+            homebrew_dirs = ["/usr/local/opt/" + x for x in homebrew_keg_only_packages]
+            with set_env(PATH=':'.join([x + "/bin" for x in homebrew_dirs]) + ':' +
+                              ':'.join([x + "/sbin" for x in homebrew_dirs]) + ':' +
+                              os.getenv("PATH", ""),
+                         PKG_CONFIG_PATH=':'.join([x + "/lib/pkgconfig" for x in homebrew_dirs]) + ':' +
                                          os.getenv("PKG_CONFIG_PATH", ""),
-                         LDFLAGS="-L/usr/local/opt/krb5/lib -L/usr/local/opt/readline/lib",
-                         CPPFLAGS="-I/usr/local/opt/krb5/include -I/usr/local/opt/readline/include",
-                         CFLAGS="-I/usr/local/opt/krb5/include -I/usr/local/opt/readline/include"):
+                         LDFLAGS=' '.join(["-L" + x + "/lib" for x in homebrew_dirs]),
+                         CPPFLAGS=' '.join(["-I" + x + "/include" for x in homebrew_dirs]),
+                         CFLAGS=' '.join(["-I" + x + "/include" for x in homebrew_dirs])):
                 super().process()
         else:
             super().process()
