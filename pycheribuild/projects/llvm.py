@@ -470,11 +470,12 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
 
     def configure(self, **kwargs):
         # Unless we set the default target triple, CMake will not be able to determine the compiler ID.
-        # The other alternative to fix this problem is to build the host backend. To save build time we do the former.
-        self.add_cmake_options(LLVM_DEFAULT_TARGET_TRIPLE=CheriBSDMorelloTargetInfo.triple_for_target(
-            CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config, include_version=True))
-        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="AArch64")
-        # self.add_cmake_options(LLVM_TARGETS_TO_BUILD="AArch64;host")
+        # The other alternative to fix this problem is to build the host backend.
+        # To save build time we could do the former, but some projects except a working host compiler for
+        # configure-time compiler checks.
+        # self.add_cmake_options(LLVM_DEFAULT_TARGET_TRIPLE=CheriBSDMorelloTargetInfo.triple_for_target(
+        #    CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config, include_version=True))
+        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="AArch64;host")
         super().configure(**kwargs)
 
 
