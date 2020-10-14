@@ -1468,9 +1468,11 @@ class BuildCheriBsdMfsKernel(SimpleProject):
             return build_cheribsd.kernel_config + "_MFS_ROOT"
         elif xtarget.is_riscv(include_purecap=True):
             conf = build_cheribsd.kernel_config
+            conf_suffix = ""
             if conf.endswith("-NODEBUG"):
                 conf = conf[0:-len("-NODEBUG")]
-            return conf + "-MFS-ROOT"
+                conf_suffix = "-NODEBUG"
+            return conf + "-MFS-ROOT" + conf_suffix
         return build_cheribsd.kernel_config
 
     @classmethod
