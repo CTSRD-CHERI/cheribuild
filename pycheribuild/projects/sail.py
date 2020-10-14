@@ -48,7 +48,7 @@ class OpamMixin(object):
         assert isinstance(self, SimpleProject)
         self.add_required_system_tool("opam", homebrew="opam",
                                       cheribuild_target="opam-2.0")  # pytype: disable=attribute-error
-        self.required_ocaml_version = "4.06.1"
+        self.required_ocaml_version = "4.11.1"
         self.__using_correct_switch = False
         self.__ignore_switch_version = False
 
@@ -248,7 +248,7 @@ class BuildSailFromOpam(ProjectUsingOpam):
         # noinspection PyUnreachableCode
         if False:
             self.run_opam_cmd("install", "-y", "--verbose", "sail")
-            opamroot_sail_binary = self.opamroot / "4.06.0/bin/sail"
+            opamroot_sail_binary = self.opamroot / self.required_ocaml_version / "bin/sail"
             self.run_cmd(opamroot_sail_binary, "-v")
             self.create_symlink(opamroot_sail_binary, self.config.cheri_sdk_bindir / opamroot_sail_binary.name)
 
@@ -415,7 +415,7 @@ class OcamlProject(OpamMixin, Project):
             self.warning(e)
             self.warning("stderr was:", e.stderr)
             hint = "Try running `" + self._opam_cmd_str("update", _add_switch=False) + " && " + self._opam_cmd_str(
-                "switch", _add_switch=False) + " 4.06.0`"
+                "switch", _add_switch=False) + " " + self.required_ocaml_version + "`"
             self.dependency_error("OCaml env seems to be messed up. Note: On MacOS homebrew OCaml is not installed"
                                   " correctly. Try installing it with opam instead:", install_instructions=hint)
         super().process()
