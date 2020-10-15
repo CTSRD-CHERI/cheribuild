@@ -57,6 +57,9 @@ class LaunchFVPBase(SimpleProject):
         cls.simulator_path = cls.add_path_option("simulator-path", help="Path to the FVP Model",
                                                  default="/usr/local/FVP_Base_RevC-Rainier")
         cls.firmware_path = cls.add_path_option("firmware-path", help="Path to the UEFI firmware binaries")
+        cls.remote_disk_image_path = cls.add_config_option("remote-disk-image-path",
+                                                           help="When set rsync will be used to update the image from "
+                                                                "the remote server prior to running it.")
         cls.ssh_port = cls.add_config_option("ssh-port", default=cls.default_ssh_port(), kind=int)
 
     # noinspection PyAttributeOutsideInit
@@ -79,6 +82,9 @@ class LaunchFVPBase(SimpleProject):
                                                  self.simulator_path / "models/Linux64_GCC-6.4/FVP_Base_RevC-Rainier")
             bl1_bin = self.ensure_file_exists("bl1.bin firmware", self.firmware_path / "bl1.bin")
             fip_bin = self.ensure_file_exists("fip.bin firmware", self.firmware_path / "fip.bin")
+            if self.remote_disk_image_path:
+                self.copy_remote_file(self.remote_disk_image_path,
+                                      self._source_class.get_instance(self).disk_image_path)
             disk_image = self.ensure_file_exists("disk image", self._source_class.get_instance(self).disk_image_path)
             # TODO: tracing support:
             # TARMAC_TRACE="--plugin ${PLUGIN_DIR}/TarmacTrace.so"
