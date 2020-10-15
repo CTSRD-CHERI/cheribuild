@@ -478,6 +478,13 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
         self.add_cmake_options(LLVM_TARGETS_TO_BUILD="AArch64;host")
         super().configure(**kwargs)
 
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        # FIXME: this appears to break the cheribsd build, so let's remove it for now...
+        # Seems like this is fixed in CHERI LLVM so it might be caused by Morello LLVM being based on an older version
+        if OSInfo.IS_MAC and (self.install_dir / "include/c++/v1").is_symlink():
+            self.delete_file(self.install_dir / "include/c++/v1")
+
 
 class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://github.com/llvm/llvm-project.git")
