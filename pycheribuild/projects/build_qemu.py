@@ -170,7 +170,7 @@ class BuildQEMUBase(AutotoolsProject):
                 smbd_path = self.config.other_tools_dir / "sbin/smbd"
 
             self.add_required_system_tool(smbd_path, cheribuild_target="samba", freebsd="samba48", apt="samba",
-                                          homebrew="samba")
+                                          homebrew="arichardson/cheri/samba")
 
             self.configure_args.append("--smbd=" + str(smbd_path))
             if not Path(smbd_path).exists():
