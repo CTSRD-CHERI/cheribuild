@@ -93,23 +93,26 @@ class LaunchFVPBase(SimpleProject):
             # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.start-instruction-count=4400000000" # just after login
             # ARCH_MSG="--plugin ${PLUGIN_DIR}/ArchMsgTrace.so -C
             # ARCH_MSG="${ARCH_MSG} -C TRACE.ArchMsgTrace.trace-file=${HOME}/rainier/rainier.archmsg.trace"
-            self.run_cmd(sim_binary, "--plugin", morello_plugin,
-                         "-C", "pctl.startup=0.0.0.0",
-                         "-C", "bp.secure_memory=0",
-                         "-C", "cache_state_modelled=0",
-                         "-C", "bp.pl011_uart0.untimed_fifos=1",
-                         "-C", "cluster0.NUM_CORES=1",
-                         "-C", "bp.smsc_91c111.enabled=1",
-                         "-C", "bp.hostbridge.userNetworking=true",
-                         "-C", "bp.hostbridge.userNetPorts=" + str(self.ssh_port) + "=22",
-                         "-C", "bp.hostbridge.interfaceName=ARM0",
-                         "-C", "bp.virtio_net.enabled=0",
-                         "-C", "bp.virtio_net.transport=legacy",
-                         "-C", "bp.virtio_net.hostbridge.userNetworking=1",
-                         "-C", "bp.secureflashloader.fname=" + str(bl1_bin),
-                         "-C", "bp.flashloader0.fname=" + str(fip_bin),
-                         "-C", "bp.virtioblockdevice.image_path=" + str(disk_image),
-                         "-S", "--print-port-number", "--run")
+
+            model_params = [
+                "pctl.startup=0.0.0.0",
+                "bp.secure_memory=0",
+                "cache_state_modelled=0",
+                "bp.pl011_uart0.untimed_fifos=1",
+                "cluster0.NUM_CORES=1",
+                "bp.smsc_91c111.enabled=1",
+                "bp.hostbridge.userNetworking=true",
+                "bp.hostbridge.userNetPorts=" + str(self.ssh_port) + "=22",
+                "bp.hostbridge.interfaceName=ARM0",
+                "bp.virtio_net.enabled=0",
+                "bp.virtio_net.transport=legacy",
+                "bp.virtio_net.hostbridge.userNetworking=1",
+                "bp.secureflashloader.fname=" + str(bl1_bin),
+                "bp.flashloader0.fname=" + str(fip_bin),
+                "bp.virtioblockdevice.image_path=" + str(disk_image),
+                ]
+            param_cmd_args = [x for param in model_params for x in ("-C", param)]
+            self.run_cmd([sim_binary, "--plugin", morello_plugin, "--print-port-number"] + param_cmd_args)
 
 
 class LaunchFVPCheriBSD(LaunchFVPBase):
