@@ -913,6 +913,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         kwargs["no_print"] = True
         return run_command(shell, "-xe" if self.config.verbose else "-e", "-c", script, **kwargs)
 
+    def ensure_file_exists(self, what, path) -> Path:
+        if not path.exists():
+            self.fatal(what, "not found:", path)
+        return path
+
     def print(self, *args, **kwargs):
         if not self.config.quiet:
             print(*args, **kwargs)
