@@ -378,7 +378,7 @@ optional arguments:
   --verbose, -v         Print all commmands that are executed (default: 'False')
   --clean, -c           Remove the build directory before build (default: 'False')
   --force, -f           Don't prompt for user input but use the default action (default: 'False')
-  --logfile             Don't write a logfile for the build steps (default: 'False')
+  --logfile             Write a logfile for the build steps (default: 'False')
   --skip-update         Skip the git pull step (default: 'False')
   --force-update        Always update (with autostash) even if there are uncommitted changes (default: 'False')
   --skip-configure      Skip the configure step (default: 'False')
