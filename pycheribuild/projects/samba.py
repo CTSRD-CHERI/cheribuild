@@ -31,7 +31,6 @@
 import os
 import shutil
 from pathlib import Path
-from operator import add
 
 from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..utils import OSInfo, set_env
