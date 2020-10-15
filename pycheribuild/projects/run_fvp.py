@@ -1,0 +1,112 @@
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# Copyright (c) 2020 Alex Richardson
+#
+# This work was supported by Innovate UK project 105694, "Digital Security by
+# Design (DSbD) Technology Platform Prototype".
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+import os
+from pathlib import Path
+
+from .disk_image import BuildCheriBSDDiskImage
+from .project import SimpleProject
+from ..config.compilation_targets import CompilationTargets
+from ..utils import set_env
+
+
+class LaunchFVPBase(SimpleProject):
+    do_not_add_to_targets = True
+    _source_class = BuildCheriBSDDiskImage
+    dependencies = [_source_class.target]
+    supported_architectures = _source_class.supported_architectures
+
+    def setup(self):
+        super().setup()
+        assert self.crosscompile_target.is_aarch64(include_purecap=True)
+
+    @staticmethod
+    def default_ssh_port():
+        # chose a different port for each user (hopefully it isn't in use yet)
+        return 12345 + ((os.getuid() - 1000) % 10000)
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+
+        cls.license_server = cls.add_config_option("license-server", help="License server to use for the model")
+        cls.simulator_path = cls.add_path_option("simulator-path", help="Path to the FVP Model",
+                                                 default="/usr/local/FVP_Base_RevC-Rainier")
+        cls.firmware_path = cls.add_path_option("firmware-path", help="Path to the UEFI firmware binaries")
+        cls.ssh_port = cls.add_config_option("ssh-port", default=cls.default_ssh_port(), kind=int)
+
+    # noinspection PyAttributeOutsideInit
+    def process(self):
+        if not self.license_server:
+            self.license_server = "unknown.license.server"  # for --pretend
+            self.fatal("License server info unknown, set the", "--" + self.get_config_option_name("license_server"),
+                       "config option!")
+        if not self.firmware_path:
+            self.firmware_path = Path("/unknown/firmware/path")  # for --pretend
+            self.fatal("Firmware path is unknown, set the", "--" + self.get_config_option_name("firmware_path"),
+                       "config option!")
+        if not self.simulator_path.is_dir():
+            self.fatal("FVP path", self.simulator_path, "does not exist, set the",
+                       "--" + self.get_config_option_name("simulator_path"), "config option!")
+        with set_env(ARMLMD_LICENSE_FILE=self.license_server, print_verbose_only=False):
+            morello_plugin = self.ensure_file_exists("Morello FVP plugin",
+                                                     self.simulator_path / "plugins/Linux64_GCC-6.4/MorelloPlugin.so")
+            sim_binary = self.ensure_file_exists("Model binary",
+                                                 self.simulator_path / "models/Linux64_GCC-6.4/FVP_Base_RevC-Rainier")
+            bl1_bin = self.ensure_file_exists("bl1.bin firmware", self.firmware_path / "bl1.bin")
+            fip_bin = self.ensure_file_exists("fip.bin firmware", self.firmware_path / "fip.bin")
+            disk_image = self.ensure_file_exists("disk image", self._source_class.get_instance(self).disk_image_path)
+            # TODO: tracing support:
+            # TARMAC_TRACE="--plugin ${PLUGIN_DIR}/TarmacTrace.so"
+            # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.trace-file=${HOME}/rainier/rainier.tarmac.trace"
+            # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.quantum-size=0x1"
+            # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.start-instruction-count=4400000000" # just after login
+            # ARCH_MSG="--plugin ${PLUGIN_DIR}/ArchMsgTrace.so -C
+            # ARCH_MSG="${ARCH_MSG} -C TRACE.ArchMsgTrace.trace-file=${HOME}/rainier/rainier.archmsg.trace"
+            self.run_cmd(sim_binary, "--plugin", morello_plugin,
+                         "-C", "pctl.startup=0.0.0.0",
+                         "-C", "bp.secure_memory=0",
+                         "-C", "cache_state_modelled=0",
+                         "-C", "bp.pl011_uart0.untimed_fifos=1",
+                         "-C", "cluster0.NUM_CORES=1",
+                         "-C", "bp.smsc_91c111.enabled=1",
+                         "-C", "bp.hostbridge.userNetworking=true",
+                         "-C", "bp.hostbridge.userNetPorts=" + str(self.ssh_port) + "=22",
+                         "-C", "bp.hostbridge.interfaceName=ARM0",
+                         "-C", "bp.virtio_net.enabled=0",
+                         "-C", "bp.virtio_net.transport=legacy",
+                         "-C", "bp.virtio_net.hostbridge.userNetworking=1",
+                         "-C", "bp.secureflashloader.fname=" + str(bl1_bin),
+                         "-C", "bp.flashloader0.fname=" + str(fip_bin),
+                         "-C", "bp.virtioblockdevice.image_path=" + str(disk_image),
+                         "-S", "--print-port-number", "--run")
+
+
+class LaunchFVPCheriBSD(LaunchFVPBase):
+    target = "run-fvp"
+    _source_class = BuildCheriBSDDiskImage
+    supported_architectures = [CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP]
