@@ -819,8 +819,8 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         super().setup_config_options(default_hostname=default_hostname, extra_files_suffix="-minimal", **kwargs)
         cls.strip_binaries = cls.add_bool_option("strip", default=True,
                                                  help="strip ELF files to reduce size of generated image")
-        cls.include_cheritest = cls.add_bool_option("include-cheritest", default=True,
-                                                    help="Also add static cheritest base variants to the disk image")
+        cls.include_cheribsdtest = cls.add_bool_option("include-cheribsdtest", default=True,
+                                                       help="Also add static cheribsdtest base variants to the disk image")
         cls.use_cheribsd_purecap_rootfs = cls.add_bool_option("use-cheribsd-purecap-rootfs", default=False,
                                                               help="Use the rootfs built by cheribsd-purecap instead")
 
@@ -899,8 +899,8 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             elif (fullpath / "libc.so").exists():
                 self.add_required_libraries(["usr/" + libcompat_dir])
 
-        if self.include_cheritest:
-            for i in [("cheritest-hybrid", "cheritest"), ("cheritest-purecap", "cheriabitest")]:
+        if self.include_cheribsdtest:
+            for i in [("cheribsdtest-hybrid", "cheritest"), ("cheribsdtest-purecap", "cheriabitest")]:
                 test_binary = self.rootfs_dir / "bin" / i[0]  # type: Path
                 old_test_binary = self.rootfs_dir / "bin" / i[1]  # type: Path
                 if test_binary.exists():
