@@ -31,6 +31,7 @@ from pathlib import Path
 from .disk_image import BuildCheriBSDDiskImage
 from .project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
+from ..config.loader import ComputedDefaultValue
 from ..utils import OSInfo, set_env
 
 
@@ -109,66 +110,77 @@ class LaunchFVPBase(SimpleProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
-        cls.license_server = cls.add_config_option("license-server", help="License server to use for the model")
-        cls.simulator_path = cls.add_path_option("simulator-path", help="Path to the FVP Model",
-                                                 default="/usr/local/FVP_Base_RevC-Rainier")
-        cls.firmware_path = cls.add_path_option("firmware-path", help="Path to the UEFI firmware binaries")
+        fw_default = ComputedDefaultValue(function=lambda c, _: c.morello_sdk_dir / "fvp-firmware",
+                                          as_string="<MORELLO_SDK>/fvp-firmware")
+        cls.firmware_path = cls.add_path_option("firmware-path", default=fw_default,
+                                                help="Path to the UEFI firmware binaries")
         cls.remote_disk_image_path = cls.add_config_option("remote-disk-image-path",
                                                            help="When set rsync will be used to update the image from "
                                                                 "the remote server prior to running it.")
         cls.ssh_port = cls.add_config_option("ssh-port", default=cls.default_ssh_port(), kind=int)
+        # Allow using the architectural FVP:
+        cls.use_architectureal_fvp = cls.add_bool_option("use-architectural-fvp",
+                                                         help="Use the architectural FVP that requires a license.")
+        cls.license_server = cls.add_config_option("license-server", help="License server to use for the model")
+        cls.arch_model_path = cls.add_path_option("simulator-path", help="Path to the FVP Model",
+                                                  default="/usr/local/FVP_Base_RevC-Rainier")
 
     # noinspection PyAttributeOutsideInit
     def process(self):
-        if not self.license_server:
-            self.license_server = "unknown.license.server"  # for --pretend
-            self.fatal("License server info unknown, set the", "--" + self.get_config_option_name("license_server"),
+        if not self.firmware_path.exists():
+            self.fatal("Firmware path is invalid, set the", "--" + self.get_config_option_name("firmware_path"),
                        "config option!")
-        if not self.firmware_path:
-            self.firmware_path = Path("/unknown/firmware/path")  # for --pretend
-            self.fatal("Firmware path is unknown, set the", "--" + self.get_config_option_name("firmware_path"),
-                       "config option!")
-        if not self.simulator_path.is_dir():
-            self.fatal("FVP path", self.simulator_path, "does not exist, set the",
-                       "--" + self.get_config_option_name("simulator_path"), "config option!")
-        with set_env(ARMLMD_LICENSE_FILE=self.license_server, print_verbose_only=False):
-            morello_plugin = self.ensure_file_exists("Morello FVP plugin",
-                                                     self.simulator_path / "plugins/Linux64_GCC-6.4/MorelloPlugin.so")
-            sim_binary = self.ensure_file_exists("Model binary",
-                                                 self.simulator_path / "models/Linux64_GCC-6.4/FVP_Base_RevC-Rainier")
-            bl1_bin = self.ensure_file_exists("bl1.bin firmware", self.firmware_path / "bl1.bin")
-            fip_bin = self.ensure_file_exists("fip.bin firmware", self.firmware_path / "fip.bin")
-            if self.remote_disk_image_path:
-                self.copy_remote_file(self.remote_disk_image_path,
-                                      self._source_class.get_instance(self).disk_image_path)
-            disk_image = self.ensure_file_exists("disk image", self._source_class.get_instance(self).disk_image_path)
-            # TODO: tracing support:
-            # TARMAC_TRACE="--plugin ${PLUGIN_DIR}/TarmacTrace.so"
-            # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.trace-file=${HOME}/rainier/rainier.tarmac.trace"
-            # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.quantum-size=0x1"
-            # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.start-instruction-count=4400000000" # just after login
-            # ARCH_MSG="--plugin ${PLUGIN_DIR}/ArchMsgTrace.so -C
-            # ARCH_MSG="${ARCH_MSG} -C TRACE.ArchMsgTrace.trace-file=${HOME}/rainier/rainier.archmsg.trace"
+        bl1_bin = self.ensure_file_exists("bl1.bin firmware", self.firmware_path / "bl1.bin")
+        fip_bin = self.ensure_file_exists("fip.bin firmware", self.firmware_path / "fip.bin")
+        if self.remote_disk_image_path:
+            self.copy_remote_file(self.remote_disk_image_path,
+                                  self._source_class.get_instance(self).disk_image_path)
+        disk_image = self.ensure_file_exists("disk image", self._source_class.get_instance(self).disk_image_path)
+        # TODO: tracing support:
+        # TARMAC_TRACE="--plugin ${PLUGIN_DIR}/TarmacTrace.so"
+        # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.trace-file=${HOME}/rainier/rainier.tarmac.trace"
+        # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.quantum-size=0x1"
+        # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.start-instruction-count=4400000000" # just after login
+        # ARCH_MSG="--plugin ${PLUGIN_DIR}/ArchMsgTrace.so -C
+        # ARCH_MSG="${ARCH_MSG} -C TRACE.ArchMsgTrace.trace-file=${HOME}/rainier/rainier.archmsg.trace"
 
-            model_params = [
-                "pctl.startup=0.0.0.0",
-                "bp.secure_memory=0",
-                "cache_state_modelled=0",
-                "bp.pl011_uart0.untimed_fifos=1",
-                "cluster0.NUM_CORES=1",
-                "bp.smsc_91c111.enabled=1",
-                "bp.hostbridge.userNetworking=true",
-                "bp.hostbridge.userNetPorts=" + str(self.ssh_port) + "=22",
-                "bp.hostbridge.interfaceName=ARM0",
-                "bp.virtio_net.enabled=0",
-                "bp.virtio_net.transport=legacy",
-                "bp.virtio_net.hostbridge.userNetworking=1",
-                "bp.secureflashloader.fname=" + str(bl1_bin),
-                "bp.flashloader0.fname=" + str(fip_bin),
-                "bp.virtioblockdevice.image_path=" + str(disk_image),
-                ]
-            param_cmd_args = [x for param in model_params for x in ("-C", param)]
-            self.run_cmd([sim_binary, "--plugin", morello_plugin, "--print-port-number"] + param_cmd_args)
+        model_params = [
+            "pctl.startup=0.0.0.0",
+            "bp.secure_memory=0",
+            "cache_state_modelled=0",
+            "bp.pl011_uart0.untimed_fifos=1",
+            "cluster0.NUM_CORES=1",
+            "bp.smsc_91c111.enabled=1",
+            "bp.hostbridge.userNetworking=true",
+            "bp.hostbridge.userNetPorts=" + str(self.ssh_port) + "=22",
+            "bp.hostbridge.interfaceName=ARM0",
+            "bp.virtio_net.enabled=0",
+            "bp.virtio_net.transport=legacy",
+            "bp.virtio_net.hostbridge.userNetworking=1",
+            "bp.secureflashloader.fname=" + str(bl1_bin),
+            "bp.flashloader0.fname=" + str(fip_bin),
+            "bp.virtioblockdevice.image_path=" + str(disk_image),
+            ]
+        # prepend -C to each of the parameters:
+        param_cmd_args = [x for param in model_params for x in ("-C", param)]
+        if self.use_architectureal_fvp:
+            if not self.license_server:
+                self.license_server = "unknown.license.server"  # for --pretend
+                self.fatal("License server info unknown, set the",
+                           "--" + self.get_config_option_name("license_server"),
+                           "config option!")
+            if not self.arch_model_path.is_dir():
+                self.fatal("FVP path", self.arch_model_path, "does not exist, set the",
+                           "--" + self.get_config_option_name("simulator_path"), "config option!")
+            with set_env(ARMLMD_LICENSE_FILE=self.license_server, print_verbose_only=False):
+                sim_binary = self.ensure_file_exists("Model binary",
+                                                     self.arch_model_path /
+                                                     "models/Linux64_GCC-6.4/FVP_Base_RevC-Rainier")
+                plugin = self.ensure_file_exists("Morello FVP plugin",
+                                                 self.arch_model_path / "plugins/Linux64_GCC-6.4/MorelloPlugin.so")
+                self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number"] + param_cmd_args)
+        else:
+            InstallMorelloFVP.get_instance(self).execute_fvp(param_cmd_args + ["--print-port-number"])
 
 
 class LaunchFVPCheriBSD(LaunchFVPBase):
