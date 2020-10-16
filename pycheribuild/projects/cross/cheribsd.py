@@ -1396,12 +1396,18 @@ class BuildCheriBsdMfsKernel(SimpleProject):
             benchmark_suffix = "-NODEBUG"
         # also build the benchmark kernel:
         if benchmark_suffix:
-            kernel_configs.append(default_kernconf + benchmark_suffix)
+            if default_kernconf.endswith(benchmark_suffix):
+                kernel_configs.append(default_kernconf[0:-len(benchmark_suffix)])
+            else:
+                kernel_configs.append(default_kernconf + benchmark_suffix)
         if self.build_fpga_kernels:
             fpga_conf = self.fpga_kernconf
             kernel_configs.append(fpga_conf)
             if benchmark_suffix:
-                kernel_configs.append(fpga_conf + benchmark_suffix)
+                if fpga_conf.endswith(benchmark_suffix):
+                    kernel_configs.append(fpga_conf[0:-len(benchmark_suffix)])
+                else:
+                    kernel_configs.append(fpga_conf + benchmark_suffix)
         if self.config.clean:
             for kernconf in kernel_configs:
                 kernel_dir = self.build_cheribsd_instance.kernel_objdir(kernconf)
