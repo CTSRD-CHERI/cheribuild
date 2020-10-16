@@ -32,6 +32,7 @@
 import argparse
 import datetime
 import functools
+import itertools
 import operator
 import os
 import shlex
@@ -44,14 +45,16 @@ from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_genera
 from run_tests_common import boot_cheribsd, run_tests_main, pexpect, CrossCompileTarget
 
 
-def run_cheritest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, args: argparse.Namespace) -> bool:
+# TODO: Remove old_binary_name once the new cheritest names are merged to all relevant CheriBSD branches
+def run_cheritest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, old_binary_name, args: argparse.Namespace) -> bool:
     try:
         qemu.checked_run("rm -f /tmp/{}.xml".format(binary_name))
         # Run it once with textual output (for debugging)
         # qemu.run("/bin/{} -a".format(binary_name, binary_name),
         #     ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
         # Generate JUnit XML:
-        qemu.run("/bin/{} -a -x > /tmp/{}.xml".format(binary_name, binary_name),
+        qemu.run("if [ -x /bin/{0} ]; then /bin/{0} -a -x; else /bin/{1} -a -x; fi > /tmp/{0}.xml"
+                 .format(binary_name, old_binary_name),
                  ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
         qemu.sendline("echo EXITCODE=$?")
         qemu.expect(["EXITCODE=(\\d+)\r"], timeout=5, pretend_result=0)
@@ -107,15 +110,17 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
     if args.run_cheritest:
         # Disable trap dumps while running cheritest (handle both old and new sysctl names until dev is merged):
         qemu.run("sysctl machdep.log_user_cheri_exceptions=0 || sysctl machdep.log_cheri_exceptions=0")
-        # The minimal disk image only has the statically linked variants:
-        test_binaries = ["cheritest", "cheriabitest"]
-        if not args.minimal_image:
-            test_binaries.extend(["cheriabitest-dynamic", "cheriabitest-dynamic-mt", "cheriabitest-mt",
-                                  "cheritest-dynamic", "cheritest-dynamic-mt", "cheritest-mt"])
-        for test in test_binaries:
-            if not run_cheritest(qemu, test, args):
-                tests_successful = False
-                boot_cheribsd.failure("At least one test failure in", test, exit=False)
+        # The minimal disk image only has the statically linked base variants:
+        cheritest_features = ["-dynamic", "-mt"] if not args.minimal_image else []
+        cheritest_bases = [("cheritest-hybrid", "cheritest"), ("cheritest-purecap", "cheriabitest")]
+        for base in cheritest_bases:
+            for features in itertools.chain(*map(lambda r: itertools.combinations(cheritest_features, r),
+                                            range(0, len(cheritest_features)+1))):
+                test = base[0] + ''.join(features)
+                old_test = old_base[0] + ''.join(features)
+                if not run_cheritest(qemu, test, old_test, args):
+                    tests_successful = False
+                    boot_cheribsd.failure("At least one test failure in", test, exit=False)
         qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
 
     # Run kyua tests
@@ -267,11 +272,11 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--no-timestamped-test-subdir", action="store_true",
                         help="Don't create a timestamped subdirectory in the test output dir ")
     parser.add_argument("--run-cheritest", dest="run_cheritest", action="store_true", default=None,
-                        help="Run cheritest and cheriabitest")
+                        help="Run cheritest programs")
     parser.add_argument("--minimal-image", action="store_true",
                         help="Set this if tests are being run on the minimal disk image rather than the full one")
     parser.add_argument("--no-run-cheritest", dest="run_cheritest", action="store_false",
-                        help="Do not run cheritest and cheriabitest")
+                        help="Do not run cheritest programs")
 
 
 if __name__ == '__main__':

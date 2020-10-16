@@ -817,7 +817,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         cls.strip_binaries = cls.add_bool_option("strip", default=True,
                                                  help="strip ELF files to reduce size of generated image")
         cls.include_cheritest = cls.add_bool_option("include-cheritest", default=True,
-                                                    help="Also add cheritest/cheriabitest to the disk image")
+                                                    help="Also add static cheritest base variants to the disk image")
         cls.use_cheribsd_purecap_rootfs = cls.add_bool_option("use-cheribsd-purecap-rootfs", default=False,
                                                               help="Use the rootfs built by cheribsd-purecap instead")
 
@@ -897,10 +897,13 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                 self.add_required_libraries(["usr/" + libcompat_dir])
 
         if self.include_cheritest:
-            for i in ("cheritest", "cheriabitest"):
-                test_binary = self.rootfs_dir / "bin" / i  # type: Path
+            for i in [("cheritest-hybrid", "cheritest"), ("cheritest-purecap", "cheriabitest")]:
+                test_binary = self.rootfs_dir / "bin" / i[0]  # type: Path
+                old_test_binary = self.rootfs_dir / "bin" / i[1]  # type: Path
                 if test_binary.exists():
                     self.add_file_to_image(test_binary, base_directory=self.rootfs_dir)
+                elif old_test_binary.exists():
+                    self.add_file_to_image(old_test_binary, base_directory=self.rootfs_dir)
 
         # These dirs seem to be needed
         self.mtree.add_dir("var/db", print_status=self.config.verbose)
