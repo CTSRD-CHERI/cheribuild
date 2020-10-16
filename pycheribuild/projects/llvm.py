@@ -81,6 +81,9 @@ class BuildLLVMBase(CMakeProject):
         cls.use_llvm_cxx = cls.add_bool_option("use-in-tree-cxx-libs", default=False,
                                                help="Use in-tree, not host, C++ runtime")
         cls.use_ccache = cls.add_bool_option("use-ccache", default=False, help="Build with CCache")
+        cls.use_modules_build = cls.add_bool_option(
+            "use-llvm-modules-build", default=False,
+            help="Use the LLVM modules build (may be faster in some cases but probably won't allow debugging)")
         cls.dylib = cls.add_bool_option("dylib", default=False, help="Build dynamic-link LLVM")
         cls.install_toolchain_only = cls.add_bool_option("install-toolchain-only", default=False,
                                                          help="Install only toolchain binaries (i.e. no test tools)")
@@ -124,6 +127,10 @@ class BuildLLVMBase(CMakeProject):
 
         # Install the llvm binutils symlinks since they now seem to work fine.
         self.add_cmake_options(LLVM_INSTALL_BINUTILS_SYMLINKS=True)
+
+        if self.use_modules_build:
+            self.add_cmake_options(LLVM_ENABLE_MODULES=True,
+                                   LLVM_ENABLE_MODULE_DEBUGGING=self.should_include_debug_info)
 
         if not self.build_everything:
             self.add_cmake_options(
