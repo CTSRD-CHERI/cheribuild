@@ -235,7 +235,7 @@ class FileSystemUtils(object):
         if dest.is_symlink():
             dest.unlink()
         # noinspection PyArgumentList
-        shutil.copy(str(src), str(dest), follow_symlinks=False)
+        shutil.copy2(str(src), str(dest), follow_symlinks=False)
         if mode is not None:
             print_command("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
             dest.chmod(mode)
