@@ -832,6 +832,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def installworld_args(self):
         result = self.buildworld_args
         result.env_vars.update(self.make_install_env)
+        # Speed up installworld a bit after https://github.com/CTSRD-CHERI/cheribsd/pull/739
+        result.set(NO_SAFE_LIBINSTALL=True)
         return result
 
     def install(self, all_kernel_configs: str = None, sysroot_only=False, install_with_subdir_override=False,
