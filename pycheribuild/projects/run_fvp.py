@@ -31,7 +31,63 @@ from pathlib import Path
 from .disk_image import BuildCheriBSDDiskImage
 from .project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
-from ..utils import set_env
+from ..utils import OSInfo, set_env
+
+
+class InstallMorelloFVP(SimpleProject):
+    target = "install-morello-fvp"
+    container_name = "morello-fvp"
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.installer_path = cls.add_path_option("installer-path", help="Path to the FVP installer.sh")
+        # We can run the FVP on macOS by using docker. FreeBSD might be able to use Linux emulation.
+        cls.use_docker_container = cls.add_path_option("use-docker-container", default=OSInfo.IS_MAC,
+                                                       help="Run the FVP inside a docker container")
+
+    @property
+    def install_dir(self):
+        return self.config.morello_sdk_dir / "FVP_Morello"
+
+    def process(self):
+        if not self.installer_path:
+            self.fatal("Path to installer not known, set the", "--" + self.get_config_option_name("installer_path"),
+                       "config option!")
+            return
+        self.makedirs(self.install_dir)
+        if self.use_docker_container:
+            self.install_file(self.installer_path, self.install_dir / self.installer_path.name)
+            self.write_file(self.install_dir / "Dockerfile", contents="""
+FROM opensuse/leap:15.2
+COPY {installer_name} .
+RUN zypper in -y xterm gzip tar libdbus-1-3 libatomic1
+RUN ./{installer_name} --i-agree-to-the-contained-eula --no-interactive --destination=/opt/FVP_Morello && \
+    rm ./{installer_name}
+""".format(installer_name=self.installer_path.name), overwrite=True)
+            self.run_cmd("docker", "build", "--pull", "-t", self.container_name, ".", cwd=self.install_dir)
+        else:
+            self.run_cmd(self.installer_path, "--i-agree-to-the-contained-eula", "--no-interactive",
+                         "-destination=" + str(self.install_dir))
+
+    def _plugin_args(self):
+        plugin_path = "plugins/Linux64_GCC-6.4/MorelloPlugin.so"
+        if self.use_docker_container:
+            return ["--plugin", Path("/opt/FVP_Morello", plugin_path)]
+        return ["--plugin", self.ensure_file_exists("Morello FVP plugin", self.install_dir / plugin_path)]
+
+    def execute_fvp(self, args: list, **kwargs):
+        model_relpath = "models/Linux64_GCC-6.4/FVP_Morello"
+        if self.use_docker_container:
+            base_command = ["docker", "run", "-it", "--rm", self.container_name,
+                            Path("/opt/FVP_Morello", model_relpath)]
+        else:
+            base_command = [self.install_dir / model_relpath]
+        self.run_cmd(base_command + self._plugin_args() + args, **kwargs)
+
+    def run_tests(self):
+        self.execute_fvp(["--help"])
+        self.execute_fvp(["--cyclelimit", "1000"])
 
 
 class LaunchFVPBase(SimpleProject):
