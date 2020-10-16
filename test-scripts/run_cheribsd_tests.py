@@ -117,7 +117,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
             for features in itertools.chain(*map(lambda r: itertools.combinations(cheritest_features, r),
                                             range(0, len(cheritest_features)+1))):
                 test = base[0] + ''.join(features)
-                old_test = old_base[0] + ''.join(features)
+                old_test = base[1] + ''.join(features)
                 if not run_cheritest(qemu, test, old_test, args):
                     tests_successful = False
                     boot_cheribsd.failure("At least one test failure in", test, exit=False)
