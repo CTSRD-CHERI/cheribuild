@@ -62,9 +62,13 @@ class InstallMorelloFVP(SimpleProject):
             self.write_file(self.install_dir / "Dockerfile", contents="""
 FROM opensuse/leap:15.2
 COPY {installer_name} .
-RUN zypper in -y xterm gzip tar libdbus-1-3 libatomic1
+RUN zypper in -y xterm gzip tar libdbus-1-3 libatomic1 telnet
 RUN ./{installer_name} --i-agree-to-the-contained-eula --no-interactive --destination=/opt/FVP_Morello && \
     rm ./{installer_name}
+# Run as non-root user to allow X11 to work
+RUN useradd fvp-user
+USER fvp-user
+VOLUME /diskimg
 """.format(installer_name=self.installer_path.name), overwrite=True)
             self.run_cmd("docker", "build", "--pull", "-t", self.container_name, ".", cwd=self.install_dir)
         else:
@@ -77,14 +81,22 @@ RUN ./{installer_name} --i-agree-to-the-contained-eula --no-interactive --destin
             return ["--plugin", Path("/opt/FVP_Morello", plugin_path)]
         return ["--plugin", self.ensure_file_exists("Morello FVP plugin", self.install_dir / plugin_path)]
 
-    def execute_fvp(self, args: list, **kwargs):
+    def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, **kwargs):
         model_relpath = "models/Linux64_GCC-6.4/FVP_Morello"
         if self.use_docker_container:
-            base_command = ["docker", "run", "-it", "--rm", self.container_name,
-                            Path("/opt/FVP_Morello", model_relpath)]
+            base_cmd = ["docker", "run", "-it", "--rm",
+                        "-p", "5000:5000",  # Expose port 5000 for telnet
+                        ]
+            if disk_image_path is not None:
+                base_cmd += ["-v", str(disk_image_path) + ":" + str(disk_image_path)]
+            if firmware_path is not None:
+                base_cmd += ["-v", str(firmware_path) + ":" + str(firmware_path)]
+            base_cmd += [self.container_name, Path("/opt/FVP_Morello", model_relpath)]
         else:
-            base_command = [self.install_dir / model_relpath]
-        self.run_cmd(base_command + self._plugin_args() + args, **kwargs)
+            base_cmd = [self.install_dir / model_relpath]
+        # TODO: X11 on macos:
+        "socat TCP-LISTEN:6000,reuseaddr,fork UNIX-CLIENT:\"$DISPLAY\""
+        self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
 
     def run_tests(self):
         self.execute_fvp(["--help"])
@@ -128,8 +140,8 @@ class LaunchFVPBase(SimpleProject):
     # noinspection PyAttributeOutsideInit
     def process(self):
         if not self.firmware_path.exists():
-            self.fatal("Firmware path is invalid, set the", "--" + self.get_config_option_name("firmware_path"),
-                       "config option!")
+            self.fatal("Firmware path", self.firmware_path, " is invalid, set the",
+                       "--" + self.get_config_option_name("firmware_path"), "config option!")
         bl1_bin = self.ensure_file_exists("bl1.bin firmware", self.firmware_path / "bl1.bin")
         fip_bin = self.ensure_file_exists("fip.bin firmware", self.firmware_path / "fip.bin")
         if self.remote_disk_image_path:
@@ -143,26 +155,22 @@ class LaunchFVPBase(SimpleProject):
         # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.start-instruction-count=4400000000" # just after login
         # ARCH_MSG="--plugin ${PLUGIN_DIR}/ArchMsgTrace.so -C
         # ARCH_MSG="${ARCH_MSG} -C TRACE.ArchMsgTrace.trace-file=${HOME}/rainier/rainier.archmsg.trace"
+        model_params = []
 
-        model_params = [
-            "pctl.startup=0.0.0.0",
-            "bp.secure_memory=0",
-            "cache_state_modelled=0",
-            "bp.pl011_uart0.untimed_fifos=1",
-            "cluster0.NUM_CORES=1",
-            "bp.smsc_91c111.enabled=1",
-            "bp.hostbridge.userNetworking=true",
-            "bp.hostbridge.userNetPorts=" + str(self.ssh_port) + "=22",
-            "bp.hostbridge.interfaceName=ARM0",
-            "bp.virtio_net.enabled=0",
-            "bp.virtio_net.transport=legacy",
-            "bp.virtio_net.hostbridge.userNetworking=1",
-            "bp.secureflashloader.fname=" + str(bl1_bin),
-            "bp.flashloader0.fname=" + str(fip_bin),
-            "bp.virtioblockdevice.image_path=" + str(disk_image),
-            ]
-        # prepend -C to each of the parameters:
-        param_cmd_args = [x for param in model_params for x in ("-C", param)]
+        def add_board_params(*params):
+            prefix = "bp." if self.use_architectureal_fvp else "board."
+            model_params.extend([prefix + p for p in params])
+
+        add_board_params(
+            "smsc_91c111.enabled=1",
+            "hostbridge.userNetworking=true",
+            "hostbridge.userNetPorts=" + str(self.ssh_port) + "=22",
+            "hostbridge.interfaceName=ARM0",
+            "virtio_net.enabled=0",
+            "virtio_net.transport=legacy",
+            "virtio_net.hostbridge.userNetworking=1",
+            "virtioblockdevice.image_path=" + str(disk_image))
+
         if self.use_architectureal_fvp:
             if not self.license_server:
                 self.license_server = "unknown.license.server"  # for --pretend
@@ -172,15 +180,49 @@ class LaunchFVPBase(SimpleProject):
             if not self.arch_model_path.is_dir():
                 self.fatal("FVP path", self.arch_model_path, "does not exist, set the",
                            "--" + self.get_config_option_name("simulator_path"), "config option!")
+
             with set_env(ARMLMD_LICENSE_FILE=self.license_server, print_verbose_only=False):
                 sim_binary = self.ensure_file_exists("Model binary",
                                                      self.arch_model_path /
                                                      "models/Linux64_GCC-6.4/FVP_Base_RevC-Rainier")
                 plugin = self.ensure_file_exists("Morello FVP plugin",
                                                  self.arch_model_path / "plugins/Linux64_GCC-6.4/MorelloPlugin.so")
+                # prepend -C to each of the parameters:
+                param_cmd_args = [x for param in model_params for x in ("-C", param)]
                 self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number"] + param_cmd_args)
+            model_params += [
+                "pctl.startup=0.0.0.0",
+                "bp.secure_memory=0",
+                "cache_state_modelled=0",
+                "cluster0.NUM_CORES=1",
+                "flashloader0.fname=" + str(fip_bin),
+                "secureflashloader.fname=" + str(bl1_bin),
+                ]
         else:
-            InstallMorelloFVP.get_instance(self).execute_fvp(param_cmd_args + ["--print-port-number"])
+            # prepend -C to each of the parameters:
+            model_params += [
+                # "css.cache_state_modelled=0",
+                # XXX: or is it , css.scp.ROMloader.fname css.mcp.ROMloader.fname?
+                "css.nonTrustedROMloader.fname=" + str(fip_bin),
+                "css.trustedBootROMloader.fname=" + str(bl1_bin),
+                "css.mcp.ROMloader.fname=" + str(
+                    self.ensure_file_exists("MCP ROM FW",
+                                            self.firmware_path / "morello/mcp_romfw/release/bin/firmware.bin")),
+                "soc.mcp_qspi_loader.fname=" + str(
+                    self.ensure_file_exists("MCP RAM FW",
+                                            self.firmware_path / "morello/mcp_ramfw_fvp/release/bin/firmware.bin")),
+                "css.scp.ROMloader.fname=" + str(
+                    self.ensure_file_exists("SCP ROM FW",
+                                            self.firmware_path / "morello/scp_romfw/release/bin/firmware.bin")),
+                "soc.scp_qspi_loader.fname=" + str(
+                    self.ensure_file_exists("SCP RAM FW",
+                                            self.firmware_path / "morello/scp_ramfw_fvp/release/bin/firmware.bin")),
+                # "num_clusters=1",
+                # "num_cores=1",
+                ]
+            param_cmd_args = [x for param in model_params for x in ("-C", param)]
+            InstallMorelloFVP.get_instance(self, cross_target=CompilationTargets.NATIVE).execute_fvp(
+                param_cmd_args + ["--print-port-number"], disk_image_path=disk_image, firmware_path=self.firmware_path)
 
 
 class LaunchFVPCheriBSD(LaunchFVPBase):
