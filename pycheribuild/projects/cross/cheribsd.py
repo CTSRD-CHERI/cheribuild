@@ -1389,7 +1389,6 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     def process(self):
         default_kernconf = self._get_kernconf_to_build(self.build_cheribsd_instance)
         kernel_configs = [default_kernconf]
-        # TODO: add the benchmark ones for RISCV
         benchmark_suffix = None
         if self.build_cheribsd_instance.crosscompile_target.is_mips(include_purecap=True):
             benchmark_suffix = "_BENCHMARK"
