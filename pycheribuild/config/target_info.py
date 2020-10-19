@@ -40,12 +40,12 @@ if typing.TYPE_CHECKING:  # no-combine
 
 
 class CPUArchitecture(Enum):
-    X86_64 = "x86_64"
-    MIPS64 = "mips64"
-    RISCV64 = "riscv64"
-    I386 = "i386"
     AARCH64 = "aarch64"
     ARM32 = "arm32"
+    I386 = "i386"
+    MIPS64 = "mips64"
+    RISCV64 = "riscv64"
+    X86_64 = "x86_64"
 
 
 class TargetInfo(ABC):
