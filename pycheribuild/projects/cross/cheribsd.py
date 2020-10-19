@@ -39,7 +39,7 @@ from pathlib import Path
 from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
                        MakeCommandKind, MakeOptions, Project, SimpleProject, TargetBranchInfo)
-from ...config.compilation_targets import CompilationTargets
+from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CrossCompileTarget
 from ...targets import target_manager
@@ -352,27 +352,22 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     @property
     def arch_build_flags(self):
+        assert isinstance(self.target_info, FreeBSDTargetInfo)
+        result = {
+            "TARGET_ARCH": self.target_info.freebsd_target_arch,
+            }
         if self.compiling_for_mips(include_purecap=True):
-            target_arch = self.config.mips_float_abi.freebsd_target_arch()
-            if self.crosscompile_target.is_cheri_purecap():
-                target_arch += "c" + self.config.mips_cheri_bits_str  # build purecap
-            result = {"TARGET": "mips", "TARGET_ARCH": target_arch}
+            result["TARGET"] = "mips"
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
                 result["CHERI"] = self.config.mips_cheri_bits_str
         elif self.crosscompile_target.is_x86_64():
-            result = {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
+            result["TARGET"] = "amd64"
         elif self.crosscompile_target.is_riscv(include_purecap=True):
-            target_arch = "riscv64"  # TODO: allow building softfloat?
-            if self.crosscompile_target.is_cheri_purecap():
-                target_arch += "c"  # build purecap
-            result = {"TARGET": "riscv", "TARGET_ARCH": target_arch}
+            result["TARGET"] = "riscv"
         elif self.crosscompile_target.is_i386():
-            result = {"TARGET": "i386", "TARGET_ARCH": "i386"}
+            result["TARGET"] = "i386"
         elif self.crosscompile_target.is_aarch64(include_purecap=True):
-            target_arch = "aarch64"
-            if self.crosscompile_target.is_cheri_purecap():
-                target_arch += "c"  # build purecap
-            result = {"TARGET": "arm64", "TARGET_ARCH": target_arch}
+            result["TARGET"] = "arm64"
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
                 # FIXME: still needed?
                 result["WITH_CHERI"] = True

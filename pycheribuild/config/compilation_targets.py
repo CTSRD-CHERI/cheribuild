@@ -256,6 +256,18 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         # TODO: do we need any special cases here?
         return target.cpu_architecture.value + common_suffix
 
+    @property
+    def freebsd_target_arch(self):
+        mapping = {
+            CPUArchitecture.AARCH64: "aarch64",
+            CPUArchitecture.ARM32: "armv7",
+            CPUArchitecture.I386: "i386",
+            CPUArchitecture.MIPS64: self.config.mips_float_abi.freebsd_target_arch(),
+            CPUArchitecture.RISCV64: "riscv64",
+            CPUArchitecture.X86_64: "amd64",
+            }
+        return mapping[self.target.cpu_architecture]
+
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         return ["freebsd"]
@@ -517,6 +529,17 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             else:
                 assert False, "Unsuported purecap target" + str(cls)
         return super().triple_for_target(target, config, include_version=include_version)
+
+    @property
+    def freebsd_target_arch(self):
+        base = super().freebsd_target_arch
+        if self.target.is_cheri_purecap():
+            purecap_suffix = "c"
+            if self.target.is_mips(include_purecap=True):
+                purecap_suffix += self.config.mips_cheri_bits_str
+        else:
+            purecap_suffix = ""
+        return base + purecap_suffix
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
