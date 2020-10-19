@@ -80,6 +80,7 @@ INITIAL_PROMPT_SH = "# "  # /bin/sh
 STOPPED = "Stopped at"
 PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
+PANIC_PAGE_FAULT = "panic: Fatal page fault at 0x"
 CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \\(.+\\)"
 # SHELL_LINE_CONTINUATION = "\r\r\n> "
 
@@ -174,38 +175,32 @@ class CheriBSDInstance(pexpect.spawn):
     def xtarget(self) -> CrossCompileTarget:
         return self.qemu_config.xtarget
 
-    def expect(self, pattern: list, timeout=-1, pretend_result=None, timeout_msg="timeout", **kwargs):
-        assert isinstance(pattern, list), "expected list and not " + str(pattern)
-        return self._expect_and_handle_panic(pattern, timeout=timeout, timeout_msg=timeout_msg, **kwargs)
+    def expect_exact_ignore_panic(self, patterns, *, timeout: int):
+        return super().expect_exact(patterns, timeout=timeout)
+
+    def expect(self, patterns: list, timeout=-1, pretend_result=None, timeout_fatal=True, timeout_msg="timeout",
+               **kwargs):
+        assert isinstance(patterns, list), "expected list and not " + str(patterns)
+        return self._expect_and_handle_panic_impl(patterns, timeout_msg, timeout_fatal=timeout_fatal,
+                                                  timeout=timeout, expect_fn=super().expect, **kwargs)
+
+    def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, timeout_fatal=True, timeout_msg="timeout",
+                     **kwargs):
+        return self._expect_and_handle_panic_impl(pattern_list, timeout_msg, timeout_fatal=timeout_fatal,
+                                                  timeout=timeout, expect_fn=super().expect_exact, **kwargs)
 
     def expect_prompt(self, timeout=-1, timeout_msg="timeout", timeout_fatal=True, **kwargs):
         return self.expect_exact([PEXPECT_PROMPT], timeout=timeout, timeout_msg=timeout_msg,
                                  timeout_fatal=timeout_fatal, **kwargs)
 
-    def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, timeout_fatal=True, timeout_msg="timeout",
-                     **kwargs):
-        assert PANIC not in pattern_list
-        assert STOPPED not in pattern_list
-        assert PANIC_KDB not in pattern_list
-        if not isinstance(pattern_list, list):
-            pattern_list = [pattern_list]
-        panic_regexes = [PANIC, STOPPED, PANIC_KDB]
-        try:
-            i = super().expect_exact(panic_regexes + pattern_list, **kwargs)
-            if i < len(panic_regexes):
-                debug_kernel_panic(self)
-                failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
-            return i - len(panic_regexes)
-        except pexpect.TIMEOUT:
-            failure(timeout_msg, ": ", str(self), exit=timeout_fatal)
-
-    def _expect_and_handle_panic(self, options: list, timeout_msg, timeout_fatal=True, **kwargs):
+    def _expect_and_handle_panic_impl(self, options: list, timeout_msg, *, timeout_fatal=True, expect_fn, **kwargs):
         assert PANIC not in options
         assert STOPPED not in options
         assert PANIC_KDB not in options
-        panic_regexes = [PANIC, STOPPED, PANIC_KDB]
+        assert PANIC_PAGE_FAULT not in options
+        panic_regexes = [PANIC, STOPPED, PANIC_KDB, PANIC_PAGE_FAULT]
         try:
-            i = super().expect(panic_regexes + options, **kwargs)
+            i = expect_fn(panic_regexes + options, **kwargs)
             if i < len(panic_regexes):
                 debug_kernel_panic(self)
                 failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
@@ -394,13 +389,15 @@ def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, a
     return path
 
 
-def debug_kernel_panic(qemu: pexpect.spawn):
+def debug_kernel_panic(qemu: CheriBSDInstance):
     # wait up to 10 seconds for a db prompt
-    i = qemu.expect([pexpect.TIMEOUT, "db> "], timeout=10)
+    # Note: this uses expect_exact_ignore_panic() to avoid infinite recursion if FreeBSD is stuck in a panic loop
+    # (as is currently happening when running the test suite on RISC-V).
+    i = qemu.expect_exact_ignore_panic([pexpect.TIMEOUT, "db> "], timeout=10)
     if i == 1:
         qemu.sendline("bt")
-    # wait for the backtrace
-    qemu.expect([pexpect.TIMEOUT, "db> "], timeout=30)
+        # wait for the backtrace
+        qemu.expect_exact_ignore_panic([pexpect.TIMEOUT, "db> "], timeout=30)
     failure("GOT KERNEL PANIC!", exit=False)
     # print("\n\npexpect info = ", qemu)
 
@@ -729,7 +726,7 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
             # If this was a CHEIR trap wait up to 20 seconds to ensure the dump output has been printed
             child.expect(["THIS STRING SHOULD NOT MATCH, JUST WAITING FOR 20 secs", pexpect.TIMEOUT], timeout=20)
             # If this was a failure of init we should get a debugger backtrace
-            failure("Error during boot login prompt: ", str(child), "match index=", i)
+            failure("Error during boot login prompt: ", str(child), " match index=", i)
         # set up network in case dhclient wasn't started yet
         if not have_dhclient:
             info("Did not see DHCPACK message, starting dhclient manually.")
