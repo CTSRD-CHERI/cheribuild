@@ -576,9 +576,8 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
                 result += ["-march=morello"]
             elif self.target.is_cheri_purecap():
                 result += ["-march=morello+c64", "-mabi=purecap"]
-            # emulated TLS is currently required for purecap, turn it on for non-purecap to
-            # allow performance comparisons
-            result.append("-femulated-tls")
+                # emulated TLS is currently required for purecap, but breaks hybrid
+                result.append("-femulated-tls")
         return result
 
     @property
