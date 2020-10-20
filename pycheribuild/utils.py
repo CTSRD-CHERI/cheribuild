@@ -57,7 +57,7 @@ __all__ = ["typing", "print_command", "include_local_file", "CompilerInfo",  # n
            "get_program_version", "SafeDict", "keep_terminal_sane", "error_message",  # no-combine
            "default_make_jobs_count", "commandline_to_str", "OSInfo", "is_jenkins_build",  # no-combine
            "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
-           "is_case_sensitive_dir", "SocketAndPort", "replace_one", "NullContextManager", "popen"]  # no-combine
+           "is_case_sensitive_dir", "SocketAndPort", "replace_one", "popen"]  # no-combine
 Type_T = typing.TypeVar("Type_T")
 
 
@@ -193,17 +193,6 @@ def _become_tty_foreground_process():
 
 
 # Python 3.7 has contextlib.nullcontext
-class NullContextManager(object):
-    def __init__(self, value=None):
-        self.value = value
-
-    def __enter__(self):
-        return self.value
-
-    def __exit__(self, *args):
-        pass
-
-
 class FakePopen:
     def kill(self):
         pass
@@ -211,11 +200,18 @@ class FakePopen:
     def terminate(self):
         pass
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
 
 def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, **kwargs) -> subprocess.Popen:
     print_command(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), print_verbose_only=print_verbose_only)
     if not run_in_pretend_mode and GlobalConfig.PRETEND_MODE:
-        return NullContextManager(FakePopen())
+        # noinspection PyTypeChecker
+        return FakePopen()
     return popen_handle_noexec(cmdline, **kwargs)
 
 
