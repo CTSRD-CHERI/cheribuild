@@ -76,12 +76,6 @@ VOLUME /diskimg
             self.run_cmd(self.installer_path, "--i-agree-to-the-contained-eula", "--no-interactive",
                          "-destination=" + str(self.install_dir))
 
-    def _plugin_args(self):
-        plugin_path = "plugins/Linux64_GCC-6.4/MorelloPlugin.so"
-        if self.use_docker_container:
-            return ["--plugin", Path("/opt/FVP_Morello", plugin_path)]
-        return ["--plugin", self.ensure_file_exists("Morello FVP plugin", self.install_dir / plugin_path)]
-
     def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True, **kwargs):
         model_relpath = "models/Linux64_GCC-6.4/FVP_Morello"
         if self.use_docker_container:
@@ -102,12 +96,12 @@ VOLUME /diskimg
             socat = popen(["socat", "TCP-LISTEN:6000,reuseaddr,fork", "UNIX-CLIENT:\"" + os.getenv("DISPLAY") + "\""],
                           stdin=subprocess.DEVNULL)
             try:
-                self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
+                self.run_cmd(base_cmd + args, **kwargs)
             finally:
                 socat.terminate()
                 socat.kill()
         else:
-            self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
+            self.run_cmd(base_cmd + args, **kwargs)
 
     def run_tests(self):
         self.execute_fvp(["--help"], x11=False)
