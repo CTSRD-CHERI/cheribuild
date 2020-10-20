@@ -343,6 +343,12 @@ class TargetManager(object):
                 yield name
 
     @property
+    def non_deprecated_target_names(self) -> "typing.Generator[str]":
+        for name, value in self._all_targets.items():
+            if not isinstance(value, DeprecatedTargetAlias):
+                yield name
+
+    @property
     def targets(self) -> "typing.Iterable[Target]":
         return self._all_targets.values()
 

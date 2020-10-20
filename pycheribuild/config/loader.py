@@ -137,15 +137,15 @@ class ConfigLoaderBase(object):
     options = dict()  # type: typing.Dict[str, "ConfigOptionBase"]
     _parsed_args = None
     _json = {}  # type: dict
-    _completing_arguments = "_ARGCOMPLETE" in os.environ
-    _argcomplete_prefix = get_argcomplete_prefix() if _completing_arguments else None
+    is_completing_arguments = "_ARGCOMPLETE" in os.environ
+    _argcomplete_prefix = get_argcomplete_prefix() if is_completing_arguments else None
     _argcomplete_prefix_includes_slash = "/" in _argcomplete_prefix if _argcomplete_prefix else None
 
-    show_all_help = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or _completing_arguments
+    show_all_help = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or is_completing_arguments
 
     def __init__(self, option_cls):
         self.__option_cls = option_cls
-        if self._completing_arguments:
+        if self.is_completing_arguments:
             # noinspection PyTypeChecker
             self._parser = argparse.ArgumentParser(formatter_class=NoOpHelpFormatter)
         else:
@@ -169,7 +169,7 @@ class ConfigLoaderBase(object):
         self.completion_excludes = []
 
     def _load_command_line_args(self):
-        if argcomplete and self._completing_arguments:
+        if argcomplete and self.is_completing_arguments:
             if "_ARGCOMPLETE_BENCHMARK" in os.environ:
                 with open(os.devnull, "wb") as output:
                     # with open("/dev/stdout", "wb") as output:
@@ -653,7 +653,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     def finalize_options(self, available_targets: list, **kwargs):
         target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
                                                   help="The targets to build")
-        if argcomplete and self._completing_arguments:
+        if argcomplete and self.is_completing_arguments:
             # if OSInfo.IS_FREEBSD: # FIXME: for some reason this won't work
             self.completion_excludes = ["-t", "--skip-dependencies"]
             if sys.platform.startswith("freebsd"):

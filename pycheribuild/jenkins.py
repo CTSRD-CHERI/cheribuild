@@ -69,7 +69,7 @@ class JenkinsConfigLoader(ConfigLoaderBase):
         target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
                                                   help="The target to build",
                                                   choices=available_targets + [EXTRACT_SDK_TARGET, RUN_EVERYTHING_TARGET])
-        if self._completing_arguments:
+        if self.is_completing_arguments:
             try:
                 import argcomplete
             except ImportError:
