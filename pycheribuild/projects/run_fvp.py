@@ -198,8 +198,8 @@ class LaunchFVPBase(SimpleProject):
                     "bp.secure_memory=0",
                     "cache_state_modelled=0",
                     "cluster0.NUM_CORES=1",
-                    "flashloader0.fname=" + str(fip_bin),
-                    "secureflashloader.fname=" + str(bl1_bin),
+                    "bp.flashloader0.fname=" + str(fip_bin),
+                    "bp.secureflashloader.fname=" + str(bl1_bin),
                     ]
                 fvp_args = [x for param in model_params for x in ("-C", param)]
                 self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number"] + fvp_args)
