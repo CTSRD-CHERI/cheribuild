@@ -76,6 +76,14 @@ VOLUME /diskimg
             self.run_cmd(self.installer_path, "--i-agree-to-the-contained-eula", "--no-interactive",
                          "-destination=" + str(self.install_dir))
 
+    def _plugin_args(self):
+        if self.get_fvp_revision() >= 312:
+            return []  # plugin no longer needed
+        plugin_path = "plugins/Linux64_GCC-6.4/MorelloPlugin.so"
+        if self.use_docker_container:
+            return ["--plugin", Path("/opt/FVP_Morello", plugin_path)]
+        return ["--plugin", self.ensure_file_exists("Morello FVP plugin", self.install_dir / plugin_path)]
+
     def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True, **kwargs):
         model_relpath = "models/Linux64_GCC-6.4/FVP_Morello"
         if self.use_docker_container:
@@ -96,12 +104,25 @@ VOLUME /diskimg
             socat = popen(["socat", "TCP-LISTEN:6000,reuseaddr,fork", "UNIX-CLIENT:\"" + os.getenv("DISPLAY") + "\""],
                           stdin=subprocess.DEVNULL)
             try:
-                self.run_cmd(base_cmd + args, **kwargs)
+                self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
             finally:
                 socat.terminate()
                 socat.kill()
         else:
-            self.run_cmd(base_cmd + args, **kwargs)
+            self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
+
+    def get_fvp_revision(self):
+        revpath = "sw/ARM_Fast_Models_FVP_Morello/rev"
+        try:
+            if self.use_docker_container:
+                rev = self.run_cmd(["docker", "run", "-it", "--rm", self.container_name, "cat",
+                                    "/opt/FVP_Morello/" + revpath], capture_output=True,
+                                   run_in_pretend_mode=True).stdout
+                return int(rev.strip())
+            return int(self.read_file(self.install_dir / revpath))
+        except Exception as e:
+            self.warning("Could not determine FVP revision:", e)
+            return 0
 
     def run_tests(self):
         self.execute_fvp(["--help"], x11=False)
@@ -204,16 +225,23 @@ class LaunchFVPBase(SimpleProject):
                 fvp_args = [x for param in model_params for x in ("-C", param)]
                 self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number"] + fvp_args)
         else:
-            # prepend -C to each of the parameters:
+            fvp_project = InstallMorelloFVP.get_instance(self, cross_target=CompilationTargets.NATIVE)
             model_params += [
                 "displayController=1",
-                "board.virtio_rng.enabled=1",
-                "board.virtio_rng.seed=0",
-                "board.virtio_rng.generator=2",
                 # "css.cache_state_modelled=0",
                 # "num_clusters=1",
                 # "num_cores=1",
                 ]
+            if fvp_project.get_fvp_revision() > 255:
+                # virtio-rng supported in rev312
+                model_params += [
+                    "board.virtio_rng.enabled=1",
+                    "board.virtio_rng.seed=0",
+                    "board.virtio_rng.generator=2",
+                    ]
+                # However, that needs new firmware
+                self.fatal("Never FVP not supported with current firmware")
+            # prepend -C to each of the parameters:
             fvp_args = [x for param in model_params for x in ("-C", param)]
             # mcp_romfw_elf = self.ensure_file_exists("MCP ROM ELF firmware",
             #                                         self.firmware_path / "morello/components/morello/mcp_romfw.elf")
@@ -243,9 +271,9 @@ class LaunchFVPBase(SimpleProject):
                 # "-C", "css.trustedBootROMloader.fname=" + str(trusted_fw),
                 ]
             import pprint
-            pprint.pprint(fvp_args)
-            InstallMorelloFVP.get_instance(self, cross_target=CompilationTargets.NATIVE).execute_fvp(
-                fvp_args + ["--print-port-number"], disk_image_path=disk_image, firmware_path=self.firmware_path)
+            self.verbose_print("FVP args:\n", pprint.pformat(fvp_args))
+            fvp_project.execute_fvp(fvp_args + ["--print-port-number"], disk_image_path=disk_image,
+                                    firmware_path=self.firmware_path)
 
 
 class LaunchFVPCheriBSD(LaunchFVPBase):
