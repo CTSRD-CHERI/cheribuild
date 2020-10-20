@@ -215,10 +215,10 @@ class LaunchFVPBase(SimpleProject):
                 # "num_cores=1",
                 ]
             fvp_args = [x for param in model_params for x in ("-C", param)]
-            mcp_romfw_elf = self.ensure_file_exists("MCP ROM ELF firmware",
-                                                    self.firmware_path / "morello/components/morello/mcp_romfw.elf")
-            scp_romfw_elf = self.ensure_file_exists("SCP ROM ELF firmware",
-                                                    self.firmware_path / "morello/components/morello/scp_romfw.elf")
+            # mcp_romfw_elf = self.ensure_file_exists("MCP ROM ELF firmware",
+            #                                         self.firmware_path / "morello/components/morello/mcp_romfw.elf")
+            # scp_romfw_elf = self.ensure_file_exists("SCP ROM ELF firmware",
+            #                                         self.firmware_path / "morello/components/morello/scp_romfw.elf")
             mcp_rom_bin = self.ensure_file_exists("MCP ROM ELF firmware",
                                                   self.firmware_path / "morello/build_artifact/mcp_rom.bin")
             scp_rom_bin = self.ensure_file_exists("SCP ROM ELF firmware",
