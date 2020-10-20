@@ -26,13 +26,14 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 import os
+import subprocess
 from pathlib import Path
 
 from .disk_image import BuildCheriBSDDiskImage
 from .project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
-from ..utils import OSInfo, set_env
+from ..utils import OSInfo, popen, set_env
 
 
 class InstallMorelloFVP(SimpleProject):
@@ -81,7 +82,7 @@ VOLUME /diskimg
             return ["--plugin", Path("/opt/FVP_Morello", plugin_path)]
         return ["--plugin", self.ensure_file_exists("Morello FVP plugin", self.install_dir / plugin_path)]
 
-    def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, **kwargs):
+    def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True, **kwargs):
         model_relpath = "models/Linux64_GCC-6.4/FVP_Morello"
         if self.use_docker_container:
             base_cmd = ["docker", "run", "-it", "--rm",
@@ -91,16 +92,26 @@ VOLUME /diskimg
                 base_cmd += ["-v", str(disk_image_path) + ":" + str(disk_image_path)]
             if firmware_path is not None:
                 base_cmd += ["-v", str(firmware_path) + ":" + str(firmware_path)]
+            if x11:
+                base_cmd += ["-e", "DISPLAY=host.docker.internal:0"]
             base_cmd += [self.container_name, Path("/opt/FVP_Morello", model_relpath)]
         else:
             base_cmd = [self.install_dir / model_relpath]
-        # TODO: X11 on macos:
-        "socat TCP-LISTEN:6000,reuseaddr,fork UNIX-CLIENT:\"$DISPLAY\""
-        self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
+        if self.use_docker_container and x11 and OSInfo.IS_MAC and os.getenv("DISPLAY"):
+            # To use X11 via docker on macos we need to run socat on port 6000
+            socat = popen(["socat", "TCP-LISTEN:6000,reuseaddr,fork", "UNIX-CLIENT:\"" + os.getenv("DISPLAY") + "\""],
+                          stdin=subprocess.DEVNULL)
+            try:
+                self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
+            finally:
+                socat.terminate()
+                socat.kill()
+        else:
+            self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
 
     def run_tests(self):
-        self.execute_fvp(["--help"])
-        self.execute_fvp(["--cyclelimit", "1000"])
+        self.execute_fvp(["--help"], x11=False)
+        self.execute_fvp(["--cyclelimit", "1000"], x11=False)
 
 
 class LaunchFVPBase(SimpleProject):
