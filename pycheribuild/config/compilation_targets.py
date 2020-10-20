@@ -807,7 +807,7 @@ class CompilationTargets(BasicCompilationTargets):
     # TODO: test RISCV
     ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI,
                                                CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI,
-                                               CHERIBSD_AARCH64, BasicCompilationTargets.NATIVE]
+                                               CHERIBSD_AARCH64, CHERIBSD_X86_64, BasicCompilationTargets.NATIVE]
     ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS = [CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI, CHERIBSD_MIPS_PURECAP,
                                            CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI]
     # Same as above, but the default is purecap RISC-V
