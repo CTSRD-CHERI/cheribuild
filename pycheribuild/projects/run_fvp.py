@@ -147,8 +147,6 @@ class LaunchFVPBase(SimpleProject):
         if not self.firmware_path.exists():
             self.fatal("Firmware path", self.firmware_path, " is invalid, set the",
                        "--" + self.get_config_option_name("firmware_path"), "config option!")
-        bl1_bin = self.ensure_file_exists("bl1.bin firmware", self.firmware_path / "bl1.bin")
-        fip_bin = self.ensure_file_exists("fip.bin firmware", self.firmware_path / "fip.bin")
         if self.remote_disk_image_path:
             self.copy_remote_file(self.remote_disk_image_path,
                                   self._source_class.get_instance(self).disk_image_path)
@@ -193,41 +191,61 @@ class LaunchFVPBase(SimpleProject):
                 plugin = self.ensure_file_exists("Morello FVP plugin",
                                                  self.arch_model_path / "plugins/Linux64_GCC-6.4/MorelloPlugin.so")
                 # prepend -C to each of the parameters:
-                param_cmd_args = [x for param in model_params for x in ("-C", param)]
-                self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number"] + param_cmd_args)
-            model_params += [
-                "pctl.startup=0.0.0.0",
-                "bp.secure_memory=0",
-                "cache_state_modelled=0",
-                "cluster0.NUM_CORES=1",
-                "flashloader0.fname=" + str(fip_bin),
-                "secureflashloader.fname=" + str(bl1_bin),
-                ]
+                bl1_bin = self.ensure_file_exists("bl1.bin firmware", self.firmware_path / "bl1.bin")
+                fip_bin = self.ensure_file_exists("fip.bin firmware", self.firmware_path / "fip.bin")
+                model_params += [
+                    "pctl.startup=0.0.0.0",
+                    "bp.secure_memory=0",
+                    "cache_state_modelled=0",
+                    "cluster0.NUM_CORES=1",
+                    "flashloader0.fname=" + str(fip_bin),
+                    "secureflashloader.fname=" + str(bl1_bin),
+                    ]
+                fvp_args = [x for param in model_params for x in ("-C", param)]
+                self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number"] + fvp_args)
         else:
             # prepend -C to each of the parameters:
             model_params += [
+                "displayController=1",
+                "board.virtio_rng.enabled=1",
+                "board.virtio_rng.seed=0",
+                "board.virtio_rng.generator=2",
                 # "css.cache_state_modelled=0",
-                # XXX: or is it , css.scp.ROMloader.fname css.mcp.ROMloader.fname?
-                "css.nonTrustedROMloader.fname=" + str(fip_bin),
-                "css.trustedBootROMloader.fname=" + str(bl1_bin),
-                "css.mcp.ROMloader.fname=" + str(
-                    self.ensure_file_exists("MCP ROM FW",
-                                            self.firmware_path / "morello/mcp_romfw/release/bin/firmware.bin")),
-                "soc.mcp_qspi_loader.fname=" + str(
-                    self.ensure_file_exists("MCP RAM FW",
-                                            self.firmware_path / "morello/mcp_ramfw_fvp/release/bin/firmware.bin")),
-                "css.scp.ROMloader.fname=" + str(
-                    self.ensure_file_exists("SCP ROM FW",
-                                            self.firmware_path / "morello/scp_romfw/release/bin/firmware.bin")),
-                "soc.scp_qspi_loader.fname=" + str(
-                    self.ensure_file_exists("SCP RAM FW",
-                                            self.firmware_path / "morello/scp_ramfw_fvp/release/bin/firmware.bin")),
                 # "num_clusters=1",
                 # "num_cores=1",
                 ]
-            param_cmd_args = [x for param in model_params for x in ("-C", param)]
+            fvp_args = [x for param in model_params for x in ("-C", param)]
+            mcp_romfw_elf = self.ensure_file_exists("MCP ROM ELF firmware",
+                                                    self.firmware_path / "morello/components/morello/mcp_romfw.elf")
+            scp_romfw_elf = self.ensure_file_exists("SCP ROM ELF firmware",
+                                                    self.firmware_path / "morello/components/morello/scp_romfw.elf")
+            mcp_rom_bin = self.ensure_file_exists("MCP ROM ELF firmware",
+                                                  self.firmware_path / "morello/build_artifact/mcp_rom.bin")
+            scp_rom_bin = self.ensure_file_exists("SCP ROM ELF firmware",
+                                                  self.firmware_path / "morello/build_artifact/scp_rom.bin")
+            scp_fw_bin = self.ensure_file_exists("scp_fw.bin", self.firmware_path / "morello/build_artifact/scp_fw.bin")
+            mcp_fw_bin = self.ensure_file_exists("mcp_fw.bin", self.firmware_path / "morello/build_artifact/mcp_fw.bin")
+            uefi_bin = self.ensure_file_exists("UEFI firmware",
+                                               self.firmware_path / "morello/build_artifact/uefi.bin")
+            fvp_args += [
+                # "-a", "Morello_Top.css.scp.armcortexm7ct=" + str(scp_romfw_elf),  # XXX: ?
+                # "-a", "Morello_Top.css.mcp.armcortexm7ct=" + str(mcp_romfw_elf),
+                "-C", "css.scp.ROMloader.fname=" + str(scp_rom_bin),
+                "-C", "css.mcp.ROMloader.fname=" + str(mcp_rom_bin),
+                # "-C", "Morello_Top.soc.scp_qspi_loader.fname=" + str(scp_fw_bin),
+                # "-C", "Morello_Top.soc.mcp_qspi_loader.fname=" + str(mcp_fw_bin),
+                "-C", "soc.scp_qspi_loader.fname=" + str(scp_fw_bin),
+                "-C", "soc.mcp_qspi_loader.fname=" + str(mcp_fw_bin),
+                "-C", "css.scp.armcortexm7ct.INITVTOR=0x0",
+                "-C", "css.mcp.armcortexm7ct.INITVTOR=0x0",
+                "--data", str(uefi_bin) + "@0x14200000",
+                # "-C", "css.nonTrustedROMloader.fname=" + str(uefi_bin),
+                # "-C", "css.trustedBootROMloader.fname=" + str(trusted_fw),
+                ]
+            import pprint
+            pprint.pprint(fvp_args)
             InstallMorelloFVP.get_instance(self, cross_target=CompilationTargets.NATIVE).execute_fvp(
-                param_cmd_args + ["--print-port-number"], disk_image_path=disk_image, firmware_path=self.firmware_path)
+                fvp_args + ["--print-port-number"], disk_image_path=disk_image, firmware_path=self.firmware_path)
 
 
 class LaunchFVPCheriBSD(LaunchFVPBase):
