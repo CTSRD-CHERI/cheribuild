@@ -31,7 +31,7 @@ from pathlib import Path
 
 from .crosscompileproject import (BuildType, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
                                   GitRepository)
-from ..llvm import BuildCheriLLVM
+from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ...config.loader import ComputedDefaultValue
 
 
@@ -44,11 +44,12 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
         function=lambda config, project: Path(config.source_root / "llvm-test-suite"),
         as_string="$SOURCE_ROOT/llvm-test-suite")
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    llvm_project = BuildCheriLLVM
 
     def _find_in_sdk_or_llvm_build_dir(self, name) -> Path:
-        if (BuildCheriLLVM.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name).exists():
-            return BuildCheriLLVM.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name
-        return BuildCheriLLVM.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name
+        if (self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name).exists():
+            return self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name
+        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name
 
     def __init__(self, config):
         super().__init__(config)
@@ -64,3 +65,23 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
             # we want to link against libc++ not libstdc++ (and for some reason we need to specify libgcc_eh too
             self.add_cmake_options(TEST_SUITE_CXX_LIBRARY="-lc++;-lgcc_eh")
             self.add_cmake_options(BENCHMARK_USE_LIBCXX=True)
+
+
+class BuildLLVMTestSuiteCheriBSDUpstreamLLVM(BuildLLVMTestSuite):
+    target = "llvm-test-suite-cheribsd-upstream-llvm"
+    project_name = "llvm-test-suite"
+    repository = GitRepository("https://github.com/llvm/llvm-test-suite.git")
+    llvm_project = BuildUpstreamLLVM
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS + [CompilationTargets.NATIVE]
+
+    @property
+    def custom_c_preprocessor(self):
+        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang-cpp"
+
+    @property
+    def custom_c_compiler(self):
+        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang"
+
+    @property
+    def custom_cxx_compiler(self):
+        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang++"
