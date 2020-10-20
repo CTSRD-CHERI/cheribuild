@@ -174,7 +174,8 @@ class ProjectSubclassDefinitionHook(type):
                 # Temporary: add deprecated aliases: mips-* -> mips64*
                 if arch.is_mips(include_purecap=True) and (
                         new_name.endswith("-mips64-purecap") or new_name.endswith("-mips64-hybrid")):
-                    target_manager.add_target_alias(replace_one(new_name, "-mips64-", "-mips-"), new_name, deprecated=True)
+                    target_manager.add_target_alias(replace_one(new_name, "-mips64-", "-mips-"), new_name,
+                                                    deprecated=True)
                 elif arch.is_mips(include_purecap=False) and (new_name.endswith("-mips64")):
                     target_manager.add_target_alias(replace_one(new_name, "-mips64", "-mips-nocheri"), new_name,
                                                     deprecated=True)
@@ -1224,11 +1225,17 @@ class GitRepository(SourceRepository):
                  per_target_branches: typing.Dict[CrossCompileTarget, TargetBranchInfo] = None):
         self.url = url
         self.old_urls = old_urls
-        self.default_branch = default_branch
+        self._default_branch = default_branch
         self.force_branch = force_branch
         if per_target_branches is None:
             per_target_branches = dict()
         self.per_target_branches = per_target_branches
+
+    def get_default_branch(self, current_project: "Project") -> str:
+        target_override = self.per_target_branches.get(current_project.crosscompile_target, None)
+        if target_override is not None:
+            return target_override.branch
+        return self._default_branch
 
     def ensure_cloned(self, current_project: "Project", *, src_dir: Path, default_src_dir: Path,
                       skip_submodules=False) -> None:
@@ -1252,8 +1259,8 @@ class GitRepository(SourceRepository):
                 clone_cmd.extend(["--depth", "1", "--no-single-branch"])
             if not skip_submodules:
                 clone_cmd.append("--recurse-submodules")
-            if self.default_branch:
-                clone_cmd += ["--branch", self.default_branch]
+            if self.get_default_branch(current_project):
+                clone_cmd += ["--branch", self.get_default_branch(current_project)]
             current_project.run_cmd(clone_cmd + [self.url, default_src_dir], cwd="/")
             # Could also do this but it seems to fetch more data than --no-single-branch
             # if self.config.shallow_clone:
@@ -1331,18 +1338,19 @@ class GitRepository(SourceRepository):
 
         # Handle forced branches now that we have fetched the latest changes
         if src_dir.exists() and self.force_branch:
-            assert self.default_branch, "default_branch must be set if force_branch is true!"
+            default_branch = self.get_default_branch(current_project)
+            assert default_branch, "default_branch must be set if force_branch is true!"
             # TODO: move this to Project so it can also be used for other targets
             status = run_command("git", "status", "-b", "-s", "--porcelain", "-u", "no",
                                  capture_output=True, print_verbose_only=True, cwd=src_dir,
                                  run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS)
             if status.stdout.startswith(b"## ") and not status.stdout.startswith(
-                    b"## " + self.default_branch.encode("utf-8") + b"..."):
+                    b"## " + default_branch.encode("utf-8") + b"..."):
                 current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
                 current_project.warning("You are trying to build the", current_branch.decode("utf-8"),
-                                        "branch. You should be using", self.default_branch)
-                if current_project.query_yes_no("Would you like to change to the " + self.default_branch + " branch?"):
-                    run_command("git", "checkout", self.default_branch, cwd=src_dir)
+                                        "branch. You should be using", default_branch)
+                if current_project.query_yes_no("Would you like to change to the " + default_branch + " branch?"):
+                    run_command("git", "checkout", default_branch, cwd=src_dir)
                 else:
                     current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
                                                          error_message="Wrong branch: " + current_branch.decode(

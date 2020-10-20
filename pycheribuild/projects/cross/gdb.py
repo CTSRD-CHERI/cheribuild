@@ -34,6 +34,7 @@ from pathlib import Path
 
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
                                   DefaultInstallDir, GitRepository, Linkage, MakeCommandKind)
+from ..project import TargetBranchInfo
 from ...utils import OSInfo, run_command, status_update
 
 
@@ -62,16 +63,24 @@ class BuildGDB(CrossCompileAutotoolsProject):
     path_in_rootfs = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS
-    repository = GitRepository("https://github.com/CTSRD-CHERI/gdb.git",
-                               # Branch name is changed for every major GDB release:
-                               default_branch="mips_cheri-8.3", force_branch=True,
-                               old_urls=[b'https://github.com/bsdjhb/gdb.git'])
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/gdb.git",
+        # Branch name is changed for every major GDB release:
+        default_branch="mips_cheri-8.3", force_branch=True,
+        per_target_branches={
+            CompilationTargets.CHERIBSD_AARCH64: TargetBranchInfo(branch="morello-8.3",
+                                                                  directory_name="morello-gdb"),
+            CompilationTargets.CHERIBSD_MORELLO_HYBRID: TargetBranchInfo(branch="morello-8.3",
+                                                                         directory_name="morello-gdb"),
+            },
+        old_urls=[b'https://github.com/bsdjhb/gdb.git'])
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
     default_build_type = BuildType.RELEASE
     supported_architectures = [CompilationTargets.NATIVE,
                                CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_RISCV_HYBRID,
-                               CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
+                               CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                               CompilationTargets.CHERIBSD_AARCH64, CompilationTargets.CHERIBSD_MORELLO_HYBRID]
     default_architecture = CompilationTargets.NATIVE
 
     @classmethod
