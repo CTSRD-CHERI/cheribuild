@@ -17,7 +17,8 @@ macOS 10.14 and newer is also supported.
 When building on macOS the following packages are required:
 ```shell
 brew install cmake ninja libarchive git glib automake autoconf coreutils llvm
-cpan install Parse::Yapp::Driver # required for samba
+# Install samba for shared mounts between host and CheriBSD on QEMU
+brew install arichardson/cheri/samba
 ```
 
 
