@@ -57,6 +57,7 @@ class BuildMtools(AutotoolsProject):
     repository = GitRepository(url="https://github.com/vapier/mtools.git")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     make_kind = MakeCommandKind.GnuMake
+    build_in_source_dir = True
 
     def __init__(self, config):
         super().__init__(config)
@@ -66,13 +67,15 @@ class BuildMtools(AutotoolsProject):
         self.make_args.set(MAN1="", MAN5="")
 
     def process(self):
-        if not (self.source_dir / "mtools.tmpl.1").exists():
-            self.run_cmd("bash", "-xe", "./mkmanpages", cwd=self.source_dir)
         super().process()
 
     def configure(self, **kwargs):
         if not (self.source_dir / "configure").exists():
             self.run_cmd("autoreconf", "-ivf", cwd=self.source_dir)
+        if not (self.source_dir / "mtools.tmpl.1").exists():
+            self.run_cmd("bash", "-e", "./mkmanpages", cwd=self.source_dir)
+        if self.target_info.is_macos():
+            self.add_configure_env_arg("LIBS", "-liconv")
 
         super().configure(**kwargs)
 
