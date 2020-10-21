@@ -84,12 +84,13 @@ VOLUME /diskimg
             return ["--plugin", Path("/opt/FVP_Morello", plugin_path)]
         return ["--plugin", self.ensure_file_exists("Morello FVP plugin", self.install_dir / plugin_path)]
 
-    def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True, **kwargs):
+    def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True,
+                    expose_telnet_ports=True, **kwargs):
         model_relpath = "models/Linux64_GCC-6.4/FVP_Morello"
         if self.use_docker_container:
-            base_cmd = ["docker", "run", "-it", "--rm",
-                        "-p", "5000:5000",  # Expose port 5000 for telnet
-                        ]
+            base_cmd = ["docker", "run", "-it", "--rm"]
+            if expose_telnet_ports:
+                base_cmd += ["-p", "5000-5007:5000-5007"]
             if disk_image_path is not None:
                 base_cmd += ["-v", str(disk_image_path) + ":" + str(disk_image_path)]
             if firmware_path is not None:
@@ -125,8 +126,8 @@ VOLUME /diskimg
             return 0
 
     def run_tests(self):
-        self.execute_fvp(["--help"], x11=False)
-        self.execute_fvp(["--cyclelimit", "1000"], x11=False)
+        self.execute_fvp(["--help"], x11=False, expose_telnet_ports=False)
+        self.execute_fvp(["--cyclelimit", "1000"], x11=False, expose_telnet_ports=False)
 
 
 class LaunchFVPBase(SimpleProject):
