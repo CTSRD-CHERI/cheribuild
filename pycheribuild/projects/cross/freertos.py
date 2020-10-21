@@ -56,7 +56,10 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         "RISC-V-Generic"]
 
     # Map Demos and the FreeRTOS apps we support building/running for
-    supported_demo_apps = {"RISC-V-Generic": ["main_blinky", "main_compartment_test"]}
+    supported_demo_apps = {"RISC-V-Generic": ["main_blinky",
+                                              "main_compartment_test",
+                                              "main_peekpoke"
+                                             ]}
 
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
@@ -129,11 +132,14 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     def compile(self, **kwargs):
         self.make_args.set(BSP=self.demo_bsp)
 
+        if self.demo_app == "main_compartment_test":
+          self.run_compartmentalize()
+
         # Need to clean before/between building apps, otherwise
         # irrelevant objs will be picked up from incompatible apps/builds
-        self.run_compartmentalize()
         self.make_args.set(PROG=self.demo_app)
         self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
+
         self.run_make(cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
         self.move_file(self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo_app + ".elf"),
                        self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"))
