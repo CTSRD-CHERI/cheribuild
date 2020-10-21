@@ -1300,7 +1300,7 @@ class GitRepository(SourceRepository):
             if current_project.query_yes_no("Use this remote?"):
                 break
             remote_name = input("Please enter the correct remote: ")
-        run_command(["git", "worktree", "add", "--track", "-b", target_override.branch, src_dir,
+        run_command(["git", "worktree", "add", "--track", "-B", target_override.branch, src_dir,
                      remote_name + "/" + target_override.branch], cwd=default_src_dir)
 
     def get_real_source_dir(self, caller: SimpleProject, default_src_dir: Path) -> Path:
