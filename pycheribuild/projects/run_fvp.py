@@ -227,10 +227,10 @@ class LaunchFVPBase(SimpleProject):
         else:
             fvp_project = InstallMorelloFVP.get_instance(self, cross_target=CompilationTargets.NATIVE)
             model_params += [
-                "displayController=1",
-                # "css.cache_state_modelled=0",
-                # "num_clusters=1",
-                # "num_cores=1",
+                "displayController=0",  # won't work yet
+                "css.cache_state_modelled=0",
+                #"num_clusters=1",
+                #"num_cores=1",
                 ]
             if fvp_project.get_fvp_revision() > 255:
                 # virtio-rng supported in rev312
