@@ -1940,7 +1940,7 @@ class Project(SimpleProject):
         self.common_warning_flags = []
         target_arch = self.crosscompile_target
         # compiler flags:
-        self.COMMON_FLAGS = self.target_info.required_compile_flags()
+        self.COMMON_FLAGS = self.target_info.default_initial_compile_flags()
         if target_arch.is_cheri_purecap([CPUArchitecture.MIPS64]) and self.force_static_linkage:
             # clang currently gets the TLS model wrong:
             # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901

@@ -725,7 +725,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         return ["newlib", "compiler-rt-builtins"]
 
-    def required_compile_flags(self) -> typing.List[str]:
+    def default_initial_compile_flags(self) -> typing.List[str]:
         # Currently we need these flags to build anything against newlib baremetal
         if self.target.is_mips(include_purecap=True):
             return [

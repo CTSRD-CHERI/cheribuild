@@ -164,7 +164,7 @@ class TargetInfo(ABC):
         """returns a list of targets that need to be built for a minimal sysroot"""
         return []
 
-    def required_compile_flags(self) -> typing.List[str]:
+    def default_initial_compile_flags(self) -> typing.List[str]:
         """Flags that need to be passed to cc/c++/cpp in all cases"""
         return []
 
