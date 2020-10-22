@@ -52,7 +52,6 @@ class MorelloFirmwareBase(CrossCompileMakefileProject):
     _default_install_dir_fn = ComputedDefaultValue(function=_morello_firmware_build_outputs_dir,
                                                    as_string="$MORELLO_SDK_ROOT/fvp-firmware/morello/build-outputs")
 
-
     @property
     def optimization_flags(self):
         return []  # These projects won't build at -O0 (since it's too big), just use the default
@@ -114,6 +113,7 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
         super().setup()
         self.make_args.set(ENABLE_MORELLO_CAP=1, PLAT="morello", ARCH="aarch64",
                            DEBUG=1 if self.build_type.is_debug else 0,
+                           CSS_USE_SCMI_SDS_DRIVER=1,
                            E=0,  # disable -Werror since there are some unused functions
                            V=1,  # verbose
                            )
