@@ -755,6 +755,83 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         return BuildNewlib.get_instance(self.project, cross_target=xtarget)
 
 
+class ArmNoneEabiGccTargetInfo(TargetInfo):
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        return []  # TODO: add a target to download the tarball and extract it
+
+    @property
+    def target_triple(self) -> str:
+        raise ValueError("Should not be used directly")
+
+    @property
+    def sysroot_dir(self) -> Path:
+        raise ValueError("Should not be used directly")
+
+    @property
+    def cmake_system_name(self) -> str:
+        return "Generic"  # Unknown platform, CMake expects the value to be set to Generic
+
+    def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
+        super().__init__(target, project)
+        self._bindir = None
+        self._binary_prefix = None
+
+    @property
+    def bindir(self) -> Path:
+        if self._bindir is not None:
+            return self._bindir
+        self._bindir = Path(self.project.config.arm_none_eabi_toolchain_prefix).parent
+        return self._bindir
+
+    @property
+    def binary_prefix(self) -> str:
+        if self._binary_prefix is not None:
+            return self._binary_prefix
+        self._binary_prefix = Path(self.project.config.arm_none_eabi_toolchain_prefix).name
+        return self._binary_prefix
+
+    @property
+    def sdk_root_dir(self) -> Path:
+        return self.bindir.parent
+
+    @property
+    def c_compiler(self) -> Path:
+        return self.bindir / (self.binary_prefix + "gcc")
+
+    @property
+    def cxx_compiler(self) -> Path:
+        return self.bindir / (self.binary_prefix + "g++")
+
+    @property
+    def c_preprocessor(self) -> Path:
+        return self.bindir / (self.binary_prefix + "cpp")
+
+    @property
+    def linker(self) -> Path:
+        return self.bindir / (self.binary_prefix + "ld")
+
+    @property
+    def ar(self) -> Path:
+        return self.bindir / (self.binary_prefix + "ar")
+
+    @property
+    def strip_tool(self) -> Path:
+        return self.bindir / (self.binary_prefix + "strip")
+
+    @property
+    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+        # This version of GCC should work without any additional flags
+        return []
+
+    @classmethod
+    def is_baremetal(cls):
+        return False
+
+    def must_link_statically(self):
+        return True
+
+
 class CompilationTargets(BasicCompilationTargets):
     CHERIBSD_MIPS_NO_CHERI = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, CheriBSDTargetInfo)
     CHERIBSD_MIPS_HYBRID = CrossCompileTarget("mips64-hybrid", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
@@ -795,6 +872,8 @@ class CompilationTargets(BasicCompilationTargets):
     BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget("baremetal-riscv64-purecap", CPUArchitecture.RISCV64,
                                                           NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                           hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
+    ARM_NONE_EABI = CrossCompileTarget("arm-none-eabi", CPUArchitecture.ARM32, ArmNoneEabiGccTargetInfo,
+                                       is_cheri_hybrid=False, is_cheri_purecap=False)  # For 32-bit firmrware
     # FreeBSD targets
     FREEBSD_MIPS = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, FreeBSDTargetInfo)
     FREEBSD_RISCV = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, FreeBSDTargetInfo)

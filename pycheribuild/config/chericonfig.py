@@ -37,6 +37,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+from .loader import ComputedDefaultValue
 from ..utils import have_working_internet_connection, latest_system_clang_tool, status_update, warning_message
 
 
@@ -71,6 +72,21 @@ class BuildType(Enum):
     @property
     def is_debug(self):
         return self is BuildType.DEBUG
+
+
+def _default_arm_none_eabi_prefix(c: "CheriConfig", _):
+    # see if the local install exists:
+    default_path = c.output_root / "arm-none-eabi-sdk"
+    if (default_path / "bin/arm-none-eabi-gcc").exists():
+        return str(default_path / "bin/arm-none-eabi-")
+    elif Path("/Applications/ARM/bin/arm-none-eabi-gcc").exists():
+        return "/Applications/ARM/bin/arm-none-eabi-"
+    else:
+        in_path = shutil.which("arm-none-eabi-gcc")
+        if in_path is not None:
+            return str(Path(in_path).parent / "arm-none-eabi-")
+        # Otherwise suggest the non-existent local installation
+        return str(default_path / "bin/arm-none-eabi-")
 
 
 class CheriConfig(object):
@@ -354,6 +370,13 @@ class CheriConfig(object):
         self.fpga_custom_env_setup_script = loader.add_path_option(
             "beri-fpga-env-setup-script",
             help="Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh")
+
+        self.arm_none_eabi_toolchain_prefix = loader.add_option(
+            "arm-none-eabi-prefix", default=ComputedDefaultValue(_default_arm_none_eabi_prefix, ""),
+            group=loader.path_group,
+            help="Prefix for arm-none-eabi-gcc binaries (e.g. /usr/bin/arm-none-eabi-). Available at"
+                 "https://developer.arm.com/tools-and-software/open-source-software/"
+                 "developer-tools/gnu-toolchain/gnu-rm/downloads")
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
         self.__optional_properties = ["preferred_xtarget"]
