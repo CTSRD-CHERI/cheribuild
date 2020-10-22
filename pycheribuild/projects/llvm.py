@@ -482,7 +482,8 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
         # configure-time compiler checks.
         # self.add_cmake_options(LLVM_DEFAULT_TARGET_TRIPLE=CheriBSDMorelloTargetInfo.triple_for_target(
         #    CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config, include_version=True))
-        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="AArch64;host")
+        # Note: ARM target is needed for firmware
+        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="ARM;AArch64;host")
         super().configure(**kwargs)
 
     def install(self, **kwargs):
