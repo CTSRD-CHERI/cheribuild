@@ -25,12 +25,17 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+import os
+import shutil
+import tempfile
+from pathlib import Path
 
 from .cross.crosscompileproject import CrossCompileMakefileProject
-from .project import DefaultInstallDir, GitRepository
+from .cross.gdb import BuildGDB
+from .project import DefaultInstallDir, GitRepository, SimpleProject
 from ..config.chericonfig import BuildType
 from ..config.compilation_targets import CompilationTargets
-from ..utils import OSInfo
+from ..utils import OSInfo, set_env
 
 
 class MorelloFirmwareBase(CrossCompileMakefileProject):
@@ -109,6 +114,90 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
             # FIXME: Makefile doesn't add HOSTLDFLAGS
             fip_make.set(HOSTCC=str(self.host_CC) + " " + fip_make.env_vars["HOSTLDFLAGS"])
         self.run_make(make_target="all", cwd=self.source_dir / "tools/fiptool", options=fip_make)
+
+    def install(self, **kwargs):
+        pass  # TODO: implement
+
+
+class BuildMorelloUEFI(MorelloFirmwareBase):
+    repository = GitRepository("git@git.morello-project.org:morello/edk2.git")
+    morello_platforms_repository = GitRepository("git@git.morello-project.org:morello/edk2-platforms.git")
+    uefi_tools_repository = GitRepository("https://git.linaro.org/uefi/uefi-tools.git")
+
+    # FIXME: clone edk2/edk2-platforms
+    target = "morello-uefi"
+    project_name = "morello-edk2"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_required_system_tool("iasl", homebrew="acpica", apt="acpica-tools")
+
+    def update(self):
+        super().update()
+        self.morello_platforms_repository.update(self, src_dir=self.source_dir / "edk2-platforms",
+                                                 skip_submodules=self.skip_git_submodules)
+        self.uefi_tools_repository.update(self, src_dir=self.source_dir / "uefi-tools",
+                                          skip_submodules=self.skip_git_submodules)
+
+    def compile(self, **kwargs):
+        # We need to use ld.bfd
+        with tempfile.TemporaryDirectory() as td:
+            self._compile(Path(td))
+
+    def _compile(self, fake_compiler_dir: Path):
+        iasl = shutil.which("iasl")
+        acpica_path = Path(iasl).parent if iasl is not None else Path("/acpica/not/found")
+        # Create the fake compiler directory with the tools and a clang wrapper script that forces bfd
+        # Also disable lto since we don't install the LLVM LTO plugin
+        self.write_file(fake_compiler_dir / "clang", contents="""#!/usr/bin/env python3
+import subprocess
+import sys
+
+args = []
+# drop arguments that won't work with a non-plugin ld
+for arg in sys.argv[1:]:
+    if arg.startswith("-Wl,-plugin-opt="):
+        continue
+    args.append(arg)
+subprocess.check_call(["{real_clang}", "-B{fake_dir}"] + args + ["-fuse-ld=bfd", "-fno-lto", "-Qunused-arguments"])
+""".format(real_clang=self.CC, fake_dir=fake_compiler_dir), overwrite=True, mode=0o755)
+        self.run_cmd(fake_compiler_dir / "clang", "-v")  # check that the script works
+        for i in ("llvm-objcopy", "llvm-objdump", "llvm-ar", "llvm-ranlib", "objcopy", "objdump", "ar", "ranlib",
+                  "nm", "llvm-nm", "size", "llvm-size"):
+            self.create_symlink(self.sdk_bindir / i, fake_compiler_dir / i, relative=False)
+
+        # EDK2 needs bfd until the lld target is merged
+        bfd_path = BuildGDB.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/ld.bfd"
+        if not bfd_path.exists():
+            self.fatal("Missing ld.bfd, please run `cheribuild.py gdb-native --reconfigure`")
+        self.create_symlink(bfd_path, fake_compiler_dir / "ld", relative=False)
+        self.create_symlink(bfd_path, fake_compiler_dir / "ld.bfd", relative=False)
+        firmware_ver = self.run_cmd("git", "-C", self.source_dir, "rev-parse", "--short", "HEAD",
+                                    capture_output=True, run_in_pretend_mode=True).stdout.decode("utf-8").strip()
+        # if ! git diff-index --quiet HEAD --; then
+        #   FIRMWARE_VER="${FIRMWARE_VER}-dirty"
+        # fi
+        with set_env(CROSS_COMPILE=str(fake_compiler_dir) + "/",
+                     CLANG_BIN=fake_compiler_dir,
+                     EDK2_TOOLCHAIN="CLANG38",
+                     VERBOSE=1,
+                     PATH=str(fake_compiler_dir) + ":" + os.getenv("PATH")):
+            platform_desc = "Platform/ARM/Morello/MorelloPlatformFvp.dsc"
+            if not (self.source_dir / "edk2-platforms" / platform_desc).exists():
+                self.fatal("Could not find", self.source_dir / "edk2-platforms" / platform_desc)
+            script = """
+source ./edksetup.sh
+make -C BaseTools
+export PACKAGES_PATH=:{src}:{src}/edk2-platforms:
+export CLANG38_AARCH64_PREFIX={toolchain_bin}/llvm-
+export CLANG38_BIN={toolchain_bin}/
+build -n {make_jobs} -a AARCH64 -t CLANG38 -p {platform_desc} \
+    -b {build_mode} -s -D EDK2_OUT_DIR=Build/morellofvp -D PLAT_TYPE_FVP \
+    -D ENABLE_MORELLO_CAP -D FIRMWARE_VER={firmware_ver}""".format(
+                iasl_path=acpica_path, uefi_tools=self.source_dir / "uefi-tools", src=self.source_dir,
+                make_jobs=self.config.make_jobs, build_mode="DEBUG",  # TODO: release
+                firmware_ver=firmware_ver, toolchain_bin=fake_compiler_dir, platform_desc=platform_desc)
+            self.run_shell_script(script, shell="bash", cwd=self.source_dir)
 
     def install(self, **kwargs):
         pass  # TODO: implement
