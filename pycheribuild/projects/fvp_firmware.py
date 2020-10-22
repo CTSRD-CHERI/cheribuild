@@ -40,6 +40,10 @@ class MorelloFirmwareBase(CrossCompileMakefileProject):
     needs_sysroot = False  # We don't need a complete sysroot
     default_build_type = BuildType.DEBUG  # TODO: release once it works
 
+    @property
+    def optimization_flags(self):
+        return []  # These projects won't build at -O0 (since it's too big), just use the default
+
 
 class BuildMorelloScpFirmware(MorelloFirmwareBase):
     repository = GitRepository("git@git.morello-project.org:morello/scp-firmware.git")
@@ -74,13 +78,12 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
     set_commands_on_cmdline = True  # Need to override this on the command line since the makefile uses :=
     default_build_type = BuildType.RELEASE
 
-    @property
-    def optimization_flags(self):
-        return []  # Won't build at -O0 (since it's too big), just use the default
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_required_system_tool("dtc", homebrew="dtc", apt="dtc")
 
     def setup(self):
         super().setup()
-        self.add_required_system_tool("wgets", homebrew="dtc")
         self.make_args.set(ENABLE_MORELLO_CAP=1, PLAT="morello", ARCH="aarch64",
                            DEBUG=1 if self.build_type.is_debug else 0,
                            E=0,  # disable -Werror since there are some unused functions
