@@ -1932,12 +1932,11 @@ class Project(SimpleProject):
 
         # convert the tuples into mutable lists (this is needed to avoid modifying class variables)
         # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
-        self.cross_warning_flags = ["-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
-                                    "-Werror=format", "-Werror=undefined-internal",
-                                    "-Werror=incompatible-pointer-types",
-                                    "-Werror=cheri-prototypes", "-Werror=cheri-bitwise-operations"]
-        # Make underaligned capability loads/stores an error and require an explicit cast:
-        self.cross_warning_flags.append("-Werror=pass-failed")
+        # FIXME: this should move to target_info
+        self.cross_warning_flags = ["-Werror=implicit-function-declaration",
+                                    "-Werror=format", "-Werror=incompatible-pointer-types"]
+        if get_compiler_info(self.CC).is_clang:
+            self.cross_warning_flags += ["-Werror=undefined-internal"]
         self.host_warning_flags = []
         self.common_warning_flags = []
         target_arch = self.crosscompile_target
@@ -1952,7 +1951,7 @@ class Project(SimpleProject):
                 self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
 
         # We might be setting too many flags, ignore this (for now)
-        if not self.compiling_for_host():
+        if not self.compiling_for_host() and get_compiler_info(self.CC).is_clang:
             self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
         assert self.install_dir, "must be set"
@@ -1994,6 +1993,15 @@ class Project(SimpleProject):
             self.make_args.set_env(**pkg_config_args)
         if self.use_lto:
             self.add_lto_build_options(get_compiler_info(self.CC))
+
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            self.cross_warning_flags += ["-Werror=cheri-capability-misuse", "-Werror=cheri-bitwise-operations"]
+            # The morello compiler still uses the old flag name
+            supports_new_flag = get_compiler_info(self.CC).supports_warning_flag("-Werror=cheri-prototypess")
+            self.cross_warning_flags.append("-Werror=cheri-prototypes" if supports_new_flag else
+                                            "-Werror=mips-cheri-prototypes")
+            # Make underaligned capability loads/stores an error and require an explicit cast:
+            self.cross_warning_flags.append("-Werror=pass-failed")
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
         self.fatal("Building", self.project_name, "with LTO is not supported (yet).")

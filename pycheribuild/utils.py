@@ -325,6 +325,7 @@ class CompilerInfo(object):
         self.version_str = version_str
         self.default_target = default_target
         self._resource_dir = None  # type: typing.Optional[Path]
+        self._supported_warning_flags = dict()  # type: typing.Dict[str, bool]
         assert compiler in ("unknown compiler", "clang", "apple-clang", "gcc"), "unknown type: " + compiler
 
     def get_resource_dir(self) -> Path:
@@ -345,6 +346,20 @@ class CompilerInfo(object):
                 resource_dir_pat = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"')
                 self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
         return self._resource_dir
+
+    def _supports_warning_flag(self, flag: str):
+        assert flag.startswith("-W")
+        result = run_command(self.path, flag, "-fsyntax-only", "-xc", "/dev/null", "-Werror=unknown-warning-option",
+                             print_verbose_only=True, run_in_pretend_mode=True, capture_error=True,
+                             allow_unexpected_returncode=True)
+        return result.returncode == 0
+
+    def supports_warning_flag(self, flag: str):
+        result = self._supported_warning_flags.get(flag)
+        if result is None:
+            result = self._supports_warning_flag(flag)
+            self._supported_warning_flags[flag] = result
+        return result
 
     def get_matching_binutil(self, binutil):
         assert self.is_clang
