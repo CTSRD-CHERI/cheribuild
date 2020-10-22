@@ -33,9 +33,14 @@ from pathlib import Path
 from .cross.crosscompileproject import CrossCompileMakefileProject
 from .cross.gdb import BuildGDB
 from .project import DefaultInstallDir, GitRepository, SimpleProject
-from ..config.chericonfig import BuildType
+from ..config.chericonfig import BuildType, CheriConfig
 from ..config.compilation_targets import CompilationTargets
+from ..config.loader import ComputedDefaultValue
 from ..utils import OSInfo, set_env
+
+
+def _morello_firmware_build_outputs_dir(config: CheriConfig, _: SimpleProject):
+    return config.morello_sdk_dir / "fvp-firmware/morello/build-outputs"
 
 
 class MorelloFirmwareBase(CrossCompileMakefileProject):
@@ -44,6 +49,9 @@ class MorelloFirmwareBase(CrossCompileMakefileProject):
     cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY  # TODO: install it
     needs_sysroot = False  # We don't need a complete sysroot
     default_build_type = BuildType.DEBUG  # TODO: release once it works
+    _default_install_dir_fn = ComputedDefaultValue(function=_morello_firmware_build_outputs_dir,
+                                                   as_string="$MORELLO_SDK_ROOT/fvp-firmware/morello/build-outputs")
+
 
     @property
     def optimization_flags(self):
@@ -200,4 +208,5 @@ build -n {make_jobs} -a AARCH64 -t CLANG38 -p {platform_desc} \
             self.run_shell_script(script, shell="bash", cwd=self.source_dir)
 
     def install(self, **kwargs):
-        pass  # TODO: implement
+        self.install_file(self.build_dir / "Build/morellofvp/DEBUG_CLANG38/FV/BL33_AP_UEFI.fd",
+                          self.install_dir / "uefi.bin", print_verbose_only=False)
