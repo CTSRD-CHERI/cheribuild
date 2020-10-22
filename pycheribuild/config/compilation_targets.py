@@ -755,6 +755,58 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         return BuildNewlib.get_instance(self.project, cross_target=xtarget)
 
 
+class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
+    shortname = "Morello-Baremetal"
+
+    @property
+    def cmake_system_name(self) -> str:
+        return "Generic"  # Unknown platform, CMake expects the value to be set to Generic
+
+    def _get_sdk_root_dir_lazy(self) -> Path:
+        return self.config.morello_sdk_dir
+
+    @property
+    def sysroot_dir(self) -> Path:
+        # Install to mips/cheri128 directory
+        raise ValueError("Should not have a valid sysroot")
+
+    @property
+    def must_link_statically(self):
+        return True  # only static linking works
+
+    @property
+    def _compiler_dir(self) -> Path:
+        return self.config.morello_sdk_dir / "bin"
+
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        return ["morello-llvm"]
+
+    @property
+    def target_triple(self):
+        if self.target.cpu_architecture == CPUArchitecture.ARM32:
+            return "arm-none-eabi"
+        assert self.target.is_aarch64(include_purecap=True)
+        if self.target.is_cheri_hybrid():
+            return "aarch64-unknown-elf"
+        assert False, "Other baremetal cases have not been tested yet!"
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        return []
+
+    @property
+    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+        if (self.target.cpu_architecture == CPUArchitecture.ARM32 or
+                self.target.is_cheri_hybrid([CPUArchitecture.AARCH64])):
+            return super().essential_compiler_and_linker_flags
+        assert False, "Other baremetal cases have not been tested yet!"
+
+    @classmethod
+    def is_baremetal(cls):
+        return True
+
+
 class ArmNoneEabiGccTargetInfo(TargetInfo):
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
@@ -872,6 +924,10 @@ class CompilationTargets(BasicCompilationTargets):
     BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget("baremetal-riscv64-purecap", CPUArchitecture.RISCV64,
                                                           NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                           hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
+
+    MORELLO_BAREMETAL_HYBRID = CrossCompileTarget("morello-baremetal", CPUArchitecture.AARCH64,
+                                                  MorelloBaremetalTargetInfo, is_cheri_hybrid=True,
+                                                  is_cheri_purecap=False)
     ARM_NONE_EABI = CrossCompileTarget("arm-none-eabi", CPUArchitecture.ARM32, ArmNoneEabiGccTargetInfo,
                                        is_cheri_hybrid=False, is_cheri_purecap=False)  # For 32-bit firmrware
     # FreeBSD targets
