@@ -2900,6 +2900,7 @@ class MakefileProject(Project):
     make_kind = MakeCommandKind.GnuMake  # Default to GNU make since that's what most makefile projects use
     _define_ld = False
     _stdout_filter = None  # don't filter output during make
+    set_commands_on_cmdline = False  # Set variables such as CC/CXX on the command line instead of the environment
 
     @property
     def essential_compiler_args(self):
@@ -2910,11 +2911,11 @@ class MakefileProject(Project):
         super().setup()
         # Most projects expect that a plain $CC foo.c will work so we include the -target, etc in CC
         essential_flags = self.target_info.essential_compiler_and_linker_flags
-        self.set_make_env_cmd_with_args("CC", self.CC, essential_flags)
-        self.set_make_env_cmd_with_args("CPP", self.CPP, essential_flags)
-        self.set_make_env_cmd_with_args("CXX", self.CXX, essential_flags)
-        self.set_make_env_cmd_with_args("CCLD", self.CC, essential_flags)
-        self.set_make_env_cmd_with_args("CXXLD", self.CXX, essential_flags)
+        self.set_make_cmd_with_args("CC", self.CC, essential_flags)
+        self.set_make_cmd_with_args("CPP", self.CPP, essential_flags)
+        self.set_make_cmd_with_args("CXX", self.CXX, essential_flags)
+        self.set_make_cmd_with_args("CCLD", self.CC, essential_flags)
+        self.set_make_cmd_with_args("CXXLD", self.CXX, essential_flags)
         self.make_args.set_env(AR=self.target_info.ar)
 
         # Some projects expect LD to be CCLD others really mean the raw linker
@@ -2930,11 +2931,14 @@ class MakefileProject(Project):
             LDFLAGS=commandline_to_str(self.default_ldflags + self.LDFLAGS),
             )
 
-    def set_make_env_cmd_with_args(self, var, cmd: Path, args: list):
+    def set_make_cmd_with_args(self, var, cmd: Path, args: list):
         value = str(cmd)
         if args:
             value += " " + commandline_to_str(args)
-        self.make_args.set_env(**{var: value})
+        if self.set_commands_on_cmdline:
+            self.make_args.set(**{var: value})
+        else:
+            self.make_args.set_env(**{var: value})
 
 
 # A target that is just an alias for at least one other targets but does not force building of dependencies
