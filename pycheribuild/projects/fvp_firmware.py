@@ -62,6 +62,7 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
     project_name = "morello-scp-firmware"
     supported_architectures = [CompilationTargets.ARM_NONE_EABI]
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
+    default_build_type = BuildType.RELEASE
 
     @property
     def build_mode(self):
@@ -69,8 +70,9 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
 
     def setup(self):
         super().setup()
+        # FIXME: DEBUG seems to result in an infinite loop on startup (assertion failure?)
         self.make_args.set(PRODUCT="morello", MODE=self.build_mode,
-                           LOG_LEVEL="TRACE" if self.build_type.is_debug else "INFO",  # TODO: change it to warn
+                           LOG_LEVEL="TRACE" if self.build_type.is_debug else "TRACE",  # TODO: change it to warn
                            V="y")
         # Build system tries to use macos tool which won't work
         self.make_args.set(
@@ -80,13 +82,6 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
             )
 
     def install(self, **kwargs):
-        """
-++ cp ./scp/build/product/morello/scp_romfw/release/bin/firmware.bin /home/alr48/cheri/arm-morello-dropzone/CodeDrop/firmware-package/output/morello//components/morello/scp-rom.bin
-++ cp ./scp/build/product/morello/scp_romfw/release/bin/scp_romfw.elf /home/alr48/cheri/arm-morello-dropzone/CodeDrop/firmware-package/output/morello//components/morello/scp_romfw.elf
-++ cp ./scp/build/product/morello/mcp_ramfw_fvp/release/bin/firmware.bin /home/alr48/cheri/arm-morello-dropzone/CodeDrop/firmware-package/output/morello//components/morello/mcp-ram.bin
-++ cp ./scp/build/product/morello/mcp_romfw/release/bin/mcp_romfw.elf /home/alr48/cheri/arm-morello-dropzone/CodeDrop/firmware-package/output/morello//components/morello/mcp_romfw.elf
-        """
-
         binaries_dir = self.build_dir / "build/product/morello"
         for i in ("mcp_ramfw_fvp", "scp_ramfw_fvp", "mcp_romfw", "scp_romfw"):
             self.install_file(binaries_dir / i / self.build_mode / "bin" / (i + ".bin"),
