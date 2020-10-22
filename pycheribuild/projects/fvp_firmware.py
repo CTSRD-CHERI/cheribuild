@@ -230,3 +230,20 @@ build -n {make_jobs} -a AARCH64 -t CLANG38 -p {platform_desc} \
     def install(self, **kwargs):
         self.install_file(self.build_dir / "Build/morellofvp/DEBUG_CLANG38/FV/BL33_AP_UEFI.fd",
                           self.install_dir / "uefi.bin", print_verbose_only=False)
+
+
+class BuildMorelloFlashImages(SimpleProject):
+    target = "morello-flash-images"
+    dependencies = ["morello-scp-firmware", "morello-trusted-firmware"]
+
+    def process(self):
+        fw_dir = _morello_firmware_build_outputs_dir(self.config, self)
+        self.info("Building combined SCP and AP flash image")
+        self.run_cmd(self.config.morello_sdk_dir / "bin/fiptool", "create",
+                     "--scp-fw", fw_dir / "scp_ramfw_fvp.bin",
+                     "--soc-fw", fw_dir / "tf-bl31.bin",
+                     fw_dir / "scp_ap_image.bin")
+        self.info("Building MCP flash image")
+        self.run_cmd(self.config.morello_sdk_dir / "bin/fiptool", "create",
+                     "--blob", "uuid=54464222-a4cf-4bf8-b1b6-cee7dade539e,file=" + str(fw_dir / "mcp_ramfw_fvp.bin"),
+                     fw_dir / "mcp_image.bin")
