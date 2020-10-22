@@ -97,6 +97,14 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
     def run_tests(self):
         self.run_make(make_target="test")  # XXX: doesn't work yet, needs a read/write/isatty()
 
+    @classmethod
+    def mcp_rom_bin(cls, caller):
+        return cls.get_install_dir(caller, cross_target=CompilationTargets.ARM_NONE_EABI) / "mcp_romfw.bin"
+
+    @classmethod
+    def scp_rom_bin(cls, caller):
+        return cls.get_install_dir(caller, cross_target=CompilationTargets.ARM_NONE_EABI) / "scp_romfw.bin"
+
 
 class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
     target = "morello-trusted-firmware"
@@ -231,6 +239,10 @@ build -n {make_jobs} -a AARCH64 -t CLANG38 -p {platform_desc} \
         self.install_file(self.build_dir / "Build/morellofvp/DEBUG_CLANG38/FV/BL33_AP_UEFI.fd",
                           self.install_dir / "uefi.bin", print_verbose_only=False)
 
+    @classmethod
+    def uefi_bin(cls, caller):
+        return cls.get_install_dir(caller, cross_target=CompilationTargets.MORELLO_BAREMETAL_HYBRID) / "uefi.bin"
+
 
 class BuildMorelloFlashImages(SimpleProject):
     target = "morello-flash-images"
@@ -242,8 +254,16 @@ class BuildMorelloFlashImages(SimpleProject):
         self.run_cmd(self.config.morello_sdk_dir / "bin/fiptool", "create",
                      "--scp-fw", fw_dir / "scp_ramfw_fvp.bin",
                      "--soc-fw", fw_dir / "tf-bl31.bin",
-                     fw_dir / "scp_ap_image.bin")
+                     self.scp_ap_ram_firmware_image)
         self.info("Building MCP flash image")
         self.run_cmd(self.config.morello_sdk_dir / "bin/fiptool", "create",
                      "--blob", "uuid=54464222-a4cf-4bf8-b1b6-cee7dade539e,file=" + str(fw_dir / "mcp_ramfw_fvp.bin"),
-                     fw_dir / "mcp_image.bin")
+                     self.mcp_ram_firmware_image)
+
+    @property
+    def scp_ap_ram_firmware_image(self):
+        return _morello_firmware_build_outputs_dir(self.config, self) / "scp_ap_image.bin"
+
+    @property
+    def mcp_ram_firmware_image(self):
+        return _morello_firmware_build_outputs_dir(self.config, self) / "mcp_image.bin"

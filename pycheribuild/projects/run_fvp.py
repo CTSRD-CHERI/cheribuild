@@ -30,6 +30,7 @@ import subprocess
 from pathlib import Path
 
 from .disk_image import BuildCheriBSDDiskImage
+from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
 from .project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
@@ -133,7 +134,7 @@ VOLUME /diskimg
 class LaunchFVPBase(SimpleProject):
     do_not_add_to_targets = True
     _source_class = BuildCheriBSDDiskImage
-    dependencies = [_source_class.target]
+    dependencies = [_source_class.target, "morello-uefi", "morello-flash-images"]
     supported_architectures = _source_class.supported_architectures
 
     def setup(self):
@@ -229,7 +230,7 @@ class LaunchFVPBase(SimpleProject):
             fvp_project = InstallMorelloFVP.get_instance(self, cross_target=CompilationTargets.NATIVE)
             model_params += [
                 "displayController=0",  # won't work yet
-                "css.cache_state_modelled=0",
+                # "css.cache_state_modelled=0",
                 # "num_clusters=1",
                 # "num_cores=1",
                 ]
@@ -240,36 +241,39 @@ class LaunchFVPBase(SimpleProject):
                     "board.virtio_rng.seed=0",
                     "board.virtio_rng.generator=2",
                     ]
-                # However, that needs new firmware
-                self.fatal("Never FVP not supported with current firmware")
+            if fvp_project.get_fvp_revision() < 312:
+                self.fatal("FVP is too old, please update to latest version")
             # prepend -C to each of the parameters:
             fvp_args = [x for param in model_params for x in ("-C", param)]
             # mcp_romfw_elf = self.ensure_file_exists("MCP ROM ELF firmware",
             #                                         self.firmware_path / "morello/components/morello/mcp_romfw.elf")
             # scp_romfw_elf = self.ensure_file_exists("SCP ROM ELF firmware",
             #                                         self.firmware_path / "morello/components/morello/scp_romfw.elf")
-            mcp_rom_bin = self.ensure_file_exists("MCP ROM ELF firmware",
-                                                  self.firmware_path / "morello/build_artifact/mcp_rom.bin")
-            scp_rom_bin = self.ensure_file_exists("SCP ROM ELF firmware",
-                                                  self.firmware_path / "morello/build_artifact/scp_rom.bin")
-            scp_fw_bin = self.ensure_file_exists("scp_fw.bin", self.firmware_path / "morello/build_artifact/scp_fw.bin")
-            mcp_fw_bin = self.ensure_file_exists("mcp_fw.bin", self.firmware_path / "morello/build_artifact/mcp_fw.bin")
-            uefi_bin = self.ensure_file_exists("UEFI firmware",
-                                               self.firmware_path / "morello/build_artifact/uefi.bin")
+            mcp_rom_bin = self.ensure_file_exists("MCP ROM ELF firmware", BuildMorelloScpFirmware.mcp_rom_bin(self))
+            scp_rom_bin = self.ensure_file_exists("SCP ROM ELF firmware", BuildMorelloScpFirmware.scp_rom_bin(self))
+            uefi_bin = self.ensure_file_exists("UEFI firmware", BuildMorelloUEFI.uefi_bin(self))
+            flash_images = BuildMorelloFlashImages.get_instance(self, cross_target=CompilationTargets.NATIVE)
+            scp_fw_bin = self.ensure_file_exists("SCP/AP firmware", flash_images.scp_ap_ram_firmware_image)
+            mcp_fw_bin = self.ensure_file_exists("MCP firmware", flash_images.mcp_ram_firmware_image)
             fvp_args += [
-                # "-a", "Morello_Top.css.scp.armcortexm7ct=" + str(scp_romfw_elf),  # XXX: ?
+                # "-a", "Morello_Top.css.scp.armcortexm7ct=" + str(scp_romfw_elf),
                 # "-a", "Morello_Top.css.mcp.armcortexm7ct=" + str(mcp_romfw_elf),
-                "-C", "css.scp.ROMloader.fname=" + str(scp_rom_bin),
-                "-C", "css.mcp.ROMloader.fname=" + str(mcp_rom_bin),
+                # "-C", "css.scp.ROMloader.fname=" + str(scp_rom_bin),
+                # "-C", "css.mcp.ROMloader.fname=" + str(mcp_rom_bin),
+                "--data", "Morello_Top.css.scp.armcortexm7ct=" + str(scp_rom_bin) + "@0x0",
+                "--data", "Morello_Top.css.mcp.armcortexm7ct=" + str(mcp_rom_bin) + "@0x0",
+                "-C", "css.scp.armcortexm7ct.INITVTOR=0x0",
+                "-C", "css.mcp.armcortexm7ct.INITVTOR=0x0",
+                "--data", str(uefi_bin) + "@0x14200000",
+
                 # "-C", "Morello_Top.soc.scp_qspi_loader.fname=" + str(scp_fw_bin),
                 # "-C", "Morello_Top.soc.mcp_qspi_loader.fname=" + str(mcp_fw_bin),
                 "-C", "soc.scp_qspi_loader.fname=" + str(scp_fw_bin),
                 "-C", "soc.mcp_qspi_loader.fname=" + str(mcp_fw_bin),
-                "-C", "css.scp.armcortexm7ct.INITVTOR=0x0",
-                "-C", "css.mcp.armcortexm7ct.INITVTOR=0x0",
-                "--data", str(uefi_bin) + "@0x14200000",
+
                 # "-C", "css.nonTrustedROMloader.fname=" + str(uefi_bin),
                 # "-C", "css.trustedBootROMloader.fname=" + str(trusted_fw),
+                "-C", "css.pl011_uart_ap.unbuffered_output=1",
                 ]
             import pprint
             self.verbose_print("FVP args:\n", pprint.pformat(fvp_args))
