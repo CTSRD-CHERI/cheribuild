@@ -164,7 +164,11 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             if self.is_baremetal() or self.is_rtems():
                 # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
                 result.append("-mcmodel=medium")
-
+        elif self.target.is_aarch64(include_purecap=True):
+            if self.target.is_cheri_hybrid():
+                result += ["-march=morello", "-mabi=aapcs"]
+            elif self.target.is_cheri_purecap():
+                result += ["-march=morello+c64", "-mabi=purecap"]
         else:
             self.project.warning("Compiler flags might be wong, only native + MIPS checked so far")
         return result
@@ -573,13 +577,9 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     @property
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:
         result = super().essential_compiler_and_linker_flags
-        if self.target.is_aarch64(include_purecap=True):
-            if self.target.is_cheri_hybrid():
-                result += ["-march=morello"]
-            elif self.target.is_cheri_purecap():
-                result += ["-march=morello+c64", "-mabi=purecap"]
-                # emulated TLS is currently required for purecap, but breaks hybrid
-                result.append("-femulated-tls")
+        if self.target.is_cheri_purecap([CPUArchitecture.AARCH64]):
+            # emulated TLS is currently required for purecap, but breaks hybrid
+            result.append("-femulated-tls")
         return result
 
     @property
