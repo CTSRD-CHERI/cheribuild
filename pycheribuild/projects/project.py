@@ -1841,11 +1841,10 @@ class Project(SimpleProject):
         # elif self.compiling_for_mips(include_purecap=False):
         #     emulation = "elf64btsmip_fbsd" if not self.target_info.is_baremetal() else "elf64btsmip"
         # result.append("-Wl,-m" + emulation)
-        result += self.target_info.essential_compiler_and_linker_flags + [
-            "-fuse-ld=" + str(self.target_info.linker),
-            # Should no longer be needed now that I added a hack for .eh_frame
-            # "-Wl,-z,notext",  # needed so that LLD allows text relocations
-            ]
+        result += self.target_info.essential_compiler_and_linker_flags
+        if get_compiler_info(self.CC).is_clang:
+            result.append("-fuse-ld=" + str(self.target_info.linker))
+
         if self.should_include_debug_info and ".bfd" not in self.target_info.linker.name:
             # Add a gdb_index to massively speed up running GDB on CHERIBSD:
             result.append("-Wl,--gdb-index")
