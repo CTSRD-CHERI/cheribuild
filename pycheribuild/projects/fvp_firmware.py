@@ -64,10 +64,13 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
     supported_architectures = [CompilationTargets.ARM_NONE_EABI]
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
 
+    @property
+    def build_mode(self):
+        return "debug" if self.build_type.is_debug else "release"
+
     def setup(self):
         super().setup()
-        self.make_args.set(PRODUCT="morello",
-                           MODE="debug" if self.build_type.is_debug else "release",
+        self.make_args.set(PRODUCT="morello", MODE=self.build_mode,
                            LOG_LEVEL="TRACE" if self.build_type.is_debug else "INFO",  # TODO: change it to warn
                            V="y")
         # Build system tries to use macos tool which won't work
@@ -78,7 +81,19 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
             )
 
     def install(self, **kwargs):
-        pass  # TODO: implement
+        """
+++ cp ./scp/build/product/morello/scp_romfw/release/bin/firmware.bin /home/alr48/cheri/arm-morello-dropzone/CodeDrop/firmware-package/output/morello//components/morello/scp-rom.bin
+++ cp ./scp/build/product/morello/scp_romfw/release/bin/scp_romfw.elf /home/alr48/cheri/arm-morello-dropzone/CodeDrop/firmware-package/output/morello//components/morello/scp_romfw.elf
+++ cp ./scp/build/product/morello/mcp_ramfw_fvp/release/bin/firmware.bin /home/alr48/cheri/arm-morello-dropzone/CodeDrop/firmware-package/output/morello//components/morello/mcp-ram.bin
+++ cp ./scp/build/product/morello/mcp_romfw/release/bin/mcp_romfw.elf /home/alr48/cheri/arm-morello-dropzone/CodeDrop/firmware-package/output/morello//components/morello/mcp_romfw.elf
+        """
+
+        binaries_dir = self.build_dir / "build/product/morello"
+        for i in ("mcp_ramfw_fvp", "scp_ramfw_fvp", "mcp_romfw", "scp_romfw"):
+            self.install_file(binaries_dir / i / self.build_mode / "bin" / (i + ".bin"),
+                              self.install_dir / (i + ".bin"), print_verbose_only=False)
+            self.install_file(binaries_dir / i / self.build_mode / "bin" / (i + ".elf"),
+                              self.install_dir / (i + ".elf"), print_verbose_only=False)
 
     def run_tests(self):
         self.run_make(make_target="test")  # XXX: doesn't work yet, needs a read/write/isatty()
