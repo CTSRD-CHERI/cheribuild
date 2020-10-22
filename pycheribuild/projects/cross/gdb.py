@@ -104,7 +104,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configure_args.extend([
             "--disable-nls",
             "--enable-tui",
-            "--disable-ld",  # "--enable-ld",
+            "--enable-ld=yes" if self.compiling_for_host() else "--disable-ld",
+            "--disable-gold",
             "--enable-64-bit-bfd",
             "--without-gnu-as",
             "--mandir=" + str(install_root / "man"),
@@ -116,6 +117,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "--disable-libstdcxx",
             "--with-guile=no",
             ])
+
+        if self.compiling_for_host() and self.target_info.is_macos():
+            # Allow building ld.bfd by building for FreeBSD
+            self.configure_args.append("--target=x86_64-unknown-freebsd13")
 
         # BUILD the gui:
         if False and self.compiling_for_host():
@@ -200,6 +205,9 @@ class BuildGDB(CrossCompileAutotoolsProject):
             # also install objdump
             self.run_make(make_target="all-binutils", cwd=self.build_dir)
             self.run_make(make_target="all-gdb", cwd=self.build_dir)
+            # And for native GDB also build ld.bfd
+            if self.compiling_for_host():
+                self.run_make(make_target="all-ld", cwd=self.build_dir)
 
     def install(self, **kwargs):
         self.run_make_install(target="install-gdb")
@@ -219,7 +227,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
         # Install the binutils prefixed with g (like homebrew does it on MacOS)
         # objdump is useful for cases where CHERI llvm-objdump doesn't print sensible source lines
         # Also install most of the other tools in case they work better than elftoolchain
-        # TODO: also build upstream ld.bfd?
         if self.compiling_for_host():
             binutils = ("objdump", "objcopy", "addr2line", "readelf", "ar", "ranlib", "size", "strings")
             bindir = self.install_dir / "bin"
@@ -229,6 +236,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.install_file(self.build_dir / "binutils/cxxfilt", bindir / "gc++filt")
             self.install_file(self.build_dir / "binutils/nm-new", bindir / "gnm")
             self.install_file(self.build_dir / "binutils/strip-new", bindir / "gstrip")
+            self.install_file(self.build_dir / "ld/ld-new", bindir / "ld.bfd")
+            self.install_file(self.build_dir / "ld/ld-new", bindir / "gld.bfd")
 
 
 class BuildKGDB(BuildGDB):
