@@ -2893,6 +2893,50 @@ class AutotoolsProject(Project):
         self.make_args.env_vars.update(**kwargs)
 
 
+class MakefileProject(Project):
+    """A very simple project that just set some defualt variables such as CC/CXX, etc"""
+    do_not_add_to_targets = True
+    build_in_source_dir = True  # Most makefile projects don't support out-of-source builds
+    make_kind = MakeCommandKind.GnuMake  # Default to GNU make since that's what most makefile projects use
+    _define_ld = False
+    _stdout_filter = None  # don't filter output during make
+
+    @property
+    def essential_compiler_args(self):
+        """ This exists to allow targets such as scp-firmware to use 32-bit arm"""
+        return self.target_info.essential_compiler_and_linker_flags
+
+    def setup(self):
+        super().setup()
+        # Most projects expect that a plain $CC foo.c will work so we include the -target, etc in CC
+        essential_flags = self.target_info.essential_compiler_and_linker_flags
+        self.set_make_env_cmd_with_args("CC", self.CC, essential_flags)
+        self.set_make_env_cmd_with_args("CPP", self.CPP, essential_flags)
+        self.set_make_env_cmd_with_args("CXX", self.CXX, essential_flags)
+        self.set_make_env_cmd_with_args("CCLD", self.CC, essential_flags)
+        self.set_make_env_cmd_with_args("CXXLD", self.CXX, essential_flags)
+        self.make_args.set_env(AR=self.target_info.ar)
+
+        # Some projects expect LD to be CCLD others really mean the raw linker
+        if self._define_ld:
+            self.make_args.set_env(LD=self.target_info.linker)
+
+        # Set values in the environment so that projects can override them
+        cppflags = self.default_compiler_flags
+        self.make_args.set_env(
+            CFLAGS=commandline_to_str(cppflags + self.CFLAGS),
+            CXXFLAGS=commandline_to_str(cppflags + self.CXXFLAGS),
+            CPPFLAGS=commandline_to_str(cppflags + self.CFLAGS),
+            LDFLAGS=commandline_to_str(self.default_ldflags + self.LDFLAGS),
+            )
+
+    def set_make_env_cmd_with_args(self, var, cmd: Path, args: list):
+        value = str(cmd)
+        if args:
+            value += " " + commandline_to_str(args)
+        self.make_args.set_env(**{var: value})
+
+
 # A target that is just an alias for at least one other targets but does not force building of dependencies
 class TargetAlias(SimpleProject):
     do_not_add_to_targets = True
