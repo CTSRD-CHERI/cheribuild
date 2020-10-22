@@ -1493,6 +1493,7 @@ class Project(SimpleProject):
     skip_git_submodules = False
     compile_db_requires_bear = True
     do_not_add_to_targets = True
+    set_pkg_config_path = True  # set the PKG_CONFIG_* environment variables when building
 
     build_dir_suffix = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
     add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
@@ -1976,13 +1977,17 @@ class Project(SimpleProject):
 
     def setup(self):
         super().setup()
-        if not self.compiling_for_host():
+        if not self.compiling_for_host() and self.needs_sysroot:
             # We need to set the PKG_CONFIG variables both when configuring and when running make since some projects
             # (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set PKG_CONFIG_*
             # these configure steps will find the libraries on the host instead and cause the build to fail
+            # PKG_CONFIG_PATH: list of directories to be searched for .pc files before the default locations.
+            # PKG_CONFIG_LIBDIR: list of directories to replace the default pkg-config search path.
+            # Since we only want libraries from our sysroots we set both.
+            pkgconfig_dirs = self.target_info.pkgconfig_dirs
             pkg_config_args = dict(
-                PKG_CONFIG_PATH=self.target_info.pkgconfig_dirs,
-                PKG_CONFIG_LIBDIR=self.target_info.pkgconfig_dirs,
+                PKG_CONFIG_PATH=pkgconfig_dirs,
+                PKG_CONFIG_LIBDIR=pkgconfig_dirs,
                 PKG_CONFIG_SYSROOT_DIR=self.target_info.sysroot_dir
                 )
             self.configure_environment.update(pkg_config_args)
@@ -2731,7 +2736,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
             ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
             TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
             TOOLCHAIN_SYSTEM_NAME=self.target_info.cmake_system_name,
-            TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs,
+            TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs if self.needs_sysroot else "",
             TOOLCHAIN_PREFIX_PATHS=";".join(map(str, self.target_info.cmake_prefix_paths)),
             TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
             )
