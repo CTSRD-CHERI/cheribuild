@@ -861,7 +861,7 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
 
     @property
     def linker(self) -> Path:
-        return self.bindir / (self.binary_prefix + "ld")
+        return self.bindir / (self.binary_prefix + "ld.bfd")
 
     @property
     def ar(self) -> Path:
