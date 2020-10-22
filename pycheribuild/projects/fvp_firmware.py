@@ -28,8 +28,9 @@
 
 from .cross.crosscompileproject import CrossCompileMakefileProject
 from .project import DefaultInstallDir, GitRepository
+from ..config.chericonfig import BuildType
 from ..config.compilation_targets import CompilationTargets
-from ..utils import get_compiler_info
+from ..utils import OSInfo
 
 
 class MorelloFirmwareBase(CrossCompileMakefileProject):
@@ -37,6 +38,7 @@ class MorelloFirmwareBase(CrossCompileMakefileProject):
     supported_architectures = [CompilationTargets.MORELLO_BAREMETAL_HYBRID]
     cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY  # TODO: install it
     needs_sysroot = False  # We don't need a complete sysroot
+    default_build_type = BuildType.DEBUG  # TODO: release once it works
 
 
 class BuildMorelloScpFirmware(MorelloFirmwareBase):
@@ -47,8 +49,10 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
 
     def setup(self):
         super().setup()
-        self.make_args.set(PRODUCT="morello", MODE="debug", LOG_LEVEL="INFO", V="y")  # TODO: change it to warn
-        ccinfo = get_compiler_info(self.CC)
+        self.make_args.set(PRODUCT="morello",
+                           MODE="debug" if self.build_type.is_debug else "release",
+                           LOG_LEVEL="TRACE" if self.build_type.is_debug else "INFO",  # TODO: change it to warn
+                           V="y")
         # Build system tries to use macos tool which won't work
         self.make_args.set(
             AR=self.target_info.ar,
@@ -61,3 +65,47 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
 
     def run_tests(self):
         self.run_make(make_target="test")  # XXX: doesn't work yet, needs a read/write/isatty()
+
+
+class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
+    target = "morello-trusted-firmware"
+    project_name = "morello-trusted-firmware-a"
+    repository = GitRepository("git@git.morello-project.org:morello/trusted-firmware-a.git")
+    set_commands_on_cmdline = True  # Need to override this on the command line since the makefile uses :=
+    default_build_type = BuildType.RELEASE
+
+    @property
+    def optimization_flags(self):
+        return []  # Won't build at -O0 (since it's too big), just use the default
+
+    def setup(self):
+        super().setup()
+        self.add_required_system_tool("wgets", homebrew="dtc")
+        self.make_args.set(ENABLE_MORELLO_CAP=1, PLAT="morello", ARCH="aarch64",
+                           DEBUG=1 if self.build_type.is_debug else 0,
+                           E=0,  # disable -Werror since there are some unused functions
+                           V=1,  # verbose
+                           )
+        self.make_args.set_env(CROSS_COMPILE=str(self.sdk_bindir) + "/")
+        # Need to override this on the command line, not just the environment)
+        self.make_args.set(LD=self.target_info.linker,
+                           LINKER=self.target_info.linker)
+        # Uses raw linker -> don't set LDFLAGS
+        self.make_args.set_env(LDFLAGS="-verbose")
+        self.make_args.set(HOSTCC=self.host_CC)
+
+    def compile(self, **kwargs):
+        self.run_make(make_target="all", cwd=self.source_dir)
+        fip_make = self.make_args.copy()
+        fip_make.set_env(CFLAGS="", CPPFLAGS="", CXXFLAGS="")
+        if OSInfo.IS_MAC:
+            # TODO: should handle non-homebrew too
+            fip_make.set_env(HOSTLDFLAGS="-L/usr/local/opt/openssl@1.1/lib",
+                             HOSTCCFLAGS="-I/usr/local/opt/openssl@1.1/include",
+                             CPPFLAGS="-I/usr/local/opt/openssl@1.1/include")
+            # FIXME: Makefile doesn't add HOSTLDFLAGS
+            fip_make.set(HOSTCC=str(self.host_CC) + " " + fip_make.env_vars["HOSTLDFLAGS"])
+        self.run_make(make_target="all", cwd=self.source_dir / "tools/fiptool", options=fip_make)
+
+    def install(self, **kwargs):
+        pass  # TODO: implement
