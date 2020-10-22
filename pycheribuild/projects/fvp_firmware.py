@@ -135,11 +135,16 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
                              HOSTCCFLAGS="-I/usr/local/opt/openssl@1.1/include",
                              CPPFLAGS="-I/usr/local/opt/openssl@1.1/include")
             # FIXME: Makefile doesn't add HOSTLDFLAGS
-            fip_make.set(HOSTCC=str(self.host_CC) + " " + fip_make.env_vars["HOSTLDFLAGS"])
+            fip_make.set(HOSTCC=str(self.host_CC) + " -Qunused-arguments " + fip_make.env_vars["HOSTLDFLAGS"])
         self.run_make(make_target="all", cwd=self.source_dir / "tools/fiptool", options=fip_make)
 
     def install(self, **kwargs):
-        pass  # TODO: implement
+        output_dir = self.build_dir / "build/morello" / ("debug" if self.build_type.is_debug else "release")
+        self.install_file(output_dir / "bl31.bin", self.install_dir / "tf-bl31.bin", print_verbose_only=False)
+        self.install_file(output_dir / "fdts/morello-fvp.dtb", self.install_dir / "morello-fvp.dtb",
+                          print_verbose_only=False)
+        self.install_file(self.build_dir / "tools/fiptool/fiptool", self.config.morello_sdk_dir / "bin/fiptool",
+                          print_verbose_only=False)
 
 
 class BuildMorelloUEFI(MorelloFirmwareBase):
