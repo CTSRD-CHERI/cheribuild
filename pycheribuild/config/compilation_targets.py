@@ -94,7 +94,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             self.project.fatal("essential_compiler_and_linker_flags should not be called in __init__, use setup()!",
                                fatal_when_pretending=True)
         # When cross compiling we need at least -target=
-        result = ["-target", self.target_triple, "-pipe"]
+        result = ["-target", self.target_triple]
         # And usually also --sysroot
         if self.project.needs_sysroot:
             result.append("--sysroot=" + str(self.sysroot_dir))
