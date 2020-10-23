@@ -156,7 +156,7 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
     uefi_tools_repository = GitRepository("https://git.linaro.org/uefi/uefi-tools.git")
     target = "morello-uefi"
     project_name = "morello-edk2"
-    default_build_type = BuildType.RELEASE
+    default_build_type = BuildType.DEBUG
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
