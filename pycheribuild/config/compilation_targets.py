@@ -767,7 +767,6 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def sysroot_dir(self) -> Path:
-        # Install to mips/cheri128 directory
         raise ValueError("Should not have a valid sysroot")
 
     @property
