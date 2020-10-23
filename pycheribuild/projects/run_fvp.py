@@ -41,6 +41,12 @@ class InstallMorelloFVP(SimpleProject):
     target = "install-morello-fvp"
     container_name = "morello-fvp"
 
+    latest_known_fvp = 327
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._fvp_revision = None
+
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
@@ -114,17 +120,19 @@ VOLUME /diskimg
             self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
 
     def get_fvp_revision(self):
-        revpath = "sw/ARM_Fast_Models_FVP_Morello/rev"
-        try:
-            if self.use_docker_container:
-                rev = self.run_cmd(["docker", "run", "-it", "--rm", self.container_name, "cat",
-                                    "/opt/FVP_Morello/" + revpath], capture_output=True,
-                                   run_in_pretend_mode=True).stdout
-                return int(rev.strip())
-            return int(self.read_file(self.install_dir / revpath))
-        except Exception as e:
-            self.warning("Could not determine FVP revision:", e)
-            return 0
+        if self._fvp_revision is None:
+            revpath = "sw/ARM_Fast_Models_FVP_Morello/rev"
+            try:
+                if self.use_docker_container:
+                    rev = self.run_cmd(["docker", "run", "-it", "--rm", self.container_name, "cat",
+                                        "/opt/FVP_Morello/" + revpath], capture_output=True,
+                                       run_in_pretend_mode=True).stdout
+                    self._fvp_revision = int(rev.strip())
+                self._fvp_revision = int(self.read_file(self.install_dir / revpath))
+            except Exception as e:
+                self.warning("Could not determine FVP revision, assuming latest known (" + str(self.latest_known_fvp) + ":", e)
+                self._fvp_revision = self.latest_known_fvp
+        return self._fvp_revision
 
     def run_tests(self):
         self.execute_fvp(["--help"], x11=False, expose_telnet_ports=False)
