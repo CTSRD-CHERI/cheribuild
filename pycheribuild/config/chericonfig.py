@@ -31,6 +31,7 @@ import getpass
 import grp
 import json
 import os
+import shutil
 import typing
 from collections import OrderedDict
 from enum import Enum
