@@ -26,6 +26,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 import os
+import platform
 import shutil
 import tempfile
 from pathlib import Path
@@ -41,6 +42,39 @@ from ..utils import OSInfo, set_env
 
 def _morello_firmware_build_outputs_dir(config: CheriConfig, _: SimpleProject):
     return config.morello_sdk_dir / "fvp-firmware/morello/build-outputs"
+
+
+class ArmNoneEabiToolchain(SimpleProject):
+    target = "arm-none-gnueabi-toolchain"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_required_system_tool("wget")
+
+    def process(self):
+        url_prefix = "https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2020q2/"
+        filename = None
+        if self.target_info.is_linux():
+            # XXX: assumes x86_64 host
+            if self.crosscompile_target.is_x86_64():
+                filename = "gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2"
+            elif self.crosscompile_target.is_aarch64():
+                filename = "gcc-arm-none-eabi-9-2020-q2-update-aarch64-linux.tar.bz2"
+            else:
+                self.fatal("Unsupported CPU architecture")
+        elif self.target_info.is_macos():
+            assert self.crosscompile_target.is_x86_64(), "Assumes x86_64"
+            filename = "gcc-arm-none-eabi-9-2020-q2-update-mac.tar.bz2"
+        if filename is None:
+            self.fatal("Cannot infer download URL for current OS:", platform.platform(),
+                       fixit_hint="Please visit https://developer.arm.com/tools-and-software/open-source-software/"
+                                  "developer-tools/gnu-toolchain/gnu-rm/downloads and select the appropriate download.")
+            return
+        if not (self.config.build_root / filename).is_file() or self.config.clean:
+            self.run_cmd("wget", url_prefix + filename, "-O", self.config.build_root / filename)
+        with self.async_clean_directory(self.config.local_arm_none_eabi_toolchain_install_dir):
+            self.run_cmd(["tar", "xf", self.config.build_root / filename, "--strip-components", "1", "-C",
+                          self.config.local_arm_none_eabi_toolchain_install_dir])
 
 
 class MorelloFirmwareBase(CrossCompileMakefileProject):
