@@ -684,7 +684,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def cmake_system_name(self) -> str:
-        return "Generic"  # Unknown platform, CMake expects the value to be set to Generic
+        return "Generic"  # CMake requires the value to be set to "Generic" for baremetal targets
 
     def _get_sdk_root_dir_lazy(self) -> Path:
         return self.config.cheri_sdk_dir
@@ -760,7 +760,7 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def cmake_system_name(self) -> str:
-        return "Generic"  # Unknown platform, CMake expects the value to be set to Generic
+        return "Generic"  # CMake requires the value to be set to "Generic" for baremetal targets
 
     def _get_sdk_root_dir_lazy(self) -> Path:
         return self.config.morello_sdk_dir
@@ -822,7 +822,7 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
 
     @property
     def cmake_system_name(self) -> str:
-        return "Generic"  # Unknown platform, CMake expects the value to be set to Generic
+        return "Generic"  # CMake requires the value to be set to "Generic" for baremetal targets
 
     def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
         super().__init__(target, project)
