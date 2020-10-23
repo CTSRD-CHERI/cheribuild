@@ -72,9 +72,9 @@ class ArmNoneEabiToolchain(SimpleProject):
             return
         if not (self.config.build_root / filename).is_file() or self.config.clean:
             self.run_cmd("wget", url_prefix + filename, "-O", self.config.build_root / filename)
-        with self.async_clean_directory(self.config.local_arm_none_eabi_toolchain_install_dir):
+        with self.async_clean_directory(self.config.local_arm_none_eabi_toolchain_relpath):
             self.run_cmd(["tar", "xf", self.config.build_root / filename, "--strip-components", "1", "-C",
-                          self.config.local_arm_none_eabi_toolchain_install_dir])
+                          self.config.local_arm_none_eabi_toolchain_relpath])
 
 
 class MorelloFirmwareBase(CrossCompileMakefileProject):
