@@ -217,7 +217,7 @@ subprocess.check_call(["{real_clang}", "-B{fake_dir}"] + args + ["-fuse-ld=bfd",
             if not (self.source_dir / "edk2-platforms" / platform_desc).exists():
                 self.fatal("Could not find", self.source_dir / "edk2-platforms" / platform_desc)
             script = """
-source ./edksetup.sh
+. edksetup.sh --reconfig
 make -C BaseTools
 export PACKAGES_PATH=:{src}:{src}/edk2-platforms:
 export CLANG38_AARCH64_PREFIX={toolchain_bin}/llvm-
