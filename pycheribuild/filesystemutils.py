@@ -85,11 +85,13 @@ class FileSystemUtils(object):
 
     def async_clean_directory(self, path: Path, *, keep_root=False, keep_dirs: list = None) -> ThreadJoiner:
         """
-        Delete a directory in the background (e.g. deleting the cheribsd build directory delays the build
-        with self.async_clean_directory("foo")
-            # foo has been moved to foo.tmp and foo is now and empty dir:
-            do_something()
-        # now foo.tpt no longer exists
+        Delete a directory in the background (e.g. deleting the cheribsd build directory delays the build a lot)
+        ::
+            with self.async_clean_directory("foo"):
+                # foo has been moved to foo.tmp and foo is now and empty dir:
+                do_something()
+            # now foo.tmp no longer exists
+
         :param path: the directory to clean
         :param keep_root: currently not supported
         :param keep_dirs: list of directories to keep (e.g. for NFS mountpoints). The contents of those directories will
