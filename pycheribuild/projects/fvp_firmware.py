@@ -33,7 +33,7 @@ from pathlib import Path
 
 from .cross.crosscompileproject import CrossCompileMakefileProject
 from .cross.gdb import BuildGDB
-from .project import DefaultInstallDir, GitRepository, SimpleProject, TargetAliasWithDependencies
+from .project import DefaultInstallDir, GitRepository, MakefileProject, SimpleProject, TargetAliasWithDependencies
 from ..config.chericonfig import BuildType, CheriConfig
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
@@ -196,18 +196,23 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
                           print_verbose_only=False)
 
 
+class BuildMorelloACPICA(MakefileProject):
+    target = "morello-acpica"
+    project_name = "morello-acpica"
+    repository = GitRepository("https://github.com/acpica/acpica.git")
+    git_revision = "ba04ee3db1042c88cf4189a26a4ad506f856dd9a"
+    needs_full_history = True
+    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+
+
 class BuildMorelloUEFI(MorelloFirmwareBase):
     repository = GitRepository("git@git.morello-project.org:morello/edk2.git")
     morello_platforms_repository = GitRepository("git@git.morello-project.org:morello/edk2-platforms.git")
-    dependencies = ["gdb-native"]  # To get ld.bfd
+    dependencies = ["gdb-native", "morello-acpica"]  # To get ld.bfd
     target = "morello-uefi"
     project_name = "morello-edk2"
     default_build_type = BuildType.DEBUG
     _extra_git_clean_excludes = ["--exclude=edk2-platforms"]  # Don't delete edk2-platforms, we do it manually
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.add_required_system_tool("iasl", homebrew="acpica", apt="acpica-tools")
 
     def update(self):
         super().update()
@@ -228,8 +233,10 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
             self._compile(Path(td))
 
     def _compile(self, fake_compiler_dir: Path):
-        iasl = shutil.which("iasl")
-        acpica_path = Path(iasl).parent if iasl is not None else Path("/acpica/not/found")
+        acpica_build = BuildMorelloACPICA.get_build_dir(self, cross_target=CompilationTargets.NATIVE)
+        iasl = acpica_build / "generate/unix/bin/iasl"
+        if not iasl.exists():
+            self.fatal("Missing iasl tool, run the", BuildMorelloACPICA.target, "first.")
         # Create the fake compiler directory with the tools and a clang wrapper script that forces bfd
         # Also disable lto since we don't install the LLVM LTO plugin
         self.write_file(fake_compiler_dir / "clang", contents="""#!/usr/bin/env python3
@@ -264,7 +271,7 @@ subprocess.check_call(["{real_clang}", "-B{fake_dir}"] + args + ["-fuse-ld=bfd",
                      CLANG_BIN=fake_compiler_dir,
                      EDK2_TOOLCHAIN="CLANG38",
                      VERBOSE=1,
-                     IASL_PREFIX=str(acpica_path) + "/",
+                     IASL_PREFIX=str(iasl.parent) + "/",
                      PATH=str(fake_compiler_dir) + ":" + os.getenv("PATH")):
             platform_desc = "Platform/ARM/Morello/MorelloPlatformFvp.dsc"
             if not (self.source_dir / "edk2-platforms" / platform_desc).exists():

@@ -1252,7 +1252,7 @@ class GitRepository(SourceRepository):
                     default_result=True):
                 current_project.fatal("Sources for", str(default_src_dir), " missing!")
             clone_cmd = ["git", "clone"]
-            if current_project.config.shallow_clone:
+            if current_project.config.shallow_clone and not current_project.needs_full_history:
                 # Note: we pass --no-single-branch since otherwise git fetch will not work with branches and
                 # the solution of running  `git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"`
                 # is not very intuitive. This increases the amount of data fetched but increases usability
@@ -1331,10 +1331,16 @@ class GitRepository(SourceRepository):
                         run_command("git", "remote", "set-url", "origin", self.url,
                                     run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, cwd=src_dir)
 
+        # If there is a hardcoded revision there is no need to call fetch
+        if revision is not None:
+            # TODO: do some rev-parse stuff to check if we are on the right revision?
+            run_command("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
+            return
+
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
         # If there is no upstream, it will just return immediately.
-        run_command("git", "fetch", cwd=src_dir)
+        run_command(["git", "fetch"], cwd=src_dir)
 
         # Handle forced branches now that we have fetched the latest changes
         if src_dir.exists() and self.force_branch:
@@ -1414,8 +1420,6 @@ class GitRepository(SourceRepository):
             run_command("git", "submodule", "update", "--init", "--recursive", cwd=src_dir, print_verbose_only=True)
         if has_changes and not has_autostash:
             run_command("git", "stash", "pop", cwd=src_dir, print_verbose_only=True)
-        if revision:
-            run_command("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
 
 
 class DefaultInstallDir(Enum):
@@ -1490,6 +1494,7 @@ class Project(SimpleProject):
     # subclasses use different repositories and they would all have to set that flag again). Annoying for LLVM/FreeBSD
     is_large_source_repository = False
     git_revision = None
+    needs_full_history = False  # Some projects need the full git history when cloning
     skip_git_submodules = False
     compile_db_requires_bear = True
     do_not_add_to_targets = True
@@ -1692,7 +1697,7 @@ class Project(SimpleProject):
             install_directory_help = "Override default install directory for " + cls.project_name
         cls._install_dir = cls.add_path_option("install-directory", metavar="DIR", help=install_directory_help,
                                                default=cls._default_install_dir_fn)
-        if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository):
+        if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository) and "git_revision" not in cls.__dict__ :
             cls.git_revision = cls.add_config_option("git-revision", metavar="REVISION",
                                                      help="The git revision to checkout prior to building. Useful if "
                                                           "HEAD is broken for one "
