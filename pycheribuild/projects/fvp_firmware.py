@@ -115,6 +115,13 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
             SIZE=self.CC.with_name(self.CC.name.replace("gcc", "size")),
             )
 
+    def process(self):
+        if not self.CC.exists():
+            self.fatal("Could not find", self.CC,
+                       fixit_hint="Install the ARM GCC manually or use "
+                                  "`cheribuild.py " + ArmNoneEabiToolchain.target + "`")
+        super().process()
+
     def install(self, **kwargs):
         binaries_dir = self.build_dir / "build/product/morello"
         for i in ("mcp_ramfw_fvp", "scp_ramfw_fvp", "mcp_romfw", "scp_romfw"):

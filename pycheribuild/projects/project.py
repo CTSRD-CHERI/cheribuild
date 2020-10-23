@@ -1842,7 +1842,7 @@ class Project(SimpleProject):
         #     emulation = "elf64btsmip_fbsd" if not self.target_info.is_baremetal() else "elf64btsmip"
         # result.append("-Wl,-m" + emulation)
         result += self.target_info.essential_compiler_and_linker_flags
-        if get_compiler_info(self.CC).is_clang:
+        if self.CC.exists() and get_compiler_info(self.CC).is_clang:
             result.append("-fuse-ld=" + str(self.target_info.linker))
 
         if self.should_include_debug_info and ".bfd" not in self.target_info.linker.name:
@@ -1934,8 +1934,6 @@ class Project(SimpleProject):
         # FIXME: this should move to target_info
         self.cross_warning_flags = ["-Werror=implicit-function-declaration",
                                     "-Werror=format", "-Werror=incompatible-pointer-types"]
-        if get_compiler_info(self.CC).is_clang:
-            self.cross_warning_flags += ["-Werror=undefined-internal"]
         self.host_warning_flags = []
         self.common_warning_flags = []
         target_arch = self.crosscompile_target
@@ -1948,10 +1946,6 @@ class Project(SimpleProject):
             # TODO: remove the data-depedent provenance flag:
             if self.should_use_extra_c_compat_flags():
                 self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
-
-        # We might be setting too many flags, ignore this (for now)
-        if not self.compiling_for_host() and get_compiler_info(self.CC).is_clang:
-            self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
         assert self.install_dir, "must be set"
         self.verbose_print(self.target, "INSTALLDIR = ", self._install_dir, "INSTALL_PREFIX=", self._install_prefix,
@@ -1990,7 +1984,7 @@ class Project(SimpleProject):
                 )
             self.configure_environment.update(pkg_config_args)
             self.make_args.set_env(**pkg_config_args)
-        if self.use_lto:
+        if self.use_lto and self.CC.exists():
             self.add_lto_build_options(get_compiler_info(self.CC))
 
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
@@ -2001,6 +1995,12 @@ class Project(SimpleProject):
                                             "-Werror=mips-cheri-prototypes")
             # Make underaligned capability loads/stores an error and require an explicit cast:
             self.cross_warning_flags.append("-Werror=pass-failed")
+        if self.CC.exists() and get_compiler_info(self.CC).is_clang:
+            self.cross_warning_flags += ["-Werror=undefined-internal"]
+
+        # We might be setting too many flags, ignore this (for now)
+        if not self.compiling_for_host() and self.CC.exists() and get_compiler_info(self.CC).is_clang:
+            self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
         self.fatal("Building", self.project_name, "with LTO is not supported (yet).")
