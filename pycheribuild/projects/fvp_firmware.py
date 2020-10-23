@@ -203,6 +203,7 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
     target = "morello-uefi"
     project_name = "morello-edk2"
     default_build_type = BuildType.DEBUG
+    _extra_git_clean_excludes = ["--exclude=edk2-platforms"]  # Don't delete edk2-platforms, we do it manually
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -212,6 +213,10 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
         super().update()
         self.morello_platforms_repository.update(self, src_dir=self.source_dir / "edk2-platforms",
                                                  skip_submodules=self.skip_git_submodules)
+
+    def clean(self):
+        super().clean()
+        self._git_clean_source_dir(self.source_dir / "edk2-platforms")
 
     @property
     def build_mode(self):
