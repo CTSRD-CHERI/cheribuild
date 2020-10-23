@@ -205,6 +205,12 @@ class BuildMorelloACPICA(MakefileProject):
     needs_full_history = True
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
 
+    def setup(self):
+        super().setup()
+        # Seems unhappy if you use clang on Linux
+        self.make_args.set(CC="/usr/bin/cc", CPP="/usr/bin/cpp", CXX="/usr/bin/c++", CCLD="/usr/bin/cc",
+                           CXXLD="/usr/bin/c++")
+
 
 class BuildMorelloUEFI(MorelloFirmwareBase):
     repository = GitRepository("git@git.morello-project.org:morello/edk2.git")
