@@ -255,6 +255,7 @@ class LaunchFVPBase(SimpleProject):
             flash_images = BuildMorelloFlashImages.get_instance(self, cross_target=CompilationTargets.NATIVE)
             scp_fw_bin = self.ensure_file_exists("SCP/AP firmware", flash_images.scp_ap_ram_firmware_image)
             mcp_fw_bin = self.ensure_file_exists("MCP firmware", flash_images.mcp_ram_firmware_image)
+            assert uefi_bin.parent == scp_fw_bin.parent and scp_fw_bin.parent == scp_rom_bin.parent, "Different dirs?"
             fvp_args += [
                 # "-a", "Morello_Top.css.scp.armcortexm7ct=" + str(scp_romfw_elf),
                 # "-a", "Morello_Top.css.mcp.armcortexm7ct=" + str(mcp_romfw_elf),
@@ -278,7 +279,7 @@ class LaunchFVPBase(SimpleProject):
             import pprint
             self.verbose_print("FVP args:\n", pprint.pformat(fvp_args))
             fvp_project.execute_fvp(fvp_args + ["--print-port-number"], disk_image_path=disk_image,
-                                    firmware_path=self.firmware_path)
+                                    firmware_path=uefi_bin.parent)
 
 
 class LaunchFVPCheriBSD(LaunchFVPBase):
