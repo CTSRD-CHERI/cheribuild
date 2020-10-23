@@ -154,10 +154,9 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
     repository = GitRepository("git@git.morello-project.org:morello/edk2.git")
     morello_platforms_repository = GitRepository("git@git.morello-project.org:morello/edk2-platforms.git")
     uefi_tools_repository = GitRepository("https://git.linaro.org/uefi/uefi-tools.git")
-
-    # FIXME: clone edk2/edk2-platforms
     target = "morello-uefi"
     project_name = "morello-edk2"
+    default_build_type = BuildType.RELEASE
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -235,7 +234,7 @@ build -n {make_jobs} -a AARCH64 -t CLANG38 -p {platform_desc} \
             self.run_shell_script(script, shell="bash", cwd=self.source_dir)
 
     def install(self, **kwargs):
-        self.install_file(self.build_dir / "Build/morellofvp/DEBUG_CLANG38/FV/BL33_AP_UEFI.fd",
+        self.install_file(self.build_dir / "Build/morellofvp" / (self.build_mode + "_CLANG38") / "FV/BL33_AP_UEFI.fd",
                           self.install_dir / "uefi.bin", print_verbose_only=False)
 
     @classmethod
