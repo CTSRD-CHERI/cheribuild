@@ -195,6 +195,7 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
     repository = GitRepository("git@git.morello-project.org:morello/edk2.git")
     morello_platforms_repository = GitRepository("git@git.morello-project.org:morello/edk2-platforms.git")
     uefi_tools_repository = GitRepository("https://git.linaro.org/uefi/uefi-tools.git")
+    dependencies = ["gdb-native"]  # To get ld.bfd
     target = "morello-uefi"
     project_name = "morello-edk2"
     default_build_type = BuildType.DEBUG
