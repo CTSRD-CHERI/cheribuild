@@ -32,7 +32,9 @@ from pathlib import Path
 
 from .cross.crosscompileproject import CrossCompileMakefileProject
 from .cross.gdb import BuildGDB
-from .project import DefaultInstallDir, GitRepository, MakefileProject, SimpleProject, TargetAliasWithDependencies
+from .project import (DefaultInstallDir, GitRepository, MakefileProject, Project,
+                      ReuseOtherProjectDefaultTargetRepository, SimpleProject,
+                      TargetAliasWithDependencies)
 from ..config.chericonfig import BuildType, CheriConfig
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
@@ -151,7 +153,7 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
     project_name = "morello-trusted-firmware-a"
     repository = GitRepository("git@git.morello-project.org:morello/trusted-firmware-a.git")
     set_commands_on_cmdline = True  # Need to override this on the command line since the makefile uses :=
-    default_build_type = BuildType.RELEASE
+    default_build_type = BuildType.DEBUG
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -297,9 +299,12 @@ build -n {make_jobs} -a AARCH64 -t CLANG38 -p {platform_desc} \
         return cls.get_install_dir(caller, cross_target=CompilationTargets.MORELLO_BAREMETAL_HYBRID) / "uefi.bin"
 
 
-class BuildMorelloFlashImages(SimpleProject):
+class BuildMorelloFlashImages(Project):
     target = "morello-flash-images"
     dependencies = ["morello-scp-firmware", "morello-trusted-firmware"]
+    _default_install_dir_fn = ComputedDefaultValue(function=_morello_firmware_build_outputs_dir,
+                                                   as_string="$MORELLO_SDK_ROOT/fvp-firmware/morello/build-outputs")
+    repository = ReuseOtherProjectDefaultTargetRepository(source_project=BuildMorelloScpFirmware)
 
     def process(self):
         fw_dir = _morello_firmware_build_outputs_dir(self.config, self)
@@ -315,11 +320,11 @@ class BuildMorelloFlashImages(SimpleProject):
 
     @property
     def scp_ap_ram_firmware_image(self):
-        return _morello_firmware_build_outputs_dir(self.config, self) / "scp_ap_image.bin"
+        return self.install_dir / "scp_ap_image.bin"
 
     @property
     def mcp_ram_firmware_image(self):
-        return _morello_firmware_build_outputs_dir(self.config, self) / "mcp_image.bin"
+        return self.install_dir / "mcp_image.bin"
 
 
 class BuildMorelloFirmware(TargetAliasWithDependencies):
