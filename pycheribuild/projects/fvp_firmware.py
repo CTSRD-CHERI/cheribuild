@@ -33,7 +33,7 @@ from pathlib import Path
 
 from .cross.crosscompileproject import CrossCompileMakefileProject
 from .cross.gdb import BuildGDB
-from .project import DefaultInstallDir, GitRepository, SimpleProject
+from .project import DefaultInstallDir, GitRepository, SimpleProject, TargetAliasWithDependencies
 from ..config.chericonfig import BuildType, CheriConfig
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
@@ -299,3 +299,8 @@ class BuildMorelloFlashImages(SimpleProject):
     @property
     def mcp_ram_firmware_image(self):
         return _morello_firmware_build_outputs_dir(self.config, self) / "mcp_image.bin"
+
+
+class BuildMorelloFirmware(TargetAliasWithDependencies):
+    target = "morello-firmware"
+    dependencies = ["morello-scp-firmware", "morello-trusted-firmware", "morello-flash-images", "morello-uefi"]
