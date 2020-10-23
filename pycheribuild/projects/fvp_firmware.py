@@ -215,7 +215,7 @@ subprocess.check_call(["{real_clang}", "-B{fake_dir}"] + args + ["-fuse-ld=bfd",
                      CLANG_BIN=fake_compiler_dir,
                      EDK2_TOOLCHAIN="CLANG38",
                      VERBOSE=1,
-                     IASL_PREFIX=acpica_path,
+                     IASL_PREFIX=str(acpica_path) + "/",
                      PATH=str(fake_compiler_dir) + ":" + os.getenv("PATH")):
             platform_desc = "Platform/ARM/Morello/MorelloPlatformFvp.dsc"
             if not (self.source_dir / "edk2-platforms" / platform_desc).exists():
