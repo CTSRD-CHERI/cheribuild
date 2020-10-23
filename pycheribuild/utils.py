@@ -349,9 +349,13 @@ class CompilerInfo(object):
 
     def _supports_warning_flag(self, flag: str):
         assert flag.startswith("-W")
-        result = run_command(self.path, flag, "-fsyntax-only", "-xc", "/dev/null", "-Werror=unknown-warning-option",
-                             print_verbose_only=True, run_in_pretend_mode=True, capture_error=True,
-                             allow_unexpected_returncode=True)
+        try:
+            result = run_command(self.path, flag, "-fsyntax-only", "-xc", "/dev/null", "-Werror=unknown-warning-option",
+                                 print_verbose_only=True, run_in_pretend_mode=True, capture_error=True,
+                                 allow_unexpected_returncode=True)
+        except subprocess.CalledProcessError as e:
+            warning_message("Failed to check for", flag, "support:", e)
+            return False
         return result.returncode == 0
 
     def supports_warning_flag(self, flag: str):
