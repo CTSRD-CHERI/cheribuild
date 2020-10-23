@@ -84,6 +84,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
     default_architecture = CompilationTargets.NATIVE
 
     @classmethod
+    def is_toolchain_target(cls):
+        return cls._xtarget is not None and cls._xtarget.is_native()
+
+    @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
