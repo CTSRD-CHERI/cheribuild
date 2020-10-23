@@ -46,7 +46,7 @@ class InstallMorelloFVP(SimpleProject):
         super().setup_config_options(**kwargs)
         cls.installer_path = cls.add_path_option("installer-path", help="Path to the FVP installer.sh")
         # We can run the FVP on macOS by using docker. FreeBSD might be able to use Linux emulation.
-        cls.use_docker_container = cls.add_path_option("use-docker-container", default=OSInfo.IS_MAC,
+        cls.use_docker_container = cls.add_bool_option("use-docker-container", default=OSInfo.IS_MAC,
                                                        help="Run the FVP inside a docker container")
 
     @property
@@ -75,7 +75,7 @@ VOLUME /diskimg
             self.run_cmd("docker", "build", "--pull", "-t", self.container_name, ".", cwd=self.install_dir)
         else:
             self.run_cmd(self.installer_path, "--i-agree-to-the-contained-eula", "--no-interactive",
-                         "-destination=" + str(self.install_dir))
+                         "--destination", self.install_dir, "--show-files")
 
     def _plugin_args(self):
         if self.get_fvp_revision() >= 312:
