@@ -2167,13 +2167,15 @@ class Project(SimpleProject):
 
     _extra_git_clean_excludes = []
 
-    def _git_clean_source_dir(self):
+    def _git_clean_source_dir(self, git_dir: Path = None):
+        if git_dir is None:
+            git_dir = self.source_dir
         # just use git clean for cleanup
         self.warning(self.project_name, "does not support out-of-source builds, using git clean to remove "
                                         "build artifacts.")
         git_clean_cmd = ["git", "clean", "-dfx", "--exclude=.*"] + self._extra_git_clean_excludes
         # Try to keep project files for IDEs and other dotfiles:
-        self.run_cmd(git_clean_cmd, cwd=self.source_dir)
+        self.run_cmd(git_clean_cmd, cwd=git_dir)
 
     def clean(self) -> ThreadJoiner:
         assert self.config.clean or self._force_clean
