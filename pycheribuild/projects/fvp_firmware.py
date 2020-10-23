@@ -170,6 +170,10 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
         self.uefi_tools_repository.update(self, src_dir=self.source_dir / "uefi-tools",
                                           skip_submodules=self.skip_git_submodules)
 
+    @property
+    def build_mode(self):
+        return "DEBUG" if self.build_type.is_debug else "RELEASE"
+
     def compile(self, **kwargs):
         # We need to use ld.bfd
         with tempfile.TemporaryDirectory() as td:
@@ -212,6 +216,7 @@ subprocess.check_call(["{real_clang}", "-B{fake_dir}"] + args + ["-fuse-ld=bfd",
                      CLANG_BIN=fake_compiler_dir,
                      EDK2_TOOLCHAIN="CLANG38",
                      VERBOSE=1,
+                     IASL_PREFIX=acpica_path,
                      PATH=str(fake_compiler_dir) + ":" + os.getenv("PATH")):
             platform_desc = "Platform/ARM/Morello/MorelloPlatformFvp.dsc"
             if not (self.source_dir / "edk2-platforms" / platform_desc).exists():
@@ -225,8 +230,7 @@ export CLANG38_BIN={toolchain_bin}/
 build -n {make_jobs} -a AARCH64 -t CLANG38 -p {platform_desc} \
     -b {build_mode} -s -D EDK2_OUT_DIR=Build/morellofvp -D PLAT_TYPE_FVP \
     -D ENABLE_MORELLO_CAP -D FIRMWARE_VER={firmware_ver}""".format(
-                iasl_path=acpica_path, uefi_tools=self.source_dir / "uefi-tools", src=self.source_dir,
-                make_jobs=self.config.make_jobs, build_mode="DEBUG",  # TODO: release
+                src=self.source_dir, make_jobs=self.config.make_jobs, build_mode=self.build_mode,
                 firmware_ver=firmware_ver, toolchain_bin=fake_compiler_dir, platform_desc=platform_desc)
             self.run_shell_script(script, shell="bash", cwd=self.source_dir)
 
