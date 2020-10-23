@@ -41,7 +41,7 @@ from ..utils import OSInfo, set_env
 
 
 def _morello_firmware_build_outputs_dir(config: CheriConfig, _: SimpleProject):
-    return config.morello_sdk_dir / "fvp-firmware/morello/build-outputs"
+    return config.morello_sdk_dir / "firmware/morello-fvp"
 
 
 class ArmNoneEabiToolchain(SimpleProject):
