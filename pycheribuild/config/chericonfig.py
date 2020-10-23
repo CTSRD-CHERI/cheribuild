@@ -77,7 +77,7 @@ class BuildType(Enum):
 
 def _default_arm_none_eabi_prefix(c: "CheriConfig", _):
     # see if the local install exists:
-    default_path = c.local_arm_none_eabi_toolchain_install_dir
+    default_path = c.local_arm_none_eabi_toolchain_relpath
     if (default_path / "bin/arm-none-eabi-gcc").exists():
         return str(default_path / "bin/arm-none-eabi-")
     elif Path("/Applications/ARM/bin/arm-none-eabi-gcc").exists():
@@ -372,7 +372,7 @@ class CheriConfig(object):
             "beri-fpga-env-setup-script",
             help="Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh")
 
-        self.local_arm_none_eabi_toolchain_install_dir = None  # type: typing.Optional[Path]
+        self.local_arm_none_eabi_toolchain_relpath = Path("arm-none-eabi-sdk")
         self.arm_none_eabi_toolchain_prefix = loader.add_option(
             "arm-none-eabi-prefix", default=ComputedDefaultValue(_default_arm_none_eabi_prefix, ""),
             group=loader.path_group,
@@ -389,8 +389,6 @@ class CheriConfig(object):
             self.pretend = True
         if self.debug_output:
             self.verbose = True
-
-        self.local_arm_none_eabi_toolchain_install_dir = self.output_root / "arm-none-eabi-sdk"
         self.targets = self.loader.targets
         # If there is no clang, default to /usr/bin/cc
         if self.clang_cpp_path is None and self.clang_plusplus_path is None and self.clang_path is None:
