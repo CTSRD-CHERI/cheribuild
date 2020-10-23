@@ -45,7 +45,11 @@ def _morello_firmware_build_outputs_dir(config: CheriConfig, _: SimpleProject):
 
 
 class ArmNoneEabiToolchain(SimpleProject):
-    target = "arm-none-gnueabi-toolchain"
+    target = "arm-none-eabi-toolchain"
+
+    @classmethod
+    def is_toolchain_target(cls):
+        return True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -72,9 +76,9 @@ class ArmNoneEabiToolchain(SimpleProject):
             return
         if not (self.config.build_root / filename).is_file() or self.config.clean:
             self.run_cmd("wget", url_prefix + filename, "-O", self.config.build_root / filename)
-        with self.async_clean_directory(self.config.local_arm_none_eabi_toolchain_relpath):
+        with self.async_clean_directory(self.config.output_root / self.config.local_arm_none_eabi_toolchain_relpath):
             self.run_cmd(["tar", "xf", self.config.build_root / filename, "--strip-components", "1", "-C",
-                          self.config.local_arm_none_eabi_toolchain_relpath])
+                          self.config.output_root / self.config.local_arm_none_eabi_toolchain_relpath])
 
 
 class MorelloFirmwareBase(CrossCompileMakefileProject):
@@ -94,6 +98,7 @@ class MorelloFirmwareBase(CrossCompileMakefileProject):
 class BuildMorelloScpFirmware(MorelloFirmwareBase):
     repository = GitRepository("git@git.morello-project.org:morello/scp-firmware.git")
     project_name = "morello-scp-firmware"
+    dependencies = ["arm-none-eabi-toolchain"]
     supported_architectures = [CompilationTargets.ARM_NONE_EABI]
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELEASE

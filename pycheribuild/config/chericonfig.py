@@ -77,7 +77,7 @@ class BuildType(Enum):
 
 def _default_arm_none_eabi_prefix(c: "CheriConfig", _):
     # see if the local install exists:
-    default_path = c.local_arm_none_eabi_toolchain_relpath
+    default_path = c.output_root / c.local_arm_none_eabi_toolchain_relpath
     if (default_path / "bin/arm-none-eabi-gcc").exists():
         return str(default_path / "bin/arm-none-eabi-")
     elif Path("/Applications/ARM/bin/arm-none-eabi-gcc").exists():
