@@ -58,7 +58,15 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     # Map Demos and the FreeRTOS apps we support building/running for
     supported_demo_apps = {"RISC-V-Generic": ["main_blinky",
                                               "main_compartment_test",
-                                              "main_peekpoke"
+                                              "main_peekpoke",
+                                              "modbus_baseline",
+                                              "modbus_baseline_microbenchmark",
+                                              "modbus_cheri_layer",
+                                              "modbus_cheri_layer_microbenchmark",
+                                              "modbus_macaroons_layer",
+                                              "modbus_macaroons_layer_microbenchmark",
+                                              "modbus_cheri_macaroons_layers",
+                                              "modbus_cheri_macaroons_layers_microbenchmark"
                                              ]}
 
     default_demo = "RISC-V-Generic"
