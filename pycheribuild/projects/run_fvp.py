@@ -150,8 +150,8 @@ class LaunchFVPBase(SimpleProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
-        fw_default = ComputedDefaultValue(function=lambda c, _: c.morello_sdk_dir / "fvp-firmware",
-                                          as_string="<MORELLO_SDK>/fvp-firmware")
+        fw_default = ComputedDefaultValue(function=lambda c, _: c.morello_sdk_dir / "firmware/morello-fvp",
+                                          as_string="<MORELLO_SDK>/firmware/morello-fvp")
         cls.firmware_path = cls.add_path_option("firmware-path", default=fw_default,
                                                 help="Path to the UEFI firmware binaries")
         cls.remote_disk_image_path = cls.add_config_option("remote-disk-image-path",
