@@ -89,7 +89,7 @@ class MorelloFirmwareBase(CrossCompileMakefileProject):
     needs_sysroot = False  # We don't need a complete sysroot
     default_build_type = BuildType.DEBUG  # TODO: release once it works
     _default_install_dir_fn = ComputedDefaultValue(function=_morello_firmware_build_outputs_dir,
-                                                   as_string="$MORELLO_SDK_ROOT/fvp-firmware/morello/build-outputs")
+                                                   as_string="$MORELLO_SDK_ROOT/firmware/morello-fvp")
 
     @property
     def optimization_flags(self):
