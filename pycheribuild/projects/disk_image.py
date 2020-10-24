@@ -530,7 +530,7 @@ class _BuildDiskImageBase(SimpleProject):
                 self.run_cmd("cat", tmp_mtree.name)
                 self.run_cmd([self.makefs_cmd, "-t", "msdos", "-s", "1m",  # 1 MB
                               # "-d", "0x2fffffff",  # super verbose output
-                              "-d", "0x20000000",  # MSDOSFS debug output
+                              # "-d", "0x20000000",  # MSDOSFS debug output
                               "-B", "le",  # byte order little endian
                               "-N", self.user_group_db_dir,
                               str(efi_partition), str(tmp_mtree.name)], cwd=self.rootfs_dir)
