@@ -92,12 +92,14 @@ VOLUME /diskimg
         return ["--plugin", self.ensure_file_exists("Morello FVP plugin", self.install_dir / plugin_path)]
 
     def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True,
-                    expose_telnet_ports=True, **kwargs):
+                    expose_telnet_ports=True, ssh_port=None, **kwargs):
         model_relpath = "models/Linux64_GCC-6.4/FVP_Morello"
         if self.use_docker_container:
             base_cmd = ["docker", "run", "-it", "--rm"]
             if expose_telnet_ports:
                 base_cmd += ["-p", "5000-5007:5000-5007"]
+            if ssh_port is not None:
+                base_cmd += ["-p", str(ssh_port) + ":" + str(ssh_port)]
             if disk_image_path is not None:
                 base_cmd += ["-v", str(disk_image_path) + ":" + str(disk_image_path)]
             if firmware_path is not None:
@@ -288,7 +290,7 @@ class LaunchFVPBase(SimpleProject):
             import pprint
             self.verbose_print("FVP args:\n", pprint.pformat(fvp_args))
             fvp_project.execute_fvp(fvp_args + ["--print-port-number"], disk_image_path=disk_image,
-                                    firmware_path=uefi_bin.parent)
+                                    firmware_path=uefi_bin.parent, ssh_port=self.ssh_port)
 
 
 class LaunchFVPCheriBSD(LaunchFVPBase):
