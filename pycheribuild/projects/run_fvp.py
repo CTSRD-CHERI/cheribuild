@@ -128,7 +128,8 @@ VOLUME /diskimg
                                         "/opt/FVP_Morello/" + revpath], capture_output=True,
                                        run_in_pretend_mode=True).stdout
                     self._fvp_revision = int(rev.strip())
-                self._fvp_revision = int(self.read_file(self.install_dir / revpath))
+                else:
+                    self._fvp_revision = int(self.read_file(self.install_dir / revpath))
             except Exception as e:
                 self.warning("Could not determine FVP revision, assuming latest known (" + str(self.latest_known_fvp) + ":", e)
                 self._fvp_revision = self.latest_known_fvp
