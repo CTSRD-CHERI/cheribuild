@@ -206,6 +206,7 @@ class LaunchFVPBase(SimpleProject):
             "virtio_net.enabled=0",
             "virtio_net.transport=legacy",
             "virtio_net.hostbridge.userNetworking=1",
+            "virtio_rng.transport=legacy",
             "virtioblockdevice.image_path=" + str(disk_image))
 
         if self.use_architectureal_fvp:
