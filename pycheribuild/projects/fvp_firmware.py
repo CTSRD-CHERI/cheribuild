@@ -87,7 +87,7 @@ class MorelloFirmwareBase(CrossCompileMakefileProject):
     supported_architectures = [CompilationTargets.MORELLO_BAREMETAL_HYBRID]
     cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY  # TODO: install it
     needs_sysroot = False  # We don't need a complete sysroot
-    default_build_type = BuildType.DEBUG  # TODO: release once it works
+    default_build_type = BuildType.RELEASE
     _default_install_dir_fn = ComputedDefaultValue(function=_morello_firmware_build_outputs_dir,
                                                    as_string="$MORELLO_SDK_ROOT/firmware/morello-fvp")
 
@@ -102,7 +102,6 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
     dependencies = ["arm-none-eabi-toolchain"]
     supported_architectures = [CompilationTargets.ARM_NONE_EABI]
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
-    default_build_type = BuildType.RELEASE
 
     @property
     def build_mode(self):
@@ -110,10 +109,10 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
 
     def setup(self):
         super().setup()
-        # FIXME: DEBUG seems to result in an infinite loop on startup (assertion failure?)
-        self.make_args.set(PRODUCT="morello", MODE=self.build_mode,
-                           LOG_LEVEL="TRACE" if self.build_type.is_debug else "TRACE",  # TODO: change it to warn
-                           V="y")
+        # FIXME: DEBUG seems to result in an infinite loop on startup (assertion failure?), so override
+        if self.build_type.is_debug:
+            self.make_args.set(LOG_LEVEL="TRACE")
+        self.make_args.set(PRODUCT="morello", MODE=self.build_mode, V="y")
         # Build system tries to use macos tool which won't work
         self.make_args.set(
             AR=self.target_info.ar,
@@ -153,7 +152,6 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
     project_name = "morello-trusted-firmware-a"
     repository = GitRepository("git@git.morello-project.org:morello/trusted-firmware-a.git")
     set_commands_on_cmdline = True  # Need to override this on the command line since the makefile uses :=
-    default_build_type = BuildType.DEBUG
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -218,7 +216,6 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
     dependencies = ["gdb-native", "morello-acpica"]  # To get ld.bfd
     target = "morello-uefi"
     project_name = "morello-edk2"
-    default_build_type = BuildType.DEBUG
     _extra_git_clean_excludes = ["--exclude=edk2-platforms"]  # Don't delete edk2-platforms, we do it manually
 
     def update(self):
