@@ -59,6 +59,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     supported_demo_apps = {"RISC-V-Generic": ["main_blinky",
                                               "main_compartment_test",
                                               "main_peekpoke",
+                                              "main_servers",
                                               "modbus_baseline",
                                               "modbus_baseline_microbenchmark",
                                               "modbus_cheri_layer",
