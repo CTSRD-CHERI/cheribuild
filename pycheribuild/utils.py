@@ -106,7 +106,7 @@ else:
             self.__doc__ = func.__doc__
             self.lock = RLock()
 
-        def __set_name__(self, owner, name): # XXX: requires python 3.6
+        def __set_name__(self, _, name):  # XXX: requires python 3.6
             if self.attrname is None:
                 self.attrname = name
             elif name != self.attrname:
