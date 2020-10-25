@@ -42,6 +42,8 @@ class InstallMorelloFVP(SimpleProject):
     container_name = "morello-fvp"
 
     latest_known_fvp = 327
+    # Seems like docker containers don't get the full amount configured in the settings so subtract a bit from 8GB
+    min_ram_mb = 7900
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -101,6 +103,15 @@ VOLUME /diskimg
                 base_cmd += ["-p", str(ssh_port) + ":" + str(ssh_port)]
             if disk_image_path is not None:
                 base_cmd += ["-v", str(disk_image_path) + ":" + str(disk_image_path)]
+                # If we are actually running a disk image, check the docker memory size first
+                if self.docker_memory_size < self.min_ram_mb * 1024 * 1024:
+                    fixit = "Change the docker settings to allow at least 8GB of RAM for containers."
+                    if OSInfo.IS_MAC:
+                        fixit += " This setting can be changed under \"Preferences > Resources > Advanced\"."
+                    self.fatal("Docker container has less than ", self.min_ram_mb, "MB of RAM (",
+                               self.docker_memory_size / 1024 / 1024, "MB), this is not enough to run the FVP!", sep="",
+                               fixit_hint=fixit)
+
             if firmware_path is not None:
                 base_cmd += ["-v", str(firmware_path) + ":" + str(firmware_path)]
             if x11:
@@ -135,6 +146,18 @@ VOLUME /diskimg
             self.warning("Could not determine FVP revision, assuming latest known (", self.latest_known_fvp, "): ", e,
                          sep="")
             return self.latest_known_fvp
+
+    @cached_property
+    def docker_memory_size(self):
+        assert self.use_docker_container
+        memtotal = self.run_cmd(["docker", "run", "-it", "--rm", self.container_name, "grep", "MemTotal:",
+                                 "/proc/meminfo"], capture_output=True, run_in_pretend_mode=True).stdout
+        self.verbose_print("Docker memory total:", memtotal)
+        try:
+            return int(memtotal.split()[1]) * 1024
+        except Exception as e:
+            self.warning("Could not determine memory available to docker container:", e)
+            return 0
 
     def run_tests(self):
         self.execute_fvp(["--help"], x11=False, expose_telnet_ports=False)
