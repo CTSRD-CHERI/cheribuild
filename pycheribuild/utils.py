@@ -46,6 +46,7 @@ import traceback
 import typing
 from pathlib import Path
 from subprocess import CompletedProcess
+from threading import RLock
 
 from .colour import AnsiColour, coloured
 
@@ -57,7 +58,7 @@ __all__ = ["typing", "print_command", "include_local_file", "CompilerInfo",  # n
            "get_program_version", "SafeDict", "keep_terminal_sane", "error_message",  # no-combine
            "default_make_jobs_count", "commandline_to_str", "OSInfo", "is_jenkins_build",  # no-combine
            "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
-           "is_case_sensitive_dir", "SocketAndPort", "replace_one", "popen"]  # no-combine
+           "is_case_sensitive_dir", "SocketAndPort", "replace_one", "popen", "cached_property"]  # no-combine
 Type_T = typing.TypeVar("Type_T")
 
 
@@ -89,6 +90,54 @@ class classproperty(object):
 
 if sys.version_info < (3, 5, 2):
     sys.exit("This script requires at least Python 3.5.2")
+
+
+if sys.version_info >= (3, 8, 0) or False:
+    from functools import cached_property
+else:
+    # Note: this is a copy of the python 3.8.6 implementation with f-strings removed for python 3.5.2 compat.
+    _NOT_FOUND = object()
+
+    # noinspection PyPep8Naming
+    class cached_property:  # noqa: N801
+        def __init__(self, func):
+            self.func = func
+            self.attrname = func.__name__ if sys.version_info < (3, 6) else None
+            self.__doc__ = func.__doc__
+            self.lock = RLock()
+
+        def __set_name__(self, owner, name): # XXX: requires python 3.6
+            if self.attrname is None:
+                self.attrname = name
+            elif name != self.attrname:
+                raise TypeError("Cannot assign the same cached_property to two different names "
+                                "({} and {}).".format(self.attrname, name))
+
+        def __get__(self, instance, owner=None):
+            if instance is None:
+                return self
+            if self.attrname is None:
+                raise TypeError("Cannot use cached_property instance without calling __set_name__ on it.")
+            try:
+                cache = instance.__dict__
+            except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
+                msg = ("No '__dict__' attribute on {} instance to cache {} property.".format(type(instance).__name__,
+                                                                                             self.attrname))
+                raise TypeError(msg) from None
+            val = cache.get(self.attrname, _NOT_FOUND)
+            if val is _NOT_FOUND:
+                with self.lock:
+                    # check if another thread filled cache while we awaited lock
+                    val = cache.get(self.attrname, _NOT_FOUND)
+                    if val is _NOT_FOUND:
+                        val = self.func(instance)
+                        try:
+                            cache[self.attrname] = val
+                        except TypeError:
+                            msg = ("The '__dict__' attribute on {} instance does not support item assignment for"
+                                   " caching {} property.".format(type(instance).__name__, self.attrname))
+                            raise TypeError(msg) from None
+            return val
 
 
 def is_jenkins_build() -> bool:
