@@ -34,7 +34,7 @@ from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, Buil
 from .project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
-from ..utils import OSInfo, popen, set_env
+from ..utils import OSInfo, popen, set_env, cached_property
 
 
 class InstallMorelloFVP(SimpleProject):
@@ -45,7 +45,6 @@ class InstallMorelloFVP(SimpleProject):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._fvp_revision = None
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -84,7 +83,7 @@ VOLUME /diskimg
                          "--destination", self.install_dir, "--show-files")
 
     def _plugin_args(self):
-        if self.get_fvp_revision() >= 312:
+        if self.fvp_revision >= 312:
             return []  # plugin no longer needed
         plugin_path = "plugins/Linux64_GCC-6.4/MorelloPlugin.so"
         if self.use_docker_container:
@@ -121,21 +120,21 @@ VOLUME /diskimg
         else:
             self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
 
-    def get_fvp_revision(self):
-        if self._fvp_revision is None:
-            revpath = "sw/ARM_Fast_Models_FVP_Morello/rev"
-            try:
-                if self.use_docker_container:
-                    rev = self.run_cmd(["docker", "run", "-it", "--rm", self.container_name, "cat",
-                                        "/opt/FVP_Morello/" + revpath], capture_output=True,
-                                       run_in_pretend_mode=True).stdout
-                    self._fvp_revision = int(rev.strip())
-                else:
-                    self._fvp_revision = int(self.read_file(self.install_dir / revpath))
-            except Exception as e:
-                self.warning("Could not determine FVP revision, assuming latest known (" + str(self.latest_known_fvp) + ":", e)
-                self._fvp_revision = self.latest_known_fvp
-        return self._fvp_revision
+    @cached_property
+    def fvp_revision(self) -> int:
+        revpath = "sw/ARM_Fast_Models_FVP_Morello/rev"
+        try:
+            if self.use_docker_container:
+                rev = self.run_cmd(["docker", "run", "-it", "--rm", self.container_name, "cat",
+                                    "/opt/FVP_Morello/" + revpath], capture_output=True,
+                                   run_in_pretend_mode=True).stdout
+                return int(rev.strip())
+            else:
+                return int(self.read_file(self.install_dir / revpath))
+        except Exception as e:
+            self.warning("Could not determine FVP revision, assuming latest known (", self.latest_known_fvp, "): ", e,
+                         sep="")
+            return self.latest_known_fvp
 
     def run_tests(self):
         self.execute_fvp(["--help"], x11=False, expose_telnet_ports=False)
@@ -246,14 +245,14 @@ class LaunchFVPBase(SimpleProject):
                 # "num_clusters=1",
                 # "num_cores=1",
                 ]
-            if fvp_project.get_fvp_revision() > 255:
+            if fvp_project.fvp_revision > 255:
                 # virtio-rng supported in rev312
                 model_params += [
                     "board.virtio_rng.enabled=1",
                     "board.virtio_rng.seed=0",
                     "board.virtio_rng.generator=2",
                     ]
-            if fvp_project.get_fvp_revision() < 312:
+            if fvp_project.fvp_revision < 312:
                 self.fatal("FVP is too old, please update to latest version")
             # prepend -C to each of the parameters:
             fvp_args = [x for param in model_params for x in ("-C", param)]
