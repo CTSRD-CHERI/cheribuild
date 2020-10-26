@@ -605,14 +605,22 @@ def status_update(*args, sep=" ", **kwargs):
     print(coloured(AnsiColour.cyan, *args, sep=sep), **kwargs)
 
 
-def warning_message(*args, sep=" "):
+def fixit_message(*args, sep=" "):
+    print(coloured(AnsiColour.blue, maybe_add_space("Possible solution:", sep) + args, sep=sep), file=sys.stderr, flush=True)
+
+
+def warning_message(*args, sep=" ", fixit_hint=None):
     # we ignore fatal errors when simulating a run
     print(coloured(AnsiColour.magenta, maybe_add_space("Warning:", sep) + args, sep=sep), file=sys.stderr, flush=True)
+    if fixit_hint:
+        fixit_message(fixit_hint)
 
 
-def error_message(*args, sep=" "):
+def error_message(*args, sep=" ", fixit_hint=None):
     # we ignore fatal errors when simulating a run
     print(coloured(AnsiColour.red, maybe_add_space("Error:", sep) + args, sep=sep), file=sys.stderr, flush=True)
+    if fixit_hint:
+        fixit_message(fixit_hint)
 
 
 def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exit_code=3):
@@ -621,7 +629,7 @@ def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, ex
         print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr,
               flush=True)
         if fixit_hint:
-            print(coloured(AnsiColour.blue, "Possible solution:", fixit_hint), file=sys.stderr, flush=True)
+            fixit_message(fixit_hint)
         if fatal_when_pretending:
             traceback.print_stack()
             sys.exit(exit_code)
@@ -629,7 +637,7 @@ def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, ex
         print(coloured(AnsiColour.red, maybe_add_space("Fatal error:", sep) + args, sep=sep), file=sys.stderr,
               flush=True)
         if fixit_hint:
-            print(coloured(AnsiColour.blue, "Possible solution:", fixit_hint), file=sys.stderr, flush=True)
+            fixit_message(fixit_hint)
         sys.exit(exit_code)
 
 
