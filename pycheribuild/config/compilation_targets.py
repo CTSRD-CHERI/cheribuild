@@ -511,16 +511,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        # Purecap (currently) builds against the hybrid sysroot:
-        if target.is_cheri_purecap():
-            if target.is_mips(include_purecap=True):
-                return ["cheribsd-mips64-hybrid"]
-            elif target.is_riscv(include_purecap=True):
-                return ["cheribsd-riscv64-hybrid"]
-            else:
-                assert False, "Logic error"
-        # Otherwise pick the matching sysroot
-        return ["cheribsd"]
+        return ["cheribsd"]  # Pick the matching sysroot (-purecap for purecap, -hybrid for hybrid etc.)
 
     @property
     def sysroot_install_prefix_relative(self) -> Path:

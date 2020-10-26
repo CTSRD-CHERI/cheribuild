@@ -199,6 +199,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     _config_file_aliases = tuple()  # Old names in the config file (per-architecture) for backwards compat
     dependencies = []  # type: typing.List[str]
     dependencies_must_be_built = False
+    # skip_toolchain_dependencies can be set to true for target aliases to skip the toolchain dependecies by default.
+    # For example, when running "cheribuild.py morello-firmware --clean" we don't want to also do a clean build of LLVM.
+    skip_toolchain_dependencies = False
+    _cached_full_deps = None  # type: typing.List[Target]
+    _cached_filtered_deps = None  # type: typing.List[Target]
     is_alias = False
     is_sdk_target = False  # for --skip-sdk
     source_dir = None
@@ -235,30 +240,44 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def _no_overwrite_allowed(self) -> "typing.Tuple[str]":
         return "_xtarget",
 
-    __cached_deps = None  # type: typing.List[Target]
-
     @classmethod
     def all_dependency_names(cls, config: CheriConfig) -> "typing.List[str]":
         assert cls._xtarget is not None
-        return [t.name for t in cls.recursive_dependencies(config)]
+        if cls.__dict__.get("_cached_full_deps", None) is None:
+            cls._cache_full_dependencies(config)
+        return [t.name for t in cls.cached_full_dependencies()]
 
     # noinspection PyCallingNonCallable
     @classmethod
-    def direct_dependencies(cls, config: CheriConfig) -> "typing.Generator[Target]":
+    def _direct_dependencies(cls, config: CheriConfig, *, include_dependencies: bool,
+                             include_toolchain_dependencies: bool,
+                             include_sdk_dependencies: bool) -> "typing.Generator[Target]":
+        if not include_sdk_dependencies:
+            include_toolchain_dependencies = False  # --skip-sdk means skip toolchain and skip sysroot
         assert cls._xtarget is not None
+        assert include_dependencies, "Should not be called with include_dependencies=False"
         dependencies = cls.dependencies
         expected_build_arch = cls.get_crosscompile_target(config)
         assert expected_build_arch is not None
         assert cls._xtarget is not None
         if expected_build_arch is None or cls._xtarget is None:
-            raise ValueError("Cannot call direct_dependencies() on a target alias")
+            raise ValueError("Cannot call _direct_dependencies() on a target alias")
         if callable(dependencies):
             if inspect.ismethod(dependencies):
                 dependencies = cls.dependencies(config)
             else:
                 # noinspection PyCallingNonCallable  (false positive, we used if callable() above)
                 dependencies = dependencies(cls, config)
+        else:
+            # TODO: assert that dependencies is a tuple
+            dependencies = list(dependencies)  # avoid mutating the class variable
         assert isinstance(dependencies, list), "Expected a list and not " + str(type(dependencies))
+        # Also add the toolchain targets (e.g. llvm-native) and sysroot targets if needed:
+        if include_toolchain_dependencies:
+            dependencies.extend(cls._xtarget.target_info_cls.toolchain_targets(cls._xtarget, config))
+        if include_sdk_dependencies and cls.needs_sysroot:
+            dependencies.extend(cls._xtarget.target_info_cls.base_sysroot_targets(cls._xtarget, config))
+        # Try to resovle the target names to actual targets and potentially add recursive depdencies
         for dep_name in dependencies:
             if callable(dep_name):
                 dep_name = dep_name(cls, config)
@@ -267,17 +286,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             except KeyError:
                 fatal_error("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
                 raise
-            # Handle --include-dependencies with --skip-sdk is passed
-            if config.skip_sdk and dep_target.project_class.is_sdk_target:
+            # Handle --include-dependencies when --skip-sdk/--no-include-toolchain-dependencies is passed
+            if not include_sdk_dependencies and dep_target.project_class.is_sdk_target:
                 if config.verbose:
                     status_update("Not adding ", cls.target, "dependency", dep_target.name,
-                                  "since it is an SDK target and --skip-sdk was passed.")
+                                  "since it is an SDK target.")
                 continue
-            if config.include_dependencies and (
-                    not config.include_toolchain_dependencies and dep_target.project_class.is_toolchain_target()):
+            if not include_toolchain_dependencies and dep_target.project_class.is_toolchain_target():
                 if config.verbose:
                     status_update("Not adding ", cls.target, "dependency", dep_target.name,
-                                  "since it is a toolchain target and --include-toolchain-dependencies was not passed.")
+                                  "since it is a toolchain target.")
                 continue
             # Now find the actual crosscompile targets for target aliases:
             if isinstance(dep_target, MultiArchTargetAlias):
@@ -305,30 +323,58 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def recursive_dependencies(cls, config: CheriConfig) -> "typing.List[Target]":
+        """
+        Returns the list of recursive depdencies. If filtered is False this returns all dependencies, if True the result
+        is filtered based on various parameters such as config.include_dependencies.
+        """
         # look only in __dict__ to avoid parent class lookup
-        _cached = cls.__dict__.get("_cached_deps", None)
-        if _cached is not None:
-            return _cached
-        result = []  # type: typing.List[Target]
-        assert cls._xtarget is not None, cls
-        for target in cls.direct_dependencies(config):
-            if target not in result:
-                result.append(target)
-            # now recursively add the other deps:
-            recursive_deps = target.project_class.recursive_dependencies(config)
-            for r in recursive_deps:
-                if r not in result:
-                    result.append(r)
-        cls._cached_deps = result
+        result = cls.__dict__.get("_cached_filtered_deps", None)
+        if result is None:
+            with_toolchain_deps = config.include_toolchain_dependencies and not cls.skip_toolchain_dependencies
+            with_sdk_deps = not config.skip_sdk
+            result = cls._recursive_dependencies_impl(
+                config, include_dependencies=config.include_dependencies or cls.dependencies_must_be_built,
+                include_toolchain_dependencies=with_toolchain_deps, include_sdk_dependencies=with_sdk_deps)
+            cls._cached_filtered_deps = result
         return result
 
     @classmethod
-    def _cached_dependencies(cls) -> "typing.List[Target]":
+    def _recursive_dependencies_impl(cls, config: CheriConfig, *, include_dependencies: bool,
+                                     include_toolchain_dependencies: bool,
+                                     include_sdk_dependencies: bool) -> "typing.List[Target]":
+        assert cls._xtarget is not None, cls
+        if not include_dependencies:
+            return []
+        result = []
+        for target in cls._direct_dependencies(config, include_dependencies=include_dependencies,
+                                               include_toolchain_dependencies=include_toolchain_dependencies,
+                                               include_sdk_dependencies=include_sdk_dependencies):
+            if target not in result:
+                result.append(target)
+            # now recursively add the other deps:
+            recursive_deps = target.project_class._recursive_dependencies_impl(
+                config, include_dependencies=include_dependencies,
+                include_toolchain_dependencies=include_toolchain_dependencies,
+                include_sdk_dependencies=include_sdk_dependencies)
+            for r in recursive_deps:
+                if r not in result:
+                    result.append(r)
+        return result
+
+    @classmethod
+    def cached_full_dependencies(cls) -> "typing.List[Target]":
         # look only in __dict__ to avoid parent class lookup
-        _cached = cls.__dict__.get("_cached_deps", None)
+        _cached = cls.__dict__.get("_cached_full_deps", None)
         if _cached is None:
-            raise ValueError("_cached_dependencies called before all_dependency_names()")
+            raise ValueError("cached_full_dependencies called before value was cached")
         return _cached
+
+    @classmethod
+    def _cache_full_dependencies(cls, config, *, allow_already_cached=False):
+        assert allow_already_cached or cls.__dict__.get("_cached_full_deps", None) is None, "Already cached??"
+        cls._cached_full_deps = cls._recursive_dependencies_impl(config, include_dependencies=True,
+                                                                 include_toolchain_dependencies=True,
+                                                                 include_sdk_dependencies=True)
 
     @classmethod
     def get_instance(cls: typing.Type[Type_T], caller: "typing.Optional[SimpleProject]",
@@ -1509,12 +1555,7 @@ class Project(SimpleProject):
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
-        # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
-        target = cls.get_crosscompile_target(config)  # type: CrossCompileTarget
-        result = target.target_info_cls.toolchain_targets(target, config)
-        if cls.needs_sysroot:
-            result += target.target_info_cls.base_sysroot_targets(target, config)
-        return result
+        return []
 
     @classmethod
     def project_build_dir_help(cls):

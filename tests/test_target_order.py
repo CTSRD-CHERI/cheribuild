@@ -1,4 +1,5 @@
 import copy
+import inspect
 import sys
 import typing
 from pathlib import Path
@@ -18,6 +19,7 @@ from .setup_mock_chericonfig import setup_mock_chericonfig
 global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
 
 
+# noinspection PyProtectedMember
 def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolchain=True,
                   skip_sdk=False) -> "typing.List[str]":
     target_manager.reset()
@@ -27,11 +29,11 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolc
     global_config.include_toolchain_dependencies = add_toolchain
     global_config.skip_sdk = skip_sdk
     for t in real_targets:
-        # noinspection PyProtectedMember
         if t.project_class._xtarget is None:
             continue
-        t.project_class._cached_deps = None
-        t.get_dependencies(global_config)  # ensure they have been cached
+    for t in target_manager.targets:
+        assert t.project_class._cached_full_deps is None
+        assert t.project_class._cached_filtered_deps is None
     result = list(t.name for t in target_manager.get_all_targets(real_targets, global_config))
     # print("result = ", result)
     return result
@@ -88,8 +90,8 @@ def test_disk_image_comes_second_last():
         ["run-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid", "cheribsd-mips64-hybrid"]) == [
                "cheribsd-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid", "run-mips64-hybrid"]
     assert _sort_targets(
-        ["run-mips64-hybrid", "disk-image-mips64-hybrid", "postgres-mips64-purecap", "cheribsd-mips64-hybrid"]) == [
-               "cheribsd-mips64-hybrid", "postgres-mips64-purecap", "disk-image-mips64-hybrid", "run-mips64-hybrid"]
+        ["run-mips64-hybrid", "disk-image-mips64-hybrid", "postgres-mips64-hybrid", "cheribsd-mips64-hybrid"]) == [
+               "cheribsd-mips64-hybrid", "postgres-mips64-hybrid", "disk-image-mips64-hybrid", "run-mips64-hybrid"]
 
 
 def test_cheribsd_default_aliases():
@@ -130,50 +132,57 @@ def test_minimal_run():
 
 def _check_deps_not_cached(classes):
     for c in classes:
-        with pytest.raises(ValueError, match="_cached_dependencies called before all_dependency_names()"):
+        with pytest.raises(ValueError, match="cached_full_dependencies called before value was cached"):
             # noinspection PyProtectedMember
-            c._cached_dependencies()
+            c.cached_full_dependencies()
 
 
 def _check_deps_cached(classes):
     for c in classes:
         # noinspection PyProtectedMember
-        assert len(c._cached_dependencies()) > 0
+        assert len(c.cached_full_dependencies()) > 0
 
 
 def test_webkit_cached_deps():
     # regression test for a bug in caching deps
     config = copy.copy(global_config)
     config.skip_sdk = True
+    config.include_toolchain_dependencies = False
+    config.include_dependencies = True
     webkit_native = target_manager.get_target_raw("qtwebkit-native").project_class
     webkit_cheri = target_manager.get_target_raw("qtwebkit-mips64-purecap").project_class
     webkit_mips = target_manager.get_target_raw("qtwebkit-mips64-hybrid").project_class
     # Check that the deps are not cached yet
     _check_deps_not_cached((webkit_native, webkit_cheri, webkit_mips))
+    assert inspect.getattr_static(webkit_native, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
+    assert inspect.getattr_static(webkit_cheri, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
+    assert inspect.getattr_static(webkit_mips, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
 
     cheri_target_names = list(sorted(webkit_cheri.all_dependency_names(config)))
-    assert cheri_target_names == ["icu4c-mips64-purecap", "icu4c-native", "libxml2-mips64-purecap",
-                                  "qtbase-mips64-purecap",
+    assert cheri_target_names == ["cheribsd-mips64-purecap", "icu4c-mips64-purecap", "icu4c-native",
+                                  "libxml2-mips64-purecap", "llvm-native", "qtbase-mips64-purecap",
                                   "sqlite-mips64-purecap"]
     _check_deps_not_cached([webkit_native, webkit_mips])
     _check_deps_cached([webkit_cheri])
-
     mips_target_names = list(sorted(webkit_mips.all_dependency_names(config)))
-    assert mips_target_names == ["icu4c-mips64-hybrid", "icu4c-native", "libxml2-mips64-hybrid", "qtbase-mips64-hybrid",
-                                 "sqlite-mips64-hybrid"]
+    assert mips_target_names == ["cheribsd-mips64-hybrid", "icu4c-mips64-hybrid", "icu4c-native",
+                                 "libxml2-mips64-hybrid", "llvm-native", "qtbase-mips64-hybrid", "sqlite-mips64-hybrid"]
     _check_deps_cached([webkit_cheri, webkit_mips])
     _check_deps_not_cached([webkit_native])
 
     native_target_names = list(sorted(webkit_native.all_dependency_names(config)))
     assert native_target_names == ["icu4c-native", "libxml2-native", "qtbase-native", "sqlite-native"]
     _check_deps_cached([webkit_cheri, webkit_mips, webkit_native])
+    assert inspect.getattr_static(webkit_native, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
+    assert inspect.getattr_static(webkit_cheri, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
+    assert inspect.getattr_static(webkit_mips, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
 
 
 def test_webkit_deps_2():
-    assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=True) == [
-        "qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
     # SDK should not add new targets
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=False) == [
+        "qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
+    assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=True) == [
         "qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
 
     assert _sort_targets(["qtwebkit-mips64-hybrid"], add_dependencies=True, skip_sdk=True) == [
@@ -181,8 +190,7 @@ def test_webkit_deps_2():
         "qtwebkit-mips64-hybrid"]
     assert _sort_targets(["qtwebkit-mips64-purecap"], add_dependencies=True, skip_sdk=True) == [
         "qtbase-mips64-purecap", "icu4c-native", "icu4c-mips64-purecap", "libxml2-mips64-purecap",
-        "sqlite-mips64-purecap",
-        "qtwebkit-mips64-purecap"]
+        "sqlite-mips64-purecap", "qtwebkit-mips64-purecap"]
 
 
 def test_riscv():
@@ -213,3 +221,22 @@ def test_libcxx_deps(suffix, expected_suffix):
     expected = ["libunwind" + expected_suffix, "libcxxrt" + expected_suffix, "libcxx" + expected_suffix]
     # Now check that the cross-compile versions explicitly chose the matching target:
     assert expected == _sort_targets(["libcxx" + suffix], add_dependencies=True, skip_sdk=True)
+
+
+@pytest.mark.parametrize("target_name,include_recursive_deps,include_toolchain,expected_deps", [
+    pytest.param("morello-firmware", False, False,
+                 ["morello-scp-firmware", "morello-trusted-firmware",
+                  "morello-flash-images", "morello-uefi", "morello-firmware"]),
+    pytest.param("morello-firmware", True, True,
+                 ["morello-scp-firmware", "morello-trusted-firmware",
+                  "morello-flash-images", "morello-uefi", "morello-firmware"]),
+    pytest.param("morello-uefi", False, False, ["morello-uefi"]),
+    pytest.param("morello-uefi", False, True, ["morello-uefi"]),
+    pytest.param("morello-uefi", True, False, ["morello-uefi"]),
+    pytest.param("morello-uefi", True, True, ["gdb-native", "morello-acpica", "morello-llvm", "morello-uefi"]),
+    ])
+def test_skip_toolchain_deps(target_name, include_recursive_deps, include_toolchain, expected_deps):
+    # Check that morello-firmware does not include toolchain dependencies by default, but the individual ones does
+    # TODO: should we do the same for all-<target>?
+    assert _sort_targets([target_name], add_dependencies=include_recursive_deps,
+                         add_toolchain=include_toolchain) == expected_deps

@@ -74,6 +74,10 @@ class Target(object):
     def get_dependencies(self, config: CheriConfig) -> "typing.List[Target]":
         return self.project_class.recursive_dependencies(config)
 
+    # noinspection PyProtectedMember
+    def cache_dependencies(self, config: CheriConfig) -> None:
+        self.project_class._cache_full_dependencies(config, allow_already_cached=True)
+
     def check_system_deps(self, config: CheriConfig):
         if self._completed:
             return
@@ -141,18 +145,20 @@ class Target(object):
         self._tests_have_run = False
         self.__project = None
         self._creating_project = False
+        self._project_class._cached_full_deps = None
+        self._project_class._cached_filtered_deps = None
 
     # noinspection PyProtectedMember
     def __lt__(self, other: "Target"):
         # print(self, "__lt__", other)
         # if this target is one of the dependencies order it before
-        other_deps = other.project_class._cached_dependencies()
+        other_deps = other.project_class.cached_full_dependencies()
         # print("other deps:", other_deps)
         if self in other_deps:
             # print(self, "is in", other, "deps -> is less")
             return True
         # and if it is the other way around we are not less
-        if other in self.project_class._cached_dependencies():
+        if other in self.project_class.cached_full_dependencies():
             # print(other, "is in", self, "deps -> is greater")
             return False
         if other.name.startswith("run") and not self.name.startswith("run"):
@@ -370,46 +376,27 @@ class TargetManager(object):
         return target
 
     @staticmethod
-    def sort_in_dependency_order(targets: "typing.List[Target]") -> "typing.List[Target]":
+    def sort_in_dependency_order(targets: "typing.Iterable[Target]") -> "typing.List[Target]":
         # pythons sorted() is guaranteed to be stable:
         sorted_targets = list(sorted(targets))
         # remove duplicates (insert into an orderdict to keep order
         return list(OrderedDict((x, True) for x in sorted_targets).keys())
 
     def get_all_targets(self, explicit_targets: "typing.List[Target]", config: CheriConfig) -> "typing.List[Target]":
-        add_dependencies = config.include_dependencies
         chosen_targets = []  # type: typing.List[Target]
-        remaining_targets_to_check = explicit_targets
-        while remaining_targets_to_check:
-            t = remaining_targets_to_check.pop(0)
+        for t in explicit_targets:
             if isinstance(t, SimpleTargetAlias):
                 t = t.get_real_target(None, config)
-            chosen_targets.append(t)
-            all_target_dependencies = t.get_dependencies(config)  # Ensure we cache the dependencies
-            deps_to_add = []
-            if add_dependencies or t.project_class.dependencies_must_be_built:
-                # some targets such as sdk always need their dependencies build:
-                deps_to_add = all_target_dependencies
-            elif t.project_class.is_alias:
-                assert not t.project_class.dependencies_must_be_built
-                # for aliases without full dependencies just add the direct dependencies
-                remaining_targets_to_check.extend(t.project_class.direct_dependencies(config))
-                continue
-            # Now add all the dependencies:
-            for dep_target in deps_to_add:
-                # when --skip-sdk is passed don't include sdk dependencies
-                if config.skip_sdk and dep_target.project_class.is_sdk_target:
-                    if config.verbose:
-                        status_update("Not adding ", t, "dependency", dep_target,
-                                      "since it is an SDK target and --skip-sdk was passed.")
-                    continue
-                if dep_target.project_class.is_toolchain_target() and not config.include_toolchain_dependencies:
-                    if config.verbose:
-                        status_update("Not adding ", t, "dependency", dep_target,
-                                      "since it is an SDK target and --no-include-toolchain-dependencies was passed.")
-                    continue
-                remaining_targets_to_check.append(dep_target)
-
+            # Ensure we don't add any duplicates to ensure correct order
+            # TODO: this can go away once we properly implement target sorting without the cached_deps hack.
+            if t not in chosen_targets:
+                chosen_targets.append(t)
+            for dep in t.get_dependencies(config):
+                if dep not in chosen_targets:
+                    chosen_targets.append(dep)
+        for t in chosen_targets:
+            # Initialize the full dependency cache so that sort() works (otherwise we'd have to pass config to __lt__).
+            t.cache_dependencies(config)
         sort = self.sort_in_dependency_order(chosen_targets)
         return sort
 
@@ -432,9 +419,9 @@ class TargetManager(object):
             for t in self._all_targets.values():
                 if isinstance(t, MultiArchTargetAlias):
                     continue
-                for dep in t.get_dependencies(config):
-                    if dep.name not in self._all_targets:
-                        sys.exit("Invalid dependency " + dep.name + " for " + t.project_class.__name__)
+                for dep in t.project_class.all_dependency_names(config):
+                    if dep not in self._all_targets:
+                        sys.exit("Invalid dependency " + dep + " for " + t.project_class.__name__)
         # targetsSorted = sorted(self._all_targets.values())
         # print(" ".join(t.name for t in targetsSorted))
         # assert self._all_targets["llvm"] < self._all_targets["cheribsd"]

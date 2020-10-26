@@ -342,3 +342,4 @@ class BuildMorelloFlashImages(Project):
 class BuildMorelloFirmware(TargetAliasWithDependencies):
     target = "morello-firmware"
     dependencies = ["morello-scp-firmware", "morello-trusted-firmware", "morello-flash-images", "morello-uefi"]
+    skip_toolchain_dependencies = True  # Don't rebuild morello-llvm unless it's also a depenency of another target

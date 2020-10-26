@@ -232,11 +232,11 @@ class CheriConfig(object):
                                                      help="Only run the configure step (skip build and install)")
         self.skip_install = loader.add_bool_option("skip-install", help="Skip the install step (only do the build)")
         self.skip_build = loader.add_bool_option("skip-build", help="Skip the build step (only do the install)")
-        self.skip_sdk = loader.add_bool_option("skip-sdk", help="When building with --include-dependencies ignore the "
-                                                                "CHERI sdk dependencies. Saves a lot of time when "
-                                                                "building libc++, etc. with dependencies but the sdk "
-                                                                "is already up-to-date")
-
+        self.skip_sdk = loader.add_bool_option(
+            "skip-sdk",
+            help="When building with --include-dependencies ignore the SDK dependencies. Saves a lot of time "
+                 "when building libc++, etc. with dependencies but the sdk is already up-to-date. "
+                 "This is like --no-include-toolchain-depedencies but also skips the target that builds the sysroot.")
         self.trap_on_unrepresentable = loader.add_bool_option("trap-on-unrepresentable", default=False,
                                                               help="Raise a CHERI exception when capabilities become "
                                                                    "unreprestable instead of detagging. Useful for "
