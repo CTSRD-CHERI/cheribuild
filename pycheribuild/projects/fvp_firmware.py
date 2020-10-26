@@ -205,6 +205,10 @@ class BuildMorelloACPICA(MakefileProject):
     needs_full_history = True
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
 
+    @classmethod
+    def is_toolchain_target(cls):
+        return True
+
     def setup(self):
         super().setup()
         # Seems unhappy if you use clang on Linux
