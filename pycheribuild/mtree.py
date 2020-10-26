@@ -118,7 +118,7 @@ class MtreeFile(object):
                 entry = MtreeEntry.parse(line, contents_root)
                 key = str(entry.path)
                 assert key == "." or os.path.normpath(key[2:]) == key[2:]
-                if key in self._mtree:
+                if key in self._mtree and False:
                     warning_message("Found duplicate definition for", entry.path)
                 self._mtree[key] = entry
             except Exception as e:

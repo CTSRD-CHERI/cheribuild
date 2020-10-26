@@ -32,7 +32,6 @@ from pathlib import Path
 from .disk_image import BuildCheriBSDDiskImage
 from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
 from .project import SimpleProject
-from ..colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
 from ..utils import OSInfo, popen, set_env, cached_property
@@ -43,8 +42,8 @@ class InstallMorelloFVP(SimpleProject):
     container_name = "morello-fvp"
 
     latest_known_fvp = 327
-    # Seems like docker containers don't get the full amount configured in the settings so subtract a bit from 8GB
-    min_ram_mb = 3900
+    # Seems like docker containers don't get the full amount configured in the settings so subtract a bit from 5GB/8GB
+    min_ram_mb = 4900
     warn_ram_mb = 7900
 
     def __init__(self, *args, **kwargs):
@@ -105,18 +104,20 @@ VOLUME /diskimg
                 base_cmd += ["-p", str(ssh_port) + ":" + str(ssh_port)]
             if disk_image_path is not None:
                 base_cmd += ["-v", str(disk_image_path) + ":" + str(disk_image_path)]
-                # If we are actually going to execute from a disk image, check the docker memory size first
-                fixit = "Change the docker settings to increase the RAM allocated to containers."
+                docker_settings_fixit = ""
                 if OSInfo.IS_MAC:
-                    fixit += " This setting can be changed under \"Preferences > Resources > Advanced\"."
+                    docker_settings_fixit = " This setting can be changed under \"Preferences > Resources > Advanced\"."
+                # If we are actually running a disk image, check the docker memory size first
                 if self.docker_memory_size < self.min_ram_mb * 1024 * 1024:
+                    fixit = "Change the docker settings to allow at least 5GB (8GB recommended) of RAM for containers."
                     self.fatal("Docker container has less than ", self.min_ram_mb, "MB of RAM (",
                                self.docker_memory_size / 1024 / 1024, "MB), this is not enough to run the FVP!", sep="",
-                               fixit_hint=fixit)
+                               fixit_hint=fixit + docker_settings_fixit)
                 elif self.docker_memory_size < self.warn_ram_mb * 1024 * 1024:
+                    fixit = "Change the docker settings to allow at least 8GB of RAM for containers."
                     self.warning("Docker container has less than ", self.warn_ram_mb, "MB of RAM (",
-                                 self.docker_memory_size / 1024 / 1024, "MB), this is not enough to run the FVP!\n",
-                                 coloured(AnsiColour.blue, fixit), sep="",)
+                                 self.docker_memory_size / 1024 / 1024, "MB), this may not enough to run the FVP", sep="",
+                                 fixit_hint=fixit + docker_settings_fixit)
 
             if firmware_path is not None:
                 base_cmd += ["-v", str(firmware_path) + ":" + str(firmware_path)]
