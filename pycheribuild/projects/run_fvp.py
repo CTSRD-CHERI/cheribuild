@@ -205,6 +205,11 @@ class LaunchFVPBase(SimpleProject):
         cls.arch_model_path = cls.add_path_option("simulator-path", help="Path to the FVP Model",
                                                   default="/usr/local/FVP_Base_RevC-Rainier")
 
+    @property
+    def use_virtio_net(self):
+        # TODO: Enable once a model is released with the IRQ wired up (maybe with a config option?)
+        return False
+
     # noinspection PyAttributeOutsideInit
     def process(self):
         if not self.firmware_path.exists():
@@ -227,14 +232,25 @@ class LaunchFVPBase(SimpleProject):
             prefix = "bp." if self.use_architectureal_fvp else "board."
             model_params.extend([prefix + p for p in params])
 
+        def add_hostbridge_params(*params):
+            prefix = "virtio_net." if self.use_virtio_net else ""
+            prefix = prefix + "hostbridge."
+            add_board_params(*[prefix + p for p in params])
+
+        if self.use_virtio_net:
+            add_board_params("virtio_net.enabled=1")
+        else:
+            add_board_params("smsc_91c111.enabled=1")
+
+        add_hostbridge_params(
+            "userNetworking=true",
+            "userNetPorts=" + str(self.ssh_port) + "=22",
+            "interfaceName=ARM0")
+
+        # NB: Set transport even if virtio_net is disabled since it still shows
+        # up and is detected, just doesn't have any queues.
         add_board_params(
-            "smsc_91c111.enabled=1",
-            "hostbridge.userNetworking=true",
-            "hostbridge.userNetPorts=" + str(self.ssh_port) + "=22",
-            "hostbridge.interfaceName=ARM0",
-            "virtio_net.enabled=0",
             "virtio_net.transport=legacy",
-            "virtio_net.hostbridge.userNetworking=1",
             "virtio_rng.transport=legacy",
             "virtioblockdevice.image_path=" + str(disk_image))
 
