@@ -157,7 +157,7 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_required_system_tool("dtc", homebrew="dtc", apt="dtc")
+        self.add_required_system_tool("dtc", homebrew="dtc", apt="device-tree-compiler")
 
     def setup(self):
         super().setup()
