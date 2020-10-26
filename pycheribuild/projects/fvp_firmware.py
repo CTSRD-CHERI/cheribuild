@@ -150,7 +150,9 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
 class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
     target = "morello-trusted-firmware"
     project_name = "morello-trusted-firmware-a"
-    repository = GitRepository("git@git.morello-project.org:morello/trusted-firmware-a.git")
+    repository = GitRepository("git@git.morello-project.org:university-of-cambridge/trusted-firmware-a.git",
+                               force_branch=True, default_branch="morello-virtio-net",
+                               old_urls=[b"git@git.morello-project.org:morello/trusted-firmware-a.git"])
     set_commands_on_cmdline = True  # Need to override this on the command line since the makefile uses :=
 
     def __init__(self, *args, **kwargs):
@@ -212,7 +214,10 @@ class BuildMorelloACPICA(MakefileProject):
 
 class BuildMorelloUEFI(MorelloFirmwareBase):
     repository = GitRepository("git@git.morello-project.org:morello/edk2.git")
-    morello_platforms_repository = GitRepository("git@git.morello-project.org:morello/edk2-platforms.git")
+    morello_platforms_repository = GitRepository(
+        "git@git.morello-project.org:university-of-cambridge/edk2-platforms.git",
+        force_branch=True, default_branch="morello-dsdt",
+        old_urls=[b"git@git.morello-project.org:morello/edk2-platforms.git"])
     dependencies = ["gdb-native", "morello-acpica"]  # To get ld.bfd
     target = "morello-uefi"
     project_name = "morello-edk2"
