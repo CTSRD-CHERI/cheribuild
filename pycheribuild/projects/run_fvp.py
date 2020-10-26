@@ -111,12 +111,12 @@ VOLUME /diskimg
                 if self.docker_memory_size < self.min_ram_mb * 1024 * 1024:
                     fixit = "Change the docker settings to allow at least 5GB (8GB recommended) of RAM for containers."
                     self.fatal("Docker container has less than ", self.min_ram_mb, "MB of RAM (",
-                               self.docker_memory_size / 1024 / 1024, "MB), this is not enough to run the FVP!", sep="",
+                               self.docker_memory_size // 1024 // 1024, "MB), this is not enough to run the FVP!", sep="",
                                fixit_hint=fixit + docker_settings_fixit)
                 elif self.docker_memory_size < self.warn_ram_mb * 1024 * 1024:
                     fixit = "Change the docker settings to allow at least 8GB of RAM for containers."
                     self.warning("Docker container has less than ", self.warn_ram_mb, "MB of RAM (",
-                                 self.docker_memory_size / 1024 / 1024, "MB), this may not enough to run the FVP", sep="",
+                                 self.docker_memory_size // 1024 // 1024, "MB), this may not enough to run the FVP", sep="",
                                  fixit_hint=fixit + docker_settings_fixit)
 
             if firmware_path is not None:
