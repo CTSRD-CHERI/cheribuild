@@ -48,6 +48,9 @@ class InstallMorelloFVP(SimpleProject):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.use_docker_container:
+            self.add_required_system_tool("docker", homebrew="homebrew/cask/docker")
+            self.add_required_system_tool("socat", homebrew="socat")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -285,6 +288,7 @@ class LaunchFVPBase(SimpleProject):
                 self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number"] + fvp_args)
         else:
             fvp_project = InstallMorelloFVP.get_instance(self, cross_target=CompilationTargets.NATIVE)
+            fvp_project.check_system_dependencies()  # warn if socat/docker is missing
             model_params += [
                 "displayController=0",  # won't work yet
                 # "css.cache_state_modelled=0",
