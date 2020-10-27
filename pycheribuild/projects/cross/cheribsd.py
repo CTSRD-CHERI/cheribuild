@@ -372,10 +372,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         elif self.crosscompile_target.is_i386():
             result = {"TARGET": "i386", "TARGET_ARCH": "i386"}
         elif self.crosscompile_target.is_aarch64(include_purecap=True):
-            result = {"TARGET": "arm64", "TARGET_ARCH": "aarch64"}
+            target_arch = "aarch64"
             if self.crosscompile_target.is_cheri_purecap():
-                result["TARGET_ARCH"] = "aarch64c"
-                result["NO_RTLD"] = True  # temporarily disable rtld
+                target_arch += "c"  # build purecap
+            result = {"TARGET": "arm64", "TARGET_ARCH": target_arch}
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
                 # FIXME: still needed?
                 result["WITH_CHERI"] = True
