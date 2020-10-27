@@ -1197,16 +1197,16 @@ class MakeOptions(object):
 
 
 class SourceRepository(object):
-    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, default_src_dir: Path,
+    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path,
                       skip_submodules=False) -> None:
         raise NotImplementedError
 
-    def update(self, current_project: "Project", *, src_dir: Path, default_src_dir: Path = None, revision=None,
+    def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path = None, revision=None,
                skip_submodules=False) -> None:
         raise NotImplementedError
 
-    def get_real_source_dir(self, caller: SimpleProject, default_src_dir: Path) -> Path:
-        return default_src_dir
+    def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Path) -> Path:
+        return base_project_source_dir
 
 
 class ExternallyManagedSourceRepository(SourceRepository):
@@ -1235,7 +1235,7 @@ class ReuseOtherProjectRepository(SourceRepository):
                                              "cheribuild.py " + self.source_project.target +
                                              "--no-skip-update --skip-configure --skip-build --skip-install`")
 
-    def get_real_source_dir(self, caller: SimpleProject, default_src_dir: typing.Optional[Path]) -> Path:
+    def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: typing.Optional[Path]) -> Path:
         return self.source_project.get_source_dir(caller, caller.config,
                                                   cross_target=self.repo_for_target) / self.subdirectory
 
@@ -1283,20 +1283,20 @@ class GitRepository(SourceRepository):
             return target_override.branch
         return self._default_branch
 
-    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, default_src_dir: Path,
+    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path,
                       skip_submodules=False) -> None:
-        if default_src_dir is None:
-            default_src_dir = src_dir
+        if base_project_source_dir is None:
+            base_project_source_dir = src_dir
         # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
-        if not (default_src_dir / ".git").exists():
+        if not (base_project_source_dir / ".git").exists():
             if current_project.config.skip_clone:
-                current_project.fatal("Sources for", str(default_src_dir), " missing!")
+                current_project.fatal("Sources for", str(base_project_source_dir), " missing!")
             assert isinstance(self.url, str), self.url
             assert not self.url.startswith("<"), "Invalid URL " + self.url
             if not current_project.query_yes_no(
-                    str(default_src_dir) + " is not a git repository. Clone it from '" + self.url + "'?",
+                    str(base_project_source_dir) + " is not a git repository. Clone it from '" + self.url + "'?",
                     default_result=True):
-                current_project.fatal("Sources for", str(default_src_dir), " missing!")
+                current_project.fatal("Sources for", str(base_project_source_dir), " missing!")
             clone_cmd = ["git", "clone"]
             if current_project.config.shallow_clone and not current_project.needs_full_history:
                 # Note: we pass --no-single-branch since otherwise git fetch will not work with branches and
@@ -1307,57 +1307,66 @@ class GitRepository(SourceRepository):
                 clone_cmd.append("--recurse-submodules")
             if self.get_default_branch(current_project):
                 clone_cmd += ["--branch", self.get_default_branch(current_project)]
-            current_project.run_cmd(clone_cmd + [self.url, default_src_dir], cwd="/")
+            current_project.run_cmd(clone_cmd + [self.url, base_project_source_dir], cwd="/")
             # Could also do this but it seems to fetch more data than --no-single-branch
             # if self.config.shallow_clone:
             #    current_project.run_cmd(["git", "config", "remote.origin.fetch",
             #                             "+refs/heads/*:refs/remotes/origin/*"], cwd=src_dir)
 
-        if src_dir == default_src_dir:
+        if src_dir == base_project_source_dir:
             return  # Nothing else to do
 
         # Handle per-target overrides by adding a new git-worktree git-worktree
         target_override = self.per_target_branches.get(current_project.crosscompile_target, None)
-        assert target_override is not None, "Default src != src -> must have a per-target override"
+        assert target_override is not None, "Default src != base src -> must have a per-target override"
         if (src_dir / ".git").exists():
             return
-        current_project.info("Creating git-worktree checkout of", default_src_dir, "with branch",
+        current_project.info("Creating git-worktree checkout of", base_project_source_dir, "with branch",
                              target_override.branch, "for", src_dir)
 
         # Find the first valid remote
         per_target_url = target_override.url if target_override.url else self.url
-        remote_name = "origin"
-        remotes = run_command(["git", "-C", default_src_dir, "remote", "-v"], capture_output=True).stdout.decode(
-            "utf-8")  # type: str
+        matching_remote = None
+        remotes = run_command(["git", "-C", base_project_source_dir, "remote", "-v"],
+                              capture_output=True).stdout.decode("utf-8")  # type: str
         for r in remotes.splitlines():
+            remote_name = r.split()[0].strip()
             if per_target_url in r:
-                remote_name = r.split()[0].strip()
+                current_project.verbose_print("Found per-target URL", per_target_url)
+                matching_remote = remote_name
+                break  # Found the matching remote
+        if matching_remote is None:
+            current_project.warning("Could not find remote for URL", per_target_url, "will add a new one")
+            new_remote = "remote-" + current_project.crosscompile_target.generic_suffix
+            run_command(["git", "-C", base_project_source_dir, "remote", "add", new_remote, per_target_url],
+                        print_verbose_only=False)
+            matching_remote = new_remote
         while True:
             try:
-                url = run_command(["git", "-C", default_src_dir, "remote", "get-url", remote_name],
+                url = run_command(["git", "-C", base_project_source_dir, "remote", "get-url", matching_remote],
                                   capture_output=True).stdout.decode("utf-8").strip()
             except subprocess.CalledProcessError as e:
-                current_project.warning("Could not determine URL for remote", remote_name, str(e))
+                current_project.warning("Could not determine URL for remote", matching_remote, str(e))
                 url = None
             if url == self.url:
                 break
-            current_project.info("URL '", url, "' for remote ", remote_name, " does not match expected url '",
+            current_project.info("URL '", url, "' for remote ", matching_remote, " does not match expected url '",
                                  self.url, "'", sep="")
             if current_project.query_yes_no("Use this remote?"):
                 break
-            remote_name = input("Please enter the correct remote: ")
-        run_command(["git", "worktree", "add", "--track", src_dir,
-                     remote_name + "/" + target_override.branch], cwd=default_src_dir)
+            matching_remote = input("Please enter the correct remote: ")
+        run_command(["git", "-C", base_project_source_dir, "worktree", "add", "--track", src_dir,
+                     matching_remote + "/" + target_override.branch], print_verbose_only=False)
 
-    def get_real_source_dir(self, caller: SimpleProject, default_src_dir: Path) -> Path:
+    def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Path) -> Path:
         target_override = self.per_target_branches.get(caller.crosscompile_target, None)
         if target_override is None:
-            return default_src_dir
-        return default_src_dir.with_name(target_override.directory_name)
+            return base_project_source_dir
+        return base_project_source_dir.with_name(target_override.directory_name)
 
-    def update(self, current_project: "Project", *, src_dir: Path, default_src_dir: Path = None, revision=None,
+    def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path = None, revision=None,
                skip_submodules=False):
-        self.ensure_cloned(current_project, src_dir=src_dir, default_src_dir=default_src_dir,
+        self.ensure_cloned(current_project, src_dir=src_dir, base_project_source_dir=base_project_source_dir,
                            skip_submodules=skip_submodules)
         if current_project.skip_update:
             return
@@ -1369,12 +1378,26 @@ class GitRepository(SourceRepository):
             # Update from the old url:
             for old_url in self.old_urls:
                 assert isinstance(old_url, bytes)
-                remote_url = run_command("git", "remote", "get-url", "origin", capture_output=True,
+                # Try to get the name of the default remove from the configured upstream branch
+                remote_name = "origin"
+                try:
+                    revparse = run_command(
+                        ["git", "-C", base_project_source_dir, "git", "rev-parse", "--symbolic-full-name",
+                         "@{upstream}"], capture_output=True).stdout.decode("utf-8")  # type: str
+                    if revparse.startswith("refs/remotes") and len(revparse.split("/")) > 3:
+                        remote_name = revparse.split("/")[2]
+                    else:
+                        current_project.warning("Could not parse git rev-parse output. No upstream configured?",
+                                                "Output was", revparse, "-- will use ", remote_name, "as remote name.")
+                except subprocess.CalledProcessError as e:
+                    current_project.warning("git rev-parse failed, will use ", remote_name, "as remote name:", e)
+
+                remote_url = run_command("git", "remote", "get-url", remote_name, capture_output=True,
                                          cwd=src_dir).stdout.strip()
                 if remote_url == old_url:
                     current_project.warning(current_project.project_name, "still points to old repository", remote_url)
                     if current_project.query_yes_no("Update to correct URL?"):
-                        run_command("git", "remote", "set-url", "origin", self.url,
+                        run_command("git", "remote", "set-url", remote_name, self.url,
                                     run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, cwd=src_dir)
 
         # If there is a hardcoded revision there is no need to call fetch
@@ -2204,7 +2227,7 @@ class Project(SimpleProject):
         if not self.repository and not self.skip_update:
             self.fatal("Cannot update", self.project_name, "as it is missing a repository source",
                        fatal_when_pretending=True)
-        self.repository.update(self, src_dir=self.source_dir, default_src_dir=self._initial_source_dir,
+        self.repository.update(self, src_dir=self.source_dir, base_project_source_dir=self._initial_source_dir,
                                revision=self.git_revision, skip_submodules=self.skip_git_submodules)
         if self.is_large_source_repository and (self.source_dir / ".git").exists():
             # This is a large repository, tell git to do whatever it can to speed up operations (new in 2.24):
@@ -2522,7 +2545,8 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.skip_update:
             # When --skip-update is set (or we don't have working internet) only check that the repository exists
             if self.repository:
-                self.repository.ensure_cloned(self, src_dir=self.source_dir, default_src_dir=self._initial_source_dir,
+                self.repository.ensure_cloned(self, src_dir=self.source_dir,
+                                              base_project_source_dir=self._initial_source_dir,
                                               skip_submodules=self.skip_git_submodules)
         else:
             self.update()
