@@ -212,9 +212,15 @@ class LaunchFVPBase(SimpleProject):
     dependencies = [_source_class.target, "morello-uefi", "morello-flash-images"]
     supported_architectures = _source_class.supported_architectures
 
+    def __init__(self, config):
+        super().__init__(config)
+        self.fvp_project = None
+
     def setup(self):
         super().setup()
         assert self.crosscompile_target.is_aarch64(include_purecap=True)
+        if not self.use_architectureal_fvp:
+            self.fvp_project = InstallMorelloFVP.get_instance(self, cross_target=CompilationTargets.NATIVE)
 
     @staticmethod
     def default_ssh_port():
@@ -242,8 +248,8 @@ class LaunchFVPBase(SimpleProject):
 
     @property
     def use_virtio_net(self):
-        # TODO: Enable once a model is released with the IRQ wired up (maybe with a config option?)
-        return False
+        # VirtIO network device first available in rev 345
+        return self.fvp_project is not None and self.fvp_project.fvp_revision >= 345
 
     # noinspection PyAttributeOutsideInit
     def process(self):
@@ -319,22 +325,21 @@ class LaunchFVPBase(SimpleProject):
                 fvp_args = [x for param in model_params for x in ("-C", param)]
                 self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number"] + fvp_args)
         else:
-            fvp_project = InstallMorelloFVP.get_instance(self, cross_target=CompilationTargets.NATIVE)
-            fvp_project.check_system_dependencies()  # warn if socat/docker is missing
+            self.fvp_project.check_system_dependencies()  # warn if socat/docker is missing
             model_params += [
                 "displayController=0",  # won't work yet
                 # "css.cache_state_modelled=0",
                 # "num_clusters=1",
                 # "num_cores=1",
                 ]
-            if fvp_project.fvp_revision > 255:
+            if self.fvp_project.fvp_revision > 255:
                 # virtio-rng supported in rev312
                 model_params += [
                     "board.virtio_rng.enabled=1",
                     "board.virtio_rng.seed=0",
                     "board.virtio_rng.generator=2",
                     ]
-            if fvp_project.fvp_revision < 312:
+            if self.fvp_project.fvp_revision < 312:
                 self.fatal("FVP is too old, please update to latest version")
             # prepend -C to each of the parameters:
             fvp_args = [x for param in model_params for x in ("-C", param)]
@@ -374,8 +379,8 @@ class LaunchFVPBase(SimpleProject):
             fvp_args += ["-C", "css.scp.CS_Counter.use_real_time=1"]
             import pprint
             self.verbose_print("FVP args:\n", pprint.pformat(fvp_args))
-            fvp_project.execute_fvp(fvp_args + ["--print-port-number"], disk_image_path=disk_image,
-                                    firmware_path=uefi_bin.parent, ssh_port=self.ssh_port)
+            self.fvp_project.execute_fvp(fvp_args + ["--print-port-number"], disk_image_path=disk_image,
+                                         firmware_path=uefi_bin.parent, ssh_port=self.ssh_port)
 
 
 class LaunchFVPCheriBSD(LaunchFVPBase):
