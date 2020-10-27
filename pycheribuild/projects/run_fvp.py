@@ -285,8 +285,7 @@ class LaunchFVPBase(SimpleProject):
 
         add_hostbridge_params(
             "userNetworking=true",
-            "userNetPorts=" + str(self.ssh_port) + "=22",
-            "interfaceName=ARM0")
+            "userNetPorts=" + str(self.ssh_port) + "=22")
 
         # NB: Set transport even if virtio_net is disabled since it still shows
         # up and is detected, just doesn't have any queues.
