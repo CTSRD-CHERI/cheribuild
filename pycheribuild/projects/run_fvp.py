@@ -86,7 +86,7 @@ VOLUME /diskimg
             self.run_cmd("docker", "build", "--pull", "-t", self.container_name, ".", cwd=self.install_dir)
         else:
             self.run_cmd("bash", self.installer_path, "--i-agree-to-the-contained-eula", "--no-interactive",
-                         "--destination", self.install_dir, "--show-files")
+                         "--destination", self.install_dir)
 
     def _plugin_args(self):
         if self.fvp_revision >= 312:
