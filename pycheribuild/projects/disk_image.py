@@ -103,6 +103,13 @@ def _default_disk_image_name(config: CheriConfig, directory: Path, project: "_Bu
     return directory / (project.disk_image_prefix + xtarget.build_suffix(config) + ".img")
 
 
+def _default_disk_image_hostname(prefix: str) -> "ComputedDefaultValue[str]":
+    # noinspection PyProtectedMember
+    return ComputedDefaultValue(
+        function=lambda conf, proj: prefix + (proj._xtarget.build_suffix(conf) if proj._xtarget else "<TARGET>"),
+        as_string=prefix + "-<ARCHITECTURE>")
+
+
 class _BuildDiskImageBase(SimpleProject):
     do_not_add_to_targets = True
     disk_image_path = None  # type: Path
@@ -811,18 +818,14 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        host_username = CheriConfig.get_user_name()
-        default_hostname = ComputedDefaultValue(
-            function=lambda conf, proj: "qemu-cheri" + proj.cheri_config_suffix + "-" + host_username,
-            as_string="qemu-cheri${ABI}-" + host_username)
-
-        super().setup_config_options(default_hostname=default_hostname, extra_files_suffix="-minimal", **kwargs)
-        cls.strip_binaries = cls.add_bool_option("strip", default=True,
-                                                 help="strip ELF files to reduce size of generated image")
-        cls.include_cheribsdtest = cls.add_bool_option("include-cheribsdtest", default=True,
-                                                       help="Also add static cheribsdtest base variants to the disk image")
-        cls.use_cheribsd_purecap_rootfs = cls.add_bool_option("use-cheribsd-purecap-rootfs", default=False,
-                                                              help="Use the rootfs built by cheribsd-purecap instead")
+        super().setup_config_options(default_hostname=_default_disk_image_hostname("cheribsd-minimal"),
+                                     extra_files_suffix="-minimal", **kwargs)
+        cls.strip_binaries = cls.add_bool_option(
+            "strip", default=True, help="strip ELF files to reduce size of generated image")
+        cls.include_cheribsdtest = cls.add_bool_option(
+            "include-cheribsdtest", default=True, help="Also add static cheribsdtest base variants to the disk image")
+        cls.use_cheribsd_purecap_rootfs = cls.add_bool_option(
+            "use-cheribsd-purecap-rootfs", default=False, help="Use the rootfs built by cheribsd-purecap instead")
 
     def __init__(self, config: CheriConfig):
         self.rootfs_xtarget = self.get_crosscompile_target(config)
@@ -1085,12 +1088,7 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        host_username = CheriConfig.get_user_name()
-        default_hostname = ComputedDefaultValue(
-            function=lambda conf, proj: "qemu-cheri" + proj.cheri_config_suffix + "-" + host_username,
-            as_string="qemu-cheri${ABI}-" + host_username)
-
-        super().setup_config_options(default_hostname=default_hostname, **kwargs)
+        super().setup_config_options(default_hostname=_default_disk_image_hostname("cheribsd"), **kwargs)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -1116,9 +1114,7 @@ class BuildFreeBSDImage(BuildMultiArchDiskImage):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        host_username = CheriConfig.get_user_name()
-        suffix = cls._xtarget.generic_suffix if cls._xtarget else "<TARGET>"
-        super().setup_config_options(default_hostname="qemu-" + suffix + "-" + host_username, **kwargs)
+        super().setup_config_options(default_hostname=_default_disk_image_hostname("freebsd"), **kwargs)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
