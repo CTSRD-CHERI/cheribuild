@@ -1360,7 +1360,7 @@ class GitRepository(SourceRepository):
         # TODO --track -B?
         try:
             run_command(["git", "-C", base_project_source_dir, "worktree", "add", "--track", "-b",
-                         "dev", src_dir, matching_remote + "/" + target_override.branch],
+                         target_override.branch, src_dir, matching_remote + "/" + target_override.branch],
                         print_verbose_only=False)
         except subprocess.CalledProcessError:
             current_project.warning("Could not create worktree with branch name ", target_override.branch,
