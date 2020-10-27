@@ -85,7 +85,7 @@ VOLUME /diskimg
 """.format(installer_name=self.installer_path.name), overwrite=True)
             self.run_cmd("docker", "build", "--pull", "-t", self.container_name, ".", cwd=self.install_dir)
         else:
-            self.run_cmd(self.installer_path, "--i-agree-to-the-contained-eula", "--no-interactive",
+            self.run_cmd("bash", self.installer_path, "--i-agree-to-the-contained-eula", "--no-interactive",
                          "--destination", self.install_dir, "--show-files")
 
     def _plugin_args(self):
