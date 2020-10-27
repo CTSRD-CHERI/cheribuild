@@ -1341,6 +1341,8 @@ class GitRepository(SourceRepository):
             run_command(["git", "-C", base_project_source_dir, "remote", "add", new_remote, per_target_url],
                         print_verbose_only=False)
             matching_remote = new_remote
+        # Fetch from the remote to ensure that the target ref exists (otherwise git worktree add fails)
+        run_command(["git", "-C", base_project_source_dir, "fetch", matching_remote], print_verbose_only=False)
         while True:
             try:
                 url = run_command(["git", "-C", base_project_source_dir, "remote", "get-url", matching_remote],
@@ -1355,8 +1357,17 @@ class GitRepository(SourceRepository):
             if current_project.query_yes_no("Use this remote?"):
                 break
             matching_remote = input("Please enter the correct remote: ")
-        run_command(["git", "-C", base_project_source_dir, "worktree", "add", "--track", src_dir,
-                     matching_remote + "/" + target_override.branch], print_verbose_only=False)
+        # TODO --track -B?
+        try:
+            run_command(["git", "-C", base_project_source_dir, "worktree", "add", "--track", "-b",
+                         "dev", src_dir, matching_remote + "/" + target_override.branch],
+                        print_verbose_only=False)
+        except subprocess.CalledProcessError:
+            current_project.warning("Could not create worktree with branch name ", target_override.branch,
+                                    ", maybe it already exists. Trying fallback name.", sep="")
+            run_command(["git", "-C", base_project_source_dir, "worktree", "add", "--track", "-b",
+                         "worktree-fallback-" + target_override.branch, src_dir,
+                         matching_remote + "/" + target_override.branch], print_verbose_only=False)
 
     def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Path) -> Path:
         target_override = self.per_target_branches.get(caller.crosscompile_target, None)
