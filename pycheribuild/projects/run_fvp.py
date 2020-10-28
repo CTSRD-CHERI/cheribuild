@@ -51,9 +51,10 @@ class InstallMorelloFVP(SimpleProject):
         super().__init__(*args, **kwargs)
         if self.use_docker_container:
             self.add_required_system_tool("docker", homebrew="homebrew/cask/docker")
-            self.add_required_system_tool("socat", homebrew="socat")
-            if OSInfo.IS_MAC:
-                self.add_required_system_tool("Xquartz", homebrew="homebrew/cask/xquartz")
+            if self.use_docker_x11_forwarding:
+                self.add_required_system_tool("socat", homebrew="socat")
+                if OSInfo.IS_MAC:
+                    self.add_required_system_tool("Xquartz", homebrew="homebrew/cask/xquartz")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -62,6 +63,9 @@ class InstallMorelloFVP(SimpleProject):
         # We can run the FVP on macOS by using docker. FreeBSD might be able to use Linux emulation.
         cls.use_docker_container = cls.add_bool_option("use-docker-container", default=OSInfo.IS_MAC,
                                                        help="Run the FVP inside a docker container")
+        # TODO: should add a general option to turn of X11 for CI.
+        cls.use_docker_x11_forwarding = cls.add_bool_option("use-docker-x11-forwarding", default=True,
+                                                            help="Forward X11 from the docker container to the host")
         cls.i_agree_to_the_contained_eula = cls.add_bool_option("agree-to-the-contained-eula")
 
     @property
@@ -132,6 +136,8 @@ VOLUME /diskimg
                     expose_telnet_ports=True, ssh_port=None, **kwargs):
         model_relpath = "models/Linux64_GCC-6.4/FVP_Morello"
         if self.use_docker_container:
+            if not self.use_docker_x11_forwarding:
+                x11 = False  # Don't bother with the GUI
             base_cmd = ["docker", "run", "-it", "--rm"]
             if expose_telnet_ports:
                 base_cmd += ["-p", "5000-5007:5000-5007"]
