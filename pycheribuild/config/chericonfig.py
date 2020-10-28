@@ -38,20 +38,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from .loader import ComputedDefaultValue
+from .loader import ComputedDefaultValue, MyJsonEncoder
 from ..utils import have_working_internet_connection, latest_system_clang_tool, status_update, warning_message
-
-
-# custom encoder to handle pathlib.Path objects
-class MyJsonEncoder(json.JSONEncoder):
-    def __init__(self, *args, **kwargs):
-        # noinspection PyArgumentList
-        super().__init__(*args, **kwargs)
-
-    def default(self, o):
-        if isinstance(o, Path):
-            return str(o)
-        return super().default(o)
 
 
 class BuildType(Enum):

@@ -475,8 +475,10 @@ def test_config_file_include():
         (config_dir / "change-smb-dir.json").write_bytes(
             b'{ "run": { "smb-host-directory": "/some/path" }, "#include": "common.json" }')
         result = _get_config_with_include(config_dir,
-                                          b'{ "run": { "ssh-forwarding-port": 12345 }, "#include": '
-                                          b'"change-smb-dir.json" }')
+                                          b'{'
+                                          b'  "run": { "ssh-forwarding-port": 12345 },'
+                                          b'  "#include": "change-smb-dir.json"'
+                                          b'}')
         run_project = _get_target_instance("run-riscv64-purecap", result, LaunchCheriBSD)
         assert run_project.custom_qemu_smb_mount == Path("/some/path")
         assert run_project.ssh_forwarding_port == 12345
@@ -764,3 +766,26 @@ def test_backwards_compat_old_suffixes_freebsd_mips():
     # Finally, using the old name on the command line should be an error:
     with pytest.raises(SystemExit, match="^2$"):
         _ = _parse_config_file_and_args(b'{}', "--freebsd-mips/build-directory=/cmdline")
+
+
+def test_expand_tilde_and_env_vars(monkeypatch):
+    monkeypatch.setenv("MYHOME", str(Path.home()))
+    # Check that relative paths in config files resolve relative to the file that it's being loaded from
+    assert _parse_config_file_and_args(b'{ "build-root": "~/build" }').build_root == (Path.home() / "build")
+    assert _parse_config_file_and_args(b'{ "build-root": "$MYHOME/build" }').build_root == (Path.home() / "build")
+    assert _parse_config_file_and_args(b'{ "build-root": "${MYHOME}/build" }').build_root == (Path.home() / "build")
+
+
+def test_relative_paths_in_config():
+    # Check that relative paths in config files resolve relative to the file that it's being loaded from
+    with tempfile.TemporaryDirectory() as td:
+        configfile = Path(td, "config.json")
+        subdir = Path(td, "subdir")
+        subdir.mkdir()
+        sub_configfile = subdir / "sub-config.json"
+        sub_configfile.write_bytes(b'{ "build-root": "./build", "source-root": "../some-other-dir" }')
+        configfile.write_bytes(b'{ "output-root": "./output", "#include": "./subdir/sub-config.json" }')
+        config = _parse_arguments([], config_file=configfile)
+        assert config.build_root == Path(td, "subdir/build")
+        assert config.source_root == Path(td, "subdir/../some-other-dir")
+        assert config.output_root == Path(td, "output")

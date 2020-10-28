@@ -109,6 +109,35 @@ class _EnumArgparseType(object):
         return '%s(%s)' % (self.enums.__name__, astr)
 
 
+class _LoadedConfigValue:
+    """A simple class to hold the loaded value as well as the source (to handle relative paths correctly)"""
+
+    def __init__(self, value, loaded_from: "typing.Optional[Path]", used_key: str = None):
+        assert value is not None
+        self.value = value
+        self.loaded_from = loaded_from
+        self.used_key = used_key
+
+    def is_nested_dict(self):
+        return isinstance(self.value, dict)
+
+    def __repr__(self):
+        return repr(self.value)
+
+
+# custom encoder to handle pathlib.Path and _LoadedConfigValue objects
+class MyJsonEncoder(json.JSONEncoder):
+    def __init__(self, *args, **kwargs):
+        # noinspection PyArgumentList
+        super().__init__(*args, **kwargs)
+
+    def default(self, o):
+        if isinstance(o, Path):
+            return str(o)
+        if isinstance(o, _LoadedConfigValue):
+            return o.value
+        return super().default(o)
+
 # When tab-completing, argparse spends 100ms printing the help message for all available targets
 # Avoid this by providing a no-op help formatter
 class NoOpHelpFormatter(argparse.HelpFormatter):
@@ -136,7 +165,7 @@ class ConfigLoaderBase(object):
 
     options = dict()  # type: typing.Dict[str, "ConfigOptionBase"]
     _parsed_args = None
-    _json = {}  # type: dict
+    _json = {}  # type: typing.Dict[str, _LoadedConfigValue]
     is_completing_arguments = "_ARGCOMPLETE" in os.environ
     _argcomplete_prefix = get_argcomplete_prefix() if is_completing_arguments else None
     _argcomplete_prefix_includes_slash = "/" in _argcomplete_prefix if _argcomplete_prefix else None
@@ -358,6 +387,7 @@ class ConfigOptionBase(object):
                 result = self._load_option_impl(config, alias_name)
                 if result is not None:
                     self.debug_msg("Using alias config option value", alias_name, "for", self.name, "->", result)
+                    assert isinstance(result, _LoadedConfigValue)
                     break
         if result is None and self._fallback_names is not None:
             for fallback_name in self._fallback_names:
@@ -366,12 +396,15 @@ class ConfigOptionBase(object):
                 result = fallback_option._load_option_impl(config, fallback_name)
                 if result is not None:
                     self.debug_msg("Using fallback config option value", fallback_name, "for", self.name, "->", result)
+                    assert isinstance(result, _LoadedConfigValue)
                     break
 
         if result is None:  # If no option is set fall back to the default
             if return_none_if_default:
                 return None  # Used in jenkins to avoid updating install directory for explicit options on commandline
             result = self._get_default_value(config, instance)
+            if result is not None:
+                result = _LoadedConfigValue(result, None)
             self._is_default_value = True
         # Now convert it to the right type
         try:
@@ -382,7 +415,7 @@ class ConfigOptionBase(object):
             sys.exit()
         return result
 
-    def _load_option_impl(self, config: "CheriConfig", target_option_name) -> "typing.Optional[typing.Any]":
+    def _load_option_impl(self, config: "CheriConfig", target_option_name) -> "typing.Optional[_LoadedConfigValue]":
         # target_option_name may not be the same as self.full_option_name if we are loading the fallback value
         raise NotImplementedError()
 
@@ -413,16 +446,18 @@ class ConfigOptionBase(object):
             self._cached = self.load_option(self._loader._cheri_config, instance, owner)
         return self._cached
 
-    def _get_default_value(self, config: "CheriConfig", instance: "typing.Optional[SimpleProject]" = None):
+    def _get_default_value(self, config: "CheriConfig",
+                           instance: "typing.Optional[SimpleProject]" = None) -> _LoadedConfigValue:
         if callable(self.default):
             return self.default(config, instance)
         else:
             return self.default
 
-    def _convert_type(self, result):
+    def _convert_type(self, loaded_result: _LoadedConfigValue):
         # check for None to make sure we don't call str(None) which would result in "None"
-        if result is None:
+        if loaded_result is None:
             return None
+        result = loaded_result.value
         # self.debug_msg("Converting", result, "to", self.value_type)
         # if the requested type is list, tuple, etc. use shlex.split() to convert strings to lists
         if self.value_type != str and isinstance(result, str):
@@ -434,7 +469,11 @@ class ConfigOptionBase(object):
         if isinstance(self.value_type, type) and issubclass(self.value_type, Path):
             expanded = os.path.expanduser(os.path.expandvars(str(result)))
             # self.debug_msg("Expanding env vars in", result, "->", expanded, os.environ)
-            result = Path(expanded).absolute()
+            if loaded_result.loaded_from is not None:
+                assert loaded_result.loaded_from.is_absolute()
+                result = loaded_result.loaded_from.parent / expanded  # Make paths relative to the config file
+            else:
+                result = Path(expanded).absolute()  # relative to CWD if it was not loaded from the command line
         else:
             result = self.value_type(result)  # make sure it has the right type (e.g. Path, int, bool, str)
         return result
@@ -510,12 +549,13 @@ class CommandLineConfigOption(ConfigOptionBase):
         assert not action.type  # we handle the type of the value manually
         return action
 
-    def _load_option_impl(self, config: "CheriConfig", target_option_name: str):
+    def _load_option_impl(self, config: "CheriConfig",
+                          target_option_name: str) -> "typing.Optional[_LoadedConfigValue]":
         from_cmdline = self._load_from_commandline()
         return from_cmdline
 
     # noinspection PyProtectedMember
-    def _load_from_commandline(self):
+    def _load_from_commandline(self) -> "typing.Optional[_LoadedConfigValue]":
         assert self._loader._parsed_args  # load() must have been called before using this object
         # FIXME: check the fallback name here
         assert hasattr(self._loader._parsed_args, self.action.dest)
@@ -525,7 +565,9 @@ class CommandLineConfigOption(ConfigOptionBase):
                 result = getattr(self._loader._parsed_args, alias_action.dest)  # alias from command line
                 if result is not None:
                     break
-        return result
+        if result is None:
+            return None
+        return _LoadedConfigValue(result, None)
 
 
 # noinspection PyProtectedMember
@@ -548,13 +590,13 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
         # try loading it from the JSON file:
         from_json = self._load_from_json(target_option_name)
         # self.debug_msg(full_option_name, "from JSON:", from_json)
-        if from_json[0] is not None:
-            status_update("Overriding default value for", target_option_name, "with value from JSON key", from_json[1],
-                          "->", from_json[0], file=sys.stderr)
-            return from_json[0]
+        if from_json is not None:
+            status_update("Overriding default value for", target_option_name, "with value from JSON key",
+                          from_json.used_key, "->", from_json.value, file=sys.stderr)
+            return from_json
         return None  # not found -> fall back to default
 
-    def _lookup_key_in_json(self, full_option_name: str):
+    def _lookup_key_in_json(self, full_option_name: str) -> "typing.Optional[_LoadedConfigValue]":
         if full_option_name in self._loader._json:
             return self._loader._json[full_option_name]
         # if there are any / characters treat these as an object reference
@@ -564,13 +606,14 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
         json_object = self._loader._json
         for objRef in json_path:
             # Return an empty dict if it is not found
-            json_object = json_object.get(objRef, {})
+            json_object = json_object.get(objRef, None)
+            if json_object is None:
+                return None
+            json_object = json_object.value
         return json_object.get(json_key, None)
 
-    def _load_from_json(self,
-                        full_option_name: str) -> "typing.Tuple[typing.Optional[typing.Any], typing.Optional[str]]":
+    def _load_from_json(self, full_option_name: str) -> "typing.Optional[_LoadedConfigValue]":
         result = self._lookup_key_in_json(full_option_name)
-        used_key = None
         # See if any of the other long option names is a valid key name:
         if result is None:
             for optionName in self.action.option_strings:
@@ -579,17 +622,14 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
                     result = self._lookup_key_in_json(json_key)
                     if result is not None:
                         warning_message("Old JSON key", json_key, "used, please use", full_option_name, "instead")
-                        used_key = json_key
                         break
-        else:
-            used_key = full_option_name
         # FIXME: it's about time I removed this code
         if result is None:
             # also check action.dest (as a fallback so I don't have to update all my config files right now)
             result = self._loader._json.get(self.action.dest, None)
             if result is not None:
-                warning_message("Old JSON key", self.action.dest, "used, please use", full_option_name, "instead")
-        return result, used_key
+                warning_message("Old JSON key", result.used_key, "used, please use", full_option_name, "instead")
+        return result
 
 
 class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
@@ -606,14 +646,15 @@ class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
 
 
 # https://stackoverflow.com/a/14902564/894271
-def dict_raise_on_duplicates(ordered_pairs):
+def dict_raise_on_duplicates_and_store_src(ordered_pairs, src_file):
     """Reject duplicate keys."""
     d = {}
     for k, v in ordered_pairs:
         if k in d:
             raise SyntaxError("duplicate key: %r" % (k,))
         else:
-            d[k] = v
+            # Ensure all values store the source file
+            d[k] = _LoadedConfigValue(v, src_file, used_key=k)
     return d
 
 
@@ -682,12 +723,14 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 stripped = line.strip()
                 if not stripped.startswith("#") and not stripped.startswith("//"):
                     json_lines.append(line)
-            result = json.loads("".join(json_lines), object_pairs_hook=dict_raise_on_duplicates)
-            self.debug_msg("Parsed", config_path, "as", coloured(AnsiColour.cyan, json.dumps(result)))
+            result = json.loads("".join(json_lines),
+                                object_pairs_hook=lambda o: dict_raise_on_duplicates_and_store_src(o, config_path))
+            self.debug_msg("Parsed", config_path, "as", coloured(AnsiColour.cyan, json.dumps(result, cls=MyJsonEncoder)))
             return result
 
     # Based on https://stackoverflow.com/a/7205107/894271
-    def merge_dict_recursive(self, a: dict, b: dict, included_file: Path, base_file: Path, path=None) -> dict:
+    def merge_dict_recursive(self, a: "typing.Dict[str, _LoadedConfigValue]", b: "typing.Dict[str, _LoadedConfigValue]",
+                             included_file: Path, base_file: Path, path=None) -> dict:
         """merges b into a"""
         if path is None:
             path = []
@@ -695,8 +738,8 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             if key == "#include":
                 continue
             if key in a:
-                if isinstance(a[key], dict) and isinstance(b[key], dict):
-                    self.merge_dict_recursive(a[key], b[key], included_file, base_file, path + [str(key)])
+                if a[key].is_nested_dict() and b[key].is_nested_dict():
+                    self.merge_dict_recursive(a[key].value, b[key].value, included_file, base_file, path + [str(key)])
                 elif a[key] != b[key]:
                     if self._parsed_args:
                         self.debug_msg("Overriding '" + '.'.join(path + [str(key)]) + "' value", b[key], " from",
@@ -718,11 +761,12 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 raise
         include_value = result.get("#include")
         if include_value:
-            included_path = config_path.parent / include_value
+            included_path = config_path.parent / include_value.value
             included_json = self.__load_json_with_includes(included_path)
+            del result["#include"]
             result = self.merge_dict_recursive(result, included_json, included_path, config_path)
             self.debug_msg(coloured(AnsiColour.cyan, "Merging JSON config file", included_path))
-            self.debug_msg("New result is", coloured(AnsiColour.cyan, json.dumps(result)))
+            self.debug_msg("New result is", coloured(AnsiColour.cyan, json.dumps(result, cls=MyJsonEncoder)))
 
         return result
 
@@ -751,10 +795,10 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         # Now validate the config file
         self._validate_config_file()
 
-    def __validate(self, prefix: str, key: str, value) -> bool:
+    def __validate(self, prefix: str, key: str, lcv: _LoadedConfigValue) -> bool:
         fullname = prefix + key
-        if isinstance(value, dict):
-            for k, v in value.items():
+        if isinstance(lcv.value, dict):
+            for k, v in lcv.value.items():
                 self.__validate(fullname + "/", k, v)
             return True
 
