@@ -27,6 +27,7 @@
 #
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 from .disk_image import BuildCheriBSDDiskImage
@@ -55,7 +56,7 @@ class InstallMorelloFVP(SimpleProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.installer_path = cls.add_path_option("installer-path", help="Path to the FVP installer.sh")
+        cls.installer_path = cls.add_path_option("installer-path", help="Path to the FVP installer.sh or installer.tgz")
         # We can run the FVP on macOS by using docker. FreeBSD might be able to use Linux emulation.
         cls.use_docker_container = cls.add_bool_option("use-docker-container", default=OSInfo.IS_MAC,
                                                        help="Run the FVP inside a docker container")
@@ -69,10 +70,23 @@ class InstallMorelloFVP(SimpleProject):
             self.fatal("Path to installer not known, set the", "--" + self.get_config_option_name("installer_path"),
                        "config option!")
             return
-        self.makedirs(self.install_dir)
-        if self.use_docker_container:
-            self.install_file(self.installer_path, self.install_dir / self.installer_path.name)
-            self.write_file(self.install_dir / "Dockerfile", contents="""
+        if not self.installer_path.is_file():
+            self.fatal("Specified path to installer does not exist:", self.installer_path)
+
+        with tempfile.TemporaryDirectory() as td:
+            # If the installer is a tgz archive extract it to the temporary directory first
+            if self.installer_path.suffix == ".tgz":
+                self.run_cmd("tar", "xf", self.installer_path, "-C", td)
+                installer_sh = (list(Path(td).glob("*.sh")) or [Path(td, "FVP_Morello.sh")])[0]
+            else:
+                installer_sh = self.installer_path
+            if installer_sh.suffix != ".sh":
+                self.warning("Incorrect path to installer? Expected installer to be a .sh file:", installer_sh)
+
+            self.makedirs(self.install_dir)
+            if self.use_docker_container:
+                self.install_file(installer_sh, self.install_dir / installer_sh.name)
+                self.write_file(self.install_dir / "Dockerfile", contents="""
 FROM opensuse/leap:15.2
 COPY {installer_name} .
 RUN zypper in -y xterm gzip tar libdbus-1-3 libatomic1 telnet
@@ -82,11 +96,12 @@ RUN ./{installer_name} --i-agree-to-the-contained-eula --no-interactive --destin
 RUN useradd fvp-user
 USER fvp-user
 VOLUME /diskimg
-""".format(installer_name=self.installer_path.name), overwrite=True)
-            self.run_cmd("docker", "build", "--pull", "-t", self.container_name, ".", cwd=self.install_dir)
-        else:
-            self.run_cmd(self.installer_path, "--i-agree-to-the-contained-eula", "--no-interactive",
-                         "--destination", self.install_dir)
+""".format(installer_name=installer_sh.name), overwrite=True)
+                self.run_cmd("docker", "build", "--pull", "-t", self.container_name, ".", cwd=self.install_dir,
+                             print_verbose_only=False)
+            else:
+                self.run_cmd(installer_sh, "--i-agree-to-the-contained-eula", "--no-interactive",
+                             "--destination", self.install_dir, print_verbose_only=False)
 
     def _plugin_args(self):
         if self.fvp_revision >= 312:
