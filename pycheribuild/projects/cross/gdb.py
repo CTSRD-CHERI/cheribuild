@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 import shutil
-import sys
 import typing
 from pathlib import Path
 
