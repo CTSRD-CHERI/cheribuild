@@ -398,9 +398,9 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
         target_info = target.target_info_cls(target, MockProject())
         assert isinstance(target_info, FreeBSDTargetInfo)
         # We only want the compiler flags, don't check whether required files exist
-        flags = target_info.essential_compiler_and_linker_flags_impl(perform_sanity_checks=False,
+        flags = target_info.essential_compiler_and_linker_flags_impl(target_info, perform_sanity_checks=False,
                                                                      default_flags_only=True)
-        config_contents = "\n".join(flags)
+        config_contents = "\n".join(flags) + "\n"
         self.makedirs(self.install_dir / "utils")
         # Note: the config file is loaded from the directory containing the real binary, not the symlink.
         self.write_file(self.install_dir / "bin" / (prefix + ".cfg"), config_contents, overwrite=True, mode=0o644)
@@ -454,11 +454,15 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
         triples = [
             "cheri-unknown-freebsd",  # for compat
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, include_version=True),
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, include_version=False),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, self.config,
+                                                 include_version=True),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, self.config,
+                                                 include_version=False),
             # RISC-V triple is the same for NO_CHERI and PURECAP so only give once
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, include_version=True),
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, include_version=False),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config,
+                                                 include_version=True),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config,
+                                                 include_version=False),
             ]
         return [x + "-" for x in triples]
 
@@ -475,9 +479,9 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
     @property
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
         triples = [
-            CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP,
+            CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config,
                                                         include_version=False),
-            CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP,
+            CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config,
                                                         include_version=True),
             ]
         return [x + "-" for x in triples]
