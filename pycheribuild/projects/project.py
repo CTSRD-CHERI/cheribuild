@@ -1393,7 +1393,7 @@ class GitRepository(SourceRepository):
                 remote_name = "origin"
                 try:
                     revparse = run_command(
-                        ["git", "-C", base_project_source_dir, "git", "rev-parse", "--symbolic-full-name",
+                        ["git", "-C", base_project_source_dir, "rev-parse", "--symbolic-full-name",
                          "@{upstream}"], capture_output=True).stdout.decode("utf-8")  # type: str
                     if revparse.startswith("refs/remotes") and len(revparse.split("/")) > 3:
                         remote_name = revparse.split("/")[2]
