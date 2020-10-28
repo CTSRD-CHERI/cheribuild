@@ -42,7 +42,7 @@ class InstallMorelloFVP(SimpleProject):
     target = "install-morello-fvp"
     container_name = "morello-fvp"
 
-    latest_known_fvp = 327
+    latest_known_fvp = 345
     # Seems like docker containers don't get the full amount configured in the settings so subtract a bit from 5GB/8GB
     min_ram_mb = 4900
     warn_ram_mb = 7900
