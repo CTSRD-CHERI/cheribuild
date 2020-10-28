@@ -33,7 +33,8 @@ import typing
 from pathlib import Path
 
 from .project import BuildType, CMakeProject, DefaultInstallDir, GitRepository
-from ..config.compilation_targets import CheriBSDMorelloTargetInfo, CheriBSDTargetInfo, CompilationTargets
+from ..config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTargetInfo, CompilationTargets,
+                                          FreeBSDTargetInfo)
 from ..config.loader import ComputedDefaultValue
 from ..config.target_info import CrossCompileTarget
 from ..utils import CompilerInfo, get_compiler_info, is_jenkins_build, OSInfo, set_env, ThreadJoiner
@@ -382,6 +383,30 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
         self.configure_args[0] = self.configure_args[0] + "/" + self.llvm_subdir
         super().configure(**kwargs)
 
+    def add_compiler_with_config_file(self, prefix: str, target: CrossCompileTarget):
+        # Create a fake project class that has the required properties needed for essential_compiler_and_linker_flags
+        class MockProject:
+            needs_sysroot = True
+            config = self.config
+
+            def warning(*args, **kwags):
+                pass
+
+        prefix += target.build_suffix(self.config)
+        # Instantiate the target_info using the mock project:
+        # noinspection PyTypeChecker
+        target_info = target.target_info_cls(target, MockProject())
+        assert isinstance(target_info, FreeBSDTargetInfo)
+        # We only want the compiler flags, don't check whether required files exist
+        flags = target_info.essential_compiler_and_linker_flags_impl(perform_sanity_checks=False,
+                                                                     default_flags_only=True)
+        config_contents = "\n".join(flags)
+        self.makedirs(self.install_dir / "utils")
+        # Note: the config file is loaded from the directory containing the real binary, not the symlink.
+        self.write_file(self.install_dir / "bin" / (prefix + ".cfg"), config_contents, overwrite=True, mode=0o644)
+        for i in ("clang", "clang++", "clang-cpp"):
+            self.create_symlink(self.install_dir / "bin" / i, self.install_dir / "utils" / (prefix + "-" + i))
+
 
 class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git")
@@ -408,29 +433,15 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
             # Save some time by only building the targets that we need.
             self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips;RISCV;host")
 
-    def add_compiler_with_config_file(self, prefix: str, target: CrossCompileTarget):
-        cross_instance = self.get_instance_for_cross_target(cross_target=target, config=self.config, caller=self)
-        # We only want the compiler flags, don't check whether required files exist
-        assert isinstance(cross_instance.target_info, CheriBSDTargetInfo)
-        flags = cross_instance.target_info.essential_compiler_and_linker_flags_impl(perform_sanity_checks=False,
-                                                                                    default_flags_only=True)
-        config_file_contents = "\n".join(flags)
-        self.makedirs(self.install_dir / "utils")
-        self.write_file(self.install_dir / "utils" / (prefix + ".cfg"), config_file_contents, overwrite=True,
-                        mode=0o644)
-        self.create_symlink(self.install_dir / "bin/clang", self.install_dir / "utils" / (prefix + "-clang"))
-        self.create_symlink(self.install_dir / "bin/clang++", self.install_dir / "utils" / (prefix + "-clang++"))
-        self.create_symlink(self.install_dir / "bin/clang-cpp", self.install_dir / "utils" / (prefix + "-clang-cpp"))
-
     def install(self, **kwargs):
         super().install(**kwargs)
         # Create symlinks that hardcode the sdk and the ABI to easily compile binaries
         # Note: This works as long as the first component of the name is not a recognized LLVM triple architecture, so
-        # we use cheribsd-<arch>-<suffix>-clang instead of <arch>-cheribsd-<suffix>-clang
-        self.add_compiler_with_config_file("cheribsd-mips64-hybrid", CompilationTargets.CHERIBSD_MIPS_HYBRID)
-        self.add_compiler_with_config_file("cheribsd-mips64-purecap", CompilationTargets.CHERIBSD_MIPS_PURECAP)
-        self.add_compiler_with_config_file("cheribsd-riscv64-hybrid", CompilationTargets.CHERIBSD_RISCV_HYBRID)
-        self.add_compiler_with_config_file("cheribsd-riscv64-purecap", CompilationTargets.CHERIBSD_RISCV_PURECAP)
+        # we use {freebsd,cheribsd}-<arch>-<variant>-clang instead of <arch>-cheribsd-<variant>-clang
+        for tgt in CompilationTargets.ALL_CHERIBSD_NON_MORELLO_TARGETS:
+            self.add_compiler_with_config_file("cheribsd", tgt)
+        for tgt in CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS:
+            self.add_compiler_with_config_file("freebsd", tgt)
 
         # llvm-objdump currently doesn't infer the available features
         # This depends on https://reviews.llvm.org/D74023
@@ -443,15 +454,11 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
         triples = [
             "cheri-unknown-freebsd",  # for compat
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, self.config,
-                                                 include_version=True),
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, self.config,
-                                                 include_version=False),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, include_version=True),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, include_version=False),
             # RISC-V triple is the same for NO_CHERI and PURECAP so only give once
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config,
-                                                 include_version=True),
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config,
-                                                 include_version=False),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, include_version=True),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, include_version=False),
             ]
         return [x + "-" for x in triples]
 
@@ -468,9 +475,9 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
     @property
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
         triples = [
-            CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config,
+            CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP,
                                                         include_version=False),
-            CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config,
+            CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP,
                                                         include_version=True),
             ]
         return [x + "-" for x in triples]
@@ -492,6 +499,8 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
         # Seems like this is fixed in CHERI LLVM so it might be caused by Morello LLVM being based on an older version
         if OSInfo.IS_MAC and (self.install_dir / "include/c++/v1").is_symlink():
             self.delete_file(self.install_dir / "include/c++/v1")
+        for tgt in CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS:
+            self.add_compiler_with_config_file("cheribsd", tgt)
 
 
 class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):

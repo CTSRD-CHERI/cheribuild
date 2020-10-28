@@ -196,10 +196,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     target = "freebsd"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     needs_sysroot = False  # We are building the full OS so we don't need a sysroot
-    # TODO: test more architectures (e.g. RISCV)
-    supported_architectures = [CompilationTargets.FREEBSD_X86_64, CompilationTargets.FREEBSD_I386,
-                               CompilationTargets.FREEBSD_MIPS, CompilationTargets.FREEBSD_RISCV,
-                               CompilationTargets.FREEBSD_AARCH64]
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
 
     _default_install_dir_fn = ComputedDefaultValue(function=freebsd_install_dir,
                                                    as_string="$INSTALL_ROOT/freebsd-{mips/x86}")
@@ -1038,7 +1035,7 @@ class BuildFreeBSDGFE(BuildFreeBSD):
     project_name = "freebsd-gfe"
     target = "freebsd-gfe"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git", default_branch="freebsd-crossbuild")
-    supported_architectures = [CompilationTargets.FREEBSD_RISCV]
+    supported_architectures = [CompilationTargets.FREEBSD_RISCV64]
 
 
 # Build FreeBSD with the default options (build the bundled clang instead of using the SDK one)
@@ -1766,7 +1763,7 @@ class BuildFreeBSDDeviceModel(BuildFreeBSDWithDefaultOptions):
     target = "device-model-freebsd"
     repository = GitRepository("https://github.com/CTSRD-CHERI/device-model-freebsd.git",
                                default_branch="dma")
-    supported_architectures = [CompilationTargets.FREEBSD_MIPS]
+    supported_architectures = [CompilationTargets.FREEBSD_MIPS64]
     kernel_config = "BERI_DE4_USBROOT"
     hide_options_from_help = True
 

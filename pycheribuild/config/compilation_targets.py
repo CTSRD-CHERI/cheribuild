@@ -233,7 +233,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return ["upstream-llvm"]
 
     @classmethod
-    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version: bool):
+    def triple_for_target(cls, target: "CrossCompileTarget", *, include_version: bool):
         common_suffix = "-unknown-freebsd"
         if include_version:
             common_suffix += str(cls.FREEBSD_VERSION)
@@ -242,7 +242,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def target_triple(self):
-        return self.triple_for_target(self.target, self.config, include_version=True)
+        return self.triple_for_target(self.target, include_version=True)
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
@@ -494,7 +494,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             self.project.run_shell_script(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
     @classmethod
-    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version):
+    def triple_for_target(cls, target: "CrossCompileTarget", *, include_version):
         if target.is_cheri_purecap():
             # anything over 10 should use libc++ by default
             if target.is_mips(include_purecap=True):
@@ -503,7 +503,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                 return "riscv64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
             else:
                 assert False, "Unsuported purecap target" + str(cls)
-        return super().triple_for_target(target, config, include_version)
+        return super().triple_for_target(target, include_version=include_version)
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
@@ -544,12 +544,12 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
         return self.config.morello_sdk_dir
 
     @classmethod
-    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version):
+    def triple_for_target(cls, target: "CrossCompileTarget", *, include_version):
         if target.is_hybrid_or_purecap_cheri():
             assert target.is_aarch64(include_purecap=True), "AArch64 is the only CHERI target supported " \
                                                             "with the Morello toolchain"
             return "aarch64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
-        return super().triple_for_target(target, config, include_version)
+        return super().triple_for_target(target, include_version=include_version)
 
     def get_cheribsd_sysroot_path(self) -> Path:
         """
@@ -921,23 +921,24 @@ class CompilationTargets(BasicCompilationTargets):
     ARM_NONE_EABI = CrossCompileTarget("arm-none-eabi", CPUArchitecture.ARM32, ArmNoneEabiGccTargetInfo,
                                        is_cheri_hybrid=False, is_cheri_purecap=False)  # For 32-bit firmrware
     # FreeBSD targets
-    FREEBSD_MIPS = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, FreeBSDTargetInfo)
-    FREEBSD_RISCV = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, FreeBSDTargetInfo)
-    FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, FreeBSDTargetInfo)
     FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, FreeBSDTargetInfo)
-    FREEBSD_X86_64 = CrossCompileTarget("amd64", CPUArchitecture.X86_64, FreeBSDTargetInfo)
+    FREEBSD_AMD64 = CrossCompileTarget("amd64", CPUArchitecture.X86_64, FreeBSDTargetInfo)
+    FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, FreeBSDTargetInfo)
+    FREEBSD_MIPS64 = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, FreeBSDTargetInfo)
+    FREEBSD_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, FreeBSDTargetInfo)
+    ALL_SUPPORTED_FREEBSD_TARGETS = [FREEBSD_AARCH64, FREEBSD_AMD64, FREEBSD_I386, FREEBSD_MIPS64, FREEBSD_RISCV64]
 
     # RTEMS targets
     RTEMS_RISCV64 = CrossCompileTarget("rtems-riscv64", CPUArchitecture.RISCV64, RTEMSTargetInfo)
     RTEMS_RISCV64_PURECAP = CrossCompileTarget("rtems-riscv64-purecap", CPUArchitecture.RISCV64, RTEMSTargetInfo,
                                                is_cheri_purecap=True, non_cheri_target=RTEMS_RISCV64)
 
-    # TODO: test RISCV
-    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI,
-                                               CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI,
-                                               CHERIBSD_AARCH64, CHERIBSD_X86_64, BasicCompilationTargets.NATIVE]
-    ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS = [CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI, CHERIBSD_MIPS_PURECAP,
-                                           CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI]
+    ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS = [CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI,
+                                           CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI]
+    ALL_CHERIBSD_NON_MORELLO_TARGETS = ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS + [CHERIBSD_AARCH64, CHERIBSD_X86_64]
+    ALL_CHERIBSD_MORELLO_TARGETS = [CHERIBSD_MORELLO_PURECAP, CHERIBSD_MORELLO_HYBRID]
+    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = ALL_CHERIBSD_NON_MORELLO_TARGETS + [BasicCompilationTargets.NATIVE]
+
     ALL_CHERIBSD_NON_CHERI_TARGETS = [CHERIBSD_MIPS_NO_CHERI, CHERIBSD_RISCV_NO_CHERI, CHERIBSD_AARCH64,
                                       CHERIBSD_X86_64]
     # Same as above, but the default is purecap RISC-V
