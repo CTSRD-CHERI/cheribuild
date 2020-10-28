@@ -105,6 +105,8 @@ class BuildCheriExercises(CrossCompileProject):
 
     def install(self, **kwargs):
         self.makedirs(self.install_dir)
+        if self.config.clean:
+            self.clean_directory(self.install_dir, ensure_dir_exists=True)
         for i in self.compiled_files:
             self.install_file(i, self.install_dir / i.name, print_verbose_only=False)
         # Also install them to the hybrid rootfs:
@@ -112,5 +114,7 @@ class BuildCheriExercises(CrossCompileProject):
         hybrid_rootfs_project = self.target_info.get_rootfs_project(xtarget=hybrid_target)
         hybrid_install_dir = hybrid_rootfs_project.install_dir / self.path_in_rootfs[1:]
         self.makedirs(hybrid_install_dir)
+        if self.config.clean:
+            self.clean_directory(hybrid_install_dir, ensure_dir_exists=True)
         for i in self.compiled_files:
             self.install_file(i, hybrid_install_dir / i.name, print_verbose_only=False)
