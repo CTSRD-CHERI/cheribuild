@@ -138,6 +138,7 @@ class MyJsonEncoder(json.JSONEncoder):
             return o.value
         return super().default(o)
 
+
 # When tab-completing, argparse spends 100ms printing the help message for all available targets
 # Avoid this by providing a no-op help formatter
 class NoOpHelpFormatter(argparse.HelpFormatter):
@@ -725,7 +726,8 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                     json_lines.append(line)
             result = json.loads("".join(json_lines),
                                 object_pairs_hook=lambda o: dict_raise_on_duplicates_and_store_src(o, config_path))
-            self.debug_msg("Parsed", config_path, "as", coloured(AnsiColour.cyan, json.dumps(result, cls=MyJsonEncoder)))
+            self.debug_msg("Parsed", config_path, "as", coloured(AnsiColour.cyan,
+                                                                 json.dumps(result, cls=MyJsonEncoder)))
             return result
 
     # Based on https://stackoverflow.com/a/7205107/894271
