@@ -904,12 +904,16 @@ class CompilationTargets(BasicCompilationTargets):
                                                 is_cheri_purecap=True, hybrid_target=CHERIBSD_RISCV_HYBRID)
     CHERIBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriBSDTargetInfo)
     # XXX: Do we want a morello-nocheri variant that uses the morello compiler for AArch64 instead of CHERI LLVM?
-    CHERIBSD_MORELLO_PURECAP = CrossCompileTarget("morello-purecap", CPUArchitecture.AARCH64,
-                                                  CheriBSDMorelloTargetInfo, is_cheri_purecap=True)
+    CHERIBSD_MORELLO_NO_CHERI = CrossCompileTarget("morello-aarch64", CPUArchitecture.AARCH64,
+                                                   CheriBSDMorelloTargetInfo)
     CHERIBSD_MORELLO_HYBRID = CrossCompileTarget("morello-hybrid", CPUArchitecture.AARCH64,
                                                  CheriBSDMorelloTargetInfo, is_cheri_hybrid=True,
-                                                 check_conflict_with=CHERIBSD_MORELLO_PURECAP,
-                                                 purecap_target=CHERIBSD_MORELLO_PURECAP)
+                                                 check_conflict_with=CHERIBSD_MORELLO_NO_CHERI,
+                                                 non_cheri_target=CHERIBSD_MORELLO_NO_CHERI)
+    CHERIBSD_MORELLO_PURECAP = CrossCompileTarget("morello-purecap", CPUArchitecture.AARCH64,
+                                                  CheriBSDMorelloTargetInfo, is_cheri_purecap=True,
+                                                  check_conflict_with=CHERIBSD_MORELLO_HYBRID,
+                                                  hybrid_target=CHERIBSD_MORELLO_HYBRID)
     CHERIBSD_X86_64 = CrossCompileTarget("amd64", CPUArchitecture.X86_64, CheriBSDTargetInfo)
 
     CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips", CPUArchitecture.MIPS64, CheriOSTargetInfo, is_cheri_purecap=True)
