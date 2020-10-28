@@ -1335,6 +1335,17 @@ class GitRepository(SourceRepository):
                 current_project.verbose_print("Found per-target URL", per_target_url)
                 matching_remote = remote_name
                 break  # Found the matching remote
+            # Also check the raw config file entry in case insteadOf/pushInsteadOf rewrote the URL so it no longer works
+            try:
+                raw_url = run_command(
+                    ["git", "-C", base_project_source_dir, "config", "remote." + remote_name + ".url"],
+                    capture_output=True).stdout.decode("utf-8").strip()
+                if raw_url == per_target_url:
+                    matching_remote = remote_name
+                    break
+            except Exception as e:
+                current_project.warning("Could not get URL for remote", remote_name, e)
+                continue
         if matching_remote is None:
             current_project.warning("Could not find remote for URL", per_target_url, "will add a new one")
             new_remote = "remote-" + current_project.crosscompile_target.generic_suffix
