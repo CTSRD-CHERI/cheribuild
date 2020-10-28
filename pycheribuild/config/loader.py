@@ -113,7 +113,7 @@ class _LoadedConfigValue:
     """A simple class to hold the loaded value as well as the source (to handle relative paths correctly)"""
 
     def __init__(self, value, loaded_from: "typing.Optional[Path]", used_key: str = None):
-        assert value is not None
+        # assert value is not None, used_key + " is None"
         self.value = value
         self.loaded_from = loaded_from
         self.used_key = used_key
