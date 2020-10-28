@@ -41,7 +41,7 @@ from .cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdDeviceModel, BuildFreeB
 from .cross.gdb import (BuildGDB, BuildKGDB)
 from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget,
                       DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
-from ..config.compilation_targets import CompilationTargets
+from ..config.compilation_targets import CheriBSDMorelloTargetInfo, CompilationTargets
 from ..mtree import MtreeFile
 from ..targets import target_manager
 from ..utils import (AnsiColour, classproperty, coloured, include_local_file, OSInfo, set_env)
@@ -1073,7 +1073,7 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
     def dependencies(cls, config):
         xtarget = cls.get_crosscompile_target(config)
         result = super().dependencies(config)
-        # RISCV needs BBL to run:
+        # GDB is not strictly a dependency, but having it in the disk image makes life a lot easier
         if xtarget.is_riscv(include_purecap=True):
             if xtarget.is_hybrid_or_purecap_cheri():
                 result.append("gdb-riscv64-hybrid")
@@ -1084,6 +1084,12 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
                 result.append("gdb-mips64-hybrid")
             else:
                 result.append("gdb-mips64")
+        if xtarget.is_aarch64(include_purecap=True):
+            if xtarget.is_hybrid_or_purecap_cheri():
+                result.append("gdb-morello-hybrid")
+            else:
+                assert not issubclass(xtarget.target_info_cls, CheriBSDMorelloTargetInfo)
+                result.append("gdb-aarch64")
         return result
 
     @classmethod
