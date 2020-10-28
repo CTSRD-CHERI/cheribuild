@@ -86,7 +86,7 @@ class BuildCheriExercises(CrossCompileProject):
 
         # Corrupt a control-flow pointer using a subobject buffer overflow
         self._compile_for_cheri_and_non_cheri(
-            "buffer-overflow-fnptr-riscv",
+            "buffer-overflow-fnptr",
             self.source_dir / "src/exercises/control-flow-pointer/buffer-overflow-fnptr.c")
 
         # Exercise integer-pointer type confusion bug
