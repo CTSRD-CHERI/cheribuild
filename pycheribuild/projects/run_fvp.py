@@ -52,6 +52,8 @@ class InstallMorelloFVP(SimpleProject):
         if self.use_docker_container:
             self.add_required_system_tool("docker", homebrew="homebrew/cask/docker")
             self.add_required_system_tool("socat", homebrew="socat")
+            if OSInfo.IS_MAC:
+                self.add_required_system_tool("Xquartz", homebrew="homebrew/cask/xquartz")
 
     @classmethod
     def setup_config_options(cls, **kwargs):

@@ -20,7 +20,7 @@ brew install cmake ninja libarchive git glib automake autoconf coreutils llvm ma
 # Install samba for shared mounts between host and CheriBSD on QEMU
 brew install arichardson/cheri/samba
 # If you intend to run the morello FVP model you will also need the following:
-brew install homebrew/cask/docker socat dtc
+brew install homebrew/cask/docker homebrew/cask/xquartz socat dtc
 ```
 
 
