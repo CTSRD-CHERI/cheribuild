@@ -62,6 +62,7 @@ class InstallMorelloFVP(SimpleProject):
         # We can run the FVP on macOS by using docker. FreeBSD might be able to use Linux emulation.
         cls.use_docker_container = cls.add_bool_option("use-docker-container", default=OSInfo.IS_MAC,
                                                        help="Run the FVP inside a docker container")
+        cls.i_agree_to_the_contained_eula = cls.add_bool_option("agree-to-the-contained-eula")
 
     @property
     def install_dir(self):
@@ -85,13 +86,25 @@ class InstallMorelloFVP(SimpleProject):
             if installer_sh.suffix != ".sh":
                 self.warning("Incorrect path to installer? Expected installer to be a .sh file:", installer_sh)
 
-            self.makedirs(self.install_dir)
+            if self.i_agree_to_the_contained_eula:
+                eula_args = ["--i-agree-to-the-contained-eula", "--no-interactive"]
+            else:
+                eula_args = ["--force"]  # accept all other values
+            # always delete the old FVP files to avoid mismatched libraries (and ensure the directory does not exist
+            # to avoid prompts from the installer)
+            self.clean_directory(self.install_dir, ensure_dir_exists=False)
+            # Even when using docker, we extract on the host first to show the EULA and install the documentation
+            self.run_cmd([installer_sh, "--destination", self.install_dir] + eula_args,
+                         print_verbose_only=False)
             if self.use_docker_container:
-                self.install_file(installer_sh, self.install_dir / installer_sh.name)
-                self.write_file(self.install_dir / "Dockerfile", contents="""
+                if installer_sh.parent != Path(td):
+                    self.install_file(installer_sh, Path(td, installer_sh.name))
+                # When building the docker container we have to pass --i-agree-to-the-contained-eula since it does
+                # not seem possible to allow interactive prompts
+                self.write_file(Path(td, "Dockerfile"), contents="""
 FROM opensuse/leap:15.2
-COPY {installer_name} .
 RUN zypper in -y xterm gzip tar libdbus-1-3 libatomic1 telnet
+COPY {installer_name} .
 RUN ./{installer_name} --i-agree-to-the-contained-eula --no-interactive --destination=/opt/FVP_Morello && \
     rm ./{installer_name}
 # Run as non-root user to allow X11 to work
@@ -99,11 +112,13 @@ RUN useradd fvp-user
 USER fvp-user
 VOLUME /diskimg
 """.format(installer_name=installer_sh.name), overwrite=True)
-                self.run_cmd("docker", "build", "--pull", "-t", self.container_name, ".", cwd=self.install_dir,
-                             print_verbose_only=False)
-            else:
-                self.run_cmd(installer_sh, "--i-agree-to-the-contained-eula", "--no-interactive",
-                             "--destination", self.install_dir, print_verbose_only=False)
+                build_flags = []
+                if not self.config.skip_update:
+                    build_flags.append("--pull")
+                if self.config.clean:
+                    build_flags.append("--no-cache")
+                self.run_cmd(["docker", "build"] + build_flags + ["-t", self.container_name, "."],
+                             cwd=td, print_verbose_only=False)
 
     def _plugin_args(self):
         if self.fvp_revision >= 312:
