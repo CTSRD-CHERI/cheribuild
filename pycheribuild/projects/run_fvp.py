@@ -359,7 +359,6 @@ class LaunchFVPBase(SimpleProject):
                 "-C", "css.scp.armcortexm7ct.INITVTOR=0x0",
                 "-C", "css.mcp.armcortexm7ct.INITVTOR=0x0",
                 "--data", str(uefi_bin) + "@0x14200000",
-
                 # "-C", "Morello_Top.soc.scp_qspi_loader.fname=" + str(scp_fw_bin),
                 # "-C", "Morello_Top.soc.mcp_qspi_loader.fname=" + str(mcp_fw_bin),
                 "-C", "soc.scp_qspi_loader.fname=" + str(scp_fw_bin),
@@ -369,6 +368,10 @@ class LaunchFVPBase(SimpleProject):
                 # "-C", "css.trustedBootROMloader.fname=" + str(trusted_fw),
                 "-C", "css.pl011_uart_ap.unbuffered_output=1",
                 ]
+            # Update the Generic Timer counter at a real-time base frequency instead of simulator time
+            # This should fix the extremely slow countdown in the loader (30 minutes instead of 10s) and might also
+            # improve network reliability
+            fvp_args += ["-C", "css.scp.CS_Counter.use_real_time=1"]
             import pprint
             self.verbose_print("FVP args:\n", pprint.pformat(fvp_args))
             fvp_project.execute_fvp(fvp_args + ["--print-port-number"], disk_image_path=disk_image,
