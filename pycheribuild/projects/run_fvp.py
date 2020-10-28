@@ -74,8 +74,10 @@ class InstallMorelloFVP(SimpleProject):
 
     def process(self):
         if not self.installer_path:
-            self.fatal("Path to installer not known, set the", "--" + self.get_config_option_name("installer_path"),
-                       "config option!")
+            self.fatal("Path to FVP installer not known, please set the",
+                       "--" + self.get_config_option_name("installer_path"), "config option.",
+                       fixit_hint="The Morello FVP can be downloaded from https://developer.arm.com/tools-and-software/"
+                       "open-source-software/arm-platforms-software/arm-ecosystem-fvps")
             return
         if not self.installer_path.is_file():
             self.fatal("Specified path to installer does not exist:", self.installer_path)
