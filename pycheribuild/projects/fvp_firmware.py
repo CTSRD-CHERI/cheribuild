@@ -227,10 +227,17 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
     project_name = "morello-edk2"
     _extra_git_clean_excludes = ["--exclude=edk2-platforms"]  # Don't delete edk2-platforms, we do it manually
 
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.edk2_platforms_rev = cls.add_config_option(
+            "edk2-platforms-git-revision", kind=str, metavar="REVISION", help="The git revision for edk2-platforms")
+
     def update(self):
         super().update()
         self.morello_platforms_repository.update(self, src_dir=self.source_dir / "edk2-platforms",
-                                                 skip_submodules=self.skip_git_submodules)
+                                                 skip_submodules=self.skip_git_submodules,
+                                                 revision=self.edk2_platforms_rev)
 
     def clean(self):
         super().clean()
