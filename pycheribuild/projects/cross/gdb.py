@@ -155,7 +155,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
         if self.compiling_for_host():
             self.LDFLAGS.append("-L/usr/local/lib")
             self.configure_args.append("--with-expat")
-            self.configure_args.append("--with-python=" + str(sys.executable))
         else:
             self.configure_args.extend(["--without-python", "--without-expat", "--without-libunwind-ia64"])
             self.configure_environment.update(gl_cv_func_gettimeofday_clobber="no",
