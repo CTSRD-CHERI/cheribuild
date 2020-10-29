@@ -244,15 +244,15 @@ class CheriConfig(object):
         self.mips_cheri_bits = 128  # Backwards compat
         self.make_jobs = None  # type: Optional[int]
 
-        self.source_root = None  # type: Optional[Path]
-        self.output_root = None  # type: Optional[Path]
-        self.build_root = None  # type: Optional[Path]
+        self.source_root = None  # type: Path
+        self.output_root = None  # type: Path
+        self.build_root = None  # type: Path
         # Path to kernel/disk images (this is the same as output_root by default but different in Jenkins)
-        self.cheribsd_image_root = None  # type: Optional[Path]
-        self.cheri_sdk_dir = None  # type: Optional[Path]
-        self.morello_sdk_dir = None  # type: Optional[Path]
-        self.other_tools_dir = None  # type: Optional[Path]
-        self.sysroot_install_dir = None  # type: Optional[Path]
+        self.cheribsd_image_root = None  # type: Path
+        self.cheri_sdk_dir = None  # type: Path
+        self.morello_sdk_dir = None  # type: Path
+        self.other_tools_dir = None  # type: Path
+        self.sysroot_install_dir = None  # type: Path
         self.docker = loader.add_bool_option("docker", help="Run the build inside a docker container",
                                              group=loader.docker_group)
         self.docker_container = loader.add_option("docker-container", help="Name of the docker container to use",
@@ -366,7 +366,7 @@ class CheriConfig(object):
             group=loader.path_group,
             help="Prefix for arm-none-eabi-gcc binaries (e.g. /usr/bin/arm-none-eabi-). Available at"
                  "https://developer.arm.com/tools-and-software/open-source-software/"
-                 "developer-tools/gnu-toolchain/gnu-rm/downloads")
+                 "developer-tools/gnu-toolchain/gnu-rm/downloads")  # type: Path
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
         self.__optional_properties = ["preferred_xtarget"]
@@ -420,7 +420,7 @@ class CheriConfig(object):
 
     @property
     def dollar_path_with_other_tools(self) -> str:
-        return str(self.other_tools_dir / "bin") + ":" + os.getenv("PATH")
+        return str(self.other_tools_dir / "bin") + ":" + os.getenv("PATH", "")
 
     @property
     def make_j_flag(self):

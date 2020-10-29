@@ -37,7 +37,8 @@ from pathlib import Path
 from .loader import ConfigOptionBase
 from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi,
                           TargetInfo)
-from ..utils import commandline_to_str, find_free_port, get_compiler_info, is_jenkins_build, SocketAndPort
+from ..utils import (cached_property, commandline_to_str, find_free_port, get_compiler_info, is_jenkins_build,
+                     SocketAndPort)
 
 if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine
@@ -90,7 +91,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def triple_for_target(cls, target, config, include_version: bool) -> str:
+    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", *, include_version: bool) -> str:
         ...
 
     @property
@@ -103,7 +104,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                                                  perform_sanity_checks=True, default_flags_only=False):
         target = target_override if target_override is not None else ti.target
         config = ti.config
-        project = ti.project
+        project = ti.project  # type: SimpleProject
         # noinspection PyProtectedMember
         if perform_sanity_checks and not project._setup_called:
             project.fatal("essential_compiler_and_linker_flags should not be called in __init__, use setup()!",
@@ -248,7 +249,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return ["upstream-llvm"]
 
     @classmethod
-    def triple_for_target(cls, target: "CrossCompileTarget", config, *, include_version: bool):
+    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", *, include_version: bool):
         common_suffix = "-unknown-freebsd"
         if include_version:
             common_suffix += str(cls.FREEBSD_VERSION)
@@ -498,7 +499,8 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                        basic_args=commandline_to_str(basic_args), cheribuild_path=cheribuild_path)
         if self.config.benchmark_with_qemu:
             # Free the port that we reserved for QEMU before starting beri-fpga-bsd-boot.py
-            qemu_ssh_socket.socket.close()
+            if qemu_ssh_socket is not None:
+                qemu_ssh_socket.socket.close()
             self.project.run_cmd(
                 [cheribuild_path / "beri-fpga-bsd-boot.py"] + basic_args + ["-vvvvv", "runbench"] + runbench_args)
         else:

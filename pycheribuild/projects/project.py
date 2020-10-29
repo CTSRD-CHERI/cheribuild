@@ -51,7 +51,8 @@ from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchi
                                   TargetInfo)
 from ..filesystemutils import FileSystemUtils
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
-from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str, CompilerInfo,
+from ..utils import (AnsiColour, cached_property, check_call_handle_noexec, classproperty, coloured, commandline_to_str,
+                     CompilerInfo,
                      fatal_error, get_compiler_info, get_program_version, get_version_output, include_local_file,
                      is_jenkins_build, OSInfo, popen_handle_noexec, print_command, replace_one, run_command,
                      status_update, ThreadJoiner, warning_message)
@@ -85,7 +86,7 @@ def _default_stdout_filter(_: bytes):
 
 class ProjectSubclassDefinitionHook(type):
     # noinspection PyProtectedMember
-    def __init__(cls, name: str, bases, clsdict):
+    def __init__(cls: "typing.Type[SimpleProject]", name: str, bases, clsdict):
         super().__init__(name, bases, clsdict)
         if typing.TYPE_CHECKING:  # no-combine
             assert issubclass(cls, SimpleProject)  # no-combine
@@ -195,8 +196,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
-    project_name = None
-    _config_file_aliases = tuple()  # Old names in the config file (per-architecture) for backwards compat
+    project_name = None  # type: str
+    # Old names in the config file (per-architecture) for backwards compat
+    _config_file_aliases = tuple()  # typing.Tuple[str]
     dependencies = []  # type: typing.List[str]
     dependencies_must_be_built = False
     # skip_toolchain_dependencies can be set to true for target aliases to skip the toolchain dependecies by default.
@@ -206,10 +208,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     _cached_filtered_deps = None  # type: typing.List[Target]
     is_alias = False
     is_sdk_target = False  # for --skip-sdk
-    source_dir = None
-    build_dir = None
+    source_dir = None  # type: Path
+    build_dir = None  # type: Path
+    install_dir = None  # type: Path
     build_in_source_dir = False  # For projects that can't build in the source dir
-    install_dir = None
     # For target_info.py. Real value is only set for Project subclasses, since SimpleProject subclasses should not
     # include C/C++ compilation (there is no source+build dir)
     auto_var_init = AutoVarInit.NONE
@@ -223,7 +225,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # Default to NATIVE only
     supported_architectures = [BasicCompilationTargets.NATIVE]
     # The architecture to build for the unsuffixed target name (defaults to supported_architectures[0] if no match)
-    _default_architecture = None
+    _default_architecture = None  # type: typing.Optional[CrossCompileTarget]
 
     _xtarget = None  # type: typing.Optional[CrossCompileTarget]
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
@@ -256,7 +258,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @classmethod
     def _direct_dependencies(cls, config: CheriConfig, *, include_dependencies: bool,
                              include_toolchain_dependencies: bool,
-                             include_sdk_dependencies: bool) -> "typing.Generator[Target]":
+                             include_sdk_dependencies: bool) -> "typing.Iterator[Target]":
         if not include_sdk_dependencies:
             include_toolchain_dependencies = False  # --skip-sdk means skip toolchain and skip sysroot
         assert cls._xtarget is not None
@@ -647,9 +649,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         cls.__config_options_set[cls] = True
 
     def __init__(self, config: CheriConfig):
+        assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
         self.target_info = self._xtarget.create_target_info(self)
         super().__init__(config)
-        assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
         assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
             self.__class__)
@@ -1980,6 +1982,7 @@ class Project(SimpleProject):
         self.configure_environment = {}  # type: typing.Dict[str,str]
         self._last_stdout_line_can_be_overwritten = False
         self.make_args = MakeOptions(self.make_kind, self)
+        self._compiledb_tool = None # type: typing.Optional[str]
         if self.config.create_compilation_db and self.compile_db_requires_bear:
             # CompileDB seems to generate broken compile_commands,json
             if self.make_args.is_gnu_make and False:
@@ -2174,6 +2177,7 @@ class Project(SimpleProject):
         assert make_command is not None
         options = options.copy()
         if self.config.create_compilation_db and self.compile_db_requires_bear:
+            assert self._compiledb_tool is not None
             compdb_extra_args = []
             if self._compiledb_tool == "bear":
                 compdb_extra_args = ["--cdb", self.build_dir / compilation_db_name, "--append", make_command]
