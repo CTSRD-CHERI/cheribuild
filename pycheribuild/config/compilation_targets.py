@@ -830,24 +830,17 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
     def cmake_system_name(self) -> str:
         return "Generic"  # CMake requires the value to be set to "Generic" for baremetal targets
 
-    def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
-        super().__init__(target, project)
-        self._bindir = None
-        self._binary_prefix = None
-
-    @property
+    @cached_property
     def bindir(self) -> Path:
-        if self._bindir is not None:
-            return self._bindir
-        self._bindir = Path(self.project.config.arm_none_eabi_toolchain_prefix).parent
-        return self._bindir
+        result = Path(self.project.config.arm_none_eabi_toolchain_prefix).parent
+        assert result is not None
+        return result
 
-    @property
+    @cached_property
     def binary_prefix(self) -> str:
-        if self._binary_prefix is not None:
-            return self._binary_prefix
-        self._binary_prefix = Path(self.project.config.arm_none_eabi_toolchain_prefix).name
-        return self._binary_prefix
+        result = Path(self.project.config.arm_none_eabi_toolchain_prefix).name
+        assert result is not None
+        return result
 
     @property
     def sdk_root_dir(self) -> Path:
