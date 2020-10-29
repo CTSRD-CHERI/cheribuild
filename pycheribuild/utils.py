@@ -864,8 +864,11 @@ class TtyState:
         warning_message("TTY flags for", self.fd.name, "changed, resetting them")
         print("Previous state", self.attrs)
         print("New state", new_attrs)
-        termios.tcsetattr(self.fd, termios.TCSANOW, self.attrs)
-        termios.tcdrain(self.fd)
+        try:
+            termios.tcsetattr(self.fd, termios.TCSADRAIN, self.attrs)
+            termios.tcdrain(self.fd)
+        except Exception as e:
+            warning_message("Error while restoring TTY flags:", e)
         new_attrs = termios.tcgetattr(self.fd)
         if new_attrs != self.attrs:
             warning_message("Failed to restore TTY flags for", self.fd.name)
