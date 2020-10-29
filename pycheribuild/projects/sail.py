@@ -30,6 +30,7 @@
 import os
 import shlex
 import shutil
+import typing
 from pathlib import Path
 from subprocess import CalledProcessError
 from typing import Any, Dict, Tuple, Union
@@ -39,13 +40,17 @@ from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepos
 from ..targets import target_manager
 from ..utils import AnsiColour, coloured, commandline_to_str, get_program_version, OSInfo, set_env, ThreadJoiner
 
+if typing.TYPE_CHECKING:
+    _MixinBase = Project
+else:
+    _MixinBase = object
 
-class OpamMixin(object):
+
+class OpamMixin(_MixinBase):
     config = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self: SimpleProject, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        assert isinstance(self, SimpleProject)
         self.add_required_system_tool("opam", homebrew="opam",
                                       cheribuild_target="opam-2.0")  # pytype: disable=attribute-error
         self.required_ocaml_version = "4.11.1"
@@ -128,7 +133,6 @@ class OpamMixin(object):
     def run_in_ocaml_env(self, command: str, cwd=None, print_verbose_only=False, **kwargs):
         opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         script = "eval `opam config env`\n" + command + "\n"
-        assert isinstance(self, Project)
         return self.run_shell_script(script, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env,
                                      **kwargs)  # pytype: disable=attribute-error
 

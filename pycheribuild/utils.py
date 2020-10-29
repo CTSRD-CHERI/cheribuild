@@ -92,8 +92,10 @@ if sys.version_info < (3, 5, 2):
     sys.exit("This script requires at least Python 3.5.2")
 
 
-if sys.version_info >= (3, 8, 0) or False:
-    from functools import cached_property
+if False and sys.version_info >= (3, 8, 0):
+    # TODO: once we depend on 3.8 use functools version instead
+    # from functools import cached_property
+    pass
 else:
     # Note: this is a copy of the python 3.8.6 implementation with f-strings removed for python 3.5.2 compat.
     _NOT_FOUND = object()
@@ -927,7 +929,7 @@ class ThreadJoiner(object):
             self.thread.join()
 
 
-def replace_one(s: str, old, new):
+def replace_one(s: str, old, new) -> str:
     """Like str.replace() but raises an exception if old is not in s"""
     result = s.replace(old, new, 1)
     if result == s:

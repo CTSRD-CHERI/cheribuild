@@ -143,8 +143,7 @@ class ProjectSubclassDefinitionHook(type):
             for arch in supported_archs:
                 assert isinstance(arch, CrossCompileTarget)
                 # create a new class to ensure different build dirs and config name strings
-                if hasattr(cls, "custom_target_name"):
-                    assert callable(cls.custom_target_name)
+                if cls.custom_target_name is not None:
                     new_name = cls.custom_target_name(target_name, arch)
                 else:
                     new_name = target_name + "-" + arch.generic_suffix
@@ -198,7 +197,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     target = ""  # type: str
     project_name = None  # type: str
     # Old names in the config file (per-architecture) for backwards compat
-    _config_file_aliases = tuple()  # typing.Tuple[str]
+    _config_file_aliases = tuple()  # type: typing.Tuple[str, ...]
     dependencies = []  # type: typing.List[str]
     dependencies_must_be_built = False
     # skip_toolchain_dependencies can be set to true for target aliases to skip the toolchain dependecies by default.
@@ -238,6 +237,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     custom_c_preprocessor = None  # type: typing.Optional[Path]
     custom_c_compiler = None  # type: typing.Optional[Path]
     custom_cxx_compiler = None  # type: typing.Optional[Path]
+    custom_target_name = None  # type: typing.Optional[typing.Callable[[str, CrossCompileTarget], str]]
 
     @classmethod
     def is_toolchain_target(cls):
@@ -271,7 +271,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             raise ValueError("Cannot call _direct_dependencies() on a target alias")
         if callable(dependencies):
             if inspect.ismethod(dependencies):
-                dependencies = cls.dependencies(config)
+                dependencies = dependencies(config)
             else:
                 # noinspection PyCallingNonCallable  (false positive, we used if callable() above)
                 dependencies = dependencies(cls, config)
@@ -522,17 +522,20 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if isinstance(target, MultiArchTarget):
             # check for exact match
             if target.target_arch is arch:
+                assert issubclass(target.project_class, cls)
                 return target.project_class
             # Otherwise fall back to the target alias and find the matching one
             target = target.base_target
         if isinstance(target, MultiArchTargetAlias):
             for t in target.derived_targets:
                 if t.target_arch is arch:
+                    assert issubclass(t.project_class, cls)
                     return t.project_class
         elif isinstance(target, Target):
             # single architecture target
             result = target.project_class
             if arch is None or result._xtarget is arch:
+                assert issubclass(result, cls)
                 return result
         raise LookupError("Invalid arch " + str(arch) + " for class " + str(cls))
 
@@ -774,7 +777,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         print_command(args, cwd=cwd, env=env)
         # make sure that env is either None or a os.environ with the updated entries entries
         if env:
-            new_env = os.environ.copy()
+            new_env = os.environ.copy()  # type: typing.Optional[typing.Dict[str, str]]
             env = {k: str(v) for k, v in env.items()}  # make sure everything is a string
             new_env.update(env)
         else:
@@ -1015,11 +1018,11 @@ class MakeCommandKind(Enum):
 class MakeOptions(object):
     def __init__(self, kind: MakeCommandKind, project: SimpleProject, **kwargs):
         self.__project = project
-        self._vars = OrderedDict()
+        self._vars = OrderedDict()  # type: typing.Dict[str, str]
         # Used by e.g. FreeBSD:
         self._with_options = OrderedDict()  # type: typing.Dict[str, bool]
-        self._flags = list()
-        self.env_vars = {}
+        self._flags = []  # type: typing.List[str]
+        self.env_vars = {}  # type: typing.Dict[str, str]
         self.set(**kwargs)
         self.kind = kind
         self.__can_pass_j_flag = None  # type: typing.Optional[bool]
@@ -2003,7 +2006,7 @@ class Project(SimpleProject):
             if install_dir_kind == DefaultInstallDir.SYSROOT or install_dir_kind == \
                     DefaultInstallDir.SYSROOT_AND_ROOTFS:
                 if self.target_info.is_baremetal():
-                    self.destdir = self.sdk_sysroot.parent
+                    self.destdir = typing.cast(Path, self.sdk_sysroot.parent)
                     self._install_prefix = Path("/", self.target_info.target_triple)
                 elif self.target_info.is_rtems():
                     self.destdir = self.sdk_sysroot.parent
@@ -2055,18 +2058,18 @@ class Project(SimpleProject):
         if self.should_include_debug_info:
             if not self.target_info.is_macos():
                 self.COMMON_FLAGS.append("-ggdb")
-        self.CFLAGS = []
-        self.CXXFLAGS = []
-        self.ASMFLAGS = []
+        self.CFLAGS = []  # type: typing.List[str]
+        self.CXXFLAGS = []  # type: typing.List[str]
+        self.ASMFLAGS = []  # type: typing.List[str]
         self.LDFLAGS = self.target_info.required_link_flags()
-        self.COMMON_LDFLAGS = []
+        self.COMMON_LDFLAGS = []  # type: typing.List[str]
         # Don't build CHERI with ASAN since that doesn't work or make much sense
         if self.use_asan and not self.compiling_for_cheri():
             self.COMMON_FLAGS.append("-fsanitize=address")
             self.COMMON_LDFLAGS.append("-fsanitize=address")
 
-        self._lto_linker_flags = []
-        self._lto_compiler_flags = []
+        self._lto_linker_flags = []  # type: typing.List[str]
+        self._lto_compiler_flags = []  # type: typing.List[str]
 
     def setup(self):
         super().setup()
@@ -2176,7 +2179,7 @@ class Project(SimpleProject):
         assert options is not None
         assert make_command is not None
         options = options.copy()
-        if self.config.create_compilation_db and self.compile_db_requires_bear:
+        if compilation_db_name is not None and self.config.create_compilation_db and self.compile_db_requires_bear:
             assert self._compiledb_tool is not None
             compdb_extra_args = []
             if self._compiledb_tool == "bear":
