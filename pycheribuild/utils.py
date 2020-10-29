@@ -591,7 +591,7 @@ def default_make_jobs_count():
     if make_jobs > 24:
         # don't use up all the resources on shared build systems
         # (you can still override this with the -j command line option)
-        make_jobs /= 2
+        make_jobs //= 2
     return make_jobs
 
 
