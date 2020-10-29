@@ -335,15 +335,21 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def c_compiler(self) -> Path:
-        if hasattr(self.project, "custom_c_compiler"):
+        if self.project.custom_c_compiler is not None:
             return self.project.custom_c_compiler
         return self.host_c_compiler(self.config)
 
     @property
     def cxx_compiler(self) -> Path:
-        if hasattr(self.project, "custom_cxx_compiler"):
+        if self.project.custom_cxx_compiler is not None:
             return self.project.custom_cxx_compiler
         return self.host_cxx_compiler(self.config)
+
+    @property
+    def c_preprocessor(self) -> Path:
+        if self.project.custom_c_preprocessor is not None:
+            return self.project.custom_c_preprocessor
+        return self.host_c_preprocessor(self.config)
 
     @property
     def linker(self) -> Path:
@@ -358,12 +364,6 @@ class NativeTargetInfo(TargetInfo):
     @property
     def strip_tool(self) -> Path:
         return self.c_compiler.parent / "strip"
-
-    @property
-    def c_preprocessor(self) -> Path:
-        if hasattr(self.project, "custom_c_preprocessor"):
-            return self.project.custom_c_preprocessor
-        return self.host_c_preprocessor(self.config)
 
     @classmethod
     def is_freebsd(cls):
@@ -425,10 +425,11 @@ class CrossCompileTarget(object):
                  non_cheri_target: "CrossCompileTarget" = None, hybrid_target: "CrossCompileTarget" = None,
                  purecap_target: "CrossCompileTarget" = None):
         if target_info_cls is None:
-            self.name = suffix
+            name_prefix = ""
         else:
             assert not suffix.startswith("-"), suffix
-            self.name = target_info_cls.shortname + "-" + suffix
+            name_prefix = target_info_cls.shortname
+        self.name = name_prefix + "-" + suffix
         self.generic_suffix = suffix
         self.cpu_architecture = cpu_architecture
         # TODO: self.operating_system = ...
@@ -460,7 +461,7 @@ class CrossCompileTarget(object):
             other_target._purecap_target._set_from(self)
 
     # Set the related targets:
-    def _set_for(self, other_target: "CrossCompileTarget", also_set_other=True):
+    def _set_for(self, other_target: "typing.Optional[CrossCompileTarget]", also_set_other=True):
         if other_target is not None and self is not other_target:
             if self._is_cheri_hybrid:
                 assert other_target._hybrid_target is None or other_target._hybrid_target is self, "Already set?"
@@ -511,7 +512,7 @@ class CrossCompileTarget(object):
         assert self.target_info_cls is not None
         return self.target_info_cls.is_native()
 
-    def _check_arch(self, arch: CPUArchitecture, include_purecap: bool):
+    def _check_arch(self, arch: CPUArchitecture, include_purecap: "typing.Optional[bool]"):
         if self.cpu_architecture is not arch:
             return False
         if include_purecap is None:

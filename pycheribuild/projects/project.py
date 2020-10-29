@@ -232,6 +232,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # To prevent non-suffixed targets in case the only target is not NATIVE
     _always_add_suffixed_targets = False  # add a suffixed target only if more than one variant is supported
 
+    # Allow overides for libc++/llvm-test-suite
+    custom_c_preprocessor = None  # type: typing.Optional[Path]
+    custom_c_compiler = None  # type: typing.Optional[Path]
+    custom_cxx_compiler = None  # type: typing.Optional[Path]
+
     @classmethod
     def is_toolchain_target(cls):
         return False
