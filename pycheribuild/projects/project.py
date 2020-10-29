@@ -1422,16 +1422,17 @@ class GitRepository(SourceRepository):
                         run_command("git", "remote", "set-url", remote_name, self.url,
                                     run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, cwd=src_dir)
 
-        # If there is a hardcoded revision there is no need to call fetch
-        if revision is not None:
-            # TODO: do some rev-parse stuff to check if we are on the right revision?
-            run_command("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
-            return
-
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
         # If there is no upstream, it will just return immediately.
         run_command(["git", "fetch"], cwd=src_dir)
+
+        if revision is not None:
+            # TODO: do some rev-parse stuff to check if we are on the right revision?
+            run_command("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
+            if not skip_submodules:
+                run_command("git", "submodule", "update", "--init", "--recursive", cwd=src_dir, print_verbose_only=True)
+            return
 
         # Handle forced branches now that we have fetched the latest changes
         if src_dir.exists() and self.force_branch:
