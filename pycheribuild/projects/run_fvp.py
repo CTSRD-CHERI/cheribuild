@@ -146,9 +146,11 @@ VOLUME /diskimg
             return [], self.install_dir / model_relpath
 
     def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True,
-                    expose_telnet_ports=True, ssh_port=None, **kwargs) -> CompletedProcess:
-        pre_cmd, fvp_path = self._fvp_base_command()
+                    expose_telnet_ports=True, ssh_port=None, interactive=True, **kwargs) -> CompletedProcess:
+        pre_cmd, fvp_path = self._fvp_base_command(interactive=interactive)
         if self.use_docker_container:
+            assert pre_cmd[-1] == self.container_name
+            pre_cmd = pre_cmd[0:-1]
             if not self.use_docker_x11_forwarding:
                 x11 = False  # Don't bother with the GUI
             if expose_telnet_ports:
@@ -176,7 +178,10 @@ VOLUME /diskimg
                 pre_cmd += ["-v", str(firmware_path) + ":" + str(firmware_path)]
             if x11:
                 pre_cmd += ["-e", "DISPLAY=host.docker.internal:0"]
+            pre_cmd += [self.container_name]
         base_cmd = pre_cmd + [fvp_path]
+        if interactive:
+            kwargs["give_tty_control"] = True
         if self.use_docker_container and x11 and OSInfo.IS_MAC and os.getenv("DISPLAY"):
             # To use X11 via docker on macos we need to run socat on port 6000
             socat = popen(["socat", "TCP-LISTEN:6000,reuseaddr,fork", "UNIX-CLIENT:\"" + os.getenv("DISPLAY") + "\""],
@@ -217,8 +222,8 @@ VOLUME /diskimg
             return 0
 
     def run_tests(self):
-        self.execute_fvp(["--help"], x11=False, expose_telnet_ports=False)
-        self.execute_fvp(["--cyclelimit", "1000"], x11=False, expose_telnet_ports=False)
+        self.execute_fvp(["--help"], x11=False, expose_telnet_ports=False, interactive=False)
+        self.execute_fvp(["--cyclelimit", "1000"], x11=False, expose_telnet_ports=False, interactive=False)
 
 
 class LaunchFVPBase(SimpleProject):
