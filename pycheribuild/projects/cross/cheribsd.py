@@ -1665,23 +1665,18 @@ class BuildCheriBsdSysroot(SimpleProject):
                 self.remote_path = "someuser@somehose:this/path/does/not/exist"
         # noinspection PyAttributeOutsideInit
         self.remote_path = os.path.expandvars(self.remote_path)
-        remote_sysroot_archive = self.remote_path + "/" + self.sysroot_archive_name
-        self.info("Will copy the sysroot files from ", remote_sysroot_archive, sep="")
+        remote_sysroot_dir = self.remote_path + "/" + self.cross_sysroot_path.name
+        self.info("Will copy the sysroot files from ", remote_sysroot_dir, sep="")
         if not self.query_yes_no("Continue?"):
             return
 
         # now copy the files
-        self.makedirs(self.cross_sysroot_path)
-        self.copy_remote_file(remote_sysroot_archive, self.sysroot_archive)
-        self.run_cmd("tar", "xzf", self.sysroot_archive, cwd=self.cross_sysroot_path.parent)
-
-    @property
-    def sysroot_archive_name(self):
-        return "cheribsd-sysroot" + self.crosscompile_target.build_suffix(self.config) + "-sysroot.tar.gz"
+        self.clean_directory(self.cross_sysroot_path, ensure_dir_exists=True)
+        self.copy_remote_file(remote_sysroot_dir + "/", self.cross_sysroot_path)
 
     @property
     def sysroot_archive(self):
-        return self.cross_sysroot_path.parent / self.sysroot_archive_name
+        return self.cross_sysroot_path.parent / (self.cross_sysroot_path.name + ".tar.gz")
 
     def create_sysroot(self):
         # we need to add include files and libraries to the sysroot directory
