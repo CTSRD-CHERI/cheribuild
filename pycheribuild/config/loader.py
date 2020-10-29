@@ -472,9 +472,10 @@ class ConfigOptionBase(object):
             # self.debug_msg("Expanding env vars in", result, "->", expanded, os.environ)
             if loaded_result.loaded_from is not None:
                 assert loaded_result.loaded_from.is_absolute()
-                result = loaded_result.loaded_from.parent / expanded  # Make paths relative to the config file
+                # Make paths relative to the config file
+                result = Path(os.path.normpath(str(loaded_result.loaded_from.parent / expanded)))
             else:
-                result = Path(expanded).absolute()  # relative to CWD if it was not loaded from the command line
+                result = Path(expanded).absolute()  # relative to CWD if it was not loaded from the config file
         else:
             result = self.value_type(result)  # make sure it has the right type (e.g. Path, int, bool, str)
         return result

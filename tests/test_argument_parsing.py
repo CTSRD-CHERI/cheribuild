@@ -787,5 +787,5 @@ def test_relative_paths_in_config():
         configfile.write_bytes(b'{ "output-root": "./output", "#include": "./subdir/sub-config.json" }')
         config = _parse_arguments([], config_file=configfile)
         assert config.build_root == Path(td, "subdir/build")
-        assert config.source_root == Path(td, "subdir/../some-other-dir")
+        assert config.source_root == Path(td, "some-other-dir")
         assert config.output_root == Path(td, "output")
