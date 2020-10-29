@@ -670,12 +670,12 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     def __init__(self):
         super().__init__(JsonAndCommandLineConfigOption)
         self._config_path = None  # type: typing.Optional[Path]
-        self.configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
         # Choose the default config file based on argv[0]
         # This allows me to have symlinks for e.g. stable-cheribuild.py release-cheribuild.py debug-cheribuild.py
-        # that pick up the right config file in ~/.config
+        # that pick up the right config file in ~/.config or the cheribuild directory
+        cheribuild_rootdir = Path(__file__).absolute().parent.parent.parent
         config_prefix = self.get_config_prefix()
-        self.default_config_path = Path(self.configdir, config_prefix + "cheribuild.json")
+        self.default_config_path = Path(cheribuild_rootdir, config_prefix + "cheribuild.json")
         self.path_group.add_argument("--config-file", metavar="FILE", type=str, default=str(self.default_config_path),
                                      action=ArgparseSetGivenAction,
                                      help="The config file that is used to load the default settings (default: '" +
@@ -787,8 +787,15 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             error_message("Configuration file", self._config_path, "does not exist, using only command line arguments.")
             raise FileNotFoundError(self._parsed_args.config_file)
         else:
-            warning_message(coloured(AnsiColour.green, "Configuration file", self._config_path,
-                                     "does not exist, using only command line arguments."))
+            # No config file bundled with cheribuild, look in ~/.config
+            configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+            print("Checking", Path(configdir, self._config_path.name), "since", self._config_path, "doesn't exist")
+            self._config_path = Path(configdir, self._config_path.name)
+            if self._config_path.exists():
+                self._json = self.__load_json_with_includes(self._config_path)
+            else:
+                warning_message(coloured(AnsiColour.green, "Configuration file", self._config_path,
+                                         "does not exist, using only command line arguments."))
 
     def load(self):
         self._load_command_line_args()
