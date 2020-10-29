@@ -105,6 +105,7 @@ cheribuild_dir = Path(output_root, "sources/cheribuild")
 if not Path(cheribuild_dir, ".git").exists():
     run_command(["git", "clone", "https://github.com/CTSRD-CHERI/cheribuild", str(cheribuild_dir)])
 run_command(["git", "-C", str(cheribuild_dir), "pull", "--rebase"])
+run_command(["git", "-C", str(cheribuild_dir), "reset", "--hard", "morello-20.10.1"])
 
 run_command("ln", "-sfn", "sources/cheribuild/cheribuild.py", "cheribuild.py", cwd=output_root)
 # TODO: download the fvp installer first?
@@ -133,5 +134,7 @@ run_command("bsdtar", "-cJvf", output_root / "release.tar.xz", "-C", output_root
             "cheribuild.py",
             install_script.relative_to(output_root),
             cwd="/")
+
+run_command("sha256sum", output_root / "release.tar.xz")
 
 print("DONE!")
