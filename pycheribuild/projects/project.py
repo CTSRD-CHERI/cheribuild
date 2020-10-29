@@ -1982,7 +1982,7 @@ class Project(SimpleProject):
         self.configure_environment = {}  # type: typing.Dict[str,str]
         self._last_stdout_line_can_be_overwritten = False
         self.make_args = MakeOptions(self.make_kind, self)
-        self._compiledb_tool = None # type: typing.Optional[str]
+        self._compiledb_tool = None  # type: typing.Optional[str]
         if self.config.create_compilation_db and self.compile_db_requires_bear:
             # CompileDB seems to generate broken compile_commands,json
             if self.make_args.is_gnu_make and False:
