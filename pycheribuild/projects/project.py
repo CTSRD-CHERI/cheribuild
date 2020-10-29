@@ -2447,31 +2447,26 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 self.maybe_strip_elf_file(file)
         self.run_cmd("du", "-sh", benchmark_dir)
 
-    @property
+    # @cached_property is important to only compute it once since we encode seconds in the file name:
+    @cached_property
     def default_statcounters_csv_name(self) -> str:
         assert isinstance(self, Project)
-        # Only compute it once since we encode seconds in the file name:
-        if hasattr(self, "_statcounters_csv"):
-            return self._statcounters_csv
+        suffix = self.build_configuration_suffix()
+        if self.config.benchmark_statcounters_suffix:
+            user_suffix = self.config.benchmark_statcounters_suffix
+            if not user_suffix.startswith("-"):
+                user_suffix = "-" + user_suffix
+            suffix += user_suffix
         else:
-            suffix = self.build_configuration_suffix()
-            if self.config.benchmark_statcounters_suffix:
-                user_suffix = self.config.benchmark_statcounters_suffix
-                if not user_suffix.startswith("-"):
-                    user_suffix = "-" + user_suffix
-                suffix += user_suffix
-            else:
-                # If we explicitly override the linkage model, encode it in the statcounters file
-                if self.force_static_linkage:
-                    suffix += "-static"
-                elif self.force_dynamic_linkage:
-                    suffix += "-dynamic"
-                if self.config.benchmark_lazy_binding:
-                    suffix += "-lazybinding"
-            # noinspection PyAttributeOutsideInit
-            self._statcounters_csv = self.target + "-statcounters{}-{}.csv".format(
-                suffix, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-            return self._statcounters_csv
+            # If we explicitly override the linkage model, encode it in the statcounters file
+            if self.force_static_linkage:
+                suffix += "-static"
+            elif self.force_dynamic_linkage:
+                suffix += "-dynamic"
+            if self.config.benchmark_lazy_binding:
+                suffix += "-lazybinding"
+        return self.target + "-statcounters{}-{}.csv".format(
+            suffix, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
     def copy_asan_dependencies(self, dest_libdir):
         # ASAN depends on libraries that are not included in the benchmark image by default:
