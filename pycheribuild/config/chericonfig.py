@@ -454,11 +454,11 @@ class CheriConfig(object):
             value = object.__getattribute__(self, key)
             if value is None:
                 raise RuntimeError("Required property " + key + " is not set!")
-        assert self.cheri_sdk_dir.is_absolute()
-        assert self.other_tools_dir.is_absolute()
-        assert self.output_root.is_absolute()
-        assert self.source_root.is_absolute()
-        assert self.build_root.is_absolute()
+        assert self.cheri_sdk_dir.is_absolute(), self.cheri_sdk_dir
+        assert self.other_tools_dir.is_absolute(), self.other_tools_dir
+        assert self.output_root.is_absolute(), self.output_root
+        assert self.source_root.is_absolute(), self.source_root
+        assert self.build_root.is_absolute(), self.build_root
         return True
 
     # FIXME: not sure why this is needed
