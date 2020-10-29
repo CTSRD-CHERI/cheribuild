@@ -26,23 +26,26 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 import os
+import re
 import subprocess
 import tempfile
+import typing
 from pathlib import Path
+from subprocess import CompletedProcess
 
 from .disk_image import BuildCheriBSDDiskImage
 from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
 from .project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
-from ..utils import OSInfo, popen, set_env, cached_property
+from ..utils import cached_property, extract_version, OSInfo, popen, set_env
 
 
 class InstallMorelloFVP(SimpleProject):
     target = "install-morello-fvp"
     container_name = "morello-fvp"
 
-    latest_known_fvp = 345
+    latest_known_fvp = (0, 11, 3)
     # Seems like docker containers don't get the full amount configured in the settings so subtract a bit from 5GB/8GB
     min_ram_mb = 4900
     warn_ram_mb = 7900
@@ -127,26 +130,33 @@ VOLUME /diskimg
                              cwd=td, print_verbose_only=False)
 
     def _plugin_args(self):
-        if self.fvp_revision >= 312:
+        if self.fvp_revision >= (0, 10, 312):
             return []  # plugin no longer needed
         plugin_path = "plugins/Linux64_GCC-6.4/MorelloPlugin.so"
         if self.use_docker_container:
             return ["--plugin", Path("/opt/FVP_Morello", plugin_path)]
         return ["--plugin", self.ensure_file_exists("Morello FVP plugin", self.install_dir / plugin_path)]
 
-    def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True,
-                    expose_telnet_ports=True, ssh_port=None, **kwargs):
+    def _fvp_base_command(self, interactive=True) -> typing.Tuple[list, Path]:
         model_relpath = "models/Linux64_GCC-6.4/FVP_Morello"
+        if self.use_docker_container:
+            return (["docker", "run"] + (["-it"] if interactive else []) + ["--rm", self.container_name],
+                    Path("/opt/FVP_Morello", model_relpath))
+        else:
+            return [], self.install_dir / model_relpath
+
+    def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True,
+                    expose_telnet_ports=True, ssh_port=None, **kwargs) -> CompletedProcess:
+        pre_cmd, fvp_path = self._fvp_base_command()
         if self.use_docker_container:
             if not self.use_docker_x11_forwarding:
                 x11 = False  # Don't bother with the GUI
-            base_cmd = ["docker", "run", "-it", "--rm"]
             if expose_telnet_ports:
-                base_cmd += ["-p", "5000-5007:5000-5007"]
+                pre_cmd += ["-p", "5000-5007:5000-5007"]
             if ssh_port is not None:
-                base_cmd += ["-p", str(ssh_port) + ":" + str(ssh_port)]
+                pre_cmd += ["-p", str(ssh_port) + ":" + str(ssh_port)]
             if disk_image_path is not None:
-                base_cmd += ["-v", str(disk_image_path) + ":" + str(disk_image_path)]
+                pre_cmd += ["-v", str(disk_image_path) + ":" + str(disk_image_path)]
                 docker_settings_fixit = ""
                 if OSInfo.IS_MAC:
                     docker_settings_fixit = " This setting can be changed under \"Preferences > Resources > Advanced\"."
@@ -163,35 +173,32 @@ VOLUME /diskimg
                                  sep="", fixit_hint=fixit + docker_settings_fixit)
 
             if firmware_path is not None:
-                base_cmd += ["-v", str(firmware_path) + ":" + str(firmware_path)]
+                pre_cmd += ["-v", str(firmware_path) + ":" + str(firmware_path)]
             if x11:
-                base_cmd += ["-e", "DISPLAY=host.docker.internal:0"]
-            base_cmd += [self.container_name, Path("/opt/FVP_Morello", model_relpath)]
-        else:
-            base_cmd = [self.install_dir / model_relpath]
+                pre_cmd += ["-e", "DISPLAY=host.docker.internal:0"]
+        base_cmd = pre_cmd + [fvp_path]
         if self.use_docker_container and x11 and OSInfo.IS_MAC and os.getenv("DISPLAY"):
             # To use X11 via docker on macos we need to run socat on port 6000
             socat = popen(["socat", "TCP-LISTEN:6000,reuseaddr,fork", "UNIX-CLIENT:\"" + os.getenv("DISPLAY") + "\""],
                           stdin=subprocess.DEVNULL)
             try:
-                self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
+                return self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
             finally:
                 socat.terminate()
                 socat.kill()
         else:
-            self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
+            return self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
 
     @cached_property
-    def fvp_revision(self) -> int:
-        revpath = "sw/ARM_Fast_Models_FVP_Morello/rev"
+    def fvp_revision(self) -> "typing.Tuple[int, int, int]":
+        pre_cmd, fvp_path = self._fvp_base_command(interactive=False)
         try:
-            if self.use_docker_container:
-                rev = self.run_cmd(["docker", "run", "-it", "--rm", self.container_name, "cat",
-                                    "/opt/FVP_Morello/" + revpath], capture_output=True,
-                                   run_in_pretend_mode=True).stdout
-                return int(rev.strip())
-            else:
-                return int(self.read_file(self.install_dir / revpath))
+            version_out = self.run_cmd(pre_cmd + [fvp_path, "--version"], capture_output=True, run_in_pretend_mode=True)
+            self.verbose_print(version_out.decode("utf-8"))
+            result = extract_version(version_out.stdout,
+                                     regex=re.compile(rb"Fast Models \[(\d+)\.(\d+)\.?(\d+)? \(.+\)]"))
+            self.info("Morello FVP version detected as", result)
+            return result
         except Exception as e:
             self.warning("Could not determine FVP revision, assuming latest known (", self.latest_known_fvp, "): ", e,
                          sep="")
@@ -256,8 +263,8 @@ class LaunchFVPBase(SimpleProject):
 
     @property
     def use_virtio_net(self):
-        # VirtIO network device first available in rev 345
-        return self.fvp_project is not None and self.fvp_project.fvp_revision >= 345
+        # VirtIO network device first available in 0.10.345
+        return self.fvp_project is not None and self.fvp_project.fvp_revision >= (0, 10, 345)
 
     # noinspection PyAttributeOutsideInit
     def process(self):
@@ -339,15 +346,14 @@ class LaunchFVPBase(SimpleProject):
                 # "num_clusters=1",
                 # "num_cores=1",
                 ]
-            if self.fvp_project.fvp_revision > 255:
-                # virtio-rng supported in rev312
-                model_params += [
-                    "board.virtio_rng.enabled=1",
-                    "board.virtio_rng.seed=0",
-                    "board.virtio_rng.generator=2",
-                    ]
-            if self.fvp_project.fvp_revision < 312:
+            if self.fvp_project.fvp_revision < (0, 10, 312):
                 self.fatal("FVP is too old, please update to latest version")
+            # virtio-rng supported in 0.10.312
+            model_params += [
+                "board.virtio_rng.enabled=1",
+                "board.virtio_rng.seed=0",
+                "board.virtio_rng.generator=2",
+                ]
             # prepend -C to each of the parameters:
             fvp_args = [x for param in model_params for x in ("-C", param)]
             # mcp_romfw_elf = self.ensure_file_exists("MCP ROM ELF firmware",
@@ -384,8 +390,6 @@ class LaunchFVPBase(SimpleProject):
             # This should fix the extremely slow countdown in the loader (30 minutes instead of 10s) and might also
             # improve network reliability
             fvp_args += ["-C", "css.scp.CS_Counter.use_real_time=1"]
-            import pprint
-            self.verbose_print("FVP args:\n", pprint.pformat(fvp_args))
             self.fvp_project.execute_fvp(fvp_args + ["--print-port-number"], disk_image_path=disk_image,
                                          firmware_path=uefi_bin.parent, ssh_port=self.ssh_port)
 
