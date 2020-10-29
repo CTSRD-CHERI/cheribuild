@@ -769,11 +769,23 @@ def test_backwards_compat_old_suffixes_freebsd_mips():
 
 
 def test_expand_tilde_and_env_vars(monkeypatch):
-    monkeypatch.setenv("MYHOME", str(Path.home()))
+    monkeypatch.setenv("HOME", "/home/foo")
+    monkeypatch.setenv("MYHOME", "/home/foo")
     # Check that relative paths in config files resolve relative to the file that it's being loaded from
-    assert _parse_config_file_and_args(b'{ "build-root": "~/build" }').build_root == (Path.home() / "build")
-    assert _parse_config_file_and_args(b'{ "build-root": "$MYHOME/build" }').build_root == (Path.home() / "build")
-    assert _parse_config_file_and_args(b'{ "build-root": "${MYHOME}/build" }').build_root == (Path.home() / "build")
+    assert _parse_config_file_and_args(b'{ "build-root": "~/build" }').build_root == Path("/home/foo/build")
+    assert _parse_config_file_and_args(b'{ "build-root": "$MYHOME/build" }').build_root == Path("/home/foo/build")
+    assert _parse_config_file_and_args(b'{ "build-root": "${MYHOME}/build" }').build_root == Path("/home/foo/build")
+    # Having HOME==/ broke jenkins, test this here:
+    monkeypatch.setenv("HOME", "/")
+    assert _parse_config_file_and_args(b'{ "build-root": "~/build" }').build_root == Path("/build")
+    assert _parse_config_file_and_args(b'{ "build-root": "$HOME/build" }').build_root == Path("/build")
+    assert _parse_config_file_and_args(b'{ "build-root": "${HOME}/build" }').build_root == Path("/build")
+    # Multiple slashes should be removed:
+    assert _parse_config_file_and_args(b'{ "build-root": "~//build//dir" }').build_root == Path("/build/dir")
+    assert _parse_config_file_and_args(b'{ "build-root": "$HOME/build//dir" }').build_root == Path("/build/dir")
+    assert _parse_config_file_and_args(b'{ "build-root": "$HOME//build//dir" }').build_root == Path("/build/dir")
+    assert _parse_config_file_and_args(b'{ "build-root": "${HOME}//build//dir" }').build_root == Path("/build/dir")
+
 
 
 def test_relative_paths_in_config():

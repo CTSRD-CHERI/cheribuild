@@ -469,13 +469,18 @@ class ConfigOptionBase(object):
                                 "got a string instead -> assuming the correct value is ", result, sep="")
         if isinstance(self.value_type, type) and issubclass(self.value_type, Path):
             expanded = os.path.expanduser(os.path.expandvars(str(result)))
+            while expanded.startswith("//"):
+                expanded = expanded[1:]  # normpath doesn't remove multiple '/' characters at the start
             # self.debug_msg("Expanding env vars in", result, "->", expanded, os.environ)
             if loaded_result.loaded_from is not None:
                 assert loaded_result.loaded_from.is_absolute()
                 # Make paths relative to the config file
                 result = Path(os.path.normpath(str(loaded_result.loaded_from.parent / expanded)))
             else:
-                result = Path(expanded).absolute()  # relative to CWD if it was not loaded from the config file
+                # Note: os.path.abspath also performs the normpath changes
+                result = Path(os.path.abspath(expanded))  # relative to CWD if it was not loaded from the config file
+            assert result.is_absolute(), result
+            assert not str(result).startswith("//"), result
         else:
             result = self.value_type(result)  # make sure it has the right type (e.g. Path, int, bool, str)
         return result
