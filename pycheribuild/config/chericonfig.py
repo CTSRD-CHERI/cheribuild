@@ -378,16 +378,12 @@ class CheriConfig(object):
         if self.debug_output:
             self.verbose = True
         self.targets = self.loader.targets
-        # If there is no clang, default to /usr/bin/cc
-        if self.clang_cpp_path is None and self.clang_plusplus_path is None and self.clang_path is None:
-            self.clang_path = Path("/usr/bin/cc")
-            self.clang_cpp_path = Path("/usr/bin/cpp")
-            self.clang_plusplus_path = Path("/usr/bin/c++")
-        if self.clang_path is None or not self.clang_path.exists():
+        assert self.clang_path is not None, "clang_path was None!"
+        if not self.clang_path.exists():
             self.clang_path = Path("/c/compiler/is/missing")
-        if self.clang_plusplus_path is None or not self.clang_plusplus_path.exists():
+        if not self.clang_plusplus_path.exists():
             self.clang_plusplus_path = Path("/c++/compiler/is/missing")
-        if self.clang_cpp_path is None or not self.clang_cpp_path.exists():
+        if not self.clang_cpp_path.exists():
             self.clang_cpp_path = Path("/cpp/is/missing")
 
         if self.test_extra_args is None:
