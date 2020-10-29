@@ -4,3 +4,4 @@ Pipfile.lock
 /.mypy_cache/
 /.pytype/
 __pycache__
+/venv/
