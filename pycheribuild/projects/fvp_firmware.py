@@ -97,7 +97,7 @@ class MorelloFirmwareBase(CrossCompileMakefileProject):
 
 
 class BuildMorelloScpFirmware(MorelloFirmwareBase):
-    repository = GitRepository("git@git.morello-project.org:morello/scp-firmware.git")
+    repository = GitRepository("https://git.morello-project.org/morello/scp-firmware.git")
     project_name = "morello-scp-firmware"
     dependencies = ["arm-none-eabi-toolchain"]
     supported_architectures = [CompilationTargets.ARM_NONE_EABI]
@@ -150,7 +150,7 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
 class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
     target = "morello-trusted-firmware"
     project_name = "morello-trusted-firmware-a"
-    repository = GitRepository("git@git.morello-project.org:university-of-cambridge/trusted-firmware-a.git",
+    repository = GitRepository("https://git.morello-project.org/university-of-cambridge/trusted-firmware-a.git",
                                force_branch=True, default_branch="morello-virtio-net",
                                old_urls=[b"git@git.morello-project.org:morello/trusted-firmware-a.git"])
     set_commands_on_cmdline = True  # Need to override this on the command line since the makefile uses :=
@@ -217,9 +217,9 @@ class BuildMorelloACPICA(MakefileProject):
 
 
 class BuildMorelloUEFI(MorelloFirmwareBase):
-    repository = GitRepository("git@git.morello-project.org:morello/edk2.git")
+    repository = GitRepository("https://git.morello-project.org/morello/edk2.git")
     morello_platforms_repository = GitRepository(
-        "git@git.morello-project.org:university-of-cambridge/edk2-platforms.git",
+        "https://git.morello-project.org/university-of-cambridge/edk2-platforms.git",
         force_branch=True, default_branch="morello-dsdt",
         old_urls=[b"git@git.morello-project.org:morello/edk2-platforms.git"])
     dependencies = ["gdb-native", "morello-acpica"]  # To get ld.bfd
