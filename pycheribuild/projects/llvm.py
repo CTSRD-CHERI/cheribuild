@@ -106,6 +106,10 @@ class BuildLLVMBase(CMakeProject):
                 self.warning("It appears you are trying to compile CHERI-LLVM with CHERI-LLVM (", self.CC,
                              "). This is not recommended!", sep="")
                 self.ask_for_confirmation("Are you sure you want to continue?")
+        if self.compiling_for_cheri():
+            # XXX: Lots of these from SmallVector/StringRef; silence the noise
+            # until diagnosed and fixed appropriately.
+            self.common_warning_flags.append("-Wno-cheri-inefficient")
         # this must be added after check_system_dependencies
         link_jobs = 2 if self.use_lto else 4
         if os.cpu_count() >= 24:
