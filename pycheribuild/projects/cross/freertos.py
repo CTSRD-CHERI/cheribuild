@@ -38,7 +38,7 @@ from ...config.loader import ComputedDefaultValue
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/FreeRTOS-mirror",
-                               force_branch=True, default_branch="cheri")
+                               force_branch=True, default_branch="hmka2-compartments-wip")
     target = "freertos"
     project_name = "freertos"
     dependencies = ["newlib", "compiler-rt-builtins"]
@@ -72,6 +72,13 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
+    default_build_system = "autotools"
+
+    def _run_waf(self, *args, **kwargs):
+        cmdline = ["./waf", "-t", self.source_dir / str("FreeRTOS/Demo/" + self.demo), "-o", self.build_dir] + list(args)
+        if self.config.verbose:
+            cmdline.append("-v")
+        return self.run_cmd(cmdline, cwd=self.source_dir  / str("FreeRTOS/Demo/" + self.demo), **kwargs)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -111,6 +118,11 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(add_common_cross_options=False, **kwargs)
 
+        cls.build_system = cls.add_config_option(
+            "build_system", metavar="BUILD", show_help=True,
+            default=cls.default_build_system,
+            help="The FreeRTOS Demo Build System.")  # type: str
+
         cls.demo = cls.add_config_option(
             "demo", metavar="DEMO", show_help=True,
             default=cls.default_demo,
@@ -120,6 +132,11 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             "prog", metavar="PROG", show_help=True,
             default=cls.default_demo_app,
             help="The FreeRTOS program to build.")  # type: str
+
+        cls.platform = cls.add_config_option(
+            "platform", metavar="PLATFORM", show_help=True,
+            default="qemu_virt",
+            help="The FreeRTOS platform to build for.")  # type: str
 
         cls.demo_bsp = cls.add_config_option(
             "bsp", metavar="BSP", show_help=True,
@@ -139,6 +156,11 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         return self.run_cmd(cmdline, cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo), **kwargs)
 
     def compile(self, **kwargs):
+
+        if self.build_system == "waf":
+            self._run_waf("build", self.config.make_j_flag)
+            return
+
         self.make_args.set(BSP=self.demo_bsp)
 
         if self.demo_app == "main_compartment_test":
@@ -154,15 +176,36 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                        self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"))
 
     def configure(self):
-        pass
+        if self.build_system == "waf":
 
-    def needs_configure(self):
-        return False
+            if "modbus" in self.demo_app:
+                program_root = "./modbus_demo"
+            elif "servers" in self.demo_app:
+                program_root = "./demo/servers"
+            else:
+                program_root = "/no/path"
+
+            config_options = [
+                          "--prefix", str(self.real_install_root_dir) + '/FreeRTOS/Demo/',
+                          "--program", self.demo_app,
+                          "--toolchain", "llvm",
+                          "--riscv-platform", self.platform,
+                          "--program-path", program_root,
+                          "--sysroot",  str(self.sdk_sysroot)
+                          ]
+
+            config_options += ["--purecap"] if self.target_info.target.is_cheri_purecap() else []
+
+            self._run_waf("distclean", "configure", *config_options)
 
     def install(self, **kwargs):
+        if self.build_system == "waf":
+            self._run_waf("install")
+            return
+
         self.install_file(
             self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"),
-            self.real_install_root_dir / str("FreeRTOS/Demo/" + self.demo + "_" + self.demo_app + ".elf"))
+            self.real_install_root_dir / str("FreeRTOS/Demo/bin/" + self.demo + "_" + self.demo_app + ".elf"))
 
     def process(self):
 
