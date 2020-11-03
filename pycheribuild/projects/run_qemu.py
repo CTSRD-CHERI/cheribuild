@@ -602,7 +602,7 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
 
     def get_riscv_bios_args(self) -> typing.List[str]:
         # Run a FreeRTOS demo application (run in machine mode using the -bios QEMU argument)
-        return ["-bios", str(BuildFreeRTOS.get_install_dir(self)) + "/FreeRTOS/Demo/" +
+        return ["-bios", str(BuildFreeRTOS.get_install_dir(self)) + "/FreeRTOS/Demo/bin/" +
                 self.demo + "_" + self.demo_app + ".elf"]
 
     def process(self):
