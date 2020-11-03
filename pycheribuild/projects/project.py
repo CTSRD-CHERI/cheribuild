@@ -1287,10 +1287,11 @@ class GitRepository(SourceRepository):
             per_target_branches = dict()
         self.per_target_branches = per_target_branches
 
-    def get_default_branch(self, current_project: "Project") -> str:
-        target_override = self.per_target_branches.get(current_project.crosscompile_target, None)
-        if target_override is not None:
-            return target_override.branch
+    def get_default_branch(self, current_project: "Project", *, include_per_target: bool) -> str:
+        if include_per_target:
+            target_override = self.per_target_branches.get(current_project.crosscompile_target, None)
+            if target_override is not None:
+                return target_override.branch
         return self._default_branch
 
     def ensure_cloned(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path,
@@ -1315,8 +1316,9 @@ class GitRepository(SourceRepository):
                 clone_cmd.extend(["--depth", "1", "--no-single-branch"])
             if not skip_submodules:
                 clone_cmd.append("--recurse-submodules")
-            if self.get_default_branch(current_project):
-                clone_cmd += ["--branch", self.get_default_branch(current_project)]
+            clone_branch = self.get_default_branch(current_project, include_per_target=False)
+            if self._default_branch:
+                clone_cmd += ["--branch", clone_branch]
             current_project.run_cmd(clone_cmd + [self.url, base_project_source_dir], cwd="/")
             # Could also do this but it seems to fetch more data than --no-single-branch
             # if self.config.shallow_clone:
@@ -1328,7 +1330,11 @@ class GitRepository(SourceRepository):
 
         # Handle per-target overrides by adding a new git-worktree git-worktree
         target_override = self.per_target_branches.get(current_project.crosscompile_target, None)
+        default_clone_branch = self.get_default_branch(current_project, include_per_target=False)
         assert target_override is not None, "Default src != base src -> must have a per-target override"
+        assert target_override.branch != default_clone_branch, \
+            "Cannot create worktree with same branch as base repo: {} vs {}".format(target_override.branch,
+                                                                                    default_clone_branch)
         if (src_dir / ".git").exists():
             return
         current_project.info("Creating git-worktree checkout of", base_project_source_dir, "with branch",
@@ -1446,7 +1452,7 @@ class GitRepository(SourceRepository):
 
         # Handle forced branches now that we have fetched the latest changes
         if src_dir.exists() and self.force_branch:
-            default_branch = self.get_default_branch(current_project)
+            default_branch = self.get_default_branch(current_project, include_per_target=True)
             assert default_branch, "default_branch must be set if force_branch is true!"
             # TODO: move this to Project so it can also be used for other targets
             status = run_command("git", "status", "-b", "-s", "--porcelain", "-u", "no",
