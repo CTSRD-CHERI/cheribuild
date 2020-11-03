@@ -122,8 +122,10 @@ class BuildFreeBSDBase(Project):
             # Use the script that I added for building on Linux/MacOS:
             self.make_args.set_command(self.source_dir / "tools/build/make.py")
 
-        # if not OSInfo.IS_FREEBSD:
-        #     self.add_required_system_header("archive.h", apt="libarchive-dev", homebrew="libarchive")
+        # The bootstrap tools need libarchive which is not always installed on Linux. macOS ships a libarchive.dylib
+        # (without headers) so we use that with the contrib/ headers and don't need an additional package.
+        if not OSInfo.IS_LINUX:
+            self.add_required_pkg_config("libarchive", apt="libarchive-dev", zypper="libarchive-devel")
         self.make_args.set(
             DB_FROM_SRC=True,  # don't use the system passwd file
             NO_CLEAN=True,  # don't clean, we have the --clean flag for that
