@@ -2100,7 +2100,7 @@ class Project(SimpleProject):
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
             self.cross_warning_flags += ["-Werror=cheri-capability-misuse", "-Werror=cheri-bitwise-operations"]
             # The morello compiler still uses the old flag name
-            supports_new_flag = get_compiler_info(self.CC).supports_warning_flag("-Werror=cheri-prototypess")
+            supports_new_flag = get_compiler_info(self.CC).supports_warning_flag("-Werror=cheri-prototypes")
             self.cross_warning_flags.append("-Werror=cheri-prototypes" if supports_new_flag else
                                             "-Werror=mips-cheri-prototypes")
             # Make underaligned capability loads/stores an error and require an explicit cast:
