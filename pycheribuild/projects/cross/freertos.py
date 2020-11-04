@@ -72,7 +72,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
-    default_build_system = "autotools"
+    default_build_system = "waf"
 
     def _run_waf(self, *args, **kwargs):
         cmdline = ["./waf", "-t", self.source_dir / str("FreeRTOS/Demo/" + self.demo), "-o", self.build_dir] + list(args)
