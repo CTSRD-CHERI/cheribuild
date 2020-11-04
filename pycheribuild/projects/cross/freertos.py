@@ -123,6 +123,11 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             default=cls.default_build_system,
             help="The FreeRTOS Demo Build System.")  # type: str
 
+        cls.toolchain = cls.add_config_option(
+            "toolchain", metavar="TOOLCHAIN", show_help=True,
+            default="llvm",
+            help="The toolchain to build FreeRTOS with.")  # type: str
+
         cls.demo = cls.add_config_option(
             "demo", metavar="DEMO", show_help=True,
             default=cls.default_demo,
@@ -188,7 +193,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             config_options = [
                           "--prefix", str(self.real_install_root_dir) + '/FreeRTOS/Demo/',
                           "--program", self.demo_app,
-                          "--toolchain", "llvm",
+                          "--toolchain", self.toolchain,
                           "--riscv-platform", self.platform,
                           "--program-path", program_root,
                           "--sysroot",  str(self.sdk_sysroot)
@@ -215,7 +220,10 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         if self.demo_app not in self.supported_demo_apps[self.demo]:
             self.fatal(self.demo + " Demo doesn't support/have " + self.demo_app)
 
-        with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
-                          # Add compiler-rt location to the search path
-                          LDFLAGS="-L" + str(self.compiler_resource / "lib")):
+        if self.toolchain == "llvm":
+            with set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
+                         # Add compiler-rt location to the search path
+                         LDFLAGS="-L" + str(self.compiler_resource / "lib")):
+                super().process()
+        else:
             super().process()
