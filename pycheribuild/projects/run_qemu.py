@@ -59,6 +59,9 @@ def get_default_ssh_forwarding_port(addend: int):
 class LaunchQEMUBase(SimpleProject):
     do_not_add_to_targets = True
     forward_ssh_port = True
+    forward_ftp_port = False
+    forward_http_port = False
+    forward_cli_port = False
     _can_provide_src_via_smb = False
     ssh_forwarding_port = None  # type: int
     custom_qemu_smb_mount = None
@@ -243,6 +246,24 @@ class LaunchQEMUBase(SimpleProject):
             # bind the qemu ssh port to the hosts port
             # qemu_command += ["-redir", "tcp:" + str(self.ssh_forwarding_port) + "::22"]
             print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.ssh_forwarding_port,
+                           sep=""))
+
+        if self.forward_ftp_port:
+            user_network_options += ",hostfwd=tcp::" + str(self.ftp_forwarding_port) + "-:21"
+            # bind the qemu ftp port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for FTP connections on localhost:", self.ftp_forwarding_port,
+                           sep=""))
+
+        if self.forward_cli_port:
+            user_network_options += ",hostfwd=tcp::" + str(self.cli_forwarding_port) + "-:23"
+            # bind the qemu CLI port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for CLI connections on localhost:", self.cli_forwarding_port,
+                           sep=""))
+
+        if self.forward_http_port:
+            user_network_options += ",hostfwd=tcp::" + str(self.http_forwarding_port) + "-:80"
+            # bind the qemu http port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for HTTP connections on localhost:", self.http_forwarding_port,
                            sep=""))
 
         # input("Press enter to continue")
@@ -566,9 +587,15 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
                                CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
     forward_ssh_port = False
-    qemu_user_networking = False
+    forward_ftp_port = True
+    forward_http_port = True
+    forward_cli_port = True
+    qemu_user_networking = True
     _enable_smbfs_support = False
     _add_virtio_rng = False
+    ftp_forwarding_port = 10021
+    cli_forwarding_port = 10023
+    http_forwarding_port = 8080
 
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
