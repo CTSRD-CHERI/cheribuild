@@ -41,7 +41,7 @@ import typing
 from enum import Enum
 from pathlib import Path
 
-from run_tests_common import *
+from run_tests_common import boot_cheribsd, pexpect, commandline_to_str
 
 KERNEL_PANIC = False
 COMPLETED = "COMPLETED"
@@ -137,7 +137,7 @@ def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, a
                          mp_q: multiprocessing.Queue = None, barrier: multiprocessing.Barrier = None,
                          llvm_lit_path: str = None, lit_extra_args: list = None) -> bool:
     try:
-        import psutil
+        import psutil  # noqa: F401
     except ImportError:
         boot_cheribsd.failure("Cannot run lit without `psutil` python module installed", exit=True)
     try:

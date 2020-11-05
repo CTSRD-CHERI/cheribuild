@@ -34,7 +34,7 @@ import sys
 import tempfile
 
 import run_remote_lit_test
-from run_tests_common import *
+from run_tests_common import boot_cheribsd, run_tests_main
 
 
 def setup_libunwind_env(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace):

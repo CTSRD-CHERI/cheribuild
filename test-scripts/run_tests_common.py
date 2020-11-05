@@ -46,13 +46,12 @@ sys.path.insert(1, str(_pexpect_dir))
 _ptyprocess_dir = _cheribuild_root / "3rdparty/ptyprocess"
 assert (_ptyprocess_dir / "ptyprocess/ptyprocess.py").exists(), (_ptyprocess_dir / "ptyprocess/ptyprocess.py")
 sys.path.insert(1, str(_ptyprocess_dir))
-
 sys.path.insert(1, str(_cheribuild_root))
-import junitparser
-import pexpect
-from pycheribuild import boot_cheribsd
-from pycheribuild.config.target_info import CrossCompileTarget
-from pycheribuild.utils import commandline_to_str
+import junitparser  # noqa: E402
+import pexpect  # noqa: E402
+from pycheribuild import boot_cheribsd  # noqa: E402
+from pycheribuild.config.target_info import CrossCompileTarget  # noqa: E402
+from pycheribuild.utils import commandline_to_str  # noqa: E402
 
 __all__ = ["run_tests_main", "boot_cheribsd", "junitparser", "pexpect", "commandline_to_str", "CrossCompileTarget"]
 

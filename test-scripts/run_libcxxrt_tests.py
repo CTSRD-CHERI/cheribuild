@@ -32,7 +32,7 @@
 import argparse
 import os
 
-from run_tests_common import *
+from run_tests_common import boot_cheribsd, run_tests_main
 
 
 def run_libcxxrt_tests(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace) -> bool:

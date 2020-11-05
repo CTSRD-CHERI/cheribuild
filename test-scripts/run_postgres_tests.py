@@ -31,7 +31,7 @@
 #
 import argparse
 
-from run_tests_common import *
+from run_tests_common import boot_cheribsd, run_tests_main
 
 
 def run_postgres_tests(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace) -> bool:
