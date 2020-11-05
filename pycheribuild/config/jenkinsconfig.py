@@ -34,7 +34,7 @@ from enum import Enum
 from pathlib import Path
 
 from .chericonfig import CheriConfig
-from .compilation_targets import CompilationTargets, CrossCompileTarget
+from .compilation_targets import CrossCompileTarget
 from .loader import ConfigLoaderBase
 from ..filesystemutils import FileSystemUtils
 from ..utils import default_make_jobs_count, fatal_error, OSInfo, warning_message
@@ -88,18 +88,18 @@ class JenkinsConfig(CheriConfig):
         self.workspace = loader.add_commandline_only_option("workspace", default=os.getenv("WORKSPACE"), type=Path,
                                                             help="The root directory for building (defaults to "
                                                                  "$WORKSPACE)")  # type: Path
-        self.sdk_archive_name = loader.add_commandline_only_option("sdk-archive", type=str,
-                                                                   default=os.getenv("SDK_ARCHIVE"),
-                                                                   help="The name of the sdk archive")  # type: str
-        self.keep_install_dir = loader.add_commandline_only_bool_option("keep-install-dir",
-                                                                        help="Don't delete the install dir prior to "
-                                                                             "build")  # type: bool
-        self.keep_sdk_dir = loader.add_commandline_only_bool_option("keep-sdk-dir",
-                                                                    help="Don't delete existing SDK dir even"
-                                                                         " if there is a newer archive")  # type: bool
-        self.force_update = loader.add_commandline_only_bool_option("force-update",
-                                                                    help="Do the updating (not recommended in "
-                                                                         "jenkins!)")  # type: bool
+        self.compiler_archive_name = loader.add_commandline_only_option(
+            "compiler-archive", type=str, default="cheri-clang-llvm.tar.xz",
+            help="The name of the archive containing the compiler")  # type: str
+        self.sysroot_archive_name = loader.add_commandline_only_option(
+            "sysroot-archive", type=str, default="cheribsd-sysroot.tar.xz",
+            help="The name of the archive containing the sysroot")  # type: str
+        self.keep_install_dir = loader.add_commandline_only_bool_option(
+            "keep-install-dir", help="Don't delete the install dir prior to build")  # type: bool
+        self.keep_sdk_dir = loader.add_commandline_only_bool_option(
+            "keep-sdk-dir", help="Don't delete existing SDK dir even if there is a newer archive")  # type: bool
+        self.force_update = loader.add_commandline_only_bool_option(
+            "force-update", help="Do the updating (not recommended in jenkins!)")  # type: bool
         self.copy_compilation_db_to_source_dir = False
         self.make_without_nice = False
 
@@ -158,33 +158,6 @@ class JenkinsConfig(CheriConfig):
     @property
     def default_cheri_sdk_directory_name(self):
         return "cherisdk"
-
-    @property
-    def sdk_cpu(self) -> str:
-        sdk_cpu = os.getenv("SDK_CPU")
-        if not sdk_cpu:
-            if self.cpu in ("cheri128", "mips"):
-                return self.cpu
-            if self.cpu == "hybrid-cheri128":
-                return "cheri128"
-            else:
-                warning_message("SDK_CPU variable not set, cannot infer the name of the SDK archive")
-                return "unknown-cpu"
-        return sdk_cpu
-
-    @property
-    def sdk_archive_path(self):
-        if self.sdk_archive_name is None:
-            self.sdk_archive_name = "{}-{}-sdk.tar.xz".format(self.sdk_cpu, self.cheri_sdk_isa_name)
-        assert isinstance(self.sdk_archive_name, str)
-        return self.workspace / self.sdk_archive_name
-
-    @property
-    def cheri_sdk_isa_name(self):
-        guessed_abi_suffix = ""
-        if self.cheri_cap_table_abi:
-            guessed_abi_suffix = "cap-table-" + self.cheri_cap_table_abi
-        return os.getenv("ISA", guessed_abi_suffix)
 
     @property
     def qemu_bindir(self):

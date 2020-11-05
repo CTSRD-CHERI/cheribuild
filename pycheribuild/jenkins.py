@@ -116,30 +116,20 @@ class SdkArchive(object):
 
 
 def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List[SdkArchive]":
-    llvm_cpu = os.getenv("LLVM_CPU", "cheri-multi")
-    clang_archive_name = "{}-{}-clang-llvm.tar.xz".format(llvm_cpu, os.getenv("LLVM_BRANCH", "master"))
-    clang_archive = SdkArchive(cheri_config, clang_archive_name, required_globs=["bin/clang"],
-                               extra_args=["--strip-components", "1"])
+    clang_archive = SdkArchive(cheri_config, cheri_config.compiler_archive_name,
+                               required_globs=["bin/clang"], extra_args=["--strip-components", "1"])
     if not clang_archive.archive.exists():
-        warning_message("Neither full SDK archive", cheri_config.sdk_archive_name, " nor clang archive",
-                        clang_archive_name,
-                        "exists, will use only existing $WORKSPACE/cherisdk")
+        warning_message("Compiler archive", clang_archive.archive, "does not exists, will use only existing tools")
         return []
     if not needs_cheribsd_sysroot or cheri_config.extract_compiler_only:
         return [clang_archive]  # only need the clang archive
     # if we only extracted the compiler, extract the sysroot now
-    cheri_sysroot_archive_name = "{}-{}-cheribsd-world.tar.xz".format(cheri_config.sdk_cpu,
-                                                                      cheri_config.cheri_sdk_isa_name)
     extra_args = ["--strip-components", "1"]
-    # Don't extract FreeBSD binaries on a linux host:
-    if not OSInfo.IS_FREEBSD:
-        extra_args += ["--exclude", "bin/*"]
-    sysroot_archive = SdkArchive(cheri_config, cheri_sysroot_archive_name, required_globs=["sysroot/usr/include"],
-                                 extra_args=extra_args)
+    sysroot_archive = SdkArchive(cheri_config, cheri_config.sysroot_archive_name,
+                                 required_globs=["sysroot/usr/include"], extra_args=extra_args)
     if not sysroot_archive.archive.exists():
-        warning_message("Project needs a full SDK archive but only clang archive was found and",
-                        sysroot_archive.archive, "is missing. Will attempt to build anyway but build "
-                                                 "will most likely fail.")
+        warning_message("Project needs a sysroot archive but ", sysroot_archive.archive,
+                        "is missing. Will attempt to build anyway but build will most likely fail.")
         run_command("ls", "-la", cwd=cheri_config.workspace)
         return [clang_archive]
     return [clang_archive, sysroot_archive]
@@ -276,10 +266,8 @@ def build_target(cheri_config, target: Target):
         project = target.get_or_create_project(cheri_config.preferred_xtarget, cheri_config)
         assert project
         cross_target = project.get_crosscompile_target(cheri_config)
-        if isinstance(target,
-                      MultiArchTargetAlias) and cross_target is not None and cross_target != \
-                cheri_config.preferred_xtarget \
-                and cheri_config.preferred_xtarget is not None:
+        if isinstance(target, MultiArchTargetAlias) and cross_target is not None and \
+                cross_target != cheri_config.preferred_xtarget and cheri_config.preferred_xtarget is not None:
             fatal_error("Cannot build project", project.target, "with cross compile target", cross_target.name,
                         "when --cpu is set to", cheri_config.preferred_xtarget.name, fatal_when_pretending=True)
         if isinstance(project, CrossCompileMixin):
