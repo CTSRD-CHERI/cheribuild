@@ -89,7 +89,7 @@ do
 
 		set -e
 		# check for errors that would fail the GitHub CI:
-		try_run_verbose flake8 pycheribuild/ --count --max-line-length=127 --show-source --statistics
+		try_run_verbose flake8 pycheribuild/ tests/ test-scripts/ --count --max-line-length=120 --show-source --statistics
 
 		# check that there are no obvious mistakes:
 		try_run ./cheribuild.py --help
