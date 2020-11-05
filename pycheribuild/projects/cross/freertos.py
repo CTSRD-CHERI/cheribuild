@@ -56,10 +56,26 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     supported_freertos_demos = [
         # Generic/simple (CHERI-)RISC-V Demo that runs main_blinky on simulators
         # and simple SoCs
-        "RISC-V-Generic"]
+        "RISC-V-Generic",
+        # CHERI-RISC-V sophisticated Demo with more advanced device drivers
+        # and currently only runs on the GFE, purecap
+        "RISC-V_Galois_P1"]
 
     # Map Demos and the FreeRTOS apps we support building/running for
-    supported_demo_apps = {"RISC-V-Generic": ["main_blinky"]}
+    supported_demo_apps = {"RISC-V-Generic": ["main_blinky"],
+                           "RISC-V_Galois_P1":
+                           ["main_blinky",
+                            "main_netboot",
+                            "main_udp",
+                            "main_peekpoke",
+                            "main_tcp",
+                            "main_full",
+                            # The followings haven't been tested for purecap
+                            "main_uart_malware",
+                            "main_rtc",
+                            "main_sd",
+                            "main_gpio",
+                            "main_iic"]}
 
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
@@ -81,25 +97,24 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         # Set sysroot Makefile arg to pick up libc
         self.make_args.set(SYSROOT=str(self.sdk_sysroot))
 
+        # Is purecap?
+        self.is_purecap = self.target_info.target.is_cheri_purecap()
+
         # Add compiler-rt location to the search path
         # self.make_args.set(LDFLAGS="-L"+str(self.compiler_resource / "lib"))
 
         if self.demo == "RISC-V_Galois_P1":
-            if "rv32" in self.demo_bsp:
+            if self.crosscompile_target.is_riscv32(include_purecap=self.is_purecap):
                 self.make_args.set(XARCH="32")
             else:
                 self.make_args.set(XARCH="64")
 
         else:  # RISC-V-Generic
             # Only build 64-bit FreeRTOS for RISC-V-Generic
+            assert(self.demo == "RISC-V-Generic")
             self.make_args.set(RISCV_XLEN="64")
 
         if self.target_info.target.is_cheri_purecap():
-            # CHERI-RISC-V sophisticated Demo with more advanced device drivers
-            # and currently only runs on FPGA-GFE, purecap
-            self.supported_freertos_demos.append("RISC-V_Galois_P1")
-            self.supported_demo_apps["RISC-V_Galois_P1"] = ["main_blinky", "main_netboot"]
-
             self.make_args.set(EXTENSION="cheri")
 
     @classmethod
@@ -117,7 +132,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             help="The FreeRTOS program to build.")  # type: str
 
         cls.demo_bsp = cls.add_config_option(
-            "demo_bsp", metavar="BSP", show_help=True,
+            "demo-bsp", metavar="BSP", show_help=True,
             default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
                                          as_string="target-dependent default"),
             help="The FreeRTOS BSP to build. This is only valid for the "
