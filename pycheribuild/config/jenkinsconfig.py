@@ -82,11 +82,9 @@ class JenkinsConfig(CheriConfig):
         super().__init__(loader, action_class=JenkinsAction)
         self.default_action = ""  # error if no action set
 
-        self.cpu = loader.add_commandline_only_option("cpu", default=os.getenv("CPU", "default"),
-                                                      help="The target to build the software for (defaults to $CPU).",
-                                                      choices=["default", "cheri128", "mips", "hybrid-cheri128",
-                                                               "riscv64", "riscv64-hybrid", "riscv64-purecap",
-                                                               "native", "x86", "amd64"])  # type: str
+        self.cpu = loader.add_commandline_only_option(
+            "cpu", default=os.getenv("CPU", "default"),
+            help="Only used for backwards compatibility with old jenkins jobs")  # type: str
         self.workspace = loader.add_commandline_only_option("workspace", default=os.getenv("WORKSPACE"), type=Path,
                                                             help="The root directory for building (defaults to "
                                                                  "$WORKSPACE)")  # type: Path
@@ -239,28 +237,8 @@ class JenkinsConfig(CheriConfig):
 
         self.sysroot_install_dir = self.cheri_sdk_dir
         self.preferred_xtarget = None  # type: typing.Optional[CrossCompileTarget]
-        if self.cpu == "default":
-            self.preferred_xtarget = None
-        elif self.cpu == "cheri128":
-            self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
-        elif self.cpu in ("mips", "hybrid-cheri128"):  # MIPS with CHERI memcpy
-            if self.cpu == "mips" and self.sdk_cpu == "cheri128":
-                self.cpu = "hybrid-" + self.sdk_cpu
-            if self.cpu == "hybrid-cheri128":
-                self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
-            else:
-                assert self.cpu == "mips"
-                self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_NO_CHERI
-        elif self.cpu == "riscv64":
-            self.preferred_xtarget = CompilationTargets.CHERIBSD_RISCV_NO_CHERI
-        elif self.cpu == "riscv64-hybrid":
-            self.preferred_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
-        elif self.cpu == "riscv64-purecap":
-            self.preferred_xtarget = CompilationTargets.CHERIBSD_RISCV_PURECAP
-        elif self.cpu in ("x86", "x86_64", "amd64", "host", "native"):
-            self.preferred_xtarget = CompilationTargets.NATIVE
-        else:
-            fatal_error("CPU is not set to a valid value:", self.cpu)
+        if self.cpu != "default":
+            warning_message("--cpu parameter passed(", self.cpu, "), this is deprecated!", sep="")
 
         if self.force_update:
             self.skip_update = False
