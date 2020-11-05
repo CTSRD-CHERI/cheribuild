@@ -68,6 +68,7 @@ def setup_mock_chericonfig(source_root: Path, pretend=True) -> MockConfig:
                        verbose_mode=config.verbose, quiet_mode=config.quiet)
     ConfigLoaderBase._cheri_config = config
     SimpleProject._config_loader = DefaultValueOnlyConfigLoader()
+    # noinspection PyProtectedMember
     SimpleProject._config_loader._cheri_config = config
     Target.instantiating_targets_should_warn = False
     # FIXME: There should only be one singleton instance

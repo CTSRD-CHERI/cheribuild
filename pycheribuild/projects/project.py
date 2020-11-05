@@ -61,7 +61,7 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
            "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo",  # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
-           "ReuseOtherProjectDefaultTargetRepository",  # no-combine
+           "ReuseOtherProjectDefaultTargetRepository", "MakefileProject",  # no-combine
            "TargetBranchInfo", "Linkage", "BasicCompilationTargets", "DefaultInstallDir", "BuildType"]  # no-combine
 
 Type_T = typing.TypeVar("Type_T")
@@ -144,7 +144,8 @@ class ProjectSubclassDefinitionHook(type):
                 assert isinstance(arch, CrossCompileTarget)
                 # create a new class to ensure different build dirs and config name strings
                 if cls.custom_target_name is not None:
-                    new_name = cls.custom_target_name(target_name, arch)
+                    custom_target_cb = cls.custom_target_name
+                    new_name = custom_target_cb(target_name, arch)
                 else:
                     new_name = target_name + "-" + arch.generic_suffix
                 new_dict = cls.__dict__.copy()

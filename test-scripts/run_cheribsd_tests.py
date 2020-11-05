@@ -42,11 +42,12 @@ import time
 from pathlib import Path
 
 from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_generated_junit_xml
-from run_tests_common import boot_cheribsd, run_tests_main, pexpect, CrossCompileTarget
+from run_tests_common import boot_cheribsd, CrossCompileTarget, pexpect, run_tests_main
 
 
 # TODO: Remove old_binary_name once the new cheribsdtest names are merged to all relevant CheriBSD branches
-def run_cheribsdtest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, old_binary_name, args: argparse.Namespace) -> bool:
+def run_cheribsdtest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, old_binary_name,
+                     args: argparse.Namespace) -> bool:
     try:
         qemu.checked_run("rm -f /tmp/{}.xml".format(binary_name))
         # Run it once with textual output (for debugging)

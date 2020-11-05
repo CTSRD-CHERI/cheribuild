@@ -352,7 +352,7 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
             return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
-def commandline_to_str(args: "typing.Iterable[str]") -> str:
+def commandline_to_str(args: "typing.Iterable[typing.Union[str,Path]]") -> str:
     return " ".join((shlex.quote(str(s)) for s in args))
 
 
@@ -608,7 +608,8 @@ def status_update(*args, sep=" ", **kwargs):
 
 
 def fixit_message(*args, sep=" "):
-    print(coloured(AnsiColour.blue, maybe_add_space("Possible solution:", sep) + args, sep=sep), file=sys.stderr, flush=True)
+    print(coloured(AnsiColour.blue, maybe_add_space("Possible solution:", sep) + args, sep=sep), file=sys.stderr,
+          flush=True)
 
 
 def warning_message(*args, sep=" ", fixit_hint=None):

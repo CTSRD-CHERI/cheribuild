@@ -236,6 +236,7 @@ def temp_symlink():
         file = _create_file(Path(td), "testfile", mode=0o700)
         yield link, file, target  # provide the fixture value
 
+
 # noinspection PyShadowingNames
 def test_symlink_symlink(temp_symlink):
     mtree = MtreeFile()

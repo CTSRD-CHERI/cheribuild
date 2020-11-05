@@ -612,6 +612,7 @@ def test_disk_image_path(target, expected_name):
     assert str(project.disk_image_path) == str(config.output_root / expected_name)
 
 
+# noinspection PyTypeChecker
 def test_freebsd_toolchains_cheribsd_purecap():
     # Targets that need CHERI don't have the --toolchain option:
     # Argparse should exit with exit code 2
@@ -642,7 +643,8 @@ def test_freebsd_toolchains_cheribsd_purecap():
     pytest.param("cheribsd-mips64-hybrid", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
                  "cheribsd-mips64-hybrid-plt-build"),
     # everything
-    pytest.param("cheribsd-mips64-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
+    pytest.param("cheribsd-mips64-purecap",
+                 ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
                  "cheribsd-mips64-purecap-plt-aggressive-hardfloat-build"),
     # plt should be encoded
     pytest.param("sqlite-mips64-hybrid", [], "sqlite-mips64-hybrid-build"),
@@ -785,7 +787,6 @@ def test_expand_tilde_and_env_vars(monkeypatch):
     assert _parse_config_file_and_args(b'{ "build-root": "$HOME/build//dir" }').build_root == Path("/build/dir")
     assert _parse_config_file_and_args(b'{ "build-root": "$HOME//build//dir" }').build_root == Path("/build/dir")
     assert _parse_config_file_and_args(b'{ "build-root": "${HOME}//build//dir" }').build_root == Path("/build/dir")
-
 
 
 def test_relative_paths_in_config():

@@ -66,9 +66,9 @@ class JenkinsConfigLoader(ConfigLoaderBase):
         self._parsed_args.verbose = True
 
     def finalize_options(self, available_targets: list, **kwargs):
-        target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
-                                                  help="The target to build",
-                                                  choices=available_targets + [EXTRACT_SDK_TARGET, RUN_EVERYTHING_TARGET])
+        target_option = self._parser.add_argument(
+            "targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE, help="The target to build",
+            choices=available_targets + [EXTRACT_SDK_TARGET, RUN_EVERYTHING_TARGET])
         if self.is_completing_arguments:
             try:
                 import argcomplete
