@@ -29,7 +29,7 @@ jobs:
       run: |
         # stop the build if there are any flake8 warnings
         # TODO: --max-complexity=20
-        flake8 pycheribuild/ --count --max-line-length=127 --show-source --statistics
+        flake8 pycheribuild/ tests/ --count --max-line-length=120 --show-source --statistics
     - name: Test with pytest
       run: |
         pytest

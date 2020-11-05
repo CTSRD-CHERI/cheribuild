@@ -11,8 +11,7 @@ except ImportError:
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
-
-from pycheribuild.mtree import MtreeFile
+from pycheribuild.mtree import MtreeFile  # noqa: E402
 
 HAVE_LCHMOD = True
 if "_TEST_SKIP_METALOG" in os.environ:
@@ -144,7 +143,7 @@ def test_add_file_infer_ssh_mode():
 ./root/.ssh/id_foo.pub type=file uname=root gname=wheel mode=0755 contents={pubkey}
 ./root/.ssh/link type=link uname=root gname=wheel mode=0600 link=authorized_keys
 # END
-""".format(auth_keys=auth_keys, privkey=privkey, pubkey=pubkey, symlink_perms=symlink_perms)
+""".format(auth_keys=auth_keys, privkey=privkey, pubkey=pubkey)
         assert expected == _get_as_str(mtree)
 
 
@@ -186,7 +185,7 @@ def test_normalize_paths_loaded_from_file():
 ./usr/lib/debug//usr/tests type=dir uname=root gname=wheel mode=0755
 ./usr/lib/debug/usr type=dir uname=root gname=wheel mode=0755
 ./usr/lib/debug/usr/tests type=dir uname=root gname=wheel mode=0755
-# END    
+# END
 """
     # check that we deduplicate these:
     mtree = MtreeFile(io.StringIO(file))

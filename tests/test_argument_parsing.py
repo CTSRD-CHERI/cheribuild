@@ -13,19 +13,20 @@ from pycheribuild.config.compilation_targets import CompilationTargets
 from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
 from pycheribuild.projects.run_qemu import LaunchCheriBSD
 
-_loader = JsonAndCommandLineConfigLoader()
-from pycheribuild.projects.project import SimpleProject
-
-SimpleProject._config_loader = _loader
 from pycheribuild.targets import MultiArchTargetAlias, target_manager, Target
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
 # noinspection PyUnresolvedReferences
-from pycheribuild.projects import *  # make sure all projects are loaded so that target_manager gets populated
-from pycheribuild.projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
+from pycheribuild.projects import *  # noqa: F401, F403
+from pycheribuild.projects.cross import *  # noqa: F401, F403
 # noinspection PyProtectedMember
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, _BuildDiskImageBase
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, FreeBSDToolchainKind
+
+# Override the default config loader:
+from pycheribuild.projects.project import SimpleProject
+_loader = JsonAndCommandLineConfigLoader()
+SimpleProject._config_loader = _loader
 
 _targets_registered = False
 Target.instantiating_targets_should_warn = False

@@ -1,19 +1,16 @@
 import copy
 import inspect
-import sys
 import typing
 from pathlib import Path
 
 import pytest
-
-sys.path.append(str(Path(__file__).parent.parent))
-
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can"t do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
 from pycheribuild.targets import target_manager
 # noinspection PyUnresolvedReferences
-from pycheribuild.projects import *  # make sure all projects are loaded so that target_manager gets populated
-from pycheribuild.projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
+# make sure all projects are loaded so that target_manager gets populated
+from pycheribuild.projects import *  # noqa: F401, F403
+from pycheribuild.projects.cross import *  # noqa: F401, F403
 from .setup_mock_chericonfig import setup_mock_chericonfig
 
 global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
