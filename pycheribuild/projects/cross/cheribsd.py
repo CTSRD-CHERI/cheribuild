@@ -36,12 +36,13 @@ import typing
 from enum import Enum
 from pathlib import Path
 
-from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
+from ..llvm import BuildCheriLLVM, BuildLLVMMonoRepoBase, BuildUpstreamLLVM
 from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
                        MakeCommandKind, MakeOptions, Project, SimpleProject, TargetBranchInfo)
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CrossCompileTarget
+from ...config.target_info import CompilerType as FreeBSDToolchainKind
 from ...targets import target_manager
 from ...utils import (classproperty, commandline_to_str, get_compiler_info, include_local_file, is_jenkins_build,
                       latest_system_clang_tool, OSInfo, print_command, ThreadJoiner)
@@ -185,15 +186,6 @@ class BuildFreeBSDBase(Project):
         self.fatal("Building FreeBSD/CheriBSD with LTO is not supported (yet).")
 
 
-class FreeBSDToolchainKind(Enum):
-    DEFAULT_EXTERNAL = "default-external"
-    BOOTSTRAP = "bootstrap"
-    UPSTREAM_LLVM = "upstream-llvm"
-    CHERI_LLVM = "cheri-llvm"
-    SYSTEM_CLANG = "system-clang"
-    CUSTOM = "custom"
-
-
 class BuildFreeBSD(BuildFreeBSDBase):
     target = "freebsd"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
@@ -207,12 +199,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
     use_llvm_binutils = False
 
     # The compiler to use for building freebsd (bundled/upstream-llvm/cheri-llvm/custom)
-    build_toolchain = FreeBSDToolchainKind.DEFAULT_EXTERNAL
+    build_toolchain = FreeBSDToolchainKind.DEFAULT_COMPILER
     can_build_with_system_clang = True  # Not true for CheriBSD
 
     @property
     def use_bootstrapped_toolchain(self):
-        return self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAP
+        return self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAPPED
 
     @classmethod
     def get_rootfs_dir(cls, caller, config=None, cross_target: CrossCompileTarget = None):
@@ -259,12 +251,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # When targeting CHERI we have to use CHERI LLVM
             assert not use_upstream_llvm
             assert not bootstrap_toolchain
-            cls.build_toolchain = FreeBSDToolchainKind.DEFAULT_EXTERNAL
+            cls.build_toolchain = FreeBSDToolchainKind.DEFAULT_COMPILER
             cls.linker_for_world = "lld"
             cls.linker_for_kernel = "lld"
         elif bootstrap_toolchain:
             assert not use_upstream_llvm
-            cls.build_toolchain = FreeBSDToolchainKind.BOOTSTRAP
+            cls.build_toolchain = FreeBSDToolchainKind.BOOTSTRAPPED
             cls._cross_toolchain_root = None
             cls.linker_for_kernel = "should-not-be-used"
             cls.linker_for_world = "should-not-be-used"
@@ -272,7 +264,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Prefer using system clang for FreeBSD builds rather than a self-built snapshot of LLVM since that might
             # have new warnings that break the -Werror build.
             cls.build_toolchain = cls.add_config_option("toolchain", kind=FreeBSDToolchainKind,
-                                                        default=FreeBSDToolchainKind.DEFAULT_EXTERNAL,
+                                                        default=FreeBSDToolchainKind.DEFAULT_COMPILER,
                                                         enum_choice_strings=[t.value for t in FreeBSDToolchainKind],
                                                         help="The toolchain to use for building FreeBSD. When set to "
                                                              "'custom', the 'toolchain-path' option must also be set")
@@ -460,15 +452,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.__objdir = None
-        if self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAP:
+        if self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAPPED:
             self.target_info._sdk_root_dir = Path("/this/path/should/not/be/used/when/bootstrapping")
-        elif self.build_toolchain == FreeBSDToolchainKind.UPSTREAM_LLVM:
-            self.target_info._sdk_root_dir = BuildUpstreamLLVM.get_install_dir(self,
-                                                                               cross_target=CompilationTargets.NATIVE)
-        elif self.build_toolchain == FreeBSDToolchainKind.CHERI_LLVM:
-            self.target_info._sdk_root_dir = BuildCheriLLVM.get_install_dir(self,
-                                                                            cross_target=CompilationTargets.NATIVE)
-        elif self.build_toolchain == FreeBSDToolchainKind.SYSTEM_CLANG:
+        elif self.build_toolchain in (FreeBSDToolchainKind.UPSTREAM_LLVM, FreeBSDToolchainKind.CHERI_LLVM,
+                                      FreeBSDToolchainKind.MORELLO_LLVM):
+            self.target_info._sdk_root_dir = BuildLLVMMonoRepoBase.get_install_dir_for_type(self, self.build_toolchain)
+        elif self.build_toolchain == FreeBSDToolchainKind.SYSTEM_LLVM:
             system_clang_root, errmsg, fixit = self._try_find_compatible_system_clang()
             if system_clang_root is None:
                 self.fatal(errmsg, fixit)
@@ -479,7 +468,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                            "is not set.")
             self.target_info._sdk_root_dir = self._cross_toolchain_root
         else:
-            assert self.build_toolchain == FreeBSDToolchainKind.DEFAULT_EXTERNAL
+            assert self.build_toolchain == FreeBSDToolchainKind.DEFAULT_COMPILER
             if self.can_build_with_system_clang:
                 # Try to find system clang and if not we fall back to the default self-built clang
                 system_clang_root, errmsg, _ = self._try_find_compatible_system_clang()

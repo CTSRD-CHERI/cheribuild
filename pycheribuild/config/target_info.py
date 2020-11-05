@@ -38,6 +38,9 @@ if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine    # pytype: disable=pyi-error
     from ..projects.project import SimpleProject, Project  # no-combine
 
+__all__ = ["AutoVarInit", "BasicCompilationTargets", "CPUArchitecture", "CrossCompileTarget",  # no-combine
+           "Linkage", "LLVMVariant", "MipsFloatAbi", "TargetInfo"]  # no-combine
+
 
 class CPUArchitecture(Enum):
     AARCH64 = "aarch64"
@@ -46,6 +49,19 @@ class CPUArchitecture(Enum):
     MIPS64 = "mips64"
     RISCV64 = "riscv64"
     X86_64 = "x86_64"
+
+
+class CompilerType(Enum):
+    """
+    Used by the jenkins script to detect which compiler directory should be used
+    """
+    DEFAULT_COMPILER = "default-compiler"  # Default system compiler (i.e. the argument passed to cheribuild)
+    CHERI_LLVM = "cheri-llvm"  # Compile with CHERI LLVM built by cheribuild
+    MORELLO_LLVM = "morello-llvm"  # Compile with Morello LLVM built by cheribuild
+    UPSTREAM_LLVM = "upstream-llvm"  # Compile with upstream LLVM built by cheribuild
+    SYSTEM_LLVM = "system-llvm"  # Compile with system installation of LLVM/Clang
+    BOOTSTRAPPED = "bootstrap"  # Compiler is included with the project
+    CUSTOM = "custom"  # Custom compiler specific in config file/command line
 
 
 class TargetInfo(ABC):

@@ -95,6 +95,9 @@ class _EnumArgparseType(object):
             # convert the passed value to the enum name
             enum_value_name = astring.upper()  # type: str
             enum_value_name = enum_value_name.replace("-", "_")
+            for e in self.enums:
+                if e.value == astring:
+                    return e
             v = self.enums[enum_value_name]
         except KeyError:
             msg = ', '.join([t.name.lower() for t in self.enums])
@@ -289,7 +292,7 @@ class ConfigLoaderBase(object):
                 "action"] == "append", "action should be none or append for Enum options"
             assert "choices" not in kwargs, "for enum options choices are the enum names (or set enum_choices)!"
             if "enum_choices" in kwargs:
-                kwargs["choices"] = tuple(t.name.lower() for t in kwargs["enum_choices"])
+                kwargs["choices"] = tuple(t.name.lower().replace("_", "-") for t in kwargs["enum_choices"])
                 del kwargs["enum_choices"]
             elif "enum_choice_strings" in kwargs:
                 # noinspection PyTypeChecker

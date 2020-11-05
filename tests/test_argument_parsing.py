@@ -541,20 +541,20 @@ class SystemClangIfExistsElse:
 @pytest.mark.parametrize("target,expected_path,kind,extra_args", [
     # FreeBSD targets default to system clang if it exists, otherwise LLVM:
     pytest.param("freebsd-mips64", SystemClangIfExistsElse("$OUTPUT$/upstream-llvm/bin/clang"),
-                 FreeBSDToolchainKind.DEFAULT_EXTERNAL, []),
+                 FreeBSDToolchainKind.DEFAULT_COMPILER, []),
     pytest.param("freebsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
     pytest.param("freebsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
     pytest.param("freebsd-mips64", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
-                 FreeBSDToolchainKind.BOOTSTRAP, []),
+                 FreeBSDToolchainKind.BOOTSTRAPPED, []),
     pytest.param("freebsd-mips64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
                  ["--freebsd-mips64/toolchain-path", "/path/to/custom/toolchain"]),
 
     # CheriBSD-mips can be built with all these toolchains (but defaults to CHERI LLVM):
-    pytest.param("cheribsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.DEFAULT_EXTERNAL, []),
+    pytest.param("cheribsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.DEFAULT_COMPILER, []),
     pytest.param("cheribsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
     pytest.param("cheribsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
     pytest.param("cheribsd-mips64", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
-                 FreeBSDToolchainKind.BOOTSTRAP, []),
+                 FreeBSDToolchainKind.BOOTSTRAPPED, []),
     pytest.param("cheribsd-mips64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
                  ["--cheribsd-mips64/toolchain-path", "/path/to/custom/toolchain"]),
     ])
@@ -568,7 +568,7 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
         expected_path = str(clang_root / "bin/clang") if clang_root is not None else expected_path.fallback
     expected_path = expected_path.replace("$OUTPUT$", str(config.output_root))
     assert str(project.CC) == str(expected_path)
-    if kind == FreeBSDToolchainKind.BOOTSTRAP:
+    if kind == FreeBSDToolchainKind.BOOTSTRAPPED:
         assert "XCC" not in project.buildworld_args.env_vars
         assert "XCC=" not in project.kernel_make_args_for_config("GENERIC", None).env_vars
     else:

@@ -32,11 +32,11 @@ import sys
 import typing
 from pathlib import Path
 
-from .project import BuildType, CMakeProject, DefaultInstallDir, GitRepository
+from .project import BuildType, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject
 from ..config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTargetInfo, CompilationTargets,
                                           FreeBSDTargetInfo)
 from ..config.loader import ComputedDefaultValue
-from ..config.target_info import CrossCompileTarget
+from ..config.target_info import CompilerType, CrossCompileTarget
 from ..utils import CompilerInfo, get_compiler_info, is_jenkins_build, OSInfo, set_env, ThreadJoiner
 
 _true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
@@ -406,6 +406,17 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
         self.write_file(self.install_dir / "bin" / (prefix + ".cfg"), config_contents, overwrite=True, mode=0o644)
         for i in ("clang", "clang++", "clang-cpp"):
             self.create_symlink(self.install_dir / "bin" / i, self.install_dir / "utils" / (prefix + "-" + i))
+
+    @classmethod
+    def get_install_dir_for_type(cls, caller: SimpleProject, compiler_type: CompilerType):
+        if compiler_type == CompilerType.CHERI_LLVM:
+            return BuildCheriLLVM.get_install_dir(caller, cross_target=CompilationTargets.NATIVE)
+        if compiler_type == CompilerType.MORELLO_LLVM:
+            return BuildMorelloLLVM.get_install_dir(caller, cross_target=CompilationTargets.NATIVE)
+        if compiler_type == CompilerType.UPSTREAM_LLVM:
+            return BuildUpstreamLLVM.get_install_dir(caller, cross_target=CompilationTargets.NATIVE)
+        else:
+            raise ValueError("Invalid compiler type: " + str(compiler_type))
 
 
 class BuildCheriLLVM(BuildLLVMMonoRepoBase):

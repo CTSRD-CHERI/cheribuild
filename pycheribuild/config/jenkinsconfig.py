@@ -35,7 +35,8 @@ from pathlib import Path
 
 from .chericonfig import CheriConfig
 from .compilation_targets import CrossCompileTarget
-from .loader import ConfigLoaderBase
+from .loader import ComputedDefaultValue, ConfigLoaderBase
+from .target_info import CompilerType
 from ..filesystemutils import FileSystemUtils
 from ..utils import default_make_jobs_count, fatal_error, OSInfo, warning_message
 
@@ -77,6 +78,17 @@ def absolute_path_only(p: str) -> Path:
     return result
 
 
+def _infer_compiler_output_path(config: "JenkinsConfig", _):
+    if config.compiler_type == CompilerType.CHERI_LLVM:
+        return config.cheri_sdk_dir
+    elif config.compiler_type == CompilerType.MORELLO_LLVM:
+        return config.morello_sdk_dir
+    elif config.compiler_type == CompilerType.UPSTREAM_LLVM:
+        return config.workspace / "upstream-llvm-sdk"
+    else:
+        raise ValueError("Unsupported compiler type: {}".format(config.compiler_type))
+
+
 class JenkinsConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, available_targets: list):
         super().__init__(loader, action_class=JenkinsAction)
@@ -85,15 +97,28 @@ class JenkinsConfig(CheriConfig):
         self.cpu = loader.add_commandline_only_option(
             "cpu", default=os.getenv("CPU", "default"),
             help="Only used for backwards compatibility with old jenkins jobs")  # type: str
-        self.workspace = loader.add_commandline_only_option("workspace", default=os.getenv("WORKSPACE"), type=Path,
-                                                            help="The root directory for building (defaults to "
-                                                                 "$WORKSPACE)")  # type: Path
+        self.workspace = loader.add_commandline_only_option(
+            "workspace", default=os.getenv("WORKSPACE"), type=Path,
+            help="The root directory for building (defaults to $WORKSPACE)")  # type: Path
         self.compiler_archive_name = loader.add_commandline_only_option(
             "compiler-archive", type=str, default="cheri-clang-llvm.tar.xz",
             help="The name of the archive containing the compiler")  # type: str
+        self.compiler_archive_output_path = loader.add_commandline_only_option(
+            "compiler-archive-output-path", type=Path, default=_infer_compiler_output_path,
+            help="The path where to extract the compiler")  # type: Path
+        self.compiler_type = loader.add_commandline_only_option(
+            "compiler-type", type=CompilerType, default=None,
+            enum_choices=[CompilerType.CHERI_LLVM, CompilerType.MORELLO_LLVM, CompilerType.UPSTREAM_LLVM],
+            help="The type of the compiler to extract (used to infer the output "
+                 " path)")  # type: typing.Optional[CompilerType]
         self.sysroot_archive_name = loader.add_commandline_only_option(
             "sysroot-archive", type=str, default="cheribsd-sysroot.tar.xz",
             help="The name of the archive containing the sysroot")  # type: str
+        self.sysroot_archive_output_path = loader.add_commandline_only_option(
+            "sysroot-archive-output-path", type=Path,
+            default=ComputedDefaultValue(lambda c, _: c.compiler_archive_output_path / "sysroot",
+                                         as_string="<compiler_path>/sysroot"),
+            help="The path where to extract the sysroot (default=")  # type: typing.Optional[Path]
         self.keep_install_dir = loader.add_commandline_only_bool_option(
             "keep-install-dir", help="Don't delete the install dir prior to build")  # type: bool
         self.keep_sdk_dir = loader.add_commandline_only_bool_option(
@@ -117,10 +142,10 @@ class JenkinsConfig(CheriConfig):
             "without-sdk", help="Don't use the CHERI SDK -> only /usr (for native builds)")
         self.strip_elf_files = loader.add_commandline_only_bool_option(
             "strip-elf-files", help="Strip ELF files before creating the tarball", default=True)
-        self.cheri_sdk_path = loader.add_commandline_only_option(
+        self._cheri_sdk_dir_override = loader.add_commandline_only_option(
             "cheri-sdk-path", default=None, type=Path,
             help="Override the path to the CHERI SDK (default is $WORKSPACE/cherisdk)")  # type: Path
-        self.morello_sdk_path = loader.add_commandline_only_option(
+        self._morello_sdk_dir_override = loader.add_commandline_only_option(
             "morello-sdk-path", default=None, type=Path,
             help="Override the path to the Morello SDK (default is $WORKSPACE/morello-sdk)")  # type: Path
         self.extract_compiler_only = loader.add_commandline_only_bool_option("extract-compiler-only",
@@ -194,15 +219,15 @@ class JenkinsConfig(CheriConfig):
 
         self.other_tools_dir = self.workspace / "bootstrap"
 
-        if self.cheri_sdk_path is not None:
-            self.cheri_sdk_dir = self.cheri_sdk_path
+        if self._cheri_sdk_dir_override is not None:
+            self.cheri_sdk_dir = self._cheri_sdk_dir_override
         elif Path("/cheri-sdk/bin/clang").exists():  # check for ctsrd/cheri-sdk docker image
             self.cheri_sdk_dir = Path("/cheri-sdk")
         else:
             self.cheri_sdk_dir = self.workspace / self.default_cheri_sdk_directory_name
 
-        if self.morello_sdk_path is not None:
-            self.morello_sdk_dir = self.morello_sdk_path
+        if self._morello_sdk_dir_override is not None:
+            self.morello_sdk_dir = self._morello_sdk_dir_override
         elif Path("/morello-sdk/bin/clang").exists():  # check for docker image
             self.morello_sdk_dir = Path("/morello-sdk")
         else:
@@ -236,8 +261,8 @@ class JenkinsConfig(CheriConfig):
             self.clang_path = self.cheri_sdk_bindir / "clang"
             self.clang_plusplus_path = self.cheri_sdk_bindir / "clang++"
 
-        if self.cheri_sdk_path is not None:
-            assert self.cheri_sdk_bindir == self.cheri_sdk_path / "bin"
+        if self._cheri_sdk_dir_override is not None:
+            assert self.cheri_sdk_bindir == self._cheri_sdk_dir_override / "bin"
 
         assert self._ensure_required_properties_set()
         if os.getenv("DEBUG") is not None:
