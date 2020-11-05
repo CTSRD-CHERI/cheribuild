@@ -390,14 +390,28 @@ def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, a
 
 
 def debug_kernel_panic(qemu: CheriBSDInstance):
+    failure("Trying to get a stack trace for kernel panic: ", qemu.match, exit=False)
     # wait up to 10 seconds for a db prompt
     # Note: this uses expect_exact_ignore_panic() to avoid infinite recursion if FreeBSD is stuck in a panic loop
     # (as is currently happening when running the test suite on RISC-V).
-    i = qemu.expect_exact_ignore_panic([pexpect.TIMEOUT, "db> "], timeout=10)
+    patterns = [pexpect.TIMEOUT, "db> ", "KDB: stack backtrace:"]
+    stack_backtrace_start_idx = 2
+    i = qemu.expect_exact_ignore_panic(patterns, timeout=10)
     if i == 1:
+        success("Got debugger prompt, requesting stack trace.")
         qemu.sendline("bt")
-        # wait for the backtrace
-        qemu.expect_exact_ignore_panic([pexpect.TIMEOUT, "db> "], timeout=30)
+        # wait for the backtrace to be printed
+        i = qemu.expect_exact_ignore_panic(patterns, timeout=30)
+    if i == stack_backtrace_start_idx:
+        # Already got a backtrace automatically (wait a few seconds for it to be printed
+        success("Kernel stack trace about to be printed:")
+        i = qemu.expect_exact_ignore_panic(patterns, timeout=30)
+        if i == stack_backtrace_start_idx:
+            # Another kernel backtrace? This indicates a panic while printing the backtrace.
+            # Print the first one (since it may be different), but then stop,
+            i = qemu.expect_exact_ignore_panic(patterns, timeout=5)
+            if i == stack_backtrace_start_idx:
+                failure("Unexpected output (infinite backtrace loop?): ", qemu.match, exit=False)
     failure("GOT KERNEL PANIC!", exit=False)
     # print("\n\npexpect info = ", qemu)
 
