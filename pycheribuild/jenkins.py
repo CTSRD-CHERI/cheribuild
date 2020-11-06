@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import argparse
+import contextlib
 import inspect
 import os
 import pprint
@@ -146,7 +147,6 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[Sdk
         status_update(expected_bindir, "already exists, not extracting SDK archives")
         return
 
-    cheri_config.FS.makedirs(cheri_config.cheri_sdk_dir)
     for archive in archives:
         archive.extract()
 
@@ -170,26 +170,30 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[Sdk
                                        expected_bindir / "ld", relative=True)
 
 
-def create_sdk_from_archives(cheri_config: JenkinsConfig, needs_cheribsd_sysroot):
+def create_sdk_from_archives(cheri_config: JenkinsConfig, needs_cheribsd_sysroot, extract_all: bool):
     # If the archive is newer, delete the existing sdk unless --keep-sdk is passed install root:
-    possibly_delete_sdk_job = ThreadJoiner(None)
-    archives = get_sdk_archives(cheri_config, needs_cheribsd_sysroot=needs_cheribsd_sysroot)
-    status_update("Will use the following SDK archives:", archives)
-    if any(not a.check_required_files(fatal=False) for a in archives):
-        # if any of the required files is missing clean up and extract
-        status_update("Required files missing -> recreating SDK")
-        possibly_delete_sdk_job = cheri_config.FS.async_clean_directory(cheri_config.cheri_sdk_dir)
-    elif cheri_config.cheri_sdk_dir.exists() and all(a.archive.exists() for a in archives):
-        for a in archives:
-            if cheri_config.cheri_sdk_dir.stat().st_ctime < a.archive.stat().st_ctime:
+    all_archives = get_sdk_archives(cheri_config, needs_cheribsd_sysroot=needs_cheribsd_sysroot)
+    status_update("Will use the following SDK archives:", all_archives)
+    if extract_all:
+        archives = all_archives
+    else:
+        # Only extract if the archive is newer
+        archives = []
+        for a in all_archives:
+            if a.output_dir.stat().st_ctime < a.archive.stat().st_ctime:
                 msgkind = status_update if not cheri_config.keep_sdk_dir else warning_message
                 msgkind("SDK archive", a.archive, "is newer than the existing SDK directory")
-                if not cheri_config.keep_sdk_dir:
-                    status_update("Deleting old SDK and extracting archive")
-                    possibly_delete_sdk_job = cheri_config.FS.async_clean_directory(cheri_config.cheri_sdk_dir)
+                archives.append(a)
                 break
     # unpack the SDK if it has not been extracted yet:
-    with possibly_delete_sdk_job:
+    with contextlib.ExitStack() as stack:
+        if not cheri_config.keep_sdk_dir:
+            status_update("Deleting old SDK and extracting archive")
+            dirs_cleaned = set()  # avoid cleaning twice
+            for a in archives:
+                if a.output_dir not in dirs_cleaned:
+                    stack.enter_context(cheri_config.FS.async_clean_directory(a.output_dir))
+                    dirs_cleaned.add(a.output_dir)
         extract_sdk_archives(cheri_config, archives)
 
 
@@ -212,7 +216,7 @@ def _jenkins_main():
     # special target to extract the sdk
     if JenkinsAction.EXTRACT_SDK in cheri_config.action or (
             len(cheri_config.targets) > 0 and cheri_config.targets[0] == EXTRACT_SDK_TARGET):
-        create_sdk_from_archives(cheri_config, not cheri_config.extract_compiler_only)
+        create_sdk_from_archives(cheri_config, not cheri_config.extract_compiler_only, extract_all=True)
         sys.exit()
 
     if RUN_EVERYTHING_TARGET in cheri_config.targets:
