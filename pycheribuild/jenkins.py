@@ -281,26 +281,6 @@ def build_target(cheri_config, target: Target):
             project._install_prefix = cheri_config.installation_prefix
             project._install_dir = cheri_config.output_root
 
-        # FIXME: only do the SDK setup once for multiple targets
-        if JenkinsAction.BUILD in cheri_config.action:
-            if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
-                assert cheri_config.cheri_sdk_dir == Path("/cheri-sdk"), cheri_config.cheri_sdk_dir
-            elif cheri_config.without_sdk:
-                status_update("Not using CHERI SDK, only files from /usr")
-                assert cheri_config.clang_path.exists(), cheri_config.clang_path
-                assert cheri_config.clang_plusplus_path.exists(), cheri_config.clang_plusplus_path
-            elif cheri_config._cheri_sdk_dir_override:
-                expected_clang = cheri_config.cheri_sdk_bindir / "clang"
-                if not expected_clang.exists():
-                    fatal_error("--cheri-sdk-path specified but", expected_clang, "does not exist")
-            else:
-                need_cheribsd_sysroot = project.needs_sysroot and project.target_info.is_cheribsd()
-                create_sdk_from_archives(cheri_config, needs_cheribsd_sysroot=need_cheribsd_sysroot)
-
-        if project.needs_sysroot and not project.target_info.sysroot_dir.exists() and JenkinsAction.BUILD in \
-                cheri_config.action:
-            fatal_error("Sysroot directory", project.target_info.sysroot_dir, "does not exist")
-
         if cheri_config.debug_output:
             status_update("Configuration options for building", project.target, file=sys.stderr)
             for attr in dir(project):
