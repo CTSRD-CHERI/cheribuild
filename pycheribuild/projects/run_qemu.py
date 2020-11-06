@@ -60,6 +60,7 @@ class LaunchQEMUBase(SimpleProject):
     do_not_add_to_targets = True
     forward_ssh_port = True
     forward_ftp_port = False
+    forward_tftp_port = False
     forward_http_port = False
     forward_cli_port = False
     _can_provide_src_via_smb = False
@@ -274,6 +275,12 @@ class LaunchQEMUBase(SimpleProject):
             user_network_options += ",hostfwd=tcp::" + str(self.ftp_forwarding_port) + "-:21"
             # bind the qemu ftp port to the hosts port
             print(coloured(AnsiColour.green, "\nListening for FTP connections on localhost:", self.ftp_forwarding_port,
+                           sep=""))
+
+        if self.forward_tftp_port:
+            user_network_options += ",hostfwd=udp::" + str(self.tftp_forwarding_port) + "-:69"
+            # bind the qemu tftp port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for TFTP connections on localhost:", self.tftp_forwarding_port,
                            sep=""))
 
         if self.forward_cli_port:
@@ -595,12 +602,14 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
                                CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
     forward_ssh_port = False
     forward_ftp_port = True
+    forward_tftp_port = True
     forward_http_port = True
     forward_cli_port = True
     qemu_user_networking = True
     _enable_smbfs_support = False
     _add_virtio_rng = False
     ftp_forwarding_port = 10021
+    tftp_forwarding_port = 10069
     cli_forwarding_port = 10023
     http_forwarding_port = 8080
 
