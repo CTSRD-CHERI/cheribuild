@@ -138,8 +138,9 @@ class JenkinsConfig(CheriConfig):
         self.installation_prefix = loader.add_commandline_only_option(
             "install-prefix", type=absolute_path_only, default=default_install_prefix,
             help="The install prefix for cross compiled projects (the path in the install image)")  # type: Path
-        self.without_sdk = loader.add_commandline_only_bool_option(
-            "without-sdk", help="Don't use the CHERI SDK -> only /usr (for native builds)")
+        self.use_system_compiler_for_native = loader.add_commandline_only_bool_option(
+            "use-system-compiler-for-native", "-without-sdk",
+            help="Don't use the CHERI SDK -> only /usr (for native builds)")
         self.strip_elf_files = loader.add_commandline_only_bool_option(
             "strip-elf-files", help="Strip ELF files before creating the tarball", default=True)
         self._cheri_sdk_dir_override = loader.add_commandline_only_option(
@@ -242,8 +243,7 @@ class JenkinsConfig(CheriConfig):
             self.skip_update = False
             self.skip_clone = False
 
-        if self.without_sdk:
-            self.cheri_sdk_dir = self.output_root / str(self.installation_prefix).strip('/')
+        if self.use_system_compiler_for_native:
             # allow overriding the clang/clang++ paths with HOST_CC/HOST_CXX
             self.clang_path = Path(os.getenv("HOST_CC", self.clang_path))
             self.clang_plusplus_path = Path(os.getenv("HOST_CXX", self.clang_plusplus_path))
@@ -257,9 +257,19 @@ class JenkinsConfig(CheriConfig):
                 fatal_error("C pre-processor", self.clang_cpp_path,
                             "does not exit. Pass --clang-cpp-path or set $HOST_CPP")
         else:
-            # always use the CHERI clang built by jenkins
-            self.clang_path = self.cheri_sdk_bindir / "clang"
-            self.clang_plusplus_path = self.cheri_sdk_bindir / "clang++"
+            # always use the CHERI clang built by jenkins (if available)
+            # Prefix $WORKSPACE/native-sdk, but fall back to CHERI/Morello LLVM if that does not exist
+            compiler_dir_override = None
+            if Path(self.workspace, "native-sdk/bin/clang").exists():
+                compiler_dir_override = Path(self.workspace, "native-sdk/bin")
+            elif (self.cheri_sdk_bindir / "clang").exists():
+                compiler_dir_override = self.cheri_sdk_bindir
+            elif (self.morello_sdk_dir / "bin/clang").exists():
+                compiler_dir_override = self.morello_sdk_dir / "bin"
+            if compiler_dir_override is not None:
+                self.clang_path = self.cheri_sdk_bindir / "clang"
+                self.clang_plusplus_path = self.cheri_sdk_bindir / "clang++"
+                self.clang_cpp_path = self.cheri_sdk_bindir / "clang++"
 
         if self._cheri_sdk_dir_override is not None:
             assert self.cheri_sdk_bindir == self._cheri_sdk_dir_override / "bin"
