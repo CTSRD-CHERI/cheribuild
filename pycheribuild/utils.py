@@ -404,7 +404,7 @@ class CompilerInfo(object):
             result = run_command(self.path, flag, "-fsyntax-only", "-xc", "/dev/null", "-Werror=unknown-warning-option",
                                  print_verbose_only=True, run_in_pretend_mode=True, capture_error=True,
                                  allow_unexpected_returncode=True)
-        except subprocess.CalledProcessError as e:
+        except (subprocess.CalledProcessError, OSError) as e:
             warning_message("Failed to check for", flag, "support:", e)
             return False
         return result.returncode == 0
@@ -485,6 +485,8 @@ def get_compiler_info(compiler: "typing.Union[str, Path]") -> CompilerInfo:
         except subprocess.CalledProcessError as e:
             stderr = e.stderr if e.stderr else b"FAILED: " + str(e).encode("utf-8")
             version_cmd = CompletedProcess(e.cmd, e.returncode, e.output, stderr)
+        except OSError as e:
+            version_cmd = CompletedProcess([compiler, "-v"], e.errno, b"", str(e).encode("utf-8"))
 
         clang_version = clang_version_pattern.search(version_cmd.stderr)
         apple_llvm_version = apple_llvm_version_pattern.search(version_cmd.stderr)
