@@ -73,6 +73,7 @@ SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHER
 STARTING_INIT = "start_init: trying /sbin/init"
 BOOT_FAILURE = "Enter full pathname of shell or RETURN for /bin/sh"
 BOOT_FAILURE2 = "wait for /bin/sh on /etc/rc failed'"
+BOOT_FAILURE3 = "Manual root filesystem specification:"  # rootfs mount failed
 SHELL_OPEN = "exec /bin/sh"
 LOGIN = "login:"
 INITIAL_PROMPT_CSH = "root@.+:.+# "  # /bin/csh
@@ -685,7 +686,7 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
         # TODO: it would be nice if we had a message to detect userspace startup without requiring bootverbose
         bootverbose = False
         boot_messages = [STARTING_INIT, "Hit \\[Enter\\] to boot immediately", "Trying to mount root from.+\\r\\n",
-                         BOOT_FAILURE, BOOT_FAILURE2] + FATAL_ERROR_MESSAGES
+                         BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3] + FATAL_ERROR_MESSAGES
         i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
         # Skip 10s wait from x86 loader if we see the "Hit [Enter] to boot" message
         if i == 1:  # Hit Enter
@@ -702,8 +703,7 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
                 success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
 
         userspace_starttime = datetime.datetime.now()
-        # TODO: add bad mountroot messages rather than waiting for timeout
-        boot_expect_strings = [LOGIN, SHELL_OPEN, BOOT_FAILURE]
+        boot_expect_strings = [LOGIN, SHELL_OPEN, BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3]
         i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=15 * 60,
                          timeout_msg="timeout awaiting login prompt")
         if i == len(boot_expect_strings):  # DHCPACK from
