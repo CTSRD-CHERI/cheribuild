@@ -49,7 +49,7 @@ from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project, SimpleProject
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
 from .utils import (commandline_to_str, fatal_error, get_program_version, init_global_config, OSInfo, run_command,
-                    set_env, status_update, ThreadJoiner, warning_message)
+                    status_update, ThreadJoiner, warning_message)
 
 EXTRACT_SDK_TARGET = "extract-sdk"
 RUN_EVERYTHING_TARGET = "__run_everything__"
