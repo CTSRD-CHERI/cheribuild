@@ -293,12 +293,8 @@ def build_target(cheri_config, target: Target):
         if JenkinsAction.BUILD in cheri_config.action:
             cleaning_task = cheri_config.FS.async_clean_directory(
                 cheri_config.output_root) if not cheri_config.keep_install_dir else ThreadJoiner(None)
-            new_path = os.getenv("PATH", "")
-            if not cheri_config.without_sdk:
-                new_path = str(cheri_config.cheri_sdk_bindir) + ":" + new_path
-            with set_env(PATH=new_path):
-                with cleaning_task:
-                    target.execute(cheri_config)
+            with cleaning_task:
+                target.execute(cheri_config)
         if JenkinsAction.TEST in cheri_config.action:
             target.run_tests(cheri_config)
 
