@@ -1297,12 +1297,14 @@ class GitRepository(SourceRepository):
 
     def ensure_cloned(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path,
                       skip_submodules=False) -> None:
+        if current_project.config.skip_clone:
+            if not (src_dir / ".git").exists():
+                current_project.fatal("Sources for", str(src_dir), " missing!")
+            return
         if base_project_source_dir is None:
             base_project_source_dir = src_dir
         # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
         if not (base_project_source_dir / ".git").exists():
-            if current_project.config.skip_clone:
-                current_project.fatal("Sources for", str(base_project_source_dir), " missing!")
             assert isinstance(self.url, str), self.url
             assert not self.url.startswith("<"), "Invalid URL " + self.url
             if not current_project.query_yes_no(
