@@ -276,7 +276,7 @@ class JenkinsConfig(CheriConfig):
             if compiler_dir_override is not None:
                 self.clang_path = self.cheri_sdk_bindir / "clang"
                 self.clang_plusplus_path = self.cheri_sdk_bindir / "clang++"
-                self.clang_cpp_path = self.cheri_sdk_bindir / "clang++"
+                self.clang_cpp_path = self.cheri_sdk_bindir / "clang-cpp"
 
         if self._cheri_sdk_dir_override is not None:
             assert self.cheri_sdk_bindir == self._cheri_sdk_dir_override / "bin"
