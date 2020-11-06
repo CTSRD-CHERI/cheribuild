@@ -770,8 +770,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             buildenv_cmd = str(bmake_binary) + " -V " + var
             bw_flags = args.all_commandline_args + ["BUILD_WITH_STRICT_TMPPATH=0", "buildenv",
                                                     "BUILDENV_SHELL=" + buildenv_cmd]
-            if self.crossbuild:
-                bw_flags.append("PATH=" + os.getenv("PATH"))
             if not self.source_dir.exists():
                 assert self.config.pretend, "This should only happen when running in a test environment"
                 return None
