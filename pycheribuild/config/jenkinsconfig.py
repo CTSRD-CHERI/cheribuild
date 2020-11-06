@@ -274,9 +274,9 @@ class JenkinsConfig(CheriConfig):
             elif (self.morello_sdk_dir / "bin/clang").exists():
                 compiler_dir_override = self.morello_sdk_dir / "bin"
             if compiler_dir_override is not None:
-                self.clang_path = self.cheri_sdk_bindir / "clang"
-                self.clang_plusplus_path = self.cheri_sdk_bindir / "clang++"
-                self.clang_cpp_path = self.cheri_sdk_bindir / "clang-cpp"
+                self.clang_path = compiler_dir_override / "clang"
+                self.clang_plusplus_path = compiler_dir_override / "clang++"
+                self.clang_cpp_path = compiler_dir_override / "clang-cpp"
 
         if self._cheri_sdk_dir_override is not None:
             assert self.cheri_sdk_bindir == self._cheri_sdk_dir_override / "bin"
