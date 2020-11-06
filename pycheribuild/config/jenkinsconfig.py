@@ -149,16 +149,21 @@ class JenkinsConfig(CheriConfig):
         self._morello_sdk_dir_override = loader.add_commandline_only_option(
             "morello-sdk-path", default=None, type=Path,
             help="Override the path to the Morello SDK (default is $WORKSPACE/morello-sdk)")  # type: Path
-        self.extract_compiler_only = loader.add_commandline_only_bool_option("extract-compiler-only",
-                                                                             help="Don't attempt to extract the "
-                                                                                  "CheriBSD sysroot")
+        self.extract_compiler_only = loader.add_commandline_only_bool_option(
+            "extract-compiler-only", help="Don't attempt to extract a sysroot")
         self.tarball_name = loader.add_commandline_only_option(
             "tarball-name", default=lambda conf, cls: conf.targets[0] + "-" + conf.cpu + ".tar.xz")
 
         self.default_output_path = "tarball"
-        self.output_path = loader.add_commandline_only_option("output-path", default=self.default_output_path,
+        default_output = ComputedDefaultValue(lambda c, _: c.workspace / c.default_output_path,
+                                              "$WORKSPACE/" + self.default_output_path)
+        self.output_root = loader.add_commandline_only_option("output-path", default=default_output, type=Path,
                                                               help="Path for the output (relative to $WORKSPACE)")
-
+        self.sysroot_install_dir = loader.add_commandline_only_option(
+            "sysroot-output-path",
+            default=ComputedDefaultValue(function=lambda c, _: c.output_root,
+                                         as_string="$WORKSPACE/" + self.default_output_path),
+            type=Path, help="Path for the installed sysroot (defaults to the same value as --output-path)")
         # self.strip_install_prefix_from_archive = loader.add_commandline_only_bool_option(
         # "strip-install-prefix-from-archive",
         #    help="Only put the files inside the install prefix into the tarball (stripping the leading
@@ -209,11 +214,14 @@ class JenkinsConfig(CheriConfig):
             fatal_error("WORKSPACE is not set to a valid directory:", self.workspace)
         self.source_root = self.workspace
         self.build_root = self.workspace
-        if self.output_path != self.default_output_path:
+        if self.output_root != self.workspace / self.default_output_path:
             if not self.keep_install_dir:
-                print("Not cleaning non-default output path", self.workspace / self.output_path)
+                print("Not cleaning non-default output path", self.output_root)
             self.keep_install_dir = True
-        self.output_root = self.workspace / self.output_path
+        if os.path.relpath(str(self.output_root), str(self.workspace)).startswith(".."):
+            fatal_error("Output path", self.output_root, "must be inside workspace", self.workspace)
+        if os.path.relpath(str(self.sysroot_install_dir), str(self.workspace)).startswith(".."):
+            fatal_error("Sysroot output path", self.sysroot_output_path, "must be inside workspace", self.workspace)
 
         # expect the CheriBSD disk images in the workspace root
         self.cheribsd_image_root = self.workspace
@@ -234,7 +242,6 @@ class JenkinsConfig(CheriConfig):
         else:
             self.morello_sdk_dir = self.workspace / self.default_morello_sdk_directory_name
 
-        self.sysroot_install_dir = self.cheri_sdk_dir
         self.preferred_xtarget = None  # type: typing.Optional[CrossCompileTarget]
         if self.cpu != "default":
             warning_message("--cpu parameter passed(", self.cpu, "), this is deprecated!", sep="")
@@ -273,6 +280,8 @@ class JenkinsConfig(CheriConfig):
 
         if self._cheri_sdk_dir_override is not None:
             assert self.cheri_sdk_bindir == self._cheri_sdk_dir_override / "bin"
+        if self._morello_sdk_dir_override is not None:
+            assert self.morello_sdk_dir == self._morello_sdk_dir_override
 
         assert self._ensure_required_properties_set()
         if os.getenv("DEBUG") is not None:
