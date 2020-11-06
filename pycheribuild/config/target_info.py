@@ -39,7 +39,7 @@ if typing.TYPE_CHECKING:  # no-combine
     from ..projects.project import SimpleProject, Project  # no-combine
 
 __all__ = ["AutoVarInit", "BasicCompilationTargets", "CPUArchitecture", "CrossCompileTarget",  # no-combine
-           "Linkage", "LLVMVariant", "MipsFloatAbi", "TargetInfo"]  # no-combine
+           "Linkage", "CompilerType", "MipsFloatAbi", "TargetInfo"]  # no-combine
 
 
 class CPUArchitecture(Enum):

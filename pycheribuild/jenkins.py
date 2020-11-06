@@ -155,7 +155,7 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[Sdk
 
     # Use llvm-ar/llvm-ranlib or the host ar/ranlib if they ar/ranlib are missing from archive
     for tool in ("ar", "ranlib", "nm"):
-        if not (expected_bindir/ tool).exists():
+        if not (expected_bindir / tool).exists():
             # If llvm-ar/ranlib/nm exists use that
             if (expected_bindir / ("llvm-" + tool)).exists():
                 cheri_config.FS.create_symlink(expected_bindir / ("llvm-" + tool),
