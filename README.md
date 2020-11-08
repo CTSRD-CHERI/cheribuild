@@ -1,7 +1,7 @@
 # `cheribuild.py` - A script to build CHERI-related software (**requires Python 3.5.2+**)
 
 This script automates all the steps required to build various [CHERI](http://www.chericpu.com)-related software.
-For example `cheribuild.py [options] sdk` will create a SDK that can be
+For example `cheribuild.py [options] sdk` will create an SDK that can be
 used to compile software for the CHERI CPU and `cheribuild.py [options] run-riscv64-purecap`
 will start an instance of [CheriBSD](https://github.com/CTSRD-CHERI/cheribsd) built for RISC-V in [QEMU](https://github.com/CTSRD-CHERI/qemu).
 
@@ -73,14 +73,14 @@ However, some targets (e.g. `all`, `sdk`) will always build their dependencies b
 #### The following main targets are available
 
 - `qemu` builds and installs [CTSRD-CHERI/qemu](https://github.com/CTSRD-CHERI/qemu)
-- `llvm` builds and installs the [CTSRD-CHERI/llvm-project](https://github.com/CTSRD-CHERI/llvm-project) toolchain (includes compiler, linker, and all required binutils).
+- `llvm` builds and installs the [CTSRD-CHERI/llvm-project](https://github.com/CTSRD-CHERI/llvm-project) toolchain (includes a compiler, linker, and all required binutils).
 - `cheribsd-<architecture>` builds and installs [CTSRD-CHERI/cheribsd](https://github.com/CTSRD-CHERI/cheribsd) and creates a sysroot for cross-compilation.
 - `disk-image-<architecture>` creates a CheriBSD disk-image.
 - `run-<architecture>` launches QEMU with the CheriBSD disk image.
 - `freestanding-sdk` builds everything required to build and run `-ffreestanding` binaries: compiler, linker and qemu
 - `cheribsd-sdk-<architecture>` builds everything required to compile binaries for CheriBSD: `freestanding-sdk` and `cheribsd-sysroot`
 - `sdk-<architecture>` is an alias for `cheribsd-sdk-<architecture>`
-- `all-<architecture>`: runs all the targets listed so far (`run-<architecture>` comes last so you can interact with QEMU)
+- `all-<architecture>`: runs all the targets listed so far (`run-<architecture>` comes last so that you can interact with QEMU)
 
 ##### Supported architectures
 - `riscv64`: RISC-V without CHERI support
@@ -146,7 +146,7 @@ The default path for the disk image is `~/cheri/output/cheribsd-<architecture>.i
 
 ### CheriBSD SSH ports
 
-Since cheribuild.py was designed to be run by multiple users on a shared build system it will tell QEMU
+Since cheribuild.py was designed to be run by multiple users on a shared build system, it will tell QEMU
 to listen on a port on localhost that depends on the user ID to avoid conflicts.
 It will print a message such as `Listening for SSH connections on localhost:12374`, i.e. you will need
 to use `ssh -p 12374 root@localhost` to connect to CheriBSD.
@@ -195,8 +195,8 @@ The native GDB will be installed to your SDK binary directory (`~/cheri/sdk/bin`
 ## Cross-compiling for CheriBSD
 
 In order to cross-compile projects such as NGINX or PostgreSQL for CheriBSD you will first need a full SDK:
-`cheribuild.py cheribsd-sdk`. The you can then run `cheribuild.py postgres-cheri` or `cheribuild.py nginx-mips`, etc.
-By default these projects will be installed into your CheriBSD rootfs under /opt and will therefore be
+`cheribuild.py cheribsd-sdk`. Then you can then run `cheribuild.py postgres-cheri` or `cheribuild.py nginx-mips`, etc.
+By default, these projects will be installed into your CheriBSD rootfs under /opt and will therefore be
 automatically included the next time you build a disk image.
 
 See `cheribuild.py --list-targets` for a full list of targets.
@@ -266,7 +266,7 @@ cd argcomplete
 python3 setup.py install --user
 ```
 
-**NOTE:** On FreeBSD pip and setuptools are not installed by default so you need to run
+**NOTE:** On FreeBSD pip and setuptools are not installed by default, so you need to run
 `python3 -m ensurepip --user` first.
 
 
