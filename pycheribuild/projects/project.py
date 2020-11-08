@@ -50,12 +50,12 @@ from ..config.loader import (ComputedDefaultValue, ConfigLoaderBase, ConfigOptio
 from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, Linkage,
                                   TargetInfo)
 from ..filesystemutils import FileSystemUtils
+from ..processutils import (check_call_handle_noexec, commandline_to_str, CompilerInfo, get_compiler_info,
+                            get_program_version, get_version_output, popen_handle_noexec, print_command, run_command,
+                            set_env)
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
-from ..utils import (AnsiColour, cached_property, check_call_handle_noexec, classproperty, coloured, commandline_to_str,
-                     CompilerInfo,
-                     fatal_error, get_compiler_info, get_program_version, get_version_output, include_local_file,
-                     is_jenkins_build, OSInfo, popen_handle_noexec, print_command, replace_one, run_command,
-                     status_update, ThreadJoiner, warning_message)
+from ..utils import (AnsiColour, cached_property, classproperty, coloured, fatal_error, include_local_file,
+                     is_jenkins_build, OSInfo, replace_one, status_update, ThreadJoiner, warning_message)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
@@ -555,6 +555,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                            run_in_pretend_mode=run_in_pretend_mode, raise_in_pretend_mode=raise_in_pretend_mode,
                            no_print=no_print, replace_env=replace_env, **kwargs)
 
+    def set_env(self, *, print_verbose_only=True, **environ):
+        return set_env(print_verbose_only=print_verbose_only, config=self.config, **environ)
+
+    @staticmethod
+    def commandline_to_str(args: "typing.Iterable[typing.Union[str,Path]]") -> str:
+        return commandline_to_str(args)
+
     @classmethod
     def get_config_option_name(cls, option: str) -> str:
         option = inspect.getattr_static(cls, option)
@@ -796,7 +803,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if self.config.write_logfile and logfile_path.is_file() and not append_to_logfile:
             logfile_path.unlink()  # remove old logfile
         args = list(map(str, args))  # make sure all arguments are strings
-        cmd_str = commandline_to_str(args)
+        cmd_str = self.commandline_to_str(args)
 
         if not self.config.write_logfile:
             if stdout_filter is None:
@@ -2331,7 +2338,7 @@ class Project(SimpleProject):
     def set_configure_prog_with_args(self, prog: str, path: Path, args: list):
         fullpath = str(path)
         if args:
-            fullpath += " " + commandline_to_str(args)
+            fullpath += " " + self.commandline_to_str(args)
         self.configure_environment[prog] = fullpath
 
     def configure(self, cwd: Path = None, configure_path: Path = None):
@@ -2775,7 +2782,7 @@ class CMakeProject(Project):
             if isinstance(value, bool):
                 strval = "1" if value else "0"
             elif isinstance(value, list):
-                strval = commandline_to_str(value)
+                strval = self.commandline_to_str(value)
             else:
                 strval = str(value)
             assert "@" + key + "@" in configured_template, key
@@ -3045,7 +3052,7 @@ class MakefileProject(Project):
     def set_make_cmd_with_args(self, var, cmd: Path, args: list):
         value = str(cmd)
         if args:
-            value += " " + commandline_to_str(args)
+            value += " " + self.commandline_to_str(args)
         if self.set_commands_on_cmdline:
             self.make_args.set(**{var: value})
         else:

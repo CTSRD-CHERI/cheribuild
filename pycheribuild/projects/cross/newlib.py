@@ -33,7 +33,6 @@ from pathlib import Path
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository, MakeCommandKind)
-from ...utils import commandline_to_str
 
 
 class BuildNewlib(CrossCompileAutotoolsProject):
@@ -101,7 +100,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
                 # self.make_args.env_vars[k2] = str(v)
 
     def configure(self):
-        target_cflags = commandline_to_str(self.target_info.essential_compiler_and_linker_flags + self.COMMON_FLAGS)
+        target_cflags = self.commandline_to_str(self.target_info.essential_compiler_and_linker_flags + self.COMMON_FLAGS)
         bindir = self.sdk_bindir
 
         self.add_configure_vars(

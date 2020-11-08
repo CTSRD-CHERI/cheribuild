@@ -32,7 +32,6 @@
 import os
 
 from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileProject, DefaultInstallDir, GitRepository
-from ...utils import set_env
 
 
 class BuildRtems(CrossCompileProject):
@@ -78,7 +77,7 @@ class BuildRtems(CrossCompileProject):
         self._run_waf("install")
 
     def process(self):
-        with set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
+        with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
                      CFLAGS="--sysroot=" + str(self.sdk_sysroot),
                      LDFLAGS="--sysroot=" + str(self.sdk_sysroot)):
             super().process()

@@ -40,11 +40,10 @@ from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_st
                        MakeCommandKind, MakeOptions, Project, SimpleProject, TargetBranchInfo)
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ComputedDefaultValue
-from ...config.target_info import AutoVarInit, CrossCompileTarget
-from ...config.target_info import CompilerType as FreeBSDToolchainKind
+from ...config.target_info import AutoVarInit, CompilerType as FreeBSDToolchainKind, CrossCompileTarget
+from ...processutils import get_compiler_info, latest_system_clang_tool, print_command
 from ...targets import target_manager
-from ...utils import (classproperty, commandline_to_str, get_compiler_info, include_local_file, is_jenkins_build,
-                      latest_system_clang_tool, OSInfo, print_command, ThreadJoiner)
+from ...utils import classproperty, include_local_file, is_jenkins_build, OSInfo, ThreadJoiner
 
 
 def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
@@ -991,7 +990,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 make_args.set_env(WANT_CHERI="pure")
         colour_diags = "export CLANG_FORCE_COLOR_DIAGNOSTICS=always; " if self.config.clang_colour_diags else ""
         build_cmd = "{colour_diags} {clean} && {build} && {install} && echo \"  Done.\"".format(
-            build=make_in_subdir + "all " + commandline_to_str(
+            build=make_in_subdir + "all " + self.commandline_to_str(
                 self.jflag) if not skip_build else "echo \"  Skipping make all\"",
             clean=make_in_subdir + "clean" if not skip_clean else "echo \"  Skipping make clean\"",
             install=install_cmd, colour_diags=colour_diags)

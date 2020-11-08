@@ -35,7 +35,7 @@ from collections import OrderedDict
 
 from .config.chericonfig import CheriConfig
 from .config.target_info import CrossCompileTarget
-from .utils import AnsiColour, coloured, fatal_error, set_env, status_update, warning_message
+from .utils import AnsiColour, coloured, fatal_error, status_update, warning_message
 
 if typing.TYPE_CHECKING:  # no-combine
     from .projects.project import SimpleProject  # no-combine
@@ -82,7 +82,7 @@ class Target(object):
         if self._completed:
             return
         project = self.get_or_create_project(None, config)
-        with set_env(PATH=config.dollar_path_with_other_tools):
+        with project.set_env(PATH=config.dollar_path_with_other_tools):
             # make sure all system dependencies exist first
             project.check_system_dependencies()
 
@@ -108,7 +108,7 @@ class Target(object):
         new_env = {"PATH": project.config.dollar_path_with_other_tools}
         if project.config.clang_colour_diags:
             new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
-        with set_env(**new_env):
+        with project.set_env(**new_env):
             func(project)
         status_update(msg, "for target '" + self.name + "' in", time.time() - starttime, "seconds")
 

@@ -31,7 +31,8 @@ import typing
 from pathlib import Path
 
 from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
-from ..utils import get_program_version, OSInfo, set_env
+from ..utils import OSInfo
+from ..processutils import get_program_version
 
 
 class BuildElftoolchain(Project):
@@ -163,5 +164,5 @@ class BuildElftoolchain(Project):
 
     def process(self):
         # work around bug in latest bmake that assumes metamode support
-        with set_env(META_NOECHO="echo"):
+        with self.set_env(META_NOECHO="echo"):
             super().process()

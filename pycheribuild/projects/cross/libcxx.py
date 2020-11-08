@@ -39,7 +39,7 @@ from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import CMakeProject, ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD
 from ...config.chericonfig import BuildType
-from ...utils import commandline_to_str, OSInfo, set_env
+from ...utils import OSInfo
 
 
 # A base class to set the default installation directory
@@ -65,8 +65,8 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
     def configure(self, **kwargs):
         # TODO: should share some code with libcxx
         # to find the libcxx lit config files and library:
-        test_compiler_flags = commandline_to_str(self.default_compiler_flags)
-        test_linker_flags = commandline_to_str(self.default_ldflags)
+        test_compiler_flags = self.commandline_to_str(self.default_compiler_flags)
+        test_linker_flags = self.commandline_to_str(self.default_ldflags)
 
         cxx_instance = BuildLibCXX.get_instance(self)
         if self.compiling_for_mips(include_purecap=True) and self.target_info.is_freebsd():
@@ -95,9 +95,9 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=False,
                                    LIBUNWIND_ENABLE_SHARED=True)
             # collect_test_binaries = self.build_dir / "test-output"
-            # executor = commandline_to_str([self.source_dir / "../libcxx/utils/copy_files.py",
+            # executor = self.commandline_to_str([self.source_dir / "../libcxx/utils/copy_files.py",
             #                                "--output-dir", collect_test_binaries])
-            executor = commandline_to_str([self.source_dir / "../libcxx/utils/compile_only.py"])
+            executor = self.commandline_to_str([self.source_dir / "../libcxx/utils/compile_only.py"])
             self.add_cmake_options(
                 LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                               "/libunwind-test-results.xml --max-time 3600 --timeout 120 -s -vv -j1",
@@ -176,7 +176,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
             self.info("Baremetal tests not implemented")
             return
         # TODO: this won't work on macOS
-        with set_env(LD_LIBRARY_PATH=self.build_dir / "lib"):
+        with self.set_env(LD_LIBRARY_PATH=self.build_dir / "lib"):
             if self.compiling_for_host():
                 self.run_cmd("ctest", ".", "-VV", cwd=self.build_dir)
             else:
@@ -280,8 +280,8 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             self.common_warning_flags.append("-Werror=cheri")
 
         # We need to build with -G0 otherwise we get R_MIPS_GPREL16 out of range linker errors
-        test_compile_flags = commandline_to_str(self.default_compiler_flags)
-        test_linker_flags = commandline_to_str(self.default_ldflags)
+        test_compile_flags = self.commandline_to_str(self.default_compiler_flags)
+        test_linker_flags = self.commandline_to_str(self.default_ldflags)
         print("test_compile_flags:", test_compile_flags)
 
         if self.target_info.is_baremetal():
@@ -316,9 +316,9 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             LIBCXX_ENABLE_STATIC_ABI_LIBRARY=not self.target_info.is_baremetal(),
             )
         if self.only_compile_tests:
-            executor = commandline_to_str([self.source_dir / "utils/compile_only.py"])
+            executor = self.commandline_to_str([self.source_dir / "utils/compile_only.py"])
         elif self.collect_test_binaries:
-            executor = commandline_to_str([self.source_dir / "utils/copy_files.py",
+            executor = self.commandline_to_str([self.source_dir / "utils/copy_files.py",
                                            "--output-dir", self.collect_test_binaries])
         elif self.target_info.is_baremetal():
             run_qemu_script = self.target_info.sdk_root_dir / "baremetal/mips64-qemu-elf/bin/run_with_qemu.py"
@@ -337,7 +337,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
                                               nfs_dir=self.nfs_mounted_path, nfs_in_target=self.nfs_path_in_qemu)
         else:
             self.libcxx_lit_jobs = " -j1"  # We can only run one job here since we are using scp
-            executor = commandline_to_str([self.source_dir / "utils/ssh.py",
+            executor = self.commandline_to_str([self.source_dir / "utils/ssh.py",
                                            "--host", "{user}@{host}:{port}".format(host=self.qemu_host,
                                                                                    user=self.qemu_user,
                                                                                    port=self.qemu_port)])
@@ -432,7 +432,7 @@ class BuildLlvmLibs(CMakeProject):
             except subprocess.CalledProcessError:
                 self.fatal(self.get_config_option_name("test_localhost_via_ssh"), "selected but cannot ssh to",
                            ssh_host)
-            executor = commandline_to_str([self.source_dir / "../libcxx/utils/ssh.py", "--host", ssh_host])
+            executor = self.commandline_to_str([self.source_dir / "../libcxx/utils/ssh.py", "--host", ssh_host])
             args.append("-Dexecutor=" + executor)
         self.run_cmd([sys.executable, "./bin/llvm-lit"] + args, cwd=self.build_dir)
 

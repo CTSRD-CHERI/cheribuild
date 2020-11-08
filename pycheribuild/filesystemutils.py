@@ -35,8 +35,8 @@ import threading
 import typing
 from pathlib import Path
 
-from .utils import (AnsiColour, ConfigBase, fatal_error, print_command, run_command, status_update, ThreadJoiner,
-                    warning_message)
+from .processutils import print_command, run_command
+from .utils import AnsiColour, ConfigBase, fatal_error, status_update, ThreadJoiner, warning_message
 
 
 class FileSystemUtils(object):

@@ -38,7 +38,8 @@ from typing import Any, Dict, Tuple, Union
 from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project,
                       SimpleProject)
 from ..targets import target_manager
-from ..utils import AnsiColour, coloured, commandline_to_str, get_program_version, OSInfo, set_env, ThreadJoiner
+from ..utils import AnsiColour, coloured, OSInfo, ThreadJoiner
+from ..processutils import get_program_version
 
 if typing.TYPE_CHECKING:
     _MixinBase = Project
@@ -85,7 +86,7 @@ class OpamMixin(_MixinBase):
         return cmdline
 
     def _opam_cmd_str(self, command, *args, _add_switch):
-        return commandline_to_str(self._opam_cmd(command, *args, _add_switch=_add_switch))
+        return self.commandline_to_str(self._opam_cmd(command, *args, _add_switch=_add_switch))
 
     def _ensure_correct_switch(self):
         if not self.__using_correct_switch and not self.__ignore_switch_version:
@@ -109,7 +110,7 @@ class OpamMixin(_MixinBase):
             if ignore_errors:
                 # noinspection PyUnresolvedReferences
                 self.verbose_print(
-                    "Ignoring non-zero exit code from " + coloured(AnsiColour.yellow, commandline_to_str(command_list)))
+                    "Ignoring non-zero exit code from " + coloured(AnsiColour.yellow, self.commandline_to_str(command_list)))
             else:
                 raise
 
@@ -304,7 +305,7 @@ class RunSailShell(OpamMixin, SimpleProject):
         self.info("Starting sail shell (using {})... ".format(shell))
         import subprocess
         try:
-            with set_env(PATH=str(self.config.cheri_sdk_bindir) + ":" + os.getenv("PATH", ""),
+            with self.set_env(PATH=str(self.config.cheri_sdk_bindir) + ":" + os.getenv("PATH", ""),
                          PS1="SAIL ENV:\\w> "):
                 self.run_cmd("which", "sail")
                 self.run_command_in_ocaml_env([shell, "--verbose", "--norc", "-i"], cwd=os.getcwd())
@@ -458,7 +459,7 @@ class BuildSailFromSource(OcamlProject):
         lemdir = BuildLem.get_source_dir(self)
         ottdir = BuildOtt.get_source_dir(self)
         linksemdir = BuildLinksem.get_source_dir(self)
-        with set_env(LEMLIB=lemdir / "library",
+        with self.set_env(LEMLIB=lemdir / "library",
                      PATH="{}:{}:".format(ottdir / "bin", lemdir / "bin") + os.environ["PATH"],
                      OCAMLPATH="{}:{}".format(lemdir / "ocaml-lib/local", linksemdir / "src/local")):
             super().process()
@@ -500,7 +501,7 @@ class BuildLinksem(OcamlProject):
         lemdir = BuildLem.get_source_dir(self)
         ottdir = BuildOtt.get_source_dir(self)
         # linksemdir = BuildLinkSem.get_source_dir(self)
-        with set_env(LEMLIB=lemdir / "library",
+        with self.set_env(LEMLIB=lemdir / "library",
                      PATH="{}:{}:".format(ottdir / "bin", lemdir / "bin") + os.environ["PATH"],
                      OCAMLPATH=lemdir / "ocaml-lib/local"):
             super().process()

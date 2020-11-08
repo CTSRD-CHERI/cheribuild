@@ -35,7 +35,7 @@ from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProje
                                   DefaultInstallDir, GitRepository, MakeCommandKind)
 from ..project import ComputedDefaultValue, ExternallyManagedSourceRepository
 from ...config.target_info import CPUArchitecture
-from ...utils import commandline_to_str, is_jenkins_build, set_env
+from ...utils import is_jenkins_build
 
 
 class BuildMibench(CrossCompileProject):
@@ -81,7 +81,7 @@ class BuildMibench(CrossCompileProject):
                            CHERI128_SDK=self.target_info.sdk_root_dir,
                            CHERI256_SDK=self.target_info.sdk_root_dir,
                            CHERI_SDK=self.target_info.sdk_root_dir)
-        with set_env(**new_env):
+        with self.set_env(**new_env):
             # We can't fall back to /usr/bin/ar here since that breaks on MacOS
             if not self.compiling_for_host():
                 self.make_args.set(AR=str(self.sdk_bindir / "llvm-ar") + " rc")
@@ -90,8 +90,8 @@ class BuildMibench(CrossCompileProject):
                 self.make_args.set(MIPS_SYSROOT=self.sdk_sysroot, CHERI128_SYSROOT=self.sdk_sysroot,
                                    CHERI256_SYSROOT=self.sdk_sysroot)
 
-            self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
-            self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
+            self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(self.default_compiler_flags))
+            self.make_args.set(ADDITIONAL_LDFLAGS=self.commandline_to_str(self.default_ldflags))
             self.make_args.set(VERSION=self.benchmark_version)
             self.makedirs(self.build_dir / "bundle")
             self.make_args.set(BUNDLE_DIR=self.build_dir / self.bundle_dir)
@@ -174,12 +174,12 @@ class BuildOlden(CrossCompileProject):
                            CHERI128_SDK=self.target_info.sdk_root_dir,
                            CHERI256_SDK=self.target_info.sdk_root_dir,
                            CHERI_SDK=self.target_info.sdk_root_dir)
-        with set_env(**new_env):
+        with self.set_env(**new_env):
             if not self.compiling_for_host():
                 self.make_args.set(SYSROOT_DIRNAME=self.cross_sysroot_path.name)
             self.make_args.add_flags("-f", "Makefile.jenkins")
-            self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
-            self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
+            self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(self.default_compiler_flags))
+            self.make_args.set(ADDITIONAL_LDFLAGS=self.commandline_to_str(self.default_ldflags))
             if self.compiling_for_host():
                 self.run_make("x86")
             elif self.compiling_for_mips(include_purecap=False):
@@ -371,12 +371,12 @@ class BuildSpec2006(CrossCompileProject):
         config_file_text = config_file_text.replace("@CONFIG_NAME@", self.config_name)
         config_file_text = config_file_text.replace("@CLANG@", str(self.CC))
         config_file_text = config_file_text.replace("@CLANGXX@", str(self.CXX))
-        config_file_text = config_file_text.replace("@CFLAGS@", commandline_to_str(
+        config_file_text = config_file_text.replace("@CFLAGS@", self.commandline_to_str(
             self.default_compiler_flags + self.CFLAGS + ["-ggdb"]))
-        config_file_text = config_file_text.replace("@CXXFLAGS@", commandline_to_str(
+        config_file_text = config_file_text.replace("@CXXFLAGS@", self.commandline_to_str(
             self.default_compiler_flags + self.CXXFLAGS + ["-ggdb"]))
         config_file_text = config_file_text.replace("@LDFLAGS@",
-                                                    commandline_to_str(self.default_ldflags + self.LDFLAGS))
+                                                    self.commandline_to_str(self.default_ldflags + self.LDFLAGS))
         config_file_text = config_file_text.replace("@SYSROOT@",
                                                     str(self.sdk_sysroot) if not self.compiling_for_host() else "/")
         config_file_text = config_file_text.replace("@SYS_BIN@",
@@ -392,7 +392,7 @@ runspec -c {spec_config_name} --noreportable --action build {benchmark_list}
 # ensure that the overwrite prompt gets yes as an answer:
 echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test \
                  --iterations 1 --make_bundle {spec_config_name} {benchmark_list}
-""".format(benchmark_list=commandline_to_str(self.benchmark_list), spec_config_name=self.config_name)
+""".format(benchmark_list=self.commandline_to_str(self.benchmark_list), spec_config_name=self.config_name)
         # TODO: add extra files to the bundle instead of copying later?
         #  https://www.spec.org/cpu2006/Docs/runspec.html#makebundle
         self.run_shell_script(script, shell="bash", cwd=self.build_dir / "spec")
@@ -496,7 +496,7 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
             benchmark_args = ["-d1", "-r" + str(num_iterations),
                               "-t", self.config_name,
                               "-o", self.default_statcounters_csv_name,
-                              "-b", commandline_to_str(self.benchmark_list),
+                              "-b", self.commandline_to_str(self.benchmark_list),
                               self.bluehive_benchmark_script_archname]
             if self.config.run_under_gdb:
                 benchmark_args.insert(0, "-g")
@@ -558,14 +558,14 @@ class BuildLMBench(CrossCompileProject):
             new_env = dict(MIPS_SDK=self.target_info.sdk_root_dir,
                            CHERI128_SDK=self.target_info.sdk_root_dir,
                            CHERI_SDK=self.target_info.sdk_root_dir)
-        with set_env(**new_env):
+        with self.set_env(**new_env):
             self.make_args.set(CC="clang")
             if not self.compiling_for_host():
                 self.make_args.set(AR=str(self.sdk_bindir / "llvm-ar"))
                 self.make_args.set(OS="mips64c128-unknown-freebsd")
 
-            self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
-            self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
+            self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(self.default_compiler_flags))
+            self.make_args.set(ADDITIONAL_LDFLAGS=self.commandline_to_str(self.default_ldflags))
             if self.build_type.is_debug:
                 self.run_make("debug", cwd=self.source_dir / "src")
             else:
@@ -644,7 +644,7 @@ class BuildUnixBench(CrossCompileProject):
             new_env = dict(MIPS_SDK=self.target_info.sdk_root_dir,
                            CHERI128_SDK=self.target_info.sdk_root_dir,
                            CHERI_SDK=self.target_info.sdk_root_dir)
-        with set_env(**new_env):
+        with self.set_env(**new_env):
             self.make_args.set(CC="clang")
             if self.compiling_for_mips(include_purecap=True):
                 self.make_args.set(OSNAME="freebsd")
@@ -657,7 +657,7 @@ class BuildUnixBench(CrossCompileProject):
             cflags = self.default_compiler_flags + ["-lstatcounters"]
             if self.fixed_iterations:
                 cflags += ["-DUNIXBENCH_FIXED_ITER"]
-            self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(cflags))
+            self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(cflags))
             if self.build_type.is_debug:
                 self.run_make(cwd=self.source_dir / "UnixBench")
             else:

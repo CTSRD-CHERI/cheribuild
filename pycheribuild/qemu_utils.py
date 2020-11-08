@@ -34,7 +34,7 @@ import typing
 from pathlib import Path
 
 from .config.target_info import CPUArchitecture, CrossCompileTarget
-from .utils import run_command
+from .processutils import run_command
 
 
 class QemuOptions:

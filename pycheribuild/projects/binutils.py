@@ -33,7 +33,7 @@ import typing
 from pathlib import Path
 
 from .project import AutotoolsProject, DefaultInstallDir, GitRepository
-from ..utils import get_compiler_info
+from ..processutils import get_compiler_info
 
 
 class BuildGnuBinutils(AutotoolsProject):

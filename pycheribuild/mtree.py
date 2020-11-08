@@ -37,7 +37,8 @@ import typing
 from collections import OrderedDict
 from pathlib import Path
 
-from .utils import commandline_to_str, status_update, warning_message
+from .processutils import commandline_to_str
+from .utils import status_update, warning_message
 
 
 class MtreeEntry(object):

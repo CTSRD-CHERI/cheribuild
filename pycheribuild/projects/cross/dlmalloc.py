@@ -29,7 +29,7 @@
 #
 
 from .crosscompileproject import (CrossCompileProject, DefaultInstallDir, GitRepository, MakeCommandKind)
-from ...utils import commandline_to_str, set_env
+from ...processutils import commandline_to_str
 
 
 class DLMalloc(CrossCompileProject):
@@ -123,7 +123,7 @@ class DLMalloc(CrossCompileProject):
         new_env = dict(CC=self.CC, CFLAGS=commandline_to_str(self.default_compiler_flags + self.CFLAGS))
         if not self.compiling_for_host():
             new_env["CHERI_SDK"] = self.target_info.sdk_root_dir,
-        with set_env(**new_env):
+        with self.set_env(**new_env):
             if self.just_so:
                 self.run_make("libdlmalloc_nonreuse.so", cwd=self.build_dir)
             else:

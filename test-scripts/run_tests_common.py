@@ -51,7 +51,7 @@ import junitparser  # noqa: E402
 import pexpect  # noqa: E402
 from pycheribuild import boot_cheribsd  # noqa: E402
 from pycheribuild.config.target_info import CrossCompileTarget  # noqa: E402
-from pycheribuild.utils import commandline_to_str  # noqa: E402
+from pycheribuild.processutils import commandline_to_str  # noqa: E402
 
 __all__ = ["run_tests_main", "boot_cheribsd", "junitparser", "pexpect", "commandline_to_str", "CrossCompileTarget"]
 

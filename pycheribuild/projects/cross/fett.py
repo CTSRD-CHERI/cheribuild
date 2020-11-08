@@ -40,7 +40,7 @@ from .sqlbox import BuildFettSQLbox
 from ..disk_image import BuildCheriBSDDiskImage
 from ..run_qemu import LaunchCheriBSD
 from ...mtree import MtreeFile
-from ...utils import classproperty, commandline_to_str
+from ...utils import classproperty
 
 
 class BuildFettConfig(FettProjectMixin, CrossCompileProject):
@@ -190,8 +190,8 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
             self.COMMON_LDFLAGS.append("-lmd")  # kcgi requires libmd
         self.make_args.set_env(
             CC=str(self.CC),
-            LDFLAGS=commandline_to_str(self.default_ldflags),
-            CFLAGS=commandline_to_str(self.default_compiler_flags),
+            LDFLAGS=self.commandline_to_str(self.default_ldflags),
+            CFLAGS=self.commandline_to_str(self.default_compiler_flags),
             BVRS_OS="freebsd"
             )
         # Note: We must set these variables on the command line since the Makefile assigns to them with =

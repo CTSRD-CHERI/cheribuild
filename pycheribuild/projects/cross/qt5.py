@@ -34,7 +34,8 @@ from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, Cr
                                   CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
                                   Linkage, MakeCommandKind)
 from ...config.loader import ComputedDefaultValue
-from ...utils import commandline_to_str, get_compiler_info, OSInfo
+from ...utils import OSInfo
+from ...processutils import get_compiler_info
 
 
 # This class is used to build qtbase and all of qt5
@@ -111,8 +112,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configure_args.extend([
                 "-device", "freebsd-generic-clang",
                 "-device-option", "CROSS_COMPILE={}/{}-".format(self.sdk_bindir, cross_compile_prefix),
-                "-device-option", "COMPILER_FLAGS=" + commandline_to_str(compiler_flags),
-                "-device-option", "LINKER_FLAGS=" + commandline_to_str(linker_flags),
+                "-device-option", "COMPILER_FLAGS=" + self.commandline_to_str(compiler_flags),
+                "-device-option", "LINKER_FLAGS=" + self.commandline_to_str(linker_flags),
                 "-sysroot", self.cross_sysroot_path,
                 "-prefix", "/usr/local/" + self._xtarget.generic_suffix
                 ])

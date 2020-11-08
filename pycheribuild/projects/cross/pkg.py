@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
-from ...utils import commandline_to_str
 
 
 class BuildPkg(CrossCompileAutotoolsProject):
@@ -67,9 +66,9 @@ class BuildPkg(CrossCompileAutotoolsProject):
                 self.fatal("Could not find libarchive:", e, fixit_hint="brew install libarchive")
         if self.build_type.should_include_debug_info:
             self.COMMON_FLAGS.append("-g")
-        self.make_args.set_env(CPPFLAGS=commandline_to_str(
+        self.make_args.set_env(CPPFLAGS=self.commandline_to_str(
             self.COMMON_FLAGS + self.compiler_warning_flags + self.optimization_flags + self.COMMON_FLAGS))
-        self.make_args.set_env(LDFLAGS=commandline_to_str(self.default_ldflags))
+        self.make_args.set_env(LDFLAGS=self.commandline_to_str(self.default_ldflags))
 
     def compile(self, **kwargs):
         super().compile(parallel=False, **kwargs)

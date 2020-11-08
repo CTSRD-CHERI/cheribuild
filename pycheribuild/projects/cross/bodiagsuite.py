@@ -33,7 +33,8 @@ from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, Cr
                                   DefaultInstallDir, GitRepository)
 from ..effectivesan import BuildEffectiveSan
 from ..softboundcets import BuildSoftBoundCETS
-from ...utils import get_compiler_info, OSInfo
+from ...processutils import get_compiler_info
+from ...utils import OSInfo
 
 
 class BuildBODiagSuite(CrossCompileCMakeProject):

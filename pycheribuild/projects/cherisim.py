@@ -32,7 +32,7 @@ from pathlib import Path
 
 from .project import (BasicCompilationTargets, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project,
                       ReuseOtherProjectRepository)
-from ..utils import commandline_to_str, OSInfo
+from ..utils import OSInfo
 
 
 class BuildBluespecCompiler(Project):
@@ -109,7 +109,7 @@ class BuildCheriSim(Project):
             self.fatal("Could not find setup.sh, please set --cheri-sim/source-directory or --fpga-env-setup-script")
         source_cmd = "source {setup_script}".format(setup_script=setup_sh)
         self.run_shell_script(
-            source_cmd + " && " + commandline_to_str(self.get_make_commandline("sim", parallel=False)),
+            source_cmd + " && " + self.commandline_to_str(self.get_make_commandline("sim", parallel=False)),
             cwd=self.source_dir / "cheri", shell="bash")
 
     def install(self, **kwargs):
@@ -147,7 +147,7 @@ class BuildBeriCtl(Project):
             setup_sh = self.config.fpga_custom_env_setup_script
         if not setup_sh.exists():
             self.fatal("Could not find setup.sh")
-        self.run_shell_script("source {} && ".format(shlex.quote(str(setup_sh))) + commandline_to_str(
+        self.run_shell_script("source {} && ".format(shlex.quote(str(setup_sh))) + self.commandline_to_str(
             self.get_make_commandline("", parallel=False)), cwd=self.source_dir, shell="bash")
 
     def install(self, **kwargs):

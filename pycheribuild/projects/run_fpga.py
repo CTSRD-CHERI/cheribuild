@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Optional
 
 from .cherisim import BuildBeriCtl, BuildCheriSim
-from .project import CheriConfig, commandline_to_str, SimpleProject
+from .project import CheriConfig, SimpleProject
 from ..config.compilation_targets import CompilationTargets
 
 
@@ -96,8 +96,8 @@ source "{env_setup_script}"
 set -x
 export PATH="$PATH:{cherilibs_dir}/tools:{cherilibs_dir}/tools/debug"
 exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv {subcmd_and_args}
-""".format(env_setup_script=env_setup_script, cherilibs_dir=cherilibs_dir, basic_args=commandline_to_str(basic_args),
-           subcmd_and_args=commandline_to_str(subcmd_and_args), cheribuild_path=cheribuild_path)
+""".format(env_setup_script=env_setup_script, cherilibs_dir=cherilibs_dir, cheribuild_path=cheribuild_path,
+           basic_args=self.commandline_to_str(basic_args), subcmd_and_args=self.commandline_to_str(subcmd_and_args))
         self.run_shell_script(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
 

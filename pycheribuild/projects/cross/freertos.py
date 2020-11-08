@@ -34,7 +34,7 @@ import os
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository)
 from ...config.loader import ComputedDefaultValue
-from ...utils import get_compiler_info, set_env
+from ...processutils import get_compiler_info
 
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
@@ -151,7 +151,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         if self.demo_app not in self.supported_demo_apps[self.demo]:
             self.fatal(self.demo + " Demo doesn't support/have " + self.demo_app)
 
-        with set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
+        with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
                      # Add compiler-rt location to the search path
                      LDFLAGS="-L" + str(self.compiler_resource / "lib")):
             super().process()

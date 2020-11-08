@@ -32,7 +32,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
-from ..utils import get_compiler_info, OSInfo
+from ..processutils import get_compiler_info
+from ..utils import OSInfo
 
 if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine    # pytype: disable=pyi-error

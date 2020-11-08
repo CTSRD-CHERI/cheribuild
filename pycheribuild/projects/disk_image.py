@@ -44,7 +44,7 @@ from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUAr
 from ..config.compilation_targets import CheriBSDMorelloTargetInfo, CompilationTargets
 from ..mtree import MtreeFile
 from ..targets import target_manager
-from ..utils import (AnsiColour, classproperty, coloured, include_local_file, OSInfo, set_env)
+from ..utils import AnsiColour, classproperty, coloured, include_local_file, OSInfo
 
 
 # Notes:
@@ -668,7 +668,7 @@ class _BuildDiskImageBase(SimpleProject):
         self._cleanup_old_files(self.disk_image_path, self.crosscompile_target.build_suffix(self.config), old_names)
 
         if not OSInfo.IS_FREEBSD and self.cross_build_image:
-            with set_env(PATH=str(self.config.output_root / "freebsd-cross/bin") + ":" + os.getenv("PATH")):
+            with self.set_env(PATH=str(self.config.output_root / "freebsd-cross/bin") + ":" + os.getenv("PATH")):
                 self.__process()
         else:
             self.__process()

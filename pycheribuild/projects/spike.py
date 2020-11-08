@@ -31,8 +31,7 @@ import sys
 
 from .cross.bbl import BuildBBLNoPayload
 from .cross.cheribsd import BuildCheriBsdMfsKernel
-from .project import (AutotoolsProject, BuildType, CheriConfig, commandline_to_str, DefaultInstallDir, GitRepository,
-                      MakeCommandKind, SimpleProject)
+from .project import (AutotoolsProject, BuildType, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets
 
 
@@ -58,8 +57,8 @@ class BuildCheriSpike(AutotoolsProject):
         self.configure_args.append("--disable-rvfi-dii")
         # We have to pass LDFLAGS as part of CC/CXX since the build system is dumb.
         common_flags = self.default_compiler_flags + self.default_ldflags
-        self.configure_environment["CC"] = commandline_to_str([self.CC] + common_flags + self.CFLAGS)
-        self.configure_environment["CXX"] = commandline_to_str([self.CXX] + common_flags + self.CXXFLAGS)
+        self.configure_environment["CC"] = self.commandline_to_str([self.CC] + common_flags + self.CFLAGS)
+        self.configure_environment["CXX"] = self.commandline_to_str([self.CXX] + common_flags + self.CXXFLAGS)
 
     @classmethod
     def get_simulator_binary(cls, caller):

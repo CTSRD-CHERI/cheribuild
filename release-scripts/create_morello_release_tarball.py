@@ -30,7 +30,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-from pycheribuild.utils import default_make_jobs_count, GlobalConfig, run_command, warning_message
+from pycheribuild.utils import default_make_jobs_count, GlobalConfig, warning_message
+from pycheribuild.processutils import run_command
 
 
 def fixme(tag):

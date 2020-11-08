@@ -34,7 +34,7 @@ from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CPUArchitecture, DefaultInstallDir, GitRepository,
                        MakeCommandKind, Project)
 from ...config.compilation_targets import CompilationTargets
-from ...utils import classproperty, commandline_to_str, OSInfo
+from ...utils import classproperty, OSInfo
 
 
 def opensbi_install_dir(config: CheriConfig, project: "Project") -> Path:
@@ -70,7 +70,7 @@ class BuildOpenSBI(Project):
 
     def setup(self):
         super().setup()
-        compflags = " " + commandline_to_str(self.target_info.essential_compiler_and_linker_flags)
+        compflags = " " + self.commandline_to_str(self.target_info.essential_compiler_and_linker_flags)
         compflags += " -Qunused-arguments"  # -mstrict-align -no-pie
         self.make_args.set(
             O=self.build_dir,  # output dir

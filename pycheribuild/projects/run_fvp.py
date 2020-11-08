@@ -38,7 +38,8 @@ from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, Buil
 from .project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
-from ..utils import cached_property, extract_version, OSInfo, popen, set_env
+from ..utils import cached_property, OSInfo
+from ..processutils import extract_version, popen
 
 
 class InstallMorelloFVP(SimpleProject):
@@ -324,7 +325,7 @@ class LaunchFVPBase(SimpleProject):
                 self.fatal("FVP path", self.arch_model_path, "does not exist, set the",
                            "--" + self.get_config_option_name("simulator_path"), "config option!")
 
-            with set_env(ARMLMD_LICENSE_FILE=self.license_server, print_verbose_only=False):
+            with self.set_env(ARMLMD_LICENSE_FILE=self.license_server, print_verbose_only=False):
                 sim_binary = self.ensure_file_exists("Model binary",
                                                      self.arch_model_path /
                                                      "models/Linux64_GCC-6.4/FVP_Base_RevC-Rainier")

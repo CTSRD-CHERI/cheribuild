@@ -39,8 +39,8 @@ from pathlib import Path
 from typing import Optional
 
 from .loader import ComputedDefaultValue, MyJsonEncoder
-from ..utils import (ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, latest_system_clang_tool,
-                     status_update, warning_message)
+from ..utils import (ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, status_update, warning_message)
+from ..processutils import latest_system_clang_tool
 
 
 class BuildType(Enum):

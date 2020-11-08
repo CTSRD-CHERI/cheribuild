@@ -33,7 +33,7 @@ import shutil
 from pathlib import Path
 
 from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
-from ..utils import OSInfo, set_env
+from ..utils import OSInfo
 
 SMB_OUT_OF_SOURCE_BUILD_WORKS = False
 
@@ -118,7 +118,7 @@ class BuildSamba(Project):
             # We need icu4c, krb5 and readline from homebrew:
             homebrew_keg_only_packages = ['icu4c', 'krb5', 'readline']
             homebrew_dirs = ["/usr/local/opt/" + x for x in homebrew_keg_only_packages]
-            with set_env(PATH=':'.join([x + "/bin" for x in homebrew_dirs]) + ':' +
+            with self.set_env(PATH=':'.join([x + "/bin" for x in homebrew_dirs]) + ':' +
                               ':'.join([x + "/sbin" for x in homebrew_dirs]) + ':' +
                               os.getenv("PATH", ""),
                          PKG_CONFIG_PATH=':'.join([x + "/lib/pkgconfig" for x in homebrew_dirs]) + ':' +

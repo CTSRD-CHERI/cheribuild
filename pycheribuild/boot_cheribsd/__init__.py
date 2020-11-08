@@ -52,7 +52,8 @@ from pathlib import Path
 
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..qemu_utils import QemuOptions, riscv_bios_arguments
-from ..utils import find_free_port, keep_terminal_sane
+from ..utils import find_free_port
+from ..processutils import keep_terminal_sane
 
 _cheribuild_root = Path(__file__).parent.parent.parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"

@@ -37,8 +37,8 @@ from pathlib import Path
 from .loader import ConfigOptionBase
 from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi,
                           TargetInfo)
-from ..utils import (cached_property, commandline_to_str, find_free_port, get_compiler_info, is_jenkins_build,
-                     SocketAndPort)
+from ..processutils import commandline_to_str, get_compiler_info
+from ..utils import cached_property, find_free_port, is_jenkins_build, SocketAndPort
 
 if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine

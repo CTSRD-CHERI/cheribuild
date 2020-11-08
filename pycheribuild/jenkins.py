@@ -49,8 +49,8 @@ from .projects.cross import *  # noqa: F401,F403
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project, SimpleProject
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
-from .utils import (commandline_to_str, fatal_error, get_program_version, init_global_config, OSInfo, run_command,
-                    status_update, ThreadJoiner, warning_message)
+from .processutils import commandline_to_str, get_program_version, run_command
+from .utils import fatal_error, init_global_config, OSInfo, status_update, ThreadJoiner, warning_message
 
 EXTRACT_SDK_TARGET = "extract-sdk"
 RUN_EVERYTHING_TARGET = "__run_everything__"

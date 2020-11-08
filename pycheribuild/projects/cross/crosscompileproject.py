@@ -34,15 +34,16 @@ import typing
 from pathlib import Path
 
 from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, CrossCompileTarget, DefaultInstallDir,
-                       GitRepository, Linkage, MakeCommandKind, MakefileProject, Project)
+                       GitRepository, Linkage, MakeCommandKind, MakefileProject, Project, commandline_to_str)
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import AutoVarInit
-from ...utils import AnsiColour, coloured, commandline_to_str, set_env
+from ...utils import AnsiColour, coloured
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",  # no-combine
            "CrossCompileTarget", "CrossCompileProject", "MakeCommandKind", "Linkage",  # no-combine
            "DefaultInstallDir", "BuildType", "CompilationTargets", "GitRepository",  # no-combine
-           "CrossCompileMixin", "FettProjectMixin", "CrossCompileMakefileProject"]  # no-combine
+           "CrossCompileMixin", "FettProjectMixin", "CrossCompileMakefileProject",  # no-combine
+           "commandline_to_str"]  # no-combine
 
 
 # This mixin sets supported_architectures to ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS and thereby
@@ -131,11 +132,11 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             # if a plain $CC can't compile programs.
             self.set_configure_prog_with_args("CC", self.CC, self.target_info.essential_compiler_and_linker_flags)
             self.set_configure_prog_with_args("CXX", self.CXX, self.target_info.essential_compiler_and_linker_flags)
-            # self.add_configure_env_arg("CPPFLAGS", commandline_to_str(CPPFLAGS))
-            self.add_configure_env_arg("CFLAGS", commandline_to_str(cppflags + self.CFLAGS))
-            self.add_configure_env_arg("CXXFLAGS", commandline_to_str(cppflags + self.CXXFLAGS))
+            # self.add_configure_env_arg("CPPFLAGS", self.commandline_to_str(CPPFLAGS))
+            self.add_configure_env_arg("CFLAGS", self.commandline_to_str(cppflags + self.CFLAGS))
+            self.add_configure_env_arg("CXXFLAGS", self.commandline_to_str(cppflags + self.CXXFLAGS))
             # this one seems to work:
-            self.add_configure_env_arg("LDFLAGS", commandline_to_str(self.LDFLAGS + self.default_ldflags))
+            self.add_configure_env_arg("LDFLAGS", self.commandline_to_str(self.LDFLAGS + self.default_ldflags))
 
             if not self.compiling_for_host():
                 self.set_configure_prog_with_args("CPP", self.CPP, cppflags)
@@ -153,7 +154,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     def process(self):
         if not self.compiling_for_host():
             # We run all these commands with $PATH containing $CHERI_SDK/bin to ensure the right tools are used
-            with set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH")):
+            with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH")):
                 super().process()
         else:
             # when building the native target we just rely on the host tools in /usr/bin

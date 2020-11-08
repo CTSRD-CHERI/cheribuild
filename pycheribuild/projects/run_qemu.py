@@ -43,7 +43,7 @@ from .cross.gdb import BuildGDB
 from .cross.rtems import BuildRtems
 from .disk_image import (BuildCheriBSDDiskImage, BuildFreeBSDGFEDiskImage, BuildFreeBSDImage,
                          BuildFreeBSDWithDefaultOptionsDiskImage)
-from .project import CheriConfig, commandline_to_str, CPUArchitecture, SimpleProject, TargetAliasWithDependencies
+from .project import CheriConfig, CPUArchitecture, SimpleProject, TargetAliasWithDependencies
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
 from ..qemu_utils import qemu_supports_9pfs, QemuOptions, riscv_bios_arguments
@@ -275,7 +275,7 @@ class LaunchQEMUBase(SimpleProject):
                 result.append("--eval-command=continue")
                 if extra_binary:
                     result.append("--init-eval-command=add-symbol-file -o 0 " + str(extra_binary))
-                return commandline_to_str(result)
+                return self.commandline_to_str(result)
 
             self.info("To start and connect GDB run the following command in another terminal:")
             path_to_kernel = self.current_kernel

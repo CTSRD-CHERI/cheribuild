@@ -39,7 +39,7 @@ from .project import (AutotoolsProject, BuildType, CheriConfig, CrossCompileTarg
                       MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
 from ..config.loader import ComputedDefaultValue
-from ..utils import commandline_to_str, get_compiler_info
+from ..processutils import  get_compiler_info
 
 
 class BuildQEMUBase(AutotoolsProject):
@@ -197,7 +197,7 @@ class BuildQEMUBase(AutotoolsProject):
             # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
             "--disable-werror",
             "--disable-pie",  # no need to build as PIE (this just slows down QEMU)
-            "--extra-cflags=" + commandline_to_str(self.default_compiler_flags + self.CFLAGS),
+            "--extra-cflags=" + self.commandline_to_str(self.default_compiler_flags + self.CFLAGS),
             "--cxx=" + str(self.CXX),
             "--cc=" + str(self.CC),
             # Using /usr/bin/make on macOS breaks compilation DB creation with bear since SIP prevents it from
@@ -208,10 +208,10 @@ class BuildQEMUBase(AutotoolsProject):
             self.make_args.set(V=1)  # Otherwise bear can't parse the compiler output
         ldflags = self.default_ldflags + self.LDFLAGS
         if ldflags:
-            self.configure_args.append("--extra-ldflags=" + commandline_to_str(ldflags))
+            self.configure_args.append("--extra-ldflags=" + self.commandline_to_str(ldflags))
         cxxflags = self.default_compiler_flags + self.CXXFLAGS
         if cxxflags:
-            self.configure_args.append("--extra-cxxflags=" + commandline_to_str(cxxflags))
+            self.configure_args.append("--extra-cxxflags=" + self.commandline_to_str(cxxflags))
 
     def run_tests(self):
         self.run_make("check", cwd=self.build_dir)
@@ -285,10 +285,10 @@ class BuildQEMU(BuildQEMUBase):
             tgt_info_riscv64 = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_RISCV64, fake_project)
             self.configure_args.extend([
                 "--cross-cc-mips=" + str(tgt_info_mips.c_compiler),
-                "--cross-cc-cflags-mips=" + commandline_to_str(
+                "--cross-cc-cflags-mips=" + self.commandline_to_str(
                     tgt_info_mips.essential_compiler_and_linker_flags).replace("=", " "),
                 "--cross-cc-riscv64=" + str(tgt_info_riscv64.c_compiler),
-                "--cross-cc-cflags-riscv64=" + commandline_to_str(
+                "--cross-cc-cflags-riscv64=" + self.commandline_to_str(
                     tgt_info_riscv64.essential_compiler_and_linker_flags).replace("=", " ")
                 ])
 

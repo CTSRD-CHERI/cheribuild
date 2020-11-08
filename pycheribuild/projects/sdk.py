@@ -35,7 +35,7 @@ from .cross.cheribsd import BuildCHERIBSD
 from .project import (CheriConfig, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject,
                       TargetAliasWithDependencies)
 from ..targets import target_manager
-from ..utils import classproperty, include_local_file, OSInfo, set_env
+from ..utils import classproperty, include_local_file, OSInfo
 
 
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
@@ -117,7 +117,7 @@ class StartCheriSDKShell(SimpleProject):
         new_man_path = str(self.config.cheri_sdk_dir / "share/man") + ":" + os.getenv("MANPATH", "") + ":"
         new_path = str(self.config.cheri_sdk_bindir) + ":" + str(self.config.dollar_path_with_other_tools)
         shell = os.getenv("SHELL", "/bin/sh")
-        with set_env(MANPATH=new_man_path, PATH=new_path):
+        with self.set_env(MANPATH=new_man_path, PATH=new_path):
             self.info("Starting CHERI SDK shell... ", end="")
             try:
                 self.run_cmd(shell)

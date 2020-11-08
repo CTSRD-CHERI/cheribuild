@@ -37,7 +37,7 @@ from .cross.cheribsd import BuildCHERIBSD
 from .cross.crosscompileproject import CheriConfig, CompilationTargets, CrossCompileProject
 from .disk_image import BuildCheriBSDDiskImage
 from .project import DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject
-from ..utils import set_env, ThreadJoiner
+from ..utils import ThreadJoiner
 
 
 class BuildSyzkaller(CrossCompileProject):
@@ -108,7 +108,7 @@ class BuildSyzkaller(CrossCompileProject):
         self.run_make(parallel=False, cwd=self.gosrc)
 
     def generate(self):
-        with set_env(PATH=self._new_path, SOURCEDIR=self.cheribsd_dir):
+        with self.set_env(PATH=self._new_path, SOURCEDIR=self.cheribsd_dir):
             self.run_make("extract", parallel=False, cwd=self.gosrc)
             self.run_make("generate", parallel=False, cwd=self.gosrc)
 

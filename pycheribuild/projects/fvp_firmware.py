@@ -38,7 +38,7 @@ from .project import (DefaultInstallDir, GitRepository, MakefileProject, Project
 from ..config.chericonfig import BuildType, CheriConfig
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
-from ..utils import OSInfo, set_env
+from ..utils import OSInfo
 
 
 def _morello_firmware_build_outputs_dir(config: CheriConfig, _: SimpleProject):
@@ -287,7 +287,7 @@ subprocess.check_call(["{real_clang}", "-B{fake_dir}"] + args + ["-fuse-ld=bfd",
         # if ! git diff-index --quiet HEAD --; then
         #   FIRMWARE_VER="${FIRMWARE_VER}-dirty"
         # fi
-        with set_env(CROSS_COMPILE=str(fake_compiler_dir) + "/",
+        with self.set_env(CROSS_COMPILE=str(fake_compiler_dir) + "/",
                      CLANG_BIN=fake_compiler_dir,
                      EDK2_TOOLCHAIN="CLANG38",
                      VERBOSE=1,

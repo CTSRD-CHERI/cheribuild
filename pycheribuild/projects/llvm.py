@@ -37,7 +37,8 @@ from ..config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTar
                                           FreeBSDTargetInfo)
 from ..config.loader import ComputedDefaultValue
 from ..config.target_info import CompilerType, CrossCompileTarget
-from ..utils import CompilerInfo, get_compiler_info, is_jenkins_build, OSInfo, set_env, ThreadJoiner
+from ..processutils import CompilerInfo, get_compiler_info
+from ..utils import is_jenkins_build, OSInfo, ThreadJoiner
 
 _true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
                                                   as_string="True unless build-everything is set")
@@ -333,7 +334,7 @@ exec {lld} "$@"
             return
         # Without setting LC_ALL lit attempts to encode some things as ASCII and fails.
         # This only happens on FreeBSD, but we might as well set it everywhere
-        with set_env(LC_ALL="en_US.UTF-8", FILECHECK_DUMP_INPUT_ON_FAILURE=1):
+        with self.set_env(LC_ALL="en_US.UTF-8", FILECHECK_DUMP_INPUT_ON_FAILURE=1):
             self.run_cmd("cmake", "--build", self.build_dir, "--target", "check-all")
 
     def prepare_install_dir_for_archiving(self):
