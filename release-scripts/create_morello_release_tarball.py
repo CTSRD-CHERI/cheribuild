@@ -75,7 +75,7 @@ cmdline, remaining = parser.parse_known_args()
 args = []
 
 if cmdline.pretend:
-    GlobalConfig.PRETEND_MODE = True
+    GlobalConfig.pretend = True
     print("Pretend mode enabled")
     args.append("--pretend")
 

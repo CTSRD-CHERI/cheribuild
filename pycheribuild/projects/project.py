@@ -547,15 +547,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     # Duplicate all arguments instead of using **kwargs to get sensible code completion
     # noinspection PyShadowingBuiltins
-    @staticmethod
-    def run_cmd(*args, capture_output=False, capture_error=False, input: typing.Union[str, bytes] = None, timeout=None,
-                print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False, no_print=False,
-                replace_env=False, **kwargs):
+    def run_cmd(self, *args, capture_output=False, capture_error=False, input: typing.Union[str, bytes] = None,
+                timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
+                no_print=False, replace_env=False, **kwargs):
         return run_command(*args, capture_output=capture_output, capture_error=capture_error, input=input,
-                           timeout=timeout,
-                           print_verbose_only=print_verbose_only, run_in_pretend_mode=run_in_pretend_mode,
-                           raise_in_pretend_mode=raise_in_pretend_mode, no_print=no_print, replace_env=replace_env,
-                           **kwargs)
+                           timeout=timeout, config=self.config, print_verbose_only=print_verbose_only,
+                           run_in_pretend_mode=run_in_pretend_mode, raise_in_pretend_mode=raise_in_pretend_mode,
+                           no_print=no_print, replace_env=replace_env, **kwargs)
 
     @classmethod
     def get_config_option_name(cls, option: str) -> str:
@@ -656,6 +654,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
         self.target_info = self._xtarget.create_target_info(self)
         super().__init__(config)
+        self.config = config
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
         assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
             self.__class__)

@@ -49,7 +49,7 @@ else:
 class OpamMixin(_MixinBase):
     config = None
 
-    def __init__(self: SimpleProject, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_required_system_tool("opam", homebrew="opam",
                                       cheribuild_target="opam-2.0")  # pytype: disable=attribute-error

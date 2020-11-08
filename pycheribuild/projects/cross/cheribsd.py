@@ -425,7 +425,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             compiler_path = shutil.which("clang", path="/usr/local/opt/llvm/bin:/usr/local/bin:/usr/bin")
         else:
             # Try using the latest installed clang
-            compiler_path = latest_system_clang_tool("clang", None)
+            compiler_path = latest_system_clang_tool(self.config, "clang", None)
         if not compiler_path:
             return (None, "Could not find an installation of clang.",
                     "Please install a recent upstream clang or use the 'custom' or 'upstream-llvm' toolchain option.")

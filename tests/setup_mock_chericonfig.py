@@ -64,8 +64,7 @@ class MockConfig(CheriConfig):
 def setup_mock_chericonfig(source_root: Path, pretend=True) -> MockConfig:
     config = MockConfig(source_root, pretend)
     # noinspection PyTypeChecker
-    init_global_config(test_mode=True, pretend_mode=config.pretend,
-                       verbose_mode=config.verbose, quiet_mode=config.quiet)
+    init_global_config(config, test_mode=True)
     ConfigLoaderBase._cheri_config = config
     SimpleProject._config_loader = DefaultValueOnlyConfigLoader()
     # noinspection PyProtectedMember

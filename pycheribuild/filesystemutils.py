@@ -35,12 +35,12 @@ import threading
 import typing
 from pathlib import Path
 
-from .config.chericonfig import CheriConfig
-from .utils import AnsiColour, fatal_error, print_command, run_command, status_update, ThreadJoiner, warning_message
+from .utils import (AnsiColour, ConfigBase, fatal_error, print_command, run_command, status_update, ThreadJoiner,
+                    warning_message)
 
 
 class FileSystemUtils(object):
-    def __init__(self, config: CheriConfig):
+    def __init__(self, config: ConfigBase):
         self.config = config
 
     def makedirs(self, path: Path):

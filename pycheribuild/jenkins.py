@@ -210,8 +210,7 @@ def _jenkins_main():
         # json = cheri_config.get_options_json()  # make sure all config options are loaded
         # pprint.pprint(config_loader.options)
         pass
-    init_global_config(test_mode=False, pretend_mode=cheri_config.pretend,
-                       verbose_mode=cheri_config.verbose, quiet_mode=cheri_config.quiet)
+    init_global_config(cheri_config, test_mode=False)
 
     # special target to extract the sdk
     if JenkinsAction.EXTRACT_SDK in cheri_config.action or (

@@ -39,7 +39,8 @@ from pathlib import Path
 from typing import Optional
 
 from .loader import ComputedDefaultValue, MyJsonEncoder
-from ..utils import have_working_internet_connection, latest_system_clang_tool, status_update, warning_message
+from ..utils import (ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, latest_system_clang_tool,
+                     status_update, warning_message)
 
 
 class BuildType(Enum):
@@ -78,11 +79,13 @@ def _default_arm_none_eabi_prefix(c: "CheriConfig", _):
         return str(default_path / "bin/arm-none-eabi-")
 
 
-class CheriConfig(object):
+class CheriConfig(ConfigBase):
     def __init__(self, loader, action_class):
         # Work around circular dependencies
         from .loader import ConfigLoaderBase
         from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage
+        # noinspection PyTypeChecker
+        super().__init__(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt())
 
         assert isinstance(loader, ConfigLoaderBase)
         loader._cheri_config = self
@@ -108,17 +111,19 @@ class CheriConfig(object):
                                                               "that would be executed")
 
         self.clang_path = loader.add_path_option("clang-path", shortname="-cc-path",
-                                                 default=latest_system_clang_tool("clang", "cc"),
+                                                 default=lambda c, _: latest_system_clang_tool(c, "clang", "cc"),
                                                  group=loader.path_group,
                                                  help="The C compiler to use for host binaries (must be compatible "
                                                       "with Clang >= 3.7)")
         self.clang_plusplus_path = loader.add_path_option("clang++-path", shortname="-c++-path",
-                                                          default=latest_system_clang_tool("clang++", "c++"),
+                                                          default=lambda c, _: latest_system_clang_tool(c, "clang++",
+                                                                                                        "c++"),
                                                           group=loader.path_group,
                                                           help="The C++ compiler to use for host binaries (must be "
                                                                "compatible with Clang >= 3.7)")
         self.clang_cpp_path = loader.add_path_option("clang-cpp-path", shortname="-cpp-path",
-                                                     default=latest_system_clang_tool("clang-cpp", "cpp"),
+                                                     default=lambda c, _: latest_system_clang_tool(c, "clang-cpp",
+                                                                                                   "cpp"),
                                                      group=loader.path_group,
                                                      help="The C preprocessor to use for host binaries (must be "
                                                           "compatible with Clang >= 3.7)")
@@ -369,7 +374,7 @@ class CheriConfig(object):
                  "developer-tools/gnu-toolchain/gnu-rm/downloads")  # type: Path
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
-        self.__optional_properties = ["preferred_xtarget"]
+        self.__optional_properties = ["preferred_xtarget", "internet_connection_last_checked_at"]
 
     def load(self):
         self.loader.load()
@@ -409,7 +414,7 @@ class CheriConfig(object):
             self.action = real_action
 
         # turn on skip-update if we don't have a working internet connection to avoid errors in git pull
-        if not self.skip_update and not have_working_internet_connection():
+        if not self.skip_update and not have_working_internet_connection(self):
             warning_message("No internet connection detected, will skip git updates!")
             self.skip_update = True
 

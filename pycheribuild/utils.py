@@ -51,32 +51,19 @@ from threading import RLock
 from .colour import AnsiColour, coloured
 
 # reduce the number of import statements per project  # no-combine
-__all__ = ["typing", "print_command", "include_local_file", "CompilerInfo",  # no-combine
+__all__ = ["typing", "print_command", "include_local_file", "CompilerInfo", "init_global_config",  # no-combine
            "run_command", "status_update", "fatal_error", "coloured", "AnsiColour", "set_env",  # no-combine
-           "init_global_config", "warning_message", "popen_handle_noexec", "extract_version",  # no-combine
+           "warning_message", "popen_handle_noexec", "extract_version", "DoNotUseInIfStmt",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "get_compiler_info", "latest_system_clang_tool",  # no-combine
-           "get_program_version", "SafeDict", "keep_terminal_sane", "error_message",  # no-combine
-           "default_make_jobs_count", "commandline_to_str", "OSInfo", "is_jenkins_build",  # no-combine
+           "get_program_version", "SafeDict", "keep_terminal_sane", "error_message", "ConfigBase",  # no-combine
+           "default_make_jobs_count", "commandline_to_str", "OSInfo", "is_jenkins_build", "GlobalConfig",  # no-combine
            "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
            "is_case_sensitive_dir", "SocketAndPort", "replace_one", "popen", "cached_property"]  # no-combine
+
+if sys.version_info < (3, 5, 2):
+    sys.exit("This script requires at least Python 3.5.2")
+
 Type_T = typing.TypeVar("Type_T")
-
-
-class GlobalConfig:
-    TEST_MODE = False
-    PRETEND_MODE = False
-    VERBOSE_MODE = False
-    QUIET_MODE = False
-    internet_connection_last_checked_at = None  # type: typing.Optional[float]
-    internet_connection_last_check_result = False
-
-
-def init_global_config(*, test_mode: bool, pretend_mode: bool, verbose_mode: bool, quiet_mode: bool):
-    assert not (verbose_mode and quiet_mode), "mutually exclusive"
-    GlobalConfig.TEST_MODE = test_mode
-    GlobalConfig.PRETEND_MODE = pretend_mode
-    GlobalConfig.VERBOSE_MODE = verbose_mode
-    GlobalConfig.QUIET_MODE = quiet_mode
 
 
 # noinspection PyPep8Naming
@@ -88,8 +75,35 @@ class classproperty(object):
         return self.f(owner)
 
 
-if sys.version_info < (3, 5, 2):
-    sys.exit("This script requires at least Python 3.5.2")
+# Placeholder until config has been initialized.
+class DoNotUseInIfStmt:
+    def __bool__(self):
+        raise ValueError("Should not be used")
+
+    def __len__(self):
+        raise ValueError("Should not be used")
+
+
+class ConfigBase:
+    TEST_MODE = False
+
+    def __init__(self, *, pretend: bool, verbose: bool, quiet: bool):
+        self.quiet = quiet
+        self.verbose = verbose
+        self.pretend = pretend
+        self.internet_connection_last_checked_at = None  # type: typing.Optional[float]
+        self.internet_connection_last_check_result = False
+
+
+# noinspection PyTypeChecker
+GlobalConfig = ConfigBase(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt())
+
+
+def init_global_config(config: ConfigBase, *, test_mode: bool = False):
+    global GlobalConfig
+    GlobalConfig = config
+    GlobalConfig.TEST_MODE = test_mode
+    assert not (GlobalConfig.verbose and GlobalConfig.quiet), "mutually exclusive"
 
 
 if False and sys.version_info >= (3, 8, 0):
@@ -155,8 +169,11 @@ def __filter_env(env: dict) -> dict:
 
 
 def print_command(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remaining_args, output_file=None,
-                  colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", print_verbose_only=False, **kwargs):
-    if GlobalConfig.QUIET_MODE or (print_verbose_only and not GlobalConfig.VERBOSE_MODE):
+                  colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", print_verbose_only=False,
+                  config: ConfigBase = None, **kwargs):
+    if config is None:
+        config = GlobalConfig  # TODO: remove
+    if config.quiet or (print_verbose_only and not config.verbose):
         return
     # also allow passing a single string
     if not type(arg1) is str:
@@ -258,9 +275,13 @@ class FakePopen:
         pass
 
 
-def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, **kwargs) -> subprocess.Popen:
-    print_command(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), print_verbose_only=print_verbose_only)
-    if not run_in_pretend_mode and GlobalConfig.PRETEND_MODE:
+def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, config: ConfigBase = None,
+          **kwargs) -> subprocess.Popen:
+    if config is None:
+        config = GlobalConfig  # TODO: remove
+    print_command(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), config=config,
+                  print_verbose_only=print_verbose_only)
+    if not run_in_pretend_mode and config.pretend:
         # noinspection PyTypeChecker
         return FakePopen()
     return popen_handle_noexec(cmdline, **kwargs)
@@ -268,10 +289,11 @@ def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, **kwargs
 
 # noinspection PyShadowingBuiltins
 def run_command(*args, capture_output=False, capture_error=False, input: "typing.Union[str, bytes]" = None,
-                timeout=None,
-                print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False, no_print=False,
-                replace_env=False, give_tty_control=False, expected_exit_code=0, allow_unexpected_returncode=False,
-                **kwargs):
+                timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
+                no_print=False, replace_env=False, give_tty_control=False, expected_exit_code=0,
+                allow_unexpected_returncode=False, config: ConfigBase = None, **kwargs):
+    if config is None:
+        config = GlobalConfig  # TODO: remove
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
@@ -280,7 +302,8 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
     cmdline = list(map(str, cmdline))  # ensure it's all strings so that subprocess can handle it
     # When running scripts from a noexec filesystem try to read the interpreter and run that
     if not no_print:
-        print_command(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), print_verbose_only=print_verbose_only)
+        print_command(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), print_verbose_only=print_verbose_only,
+                      config=config)
     if "cwd" in kwargs:
         kwargs["cwd"] = str(kwargs["cwd"])
     else:
@@ -289,7 +312,7 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
             kwargs["cwd"] = os.getcwd()
         except FileNotFoundError:
             kwargs["cwd"] = tempfile.gettempdir()
-    if not run_in_pretend_mode and GlobalConfig.PRETEND_MODE:
+    if not run_in_pretend_mode and config.pretend:
         return CompletedProcess(args=cmdline, returncode=0, stdout=b"", stderr=b"")
     # actually run the process now:
     if input is not None:
@@ -303,7 +326,7 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
     if capture_error:
         assert "stderr" not in kwargs  # we need to use stdout here
         kwargs["stderr"] = subprocess.PIPE
-    elif GlobalConfig.QUIET_MODE and "stdout" not in kwargs:
+    elif config.quiet and "stdout" not in kwargs:
         kwargs["stdout"] = subprocess.DEVNULL
 
     if "env" in kwargs:
@@ -342,10 +365,10 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
                 raise
             retcode = process.poll()
             if retcode != expected_exit_code and not allow_unexpected_returncode:
-                if GlobalConfig.PRETEND_MODE and not raise_in_pretend_mode:
+                if config.pretend and not raise_in_pretend_mode:
                     cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
                     fatal_error("Command ", "`" + commandline_to_str(process.args) +
-                                "` failed with unexpected exit code ", retcode, *cwd, sep="")
+                                "` failed with unexpected exit code ", retcode, *cwd, sep="", pretend=config.pretend)
                 else:
                     raise _make_called_process_error(retcode, process.args, stdout=stdout, stderr=stderr,
                                                      cwd=kwargs["cwd"])
@@ -369,12 +392,14 @@ def find_free_port() -> SocketAndPort:
 
 
 class CompilerInfo(object):
-    def __init__(self, path: Path, compiler: str, version: "typing.Tuple[int]", version_str: str, default_target: str):
+    def __init__(self, path: Path, compiler: str, version: "typing.Tuple[int]", version_str: str, default_target: str,
+                 *, config: ConfigBase):
         self.path = path
         self.compiler = compiler
         self.version = version
         self.version_str = version_str
         self.default_target = default_target
+        self.config = config
         self._resource_dir = None  # type: typing.Optional[Path]
         self._supported_warning_flags = dict()  # type: typing.Dict[str, bool]
         assert compiler in ("unknown compiler", "clang", "apple-clang", "gcc"), "unknown type: " + compiler
@@ -382,17 +407,18 @@ class CompilerInfo(object):
     def get_resource_dir(self) -> Path:
         # assert self.is_clang, self.compiler
         if not self._resource_dir:
-            if not self.path.exists() and GlobalConfig.PRETEND_MODE:
+            if not self.path.exists() and self.config.pretend:
                 return Path("/unknown/resource/dir")  # avoid failing in jenkins
             # Clang 5.0 added the -print-resource-dir flag
             if self.is_clang and self.version >= (5, 0):
-                resource_dir = run_command(self.path, "-print-resource-dir", print_verbose_only=True,
-                                           capture_output=True, run_in_pretend_mode=True).stdout.decode("utf-8").strip()
+                resource_dir = run_command(self.path, "-print-resource-dir", config=self.config,
+                                           print_verbose_only=True, capture_output=True,
+                                           run_in_pretend_mode=True).stdout.decode("utf-8").strip()
                 assert resource_dir, "-print-resource-dir no longer works?"
                 self._resource_dir = Path(resource_dir)
             else:
                 # pretend to compile an existing source file and capture the -resource-dir output
-                cc1_cmd = run_command(self.path, "-###", "-xc", "-c", "/dev/null",
+                cc1_cmd = run_command(self.path, "-###", "-xc", "-c", "/dev/null", config=self.config,
                                       capture_error=True, print_verbose_only=True, run_in_pretend_mode=True)
                 resource_dir_pat = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"')
                 self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
@@ -403,7 +429,7 @@ class CompilerInfo(object):
         try:
             result = run_command(self.path, flag, "-fsyntax-only", "-xc", "/dev/null", "-Werror=unknown-warning-option",
                                  print_verbose_only=True, run_in_pretend_mode=True, capture_error=True,
-                                 allow_unexpected_returncode=True)
+                                 allow_unexpected_returncode=True, config=self.config)
         except (subprocess.CalledProcessError, OSError) as e:
             warning_message("Failed to check for", flag, "support:", e)
             return False
@@ -455,8 +481,10 @@ class CompilerInfo(object):
 _cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
 
 
-def get_compiler_info(compiler: "typing.Union[str, Path]") -> CompilerInfo:
+def get_compiler_info(compiler: "typing.Union[str, Path]", *, config: ConfigBase = None) -> CompilerInfo:
     assert compiler is not None
+    if config is None:
+        config = GlobalConfig  # TODO: remove
     compiler = Path(compiler)
     if not compiler.is_absolute():
         found_in_path = shutil.which(str(compiler))
@@ -480,7 +508,7 @@ def get_compiler_info(compiler: "typing.Union[str, Path]") -> CompilerInfo:
             # Use -v instead of --version to support both gcc and clang
             # Note: for clang-cpp/cpp we need to have stdin as devnull
             version_cmd = run_command(compiler, "-v", capture_error=True, print_verbose_only=True,
-                                      run_in_pretend_mode=True,
+                                      run_in_pretend_mode=True, config=config,
                                       stdin=subprocess.DEVNULL, capture_output=True)
         except subprocess.CalledProcessError as e:
             stderr = e.stderr if e.stderr else b"FAILED: " + str(e).encode("utf-8")
@@ -510,28 +538,34 @@ def get_compiler_info(compiler: "typing.Union[str, Path]") -> CompilerInfo:
             version_str = clang_version.group(0).decode("utf-8")
         else:
             warning_message("Could not detect compiler info for", compiler, "- output was", version_cmd.stderr)
-        if GlobalConfig.VERBOSE_MODE:
+        if config.verbose:
             print(compiler, "is", kind, "version", version, "with default target", target_string)
-        _cached_compiler_infos[compiler] = CompilerInfo(compiler, kind, version, version_str, target_string)
+        _cached_compiler_infos[compiler] = CompilerInfo(compiler, kind, version, version_str, target_string,
+                                                        config=config)
     return _cached_compiler_infos[compiler]
 
 
 # Cache the versions
 @functools.lru_cache(maxsize=20)
-def get_version_output(program: Path, command_args: tuple = None) -> "bytes":
+def get_version_output(program: Path, command_args: tuple = None, *, config: ConfigBase = None) -> "bytes":
+    if config is None:
+        config = GlobalConfig  # TODO: remove
     if command_args is None:
         command_args = ["--version"]
-    prog = run_command([str(program)] + list(command_args), stdin=subprocess.DEVNULL,
+    prog = run_command([str(program)] + list(command_args), config=config, stdin=subprocess.DEVNULL,
                        stderr=subprocess.STDOUT, capture_output=True, run_in_pretend_mode=True)
     return prog.stdout
 
 
 @functools.lru_cache(maxsize=20)
 def get_program_version(program: Path, command_args: tuple = None, component_kind: "typing.Type[Type_T]" = int,
-                        regex=None, program_name: bytes = None) -> "typing.Tuple[Type_T, Type_T, Type_T]":
+                        regex=None, program_name: bytes = None, *,
+                        config: ConfigBase = None) -> "typing.Tuple[Type_T, Type_T, Type_T]":
+    if config is None:
+        config = GlobalConfig  # TODO: remove
     if program_name is None:
         program_name = program.name.encode("utf-8")
-    stdout = get_version_output(program, command_args=command_args)
+    stdout = get_version_output(program, command_args=command_args, config=config)
     return extract_version(stdout, component_kind, regex, program_name)
 
 
@@ -551,7 +585,8 @@ def extract_version(output: bytes, component_kind: "typing.Type[Type_T]" = int, 
     return tuple(map(component_kind, match.groups()))
 
 
-def latest_system_clang_tool(basename: str, fallback_basename: "typing.Optional[str]") -> typing.Optional[Path]:
+def latest_system_clang_tool(config: ConfigBase, basename: str,
+                             fallback_basename: "typing.Optional[str]") -> typing.Optional[Path]:
     if "_ARGCOMPLETE" in os.environ:  # Avoid expensive lookup when tab-completing
         return None if fallback_basename is None else Path(fallback_basename)
 
@@ -569,7 +604,7 @@ def latest_system_clang_tool(basename: str, fallback_basename: "typing.Optional[
                 continue
             # print("Checking compiler candidate", candidate)
             candidate = search_dir / candidate_name
-            info = get_compiler_info(candidate)
+            info = get_compiler_info(candidate, config=config)  # Global config not initialized yet
             if OSInfo.IS_MAC and not info.is_apple_clang:
                 # print("Ignoring", candidate, "since it is not apple clang and won't be able to build host binaries")
                 continue
@@ -628,9 +663,11 @@ def error_message(*args, sep=" ", fixit_hint=None):
         fixit_message(fixit_hint)
 
 
-def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exit_code=3):
+def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exit_code=3, pretend: bool = None):
+    if pretend is None:
+        pretend = GlobalConfig.pretend  # TODO: remove
     # we ignore fatal errors when simulating a run
-    if GlobalConfig.PRETEND_MODE:
+    if pretend:
         print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr,
               flush=True)
         if fixit_hint:
@@ -649,20 +686,20 @@ def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, ex
 def include_local_file(path: str) -> str:
     file = Path(__file__).parent / path  # type: Path
     if not file.is_file():
-        fatal_error(file, "is missing!")
+        fatal_error(file, "is missing!", pretend=False)
     with file.open("r", encoding="utf-8") as f:
         return f.read()
 
 
-def have_working_internet_connection():
-    if GlobalConfig.TEST_MODE:
+def have_working_internet_connection(config: ConfigBase):
+    if config.TEST_MODE:
         return True
     current_check_time = time.time()
-    if GlobalConfig.internet_connection_last_checked_at:
-        if current_check_time < GlobalConfig.internet_connection_last_checked_at + 60.0:
+    if config.internet_connection_last_checked_at:
+        if current_check_time < config.internet_connection_last_checked_at + 60.0:
             # Assume that the detected values remains the same for 60 seconds to avoid repeated checks.
             # This saves around 50ms startup time.
-            return GlobalConfig.internet_connection_last_check_result
+            return config.internet_connection_last_check_result
     # Try to connect to google DNS server at 8.8.8.8 to check if we have a working internet connection
     # Don't make a DNS request since that could be broken for other reasons!
     # From https://stackoverflow.com/questions/3764291/checking-network-connection/33117579#33117579
@@ -679,13 +716,13 @@ def have_working_internet_connection():
     except OSError:
         result = False
     except Exception as ex:
-        fatal_error("Something went wrong while checking for internet connection", ex)
+        fatal_error("Something went wrong while checking for internet connection", ex, pretend=config.pretend)
         result = False
     finally:
         if x:
             x.close()
-        GlobalConfig.internet_connection_last_check_result = result
-        GlobalConfig.internet_connection_last_checked_at = current_check_time
+        config.internet_connection_last_check_result = result
+        config.internet_connection_last_checked_at = current_check_time
         return result
 
 
@@ -821,7 +858,7 @@ class OSInfo(object):
 
 
 @contextlib.contextmanager
-def set_env(*, print_verbose_only=True, **environ):
+def set_env(*, print_verbose_only=True, config: ConfigBase = None, **environ):
     """
     Temporarily set the process environment variables.
 
@@ -833,11 +870,13 @@ def set_env(*, print_verbose_only=True, **environ):
     False
 
     """
+    if config is None:
+        config = GlobalConfig  # TODO: remove
     old_environ = dict(os.environ)
     # make sure all environment variables are converted to string
     str_environ = dict((str(k), str(v)) for k, v in environ.items())
     for k, v in str_environ.items():
-        print_command("export", k + "=" + v, print_verbose_only=print_verbose_only)
+        print_command("export", k + "=" + v, print_verbose_only=print_verbose_only, config=config)
     os.environ.update(str_environ)
     try:
         yield

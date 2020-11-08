@@ -54,21 +54,22 @@ from .utils import (AnsiColour, coloured, commandline_to_str, fatal_error, get_p
 DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent.parent]
 
 
-def update_check():
+def update_check(config: DefaultCheriConfig):
     for d in DIRS_TO_CHECK_FOR_UPDATES:
-        _update_check(d)
+        _update_check(config, d)
 
 
-def _update_check(d: Path):
+def _update_check(config: DefaultCheriConfig, d: Path):
     if not shutil.which("git"):
         return
     # Avoid update check if we don't have an internet connection
-    if not have_working_internet_connection():
+    if not have_working_internet_connection(config):
         return
     # check if new commits are available
     project_dir = str(d)
-    run_command(["git", "fetch"], cwd=project_dir, timeout=5)
-    output = subprocess.check_output(["git", "status", "-uno"], cwd=project_dir)
+    run_command(["git", "fetch"], cwd=project_dir, timeout=5, config=config)
+    output = run_command(["git", "status", "-uno"], cwd=project_dir, config=config, capture_output=True,
+                         print_verbose_only=True).stdout
     behind_index = output.find(b"Your branch is behind ")
     if behind_index > 0:
         msg_end = output.find(b"\n  (use \"git pull\" to update your local branch)")
@@ -80,7 +81,7 @@ def _update_check(d: Path):
             # Use the autostash flag for Git >= 2.14
             # https://stackoverflow.com/a/30209750/894271
             autostash_flag = ["--autostash"] if git_version >= (2, 14) else []
-            subprocess.check_call(["git", "pull", "--rebase"] + autostash_flag, cwd=project_dir)
+            run_command(["git", "pull", "--rebase"] + autostash_flag, cwd=project_dir, config=config)
             os.execv(sys.argv[0], sys.argv)
 
 
@@ -113,8 +114,7 @@ def real_main():
     target_manager.register_command_line_options()
     # load them from JSON/cmd line
     cheri_config.load()
-    init_global_config(test_mode=False, pretend_mode=cheri_config.pretend,
-                       verbose_mode=cheri_config.verbose, quiet_mode=cheri_config.quiet)
+    init_global_config(cheri_config)
 
     if cheri_config.docker or JsonAndCommandLineConfigLoader.get_config_prefix() == "docker-":
         # check that the docker build won't override native binaries
@@ -231,7 +231,7 @@ def real_main():
     # Don't do the update check when tab-completing (otherwise it freezes)
     if "_ARGCOMPLETE" not in os.environ and not cheri_config.skip_update:  # no-combine
         try:  # no-combine
-            update_check()  # no-combine
+            update_check(cheri_config)  # no-combine
         except Exception as e:  # no-combine
             print("Failed to check for updates:", e)  # no-combine
     if CheribuildAction.PRINT_CHOSEN_TARGETS in cheri_config.action:
