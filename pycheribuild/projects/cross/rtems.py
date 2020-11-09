@@ -78,6 +78,6 @@ class BuildRtems(CrossCompileProject):
 
     def process(self):
         with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
-                     CFLAGS="--sysroot=" + str(self.sdk_sysroot),
-                     LDFLAGS="--sysroot=" + str(self.sdk_sysroot)):
+                          CFLAGS="--sysroot=" + str(self.sdk_sysroot),
+                          LDFLAGS="--sysroot=" + str(self.sdk_sysroot)):
             super().process()

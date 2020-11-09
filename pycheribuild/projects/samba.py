@@ -119,13 +119,13 @@ class BuildSamba(Project):
             homebrew_keg_only_packages = ['icu4c', 'krb5', 'readline']
             homebrew_dirs = ["/usr/local/opt/" + x for x in homebrew_keg_only_packages]
             with self.set_env(PATH=':'.join([x + "/bin" for x in homebrew_dirs]) + ':' +
-                              ':'.join([x + "/sbin" for x in homebrew_dirs]) + ':' +
-                              os.getenv("PATH", ""),
-                         PKG_CONFIG_PATH=':'.join([x + "/lib/pkgconfig" for x in homebrew_dirs]) + ':' +
-                                         os.getenv("PKG_CONFIG_PATH", ""),
-                         LDFLAGS=' '.join(["-L" + x + "/lib" for x in homebrew_dirs]),
-                         CPPFLAGS=' '.join(["-I" + x + "/include" for x in homebrew_dirs]),
-                         CFLAGS=' '.join(["-I" + x + "/include" for x in homebrew_dirs])):
+                                   ':'.join([x + "/sbin" for x in homebrew_dirs]) + ':' +
+                                   os.getenv("PATH", ""),
+                              PKG_CONFIG_PATH=':'.join([x + "/lib/pkgconfig" for x in homebrew_dirs]) + ':' +
+                                              os.getenv("PKG_CONFIG_PATH", ""),
+                              LDFLAGS=' '.join(["-L" + x + "/lib" for x in homebrew_dirs]),
+                              CPPFLAGS=' '.join(["-I" + x + "/include" for x in homebrew_dirs]),
+                              CFLAGS=' '.join(["-I" + x + "/include" for x in homebrew_dirs])):
                 super().process()
         else:
             super().process()

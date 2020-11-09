@@ -152,6 +152,6 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             self.fatal(self.demo + " Demo doesn't support/have " + self.demo_app)
 
         with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
-                     # Add compiler-rt location to the search path
-                     LDFLAGS="-L" + str(self.compiler_resource / "lib")):
+                          # Add compiler-rt location to the search path
+                          LDFLAGS="-L" + str(self.compiler_resource / "lib")):
             super().process()

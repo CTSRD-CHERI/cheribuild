@@ -29,7 +29,8 @@
 #
 import re
 
-from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject,  DefaultInstallDir, FettProjectMixin, GitRepository, MakeCommandKind)
+from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, FettProjectMixin,
+                                  GitRepository, MakeCommandKind)
 from .openssl import BuildFettOpenSSL
 
 

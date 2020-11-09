@@ -319,7 +319,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             executor = self.commandline_to_str([self.source_dir / "utils/compile_only.py"])
         elif self.collect_test_binaries:
             executor = self.commandline_to_str([self.source_dir / "utils/copy_files.py",
-                                           "--output-dir", self.collect_test_binaries])
+                                                "--output-dir", self.collect_test_binaries])
         elif self.target_info.is_baremetal():
             run_qemu_script = self.target_info.sdk_root_dir / "baremetal/mips64-qemu-elf/bin/run_with_qemu.py"
             if not run_qemu_script.exists():
@@ -338,9 +338,9 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         else:
             self.libcxx_lit_jobs = " -j1"  # We can only run one job here since we are using scp
             executor = self.commandline_to_str([self.source_dir / "utils/ssh.py",
-                                           "--host", "{user}@{host}:{port}".format(host=self.qemu_host,
-                                                                                   user=self.qemu_user,
-                                                                                   port=self.qemu_port)])
+                                                "--host", "{user}@{host}:{port}".format(host=self.qemu_host,
+                                                                                        user=self.qemu_user,
+                                                                                        port=self.qemu_port)])
         if self.target_info.is_baremetal():
             target_info = "libcxx.test.target_info.BaremetalNewlibTI"
         else:

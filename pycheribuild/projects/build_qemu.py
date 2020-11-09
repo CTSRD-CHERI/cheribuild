@@ -39,7 +39,7 @@ from .project import (AutotoolsProject, BuildType, CheriConfig, CrossCompileTarg
                       MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
 from ..config.loader import ComputedDefaultValue
-from ..processutils import  get_compiler_info
+from ..processutils import get_compiler_info
 
 
 class BuildQEMUBase(AutotoolsProject):
