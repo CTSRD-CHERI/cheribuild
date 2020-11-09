@@ -1308,7 +1308,9 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def install(self, **kwargs):
         # If we build the FPGA kernels also install them into boot:
-        all_kernel_configs = " ".join([self.kernel_config] + self.extra_kernels + self.extra_kernels_with_mfs)
+        available_kernconfs = [self.kernel_config] + self.extra_kernels
+        if self.mfs_root_image:
+            available_kernconfs += self.extra_kernels_with_mfs
         if self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_PURECAP:
             # remove the old rootfs-purecap128/256 rootfs dirs
             self._cleanup_old_files(self.install_dir, "rootfs-mips64-purecap",
@@ -1316,7 +1318,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         elif self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_HYBRID:
             # remove the old rootfs128/256 rootfs dirs
             self._cleanup_old_files(self.install_dir, "rootfs-mips64-hybrid", ["rootfs128", "rootfs256"])
-        super().install(all_kernel_configs=all_kernel_configs, sysroot_only=self.sysroot_only, **kwargs)
+        super().install(all_kernel_configs=" ".join(available_kernconfs), sysroot_only=self.sysroot_only, **kwargs)
 
 
 class BuildCheriBSDFett(BuildCHERIBSD):
