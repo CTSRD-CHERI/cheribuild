@@ -46,8 +46,10 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = [
-        CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
-        CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV32,
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV32_PURECAP,
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP]
     default_install_dir = DefaultInstallDir.SYSROOT
 
     # FreeRTOS Demos to build
@@ -76,15 +78,21 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         # Override that with no and set the appopriate flags here.
         self.make_args.set(NIX_ENV="no")
 
-        # Only build 64-bit FreeRTOS as cheribuild currently only supports building
-        # for RV64
-        self.make_args.set(RISCV_XLEN="64")
-
         # Set sysroot Makefile arg to pick up libc
         self.make_args.set(SYSROOT=str(self.sdk_sysroot))
 
         # Add compiler-rt location to the search path
         # self.make_args.set(LDFLAGS="-L"+str(self.compiler_resource / "lib"))
+
+        if self.demo == "RISC-V_Galois_P1":
+            if "rv32" in self.demo_bsp:
+                self.make_args.set(XARCH="32")
+            else:
+                self.make_args.set(XARCH="64")
+
+        else:  # RISC-V-Generic
+            # Only build 64-bit FreeRTOS for RISC-V-Generic
+            self.make_args.set(RISCV_XLEN="64")
 
         if self.target_info.target.is_cheri_purecap():
             # CHERI-RISC-V sophisticated Demo with more advanced device drivers
@@ -109,7 +117,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             help="The FreeRTOS program to build.")  # type: str
 
         cls.demo_bsp = cls.add_config_option(
-            "bsp", metavar="BSP", show_help=True,
+            "demo_bsp", metavar="BSP", show_help=True,
             default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
                                          as_string="target-dependent default"),
             help="The FreeRTOS BSP to build. This is only valid for the "

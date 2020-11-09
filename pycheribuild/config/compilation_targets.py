@@ -165,7 +165,6 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                     result.append("-cheri=" + config.mips_cheri_bits_str)
                     result.append("-mcpu=beri")
         elif target.is_riscv(include_purecap=True):
-            assert target.cpu_architecture == CPUArchitecture.RISCV64
             # Use the insane RISC-V arch string to enable CHERI
             result.append("-march=" + ti.riscv_arch_string)
 
@@ -199,9 +198,15 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         # Use the insane RISC-V arch string to enable CHERI
         if self.is_baremetal():
             # Baremetal/FreeRTOS only supports softfloat
-            arch_string = "rv64imac"
+            if self.target.cpu_architecture == CPUArchitecture.RISCV32:
+                arch_string = "rv32imac"
+            else:
+                arch_string = "rv64imac"
         else:
-            arch_string = "rv64imafdc"
+            if self.target.cpu_architecture == CPUArchitecture.RISCV32:
+                arch_string = "rv32imafdc"
+            else:
+                arch_string = "rv64imafdc"
 
         if self.target.is_hybrid_or_purecap_cheri():
             arch_string += "xcheri"
@@ -210,18 +215,42 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     @property
     def riscv_abi(self):
         assert self.target.is_riscv(include_purecap=True)
+
+        if self.is_baremetal():
+            return self.riscv_softfloat_abi()  # Baremetal/FreeRTOS only supports softfloat
+
         if self.target.is_cheri_purecap():
-            return "l64pc128d"  # 64-bit double-precision hard-float + purecap
+            if self.target.cpu_architecture == CPUArchitecture.RISCV32:
+                # 32-bit double-precision hard-float + purecap
+                return "il32pc64d"
+            else:
+                # 64-bit double-precision hard-float + purecap
+                return "l64pc128d"
         else:
-            return "lp64d"  # 64-bit double-precision hard-float
+            if self.target.cpu_architecture == CPUArchitecture.RISCV32:
+                # 32-bit double-precision hard-float
+                return "ilp32d"
+            else:
+                # 64-bit double-precision hard-float
+                return "lp64d"
 
     @property
     def riscv_softfloat_abi(self):
         assert self.target.is_riscv(include_purecap=True)
         if self.target.is_cheri_purecap():
-            return "l64pc128"  # 64-bit soft-float purecap
+            if self.target.cpu_architecture == CPUArchitecture.RISCV32:
+                # 32-bit soft-float
+                return "ilp32"
+            else:
+                # 64-bit soft-float
+                return "lp64"
         else:
-            return "lp64"  # 64-bit soft-float
+            if self.target.cpu_architecture == CPUArchitecture.RISCV32:
+                # 32-bit soft-float
+                return "il32pc64"
+            else:
+                # 64-bit soft-float
+                return "l64pc128"
 
 
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
@@ -748,7 +777,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
                 return "mips64c{}-qemu-elf-purecap".format(config.mips_cheri_bits)
             return "mips64-qemu-elf"
         if target.is_riscv(include_purecap=True):
-            return "riscv64-unknown-elf"
+            return target.cpu_architecture.value + "-unknown-elf"
         assert False, "Other baremetal cases have not been tested yet!"
 
     @classmethod
@@ -941,12 +970,21 @@ class CompilationTargets(BasicCompilationTargets):
     BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-mips64-purecap", CPUArchitecture.MIPS64,
                                                          NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                          non_cheri_target=BAREMETAL_NEWLIB_MIPS64)
+    BAREMETAL_NEWLIB_RISCV32 = CrossCompileTarget("baremetal-riscv32", CPUArchitecture.RISCV32,
+                                                  NewlibBaremetalTargetInfo,
+                                                  check_conflict_with=BAREMETAL_NEWLIB_MIPS64)
     BAREMETAL_NEWLIB_RISCV64 = CrossCompileTarget("baremetal-riscv64", CPUArchitecture.RISCV64,
                                                   NewlibBaremetalTargetInfo,
                                                   check_conflict_with=BAREMETAL_NEWLIB_MIPS64)
+    BAREMETAL_NEWLIB_RISCV32_HYBRID = CrossCompileTarget("baremetal-riscv32-hybrid", CPUArchitecture.RISCV32,
+                                                         NewlibBaremetalTargetInfo, is_cheri_hybrid=True,
+                                                         non_cheri_target=BAREMETAL_NEWLIB_RISCV32)
     BAREMETAL_NEWLIB_RISCV64_HYBRID = CrossCompileTarget("baremetal-riscv64-hybrid", CPUArchitecture.RISCV64,
                                                          NewlibBaremetalTargetInfo, is_cheri_hybrid=True,
                                                          non_cheri_target=BAREMETAL_NEWLIB_RISCV64)
+    BAREMETAL_NEWLIB_RISCV32_PURECAP = CrossCompileTarget("baremetal-riscv32-purecap", CPUArchitecture.RISCV32,
+                                                          NewlibBaremetalTargetInfo, is_cheri_purecap=True,
+                                                          hybrid_target=BAREMETAL_NEWLIB_RISCV32_HYBRID)
     BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget("baremetal-riscv64-purecap", CPUArchitecture.RISCV64,
                                                           NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                           hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
@@ -983,7 +1021,8 @@ class CompilationTargets(BasicCompilationTargets):
                                     CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI, CHERIBSD_MIPS_PURECAP]
 
     ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64, BAREMETAL_NEWLIB_MIPS64_PURECAP,
-                                       BAREMETAL_NEWLIB_RISCV64, BAREMETAL_NEWLIB_RISCV64_PURECAP]
+                                       BAREMETAL_NEWLIB_RISCV64, BAREMETAL_NEWLIB_RISCV64_PURECAP,
+                                       BAREMETAL_NEWLIB_RISCV32, BAREMETAL_NEWLIB_RISCV32_PURECAP]
     ALL_SUPPORTED_RTEMS_TARGETS = [RTEMS_RISCV64, RTEMS_RISCV64_PURECAP]
     ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = \
         ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + ALL_SUPPORTED_BAREMETAL_TARGETS
