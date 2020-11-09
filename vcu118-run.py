@@ -273,6 +273,11 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     gdb_finish_time = load_end_time
     gdb.sendline("continue")
     success("Starting CheriBSD after ", datetime.datetime.utcnow() - gdb_start_time)
+    try:
+        serial_conn.expect_exact(["bbl loader"], timeout=30)
+        success("bbl loader started")
+    except pexpect.TIMEOUT:
+        failure("Did not get expected bbl output", exit=True)
     # TODO: network_iface="xae0", but DHCP doesn't work
     boot_and_login(serial_conn, starttime=gdb_finish_time, network_iface=None)
     return FpgaConnection(gdb, openocd, serial_conn)
