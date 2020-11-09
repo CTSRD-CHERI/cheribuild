@@ -78,13 +78,13 @@ BOOT_FAILURE2 = "wait for /bin/sh on /etc/rc failed'"
 BOOT_FAILURE3 = "Manual root filesystem specification:"  # rootfs mount failed
 SHELL_OPEN = "exec /bin/sh"
 LOGIN = "login:"
-INITIAL_PROMPT_CSH = "root@.+:.+# "  # /bin/csh
+INITIAL_PROMPT_CSH = re.compile(r"root@.+:.+# ")  # /bin/csh
 INITIAL_PROMPT_SH = "# "  # /bin/sh
 STOPPED = "Stopped at"
 PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
 PANIC_PAGE_FAULT = "panic: Fatal page fault at 0x"
-CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \\(.+\\)"
+CHERI_TRAP = re.compile(r"USER_CHERI_EXCEPTION: pid \d+ tid \d+ \(.+\)")
 # SHELL_LINE_CONTINUATION = "\r\r\n> "
 
 # Similar approach to pexpect.replwrap:
@@ -116,12 +116,12 @@ class PretendSpawn(pexpect.spawn):
         kwargs["timeout"] = 1
         super().__init__("cat", use_poll=True, **kwargs)
         self.cmd = [command] + args
-        print("Spawning (fake)", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
+        info("Spawning (fake) ", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
 
     def expect(self, *args, pretend_result=None, **kwargs):
         args_list = args[0]
         assert isinstance(args_list, list)
-        print("Expecting", args_list, file=sys.stderr, flush=True)
+        info("Expecting ", args_list)
         if pretend_result:
             return pretend_result
         # Never return TIMEOUT in pretend mode
@@ -131,7 +131,7 @@ class PretendSpawn(pexpect.spawn):
         return 0
 
     def expect_exact(self, pattern_list, pretend_result=None, **kw):
-        print("Expecting", pattern_list, file=sys.stderr, flush=True)
+        info("Expecting ", pattern_list)
         if pretend_result:
             return pretend_result
         # Never return TIMEOUT in pretend mode
@@ -144,7 +144,13 @@ class PretendSpawn(pexpect.spawn):
         pass
 
     def wait(self):
-        print("Exiting (fake)", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
+        info("Exiting (fake) ", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
+
+    def interact(self, **kwargs):
+        info("Interacting with (fake) ", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
+
+    def sendcontrol(self, char):
+        info("Sending CTRL+", char, " to (fake) ", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
 
 
 class CheriBSDCommandFailed(Exception):
@@ -191,14 +197,14 @@ def parse_smb_mount(arg: str):
     return SmbMount(host, readonly, target)
 
 
-class CheriBSDInstance(pexpect.spawn):
-    EXIT_ON_KERNEL_PANIC = True
-    smb_dirs = None  # type: typing.List[SmbMount]
-    flush_interval = None
+if typing.TYPE_CHECKING:
+    MixinBase = pexpect.spawn
+else:
+    MixinBase = object
 
-    def __init__(self, xtarget: CrossCompileTarget, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.xtarget = xtarget
+
+class CheriBSDSpawnMixin(MixinBase):
+    EXIT_ON_KERNEL_PANIC = True
 
     def expect_exact_ignore_panic(self, patterns, *, timeout: int):
         return super().expect_exact(patterns, timeout=timeout)
@@ -206,11 +212,13 @@ class CheriBSDInstance(pexpect.spawn):
     def expect(self, patterns: list, timeout=-1, pretend_result=None, timeout_fatal=True, timeout_msg="timeout",
                **kwargs):
         assert isinstance(patterns, list), "expected list and not " + str(patterns)
+        info("Expecting regex ", coloured(AnsiColour.blue, str(patterns)))
         return self._expect_and_handle_panic_impl(patterns, timeout_msg, timeout_fatal=timeout_fatal,
                                                   timeout=timeout, expect_fn=super().expect, **kwargs)
 
     def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, timeout_fatal=True, timeout_msg="timeout",
                      **kwargs):
+        info("Expecting literal ", coloured(AnsiColour.blue, str(pattern_list)))
         return self._expect_and_handle_panic_impl(pattern_list, timeout_msg, timeout_fatal=timeout_fatal,
                                                   timeout=timeout, expect_fn=super().expect_exact, **kwargs)
 
@@ -225,11 +233,11 @@ class CheriBSDInstance(pexpect.spawn):
         assert PANIC_PAGE_FAULT not in options
         panic_regexes = [PANIC, STOPPED, PANIC_KDB, PANIC_PAGE_FAULT]
         try:
-            i = expect_fn(panic_regexes + options, **kwargs)
-            if i < len(panic_regexes):
+            i = expect_fn(options + panic_regexes, **kwargs)
+            if i > len(options):
                 debug_kernel_panic(self)
                 failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
-            return i - len(panic_regexes)
+            return i
         except pexpect.TIMEOUT:
             failure(timeout_msg, ": ", str(self), exit=timeout_fatal)
 
@@ -241,6 +249,12 @@ class CheriBSDInstance(pexpect.spawn):
     def checked_run(self, cmd: str, *, timeout=600, ignore_cheri_trap=False, error_output: str = None, **kwargs):
         checked_run_cheribsd_command(self, cmd, timeout=timeout, ignore_cheri_trap=ignore_cheri_trap,
                                      error_output=error_output, **kwargs)
+
+
+class CheriBSDInstance(CheriBSDSpawnMixin, pexpect.spawn):
+    def __init__(self, xtarget: CrossCompileTarget, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.xtarget = xtarget
 
 
 class QemuCheriBSDInstance(CheriBSDInstance):
@@ -413,7 +427,7 @@ def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, a
         return unxz(path)
 
     bz2_guess = path.with_suffix(path.suffix + ".bz2")
-    # try adding the archive suffix suffix
+    # try adding the archive suffix
     if bz2_guess.exists():
         if path.is_file() and is_newer(path, bz2_guess):
             info("Not Extracting ", bz2_guess, " since uncompressed image ", path, " is newer")
@@ -435,7 +449,7 @@ def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, a
     return path
 
 
-def debug_kernel_panic(qemu: CheriBSDInstance):
+def debug_kernel_panic(qemu: CheriBSDSpawnMixin):
     failure("Trying to get a stack trace for kernel panic: ", qemu.match, exit=False)
     # wait up to 10 seconds for a db prompt
     # Note: this uses expect_exact_ignore_panic() to avoid infinite recursion if FreeBSD is stuck in a panic loop
@@ -449,7 +463,7 @@ def debug_kernel_panic(qemu: CheriBSDInstance):
         # wait for the backtrace to be printed
         i = qemu.expect_exact_ignore_panic(patterns, timeout=30)
     if i == stack_backtrace_start_idx:
-        # Already got a backtrace automatically (wait a few seconds for it to be printed
+        # Already got a backtrace automatically (wait a few seconds for it to be printed)
         success("Kernel stack trace about to be printed:")
         i = qemu.expect_exact_ignore_panic(patterns, timeout=30)
         if i == stack_backtrace_start_idx:
@@ -462,16 +476,19 @@ def debug_kernel_panic(qemu: CheriBSDInstance):
     # print("\n\npexpect info = ", qemu)
 
 
-def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None, error_output=None,
+SH_PROGRAM_NOT_FOUND = re.compile("/bin/sh: [/\\w\\d_-]+: not found")
+RTLD_DSO_NOT_FOUND = re.compile("ld(-cheri)?-elf.so.1: Shared object \".+\" not found, required by \".+\"")
+
+
+def run_cheribsd_command(qemu: CheriBSDSpawnMixin, cmd: str, expected_output=None, error_output=None,
                          cheri_trap_fatal=True, ignore_cheri_trap=False, timeout=60):
     qemu.sendline(cmd)
     # FIXME: allow ignoring CHERI traps
     if expected_output:
         qemu.expect([expected_output], timeout=timeout)
 
-    results = ["/bin/sh: [/\\w\\d_-]+: not found",
-               "ld(-cheri)?-elf.so.1: Shared object \".+\" not found, required by \".+\"",
-               pexpect.TIMEOUT, PEXPECT_PROMPT_RE, PEXPECT_CONTINUATION_PROMPT_RE]
+    results = [SH_PROGRAM_NOT_FOUND, RTLD_DSO_NOT_FOUND, pexpect.TIMEOUT,
+               PEXPECT_PROMPT_RE, PEXPECT_CONTINUATION_PROMPT_RE]
     error_output_index = -1
     cheri_trap_index = -1
     if error_output:
@@ -508,7 +525,7 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
             failure("Got CHERI TRAP!", exit=False)
 
 
-def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, ignore_cheri_trap=False,
+def checked_run_cheribsd_command(qemu: CheriBSDSpawnMixin, cmd: str, timeout=600, ignore_cheri_trap=False,
                                  error_output: str = None, **kwargs):
     starttime = datetime.datetime.now()
     qemu.sendline(
@@ -604,7 +621,7 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
         super().__init__(qemu_config, "cat", use_poll=True, **kwargs)
 
     def expect(self, *args, pretend_result=None, **kwargs):
-        print("Expecting", args, file=sys.stderr, flush=True)
+        info("Expecting", args)
         args_list = args[0]
         assert isinstance(args_list, list)
         if pretend_result:
@@ -615,7 +632,7 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
         return 0
 
     def expect_prompt(self, *args, **kwargs):
-        print("Expecting prompt")
+        info("Expecting prompt")
         return
 
     def flush(self):
@@ -715,7 +732,8 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
     return child
 
 
-def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False, network_iface: str) -> None:
+def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False,
+                   network_iface: typing.Optional[str]) -> None:
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -731,7 +749,8 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
         # BOOTVERBOSE is off for the amd64 kernel, so we don't see the STARTING_INIT message
         # TODO: it would be nice if we had a message to detect userspace startup without requiring bootverbose
         bootverbose = False
-        boot_messages = [STARTING_INIT, "Hit \\[Enter\\] to boot immediately", "Trying to mount root from.+\\r\\n",
+        boot_messages = [STARTING_INIT, "Hit \\[Enter\\] to boot immediately",
+                         re.compile(r"Trying to mount root from .+\.\.\."),
                          BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3] + FATAL_ERROR_MESSAGES
         i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
         # Skip 10s wait from x86 loader if we see the "Hit [Enter] to boot" message
@@ -783,9 +802,9 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
             success("===> /etc/rc completed, got command prompt")
             _set_pexpect_sh_prompt(child)
         else:  # BOOT_FAILURE or FATAL_ERROR_MESSAGES
-            # If this was a CHEIR trap wait up to 20 seconds to ensure the dump output has been printed
+            # If this was a CHEIR trap, wait up to 20 seconds to ensure the dump output has been printed
             child.expect(["THIS STRING SHOULD NOT MATCH, JUST WAITING FOR 20 secs", pexpect.TIMEOUT], timeout=20)
-            # If this was a failure of init we should get a debugger backtrace
+            # If this was a failure of init, we should get a debugger backtrace
             failure("Error during boot login prompt: ", str(child), " match index=", i)
         # set up network in case dhclient wasn't started yet
         if not have_dhclient:
