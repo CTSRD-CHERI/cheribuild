@@ -38,6 +38,8 @@ import time
 import typing
 from pathlib import Path
 
+from pycheribuild.colour import AnsiColour, coloured
+
 _cheribuild_root = Path(__file__).resolve().parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
 assert (_pexpect_dir / "pexpect/__init__.py").exists()
@@ -123,7 +125,10 @@ reset halt
 def load_bitfile(bitfile: Path, ltxfile: Path, fu: FileSystemUtils):
     if shutil.which("vivado") is None:
         fatal_error("vivado not in $PATH, cannot continue")
-
+    if bitfile is None or not bitfile.exists():
+        fatal_error("Missing bitfile:", bitfile)
+    if ltxfile is None or not ltxfile.exists():
+        fatal_error("Missing ltx file:", ltxfile)
     with tempfile.NamedTemporaryFile() as t:
         t.write(VIVADO_SCRIPT)
         t.flush()
@@ -202,9 +207,7 @@ def start_openocd(openocd_cmd: Path) -> typing.Tuple[pexpect.spawn, int]:
         return openocd, gdb_port
 
 
-def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path, kernel_image: Path = None,
-                          kernel_debug_file: Path = None, tty_info: ListPortInfo) -> FpgaConnection:
-    # Open the serial connection first to check that it's available:
+def get_console(tty_info: ListPortInfo) -> CheriBSDSpawnMixin:
     # We use the miniterm command bundled with PySerial as the interactive prompt.
     # This means that we don't depend on minicom/picocom being installed.
     success("Connecting to TTY...")
@@ -216,6 +219,13 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
         serial_conn = CheriBSDInstance(CompilationTargets.CHERIBSD_RISCV_HYBRID, sys.executable, miniterm_cmd,
                                        logfile=sys.stdout, encoding="utf-8", timeout=60)
     serial_conn.expect(["--- Miniterm on "])
+    return serial_conn
+
+
+def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path, kernel_image: Path = None,
+                          kernel_debug_file: Path = None, tty_info: ListPortInfo) -> FpgaConnection:
+    # Open the serial connection first to check that it's available:
+    serial_conn = get_console(tty_info)
     success("Connected to TTY")
     # First start openocd
     gdb_start_time = datetime.datetime.utcnow()
@@ -308,6 +318,7 @@ def main():
                         type=abspath_arg)
     parser.add_argument("--pretend", help="Don't actually run the commands just show what would happen",
                         action="store_true")
+    parser.add_argument("action", choices=["all", "bitfile", "boot", "console"], default="all")
     try:
         # noinspection PyUnresolvedReferences
         import argcomplete
@@ -317,25 +328,37 @@ def main():
     args = parser.parse_args()
     print(args)
     init_global_config(ConfigBase(pretend=args.pretend, verbose=True, quiet=False))
-    if args.bitfile is not None:
+    if (args.action == "all" and args.bitfile is not None) or args.action == "bitfile":
         if args.ltxfile is None:
             args.ltxfile = Path(args.bitfile).with_suffix(".ltx")
         load_bitfile(args.bitfile, args.ltxfile, FileSystemUtils(get_global_config()))
+        if args.action == "bitfile":
+            sys.exit(0)
 
     tty_info = find_vcu118_tty()
     print("Found TTY:", tty_info)
     print(tty_info.usb_info())
-    conn = load_and_start_kernel(gdb_cmd=args.gdb, openocd_cmd=args.openocd, bios_image=args.bios,
-                                 kernel_image=args.kernel, kernel_debug_file=args.kernel_debug_file, tty_info=tty_info)
-    success("Interacting with CheriBSD. Press CTRL+] to exit")
+    if args.action == "console":
+        console = get_console(tty_info)
+    else:
+        conn = load_and_start_kernel(gdb_cmd=args.gdb, openocd_cmd=args.openocd, bios_image=args.bios,
+                                     kernel_image=args.kernel, kernel_debug_file=args.kernel_debug_file,
+                                     tty_info=tty_info)
+        console = conn.serial
+        if args.action == "boot":
+            sys.exit(0)
+    success("Interacting with CheriBSD. ", coloured(AnsiColour.yellow, "Use CTRL+] to exit"))
     # Print the help message
-    conn.serial.sendcontrol('t')
-    conn.serial.sendcontrol('h')
+    console.sendcontrol('t')
+    console.sendcontrol('i')
     # interac() prints all input+output -> disable logfile
-    conn.serial.logfile = None
-    conn.serial.logfile_read = None
-    conn.serial.logfile_send = None
-    conn.serial.interact()
+    console.logfile = None
+    console.logfile_read = None
+    console.logfile_send = None
+    if args.action == "console":
+        # TODO? console.sendintr()  # Send CTRL+C to get a clean prompt
+        pass
+    console.interact()
 
 
 if __name__ == "__main__":
