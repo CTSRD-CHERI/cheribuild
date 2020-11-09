@@ -208,7 +208,8 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     # We use the miniterm command bundled with PySerial as the interactive prompt.
     # This means that we don't depend on minicom/picocom being installed.
     success("Connecting to TTY...")
-    miniterm_cmd = ["-m", "serial.tools.miniterm", tty_info.device, "115200", "--filter", "colorize"]
+    # Note: use --eol LF to avoid two prompts being printed on <Enter> (default seems to be CRLF)
+    miniterm_cmd = ["-m", "serial.tools.miniterm", tty_info.device, "115200", "--eol", "LF"]
     if get_global_config().pretend:
         serial_conn = FakeSerialSpawn(sys.executable, miniterm_cmd)
     else:
