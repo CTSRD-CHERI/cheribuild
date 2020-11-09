@@ -209,15 +209,16 @@ class CheriBSDSpawnMixin(MixinBase):
     def expect_exact_ignore_panic(self, patterns, *, timeout: int):
         return super().expect_exact(patterns, timeout=timeout)
 
-    def expect(self, patterns: list, timeout=-1, pretend_result=None, timeout_fatal=True, timeout_msg="timeout",
-               **kwargs):
+    def expect(self, patterns: "typing.List[typing.Union[str, typing.Pattern]]", timeout=-1, pretend_result=None,
+               timeout_fatal=True, timeout_msg="timeout", **kwargs):
         assert isinstance(patterns, list), "expected list and not " + str(patterns)
         info("Expecting regex ", coloured(AnsiColour.blue, str(patterns)))
         return self._expect_and_handle_panic_impl(patterns, timeout_msg, timeout_fatal=timeout_fatal,
                                                   timeout=timeout, expect_fn=super().expect, **kwargs)
 
-    def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, timeout_fatal=True, timeout_msg="timeout",
-                     **kwargs):
+    def expect_exact(self, pattern_list: typing.List[typing.Union[str, typing.Pattern]], timeout=-1,
+                     pretend_result=None, timeout_fatal=True, timeout_msg="timeout", **kwargs):
+        assert isinstance(pattern_list, list), "expected list and not " + str(pattern_list)
         info("Expecting literal ", coloured(AnsiColour.blue, str(pattern_list)))
         return self._expect_and_handle_panic_impl(pattern_list, timeout_msg, timeout_fatal=timeout_fatal,
                                                   timeout=timeout, expect_fn=super().expect_exact, **kwargs)
@@ -740,7 +741,7 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
 
     if kernel_init_only:
         # To test kernel startup time
-        child.expect_exact("Uptime: ", timeout=60)
+        child.expect_exact(["Uptime: "], timeout=60)
         i = child.expect([pexpect.TIMEOUT, "Please press any key to reboot.", pexpect.EOF], timeout=240)
         if i == 0:
             failure("QEMU didn't exit after shutdown!")
@@ -798,7 +799,7 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
                 success("===> got /sbin/sh prompt")
                 _set_pexpect_sh_prompt(child)
         elif i == boot_expect_strings.index(SHELL_OPEN):  # shell started from /etc/rc:
-            child.expect_exact(INITIAL_PROMPT_SH, timeout=30)
+            child.expect_exact([INITIAL_PROMPT_SH], timeout=30)
             success("===> /etc/rc completed, got command prompt")
             _set_pexpect_sh_prompt(child)
         else:  # BOOT_FAILURE or FATAL_ERROR_MESSAGES
