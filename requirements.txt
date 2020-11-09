@@ -3,4 +3,3 @@ pytest~=6.1.2
 argcomplete~=1.12.1
 # Only needed for RISC-V FPGA boot -> not bundled
 pyserial==3.4
-pexpect-serial==0.1.0
