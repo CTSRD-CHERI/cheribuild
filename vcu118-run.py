@@ -45,13 +45,14 @@ sys.path.insert(1, str(_pexpect_dir))
 sys.path.insert(1, str(_pexpect_dir.parent / "ptyprocess"))
 sys.path.insert(1, str(_cheribuild_root))
 from pycheribuild.utils import ConfigBase, fatal_error, get_global_config, init_global_config
+from pycheribuild.config.compilation_targets import CompilationTargets
 from pycheribuild.processutils import print_command
-from pycheribuild.boot_cheribsd import failure, PretendSpawn, success, pexpect
+from pycheribuild.boot_cheribsd import (boot_and_login, CheriBSDInstance, CheriBSDSpawnMixin, failure, PretendSpawn,
+                                        success, pexpect)
 from pycheribuild.filesystemutils import FileSystemUtils
-import serial
+
 from serial.tools.list_ports import comports
 from serial.tools.list_ports_common import ListPortInfo
-
 
 VIVADO_SCRIPT = b"""
 # Setup some variables
@@ -158,20 +159,26 @@ def abspath_arg(s) -> Path:
     return Path(os.path.abspath(os.path.expandvars(os.path.expanduser(s))))
 
 
+class FakeSerialSpawn(CheriBSDSpawnMixin, PretendSpawn):
+    pass
+
+
 class FpgaConnection:
     """Access to openOCD+GDB+Serial port connection"""
 
-    def __init__(self, gdb: pexpect.spawn, openocd: pexpect.spawn, serial: Path):
+    def __init__(self, gdb: pexpect.spawn, openocd: pexpect.spawn, serial: CheriBSDSpawnMixin):
         self.gdb = gdb
         self.openocd = openocd
         self.serial = serial
-        # import serial
-        # from pexpect_serial import SerialSpawn
-        #
-        # with serial.Serial('COM1', 115200, timeout=0) as ser:
-        #     ss = SerialSpawn(ser)
-        #     ss.sendline('start')
-        #     ss.expect('done')
+
+
+def reset_soc(conn: FpgaConnection):
+    # On the rare occasion you need to reset SoC stuff not just the core, set *(0x6fff0000)=1 does a write to a GPIO
+    # block whose output is connected to the SoC's reset so that lets you reset the whole SoC
+    conn.gdb.sendline("set *(0x6fff0000)=1")
+    # though the core will then be running so you'll need to c and then ^C in GDB to get things back in sync
+    conn.gdb.sendline("continue")
+    conn.gdb.sendintr()
 
 
 def start_openocd(openocd_cmd: Path) -> typing.Tuple[pexpect.spawn, int]:
@@ -186,21 +193,35 @@ def start_openocd(openocd_cmd: Path) -> typing.Tuple[pexpect.spawn, int]:
             openocd = pexpect.spawn(cmdline[0], cmdline[1:], logfile=sys.stdout, encoding="utf-8")
         openocd.expect_exact(["Open On-Chip Debugger"])
         success("openocd started")
-        expected_gdb_port = 3333
+        gdb_port = 3333
         openocd.expect(["Info : Listening on port (\\d+) for gdb connections"])
-        print(openocd.match)
+        if openocd.match is not None:
+            gdb_port = int(openocd.match.group(1))
         openocd.expect_exact(["Info : Listening on port 4444 for telnet connections"])
         success("openocd waiting for GDB connection")
-        return openocd, expected_gdb_port
+        return openocd, gdb_port
 
 
-def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
-                          kernel_image: Path = None, kernel_debug_file: Path = None) -> FpgaConnection:
+def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path, kernel_image: Path = None,
+                          kernel_debug_file: Path = None, tty_info: ListPortInfo) -> FpgaConnection:
+    # Open the serial connection first to check that it's available:
+    # We use the miniterm command bundled with PySerial as the interactive prompt.
+    # This means that we don't depend on minicom/picocom being installed.
+    success("Connecting to TTY...")
+    miniterm_cmd = ["-m", "serial.tools.miniterm", tty_info.device, "115200", "--filter", "colorize"]
+    if get_global_config().pretend:
+        serial_conn = FakeSerialSpawn(sys.executable, miniterm_cmd)
+    else:
+        serial_conn = CheriBSDInstance(CompilationTargets.CHERIBSD_RISCV_HYBRID, sys.executable, miniterm_cmd,
+                                       logfile=sys.stdout, encoding="utf-8", timeout=60)
+    serial_conn.expect(["--- Miniterm on "])
+    success("Connected to TTY")
     # First start openocd
+    gdb_start_time = datetime.datetime.utcnow()
     openocd, openocd_gdb_port = start_openocd(openocd_cmd)
     # openocd is running, now start GDB
     args = [str(Path(bios_image).absolute()),
-           "-ex", "target extended-remote :" + str(openocd_gdb_port)]
+            "-ex", "target extended-remote :" + str(openocd_gdb_port)]
     args += ["-ex", "set confirm off"]  # avoid interactive prompts
     args += ["-ex", "monitor reset init"]  # reset and go back to boot room
     args += ["-ex", "si 5"]  # we need to run the first few instructions to get a valid DTB
@@ -248,7 +269,12 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     gdb.expect_exact(["Transfer rate:"], timeout=10 * 60)  # XXX: is 10 minutes a sensible timeout?
     load_end_time = datetime.datetime.utcnow()
     success("Finished loading bootloader image in ", load_end_time - load_start_time)
-    return FpgaConnection(gdb, openocd, Path("/dev/foo"))
+    gdb_finish_time = load_end_time
+    gdb.sendline("continue")
+    success("Starting CheriBSD after ", datetime.datetime.utcnow() - gdb_start_time)
+    # TODO: network_iface="xae0", but DHCP doesn't work
+    boot_and_login(serial_conn, starttime=gdb_finish_time, network_iface=None)
+    return FpgaConnection(gdb, openocd, serial_conn)
 
 
 def find_vcu118_tty() -> ListPortInfo:
@@ -263,6 +289,7 @@ def find_vcu118_tty() -> ListPortInfo:
 
 
 def main():
+    # noinspection PyTypeChecker
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--bitfile", help="The bitfile to load", type=abspath_arg)
     parser.add_argument("--ltxfile", help="The LTX file to use", type=abspath_arg)
@@ -293,8 +320,16 @@ def main():
     print("Found TTY:", tty_info)
     print(tty_info.usb_info())
     conn = load_and_start_kernel(gdb_cmd=args.gdb, openocd_cmd=args.openocd, bios_image=args.bios,
-                                 kernel_image=args.kernel, kernel_debug_file=args.kernel_debug_file)
-    conn.gdb.sendline("continue")
+                                 kernel_image=args.kernel, kernel_debug_file=args.kernel_debug_file, tty_info=tty_info)
+    success("Interacting with CheriBSD. Press CTRL+] to exit")
+    # Print the help message
+    conn.serial.sendcontrol('t')
+    conn.serial.sendcontrol('h')
+    # interac() prints all input+output -> disable logfile
+    conn.serial.logfile = None
+    conn.serial.logfile_read = None
+    conn.serial.logfile_send = None
+    conn.serial.interact()
 
 
 if __name__ == "__main__":
