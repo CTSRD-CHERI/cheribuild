@@ -49,8 +49,8 @@ sys.path.insert(1, str(_cheribuild_root))
 from pycheribuild.utils import ConfigBase, fatal_error, get_global_config, init_global_config
 from pycheribuild.config.compilation_targets import CompilationTargets
 from pycheribuild.processutils import print_command
-from pycheribuild.boot_cheribsd import (boot_and_login, CheriBSDInstance, CheriBSDSpawnMixin, failure, PretendSpawn,
-                                        success, pexpect)
+from pycheribuild.boot_cheribsd import (boot_and_login, CheriBSDInstance, CheriBSDSpawnMixin, failure, info,
+                                        PretendSpawn, success, pexpect)
 from pycheribuild.filesystemutils import FileSystemUtils
 
 from serial.tools.list_ports import comports
@@ -318,7 +318,8 @@ def main():
                         type=abspath_arg)
     parser.add_argument("--pretend", help="Don't actually run the commands just show what would happen",
                         action="store_true")
-    parser.add_argument("action", choices=["all", "bitfile", "boot", "console"], default="all")
+    parser.add_argument("action", choices=["all", "bitfile", "boot", "console"],
+                        default="all", nargs=argparse.OPTIONAL)
     try:
         # noinspection PyUnresolvedReferences
         import argcomplete
@@ -336,8 +337,8 @@ def main():
             sys.exit(0)
 
     tty_info = find_vcu118_tty()
-    print("Found TTY:", tty_info)
-    print(tty_info.usb_info())
+    success("Found TTY:", tty_info)
+    info(tty_info.usb_info())
     if args.action == "console":
         console = get_console(tty_info)
     else:
