@@ -769,7 +769,8 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
                 success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
 
         userspace_starttime = datetime.datetime.now()
-        boot_expect_strings = [LOGIN, SHELL_OPEN, BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3]
+        boot_expect_strings = [LOGIN, SHELL_OPEN, BOOT_FAILURE, BOOT_FAILURE2,
+                               BOOT_FAILURE3]  # type: typing.List[typing.Union[str, typing.Pattern]]
         i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=15 * 60,
                          timeout_msg="timeout awaiting login prompt")
         if i == len(boot_expect_strings):  # DHCPACK from
