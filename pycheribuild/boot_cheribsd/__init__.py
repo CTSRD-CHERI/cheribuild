@@ -50,10 +50,11 @@ import traceback
 import typing
 from pathlib import Path
 
+from pycheribuild.colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
+from ..processutils import commandline_to_str, keep_terminal_sane
 from ..qemu_utils import QemuOptions, riscv_bios_arguments
 from ..utils import find_free_port
-from ..processutils import keep_terminal_sane
 
 _cheribuild_root = Path(__file__).parent.parent.parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
@@ -109,6 +110,43 @@ _SSH_SOCKET_PLACEHOLDER = None  # type: typing.Optional[socket.socket]
 MAX_SMBFS_RETRY = 3
 
 
+class PretendSpawn(pexpect.spawn):
+    def __init__(self, command, args, **kwargs):
+        # Just start cat for --pretend mode
+        kwargs["timeout"] = 1
+        super().__init__("cat", use_poll=True, **kwargs)
+        self.cmd = [command] + args
+        print("Spawning (fake)", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
+
+    def expect(self, *args, pretend_result=None, **kwargs):
+        args_list = args[0]
+        assert isinstance(args_list, list)
+        print("Expecting", args_list, file=sys.stderr, flush=True)
+        if pretend_result:
+            return pretend_result
+        # Never return TIMEOUT in pretend mode
+        for i, v in enumerate(args_list):
+            if i != pexpect.TIMEOUT:
+                return i
+        return 0
+
+    def expect_exact(self, pattern_list, pretend_result=None, **kw):
+        print("Expecting", pattern_list, file=sys.stderr, flush=True)
+        if pretend_result:
+            return pretend_result
+        # Never return TIMEOUT in pretend mode
+        for i, v in enumerate(pattern_list):
+            if i != pexpect.TIMEOUT:
+                return i
+        return 0
+
+    def flush(self):
+        pass
+
+    def wait(self):
+        print("Exiting (fake)", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
+
+
 class CheriBSDCommandFailed(Exception):
     def __init__(self, *args, execution_time: datetime.timedelta):
         super().__init__(*args)
@@ -158,24 +196,9 @@ class CheriBSDInstance(pexpect.spawn):
     smb_dirs = None  # type: typing.List[SmbMount]
     flush_interval = None
 
-    def __init__(self, qemu_config: QemuOptions, *args, ssh_port: typing.Optional[int],
-                 ssh_pubkey: typing.Optional[Path], **kwargs):
+    def __init__(self, xtarget: CrossCompileTarget, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.qemu_config = qemu_config
-        self.should_quit = False
-        self.ssh_port = ssh_port
-        assert ssh_pubkey is None or isinstance(ssh_pubkey, Path)
-        self.ssh_public_key = ssh_pubkey
-        # strip the .pub from the key file
-        self.ssh_private_key = Path(ssh_pubkey).with_suffix("") if ssh_pubkey else None
-        assert self.ssh_private_key != self.ssh_public_key
-        self.ssh_user = "root"
-        self.smb_dirs = []  # type: typing.List[SmbMount]
-        self.smb_failed = False
-
-    @property
-    def xtarget(self) -> CrossCompileTarget:
-        return self.qemu_config.xtarget
+        self.xtarget = xtarget
 
     def expect_exact_ignore_panic(self, patterns, *, timeout: int):
         return super().expect_exact(patterns, timeout=timeout)
@@ -218,6 +241,27 @@ class CheriBSDInstance(pexpect.spawn):
     def checked_run(self, cmd: str, *, timeout=600, ignore_cheri_trap=False, error_output: str = None, **kwargs):
         checked_run_cheribsd_command(self, cmd, timeout=timeout, ignore_cheri_trap=ignore_cheri_trap,
                                      error_output=error_output, **kwargs)
+
+
+class QemuCheriBSDInstance(CheriBSDInstance):
+    EXIT_ON_KERNEL_PANIC = True
+    smb_dirs = None  # type: typing.List[SmbMount]
+    flush_interval = None
+
+    def __init__(self, qemu_config: QemuOptions, *args, ssh_port: typing.Optional[int],
+                 ssh_pubkey: typing.Optional[Path], **kwargs):
+        super().__init__(qemu_config.xtarget, *args, **kwargs)
+        self.qemu_config = qemu_config
+        self.should_quit = False
+        self.ssh_port = ssh_port
+        assert ssh_pubkey is None or isinstance(ssh_pubkey, Path)
+        self.ssh_public_key = ssh_pubkey
+        # strip the .pub from the key file
+        self.ssh_private_key = Path(ssh_pubkey).with_suffix("") if ssh_pubkey else None
+        assert self.ssh_private_key != self.ssh_public_key
+        self.ssh_user = "root"
+        self.smb_dirs = []  # type: typing.List[SmbMount]
+        self.smb_failed = False
 
     @staticmethod
     def _ssh_options(use_controlmaster: bool):
@@ -512,7 +556,7 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
                                     execution_time=runtime)
 
 
-def setup_ssh_for_root_login(qemu: CheriBSDInstance):
+def setup_ssh_for_root_login(qemu: QemuCheriBSDInstance):
     pubkey = qemu.ssh_public_key
     assert pubkey is not None
     assert isinstance(pubkey, Path)
@@ -553,7 +597,7 @@ def _set_pexpect_sh_prompt(child):
 
 
 # noinspection PyMethodMayBeStatic,PyUnusedLocal
-class FakeSpawn(CheriBSDInstance):
+class FakeQemuSpawn(QemuCheriBSDInstance):
     def __init__(self, qemu_config: QemuOptions, *args, **kwargs):
         # Just start cat for --pretend mode
         kwargs["timeout"] = 1
@@ -590,9 +634,8 @@ class FakeSpawn(CheriBSDInstance):
         return True
 
 
-def start_dhclient(qemu: CheriBSDInstance):
+def start_dhclient(qemu: CheriBSDInstance, network_iface: str):
     success("===> Setting up QEMU networking")
-    network_iface = qemu.qemu_config.network_interface_name()
     qemu.sendline("ifconfig {network_iface} up && dhclient {network_iface}".format(network_iface=network_iface))
     i = qemu.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running",
                      "interface ([\\w\\d]+) does not exist"], timeout=120)
@@ -615,7 +658,7 @@ def start_dhclient(qemu: CheriBSDInstance):
 def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path], kernel_image: Path,
                   disk_image: typing.Optional[Path], ssh_port: typing.Optional[int],
                   ssh_pubkey: typing.Optional[Path], *, smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False,
-                  trap_on_unrepresentable=False, skip_ssh_setup=False, bios_path: Path = None) -> CheriBSDInstance:
+                  trap_on_unrepresentable=False, skip_ssh_setup=False, bios_path: Path = None) -> QemuCheriBSDInstance:
     user_network_args = ""
     if smb_dirs is None:
         smb_dirs = []
@@ -656,9 +699,9 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
     global _SSH_SOCKET_PLACEHOLDER
     if _SSH_SOCKET_PLACEHOLDER is not None:
         _SSH_SOCKET_PLACEHOLDER.close()
-    qemu_cls = CheriBSDInstance
+    qemu_cls = QemuCheriBSDInstance
     if PRETEND:
-        qemu_cls = FakeSpawn
+        qemu_cls = FakeQemuSpawn
     child = qemu_cls(qemu_options, qemu_args[0], qemu_args[1:], ssh_port=ssh_port, ssh_pubkey=ssh_pubkey,
                      encoding="utf-8", echo=False, timeout=60)
     # child.logfile=sys.stdout.buffer
@@ -667,10 +710,12 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
         child.logfile = QEMU_LOGFILE.open("w")
     else:
         child.logfile_read = sys.stdout
-    return boot_and_login(child, starttime=qemu_starttime, kernel_init_only=kernel_init_only)
+    boot_and_login(child, starttime=qemu_starttime, kernel_init_only=kernel_init_only,
+                   network_iface=qemu_options.network_interface_name())
+    return child
 
 
-def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False) -> CheriBSDInstance:
+def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False, network_iface: str) -> None:
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -681,9 +726,9 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
         i = child.expect([pexpect.TIMEOUT, "Please press any key to reboot.", pexpect.EOF], timeout=240)
         if i == 0:
             failure("QEMU didn't exit after shutdown!")
-        return child
+        return
     try:
-        # BOOTVERBOSE is off for the amd64 kernel so we don't see the STARTING_INIT message
+        # BOOTVERBOSE is off for the amd64 kernel, so we don't see the STARTING_INIT message
         # TODO: it would be nice if we had a message to detect userspace startup without requiring bootverbose
         bootverbose = False
         boot_messages = [STARTING_INIT, "Hit \\[Enter\\] to boot immediately", "Trying to mount root from.+\\r\\n",
@@ -744,16 +789,20 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
             failure("Error during boot login prompt: ", str(child), " match index=", i)
         # set up network in case dhclient wasn't started yet
         if not have_dhclient:
-            info("Did not see DHCPACK message, starting dhclient manually.")
-            start_dhclient(child)
+            if network_iface is None:
+                info("No network interface specified, not trying to start dhclient.")
+            else:
+                info("Did not see DHCPACK message, starting dhclient manually.")
+                start_dhclient(child, network_iface=network_iface)
         success("===> booted CheriBSD (userspace startup time: ", datetime.datetime.now() - userspace_starttime, ")")
     except KeyboardInterrupt:
         failure("Keyboard interrupt during boot", exit=True)
-    return child
+    return
 
 
-def _do_test_setup(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: list, test_ld_preload_files: list,
-                   test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None) -> None:
+def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_archives: list,
+                   test_ld_preload_files: list,
+                   test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None):
     smb_dirs = qemu.smb_dirs  # type: typing.List[SmbMount]
     setup_tests_starttime = datetime.datetime.now()
     # disable coredumps, otherwise we get no space left on device errors
@@ -845,7 +894,7 @@ def _do_test_setup(qemu: CheriBSDInstance, args: argparse.Namespace, test_archiv
         success("Additional test enviroment setup took ", datetime.datetime.now() - setup_tests_starttime)
 
 
-def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: list, test_ld_preload_files: list,
+def runtests(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_archives: list, test_ld_preload_files: list,
              test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
              test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None) -> bool:
     try:

@@ -216,11 +216,11 @@ def parse_args() -> argparse.Namespace:
     # bash completion:
     # activate-global-python-argcomplete --user &&  source ~/.bash_completion.d/python-argcomplete.sh
     try:
+        # noinspection PyUnresolvedReferences
         import argcomplete
         argcomplete.autocomplete(parser)
     except ImportError:
-        # noinspection PyUnusedLocal
-        argcomplete = {}
+        pass
     # parse the arguments
     args = parser.parse_args()
     global VERBOSE_LEVEL
@@ -382,7 +382,7 @@ class MySpawn(pexpect.spawn):
             exit(1)
 
 
-class BeriCtlCheriBSDSpawn(boot_cheribsd.CheriBSDInstance):
+class BeriCtlCheriBSDSpawn(boot_cheribsd.QemuCheriBSDInstance):
     def __init__(self, *args, ssh_port: int = None, ssh_pubkey: Path = None, **kwargs):
         qemu_config = QemuOptions(CompilationTargets.CHERIBSD_MIPS_HYBRID)  # unused but needs to be passed
         super().__init__(qemu_config, *args, ssh_port=ssh_port, ssh_pubkey=ssh_pubkey, **kwargs)
@@ -401,7 +401,7 @@ class BeriCtlCheriBSDSpawn(boot_cheribsd.CheriBSDInstance):
         self.logfile_read = old_logfile_read
 
 
-def get_console(cable_id, berictl, logfile=None, *, pubkey: Path) -> boot_cheribsd.CheriBSDInstance:
+def get_console(cable_id, berictl, logfile=None, *, pubkey: Path) -> boot_cheribsd.QemuCheriBSDInstance:
     cmd = [berictl]
     cmd += ['-c', str(cable_id)]
     cmd += ['-j', 'console']
@@ -453,7 +453,7 @@ def loadbin(*, img, addr, cable_id, berictl, args):
     ldbin.close()
 
 
-def boot_bsd_berictl(args, pubkey: Path) -> boot_cheribsd.CheriBSDInstance:
+def boot_bsd_berictl(args, pubkey: Path) -> boot_cheribsd.QemuCheriBSDInstance:
     # grab the console before booting; this should reduce the chance that we
     # miss boot messages
     console = get_console(cable_id=args.cable_id, berictl=args.berictl, pubkey=pubkey)
@@ -503,7 +503,7 @@ def streamtrace_berictl(args):
     boot.close()
 
 
-def boot_bsd_qemu(disk_image, kernel, args, pubkey: Path, port: int) -> boot_cheribsd.CheriBSDInstance:
+def boot_bsd_qemu(disk_image, kernel, args, pubkey: Path, port: int) -> boot_cheribsd.QemuCheriBSDInstance:
     qemu = default_qemu_path(args)
 
     # if needed extract the kernel/image:
@@ -526,8 +526,8 @@ def boot_bsd_qemu(disk_image, kernel, args, pubkey: Path, port: int) -> boot_che
         cmd.extend(["-hda", disk_image])
     # TODO: ssh host forwarding
     print("Running", " ".join(cmd))
-    c = boot_cheribsd.CheriBSDInstance(qemu_config, " ".join(cmd), ssh_port=port, ssh_pubkey=pubkey, encoding="utf-8",
-                                       echo=False, timeout=60)
+    c = boot_cheribsd.QemuCheriBSDInstance(qemu_config, " ".join(cmd), ssh_port=port, ssh_pubkey=pubkey,
+                                           encoding="utf-8", echo=False, timeout=60)
     return c
 
 
@@ -540,7 +540,7 @@ def boot_bsd(kernel_img, args, ssh_pubkey: Path):
         console = boot_bsd_berictl(args, pubkey=ssh_pubkey)
     assert isinstance(console, boot_cheribsd.CheriBSDInstance)
     console.logfile_read = sys.stdout
-    console = boot_cheribsd.boot_and_login(console, starttime=starttime)
+    boot_cheribsd.boot_and_login(console, starttime=starttime, network_iface=get_network_iface(args))
     # ensure that we have the ssh public key set up
     if ssh_pubkey.exists():
         boot_cheribsd.setup_ssh_for_root_login(console)
