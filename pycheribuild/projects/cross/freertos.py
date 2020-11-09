@@ -46,6 +46,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = [
         CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV32,
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV32_PURECAP,
         CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
     default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
@@ -101,9 +103,10 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             # Galois demo only runs on VCU118/GFE
             self.make_args.set(BSP="vcu118")
 
-            # Only build 64-bit FreeRTOS as cheribuild currently only supports building
-            # for RV64
-            self.make_args.set(XLEN="64")
+            if "rv32" in self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True):
+                self.make_args.set(XLEN="32")
+            else:
+                self.make_args.set(XLEN="64")
 
             # Set sysroot Makefile arg to pick up libc
             self.make_args.set(SYSROOT_DIR=str(self.sdk_sysroot))

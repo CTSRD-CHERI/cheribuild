@@ -48,6 +48,7 @@ class CPUArchitecture(Enum):
     I386 = "i386"
     MIPS64 = "mips64"
     RISCV64 = "riscv64"
+    RISCV32 = "riscv32"
     X86_64 = "x86_64"
 
     def is_32bit(self) -> bool:
@@ -298,6 +299,8 @@ class TargetInfo(ABC):
         if self.target.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
             assert self.config.mips_cheri_bits in (128, 256), "No other cap size supported yet"
             return self.config.mips_cheri_bits // 8
+        elif self.target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV32]):
+            return 8  # RISCV32 uses 64-bit capabilities
         elif self.target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             return 16  # RISCV64 uses 128-bit capabilities
         elif self.target.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
@@ -583,8 +586,14 @@ class CrossCompileTarget(object):
     def is_mips(self, include_purecap: bool = None):
         return self._check_arch(CPUArchitecture.MIPS64, include_purecap)
 
-    def is_riscv(self, include_purecap: bool = None):
+    def is_riscv32(self, include_purecap: bool = None):
+        return self._check_arch(CPUArchitecture.RISCV32, include_purecap)
+
+    def is_riscv64(self, include_purecap: bool = None):
         return self._check_arch(CPUArchitecture.RISCV64, include_purecap)
+
+    def is_riscv(self, include_purecap: bool = None):
+        return self.is_riscv32(include_purecap) or self.is_riscv64(include_purecap)
 
     def is_aarch64(self, include_purecap: bool = None):
         return self._check_arch(CPUArchitecture.AARCH64, include_purecap)
