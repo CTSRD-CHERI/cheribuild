@@ -396,6 +396,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Don't split the debug info from the binary, just keep it as part of the binary
             # This means we can just scp the file over to a cheribsd instace, run gdb and get symbols and sources.
             self.make_args.set_with_options(DEBUG_FILES=False)
+            # The OFED code is unlikely to be of any use to us and is also full of annoying warnings that flood the
+            # build log. Moreover, these warnings indicat that it's very unlikely to work as purecap.
+            self.make_args.set_with_options(OFED=False)
             # Don't build manpages by default
             self.make_args.set_with_options(MAN=self.with_manpages)
             # GOOGLETEST takes many minutes to compile and link with an assertions-enabled clang
