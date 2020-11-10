@@ -50,11 +50,10 @@ def _parse_arguments(args: typing.List[str], *, config_file=Path("/this/does/not
     assert isinstance(args, list)
     assert all(isinstance(arg, str) for arg in args), "Invalid argv " + str(args)
     global _targets_registered
-    # noinspection PyGlobalUndefined
-    global _cheri_config
     if not _targets_registered:
         all_target_names = list(sorted(target_manager.target_names)) + ["__run_everything__"]
         ConfigLoaderBase._cheri_config = DefaultCheriConfig(_loader, all_target_names)
+        ConfigLoaderBase._cheri_config.TEST_MODE = True
         SimpleProject._config_loader = _loader
         target_manager.register_command_line_options()
         _targets_registered = True
@@ -79,6 +78,9 @@ def _parse_config_file_and_args(config_file_contents: bytes, *args: str,
 
 def test_skip_update():
     # default is false:
+    conf = _parse_arguments(["--skip-configure"])
+    skip = inspect.getattr_static(conf, "skip_update")
+    assert isinstance(skip, JsonAndCommandLineConfigOption)
     assert not _parse_arguments(["--skip-configure"]).skip_update
     # check that --no-foo and --foo work:
     assert _parse_arguments(["--skip-update"]).skip_update
