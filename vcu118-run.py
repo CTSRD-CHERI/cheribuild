@@ -263,9 +263,11 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     success("openocd accepted GDB connection")
     gdb.expect_exact(["Remote debugging using :" + str(openocd_gdb_port)])
     success("GDB connected to openocd")
-    gdb.expect_exact(["0x0000000070000000 in ??"])
+    # XXX: doesn't match with recent GDB:  gdb.expect_exact(["0x0000000070000000 in ??"])
+    gdb.expect_exact(["0x0000000070000000"])
     success("PC set to bootrom")
-    gdb.expect_exact(["0x0000000044000000 in ??"])
+    # XXX: doesn't match with recent GDB: gdb.expect_exact(["0x0000000044000000 in ??"])
+    gdb.expect_exact(["0x0000000044000000"])
     success("Done executing bootrom")
     if kernel_image is not None:
         gdb.expect_exact(["Loading section .text"])
