@@ -176,6 +176,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             # Currently there are a lot of `undefined symbol 'elf_version'`, etc errors
             # Add -lelf to the linker command line until the source is fixed
             self.LDFLAGS.append("-lelf")
+            self.LDFLAGS.append("-lmd")
             self.configure_environment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
         if self.make_args.command == "gmake":
             self.configure_environment["MAKE"] = "gmake"
