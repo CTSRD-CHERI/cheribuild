@@ -234,6 +234,7 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     args = [str(Path(bios_image).absolute()),
             "-ex", "target extended-remote :" + str(openocd_gdb_port)]
     args += ["-ex", "set confirm off"]  # avoid interactive prompts
+    args += ["-ex", "set pagination off"]  # avoid paginating output, requiring input
     args += ["-ex", "set style enabled off"]  # disable colours since they break the matcher strings
     args += ["-ex", "monitor reset init"]  # reset and go back to boot room
     args += ["-ex", "si 5"]  # we need to run the first few instructions to get a valid DTB
