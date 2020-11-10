@@ -227,6 +227,8 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     # Open the serial connection first to check that it's available:
     serial_conn = get_console(tty_info)
     success("Connected to TTY")
+    if not bios_image.exists():
+        failure("Missing bios image: ", bios_image)
     # First start openocd
     gdb_start_time = datetime.datetime.utcnow()
     openocd, openocd_gdb_port = start_openocd(openocd_cmd)
@@ -287,11 +289,13 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     gdb_finish_time = load_end_time
     gdb.sendline("continue")
     success("Starting CheriBSD after ", datetime.datetime.utcnow() - gdb_start_time)
-    try:
-        serial_conn.expect_exact(["bbl loader"], timeout=30)
+    i = serial_conn.expect_exact(["bbl loader", "---<<BOOT>>---", pexpect.TIMEOUT], timeout=30)
+    if i == 0:
         success("bbl loader started")
-    except pexpect.TIMEOUT:
-        failure("Did not get expected bbl output", exit=True)
+    elif i == 0:
+        success("FreeBSD booot started")
+    else:
+        failure("Did not get expected boot output", exit=True)
     # TODO: network_iface="xae0", but DHCP doesn't work
     boot_and_login(serial_conn, starttime=gdb_finish_time, network_iface=None)
     return FpgaConnection(gdb, openocd, serial_conn)
@@ -313,8 +317,7 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--bitfile", help="The bitfile to load", type=abspath_arg)
     parser.add_argument("--ltxfile", help="The LTX file to use", type=abspath_arg)
-    parser.add_argument("--bios", default="openocd", help="The machine-mode program to load", required=True,
-                        type=abspath_arg)
+    parser.add_argument("--bios", default="openocd", help="The machine-mode program to load", type=abspath_arg)
     parser.add_argument("--kernel", help="The supervisor-mode program to load", type=abspath_arg)
     parser.add_argument("--kernel-debug-file", help="Debug info file for the kernel", type=abspath_arg)
     parser.add_argument("--gdb", default=shutil.which("gdb") or "gdb", help="Path to GDB binary", type=Path)

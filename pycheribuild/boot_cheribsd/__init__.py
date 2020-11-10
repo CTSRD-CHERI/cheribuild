@@ -733,7 +733,7 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
     return child
 
 
-def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False,
+def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=False,
                    network_iface: typing.Optional[str]) -> None:
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
