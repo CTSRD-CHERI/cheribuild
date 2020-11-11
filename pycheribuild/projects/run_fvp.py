@@ -38,15 +38,17 @@ from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, Buil
 from .project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
-from ..utils import cached_property, OSInfo
 from ..processutils import extract_version, popen
+from ..utils import cached_property, OSInfo
 
 
 class InstallMorelloFVP(SimpleProject):
     target = "install-morello-fvp"
     container_name = "morello-fvp"
-
+    base_url = "https://developer.arm.com/-/media/Arm%20Developer%20Community/Downloads/OSS/FVP/Morello%20Platform/"
     latest_known_fvp = (0, 11, 3)
+    installer_filename = "FVP_Morello_{}.{}_{}.tgz".format(*latest_known_fvp)
+
     # Seems like docker containers don't get the full amount configured in the settings so subtract a bit from 5GB/8GB
     min_ram_mb = 4900
     warn_ram_mb = 7900
@@ -59,6 +61,8 @@ class InstallMorelloFVP(SimpleProject):
                 self.add_required_system_tool("socat", homebrew="socat")
                 if OSInfo.IS_MAC:
                     self.add_required_system_tool("Xquartz", homebrew="homebrew/cask/xquartz")
+        if self.installer_path is None:
+            self.add_required_system_tool("wget")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -77,17 +81,17 @@ class InstallMorelloFVP(SimpleProject):
         return self.config.morello_sdk_dir / "FVP_Morello"
 
     def process(self):
-        if not self.installer_path:
-            self.fatal("Path to FVP installer not known, please set the",
-                       "--" + self.get_config_option_name("installer_path"), "config option.",
-                       fixit_hint="The Morello FVP can be downloaded from https://developer.arm.com/tools-and-software/"
-                       "open-source-software/arm-platforms-software/arm-ecosystem-fvps")
-            return
+        if self.installer_path is None:
+            # noinspection PyAttributeOutsideInit
+            self.installer_path = self.install_dir / self.installer_filename
+            if not self.installer_path.exists():
+                self.run_cmd("wget", self.base_url + self.installer_filename, "-O", self.installer_path)
+
         if not self.installer_path.is_file():
             self.fatal("Specified path to installer does not exist:", self.installer_path)
 
         with tempfile.TemporaryDirectory() as td:
-            # If the installer is a tgz archive extract it to the temporary directory first
+            # If the installer is a tgz archive, extract it to the temporary directory first
             if self.installer_path.suffix == ".tgz":
                 self.run_cmd("tar", "xf", self.installer_path, "-C", td)
                 installer_sh = (list(Path(td).glob("*.sh")) or [Path(td, "FVP_Morello.sh")])[0]
