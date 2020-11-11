@@ -215,7 +215,6 @@ VOLUME /diskimg
         pre_cmd, fvp_path = self._fvp_base_command(interactive=False, docker_image=docker_image)
         try:
             version_out = self.run_cmd(pre_cmd + [fvp_path, "--version"], capture_output=True, run_in_pretend_mode=True)
-            self.verbose_print(version_out.decode("utf-8"))
             result = extract_version(version_out.stdout,
                                      regex=re.compile(rb"Fast Models \[(\d+)\.(\d+)\.?(\d+)? \(.+\)]"))
             self.info("Morello FVP version detected as", result)
