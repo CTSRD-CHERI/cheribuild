@@ -164,7 +164,7 @@ VOLUME /diskimg
         if self.use_docker_container:
             assert pre_cmd[-1] == self.container_name
             pre_cmd = pre_cmd[0:-1]
-            if not self.use_docker_x11_forwarding:
+            if not self.use_docker_x11_forwarding or os.getenv("DISPLAY", None) is None:
                 x11 = False  # Don't bother with the GUI
             if expose_telnet_ports:
                 pre_cmd += ["-p", "5000-5007:5000-5007"]
