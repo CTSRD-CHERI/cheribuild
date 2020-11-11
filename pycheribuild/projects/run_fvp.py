@@ -162,7 +162,7 @@ VOLUME /diskimg
                     expose_telnet_ports=True, ssh_port=None, interactive=True, **kwargs) -> CompletedProcess:
         pre_cmd, fvp_path = self._fvp_base_command(interactive=interactive)
         if self.use_docker_container:
-            assert pre_cmd[-1] == self.container_name
+            assert pre_cmd[-1] == self.container_name + ":latest", pre_cmd[-1]
             pre_cmd = pre_cmd[0:-1]
             if not self.use_docker_x11_forwarding or os.getenv("DISPLAY", None) is None:
                 x11 = False  # Don't bother with the GUI
