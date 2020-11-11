@@ -51,7 +51,7 @@ from .colour import AnsiColour, coloured
 from .utils import (ConfigBase, fatal_error, get_global_config, OSInfo, status_update, Type_T, warning_message)
 
 __all__ = ["print_command", "get_compiler_info", "CompilerInfo", "popen", "popen_handle_noexec",  # no-combine
-           "run_command", "latest_system_clang_tool", "commandline_to_str", "set_env",  # no-combine
+           "run_command", "latest_system_clang_tool", "commandline_to_str", "set_env", "extract_version",  # no-combine
            "get_program_version", "check_call_handle_noexec", "get_version_output", "keep_terminal_sane"]  # no-combine
 
 
