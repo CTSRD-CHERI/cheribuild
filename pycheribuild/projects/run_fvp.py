@@ -83,8 +83,8 @@ class InstallMorelloFVP(SimpleProject):
     def process(self):
         if self.installer_path is None:
             # noinspection PyAttributeOutsideInit
-            self.installer_path = self.install_dir / self.installer_filename
-            if not self.installer_path.exists():
+            self.installer_path = self.install_dir.parent / self.installer_filename
+            if not self.installer_path.is_file():
                 self.run_cmd("wget", self.base_url + self.installer_filename, "-O", self.installer_path)
 
         if not self.installer_path.is_file():
@@ -131,8 +131,14 @@ VOLUME /diskimg
                     build_flags.append("--pull")
                 if self.config.clean:
                     build_flags.append("--no-cache")
-                self.run_cmd(["docker", "build"] + build_flags + ["-t", self.container_name, "."],
-                             cwd=td, print_verbose_only=False)
+                image_latest = self.container_name + ":latest"
+                self.run_cmd(["docker", "build"] + build_flags + ["-t", image_latest, "."], cwd=td,
+                             print_verbose_only=False)
+                # get the version from the newly-built image (don't use the cached_property)
+                version = self._get_version(docker_image=image_latest)
+                # Also create a morello-fvp:0.11.3 tag to allow running speicific versions
+                self.run_cmd("docker", "image", "tag", image_latest,
+                             self.container_name + ":" + ".".join(map(str, version)), print_verbose_only=False)
 
     def _plugin_args(self):
         if self.fvp_revision >= (0, 10, 312):
@@ -142,10 +148,12 @@ VOLUME /diskimg
             return ["--plugin", Path("/opt/FVP_Morello", plugin_path)]
         return ["--plugin", self.ensure_file_exists("Morello FVP plugin", self.install_dir / plugin_path)]
 
-    def _fvp_base_command(self, interactive=True) -> typing.Tuple[list, Path]:
+    def _fvp_base_command(self, interactive=True, docker_image=None) -> typing.Tuple[list, Path]:
         model_relpath = "models/Linux64_GCC-6.4/FVP_Morello"
         if self.use_docker_container:
-            return (["docker", "run"] + (["-it"] if interactive else []) + ["--rm", self.container_name],
+            if docker_image is None:
+                docker_image = self.container_name + ":latest"
+            return (["docker", "run"] + (["-it"] if interactive else []) + ["--rm", docker_image],
                     Path("/opt/FVP_Morello", model_relpath))
         else:
             return [], self.install_dir / model_relpath
@@ -201,7 +209,10 @@ VOLUME /diskimg
 
     @cached_property
     def fvp_revision(self) -> "typing.Tuple[int, int, int]":
-        pre_cmd, fvp_path = self._fvp_base_command(interactive=False)
+        return self._get_version()
+
+    def _get_version(self, docker_image=None):
+        pre_cmd, fvp_path = self._fvp_base_command(interactive=False, docker_image=docker_image)
         try:
             version_out = self.run_cmd(pre_cmd + [fvp_path, "--version"], capture_output=True, run_in_pretend_mode=True)
             self.verbose_print(version_out.decode("utf-8"))
