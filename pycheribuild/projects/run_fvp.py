@@ -280,6 +280,7 @@ class LaunchFVPBase(SimpleProject):
         cls.license_server = cls.add_config_option("license-server", help="License server to use for the model")
         cls.arch_model_path = cls.add_path_option("simulator-path", help="Path to the FVP Model",
                                                   default="/usr/local/FVP_Base_RevC-Rainier")
+        cls.smp = cls.add_bool_option("smp", help="Simulate multiple CPU cores in the FVP", default=True)
 
     @property
     def use_virtio_net(self):
@@ -363,9 +364,9 @@ class LaunchFVPBase(SimpleProject):
             model_params += [
                 "displayController=0",  # won't work yet
                 # "css.cache_state_modelled=0",
-                # "num_clusters=1",
-                # "num_cores=1",
                 ]
+            if not self.smp:
+                model_params += ["num_clusters=1", "num_cores=1"]
             if self.fvp_project.fvp_revision < (0, 10, 312):
                 self.fatal("FVP is too old, please update to latest version")
             # virtio-rng supported in 0.10.312
