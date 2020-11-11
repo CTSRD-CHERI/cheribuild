@@ -137,20 +137,13 @@ class BuildGDB(CrossCompileAutotoolsProject):
             # "/usr/local/opt/tcl-tk/lib/pkgconfig:/usr/local/lib/pkgconfig"
 
         # extra ./configure environment variables:
-        # compile flags
-        # self.cross_warning_flags.extend(["-Wno-absolute-value", "-Wno-parentheses-equality"
-        #                                   "-Wno-unused-function", "-Wno-unused-variable"])
-        # These warnings are really noisy and useless:
-        self.common_warning_flags.extend([
-            "-Wno-mismatched-tags",
-            "-Wno-unknown-warning-option",  # caused by the build passing -Wshadow=local
-            "-Werror=implicit-function-declaration"
-            ])
-        self.CXXFLAGS.append("-Wno-mismatched-tags")
+        # XXX: cannot enable this until https://sourceware.org/pipermail/gdb-patches/2020-November/173174.html
+        # self.common_warning_flags.append("-Werror=implicit-function-declaration")
         if self.should_include_debug_info:
             self.COMMON_FLAGS.append("-g")
         self.COMMON_FLAGS.append("-fcommon")
-        # TODO: we should fix this:
+        # FIXME: we have to disable these -Werror flags since otherwise the configure checks fail and GDB tries to
+        # build it's own printf (which results in compiler errors).
         self.cross_warning_flags.append("-Wno-error=format")
         self.cross_warning_flags.append("-Wno-error=incompatible-pointer-types")
         self.configure_args.append("--enable-targets=all")
