@@ -803,7 +803,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if self.config.write_logfile and logfile_path.is_file() and not append_to_logfile:
             logfile_path.unlink()  # remove old logfile
         args = list(map(str, args))  # make sure all arguments are strings
-        cmd_str = self.commandline_to_str(args)
 
         if not self.config.write_logfile:
             if stdout_filter is None:
@@ -811,7 +810,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 check_call_handle_noexec(args, cwd=str(cwd), env=new_env)
             else:
                 make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, env=new_env)
-                self.__run_process_with_filtered_output(make, None, stdout_filter, cmd_str)
+                self.__run_process_with_filtered_output(make, None, stdout_filter, args)
             return
 
         # open file in append mode
@@ -821,16 +820,17 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 logfile.write(b"\n\n")
             if cwd:
                 logfile.write(("cd " + shlex.quote(str(cwd)) + " && ").encode("utf-8"))
-            logfile.write(cmd_str.encode("utf-8") + b"\n\n")
+            logfile.write(self.commandline_to_str(args).encode("utf-8") + b"\n\n")
             if self.config.quiet:
                 # a lot more efficient than filtering every line
                 check_call_handle_noexec(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=new_env)
                 return
             make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=new_env)
-            self.__run_process_with_filtered_output(make, logfile, stdout_filter, cmd_str)
+            self.__run_process_with_filtered_output(make, logfile, stdout_filter, args)
 
     def __run_process_with_filtered_output(self, proc: subprocess.Popen, logfile: "typing.Optional[typing.IO]",
-                                           stdout_filter: "typing.Callable[[bytes], None]", cmd_str: str):
+                                           stdout_filter: "typing.Callable[[bytes], None]",
+                                           args: "typing.List[str]"):
         logfile_lock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
         stderr_thread = None
         if logfile:
@@ -866,10 +866,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             # add the final new line after the filtering
             sys.stdout.buffer.write(b"\n")
         if retcode:
-            message = "Command \"%s\" failed with exit code %d.\n" % (cmd_str, retcode)
-            if logfile:
-                message += "See " + logfile.name + " for details."
-            raise SystemExit(message)
+            message = ("See " + logfile.name + " for details.").encode("utf-8") if logfile else None
+            raise subprocess.CalledProcessError(retcode, args, None, stderr=message)
 
     def maybe_strip_elf_file(self, file: Path, *, output_path: Path = None, print_verbose_only=True) -> bool:
         """Runs llvm-strip on the file if it is an ELF file and it is safe to do so."""

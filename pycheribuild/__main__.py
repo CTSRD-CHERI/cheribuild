@@ -258,9 +258,11 @@ def main():
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError as err:
         error = True
-        cwd = (". Working directory was ", err.cwd) if hasattr(err, "cwd") else ()
+        extra_msg = (". Working directory was ", err.cwd) if hasattr(err, "cwd") else ()
+        if err.stderr is not None:
+            extra_msg += ("\nStandard error was:\n", err.stderr.decode("utf-8"))
         fatal_error("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
-                    err.returncode, *cwd, fatal_when_pretending=True, sep="", exit_code=err.returncode)
+                    err.returncode, *extra_msg, fatal_when_pretending=True, sep="", exit_code=err.returncode)
     finally:
         if error:
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
