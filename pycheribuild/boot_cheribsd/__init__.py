@@ -606,9 +606,11 @@ def setup_ssh_for_root_login(qemu: QemuCheriBSDInstance):
 def _set_pexpect_sh_prompt(child):
     success("===> setting PS1")
     # Make the prompt match PROMPT
-    prompt_change = u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''".format(PEXPECT_PROMPT_SET_STR,
-                                                                    PEXPECT_CONTINUATION_PROMPT_SET_STR)
-    child.sendline(prompt_change)
+    # TODO: stty rows 40 cols 500? to avoid stupid line wrapping
+    # Note: it seems like sending all three at once does not always work, so we set them in reverse order.
+    child.sendline("PROMPT_COMMAND=''")
+    child.sendline("PS2='{0}'".format(PEXPECT_CONTINUATION_PROMPT_SET_STR))
+    child.sendline("PS1='{0}'".format(PEXPECT_PROMPT_SET_STR))
     # Find the prompt
     child.expect_prompt(timeout=60)
     success("===> successfully set PS1/PS2")
@@ -652,7 +654,7 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
         return True
 
 
-def start_dhclient(qemu: CheriBSDInstance, network_iface: str):
+def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
     success("===> Setting up QEMU networking")
     qemu.sendline("ifconfig {network_iface} up && dhclient {network_iface}".format(network_iface=network_iface))
     i = qemu.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running",
