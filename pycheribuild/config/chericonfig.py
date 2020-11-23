@@ -144,16 +144,11 @@ class CheriConfig(ConfigBase):
             help="Skip the buildkernel step when building FreeBSD or CheriBSD")
         self.freebsd_kernconf = loader.add_option("kernel-config", "-kernconf", group=loader.freebsd_group,
                                                   help_hidden=True, help="Override default kernel config to use.")
-        self.freebsd_subdir = loader.add_commandline_only_option("freebsd-subdir", "-subdir",
-                                                                 group=loader.freebsd_group, type=list,
-                                                                 metavar="SUBDIRS",
-                                                                 help="Only build subdirs SUBDIRS of FreeBSD/CheriBSD "
-                                                                      "instead of the full tree. Useful "
-                                                                      "for quickly rebuilding an individual "
-                                                                      "programs/libraries. If more than one dir is "
-                                                                      "passed they will be "
-                                                                      "processed in order.  Note: This will break if "
-                                                                      "not all dependencies have been built.")
+        self.freebsd_subdir = loader.add_commandline_only_option(
+            "freebsd-subdir", "-subdir", group=loader.freebsd_group, type=list, metavar="SUBDIRS",
+            help="Only build subdirs SUBDIRS of FreeBSD/CheriBSD instead of the full tree. Useful for quickly "
+                 "rebuilding individual programs/libraries. If more than one dir is passed they will be processed in "
+                 "order. Note: This will break if not all dependencies have been built.")
         self.freebsd_host_tools_only = loader.add_commandline_only_bool_option(
             "freebsd-host-tools-only", help_hidden=True, group=loader.freebsd_group,
             help="Stop the FreeBSD/CheriBSD build after the host tools have been built")
