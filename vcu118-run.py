@@ -276,7 +276,7 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
         gdb.expect_exact(["Loading section .text"])
         load_start_time = datetime.datetime.utcnow()
         success("Started loading kernel image (this may take a long time)")
-        gdb.expect_exact(["Transfer rate:"], timeout=20 * 60)  # XXX: is 20 minutes a sensible timeout?
+        gdb.expect_exact(["Transfer rate:"], timeout=120 * 60)  # XXX: is 2 hours a sensible timeout?
         load_end_time = datetime.datetime.utcnow()
         success("Finished loading kernel image in ", load_end_time - load_start_time)
     # Now load the bootloader
