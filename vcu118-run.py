@@ -36,9 +36,9 @@ import sys
 import tempfile
 import time
 import typing
+from abc import abstractmethod
 from pathlib import Path
 
-from pycheribuild.colour import AnsiColour, coloured
 
 _cheribuild_root = Path(__file__).resolve().parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
@@ -46,6 +46,7 @@ assert (_pexpect_dir / "pexpect/__init__.py").exists()
 sys.path.insert(1, str(_pexpect_dir))
 sys.path.insert(1, str(_pexpect_dir.parent / "ptyprocess"))
 sys.path.insert(1, str(_cheribuild_root))
+from pycheribuild.colour import AnsiColour, coloured
 from pycheribuild.utils import ConfigBase, fatal_error, get_global_config, init_global_config
 from pycheribuild.config.compilation_targets import CompilationTargets
 from pycheribuild.processutils import print_command
@@ -168,10 +169,53 @@ class FakeSerialSpawn(CheriBSDSpawnMixin, PretendSpawn):
     pass
 
 
+class SerialConnection:
+    def __init__(self, executable, args):
+        if get_global_config().pretend:
+            self.cheribsd = FakeSerialSpawn(executable, args)
+        else:
+            print_command([executable, *args])
+            self.cheribsd = CheriBSDInstance(CompilationTargets.CHERIBSD_RISCV_HYBRID, executable, args,
+                                             logfile=sys.stdout, encoding="utf-8", timeout=60)
+        assert isinstance(self.cheribsd, CheriBSDSpawnMixin)
+
+    @abstractmethod
+    def show_help_message(self): ...
+
+
+class PicoComConnection(SerialConnection):
+    def __init__(self, tty_info: ListPortInfo):
+        # We need --nolock so that openocd can access the device
+        # TODO: should probably
+        super().__init__("picocom", ["--baud", "115200", tty_info.device])
+        self.cheribsd.expect(["Terminal ready"])
+
+    def show_help_message(self):
+        # Print the help message
+        self.cheribsd.sendcontrol('a')
+        self.cheribsd.sendcontrol('h')
+        time.sleep(.5)
+        success("Interacting with CheriBSD. ", coloured(AnsiColour.yellow, "Use CTRL+A,CTRL+Q to exit"))
+
+
+class PySerialConnection(SerialConnection):
+    def __init__(self, tty_info: ListPortInfo):
+        # Note: use --eol LF to avoid two prompts being printed on <Enter> (default seems to be CRLF)
+        super().__init__(sys.executable, ["-m", "serial.tools.miniterm", tty_info.device, "115200", "--eol", "LF"])
+        self.cheribsd.expect(["--- Miniterm on "])
+
+    def show_help_message(self):
+        # Print the help message
+        self.cheribsd.sendcontrol('t')
+        self.cheribsd.sendcontrol('i')
+        time.sleep(.5)
+        success("Interacting with CheriBSD. ", coloured(AnsiColour.yellow, "Use CTRL+] to exit"))
+
+
 class FpgaConnection:
     """Access to openOCD+GDB+Serial port connection"""
 
-    def __init__(self, gdb: pexpect.spawn, openocd: pexpect.spawn, serial: CheriBSDSpawnMixin):
+    def __init__(self, gdb: pexpect.spawn, openocd: pexpect.spawn, serial: SerialConnection):
         self.gdb = gdb
         self.openocd = openocd
         self.serial = serial
@@ -207,19 +251,13 @@ def start_openocd(openocd_cmd: Path) -> typing.Tuple[pexpect.spawn, int]:
         return openocd, gdb_port
 
 
-def get_console(tty_info: ListPortInfo) -> CheriBSDSpawnMixin:
-    # We use the miniterm command bundled with PySerial as the interactive prompt.
+def get_console(tty_info: ListPortInfo) -> SerialConnection:
+    # We fall back to using the miniterm command bundled with PySerial as the interactive prompt.
     # This means that we don't depend on minicom/picocom being installed.
     success("Connecting to TTY...")
-    # Note: use --eol LF to avoid two prompts being printed on <Enter> (default seems to be CRLF)
-    miniterm_cmd = ["-m", "serial.tools.miniterm", tty_info.device, "115200", "--eol", "LF"]
-    if get_global_config().pretend:
-        serial_conn = FakeSerialSpawn(sys.executable, miniterm_cmd)
-    else:
-        serial_conn = CheriBSDInstance(CompilationTargets.CHERIBSD_RISCV_HYBRID, sys.executable, miniterm_cmd,
-                                       logfile=sys.stdout, encoding="utf-8", timeout=60)
-    serial_conn.expect(["--- Miniterm on "])
-    return serial_conn
+    if shutil.which("picocom"):
+        return PicoComConnection(tty_info)
+    return PySerialConnection(tty_info)
 
 
 def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path, kernel_image: Path = None,
@@ -289,7 +327,7 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     gdb_finish_time = load_end_time
     gdb.sendline("continue")
     success("Starting CheriBSD after ", datetime.datetime.utcnow() - gdb_start_time)
-    i = serial_conn.expect_exact(["bbl loader", "---<<BOOT>>---", pexpect.TIMEOUT], timeout=30)
+    i = serial_conn.cheribsd.expect_exact(["bbl loader", "---<<BOOT>>---", pexpect.TIMEOUT], timeout=30)
     if i == 0:
         success("bbl loader started")
     elif i == 0:
@@ -297,7 +335,7 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     else:
         failure("Did not get expected boot output", exit=True)
     # TODO: network_iface="xae0", but DHCP doesn't work
-    boot_and_login(serial_conn, starttime=gdb_finish_time, network_iface=None)
+    boot_and_login(serial_conn.cheribsd, starttime=gdb_finish_time, network_iface=None)
     return FpgaConnection(gdb, openocd, serial_conn)
 
 
@@ -355,18 +393,15 @@ def main():
         console = conn.serial
         if args.action == "boot":
             sys.exit(0)
-    success("Interacting with CheriBSD. ", coloured(AnsiColour.yellow, "Use CTRL+] to exit"))
-    # Print the help message
-    console.sendcontrol('t')
-    console.sendcontrol('i')
-    # interac() prints all input+output -> disable logfile
-    console.logfile = None
-    console.logfile_read = None
-    console.logfile_send = None
+    # interact() prints all input+output -> disable logfile
+    console.cheribsd.logfile = None
+    console.cheribsd.logfile_read = None
+    console.cheribsd.logfile_send = None
+    console.show_help_message()
     if args.action == "console":
-        # TODO? console.sendintr()  # Send CTRL+C to get a clean prompt
         pass
-    console.interact()
+        # TODO? console.sendintr()  # Send CTRL+C to get a clean prompt
+    console.cheribsd.interact()
 
 
 if __name__ == "__main__":
