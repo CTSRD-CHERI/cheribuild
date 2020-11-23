@@ -29,11 +29,15 @@
 #
 import stat
 import tempfile
+import os
 from pathlib import Path
 
-from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, CrossCompileProject,
+from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, CrossCompileCMakeProject,
+                                  CrossCompileProject,
                                   DefaultInstallDir, GitRepository, MakeCommandKind)
-from ..project import ComputedDefaultValue, ExternallyManagedSourceRepository
+from .llvm_test_suite import BuildLLVMTestSuite
+from ..project import ComputedDefaultValue, ExternallyManagedSourceRepository, ReuseOtherProjectRepository
+from ...config.chericonfig import BuildType
 from ...config.target_info import CPUArchitecture
 from ...utils import is_jenkins_build
 
@@ -152,6 +156,40 @@ class BuildMibench(CrossCompileProject):
                                                                        self.benchmark_size,
                                                                        "-o", self.default_statcounters_csv_name,
                                                                        self.benchmark_version])
+
+
+class BuildMiBenchNew(CrossCompileCMakeProject):
+    repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite)
+    default_build_type = BuildType.RELEASE
+    target = "mibench-new"
+    project_name = "mibench-new"
+    cross_install_dir = DefaultInstallDir.ROOTFS
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+
+    def setup(self):
+        super().setup()
+        # Only build MiBench
+        self.add_cmake_options(TEST_SUITE_SUBDIRS="MultiSource/Benchmarks/MiBench",
+                               TEST_SUITE_COPY_DATA=True,
+                               TEST_SUITE_COLLECT_CODE_SIZE=False,
+                               TEST_SUITE_COLLECT_COMPILE_TIME=False,
+                               TEST_SUITE_COLLECT_STATS=False)
+
+    def install(self, **kwargs):
+        root_dir = str(self.build_dir / "MultiSource/Benchmarks/MiBench")
+        for curdir, dirnames, filenames in os.walk(root_dir):
+            # We don't run some benchmarks (e.g. consumer-typeset or consumer-lame) yet
+            for ignored_dirname in ('CMakeFiles', 'consumer-typeset', 'consumer-lame', 'office-ispell', 'telecomm-gsm'):
+                if ignored_dirname in dirnames:
+                    dirnames.remove(ignored_dirname)
+            relpath = os.path.relpath(curdir, root_dir)
+            for filename in filenames:
+                new_file = Path(curdir, filename)
+                if new_file.suffix in (".cmake", ".reference_output", ".time", ".test"):
+                    continue
+                # print(new_file)
+                self.install_file(new_file, self.install_dir / relpath / filename)
+        pass
 
 
 class BuildOlden(CrossCompileProject):
