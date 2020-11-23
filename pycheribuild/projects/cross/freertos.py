@@ -143,6 +143,10 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             default="qemu_virt",
             help="The FreeRTOS platform to build for.")  # type: str
 
+        cls.compartmentalize= cls.add_bool_option("compartmentalize", show_help=True,
+            default=False,
+            help="Compartmentalize FreeRTOS")
+
         cls.demo_bsp = cls.add_config_option(
             "bsp", metavar="BSP", show_help=True,
             default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
@@ -201,6 +205,9 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
             config_options += ["--purecap"] if self.target_info.target.is_cheri_purecap() else []
 
+            if self.compartmentalize:
+              config_options += ["--compartmentalize"]
+
             self._run_waf("distclean", "configure", *config_options)
 
     def install(self, **kwargs):
@@ -221,7 +228,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             self.fatal(self.demo + " Demo doesn't support/have " + self.demo_app)
 
         if self.toolchain == "llvm":
-            with set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
+            with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
                          # Add compiler-rt location to the search path
                          LDFLAGS="-L" + str(self.compiler_resource / "lib")):
                 super().process()
