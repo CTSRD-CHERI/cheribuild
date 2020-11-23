@@ -657,7 +657,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
         else:
             return self.async_clean_directory(builddir)
 
-    def _buildkernel(self, kernconf: str, mfs_root_image: Path = None, extra_make_args=None):
+    def _buildkernel(self, kernconf: str, mfs_root_image: Path = None, extra_make_args=None,
+                     ignore_skip_buildkernel=False):
+        # Check that --skip-buildkernel is respected. However, we ignore it for the cheribsd-mfs-root-kernel targets
+        # since those targets only build a kernel.
+        assert not self.config.skip_buildkernel or ignore_skip_buildkernel, "--skip-buildkernel set but building kernel"
         kernel_make_args = self.kernel_make_args_for_config(kernconf, extra_make_args)
         if not self.use_bootstrapped_toolchain and not self.CC.exists():
             self.fatal("Requested build of kernel with external toolchain, but", self.CC,
@@ -689,7 +693,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.run_make("buildkernel", options=kernel_make_args,
                       compilation_db_name="compile_commands_" + kernconf.replace(" ", "_") + ".json")
 
-    def _installkernel(self, kernconf, destdir: str = None, extra_make_args=None):
+    def _installkernel(self, kernconf, destdir: str = None, extra_make_args=None, ignore_skip_buildkernel=False):
+        # Check that --skip-buildkernel is respected. However, we ignore it for the cheribsd-mfs-root-kernel targets
+        # since those targets only build a kernel.
+        assert not self.config.skip_buildkernel or ignore_skip_buildkernel, "--skip-buildkernel set but building kernel"
         # don't use multiple jobs here
         install_kernel_args = self.kernel_make_args_for_config(kernconf, extra_make_args)
         install_kernel_args.env_vars.update(self.make_install_env)
@@ -730,7 +737,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     build_args.set(WORLDFAST=True)
             self.run_make("buildworld", options=build_args)
             self.kernel_toolchain_exists = True  # includes the necessary tools for kernel-toolchain
-        if not self.subdir_override:
+        if not self.config.skip_buildkernel and not self.subdir_override:
             for i in ("USBROOT", "NFSROOT", "MDROOT"):
                 if ("_" + i) in self.kernel_config:
                     self.info("Not embedding MFS_ROOT image in non-MFS root kernel config:", self.kernel_config)
@@ -818,8 +825,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         result.set(NO_SAFE_LIBINSTALL=True)
         return result
 
-    def install(self, all_kernel_configs: str = None, sysroot_only=False, install_with_subdir_override=False,
-                skip_kernel=False, **kwargs):
+    def install(self, all_kernel_configs: str = None, sysroot_only=False, install_with_subdir_override=False, **kwargs):
         if self.subdir_override and not install_with_subdir_override:
             self.info("Skipping install step because SUBDIR_OVERRIDE was set")
             return
@@ -889,9 +895,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     self._cleanup_old_files(self.target_info.sysroot_dir,
                                             self.crosscompile_target.build_suffix(self.config), old_suffixes)
 
-        if skip_kernel:
-            return
         assert not sysroot_only, "Should not end up here"
+        if self.config.skip_buildkernel:
+            return
         # Run installkernel after installworld since installworld deletes METALOG and therefore the files added by
         # the installkernel step will not be included if we run it first.
         if not all_kernel_configs:
@@ -1304,10 +1310,11 @@ class BuildCHERIBSD(BuildFreeBSD):
         if self.sysroot_only:
             # Don't attempt to build extra kernels if we are only building a sysroot
             return
-        if self.extra_kernels:
-            self._buildkernel(kernconf=" ".join(self.extra_kernels))
-        if self.extra_kernels_with_mfs and self.mfs_root_image:
-            self._buildkernel(kernconf=" ".join(self.extra_kernels_with_mfs), mfs_root_image=self.mfs_root_image)
+        if not self.config.skip_buildkernel and not self.subdir_override:
+            if self.extra_kernels:
+                self._buildkernel(kernconf=" ".join(self.extra_kernels))
+            if self.extra_kernels_with_mfs and self.mfs_root_image:
+                self._buildkernel(kernconf=" ".join(self.extra_kernels_with_mfs), mfs_root_image=self.mfs_root_image)
 
     def install(self, **kwargs):
         # If we build the FPGA kernels also install them into boot:
@@ -1425,10 +1432,12 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         # Don't bother with modules for the MFS kernels:
         extra_make_args = dict(NO_MODULES="yes")
         # noinspection PyProtectedMember
-        build_cheribsd._buildkernel(kernconf=" ".join(kernconfs), mfs_root_image=image, extra_make_args=extra_make_args)
+        build_cheribsd._buildkernel(kernconf=" ".join(kernconfs), mfs_root_image=image, extra_make_args=extra_make_args,
+                                    ignore_skip_buildkernel=True)
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
             # noinspection PyProtectedMember
-            build_cheribsd._installkernel(kernconf=" ".join(kernconfs), destdir=td, extra_make_args=extra_make_args)
+            build_cheribsd._installkernel(kernconf=" ".join(kernconfs), destdir=td, extra_make_args=extra_make_args,
+                                          ignore_skip_buildkernel=True)
             self.run_cmd("find", td)
             for conf in kernconfs:
                 kernel_install_path = self.installed_kernel_for_config(self, conf)
