@@ -216,9 +216,9 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
     if i != 0:
         boot_cheribsd.failure("Poweroff " + ("timed out" if i == 1 else "failed"))
         return False
-    # 240 secs since it takes a lot longer on a full image (it took 44 seconds after installing kyua, so on a really
+    # 300 secs since it takes a lot longer on a full image (it took 44 seconds after installing kyua, so on a really
     # busy jenkins slave it might be a lot slower)
-    i = qemu.expect([pexpect.TIMEOUT, "Please press any key to reboot.", pexpect.EOF], timeout=240)
+    i = qemu.expect([pexpect.TIMEOUT, "Please press any key to reboot.", pexpect.EOF], timeout=300)
     if i == 0:
         boot_cheribsd.failure("QEMU didn't exit after shutdown!")
         return False
