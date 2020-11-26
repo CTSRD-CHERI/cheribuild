@@ -91,6 +91,8 @@ def run_cheribsdtest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, old_bina
 
 def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.success("Booted successfully")
+    # Enable userspace CHERI exception logging to aid debugging
+    qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
     qemu.checked_run("kenv")
     # unchecked since mount_smbfs returns non-zero for --help:
     qemu.run("mount_smbfs --help", cheri_trap_fatal=True)
