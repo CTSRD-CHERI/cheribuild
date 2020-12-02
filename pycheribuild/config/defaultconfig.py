@@ -76,6 +76,8 @@ class DefaultCheriConfig(CheriConfig):
                                                     default=False)
         self.skip_update = loader.add_bool_option("skip-update", help="Skip the git pull step")
         self.skip_clone = False
+        self.confirm_clone = loader.add_bool_option(
+            "confirm-clone", help="Ask for confirmation before cloning repositories.")
         self.force_update = loader.add_bool_option("force-update", help="Always update (with autostash) even if there "
                                                                         "are uncommitted changes")
         self.skip_configure = loader.add_bool_option("skip-configure", help="Skip the configure step",

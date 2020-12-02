@@ -170,6 +170,7 @@ class JenkinsConfig(CheriConfig):
         #    directories)")  # type: bool
         self.skip_update = True
         self.skip_clone = True
+        self.confirm_clone = False
         self.verbose = True
         self.quiet = False
         self.clean = loader.add_commandline_only_bool_option("clean", default=True,

@@ -1311,7 +1311,7 @@ class GitRepository(SourceRepository):
         if not (base_project_source_dir / ".git").exists():
             assert isinstance(self.url, str), self.url
             assert not self.url.startswith("<"), "Invalid URL " + self.url
-            if not current_project.query_yes_no(
+            if current_project.config.confirm_clone and not current_project.query_yes_no(
                     str(base_project_source_dir) + " is not a git repository. Clone it from '" + self.url + "'?",
                     default_result=True):
                 current_project.fatal("Sources for", str(base_project_source_dir), " missing!")

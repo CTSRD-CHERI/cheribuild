@@ -34,6 +34,7 @@ class MockConfig(CheriConfig):
         self.skip_update = True
         self.skip_install = True
         self.skip_clone = True
+        self.confirm_clone = False
         self.skip_configure = True
         self.force_configure = False
         self.include_dependencies = False

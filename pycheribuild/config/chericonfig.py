@@ -185,6 +185,7 @@ class CheriConfig(ConfigBase):
         self.write_logfile = None  # type: Optional[bool]
         self.skip_update = None  # type: Optional[bool]
         self.skip_clone = None  # type: Optional[bool]
+        self.confirm_clone = None  # type: Optional[bool]
         self.skip_configure = None  # type: Optional[bool]
         self.force_configure = None  # type: Optional[bool]
         self.force_update = None  # type: Optional[bool]
