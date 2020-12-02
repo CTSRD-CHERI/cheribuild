@@ -69,7 +69,8 @@ setup_network() {
 }
 
 setup_network atse0 polling # FPGA needs polling
-setup_network le0           # QEMU
+setup_network le0           # QEMU (Malta)
+setup_network vtnet0        # QEMU (virtio)
 
 echo "set up loopback"
 /sbin/ifconfig lo0 inet 127.0.0.1 up

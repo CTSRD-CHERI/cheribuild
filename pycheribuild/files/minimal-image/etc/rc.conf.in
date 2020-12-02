@@ -4,6 +4,7 @@ sshd_enable="YES"
 ifconfig_atse0="polling DHCP"
 ifconfig_atse1="polling"
 ifconfig_le0="DHCP"
+ifconfig_vtnet0="DHCP"
 de4_hdmi_enable="YES"
 
 # Disable all but ECDSA and RSA (for Mac support) to speed first boot on sdcard.
