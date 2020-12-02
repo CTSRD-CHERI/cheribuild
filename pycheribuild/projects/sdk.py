@@ -105,8 +105,8 @@ target_manager.add_target_alias("binutils", "llvm-native")
 
 class BuildBaremetalSdk(TargetAliasWithDependencies):
     target = "baremetal-sdk"  # FIXME: this should be a multi-arch target (or just build both probably)
-    dependencies = ["freestanding-sdk", "newlib-baremetal-mips",
-                    "libcxx-baremetal-mips"]  # TODO: add libcxx-baremetal-cheri
+    dependencies = ["freestanding-sdk", "newlib-baremetal-mips64",
+                    "libcxx-baremetal-mips64"]  # TODO: add libcxx-baremetal-cheri
     is_sdk_target = True
 
 

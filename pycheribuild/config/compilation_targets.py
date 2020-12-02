@@ -937,7 +937,7 @@ class CompilationTargets(BasicCompilationTargets):
     CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips", CPUArchitecture.MIPS64, CheriOSTargetInfo, is_cheri_purecap=True)
 
     # Baremetal targets
-    BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips", CPUArchitecture.MIPS64, NewlibBaremetalTargetInfo)
+    BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips64", CPUArchitecture.MIPS64, NewlibBaremetalTargetInfo)
     BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-mips64-purecap", CPUArchitecture.MIPS64,
                                                          NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                          non_cheri_target=BAREMETAL_NEWLIB_MIPS64)

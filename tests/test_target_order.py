@@ -37,9 +37,9 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolc
 
 
 freestanding_deps = ["llvm-native", "qemu", "gdb-native", "freestanding-sdk"]
-baremetal_deps = freestanding_deps + ["newlib-baremetal-mips", "compiler-rt-builtins-baremetal-mips",
-                                      "libunwind-baremetal-mips", "libcxxrt-baremetal-mips", "libcxx-baremetal-mips",
-                                      "baremetal-sdk"]
+baremetal_deps = freestanding_deps + ["newlib-baremetal-mips64", "compiler-rt-builtins-baremetal-mips64",
+                                      "libunwind-baremetal-mips64", "libcxxrt-baremetal-mips64",
+                                      "libcxx-baremetal-mips64", "baremetal-sdk"]
 cheribsd_sdk_deps = freestanding_deps + ["cheribsd-mips64-hybrid", "cheribsd-sdk-mips64-hybrid"]
 
 
