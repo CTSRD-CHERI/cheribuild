@@ -187,9 +187,7 @@ class BuildMiBenchNew(CrossCompileCMakeProject):
                 new_file = Path(curdir, filename)
                 if new_file.suffix in (".cmake", ".reference_output", ".time", ".test"):
                     continue
-                # print(new_file)
-                self.install_file(new_file, self.install_dir / relpath / filename)
-        pass
+                self.install_file(new_file, self.install_dir / relpath / filename, print_verbose_only=True)
 
 
 class BuildOlden(CrossCompileProject):
@@ -554,6 +552,88 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
     def process(self):
         self.__check_valid_benchmark_list()
         super().process()
+
+
+class BuildSpec2006New(CrossCompileCMakeProject):
+    repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite)
+    default_build_type = BuildType.RELEASE
+    target = "spec2006-new"
+    project_name = "spec2006-new"
+    cross_install_dir = DefaultInstallDir.ROOTFS
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.spec_iso_path = cls.add_path_option("iso-path",
+                                                default="/you/must/set the spec2006-new/iso-path config option",
+                                                help="Path to the SPEC2006 ISO image")
+        cls.fast_benchmarks_only = cls.add_bool_option("fast-benchmarks-only", default=False)
+        cls.benchmark_override = cls.add_config_option("benchmarks", default=[], kind=list,
+                                                       help="override the list of benchmarks to run")
+
+    @property
+    def extracted_spec_sources(self) -> Path:
+        return self.build_dir / "spec-extracted"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Worst case benchmarks: 471.omnetpp 483.xalancbmk 400.perlbench (which won't compile)
+        # Approximate duration for 3 runs on the FPGA:
+        self.working_benchmark_list = [
+            # "400.perlbench", # --- broken
+            "401.bzip2",  # 3 runs = 0:10:33 -> ~3:30mins per run
+            # "403.gcc", # --- broken
+            # "429.mcf",  # Strange tag violation even after fixing realloc() and would use too much memory to
+            # run on a 1GB RAM FPGA
+            "445.gobmk",  # 3 runs = 1:05:43 -> ~22mins per run
+            "456.hmmer",  # 3 runs = 0:05:50 -> ~2mins per run
+            "458.sjeng",  # 3 runs = 0:23:14 -> ~7mins per run
+            "462.libquantum",  # 3 runs = 0:00:21 -> ~7s per run
+            "464.h264ref",  # 3 runs = 1:20:01 -> ~27mins per run
+            "471.omnetpp",  # 3 runs = 0:05:09 -> ~1:45min per run
+            "473.astar",  # 3 runs = 0:31:41  -> ~10:30 mins per run
+            "483.xalancbmk",  # 3 runs = 0:00:55 -> ~20 secs per run"
+            ]
+        self.complete_benchmark_list = self.working_benchmark_list + ["400.perlbench", "403.gcc", "429.mcf"]
+        self.fast_list = ["471.omnetpp", "483.xalancbmk", "456.hmmer", "462.libquantum"]
+        if self.benchmark_override:
+            self.benchmark_list = self.benchmark_override
+        elif self.fast_benchmarks_only:
+            self.benchmark_list = self.fast_list
+        else:
+            self.benchmark_list = self.working_benchmark_list
+
+    def setup(self):
+        super().setup()
+        # Only build MiBench
+        self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006",
+                               TEST_SUITE_COPY_DATA=True,
+                               TEST_SUITE_COLLECT_CODE_SIZE=False,
+                               TEST_SUITE_COLLECT_COMPILE_TIME=False,
+                               TEST_SUITE_COLLECT_STATS=False,
+                               TEST_SUITE_RUN_TYPE='test',  # TODO: allow train+ref
+                               TEST_SUITE_SPEC2006_ROOT=self.extracted_spec_sources)
+
+    def configure(self, **kwargs):
+        # Need to extract the ISO it before configuring
+        self.makedirs(self.extracted_spec_sources)
+        if not (self.extracted_spec_sources / "install.sh").exists():
+            self.clean_directory(self.extracted_spec_sources)  # clean up partial builds
+            self.run_cmd("bsdtar", "xf", self.spec_iso_path, "-C", self.extracted_spec_sources, cwd=self.build_dir)
+        super().configure(**kwargs)
+
+    def install(self, **kwargs):
+        root_dir = str(self.build_dir / "External/SPEC/CINT2006")
+        for curdir, dirnames, filenames in os.walk(root_dir):
+            # We don't run some benchmarks (e.g. consumer-typeset or consumer-lame) yet
+            for ignored_dirname in ('CMakeFiles', ):
+                if ignored_dirname in dirnames:
+                    dirnames.remove(ignored_dirname)
+            relpath = os.path.relpath(curdir, root_dir)
+            for filename in filenames:
+                new_file = Path(curdir, filename)
+                self.install_file(new_file, self.install_dir / relpath / filename, print_verbose_only=True)
 
 
 class BuildLMBench(CrossCompileProject):
