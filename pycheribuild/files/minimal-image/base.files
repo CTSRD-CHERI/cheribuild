@@ -34,4 +34,7 @@ usr/sbin/service
 usr/share/misc/termcap
 var/run/dhclient
 
+# Required for the C.UTF-8 locale (which is the default now):
+usr/share/locale/C.UTF-8/LC_CTYPE
+
 # Note: libraries are added from the python code
