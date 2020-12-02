@@ -172,8 +172,7 @@ class _BuildDiskImageBase(SimpleProject):
         self.cross_build_image = self.source_project.crossbuild
         self.minimum_image_size = "1g"  # minimum image size = 1GB
         self.mtree = MtreeFile()
-        self.input_metalog = self.rootfs_dir / "METALOG"
-        self.input_metalog_required = True
+        self.input_metalogs = [self.rootfs_dir / "METALOG.world", self.rootfs_dir / "METALOG.kernel"]
         # used during process to generated files
         self.tmpdir = None  # type: typing.Optional[Path]
         self.file_templates = _AdditionalFileTemplates()
@@ -249,14 +248,15 @@ class _BuildDiskImageBase(SimpleProject):
         assert self.tmpdir is not None
         assert self.manifest_file is not None
         # skip parsing the metalog in the git push hook since it takes a long time and isn't that useful
-        if self.input_metalog.exists() and not os.getenv("_TEST_SKIP_METALOG"):
-            self.mtree.load(self.input_metalog)
-        elif self.input_metalog_required:
-            self.fatal("Could not find required input mtree file", self.input_metalog)
+        for metalog in self.input_metalogs:
+            if metalog.exists() and not os.getenv("_TEST_SKIP_METALOG"):
+                self.mtree.load(metalog, append=True)
+            else:
+                self.fatal("Could not find required input mtree file", metalog)
 
         # We need to add /etc/fstab and /etc/rc.conf and the SSH host keys to the disk-image.
         # If they do not exist in the extra-files directory yet we generate a default one and use that
-        # Additionally all other files in the extra-files directory will be added to the disk image
+        # Additionally, all other files in the extra-files directory will be added to the disk image
 
         if self.extra_files_dir.exists():
             self.add_all_files_in_dir(self.extra_files_dir)
@@ -726,8 +726,9 @@ class _BuildDiskImageBase(SimpleProject):
         self.info("Disk image root fs is", self.rootfs_dir)
         self.info("Extra files for the disk image will be copied from", self.extra_files_dir)
 
-        if not self.input_metalog.is_file():
-            self.fatal("mtree manifest", self.input_metalog, "is missing")
+        for metalog in self.input_metalogs:
+            if not metalog.is_file():
+                self.fatal("mtree manifest", metalog, "is missing")
         if not (self.user_group_db_dir / "master.passwd").is_file():
             self.fatal("master.passwd does not exist in ", self.user_group_db_dir)
 
@@ -768,7 +769,8 @@ class _BuildDiskImageBase(SimpleProject):
                 if added:
                     continue
                 elif target_path not in self.mtree:
-                    if target_path != "METALOG":  # METALOG is not added to METALOG
+                    # METALOG is not added to the disk image
+                    if target_path not in ("METALOG", "METALOG.kernel", "METALOG.world"):
                         unlisted_files.append((full_path, target_path))
         if unlisted_files:
             print("Found the following files in the rootfs that are not listed in METALOG:")
@@ -839,7 +841,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         super().__init__(config, source_class=self.cheribsd_class)
         self.minimum_image_size = "20m"  # let's try to shrink the image size
         # The base input is only cheribsdbox and all the symlinks
-        self.input_metalog = self.rootfs_dir / "cheribsdbox.mtree"
+        self.input_metalogs = [self.rootfs_dir / "cheribsdbox.mtree"]
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
 

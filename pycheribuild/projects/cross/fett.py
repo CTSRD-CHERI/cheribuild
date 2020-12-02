@@ -55,7 +55,7 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
 
     def __init__(self, config):
         super().__init__(config)
-        self.METALOG = self.destdir / "METALOG"
+        self.METALOG = self.destdir / "METALOG.world"
 
     def compile(self, **kwargs):
         print("Nothing to build for " + self.project_name)

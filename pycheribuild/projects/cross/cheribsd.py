@@ -168,6 +168,13 @@ class BuildFreeBSDBase(Project):
         # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested
         if parallel and self.config.make_jobs == 1:
             parallel = False
+        if options is None:
+            options = self.make_args
+        if "METALOG" in options.env_vars:
+            assert "DESTDIR" in options.env_vars, "METALOG set, but DESTDIR not set"
+            assert options.env_vars["METALOG"].startswith(options.env_vars["DESTDIR"]), "METALOG not below DESTDIR"
+        assert options.get_var("METALOG", None) is None, "METALOG should only be set in the environment"
+        assert options.get_var("DESTDIR", None) is None, "DESTDIR should only be set in the environment"
         super().run_make(make_target, options=options, cwd=self.source_dir, parallel=parallel, **kwargs)
 
     @property
@@ -693,7 +700,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.run_make("buildkernel", options=kernel_make_args,
                       compilation_db_name="compile_commands_" + kernconf.replace(" ", "_") + ".json")
 
-    def _installkernel(self, kernconf, destdir: str = None, extra_make_args=None, ignore_skip_buildkernel=False):
+    def _installkernel(self, kernconf, *, install_dir: Path, extra_make_args=None, ignore_skip_buildkernel=False):
         # Check that --skip-buildkernel is respected. However, we ignore it for the cheribsd-mfs-root-kernel targets
         # since those targets only build a kernel.
         assert not self.config.skip_buildkernel or ignore_skip_buildkernel, "--skip-buildkernel set but building kernel"
@@ -706,9 +713,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.add_debug_info_flag:
             install_kernel_args.set_with_options(KERNEL_SYMBOLS=True)
             install_kernel_args.set(INSTALL_KERNEL_DOT_FULL=True)
-        if destdir:
-            install_kernel_args.set_env(DESTDIR=destdir)
+        install_kernel_args.set_env(DESTDIR=install_dir, METALOG=install_dir / "METALOG.kernel")
         self.info("Installing kernels for configs:", kernconf)
+        self.delete_file(self.install_dir / "METALOG.kernel")  # Ensure that METALOG does not contain stale values.
         self.run_make("installkernel", options=install_kernel_args, parallel=False)
 
     def compile(self, mfs_root_image: Path = None, sysroot_only=False, all_kernel_configs: str = None, **kwargs):
@@ -823,6 +830,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         result.env_vars.update(self.make_install_env)
         # Speed up installworld a bit after https://github.com/CTSRD-CHERI/cheribsd/pull/739
         result.set(NO_SAFE_LIBINSTALL=True)
+        result.set_env(METALOG=self.install_dir / "METALOG.world")
         return result
 
     def install(self, all_kernel_configs: str = None, sysroot_only=False, install_with_subdir_override=False, **kwargs):
@@ -876,11 +884,14 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     if not self.crosscompile_target.is_hybrid_or_purecap_cheri():
                         self._cleanup_old_files(self.install_dir, self.crosscompile_target.build_suffix(self.config),
                                                 ["-mips"])
+                # Ensure that METALOG does not contain stale values:
+                self.delete_file(self.install_dir / "METALOG.world")
                 self.run_make("installworld", options=install_world_args)
                 self.run_make("distribution", options=install_world_args)
                 if self.has_installsysroot_target:
                     if is_jenkins_build():
                         installsysroot_args.set_env(DESTDIR=self.target_info.sysroot_dir)
+                    installsysroot_args.set_env(METALOG=installsysroot_args.env_vars["DESTDIR"] + "/METALOG")
                     self.run_make("installsysroot", options=installsysroot_args)
                     # remove the old sysroot dirs
                     old_suffixes = []
@@ -902,7 +913,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # the installkernel step will not be included if we run it first.
         if not all_kernel_configs:
             all_kernel_configs = self.kernel_config
-        self._installkernel(kernconf=all_kernel_configs)
+        self._installkernel(kernconf=all_kernel_configs, install_dir=self.install_dir)
 
     def add_cross_build_options(self):
         self.make_args.set_env(CC=self.host_CC, CXX=self.host_CXX, CPP=self.host_CPP)
@@ -1436,8 +1447,8 @@ class BuildCheriBsdMfsKernel(SimpleProject):
                                     ignore_skip_buildkernel=True)
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
             # noinspection PyProtectedMember
-            build_cheribsd._installkernel(kernconf=" ".join(kernconfs), destdir=td, extra_make_args=extra_make_args,
-                                          ignore_skip_buildkernel=True)
+            build_cheribsd._installkernel(kernconf=" ".join(kernconfs), install_dir=Path(td),
+                                          extra_make_args=extra_make_args, ignore_skip_buildkernel=True)
             self.run_cmd("find", td)
             for conf in kernconfs:
                 kernel_install_path = self.installed_kernel_for_config(self, conf)
@@ -1692,7 +1703,7 @@ class BuildCheriBsdSysroot(SimpleProject):
                    "--include=./usr/libcheri", "--include=./usr/lib32", "--include=./usr/lib64",
                    "--include=./usr/libsoft",
                    # only pack those files that are mentioned in METALOG
-                   "@METALOG"]
+                   "@METALOG.world"]
         if self.compiling_for_mips(include_purecap=False) and self.use_cheri_sysroot_for_mips:
             rootfs_target = self.rootfs_source_class.get_instance_for_cross_target(
                 CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config)

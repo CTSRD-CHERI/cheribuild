@@ -100,14 +100,15 @@ class MtreeFile(object):
     def __init__(self, file: "typing.Union[io.StringIO,Path,typing.IO]" = None, contents_root: Path = None):
         self._mtree = OrderedDict()  # type: typing.Dict[str, MtreeEntry]
         if file:
-            self.load(file, contents_root)
+            self.load(file, contents_root=contents_root, append=False)
 
-    def load(self, file: "typing.Union[io.StringIO,Path,typing.IO]", contents_root: Path = None):
+    def load(self, file: "typing.Union[io.StringIO,Path,typing.IO]", *, append: bool, contents_root: Path = None):
         if isinstance(file, Path):
             with file.open("r") as f:
-                self.load(f)
+                self.load(f, contents_root=contents_root, append=append)
                 return
-        self._mtree.clear()
+        if not append:
+            self._mtree.clear()
         if "_TEST_SKIP_METALOG" in os.environ:
             status_update("Not parsing", file, "in test mode")
             return  # avoid parsing all metalog files in the basic sanity checks
