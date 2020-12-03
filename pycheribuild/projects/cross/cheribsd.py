@@ -977,7 +977,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         install_to_sysroot_cmd = ""
         # We have to override INSTALL so that the sysroot installations don't end up in METALOG
         # This happens after https://github.com/freebsd/freebsd/commit/5496ab2ac950813edbd55d73c967184e033bea2f
-        install_nometalog_cmd = "INSTALL=\"install -N " + str(self.source_dir / "etc") + " -U\""
+        install_nometalog_cmd = "INSTALL=\"install -N " + str(self.source_dir / "etc") + " -U\" METALOG=/dev/null"
         if is_lib:
             if install_to_internal_sysroot:
                 # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
