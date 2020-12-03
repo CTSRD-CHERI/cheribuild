@@ -715,7 +715,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             install_kernel_args.set(INSTALL_KERNEL_DOT_FULL=True)
         install_kernel_args.set_env(DESTDIR=install_dir, METALOG=install_dir / "METALOG.kernel")
         self.info("Installing kernels for configs:", kernconf)
-        self.delete_file(self.install_dir / "METALOG.kernel")  # Ensure that METALOG does not contain stale values.
+        self.delete_file(install_dir / "METALOG.kernel")  # Ensure that METALOG does not contain stale values.
         self.run_make("installkernel", options=install_kernel_args, parallel=False)
 
     def compile(self, mfs_root_image: Path = None, sysroot_only=False, all_kernel_configs: str = None, **kwargs):
