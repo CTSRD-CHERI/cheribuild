@@ -1420,25 +1420,25 @@ class GitRepository(SourceRepository):
 
         # handle repositories that have moved
         if src_dir.exists() and self.old_urls:
+            # Try to get the name of the default remove from the configured upstream branch
+            remote_name = "origin"
+            try:
+                revparse = run_command(
+                    ["git", "-C", base_project_source_dir, "rev-parse", "--symbolic-full-name",
+                     "@{upstream}"], capture_output=True).stdout.decode("utf-8")  # type: str
+                if revparse.startswith("refs/remotes") and len(revparse.split("/")) > 3:
+                    remote_name = revparse.split("/")[2]
+                else:
+                    current_project.warning("Could not parse git rev-parse output. No upstream configured?",
+                                            "Output was", revparse, "-- will use ", remote_name, "as remote name.")
+            except subprocess.CalledProcessError as e:
+                current_project.warning("git rev-parse failed, will use ", remote_name, "as remote name:", e)
+
+            remote_url = run_command("git", "remote", "get-url", remote_name, capture_output=True,
+                                     cwd=src_dir).stdout.strip()
             # Update from the old url:
             for old_url in self.old_urls:
                 assert isinstance(old_url, bytes)
-                # Try to get the name of the default remove from the configured upstream branch
-                remote_name = "origin"
-                try:
-                    revparse = run_command(
-                        ["git", "-C", base_project_source_dir, "rev-parse", "--symbolic-full-name",
-                         "@{upstream}"], capture_output=True).stdout.decode("utf-8")  # type: str
-                    if revparse.startswith("refs/remotes") and len(revparse.split("/")) > 3:
-                        remote_name = revparse.split("/")[2]
-                    else:
-                        current_project.warning("Could not parse git rev-parse output. No upstream configured?",
-                                                "Output was", revparse, "-- will use ", remote_name, "as remote name.")
-                except subprocess.CalledProcessError as e:
-                    current_project.warning("git rev-parse failed, will use ", remote_name, "as remote name:", e)
-
-                remote_url = run_command("git", "remote", "get-url", remote_name, capture_output=True,
-                                         cwd=src_dir).stdout.strip()
                 if remote_url == old_url:
                     current_project.warning(current_project.project_name, "still points to old repository", remote_url)
                     if current_project.query_yes_no("Update to correct URL?"):
