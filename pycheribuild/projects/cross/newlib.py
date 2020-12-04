@@ -100,8 +100,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
                 # self.make_args.env_vars[k2] = str(v)
 
     def configure(self):
-        target_cflags = self.commandline_to_str(
-            self.target_info.essential_compiler_and_linker_flags + self.COMMON_FLAGS)
+        target_cflags = self.commandline_to_str(self.essential_compiler_and_linker_flags + self.COMMON_FLAGS)
         bindir = self.sdk_bindir
 
         self.add_configure_vars(
@@ -198,7 +197,7 @@ int main(int argc, char** argv) {
 """, overwrite=True)
             test_exe = Path(td, "test.exe")
             # FIXME: CHERI helloworld
-            compiler_flags = self.target_info.essential_compiler_and_linker_flags + self.COMMON_FLAGS + [
+            compiler_flags = self.essential_compiler_and_linker_flags + self.COMMON_FLAGS + [
                 "-Wl,-T,qemu-malta.ld", "-Wl,-verbose", "--sysroot=" + str(self.sdk_sysroot)]
             self.run_cmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe] + compiler_flags + ["-###"], cwd=td)
             self.run_cmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe] + compiler_flags, cwd=td)

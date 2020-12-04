@@ -130,8 +130,8 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
                 assert key not in self.configure_environment, key
             # We have to include -target xxx-unknown-freebsd as part of CC for some build systems since they fail
             # if a plain $CC can't compile programs.
-            self.set_configure_prog_with_args("CC", self.CC, self.target_info.essential_compiler_and_linker_flags)
-            self.set_configure_prog_with_args("CXX", self.CXX, self.target_info.essential_compiler_and_linker_flags)
+            self.set_configure_prog_with_args("CC", self.CC, self.essential_compiler_and_linker_flags)
+            self.set_configure_prog_with_args("CXX", self.CXX, self.essential_compiler_and_linker_flags)
             # self.add_configure_env_arg("CPPFLAGS", self.commandline_to_str(CPPFLAGS))
             self.add_configure_env_arg("CFLAGS", self.commandline_to_str(cppflags + self.CFLAGS))
             self.add_configure_env_arg("CXXFLAGS", self.commandline_to_str(cppflags + self.CXXFLAGS))

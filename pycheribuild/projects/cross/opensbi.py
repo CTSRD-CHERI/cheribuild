@@ -70,7 +70,7 @@ class BuildOpenSBI(Project):
 
     def setup(self):
         super().setup()
-        compflags = " " + self.commandline_to_str(self.target_info.essential_compiler_and_linker_flags)
+        compflags = " " + self.commandline_to_str(self.essential_compiler_and_linker_flags)
         compflags += " -Qunused-arguments"  # -mstrict-align -no-pie
         self.make_args.set(
             O=self.build_dir,  # output dir
@@ -86,8 +86,8 @@ class BuildOpenSBI(Project):
             FW_OPTIONS="0x2",  # Debug output enabled for now
             # FW_JUMP_ADDR= ## cheribsd start addr
             # FW_JUMP_FDT_ADDR= ## cheribsd fdt addr
-            PLATFORM_RISCV_ABI=self.target_info.riscv_softfloat_abi,
-            PLATFORM_RISCV_ISA=self.target_info.riscv_arch_string,
+            PLATFORM_RISCV_ABI=self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True),
+            PLATFORM_RISCV_ISA=self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True),
             PLATFORM_RISCV_XLEN=64,
             )
         if self.config.verbose:
@@ -131,7 +131,7 @@ class BuildOpenSBI(Project):
     def _fw_jump_path(self) -> Path:
         # share/opensbi/lp64/generic/firmware//fw_payload.bin
         return self.install_dir / "share/opensbi/{abi}/generic/firmware/fw_jump.elf".format(
-            abi=self.target_info.riscv_softfloat_abi)
+            abi=self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True))
 
     @classmethod
     def get_nocap_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":

@@ -51,8 +51,8 @@ class BuildCheriExercises(CrossCompileProject):
 
     def _compile_file(self, output: Path, *args, target_override: CrossCompileTarget = None):
         assert isinstance(self.target_info, CheriBSDTargetInfo)
-        target_flags = self.target_info.essential_compiler_and_linker_flags_impl(
-            self.target_info, target_override=target_override, default_flags_only=True)
+        target_flags = self.target_info.get_essential_compiler_and_linker_flags(xtarget=target_override,
+                                                                                default_flags_only=True)
         warning_flags = ["-Wall", "-Wcheri"]
         self.run_cmd([self.CC] + target_flags + warning_flags + ["-fuse-ld=lld", "-o", output, *args],
                      print_verbose_only=False)

@@ -79,10 +79,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
     default_build_type = BuildType.RELEASE
-    supported_architectures = [CompilationTargets.NATIVE,
-                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_RISCV_HYBRID,
-                               CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
-                               CompilationTargets.CHERIBSD_AARCH64, CompilationTargets.CHERIBSD_MORELLO_HYBRID]
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_NON_MORELLO_TARGETS + \
+                              CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS + [CompilationTargets.NATIVE]
     default_architecture = CompilationTargets.NATIVE
 
     @classmethod
@@ -96,11 +94,18 @@ class BuildGDB(CrossCompileAutotoolsProject):
     def __init__(self, config: CheriConfig):
         self._compile_status_message = None
         if not self._xtarget.is_native():
-            # We always want to build the MIPS binary static so we can just scp it over to QEMU
+            # We always want to build the CheriBSD binary static so that we can just scp it over to QEMU
             self._linkage = Linkage.STATIC
-
         super().__init__(config)
-        assert not self.compiling_for_cheri(), "Should only build this as a static MIPS binary not CHERIABI"
+
+    @property
+    def essential_compiler_and_linker_flags(self):
+        # XXX: Ugly hack to build the -purecap GDB targets as hybrid. This avoids having to build a hybrid sysroot
+        # just to build gdb for the purecap disk images.
+        if self.crosscompile_target.is_cheri_purecap():
+            return self.target_info.get_essential_compiler_and_linker_flags(
+                xtarget=self.crosscompile_target.get_cheri_hybrid_target())
+        return super().essential_compiler_and_linker_flags
 
     def setup(self):
         super().setup()
@@ -210,19 +215,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
     def install(self, **kwargs):
         self.run_make_install(target="install-gdb")
-        if self.target_info.is_cheribsd() and self.compiling_for_cheri_hybrid():
-            # If we are building a hybrid GDB, also install it to the purecap rootfs
-            make_install_env = self.make_install_env.copy()
-            purecap_target = self.crosscompile_target.get_cheri_purecap_target()
-            rootfs_project = self.target_info.get_rootfs_project(xtarget=purecap_target)
-            purecap_rootfs = rootfs_project.install_dir
-            if (purecap_rootfs / "usr").exists():
-                self.info("Also installing to", purecap_rootfs)
-                assert "DESTDIR" in make_install_env, "DESTDIR must be set in install"
-                make_install_env["DESTDIR"] = str(purecap_rootfs)
-                self.run_make_install(target="install-gdb", make_install_env=make_install_env)
-            else:
-                self.info("Not installing to purecap rootfs", purecap_rootfs, "since it doesn't exist")
         # Install the binutils prefixed with g (like homebrew does it on MacOS)
         # objdump is useful for cases where CHERI llvm-objdump doesn't print sensible source lines
         # Also install most of the other tools in case they work better than elftoolchain

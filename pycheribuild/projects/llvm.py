@@ -399,8 +399,8 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
         target_info = target.target_info_cls(target, MockProject())
         assert isinstance(target_info, FreeBSDTargetInfo)
         # We only want the compiler flags, don't check whether required files exist
-        flags = target_info.essential_compiler_and_linker_flags_impl(target_info, perform_sanity_checks=False,
-                                                                     default_flags_only=True)
+        flags = target_info.get_essential_compiler_and_linker_flags(perform_sanity_checks=False,
+                                                                    default_flags_only=True)
         config_contents = "\n".join(flags) + "\n"
         self.makedirs(self.install_dir / "utils")
         # Note: the config file is loaded from the directory containing the real binary, not the symlink.

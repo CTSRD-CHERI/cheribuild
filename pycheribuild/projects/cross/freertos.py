@@ -66,8 +66,9 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         super().__init__(config)
         self.compiler_resource = get_compiler_info(self.CC).get_resource_dir()
 
-        self.default_demo_app = "qemu_virt-" + self.target_info.riscv_arch_string + \
-                                self.target_info.riscv_softfloat_abi
+        self.default_demo_app = "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target,
+                                                                                      softfloat=True) + \
+                                self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
 
         # We only support building FreeRTOS with llvm from cheribuild
         self.make_args.set(TOOLCHAIN="llvm")
@@ -118,8 +119,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                  "$platform-$arch-$abi format. See RISC-V-Generic/README for more details")
 
     def default_demo_bsp(self):
-        return "qemu_virt-" + self.target_info.riscv_arch_string + "-" + \
-               self.target_info.riscv_softfloat_abi
+        return "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True) + "-" + \
+               self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
 
     def compile(self, **kwargs):
         self.make_args.set(BSP=self.demo_bsp)

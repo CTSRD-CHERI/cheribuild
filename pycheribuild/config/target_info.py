@@ -147,13 +147,20 @@ class TargetInfo(ABC):
     def strip_tool(self) -> Path:
         ...
 
-    @property
+    @classmethod
     @abstractmethod
-    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+    def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
+                                                 perform_sanity_checks=True, default_flags_only=False):
         """
         :return: flags such as -target + -mabi which are needed for both compiler and linker
         """
         ...
+
+    def get_essential_compiler_and_linker_flags(self, xtarget: "CrossCompileTarget" = None,
+                                                perform_sanity_checks=True, default_flags_only=False):
+        return self.essential_compiler_and_linker_flags_impl(self, perform_sanity_checks=perform_sanity_checks,
+                                                             xtarget=xtarget if xtarget is not None else self.target,
+                                                             default_flags_only=default_flags_only)
 
     @property
     def additional_executable_link_flags(self):
@@ -398,11 +405,12 @@ class NativeTargetInfo(TargetInfo):
     def is_native(cls):
         return True
 
-    @property
-    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+    @classmethod
+    def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
+                                                 perform_sanity_checks=True, default_flags_only=False):
         result = []
-        if self.project.auto_var_init != AutoVarInit.NONE:
-            compiler = get_compiler_info(self.c_compiler)
+        if instance.project.auto_var_init != AutoVarInit.NONE:
+            compiler = get_compiler_info(instance.c_compiler)
             if compiler.is_apple_clang:
                 # Not sure which apple clang version is the first to support it but 11.0.3 on my system does
                 valid_clang_version = compiler.version >= (11, 0)
@@ -410,9 +418,9 @@ class NativeTargetInfo(TargetInfo):
                 # Clang 8.0.0 is the first to support auto-var-init
                 valid_clang_version = compiler.is_clang and compiler.version >= (8, 0)
             if valid_clang_version:
-                result += self.project.auto_var_init.clang_flags()
+                result += instance.project.auto_var_init.clang_flags()
             else:
-                self.project.fatal("Requested automatic variable initialization, but don't know how to for", compiler)
+                instance.project.fatal("Requested automatic variable initialization, but don't know how to for", compiler)
         return result  # default host compiler should not need any extra flags
 
 

@@ -100,9 +100,9 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, ti: "_ClangBasedTargetInfo", *,
-                                                 target_override: "CrossCompileTarget" = None,
+                                                 xtarget: "CrossCompileTarget",
                                                  perform_sanity_checks=True, default_flags_only=False):
-        target = target_override if target_override is not None else ti.target
+        assert xtarget is not None
         config = ti.config
         project = ti.project  # type: SimpleProject
         # noinspection PyProtectedMember
@@ -110,7 +110,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             project.fatal("essential_compiler_and_linker_flags should not be called in __init__, use setup()!",
                           fatal_when_pretending=True)
         # When cross compiling we need at least -target=
-        result = ["-target", cls.triple_for_target(target, project.config, include_version=True)]
+        result = ["-target", cls.triple_for_target(xtarget, project.config, include_version=True)]
         # And usually also --sysroot
         if project.needs_sysroot:
             result.append("--sysroot=" + str(ti.sysroot_dir))
@@ -128,13 +128,13 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             else:
                 project.fatal("Requested automatic variable initialization, but don't know how to for", compiler)
 
-        if target.is_mips(include_purecap=True):
+        if xtarget.is_mips(include_purecap=True):
             result.append("-integrated-as")
             result.append("-G0")  # no small objects in GOT optimization
             # Floating point ABI:
             if ti.is_baremetal() or ti.is_rtems():
                 # The baremetal driver doesn't add -fPIC for CHERI
-                if target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+                if xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
                     result.append("-fPIC")
                     # For now use soft-float to avoid compiler crashes
                     result.append(MipsFloatAbi.SOFT.clang_float_flag())
@@ -149,7 +149,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             # CPU flags (currently always BERI):
             if ti.is_cheribsd():
                 result.append("-mcpu=beri")
-            if target.is_cheri_purecap():
+            if xtarget.is_cheri_purecap():
                 result.extend(["-mabi=purecap", "-mcpu=beri", "-cheri=" + config.mips_cheri_bits_str])
                 if config.subobject_bounds:
                     result.extend(["-Xclang", "-cheri-bounds=" + str(config.subobject_bounds)])
@@ -158,70 +158,56 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 if config.cheri_cap_table_abi:
                     result.append("-cheri-cap-table-abi=" + config.cheri_cap_table_abi)
             else:
-                assert target.is_mips(include_purecap=False)
+                assert xtarget.is_mips(include_purecap=False)
                 # TODO: should we use -mcpu=cheri128?
                 result.extend(["-mabi=n64"])
-                if target.is_cheri_hybrid():
+                if xtarget.is_cheri_hybrid():
                     result.append("-cheri=" + config.mips_cheri_bits_str)
                     result.append("-mcpu=beri")
-        elif target.is_riscv(include_purecap=True):
-            assert target.cpu_architecture == CPUArchitecture.RISCV64
+        elif xtarget.is_riscv(include_purecap=True):
+            assert xtarget.cpu_architecture == CPUArchitecture.RISCV64
+            # Note: Baremetal/FreeRTOS currently only supports softfloat
+            softfloat = ti.is_baremetal()
             # Use the insane RISC-V arch string to enable CHERI
-            result.append("-march=" + ti.riscv_arch_string)
-
-            if ti.is_baremetal():
-                # Baremetal/FreeRTOS only supports softfloat
-                result.append("-mabi=" + ti.riscv_softfloat_abi)
-            else:
-                result.append("-mabi=" + ti.riscv_abi)
-
+            result.append("-march=" + ti.get_riscv_arch_string(xtarget, softfloat=ti.is_baremetal()))
+            result.append("-mabi=" + ti.get_riscv_abi(xtarget, softfloat=softfloat))
             result.append("-mno-relax")  # Linker relaxations are not supported with clang+lld
 
             if ti.is_baremetal() or ti.is_rtems():
                 # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
                 result.append("-mcmodel=medium")
-        elif target.is_aarch64(include_purecap=True):
-            if target.is_cheri_hybrid():
+        elif xtarget.is_aarch64(include_purecap=True):
+            if xtarget.is_cheri_hybrid():
                 result += ["-march=morello", "-mabi=aapcs"]
-            elif target.is_cheri_purecap():
+            elif xtarget.is_cheri_purecap():
                 result += ["-march=morello+c64", "-mabi=purecap"]
         else:
             project.warning("Compiler flags might be wong, only native + MIPS checked so far")
         return result
 
-    @property
-    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
-        return self.essential_compiler_and_linker_flags_impl(self)
-
-    @property
-    def riscv_arch_string(self):
-        assert self.target.is_riscv(include_purecap=True)
+    @classmethod
+    def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, softfloat: bool):
+        assert xtarget.is_riscv(include_purecap=True)
         # Use the insane RISC-V arch string to enable CHERI
-        if self.is_baremetal():
-            # Baremetal/FreeRTOS only supports softfloat
+        if softfloat:
             arch_string = "rv64imac"
         else:
             arch_string = "rv64imafdc"
-
-        if self.target.is_hybrid_or_purecap_cheri():
+        if xtarget.is_hybrid_or_purecap_cheri():
             arch_string += "xcheri"
         return arch_string  # XXX: any more extensions needed?
 
-    @property
-    def riscv_abi(self):
-        assert self.target.is_riscv(include_purecap=True)
-        if self.target.is_cheri_purecap():
+    @classmethod
+    def get_riscv_abi(cls, xtarget: CrossCompileTarget, *, softfloat: bool):
+        assert xtarget.is_riscv(include_purecap=True)
+        if xtarget.is_cheri_purecap():
+            if softfloat:
+                return "l64pc128"  # 64-bit soft-float purecap
             return "l64pc128d"  # 64-bit double-precision hard-float + purecap
         else:
+            if softfloat:
+                return "lp64"  # 64-bit soft-float
             return "lp64d"  # 64-bit double-precision hard-float
-
-    @property
-    def riscv_softfloat_abi(self):
-        assert self.target.is_riscv(include_purecap=True)
-        if self.target.is_cheri_purecap():
-            return "l64pc128"  # 64-bit soft-float purecap
-        else:
-            return "lp64"  # 64-bit soft-float
 
 
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
@@ -601,10 +587,10 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig"):
         return ["morello-llvm"]
 
-    @property
-    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
-        result = super().essential_compiler_and_linker_flags
-        if self.target.is_cheri_purecap([CPUArchitecture.AARCH64]):
+    @classmethod
+    def essential_compiler_and_linker_flags_impl(cls, ti: "_ClangBasedTargetInfo", *, xtarget, **kwargs):
+        result = super().essential_compiler_and_linker_flags_impl(ti, xtarget=xtarget, **kwargs)
+        if ti.target.is_cheri_purecap([CPUArchitecture.AARCH64]):
             # emulated TLS is currently required for purecap, but breaks hybrid
             result.append("-femulated-tls")
         return result
@@ -824,12 +810,11 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         return []
 
-    @property
-    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
-        if (self.target.cpu_architecture == CPUArchitecture.ARM32 or
-                self.target.is_cheri_hybrid([CPUArchitecture.AARCH64])):
-            return super().essential_compiler_and_linker_flags
-        assert False, "Other baremetal cases have not been tested yet!"
+    @classmethod
+    def essential_compiler_and_linker_flags_impl(cls, ti, *, xtarget, **kwargs) -> typing.List[str]:
+        if xtarget.cpu_architecture == CPUArchitecture.ARM32 or xtarget.is_cheri_hybrid([CPUArchitecture.AARCH64]):
+            return super().essential_compiler_and_linker_flags_impl(ti, xtarget=xtarget)
+        raise ValueError("Other baremetal cases have not been tested yet!")
 
     @classmethod
     def is_baremetal(cls):
@@ -893,8 +878,8 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
     def strip_tool(self) -> Path:
         return self.bindir / (self.binary_prefix + "strip")
 
-    @property
-    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+    @classmethod
+    def essential_compiler_and_linker_flags_impl(cls, *args, **kwargs):
         # This version of GCC should work without any additional flags
         return []
 

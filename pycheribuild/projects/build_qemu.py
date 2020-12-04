@@ -286,10 +286,10 @@ class BuildQEMU(BuildQEMUBase):
             self.configure_args.extend([
                 "--cross-cc-mips=" + str(tgt_info_mips.c_compiler),
                 "--cross-cc-cflags-mips=" + self.commandline_to_str(
-                    tgt_info_mips.essential_compiler_and_linker_flags).replace("=", " "),
+                    tgt_info_mips.get_essential_compiler_and_linker_flags()).replace("=", " "),
                 "--cross-cc-riscv64=" + str(tgt_info_riscv64.c_compiler),
                 "--cross-cc-cflags-riscv64=" + self.commandline_to_str(
-                    tgt_info_riscv64.essential_compiler_and_linker_flags).replace("=", " ")
+                    tgt_info_riscv64.get_essential_compiler_and_linker_flags()).replace("=", " ")
                 ])
 
 

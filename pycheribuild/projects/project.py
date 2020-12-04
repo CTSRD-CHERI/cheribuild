@@ -1925,6 +1925,11 @@ class Project(SimpleProject):
             return self.common_warning_flags + self.cross_warning_flags
 
     @property
+    def essential_compiler_and_linker_flags(self):
+        # This property exists so that gdb can override the target flags to build the -purecap targets as hybrid.
+        return self.target_info.get_essential_compiler_and_linker_flags()
+
+    @property
     def default_compiler_flags(self):
         assert self._setup_called
         result = []
@@ -1938,7 +1943,7 @@ class Project(SimpleProject):
             result.append("-fvisibility=hidden")
         if self.compiling_for_host():
             return result + self.COMMON_FLAGS + self.compiler_warning_flags + self.optimization_flags
-        result += self.target_info.essential_compiler_and_linker_flags + self.optimization_flags
+        result += self.essential_compiler_and_linker_flags + self.optimization_flags
         result += self.COMMON_FLAGS + self.compiler_warning_flags
         if self.config.csetbounds_stats:
             result.extend(["-mllvm", "-collect-csetbounds-output=" + str(self.csetbounds_stats_file),
@@ -1979,7 +1984,7 @@ class Project(SimpleProject):
         # elif self.compiling_for_mips(include_purecap=False):
         #     emulation = "elf64btsmip_fbsd" if not self.target_info.is_baremetal() else "elf64btsmip"
         # result.append("-Wl,-m" + emulation)
-        result += self.target_info.essential_compiler_and_linker_flags
+        result += self.essential_compiler_and_linker_flags
         if self.CC.exists() and get_compiler_info(self.CC).is_clang:
             result.append("-fuse-ld=" + str(self.target_info.linker))
 
@@ -3040,15 +3045,10 @@ class MakefileProject(Project):
     _stdout_filter = None  # don't filter output during make
     set_commands_on_cmdline = False  # Set variables such as CC/CXX on the command line instead of the environment
 
-    @property
-    def essential_compiler_args(self):
-        """ This exists to allow targets such as scp-firmware to use 32-bit arm"""
-        return self.target_info.essential_compiler_and_linker_flags
-
     def setup(self):
         super().setup()
         # Most projects expect that a plain $CC foo.c will work so we include the -target, etc in CC
-        essential_flags = self.target_info.essential_compiler_and_linker_flags
+        essential_flags = self.essential_compiler_and_linker_flags
         self.set_make_cmd_with_args("CC", self.CC, essential_flags)
         self.set_make_cmd_with_args("CPP", self.CPP, essential_flags)
         self.set_make_cmd_with_args("CXX", self.CXX, essential_flags)

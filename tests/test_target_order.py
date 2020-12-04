@@ -106,8 +106,7 @@ def test_cheribsd_default_aliases():
                  ["qemu", "llvm-native", "cheribsd-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid",
                   "run-mips64-hybrid"]),
     pytest.param("run-mips64-purecap", True,
-                 ["qemu", "llvm-native", "cheribsd-mips64-purecap",
-                  "cheribsd-mips64-hybrid", "gdb-mips64-hybrid",   # FIXME: should not need a hybrid sysroot here!
+                 ["qemu", "llvm-native", "cheribsd-mips64-purecap", "gdb-mips64-purecap",
                   "disk-image-mips64-purecap", "run-mips64-purecap"]),
     pytest.param("run-riscv64", True,
                  ["qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64", "run-riscv64"]),
@@ -115,8 +114,7 @@ def test_cheribsd_default_aliases():
                  ["qemu", "llvm-native", "cheribsd-riscv64-hybrid", "gdb-riscv64-hybrid",
                   "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-hybrid", "run-riscv64-hybrid"]),
     pytest.param("run-riscv64-purecap", True,
-                 ["qemu", "llvm-native", "cheribsd-riscv64-purecap",
-                  "cheribsd-riscv64-hybrid", "gdb-riscv64-hybrid",  # FIXME: should not need a hybrid sysroot here!
+                 ["qemu", "llvm-native", "cheribsd-riscv64-purecap", "gdb-riscv64-purecap",
                   "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"]),
     # Note: QEMU not needed for aarch64/amd64 since we could also use the system QEMU
     pytest.param("run-aarch64", True,
@@ -130,8 +128,7 @@ def test_cheribsd_default_aliases():
                  ["morello-llvm", "cheribsd-morello-hybrid", "gdb-morello-hybrid", "morello-firmware",
                   "disk-image-morello-hybrid", "run-fvp-morello-hybrid"]),
     pytest.param("run-fvp-morello-purecap", True,
-                 ["morello-llvm", "cheribsd-morello-purecap",
-                  "cheribsd-morello-hybrid", "gdb-morello-hybrid",  # FIXME: should not need a hybrid sysroot here!
+                 ["morello-llvm", "cheribsd-morello-purecap", "gdb-morello-purecap",
                   "morello-firmware", "disk-image-morello-purecap", "run-fvp-morello-purecap"]),
     ])
 def test_all_run_deps(target, add_toolchain: bool, expected_deps):
