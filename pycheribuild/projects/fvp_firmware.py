@@ -33,8 +33,7 @@ from pathlib import Path
 from .cross.crosscompileproject import CrossCompileMakefileProject
 from .cross.gdb import BuildGDB
 from .project import (DefaultInstallDir, GitRepository, MakefileProject, Project,
-                      ReuseOtherProjectDefaultTargetRepository, SimpleProject,
-                      TargetAliasWithDependencies)
+                      ReuseOtherProjectDefaultTargetRepository, SimpleProject)
 from ..config.chericonfig import BuildType, CheriConfig
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
@@ -351,7 +350,28 @@ class BuildMorelloFlashImages(Project):
         return self.install_dir / "mcp_image.bin"
 
 
-class BuildMorelloFirmware(TargetAliasWithDependencies):
+class BuildMorelloFirmware(SimpleProject):
     target = "morello-firmware"
-    dependencies = ["morello-scp-firmware", "morello-trusted-firmware", "morello-flash-images", "morello-uefi"]
+    dependencies_must_be_built = True
     skip_toolchain_dependencies = True  # Don't rebuild morello-llvm unless it's also a depenency of another target
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig):
+        # Note: can't make this a per-target option (using setup_config_options) since dependencies() is called before
+        # we have loaded the per-target config options.
+        if config.build_morello_firmware_from_source:
+            return ["morello-scp-firmware", "morello-trusted-firmware", "morello-flash-images", "morello-uefi"]
+        return []
+
+    def process(self):
+        if self.config.build_morello_firmware_from_source:
+            return  # We just need to build all the depedencies
+
+        # Download the latest tarball and extract it
+        download_url_base = "https://morello-dist.cl.cam.ac.uk/releases/2020.10/arm64.aarch64c/"
+        filename = "morello-fvp-firmware-2020.10.tar.xz"
+        fvp_firmware_dir = _morello_firmware_build_outputs_dir(self.config, self)
+        firmware_archive = fvp_firmware_dir.parent / filename
+        self.download_file(firmware_archive, url=download_url_base + filename,
+                           sha256="440f08a05f2a8e6475e81d2527cc169f0491a6cd177da290e75b0e51363f1412")
+        self.run_cmd("tar", "xf", firmware_archive, "-C", fvp_firmware_dir.parent)

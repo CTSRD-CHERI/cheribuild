@@ -975,9 +975,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         kwargs["no_print"] = True
         return run_command(shell, "-xe" if self.config.verbose else "-e", "-c", script, **kwargs)
 
-    def ensure_file_exists(self, what, path) -> Path:
+    def ensure_file_exists(self, what, path, fixit_hint=None) -> Path:
         if not path.exists():
-            self.fatal(what, "not found:", path)
+            self.fatal(what, "not found:", path, fixit_hint=fixit_hint)
         return path
 
     def download_file(self, dest: Path, url: str, sha256: str = None):

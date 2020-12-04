@@ -39,8 +39,8 @@ from pathlib import Path
 from typing import Optional
 
 from .loader import ComputedDefaultValue, MyJsonEncoder
-from ..utils import (ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, status_update, warning_message)
 from ..processutils import latest_system_clang_tool
+from ..utils import (ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, status_update, warning_message)
 
 
 class BuildType(Enum):
@@ -372,6 +372,10 @@ class CheriConfig(ConfigBase):
             help="Prefix for arm-none-eabi-gcc binaries (e.g. /usr/bin/arm-none-eabi-). Available at"
                  "https://developer.arm.com/tools-and-software/open-source-software/"
                  "developer-tools/gnu-toolchain/gnu-rm/downloads")  # type: Path
+
+        self.build_morello_firmware_from_source = loader.add_bool_option(
+            "build-morello-firmware-from-source", help_hidden=False,
+            help="Build the firmware from source instead of downloading the latest release.")
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
         self.__optional_properties = ["preferred_xtarget", "internet_connection_last_checked_at"]

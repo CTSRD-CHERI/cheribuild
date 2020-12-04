@@ -18,13 +18,14 @@ global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
 
 # noinspection PyProtectedMember
 def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolchain=True,
-                  skip_sdk=False) -> "typing.List[str]":
+                  skip_sdk=False, build_morello_from_source=False) -> "typing.List[str]":
     target_manager.reset()
     # print(real_targets)
     real_targets = list(target_manager.get_target(t, None, global_config, caller="_sort_targets") for t in targets)
     global_config.include_dependencies = add_dependencies
     global_config.include_toolchain_dependencies = add_toolchain
     global_config.skip_sdk = skip_sdk
+    global_config.build_morello_firmware_from_source = build_morello_from_source
     for t in real_targets:
         if t.project_class._xtarget is None:
             continue
@@ -220,20 +221,27 @@ def test_libcxx_deps(suffix, expected_suffix):
     assert expected == _sort_targets(["libcxx" + suffix], add_dependencies=True, skip_sdk=True)
 
 
-@pytest.mark.parametrize("target_name,include_recursive_deps,include_toolchain,expected_deps", [
+@pytest.mark.parametrize("target_name,include_recursive_deps,include_toolchain,expected_deps,morello_from_source", [
     pytest.param("morello-firmware", False, False,
                  ["morello-scp-firmware", "morello-trusted-firmware",
-                  "morello-flash-images", "morello-uefi", "morello-firmware"]),
+                  "morello-flash-images", "morello-uefi", "morello-firmware"], True,
+                 id="firmware from source (no deps)"),
     pytest.param("morello-firmware", True, True,
                  ["morello-scp-firmware", "morello-trusted-firmware",
-                  "morello-flash-images", "morello-uefi", "morello-firmware"]),
-    pytest.param("morello-uefi", False, False, ["morello-uefi"]),
-    pytest.param("morello-uefi", False, True, ["morello-uefi"]),
-    pytest.param("morello-uefi", True, False, ["morello-uefi"]),
-    pytest.param("morello-uefi", True, True, ["gdb-native", "morello-acpica", "morello-llvm", "morello-uefi"]),
+                  "morello-flash-images", "morello-uefi", "morello-firmware"], True,
+                 id="firmware from source (deps)"),
+    pytest.param("morello-firmware", True, True, ["morello-firmware"], False,
+                 id="firmware dowload (deps)"),
+    pytest.param("morello-firmware", False, False, ["morello-firmware"], False,
+                 id="firmware dowload (no deps)"),
+    pytest.param("morello-uefi", False, False, ["morello-uefi"], True),
+    pytest.param("morello-uefi", False, True, ["morello-uefi"], True),
+    pytest.param("morello-uefi", True, False, ["morello-uefi"], True),
+    pytest.param("morello-uefi", True, True, ["gdb-native", "morello-acpica", "morello-llvm", "morello-uefi"], True),
     ])
-def test_skip_toolchain_deps(target_name, include_recursive_deps, include_toolchain, expected_deps):
+def test_skip_toolchain_deps(target_name, include_recursive_deps, include_toolchain, expected_deps,
+                             morello_from_source):
     # Check that morello-firmware does not include toolchain dependencies by default, but the individual ones does
     # TODO: should we do the same for all-<target>?
-    assert _sort_targets([target_name], add_dependencies=include_recursive_deps,
-                         add_toolchain=include_toolchain) == expected_deps
+    assert _sort_targets([target_name], add_dependencies=include_recursive_deps, add_toolchain=include_toolchain,
+                         build_morello_from_source=morello_from_source) == expected_deps

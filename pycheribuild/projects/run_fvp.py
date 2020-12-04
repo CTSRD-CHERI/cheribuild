@@ -245,7 +245,7 @@ VOLUME /diskimg
 class LaunchFVPBase(SimpleProject):
     do_not_add_to_targets = True
     _source_class = BuildCheriBSDDiskImage
-    dependencies = [_source_class.target, "morello-uefi", "morello-flash-images"]
+    dependencies = [_source_class.target, "morello-firmware"]
     supported_architectures = _source_class.supported_architectures
 
     def __init__(self, config):
@@ -293,10 +293,11 @@ class LaunchFVPBase(SimpleProject):
         if not self.firmware_path.exists():
             self.fatal("Firmware path", self.firmware_path, " is invalid, set the",
                        "--" + self.get_config_option_name("firmware_path"), "config option!")
+        disk_image_project = self._source_class.get_instance(self)
         if self.remote_disk_image_path:
-            self.copy_remote_file(self.remote_disk_image_path,
-                                  self._source_class.get_instance(self).disk_image_path)
-        disk_image = self.ensure_file_exists("disk image", self._source_class.get_instance(self).disk_image_path)
+            self.copy_remote_file(self.remote_disk_image_path, disk_image_project.disk_image_path)
+        disk_image = self.ensure_file_exists("disk image", disk_image_project.disk_image_path,
+                                             fixit_hint="Run `cheribuild.py " + disk_image_project.target + "`")
         # TODO: tracing support:
         # TARMAC_TRACE="--plugin ${PLUGIN_DIR}/TarmacTrace.so"
         # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.trace-file=${HOME}/rainier/rainier.tarmac.trace"
@@ -382,12 +383,18 @@ class LaunchFVPBase(SimpleProject):
             #                                         self.firmware_path / "morello/components/morello/mcp_romfw.elf")
             # scp_romfw_elf = self.ensure_file_exists("SCP ROM ELF firmware",
             #                                         self.firmware_path / "morello/components/morello/scp_romfw.elf")
-            mcp_rom_bin = self.ensure_file_exists("MCP ROM ELF firmware", BuildMorelloScpFirmware.mcp_rom_bin(self))
-            scp_rom_bin = self.ensure_file_exists("SCP ROM ELF firmware", BuildMorelloScpFirmware.scp_rom_bin(self))
-            uefi_bin = self.ensure_file_exists("UEFI firmware", BuildMorelloUEFI.uefi_bin(self))
+            firmware_fixit = "Run `cheribuild.py morello-fvp-firmware`"
+            mcp_rom_bin = self.ensure_file_exists("MCP ROM ELF firmware", BuildMorelloScpFirmware.mcp_rom_bin(self),
+                                                  fixit_hint=firmware_fixit)
+            scp_rom_bin = self.ensure_file_exists("SCP ROM ELF firmware", BuildMorelloScpFirmware.scp_rom_bin(self),
+                                                  fixit_hint=firmware_fixit)
+            uefi_bin = self.ensure_file_exists("UEFI firmware", BuildMorelloUEFI.uefi_bin(self),
+                                               fixit_hint=firmware_fixit)
             flash_images = BuildMorelloFlashImages.get_instance(self, cross_target=CompilationTargets.NATIVE)
-            scp_fw_bin = self.ensure_file_exists("SCP/AP firmware", flash_images.scp_ap_ram_firmware_image)
-            mcp_fw_bin = self.ensure_file_exists("MCP firmware", flash_images.mcp_ram_firmware_image)
+            scp_fw_bin = self.ensure_file_exists("SCP/AP firmware", flash_images.scp_ap_ram_firmware_image,
+                                                 fixit_hint=firmware_fixit)
+            mcp_fw_bin = self.ensure_file_exists("MCP firmware", flash_images.mcp_ram_firmware_image,
+                                                 fixit_hint=firmware_fixit)
             assert uefi_bin.parent == scp_fw_bin.parent and scp_fw_bin.parent == scp_rom_bin.parent, "Different dirs?"
             fvp_args += [
                 # "-a", "Morello_Top.css.scp.armcortexm7ct=" + str(scp_romfw_elf),
