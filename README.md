@@ -24,7 +24,7 @@ brew install homebrew/cask/docker homebrew/cask/xquartz socat dtc
 ```
 
 
-#### Ubuntu
+#### Debian/Ubuntu
 If you are building CHERI on a Debian/Ubuntu-based machine, please install the following packages:
 
 ```shell
