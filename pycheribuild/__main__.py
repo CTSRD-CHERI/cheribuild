@@ -50,7 +50,7 @@ from .projects.project import SimpleProject
 from .targets import target_manager
 from .processutils import commandline_to_str, get_program_version, print_command, run_command
 from .utils import (AnsiColour, OSInfo, coloured, fatal_error, have_working_internet_connection, init_global_config,
-                    status_update, warning_message)
+                    status_update)
 DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent.parent]
 
 
@@ -95,7 +95,7 @@ def ensure_fd_is_blocking(fd):
         fatal_error("fd", fd, "is set to nonblocking and could not unset flag")
 
 
-def check_macos_big_sur_apfs(config: DefaultCheriConfig):
+def check_macos_big_sur(config: DefaultCheriConfig):
     if not OSInfo.IS_MAC:
         return
     macos_version_str = run_command(["sw_vers", "-productVersion"], config=config, capture_output=True,
@@ -106,75 +106,9 @@ def check_macos_big_sur_apfs(config: DefaultCheriConfig):
         return
     if macos_version[0] != 11:  # if next year's macOS 12 suffers from the same bug I will be very sad
         fatal_error("Unknown macOS major version " + str(macos_version[0]) + "!", pretend=False)
-    import xml.dom.minidom
-    for path in [config.build_root, config.output_root]:
-        # Python has no statfs wrapper and psutil only provides a list of all
-        # partitions with no easy way to map a path to its containing mount
-        # point. Just do the dumb thing and shell out.
-        df_str = run_command(["df", path], config=config, capture_output=True, run_in_pretend_mode=True,
-                             raise_in_pretend_mode=True, no_print=True).stdout.decode('utf-8')
-        df_str = df_str.strip()
-        df_lines = df_str.split('\n')
-        if len(df_lines) != 2:
-            fatal_error("Unexpected df output for", path, pretend=False)
-        disk = df_lines[1].split(' ')[0]
-        diskutil_str = run_command(["diskutil", "info", "-plist", disk], config=config, capture_output=True,
-                                   run_in_pretend_mode=True, raise_in_pretend_mode=True,
-                                   no_print=True).stdout.decode('utf-8')
-        # Output is of the form:
-        # <plist>
-        # <dict>
-        #   ...
-        #   <key>FilesystemType</key>
-        #   <string>apfs</string>
-        plist = xml.dom.minidom.parseString(diskutil_str).documentElement
-        elements = []
-        for node in plist.childNodes:
-            if node.nodeType == node.ELEMENT_NODE:
-                elements.append(node)
-        if len(elements) != 1:
-            fatal_error("Bad number of elements in diskutil info -plist", disk, pretend=False)
-        plist_dict = elements[0]
-        if plist_dict.tagName != 'dict':
-            fatal_error("Bad root child in diskutil info -plist", disk, pretend=False)
-        for child in plist_dict.childNodes:
-            if child.nodeType != node.ELEMENT_NODE or child.tagName != 'key':
-                continue
-            if len(child.childNodes) != 1:
-                fatal_error("Bad number of children for key node in diskutil info -plist", disk, pretend=False)
-            text = child.childNodes[0]
-            if text.nodeType != text.TEXT_NODE:
-                fatal_error("Non-text child for key node in diskutil info -plist", disk, pretend=False)
-            if text.data != 'FilesystemType':
-                continue
-            child = child.nextSibling
-            while child.nodeType == child.TEXT_NODE and not child.data.strip():
-                child = child.nextSibling
-            if child.nodeType != node.ELEMENT_NODE:
-                fatal_error("Bad next sibling type for FilesystemType key in diskutil -info -plist", disk,
-                            pretend=False)
-            if child.tagName != 'string':
-                fatal_error("Bad next sibling tag for FilesystemType key in diskutil info -plist", disk, pretend=False)
-            if len(child.childNodes) != 1:
-                fatal_error("Bad number of children for string node in diskutil info -plist", disk, pretend=False)
-            text = child.childNodes[0]
-            if text.nodeType != text.TEXT_NODE:
-                fatal_error("Non-text child for string node in diskutil info -plist", disk, pretend=False)
-            fstype = text.data
-            break
-        else:
-            fatal_error("Could not find FilesystemType property in diskutil info -plist", disk, pretend=False)
-
-        if fstype == 'apfs':
-            fatal_error("You are using macOS Big Sur with", path, "located on an APFS volume. This is known to be "
-                        "unstable and lead to lockups requiring a machine reboot when building CheriBSD. Please use "
-                        "an HFS+ volume, a pre-Big Sur version of macOS or a different OS entirely.",
-                        pretend=(os.getenv('CHERIBUILD_BIG_SUR_APFS_NON_FATAL') == 'yes'))
-        elif fstype != 'hfs':
-            warning_message("You are using macOS Big Sur with", path, "located on a volume with an unknown filesystem "
-                            "type (" + fstype + "). APFS is known to be unstable and lead to lockups; if you "
-                            "experience similar issues, please use an HFS+ volume, a pre-Big Sur version of macOS or "
-                            "a different OS entirely.")
+    fatal_error("You are using macOS Big Sur; this is known to be unstable and lead to lockups, requiring a machine "
+                "reboot when building CheriBSD. Please use a pre-Big Sur version of macOS or a different OS entirely.",
+                pretend=os.getenv("CHERIBUILD_BIG_SUR_NON_FATAL"))
 
 
 def real_main():
@@ -234,7 +168,7 @@ def real_main():
     assert any(x in cheri_config.action for x in (CheribuildAction.TEST, CheribuildAction.PRINT_CHOSEN_TARGETS,
                                                   CheribuildAction.BUILD, CheribuildAction.BENCHMARK))
 
-    check_macos_big_sur_apfs(cheri_config)
+    check_macos_big_sur(cheri_config)
 
     if cheri_config.docker:
         cheribuild_dir = str(Path(__file__).absolute().parent.parent)
