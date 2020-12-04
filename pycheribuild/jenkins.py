@@ -104,8 +104,10 @@ class SdkArchive(object):
         self.check_required_files()
 
     def check_required_files(self, fatal=True) -> bool:
+        status_update("Checking for required files in", self.output_dir)
         for glob in self.required_globs:
             found = list(self.output_dir.glob(glob))
+            status_update("Checking ", glob, ":", found, sep="")
             # print("Matched files:", found)
             if len(found) == 0:
                 if fatal:
