@@ -84,8 +84,8 @@ class InstallMorelloFVP(SimpleProject):
         if self.installer_path is None:
             # noinspection PyAttributeOutsideInit
             self.installer_path = self.install_dir.parent / self.installer_filename
-            if not self.installer_path.is_file():
-                self.run_cmd("wget", self.base_url + self.installer_filename, "-O", self.installer_path)
+            self.download_file(self.installer_path, url=self.base_url + self.installer_filename,
+                               sha256="2e52c34b80038fa025c590f49034a39350b8e7f8f3082fe389d5e5ca98f1cfe9")
 
         if not self.installer_path.is_file():
             self.fatal("Specified path to installer does not exist:", self.installer_path)

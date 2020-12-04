@@ -302,3 +302,20 @@ class FileSystemUtils(object):
             return False
         # print(d, "is empty")
         return True
+
+    def sha256sum(self, file: Path) -> str:
+        # Based on https://stackoverflow.com/a/44873382/894271
+        import hashlib  # rarely need, so imported on demand to reduce startup time
+        h = hashlib.sha256()
+        b = bytearray(128 * 1024)
+        mv = memoryview(b)
+        if not file.exists():
+            fatal_error("Cannot hash", file, "since it does not exist", pretend=self.config.pretend)
+            if self.config.pretend:
+                return "0"
+        with file.open('rb', buffering=0) as f:
+            # PyCharm thinks .readinto is not supported.
+            # noinspection PyUnresolvedReferences
+            for n in iter(lambda: f.readinto(mv), 0):
+                h.update(mv[:n])
+        return h.hexdigest()

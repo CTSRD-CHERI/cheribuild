@@ -980,6 +980,28 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             self.fatal(what, "not found:", path)
         return path
 
+    def download_file(self, dest: Path, url: str, sha256: str = None):
+        should_download = False
+        if not dest.is_file():
+            should_download = True
+        elif sha256 is not None:
+            existing_sha256 = self.sha256sum(dest)
+            self.verbose_print("Downloaded", url, "with SHA256", existing_sha256)
+            if sha256 and existing_sha256 != sha256:
+                self.warning("SHA256 for", dest, "(" + existing_sha256 + ") does not match expected SHA256", sha256)
+                if self.query_yes_no("Continue with unexpected file?", default_result=False, force_result=False):
+                    self.info("Using file with unexpected SHA256 hash", existing_sha256)
+                else:
+                    self.info("Will try to download again.")
+                    should_download = True
+        if should_download:
+            self.run_cmd("wget", url, "-O", dest)
+            downloaded_sha256 = self.sha256sum(dest)
+            self.verbose_print("Downloaded", url, "with SHA256 hash", downloaded_sha256)
+            if sha256 and downloaded_sha256 != sha256:
+                self.warning("Downloaded file SHA256 hash", downloaded_sha256, "does not match expected SHA256", sha256)
+                self.ask_for_confirmation("Continue with unexpected file?", default_result=False)
+
     def print(self, *args, **kwargs):
         if not self.config.quiet:
             print(*args, **kwargs)

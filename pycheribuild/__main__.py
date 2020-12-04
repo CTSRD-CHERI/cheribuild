@@ -100,6 +100,8 @@ def check_macos_big_sur(config: DefaultCheriConfig):
     if not OSInfo.IS_MAC:
         return
     macos_version_str = platform.mac_ver()[0]
+    # Note: os.uname().release 20.0.0 and 20.1.0 are broken, once we know a version where it's fixed, we can change
+    # this to an os.uname() range check.
     macos_version = tuple(map(int, macos_version_str.split('.')))
     if macos_version[0] == 10:
         return
