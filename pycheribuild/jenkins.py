@@ -107,7 +107,7 @@ class SdkArchive(object):
         status_update("Checking for required files in", self.output_dir)
         for glob in self.required_globs:
             found = list(self.output_dir.glob(glob))
-            status_update("Checking ", glob, ":", found, sep="")
+            status_update("Checking ", glob, ": ", found, sep="")
             # print("Matched files:", found)
             if len(found) == 0:
                 if fatal:
@@ -131,10 +131,10 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List
     if not needs_cheribsd_sysroot or cheri_config.extract_compiler_only:
         return [clang_archive]  # only need the clang archive
     # if we only extracted the compiler, extract the sysroot now
-    extra_args = ["--strip-components", "1"]
+    extra_args = ["--strip-components", "2"]
     sysroot_archive = SdkArchive(cheri_config, cheri_config.sysroot_archive_name,
                                  output_dir=cheri_config.sysroot_archive_output_path,
-                                 required_globs=["sysroot/usr/include"], extra_args=extra_args)
+                                 required_globs=["usr/include"], extra_args=extra_args)
     if not sysroot_archive.archive.exists():
         warning_message("Project needs a sysroot archive but ", sysroot_archive.archive,
                         "is missing. Will attempt to build anyway but build will most likely fail.")
