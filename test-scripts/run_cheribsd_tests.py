@@ -278,8 +278,6 @@ def add_args(parser: argparse.ArgumentParser):
                         help="Run cheribsdtest programs")
     parser.add_argument("--no-run-cheribsdtest", dest="run_cheribsdtest", action="store_false",
                         help="Do not run cheribsdtest programs")
-    parser.add_argument("--minimal-image", action="store_true",
-                        help="Set this if tests are being run on the minimal disk image rather than the full one")
 
 
 if __name__ == '__main__':

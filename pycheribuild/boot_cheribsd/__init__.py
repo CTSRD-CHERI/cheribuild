@@ -989,6 +989,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--kernel", default=None)
     parser.add_argument("--bios", default=None)
     parser.add_argument("--disk-image", default=None)
+    parser.add_argument("--minimal-image", action="store_true",
+                        help="Set this if tests are being run on the minimal disk image rather than the full one")
     parser.add_argument("--extract-images-to", help="Path where the compressed images should be extracted to")
     parser.add_argument("--reuse-image", action="store_true")
     parser.add_argument("--keep-compressed-images", action="store_true", default=True, dest="keep_compressed_images")

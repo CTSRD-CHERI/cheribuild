@@ -36,10 +36,10 @@ from run_tests_common import boot_cheribsd, run_tests_main
 
 def run_postgres_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running PostgreSQL tests")
-    if not args.use_full_image:
+    if args.minimal_image:
         qemu.checked_run("ln -s /locale /usr/share/locale")
-        # check that the locale files exist
-        qemu.checked_run("ls /usr/share/locale/C.UTF-8")
+    # check that the locale files exist
+    qemu.checked_run("ls /usr/share/locale/C.UTF-8")
     # TODO: copy over the logfile and enable coredumps?
     # Run tests with a two-hour timeout:
     qemu.checked_run("cd '{}' && sh -xe ./run-postgres-tests.sh".format(qemu.smb_dirs[0].in_target), timeout=240 * 60)
@@ -48,12 +48,10 @@ def run_postgres_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.
 
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--locale-files-dir", required=True)
-    parser.add_argument("--use-full-image", action="store_true",
-                        help="Run tests using the full disk image not the minimal one")
 
 
 def adjust_args(args: argparse.Namespace):
-    if not args.use_full_image:
+    if args.minimal_image:
         args.smb_mount_directories.append(
             boot_cheribsd.SmbMount(args.locale_files_dir, readonly=True, in_target="/locale"))
 
