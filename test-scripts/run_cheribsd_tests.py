@@ -46,7 +46,7 @@ from run_tests_common import boot_cheribsd, CrossCompileTarget, pexpect, run_tes
 
 
 # TODO: Remove old_binary_name once the new cheribsdtest names are merged to all relevant CheriBSD branches
-def run_cheribsdtest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, old_binary_name,
+def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_binary_name,
                      args: argparse.Namespace) -> bool:
     try:
         qemu.checked_run("rm -f /tmp/{}.xml".format(binary_name))
@@ -89,7 +89,7 @@ def run_cheribsdtest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, old_bina
         return False
 
 
-def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.success("Booted successfully")
     # Enable userspace CHERI exception logging to aid debugging
     qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
@@ -102,6 +102,12 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
     qemu.run("/libexec/ld-elf.so.1 -h", cheri_trap_fatal=True)
 
     tests_successful = True
+    # check whether su works (this was broken until recently on the minimal images)
+    try:
+        qemu.checked_run("su -m tests -c id")
+    except boot_cheribsd.CheriBSDCommandFailed as e:
+        boot_cheribsd.failure("Failed to run su: ", e, exit=False)
+        tests_successful = False
 
     # Check that we can connect to QEMU using SSH. This catches regressions that break SSHD.
     if not qemu.check_ssh_connection():
