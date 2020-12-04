@@ -196,7 +196,7 @@ The native GDB will be installed to your SDK binary directory (`~/cheri/sdk/bin`
 ## Cross-compiling for CheriBSD
 
 In order to cross-compile projects such as NGINX or PostgreSQL for CheriBSD you will first need a full SDK:
-`cheribuild.py cheribsd-sdk`. Then you can then run `cheribuild.py postgres-cheri` or `cheribuild.py nginx-mips`, etc.
+`cheribuild.py cheribsd-sdk-mips64-purecap`. Then you can then run `cheribuild.py postgres-mips64-purecap` or `cheribuild.py nginx-mips64-purecap`, etc.
 By default, these projects will be installed into your CheriBSD rootfs under /opt and will therefore be
 automatically included the next time you build a disk image.
 
