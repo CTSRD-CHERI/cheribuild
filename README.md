@@ -156,7 +156,8 @@ with the following configuration file (see below for more details on the config 
 {
     "run-riscv64-hybrid": {
         "ssh-forwarding-port": 12345
-    }, "run-riscv64-purecap": {
+    },
+    "run-riscv64-purecap": {
         "ssh-forwarding-port": 12346
     }
 }
