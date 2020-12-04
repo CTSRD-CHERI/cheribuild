@@ -1,9 +1,9 @@
 # `cheribuild.py` - A script to build CHERI-related software (**requires Python 3.5.2+**)
 
 This script automates all the steps required to build various [CHERI](http://www.chericpu.com)-related software.
-For example `cheribuild.py [options] sdk` will create an SDK that can be
-used to compile software for the CHERI CPU and `cheribuild.py [options] run-riscv64-purecap`
-will start an instance of [CheriBSD](https://github.com/CTSRD-CHERI/cheribsd) built for RISC-V in [QEMU](https://github.com/CTSRD-CHERI/qemu).
+For example `cheribuild.py [options] sdk-riscv64-purecap` will create an SDK that can be
+used to compile software as pure-capability code for a CHERI-RISC-V CPU, and `cheribuild.py [options] run-riscv64-purecap`
+will start an instance of [CheriBSD](https://github.com/CTSRD-CHERI/cheribsd) built as pure-capability code for CHERI-RISC-V in [QEMU](https://github.com/CTSRD-CHERI/qemu).
 
 `cheribuild.py` also allows building software for Arm's adaption of CHERI, [the Morello platform](https://developer.arm.com/architectures/cpu-architecture/a-profile/morello), however not all targets are supported yet.
 
@@ -62,13 +62,13 @@ It is also possible to run this script on a remote host by using the `remote-che
 
 `cheribuild.py [options...] targets...`
 
-Example: to build and run a CheriBSD: `cheribuild.py --include-dependencies run` and
+Example: to build and run a pure-capability CheriBSD for RISC-V: `cheribuild.py --include-dependencies run-riscv64-purecap` and
 for a clean verbose build of LLVM `cheribuild.py -v --clean llvm`
 
 ## Available Targets
 
 When selecting a target you can also build all the targets that it depends on by passing the `--include-dependencies` or `-d` option.
-However, some targets (e.g. `all`, `sdk`) will always build their dependencies because running them without building the dependencies does not make sense (see the list of targets for details).
+However, some targets (e.g. `all`, `sdk-*`) will always build their dependencies because running them without building the dependencies does not make sense (see the list of targets for details).
 
 #### The following main targets are available
 
