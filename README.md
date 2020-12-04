@@ -10,7 +10,7 @@ will start an instance of [CheriBSD](https://github.com/CTSRD-CHERI/cheribsd) bu
 ## Supported operating systems
 `cheribuild.py` has been tested and should work on FreeBSD 11 and 12.
 On Linux, Ubuntu 16.04/18.04/20.04, Debian 10 and OpenSUSE Tumbleweed are supported. Ubuntu 14.04 may also work but is no longer tested.
-macOS 10.14 and newer is also supported.
+macOS 10.14 and newer is also supported, but macOS 11 is currently *not supported* and attempting to build using it will likely hang your machine and require a reboot.
 
 # Pre-Build Setup
 #### macOS
