@@ -1,16 +1,17 @@
 import copy
 import inspect
 import typing
+# noinspection PyUnresolvedReferences
 from pathlib import Path
 
 import pytest
+
+# Make sure all projects are loaded so that target_manager gets populated
+from pycheribuild.projects import *  # noqa: F401, F403
+from pycheribuild.projects.cross import *  # noqa: F401, F403
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can"t do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
 from pycheribuild.targets import target_manager
-# noinspection PyUnresolvedReferences
-# make sure all projects are loaded so that target_manager gets populated
-from pycheribuild.projects import *  # noqa: F401, F403
-from pycheribuild.projects.cross import *  # noqa: F401, F403
 from .setup_mock_chericonfig import setup_mock_chericonfig
 
 global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
@@ -98,10 +99,44 @@ def test_cheribsd_default_aliases():
     assert _sort_targets(["cheribsd-mips64-hybrid"]) == ["cheribsd-mips64-hybrid"]
 
 
-def test_all_run_deps():
-    assert _sort_targets(["run-mips64-hybrid"], add_dependencies=True) == [
-        "qemu", "llvm-native", "cheribsd-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid",
-        "run-mips64-hybrid"]
+@pytest.mark.parametrize("target,add_toolchain,expected_deps", [
+    pytest.param("run-mips64", True,
+                 ["qemu", "llvm-native", "cheribsd-mips64", "gdb-mips64", "disk-image-mips64", "run-mips64"]),
+    pytest.param("run-mips64-hybrid", True,
+                 ["qemu", "llvm-native", "cheribsd-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid",
+                  "run-mips64-hybrid"]),
+    pytest.param("run-mips64-purecap", True,
+                 ["qemu", "llvm-native", "cheribsd-mips64-purecap",
+                  "cheribsd-mips64-hybrid", "gdb-mips64-hybrid",   # FIXME: should not need a hybrid sysroot here!
+                  "disk-image-mips64-purecap", "run-mips64-purecap"]),
+    pytest.param("run-riscv64", True,
+                 ["qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64", "run-riscv64"]),
+    pytest.param("run-riscv64-hybrid", True,
+                 ["qemu", "llvm-native", "cheribsd-riscv64-hybrid", "gdb-riscv64-hybrid",
+                  "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-hybrid", "run-riscv64-hybrid"]),
+    pytest.param("run-riscv64-purecap", True,
+                 ["qemu", "llvm-native", "cheribsd-riscv64-purecap",
+                  "cheribsd-riscv64-hybrid", "gdb-riscv64-hybrid",  # FIXME: should not need a hybrid sysroot here!
+                  "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"]),
+    # Note: QEMU not needed for aarch64/amd64 since we could also use the system QEMU
+    pytest.param("run-aarch64", True,
+                 ["llvm-native", "cheribsd-aarch64", "gdb-aarch64", "disk-image-aarch64", "run-aarch64"]),
+    pytest.param("run-amd64", True,
+                 ["llvm-native", "cheribsd-amd64",
+                  # FIXME: should include GDB: "gdb-amd64",
+                  "disk-image-amd64", "run-amd64"]),
+    # Morello code won't run on QEMU (yet)
+    pytest.param("run-fvp-morello-hybrid", True,
+                 ["morello-llvm", "cheribsd-morello-hybrid", "gdb-morello-hybrid", "morello-firmware",
+                  "disk-image-morello-hybrid", "run-fvp-morello-hybrid"]),
+    pytest.param("run-fvp-morello-purecap", True,
+                 ["morello-llvm", "cheribsd-morello-purecap",
+                  "cheribsd-morello-hybrid", "gdb-morello-hybrid",  # FIXME: should not need a hybrid sysroot here!
+                  "morello-firmware", "disk-image-morello-purecap", "run-fvp-morello-purecap"]),
+    ])
+def test_all_run_deps(target, add_toolchain: bool, expected_deps):
+    assert _sort_targets([target], add_dependencies=True, add_toolchain=add_toolchain,
+                         build_morello_from_source=False) == expected_deps
 
 
 def test_run_disk_image():
