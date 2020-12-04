@@ -29,6 +29,7 @@
 #
 import fcntl
 import os
+import platform
 import shutil
 import signal
 import subprocess
@@ -98,9 +99,7 @@ def ensure_fd_is_blocking(fd):
 def check_macos_big_sur(config: DefaultCheriConfig):
     if not OSInfo.IS_MAC:
         return
-    macos_version_str = run_command(["sw_vers", "-productVersion"], config=config, capture_output=True,
-                                    run_in_pretend_mode=True, raise_in_pretend_mode=True,
-                                    no_print=True).stdout.decode('utf-8')
+    macos_version_str = platform.mac_ver()[0]
     macos_version = tuple(map(int, macos_version_str.split('.')))
     if macos_version[0] == 10:
         return
