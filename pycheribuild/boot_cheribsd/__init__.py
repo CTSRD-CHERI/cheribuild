@@ -84,7 +84,8 @@ STOPPED = "Stopped at"
 PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
 PANIC_PAGE_FAULT = "panic: Fatal page fault at 0x"
-CHERI_TRAP = re.compile(r"USER_CHERI_EXCEPTION: pid \d+ tid \d+ \(.+\)")
+CHERI_TRAP_MIPS = re.compile(r"USER_CHERI_EXCEPTION: pid \d+ tid \d+ \(.+\)")
+CHERI_TRAP_RISCV = re.compile(r"pid \d+ tid \d+ \(.+\), uid \d+: CHERI fault \(type")
 # SHELL_LINE_CONTINUATION = "\r\r\n> "
 
 # Similar approach to pexpect.replwrap:
@@ -100,7 +101,7 @@ PEXPECT_CONTINUATION_PROMPT_SET_STR = PEXPECT_CONTINUATION_PROMPT.replace("\\", 
 PEXPECT_PROMPT_RE = re.escape(PEXPECT_PROMPT)
 PEXPECT_CONTINUATION_PROMPT_RE = re.escape(PEXPECT_CONTINUATION_PROMPT)
 
-FATAL_ERROR_MESSAGES = [CHERI_TRAP]
+FATAL_ERROR_MESSAGES = [CHERI_TRAP_MIPS, CHERI_TRAP_RISCV]
 
 PRETEND = False
 MESSAGE_PREFIX = ""
@@ -491,13 +492,14 @@ def run_cheribsd_command(qemu: CheriBSDSpawnMixin, cmd: str, expected_output=Non
     results = [SH_PROGRAM_NOT_FOUND, RTLD_DSO_NOT_FOUND, pexpect.TIMEOUT,
                PEXPECT_PROMPT_RE, PEXPECT_CONTINUATION_PROMPT_RE]
     error_output_index = -1
-    cheri_trap_index = -1
+    cheri_trap_indices = tuple()
     if error_output:
         error_output_index = len(results)
         results.append(error_output)
     if not ignore_cheri_trap:
-        cheri_trap_index = len(results)
-        results.append(CHERI_TRAP)
+        cheri_trap_indices = (len(results), len(results) + 1)
+        results.append(CHERI_TRAP_MIPS)
+        results.append(CHERI_TRAP_RISCV)
     starttime = datetime.datetime.now()
     i = qemu.expect(results, timeout=timeout, pretend_result=3)
     runtime = datetime.datetime.now() - starttime
@@ -516,7 +518,7 @@ def run_cheribsd_command(qemu: CheriBSDSpawnMixin, cmd: str, expected_output=Non
         qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
         raise CheriBSDMatchedErrorOutput("Matched error output ", error_output, " in ", cmd, execution_time=runtime)
-    elif i == cheri_trap_index:
+    elif i in cheri_trap_indices:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
@@ -531,13 +533,14 @@ def checked_run_cheribsd_command(qemu: CheriBSDSpawnMixin, cmd: str, timeout=600
     starttime = datetime.datetime.now()
     qemu.sendline(
         cmd + " ;if test $? -eq 0; then echo '__COMMAND' 'SUCCESSFUL__'; else echo '__COMMAND' 'FAILED__'; fi")
-    cheri_trap_index = None
+    cheri_trap_indices = tuple()
     error_output_index = None
     results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", PEXPECT_CONTINUATION_PROMPT_RE]
     try:
         if not ignore_cheri_trap:
-            cheri_trap_index = len(results)
-            results.append(CHERI_TRAP)
+            cheri_trap_indices = (len(results), len(results) + 1)
+            results.append(CHERI_TRAP_MIPS)
+            results.append(CHERI_TRAP_RISCV)
         if error_output:
             error_output_index = len(results)
             results.append(error_output)
@@ -555,7 +558,7 @@ def checked_run_cheribsd_command(qemu: CheriBSDSpawnMixin, cmd: str, timeout=600
         return True
     elif i == 2:
         raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd, execution_time=runtime)
-    elif i == cheri_trap_index:
+    elif i in cheri_trap_indices:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
