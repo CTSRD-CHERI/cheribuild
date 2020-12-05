@@ -35,7 +35,6 @@ from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, Cr
                                   Linkage, MakeCommandKind)
 from ...config.loader import ComputedDefaultValue
 from ...utils import OSInfo
-from ...processutils import get_compiler_info
 
 
 # This class is used to build qtbase and all of qt5
@@ -81,7 +80,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configure_args.extend(["-prefix", str(self.install_dir)])
             self.configure_args.append("QMAKE_CC=" + str(self.CC))
             self.configure_args.append("QMAKE_CXX=" + str(self.CXX))
-            if OSInfo.IS_LINUX and get_compiler_info(self.CC).is_clang:
+            if OSInfo.IS_LINUX and self.get_compiler_info(self.CC).is_clang:
                 # otherwise the build assumes GCC
                 self.configure_args.append("-platform")
                 self.configure_args.append("linux-clang")
@@ -252,7 +251,7 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
         super().setup()
         # noinspection PyAttributeOutsideInit
         self.host_target = self.get_instance(self, cross_target=CompilationTargets.NATIVE)
-        compiler_info = get_compiler_info(self.CC)
+        compiler_info = self.get_compiler_info(self.CC)
         if compiler_info.is_clang and not compiler_info.is_apple_clang and compiler_info.version > (10, 0):
             self.add_cmake_options(WARNINGS_ARE_ERRORS=False)  # -Werror,-Wunused-private-field
 

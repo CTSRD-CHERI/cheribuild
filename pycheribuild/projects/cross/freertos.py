@@ -34,7 +34,6 @@ import os
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository)
 from ...config.loader import ComputedDefaultValue
-from ...processutils import get_compiler_info
 
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
@@ -64,7 +63,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.compiler_resource = get_compiler_info(self.CC).get_resource_dir()
+        self.compiler_resource = self.get_compiler_info(self.CC).get_resource_dir()
 
         self.default_demo_app = "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target,
                                                                                       softfloat=True) + \

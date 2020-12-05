@@ -37,7 +37,7 @@ from pathlib import Path
 from .loader import ConfigOptionBase
 from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi,
                           TargetInfo)
-from ..processutils import commandline_to_str, get_compiler_info
+from ..processutils import commandline_to_str
 from ..utils import cached_property, find_free_port, is_jenkins_build, SocketAndPort
 
 if typing.TYPE_CHECKING:  # no-combine
@@ -120,7 +120,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         result += ["-B" + str(ti._compiler_dir)]
 
         if not default_flags_only and project.auto_var_init != AutoVarInit.NONE:
-            compiler = get_compiler_info(ti.c_compiler)
+            compiler = project.get_compiler_info(ti.c_compiler)
             valid_clang_version = compiler.is_clang and compiler.version >= (8, 0)
             # We should have at least 8.0.0 unless the user explicitly selected an incompatible clang
             if valid_clang_version:

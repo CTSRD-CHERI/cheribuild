@@ -32,7 +32,6 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
-from ..processutils import get_compiler_info
 from ..utils import OSInfo
 
 if typing.TYPE_CHECKING:  # no-combine
@@ -355,7 +354,7 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def target_triple(self):
-        return get_compiler_info(self.c_compiler).default_target
+        return self.project.get_compiler_info(self.c_compiler).default_target
 
     @property
     def c_compiler(self) -> Path:
@@ -410,7 +409,7 @@ class NativeTargetInfo(TargetInfo):
                                                  perform_sanity_checks=True, default_flags_only=False):
         result = []
         if instance.project.auto_var_init != AutoVarInit.NONE:
-            compiler = get_compiler_info(instance.c_compiler)
+            compiler = instance.project.get_compiler_info(instance.c_compiler)
             if compiler.is_apple_clang:
                 # Not sure which apple clang version is the first to support it but 11.0.3 on my system does
                 valid_clang_version = compiler.version >= (11, 0)

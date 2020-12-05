@@ -41,7 +41,7 @@ from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_st
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CompilerType as FreeBSDToolchainKind, CrossCompileTarget
-from ...processutils import get_compiler_info, latest_system_clang_tool, print_command
+from ...processutils import latest_system_clang_tool, print_command
 from ...targets import target_manager
 from ...utils import classproperty, include_local_file, is_jenkins_build, OSInfo, ThreadJoiner
 
@@ -425,7 +425,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def _try_find_compatible_system_clang(self):
         min_version = (10, 0)
-        cc_info = get_compiler_info(self.host_CC)
+        cc_info = self.get_compiler_info(self.host_CC)
         # Use the compiler configured in the cheribuild config if possible
         if cc_info.is_clang and not cc_info.is_apple_clang and cc_info.version >= min_version:
             compiler_path = cc_info.path
@@ -439,7 +439,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return (None, "Could not find an installation of clang.",
                     "Please install a recent upstream clang or use the 'custom' or 'upstream-llvm' toolchain option.")
         self.info("Checking if", compiler_path, "can be used to build FreeBSD...")
-        cc_info = get_compiler_info(compiler_path)
+        cc_info = self.get_compiler_info(compiler_path)
         if cc_info.is_apple_clang:
             return (None, "Cannot build FreeBSD with Apple clang.",
                     "Please install a recent upstream clang (e.g. with homebrew) or use the 'custom' "
@@ -521,7 +521,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         target_flags = self._setup_arch_specific_options()
 
         # TODO: should I be setting this in the environment instead?
-        xccinfo = get_compiler_info(self.CC)
+        xccinfo = self.get_compiler_info(self.CC)
         if not xccinfo.is_clang:
             self.ask_for_confirmation("Cross compiler is not clang, are you sure you want to continue?")
         self.cross_toolchain_config.set_env(

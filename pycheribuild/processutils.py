@@ -463,10 +463,8 @@ class CompilerInfo(object):
 _cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
 
 
-def get_compiler_info(compiler: "typing.Union[str, Path]", *, config: ConfigBase = None) -> CompilerInfo:
+def get_compiler_info(compiler: "typing.Union[str, Path]", *, config: ConfigBase) -> CompilerInfo:
     assert compiler is not None
-    if config is None:
-        config = get_global_config()  # TODO: remove
     compiler = Path(compiler)
     if not compiler.is_absolute():
         found_in_path = shutil.which(str(compiler))

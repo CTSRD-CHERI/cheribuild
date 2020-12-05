@@ -442,7 +442,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return self.get_crosscompile_target(self.config)
 
     def get_host_triple(self):
-        compiler = get_compiler_info(self.host_CC)
+        compiler = self.get_compiler_info(self.host_CC)
         return compiler.default_target
 
     # noinspection PyPep8Naming
@@ -1002,6 +1002,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if sha256 and downloaded_sha256 != sha256:
                 self.warning("Downloaded file SHA256 hash", downloaded_sha256, "does not match expected SHA256", sha256)
                 self.ask_for_confirmation("Continue with unexpected file?", default_result=False)
+
+    def get_compiler_info(self, compiler: Path):
+        return get_compiler_info(compiler, config=self.config)
 
     def print(self, *args, **kwargs):
         if not self.config.quiet:
@@ -1599,7 +1602,7 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         # For the NATIVE variant we want to install to CHERI clang:
         if project.compiling_for_host():
             compiler_for_resource_dir = config.cheri_sdk_bindir / "clang"
-        return get_compiler_info(compiler_for_resource_dir).get_resource_dir()
+        return get_compiler_info(compiler_for_resource_dir, config=config).get_resource_dir()
     elif install_dir == DefaultInstallDir.SYSROOT or install_dir == DefaultInstallDir.SYSROOT_AND_ROOTFS:
         return project.sdk_sysroot
     elif install_dir == DefaultInstallDir.CHERI_SDK:
@@ -1986,7 +1989,7 @@ class Project(SimpleProject):
         #     emulation = "elf64btsmip_fbsd" if not self.target_info.is_baremetal() else "elf64btsmip"
         # result.append("-Wl,-m" + emulation)
         result += self.essential_compiler_and_linker_flags
-        if self.CC.exists() and get_compiler_info(self.CC).is_clang:
+        if self.get_compiler_info(self.CC).is_clang:
             result.append("-fuse-ld=" + str(self.target_info.linker))
 
         if self.should_include_debug_info and ".bfd" not in self.target_info.linker.name:
@@ -2129,22 +2132,23 @@ class Project(SimpleProject):
                 )
             self.configure_environment.update(pkg_config_args)
             self.make_args.set_env(**pkg_config_args)
+        cc_info = self.get_compiler_info(self.CC)
         if self.use_lto and self.CC.exists():
-            self.add_lto_build_options(get_compiler_info(self.CC))
+            self.add_lto_build_options(cc_info)
 
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
             self.cross_warning_flags += ["-Werror=cheri-capability-misuse", "-Werror=cheri-bitwise-operations"]
             # The morello compiler still uses the old flag name
-            supports_new_flag = get_compiler_info(self.CC).supports_warning_flag("-Werror=cheri-prototypes")
+            supports_new_flag = cc_info.supports_warning_flag("-Werror=cheri-prototypes")
             self.cross_warning_flags.append("-Werror=cheri-prototypes" if supports_new_flag else
                                             "-Werror=mips-cheri-prototypes")
             # Make underaligned capability loads/stores an error and require an explicit cast:
             self.cross_warning_flags.append("-Werror=pass-failed")
-        if self.CC.exists() and get_compiler_info(self.CC).is_clang:
+        if self.CC.exists() and cc_info.is_clang:
             self.cross_warning_flags += ["-Werror=undefined-internal"]
 
         # We might be setting too many flags, ignore this (for now)
-        if not self.compiling_for_host() and self.CC.exists() and get_compiler_info(self.CC).is_clang:
+        if not self.compiling_for_host() and self.CC.exists() and self.get_compiler_info(self.CC).is_clang:
             self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
@@ -2569,7 +2573,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 
         if self.use_asan and self.compiling_for_mips(include_purecap=False):
             # copy the ASAN lib into the right directory:
-            resource_dir = get_compiler_info(self.CC).get_resource_dir()
+            resource_dir = self.get_compiler_info(self.CC).get_resource_dir()
             status_update("Copying ASAN libs to", resource_dir)
             expected_path = resource_dir / "lib/freebsd/"
             asan_libdir_candidates = list((self.sdk_sysroot / "usr/lib/clang").glob("*"))

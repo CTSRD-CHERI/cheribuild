@@ -33,7 +33,6 @@ from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, Cr
                                   DefaultInstallDir, GitRepository)
 from ..effectivesan import BuildEffectiveSan
 from ..softboundcets import BuildSoftBoundCETS
-from ...processutils import get_compiler_info
 from ...utils import OSInfo
 
 
@@ -97,7 +96,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
-        if get_compiler_info(self.CC).is_clang:
+        if self.get_compiler_info(self.CC).is_clang:
             self.common_warning_flags.append("-Wno-unused-command-line-argument")
         if self.compiling_for_host():
             if [self.use_softboundcets, self.use_effectivesan, self.use_asan, self.use_valgrind].count(True) > 1:

@@ -37,7 +37,7 @@ from ..config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTar
                                           FreeBSDTargetInfo)
 from ..config.loader import ComputedDefaultValue
 from ..config.target_info import CompilerType, CrossCompileTarget
-from ..processutils import CompilerInfo, get_compiler_info
+from ..processutils import CompilerInfo
 from ..utils import is_jenkins_build, OSInfo, ThreadJoiner
 
 _true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
@@ -247,7 +247,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         self.check_compiler_version(3, 8, install_instructions=self.clang_install_hint())
 
     def check_compiler_version(self, major: int, minor: int, patch=0, install_instructions=None):
-        info = get_compiler_info(self.CC)
+        info = self.get_compiler_info(self.CC)
         # noinspection PyTypeChecker
         version_str = ".".join(map(str, info.version))
         if info.compiler == "apple-clang":

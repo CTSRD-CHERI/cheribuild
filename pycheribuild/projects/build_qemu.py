@@ -39,7 +39,6 @@ from .project import (AutotoolsProject, BuildType, CheriConfig, CrossCompileTarg
                       MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
 from ..config.loader import ComputedDefaultValue
-from ..processutils import get_compiler_info
 
 
 class BuildQEMUBase(AutotoolsProject):
@@ -139,7 +138,7 @@ class BuildQEMUBase(AutotoolsProject):
     def setup(self):
         super().setup()
         compiler = self.CC
-        ccinfo = get_compiler_info(compiler)
+        ccinfo = self.get_compiler_info(compiler)
         if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
             # Turn implicit function declaration into an error -Wimplicit-function-declaration
             self.CFLAGS.extend(["-Werror=implicit-function-declaration",
