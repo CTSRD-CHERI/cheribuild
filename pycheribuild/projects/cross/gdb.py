@@ -34,6 +34,7 @@ from pathlib import Path
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
                                   DefaultInstallDir, GitRepository, Linkage, MakeCommandKind)
 from ..project import TargetBranchInfo
+from ...config.target_info import CrossCompileTarget
 from ...processutils import run_command
 from ...utils import OSInfo, status_update
 
@@ -106,6 +107,13 @@ class BuildGDB(CrossCompileAutotoolsProject):
             return self.target_info.get_essential_compiler_and_linker_flags(
                 xtarget=self.crosscompile_target.get_cheri_hybrid_target())
         return super().essential_compiler_and_linker_flags
+
+    @staticmethod
+    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
+        if xtarget.is_cheri_purecap():
+            # Target is not actually purecap, just using the purecap sysroot
+            return base_target + "-" + xtarget.get_cheri_hybrid_target().generic_suffix + "-for-purecap-rootfs"
+        return base_target + "-" + xtarget.generic_suffix
 
     def setup(self):
         super().setup()
