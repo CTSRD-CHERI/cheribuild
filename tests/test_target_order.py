@@ -120,9 +120,7 @@ def test_cheribsd_default_aliases():
     pytest.param("run-aarch64", True,
                  ["llvm-native", "cheribsd-aarch64", "gdb-aarch64", "disk-image-aarch64", "run-aarch64"]),
     pytest.param("run-amd64", True,
-                 ["llvm-native", "cheribsd-amd64",
-                  # FIXME: should include GDB: "gdb-amd64",
-                  "disk-image-amd64", "run-amd64"]),
+                 ["llvm-native", "cheribsd-amd64", "gdb-amd64", "disk-image-amd64", "run-amd64"]),
     # Morello code won't run on QEMU (yet)
     pytest.param("run-fvp-morello-hybrid", True,
                  ["morello-llvm", "cheribsd-morello-hybrid", "gdb-morello-hybrid", "morello-firmware",
