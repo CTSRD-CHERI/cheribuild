@@ -483,6 +483,7 @@ def get_compiler_info(compiler: "typing.Union[str, Path]", *, config: ConfigBase
         apple_llvm_version_pattern = re.compile(b"Apple (?:clang|LLVM) version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         # TODO: could also use -dumpmachine to get the triple
         target_pattern = re.compile(b"Target: (.+)")
+        executed_sucessfully = True
         # clang prints this output to stderr
         try:
             # Use -v instead of --version to support both gcc and clang
@@ -493,8 +494,10 @@ def get_compiler_info(compiler: "typing.Union[str, Path]", *, config: ConfigBase
         except subprocess.CalledProcessError as e:
             stderr = e.stderr if e.stderr else b"FAILED: " + str(e).encode("utf-8")
             version_cmd = CompletedProcess(e.cmd, e.returncode, e.output, stderr)
+            executed_sucessfully = False
         except OSError as e:
             version_cmd = CompletedProcess([compiler, "-v"], e.errno, b"", str(e).encode("utf-8"))
+            executed_sucessfully = False
 
         clang_version = clang_version_pattern.search(version_cmd.stderr)
         apple_llvm_version = apple_llvm_version_pattern.search(version_cmd.stderr)
@@ -520,8 +523,11 @@ def get_compiler_info(compiler: "typing.Union[str, Path]", *, config: ConfigBase
             warning_message("Could not detect compiler info for", compiler, "- output was", version_cmd.stderr)
         if config.verbose:
             print(compiler, "is", kind, "version", version, "with default target", target_string)
-        _cached_compiler_infos[compiler] = CompilerInfo(compiler, kind, version, version_str, target_string,
-                                                        config=config)
+        result = CompilerInfo(compiler, kind, version, version_str, target_string, config=config)
+        # Don't cache the result if the -v command failed (e.g. compiler doesn't exist yet)
+        if executed_sucessfully:
+            _cached_compiler_infos[compiler] = result
+        return result
     return _cached_compiler_infos[compiler]
 
 
