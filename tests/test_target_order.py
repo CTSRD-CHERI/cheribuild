@@ -106,7 +106,7 @@ def test_cheribsd_default_aliases():
                  ["qemu", "llvm-native", "cheribsd-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid",
                   "run-mips64-hybrid"]),
     pytest.param("run-mips64-purecap", True,
-                 ["qemu", "llvm-native", "cheribsd-mips64-purecap","gdb-mips64-hybrid-for-purecap-rootfs",
+                 ["qemu", "llvm-native", "cheribsd-mips64-purecap", "gdb-mips64-hybrid-for-purecap-rootfs",
                   "disk-image-mips64-purecap", "run-mips64-purecap"]),
     pytest.param("run-riscv64", True,
                  ["qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64", "run-riscv64"]),

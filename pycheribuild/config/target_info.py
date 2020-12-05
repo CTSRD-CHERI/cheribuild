@@ -420,7 +420,8 @@ class NativeTargetInfo(TargetInfo):
             if valid_clang_version:
                 result += instance.project.auto_var_init.clang_flags()
             else:
-                instance.project.fatal("Requested automatic variable initialization, but don't know how to for", compiler)
+                instance.project.fatal("Requested automatic variable initialization, but don't know how to for",
+                                       compiler)
         return result  # default host compiler should not need any extra flags
 
 

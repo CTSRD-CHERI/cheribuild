@@ -80,8 +80,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
     default_build_type = BuildType.RELEASE
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_NON_MORELLO_TARGETS + \
-                              CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = (CompilationTargets.ALL_CHERIBSD_NON_MORELLO_TARGETS +
+                               CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS + [CompilationTargets.NATIVE])
     default_architecture = CompilationTargets.NATIVE
 
     @classmethod

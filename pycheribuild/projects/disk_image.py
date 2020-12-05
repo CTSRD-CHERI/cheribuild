@@ -1073,7 +1073,6 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
 
     @classmethod
     def dependencies(cls, config):
-        xtarget = cls.get_crosscompile_target(config)
         result = super().dependencies(config)
         # GDB is not strictly a dependency, but having it in the disk image makes life a lot easier
         result.append("gdb")
