@@ -389,7 +389,7 @@ class CompilerInfo(object):
     def get_resource_dir(self) -> Path:
         # assert self.is_clang, self.compiler
         if not self._resource_dir:
-            if not self.path.exists() and self.config.pretend:
+            if not self.path.exists():
                 return Path("/unknown/resource/dir")  # avoid failing in jenkins
             # Clang 5.0 added the -print-resource-dir flag
             if self.is_clang and self.version >= (5, 0):

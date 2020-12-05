@@ -1277,6 +1277,8 @@ class ReuseOtherProjectRepository(SourceRepository):
                                              "--no-skip-update --skip-configure --skip-build --skip-install`")
 
     def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: typing.Optional[Path]) -> Path:
+        if base_project_source_dir is not None:
+            return base_project_source_dir
         return self.source_project.get_source_dir(caller, caller.config,
                                                   cross_target=self.repo_for_target) / self.subdirectory
 
@@ -1628,6 +1630,13 @@ def _default_install_dir_str(project: "Project") -> str:
     # fatal_error("Unknown install dir for", project.project_name)
 
 
+def _default_source_dir(config: CheriConfig, project: "Project"):
+    if project.repository is not None and isinstance(project.repository, ReuseOtherProjectRepository):
+        # For projects that reuse other source directories, we have to return the default for the source project.
+        return project.repository.get_real_source_dir(project, None)
+    return Path(config.source_root / project.project_name.lower())
+
+
 class Project(SimpleProject):
     repository = None  # type: SourceRepository
     # is_large_source_repository can be set to true to set some git config options to speed up operations:
@@ -1644,9 +1653,8 @@ class Project(SimpleProject):
     build_dir_suffix = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
     add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
 
-    default_source_dir = ComputedDefaultValue(
-        function=lambda config, project: Path(config.source_root / project.project_name.lower()),
-        as_string=lambda cls: "$SOURCE_ROOT/" + cls.project_name.lower())
+    default_source_dir = ComputedDefaultValue(function=_default_source_dir,
+                                              as_string=lambda cls: "$SOURCE_ROOT/" + cls.project_name.lower())
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
@@ -2009,13 +2017,6 @@ class Project(SimpleProject):
             # TODO: remove this and use a custom argparse.Action subclass
             assert isinstance(self.repository, GitRepository)
             self.repository.url = self._repository_url
-        if isinstance(self.repository, ReuseOtherProjectRepository):
-            # HACK: override the source directory (ignoring the setting from the JSON)
-            # This should be done using a decorator that also changes default_source_dir so that we can
-            # take the JSON into account
-            self._initial_source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
-            self.info("Overriding source directory for", self.target, "since it reuses the sources of",
-                      self.repository.source_project.target, "->", self._initial_source_dir)
         self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
 
         if self.build_in_source_dir:

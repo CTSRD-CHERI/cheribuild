@@ -10,21 +10,20 @@ import pytest
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
 from pycheribuild.config.compilation_targets import CompilationTargets
-from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
-from pycheribuild.projects.run_qemu import LaunchCheriBSD
-
-from pycheribuild.targets import MultiArchTargetAlias, target_manager, Target
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
+from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # noqa: F401, F403
 from pycheribuild.projects.cross import *  # noqa: F401, F403
-# noinspection PyProtectedMember
-from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, _BuildDiskImageBase
-from pycheribuild.projects.cross.qt5 import BuildQtBase
 from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, FreeBSDToolchainKind
-
+from pycheribuild.projects.cross.qt5 import BuildQtBase
+# noinspection PyProtectedMember
+from pycheribuild.projects.disk_image import _BuildDiskImageBase, BuildCheriBSDDiskImage
 # Override the default config loader:
 from pycheribuild.projects.project import SimpleProject
+from pycheribuild.projects.run_qemu import LaunchCheriBSD
+from pycheribuild.targets import MultiArchTargetAlias, Target, target_manager
+
 _loader = JsonAndCommandLineConfigLoader()
 SimpleProject._config_loader = _loader
 
@@ -790,6 +789,31 @@ def test_expand_tilde_and_env_vars(monkeypatch):
     assert _parse_config_file_and_args(b'{ "build-root": "$HOME/build//dir" }').build_root == Path("/build/dir")
     assert _parse_config_file_and_args(b'{ "build-root": "$HOME//build//dir" }').build_root == Path("/build/dir")
     assert _parse_config_file_and_args(b'{ "build-root": "${HOME}//build//dir" }').build_root == Path("/build/dir")
+
+
+def test_source_dir_option_when_reusing_git_repo(monkeypatch):
+    """Passing the --foo/source-dir=/some/path should also work if the target reuses another target's source dir"""
+    # By default compiler-rt-native should reuse the LLVM source dir
+    config = _parse_config_file_and_args(b'{ "llvm/source-directory": "/custom/llvm/dir" }', )
+    assert str(_get_target_instance("llvm-native", config).source_dir) == "/custom/llvm/dir"
+    assert str(_get_target_instance("compiler-rt-native", config).source_dir) == "/custom/llvm/dir/compiler-rt"
+    assert str(_get_target_instance("compiler-rt-riscv64", config).source_dir) == "/custom/llvm/dir/compiler-rt"
+
+    # An explicit override should have priority:
+    config = _parse_config_file_and_args(b'{ "llvm/source-directory": "/custom/llvm/dir2"}',
+                                         "--compiler-rt/source-directory=/custom/compiler-rt/dir2")
+    assert str(_get_target_instance("llvm-native", config).source_dir) == "/custom/llvm/dir2"
+    assert str(_get_target_instance("compiler-rt-native", config).source_dir) == "/custom/compiler-rt/dir2"
+    assert str(_get_target_instance("compiler-rt-riscv64", config).source_dir) == "/custom/compiler-rt/dir2"
+
+    # Same again just with the -native suffix:
+    config = _parse_config_file_and_args(b'{ "llvm-native/source-directory": "/custom/llvm/dir3",'
+                                         b'  "source-root": "/foo" }',
+                                         "--compiler-rt-native/source-directory=/custom/compiler-rt/dir3")
+    assert str(_get_target_instance("llvm-native", config).source_dir) == "/custom/llvm/dir3"
+    assert str(_get_target_instance("compiler-rt-native", config).source_dir) == "/custom/compiler-rt/dir3"
+    # compiler-rt-riscv64 uses the default path, since we only changed llvm-native and compiler-rt-native:
+    assert str(_get_target_instance("compiler-rt-riscv64", config).source_dir) == "/foo/llvm-project/compiler-rt"
 
 
 def test_relative_paths_in_config():
