@@ -433,6 +433,11 @@ class BuildICU4C(CrossCompileAutotoolsProject):
             # We have modified the ICU data Makefile so that ICU builds a big endian data archive
             self.configure_args.append("--with-data-packaging=archive")
 
+            if self.crosscompile_target.is_aarch64(include_purecap=True):
+                # XXX: Morello hybrid gives relocation errors without this, add to purecap
+                # as well for comparability
+                self.COMMON_FLAGS.append("-fPIC")
+
     def process(self):
         if not self.compiling_for_host() and not (self.native_build_dir / "bin/icupkg").exists():
             self.fatal("Missing host build directory", self.native_build_dir, " (needed for cross-compiling)",
