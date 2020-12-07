@@ -995,6 +995,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     self.info("Will try to download again.")
                     should_download = True
         if should_download:
+            self.makedirs(dest.parent)
             self.run_cmd("wget", url, "-O", dest)
             downloaded_sha256 = self.sha256sum(dest)
             self.verbose_print("Downloaded", url, "with SHA256 hash", downloaded_sha256)
