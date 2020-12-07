@@ -333,6 +333,10 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                                             CPUArchitecture.X86_64, CPUArchitecture.AARCH64):
             self.project.warning("CheriBSD test scripts currently only work for MIPS, RISC-V, AArch64 and x86-64")
             return
+        if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            self.project.warning("CheriBSD test scripts currently don't support the Morello FVP - "
+                                 "remove when Morello QEMU support done")
+            return
         if kernel_path is None and "--kernel" not in self.config.test_extra_args:
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
             # --no-use-minimal-benchmark-kernel on the command line or in the config JSON
