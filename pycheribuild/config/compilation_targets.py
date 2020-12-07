@@ -609,10 +609,6 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
             result.append("-femulated-tls")
         return result
 
-    @property
-    def must_link_statically(self):
-        return True  # dynamic linking is still experimental
-
 
 # FIXME: This is completely wrong since cherios is not cheribsd, but should work for now:
 class CheriOSTargetInfo(CheriBSDTargetInfo):
