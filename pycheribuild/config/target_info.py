@@ -275,6 +275,8 @@ class TargetInfo(ABC):
             return self.config.mips_cheri_bits // 8
         elif self.target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             return 16  # RISCV64 uses 128-bit capabilities
+        elif self.target.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            return 16
         raise ValueError("Capabilities not supported for " + repr(self))
 
     @property
