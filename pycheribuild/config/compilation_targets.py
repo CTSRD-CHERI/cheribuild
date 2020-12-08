@@ -99,12 +99,12 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         return self.triple_for_target(self.target, self.config, include_version=True)
 
     @classmethod
-    def essential_compiler_and_linker_flags_impl(cls, ti: "_ClangBasedTargetInfo", *,
+    def essential_compiler_and_linker_flags_impl(cls, instance: "_ClangBasedTargetInfo", *,
                                                  xtarget: "CrossCompileTarget",
                                                  perform_sanity_checks=True, default_flags_only=False):
         assert xtarget is not None
-        config = ti.config
-        project = ti.project  # type: SimpleProject
+        config = instance.config
+        project = instance.project
         # noinspection PyProtectedMember
         if perform_sanity_checks and not project._setup_called:
             project.fatal("essential_compiler_and_linker_flags should not be called in __init__, use setup()!",
@@ -113,14 +113,14 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         result = ["-target", cls.triple_for_target(xtarget, project.config, include_version=True)]
         # And usually also --sysroot
         if project.needs_sysroot:
-            result.append("--sysroot=" + str(ti.sysroot_dir))
-            if perform_sanity_checks and project.is_nonexistent_or_empty_dir(ti.sysroot_dir):
-                project.fatal("Project", project.target, "needs a sysroot, but", ti.sysroot_dir,
+            result.append("--sysroot=" + str(instance.sysroot_dir))
+            if perform_sanity_checks and project.is_nonexistent_or_empty_dir(instance.sysroot_dir):
+                project.fatal("Project", project.target, "needs a sysroot, but", instance.sysroot_dir,
                               " is empty or does not exist.")
-        result += ["-B" + str(ti._compiler_dir)]
+        result += ["-B" + str(instance._compiler_dir)]
 
         if not default_flags_only and project.auto_var_init != AutoVarInit.NONE:
-            compiler = project.get_compiler_info(ti.c_compiler)
+            compiler = project.get_compiler_info(instance.c_compiler)
             valid_clang_version = compiler.is_clang and compiler.version >= (8, 0)
             # We should have at least 8.0.0 unless the user explicitly selected an incompatible clang
             if valid_clang_version:
@@ -132,7 +132,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             result.append("-integrated-as")
             result.append("-G0")  # no small objects in GOT optimization
             # Floating point ABI:
-            if ti.is_baremetal() or ti.is_rtems():
+            if cls.is_baremetal() or cls.is_rtems():
                 # The baremetal driver doesn't add -fPIC for CHERI
                 if xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
                     result.append("-fPIC")
@@ -147,7 +147,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 result.append(config.mips_float_abi.clang_float_flag())
 
             # CPU flags (currently always BERI):
-            if ti.is_cheribsd():
+            if cls.is_cheribsd():
                 result.append("-mcpu=beri")
             if xtarget.is_cheri_purecap():
                 result.extend(["-mabi=purecap", "-mcpu=beri", "-cheri=" + config.mips_cheri_bits_str])
@@ -167,13 +167,13 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         elif xtarget.is_riscv(include_purecap=True):
             assert xtarget.cpu_architecture == CPUArchitecture.RISCV64
             # Note: Baremetal/FreeRTOS currently only supports softfloat
-            softfloat = ti.is_baremetal()
+            softfloat = cls.is_baremetal()
             # Use the insane RISC-V arch string to enable CHERI
-            result.append("-march=" + ti.get_riscv_arch_string(xtarget, softfloat=ti.is_baremetal()))
-            result.append("-mabi=" + ti.get_riscv_abi(xtarget, softfloat=softfloat))
+            result.append("-march=" + cls.get_riscv_arch_string(xtarget, softfloat=cls.is_baremetal()))
+            result.append("-mabi=" + cls.get_riscv_abi(xtarget, softfloat=softfloat))
             result.append("-mno-relax")  # Linker relaxations are not supported with clang+lld
 
-            if ti.is_baremetal() or ti.is_rtems():
+            if cls.is_baremetal() or cls.is_rtems():
                 # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
                 result.append("-mcmodel=medium")
         elif xtarget.is_aarch64(include_purecap=True):
@@ -811,9 +811,9 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
         return []
 
     @classmethod
-    def essential_compiler_and_linker_flags_impl(cls, ti, *, xtarget, **kwargs) -> typing.List[str]:
+    def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs) -> typing.List[str]:
         if xtarget.cpu_architecture == CPUArchitecture.ARM32 or xtarget.is_cheri_hybrid([CPUArchitecture.AARCH64]):
-            return super().essential_compiler_and_linker_flags_impl(ti, xtarget=xtarget)
+            return super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs)
         raise ValueError("Other baremetal cases have not been tested yet!")
 
     @classmethod
