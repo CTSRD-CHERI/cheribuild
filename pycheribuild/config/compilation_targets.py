@@ -588,9 +588,9 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
         return ["morello-llvm"]
 
     @classmethod
-    def essential_compiler_and_linker_flags_impl(cls, ti: "_ClangBasedTargetInfo", *, xtarget, **kwargs):
-        result = super().essential_compiler_and_linker_flags_impl(ti, xtarget=xtarget, **kwargs)
-        if ti.target.is_cheri_purecap([CPUArchitecture.AARCH64]):
+    def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs):
+        result = super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs)
+        if xtarget.is_cheri_purecap([CPUArchitecture.AARCH64]):
             # emulated TLS is currently required for purecap, but breaks hybrid
             result.append("-femulated-tls")
         return result
