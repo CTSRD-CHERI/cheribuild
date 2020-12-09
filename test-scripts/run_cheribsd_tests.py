@@ -260,7 +260,7 @@ def cheribsd_setup_args(args: argparse.Namespace):
         else:
             args.timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             real_output_dir = (test_output_dir / args.timestamp).absolute()
-            args.test_output_dir = str(real_output_dir)
+        args.test_output_dir = str(real_output_dir)
         boot_cheribsd.run_host_command(["mkdir", "-p", str(real_output_dir)])
         if not boot_cheribsd.PRETEND:
             (real_output_dir / "cmdline").write_text(str(sys.argv))
