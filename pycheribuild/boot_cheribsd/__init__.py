@@ -831,12 +831,14 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
                    test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None):
     smb_dirs = qemu.smb_dirs  # type: typing.List[SmbMount]
     setup_tests_starttime = datetime.datetime.now()
-    # disable coredumps, otherwise we get no space left on device errors
     for smb_dir in smb_dirs:
-        # If we are mounting /build set kern.corefile to point there:
-        if not smb_dir.readonly and smb_dir.in_target == "/build":
-            qemu.run("sysctl kern.corefile=/build/%N.%P.core")
-    qemu.run("sysctl kern.coredump=0")
+        # If we are mounting /build or /test-results then set kern.corefile to point there:
+        if not smb_dir.readonly and smb_dir.in_target in ["/build", "/test-results"]:
+            qemu.run("sysctl kern.corefile=" + smb_dir.in_target + "/%N.%P.core")
+            break
+    else:
+        # If not, disable coredumps, otherwise we get no space left on device errors
+        qemu.run("sysctl kern.coredump=0")
     # ensure that /usr/local exists and if not create it as a tmpfs (happens in the minimal image)
     # However, don't do it on the full image since otherwise we would install kyua to the tmpfs on /usr/local
     # We can differentiate the two by checking if /boot/kernel/kernel exists since it will be missing in the minimal
