@@ -34,17 +34,17 @@ from pathlib import Path
 from run_tests_common import boot_cheribsd, junitparser
 
 
-def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path):
+def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path, prefix: str = None):
     assert output_file.resolve() != db_file.resolve()
     with output_file.open("w") as output_stream:
         command = ["kyua", "report-junit", "--results-file=" + str(db_file)]
         boot_cheribsd.run_host_command(command, stdout=output_stream)
         # TODO: xml escape the file?
         if not boot_cheribsd.PRETEND:
-            fixup_kyua_generated_junit_xml(output_file)
+            fixup_kyua_generated_junit_xml(output_file, prefix)
 
 
-def fixup_kyua_generated_junit_xml(xml_file: Path):
+def fixup_kyua_generated_junit_xml(xml_file: Path, prefix: str = None):
     boot_cheribsd.info("Updating statistics in JUnit file ", xml_file)
     # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
     orig_xml_str = xml_file.read_text("utf-8", errors='backslashreplace')
@@ -60,6 +60,12 @@ def fixup_kyua_generated_junit_xml(xml_file: Path):
         tf.flush()
         xml = junitparser.JUnitXml.fromfile(tf.name)
         xml.update_statistics()
+        if prefix is not None:
+            if isinstance(xml, junitparser.TestSuite):
+                xml.name = prefix if xml.name is None else prefix + "-" + xml.name
+            else:
+                for suite in xml:
+                    suite.name = prefix if suite.name is None else prefix + "-" + suite.name
         # Now we can overwrite the input file
         xml.write(str(xml_file))
         boot_cheribsd.run_host_command(["grep", "<testsuite", str(xml_file)])
@@ -73,6 +79,7 @@ if __name__ == "__main__":
     parser.add_argument("xml", nargs=argparse.OPTIONAL,
                         help="The output file (or - for stdout). Defaults to the db file with suffix .xml")
     parser.add_argument("--update-stats", action="store_true", help="Only update stats instead of parsing a kyua db")
+    parser.add_argument("--add-prefix", help="Add a prefix to all testsuites")
     args = parser.parse_args()
     if not args.xml:
         output = Path(args.db).with_suffix(".xml")
@@ -81,6 +88,6 @@ if __name__ == "__main__":
     else:
         output = Path(args.xml)
     if args.update_stats:
-        fixup_kyua_generated_junit_xml(Path(args.db))
+        fixup_kyua_generated_junit_xml(Path(args.db), args.add_prefix)
     else:
-        convert_kyua_db_to_junit_xml(Path(args.db), output)
+        convert_kyua_db_to_junit_xml(Path(args.db), output, args.add_prefix)

@@ -209,7 +209,8 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
         boot_cheribsd.info("Updating statistics in JUnit output directory ", junit_dir)
         for host_xml_path in junit_dir.glob("*.xml"):
             try:
-                fixup_kyua_generated_junit_xml(host_xml_path)  # Despite the name also works for cheribsdtest
+                # Despite the name also works for cheribsdtest
+                fixup_kyua_generated_junit_xml(host_xml_path, qemu.xtarget.generic_suffix)
             except Exception as e:
                 boot_cheribsd.failure("Could not update stats in ", junit_dir, ": ", e, exit=False)
                 tests_successful = False
