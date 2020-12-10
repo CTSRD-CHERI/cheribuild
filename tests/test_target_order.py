@@ -123,11 +123,12 @@ def test_cheribsd_default_aliases():
                  ["llvm-native", "cheribsd-amd64", "gdb-amd64", "disk-image-amd64", "run-amd64"]),
     # Morello code won't run on QEMU (yet)
     pytest.param("run-fvp-morello-hybrid", True,
-                 ["morello-llvm", "cheribsd-morello-hybrid", "gdb-morello-hybrid", "morello-firmware",
-                  "disk-image-morello-hybrid", "run-fvp-morello-hybrid"]),
+                 ["install-morello-fvp", "morello-llvm", "cheribsd-morello-hybrid", "gdb-morello-hybrid",
+                  "morello-firmware", "disk-image-morello-hybrid", "run-fvp-morello-hybrid"]),
     pytest.param("run-fvp-morello-purecap", True,
-                 ["morello-llvm", "cheribsd-morello-purecap", "gdb-morello-hybrid-for-purecap-rootfs",
-                  "morello-firmware", "disk-image-morello-purecap", "run-fvp-morello-purecap"]),
+                 ["install-morello-fvp", "morello-llvm", "cheribsd-morello-purecap",
+                  "gdb-morello-hybrid-for-purecap-rootfs", "morello-firmware", "disk-image-morello-purecap",
+                  "run-fvp-morello-purecap"]),
     ])
 def test_all_run_deps(target, add_toolchain: bool, expected_deps):
     assert _sort_targets([target], add_dependencies=True, add_toolchain=add_toolchain,

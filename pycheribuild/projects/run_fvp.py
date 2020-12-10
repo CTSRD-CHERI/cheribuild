@@ -81,11 +81,27 @@ class InstallMorelloFVP(SimpleProject):
         return self.config.morello_sdk_dir / "FVP_Morello"
 
     def process(self):
+        downloaded_new_file = False
         if self.installer_path is None:
             # noinspection PyAttributeOutsideInit
             self.installer_path = self.install_dir.parent / self.installer_filename
-            self.download_file(self.installer_path, url=self.base_url + self.installer_filename,
-                               sha256="2e52c34b80038fa025c590f49034a39350b8e7f8f3082fe389d5e5ca98f1cfe9")
+            downloaded_new_file = self.download_file(
+                self.installer_path, url=self.base_url + self.installer_filename,
+                sha256="2e52c34b80038fa025c590f49034a39350b8e7f8f3082fe389d5e5ca98f1cfe9")
+
+        # Return early if we didn't download a new file or are running without --clean
+        if not downloaded_new_file and not self.config.clean:
+            # Check if it is already installed:
+            existing_version = self._get_version(result_if_invalid=(0, 0, 0))
+            version_str = ".".join(map(str, existing_version))
+            if existing_version == self.latest_known_fvp:
+                self.info("Expected FVP version", version_str, "is already installed. Run with --clean to reinstall.")
+                return
+            elif existing_version >= self.latest_known_fvp:
+                self.info("Newer FVP version", version_str, "is installed. Run with --clean to reinstall.")
+                return
+            else:
+                self.info("Found old FVP version ", version_str, ". Will install ", self.installer_path, sep="")
 
         if not self.installer_path.is_file():
             self.fatal("Specified path to installer does not exist:", self.installer_path)
@@ -135,7 +151,7 @@ VOLUME /diskimg
                 self.run_cmd(["docker", "build"] + build_flags + ["-t", image_latest, "."], cwd=td,
                              print_verbose_only=False)
                 # get the version from the newly-built image (don't use the cached_property)
-                version = self._get_version(docker_image=image_latest)
+                version = self._get_version(docker_image=image_latest, result_if_invalid=None)
                 # Also create a morello-fvp:0.11.3 tag to allow running speicific versions
                 self.run_cmd("docker", "image", "tag", image_latest,
                              self.container_name + ":" + ".".join(map(str, version)), print_verbose_only=False)
@@ -210,9 +226,9 @@ VOLUME /diskimg
 
     @cached_property
     def fvp_revision(self) -> "typing.Tuple[int, int, int]":
-        return self._get_version()
+        return self._get_version(result_if_invalid=self.latest_known_fvp)
 
-    def _get_version(self, docker_image=None):
+    def _get_version(self, docker_image=None, *, result_if_invalid) -> "typing.Tuple[int, int, int]":
         pre_cmd, fvp_path = self._fvp_base_command(interactive=False, docker_image=docker_image)
         try:
             version_out = self.run_cmd(pre_cmd + [fvp_path, "--version"], capture_output=True, run_in_pretend_mode=True)
@@ -221,9 +237,11 @@ VOLUME /diskimg
             self.info("Morello FVP version detected as", result)
             return result
         except Exception as e:
-            self.warning("Could not determine FVP revision, assuming latest known (", self.latest_known_fvp, "): ", e,
-                         sep="")
-            return self.latest_known_fvp
+            if result_if_invalid is None:
+                self.fatal("Failed to detect FVP revision: ", e)
+                return self.latest_known_fvp  # for --pretend mode
+            self.warning("Could not determine FVP revision, assuming ", result_if_invalid, ": ", e, sep="")
+            return result_if_invalid
 
     @cached_property
     def docker_memory_size(self):
@@ -245,7 +263,7 @@ VOLUME /diskimg
 class LaunchFVPBase(SimpleProject):
     do_not_add_to_targets = True
     _source_class = BuildCheriBSDDiskImage
-    dependencies = [_source_class.target, "morello-firmware"]
+    dependencies = ["install-morello-fvp", _source_class.target, "morello-firmware"]
     supported_architectures = _source_class.supported_architectures
 
     def __init__(self, config):

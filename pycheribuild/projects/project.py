@@ -980,7 +980,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             self.fatal(what, "not found:", path, fixit_hint=fixit_hint)
         return path
 
-    def download_file(self, dest: Path, url: str, sha256: str = None):
+    def download_file(self, dest: Path, url: str, sha256: str = None) -> bool:
+        """
+        :return: True if a new file was downloaded, false otherwise.
+        """
         should_download = False
         if not dest.is_file():
             should_download = True
@@ -1002,6 +1005,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if sha256 and downloaded_sha256 != sha256:
                 self.warning("Downloaded file SHA256 hash", downloaded_sha256, "does not match expected SHA256", sha256)
                 self.ask_for_confirmation("Continue with unexpected file?", default_result=False)
+        return should_download
 
     def get_compiler_info(self, compiler: Path):
         return get_compiler_info(compiler, config=self.config)
