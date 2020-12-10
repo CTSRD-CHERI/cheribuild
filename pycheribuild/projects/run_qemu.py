@@ -673,6 +673,26 @@ target_manager.add_target_alias("run-native", "run-amd64", deprecated=True)
 target_manager.add_target_alias("run-x86_64", "run-amd64", deprecated=True)
 
 
+class BuildAndRunCheriBSD(TargetAliasWithDependencies):
+    target = "build-and-run-cheribsd"
+    dependencies = ["cheribsd", "disk-image", "run"]
+    direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
+
+    @classproperty
+    def supported_architectures(self):
+        return LaunchCheriBSD.supported_architectures
+
+
+class BuildAndRunFreeBSD(TargetAliasWithDependencies):
+    target = "build-and-run-freebsd"
+    dependencies = ["freebsd", "disk-image-freebsd", "run-freebsd"]
+    direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
+
+    @classproperty
+    def supported_architectures(self):
+        return LaunchFreeBSD.supported_architectures
+
+
 class BuildAll(TargetAliasWithDependencies):
     target = "all"
     dependencies = ["qemu", "sdk", "disk-image", "run"]

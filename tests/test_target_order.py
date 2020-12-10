@@ -99,6 +99,21 @@ def test_cheribsd_default_aliases():
     assert _sort_targets(["cheribsd-mips64-hybrid"]) == ["cheribsd-mips64-hybrid"]
 
 
+@pytest.mark.parametrize("target_name,expected_list", [
+    pytest.param("build-and-run-cheribsd-riscv64", ["cheribsd-riscv64", "disk-image-riscv64", "run-riscv64"]),
+    pytest.param("build-and-run-cheribsd-aarch64", ["cheribsd-aarch64", "disk-image-aarch64", "run-aarch64"]),
+    pytest.param("build-and-run-cheribsd-riscv64-purecap",
+                 ["cheribsd-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"]),
+    pytest.param("build-and-run-freebsd-riscv64",
+                 ["freebsd-riscv64", "disk-image-freebsd-riscv64", "run-freebsd-riscv64"]),
+    pytest.param("build-and-run-freebsd-aarch64",
+                 ["freebsd-aarch64", "disk-image-freebsd-aarch64", "run-freebsd-aarch64"]),
+    pytest.param("build-and-run-freebsd-amd64", ["freebsd-amd64", "disk-image-freebsd-amd64", "run-freebsd-amd64"]),
+    ])
+def test_build_and_run(target_name, expected_list):
+    assert _sort_targets([target_name], add_dependencies=False) == expected_list + [target_name]
+
+
 @pytest.mark.parametrize("target,add_toolchain,expected_deps", [
     pytest.param("run-mips64", True,
                  ["qemu", "llvm-native", "cheribsd-mips64", "gdb-mips64", "disk-image-mips64", "run-mips64"]),

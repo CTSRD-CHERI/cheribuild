@@ -201,6 +201,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     _config_file_aliases = tuple()  # type: typing.Tuple[str, ...]
     dependencies = []  # type: typing.List[str]
     dependencies_must_be_built = False
+    direct_dependencies_only = False
     # skip_toolchain_dependencies can be set to true for target aliases to skip the toolchain dependecies by default.
     # For example, when running "cheribuild.py morello-firmware --clean" we don't want to also do a clean build of LLVM.
     skip_toolchain_dependencies = False
@@ -259,7 +260,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @classmethod
     def _direct_dependencies(cls, config: CheriConfig, *, include_dependencies: bool,
                              include_toolchain_dependencies: bool,
-                             include_sdk_dependencies: bool) -> "typing.Iterator[Target]":
+                             include_sdk_dependencies: bool,
+                             explicit_dependencies_only: bool) -> "typing.Iterator[Target]":
         if not include_sdk_dependencies:
             include_toolchain_dependencies = False  # --skip-sdk means skip toolchain and skip sysroot
         assert cls._xtarget is not None
@@ -281,10 +283,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             dependencies = list(dependencies)  # avoid mutating the class variable
         assert isinstance(dependencies, list), "Expected a list and not " + str(type(dependencies))
         # Also add the toolchain targets (e.g. llvm-native) and sysroot targets if needed:
-        if include_toolchain_dependencies:
-            dependencies.extend(cls._xtarget.target_info_cls.toolchain_targets(cls._xtarget, config))
-        if include_sdk_dependencies and cls.needs_sysroot:
-            dependencies.extend(cls._xtarget.target_info_cls.base_sysroot_targets(cls._xtarget, config))
+        if not explicit_dependencies_only:
+            if include_toolchain_dependencies:
+                dependencies.extend(cls._xtarget.target_info_cls.toolchain_targets(cls._xtarget, config))
+            if include_sdk_dependencies and cls.needs_sysroot:
+                dependencies.extend(cls._xtarget.target_info_cls.base_sysroot_targets(cls._xtarget, config))
         # Try to resovle the target names to actual targets and potentially add recursive depdencies
         for dep_name in dependencies:
             if callable(dep_name):
@@ -295,12 +298,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 fatal_error("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
                 raise
             # Handle --include-dependencies when --skip-sdk/--no-include-toolchain-dependencies is passed
-            if not include_sdk_dependencies and dep_target.project_class.is_sdk_target:
+            if explicit_dependencies_only:
+                pass  # add all explicit direct depedencies
+            elif not include_sdk_dependencies and dep_target.project_class.is_sdk_target:
                 if config.verbose:
                     status_update("Not adding ", cls.target, "dependency", dep_target.name,
                                   "since it is an SDK target.")
                 continue
-            if not include_toolchain_dependencies and dep_target.project_class.is_toolchain_target():
+            elif not include_toolchain_dependencies and dep_target.project_class.is_toolchain_target():
                 if config.verbose:
                     status_update("Not adding ", cls.target, "dependency", dep_target.name,
                                   "since it is a toolchain target.")
@@ -356,9 +361,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         result = []
         for target in cls._direct_dependencies(config, include_dependencies=include_dependencies,
                                                include_toolchain_dependencies=include_toolchain_dependencies,
-                                               include_sdk_dependencies=include_sdk_dependencies):
+                                               include_sdk_dependencies=include_sdk_dependencies,
+                                               explicit_dependencies_only=cls.direct_dependencies_only):
             if target not in result:
                 result.append(target)
+            if cls.direct_dependencies_only:
+                continue  # don't add recursive dependencies for e.g. "build-and-run"
             # now recursively add the other deps:
             recursive_deps = target.project_class._recursive_dependencies_impl(
                 config, include_dependencies=include_dependencies,
