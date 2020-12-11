@@ -831,11 +831,16 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
                    test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None):
     smb_dirs = qemu.smb_dirs  # type: typing.List[SmbMount]
     setup_tests_starttime = datetime.datetime.now()
-    for smb_dir in smb_dirs:
-        # If we are mounting /build or /test-results then set kern.corefile to point there:
-        if not smb_dir.readonly and smb_dir.in_target in ["/build", "/test-results"]:
-            qemu.run("sysctl kern.corefile=" + smb_dir.in_target + "/%N.%P.core")
-            break
+    if args.enable_coredumps:
+        for smb_dir in smb_dirs:
+            # If we are mounting /build or /test-results then set kern.corefile to point there:
+            if not smb_dir.readonly and smb_dir.in_target in ["/build", "/test-results"]:
+                qemu.run("sysctl kern.corefile=" + smb_dir.in_target + "/%N.%P.core")
+                break
+            else:
+                # Otherwise, place coredumps on tmpfs to avoid slowing down the tests.
+                qemu.run("sysctl kern.corefile=/tmp/%N.%P.core")
+        qemu.run("sysctl kern.coredump=1")
     else:
         # If not, disable coredumps, otherwise we get no space left on device errors
         qemu.run("sysctl kern.coredump=0")
@@ -1037,6 +1042,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
                         help="Don't actually boot CheriBSD just print what would happen")
     parser.add_argument("--interact", "-i", action="store_true")
     parser.add_argument("--test-kernel-init-only", action="store_true")
+    parser.add_argument("--enable-coredumps", action="store_true", dest="enable_coredumps", default=True)
+    parser.add_argument("--disable-coredumps", action="store_false", dest="enable_coredumps")
 
     # Ensure that we don't get a race when running multiple shards:
     # If we extract the disk image at the same time we might spawn QEMU just between when the
