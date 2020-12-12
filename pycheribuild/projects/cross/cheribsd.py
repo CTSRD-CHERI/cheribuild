@@ -547,9 +547,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 XSTRINGS=cross_bindir / "llvm-strings",
                 XOBJCOPY=cross_bindir / "llvm-objcopy",
                 XRANLIB=cross_bindir / "llvm-ranlib",
-                # See https://bugs.llvm.org/show_bug.cgi?id=41707
-                RANLIBFLAGS="",  # llvm-ranlib doesn't support -D flag
                 )
+        if xccinfo.is_clang and xccinfo.version < (10, 0):
+            # llvm-ranlib didn't support -D flag (see https://bugs.llvm.org/show_bug.cgi?id=41707)
+            self.cross_toolchain_config.set(RANLIBFLAGS="")
         # However, we do want to install the host tools
         self.cross_toolchain_config.set_with_options(TOOLCHAIN=True)
 
