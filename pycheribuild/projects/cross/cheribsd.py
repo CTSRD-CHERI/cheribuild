@@ -533,11 +533,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         else:
             self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=False)
             # Note: the STRIP variable contains the flag to be passed to install for stripping, whereas install reads
-            # the stripbin environment variable to determine the path to strip
-            # TODO: self.cross_toolchain_config.set_env(STRIPBIN=cross_bindir / "llvm-strip")
-            # We currently still need elftoolchain strip
-            self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
-
+            # the XSTRIPBIN environment variable to determine the path to strip.
             self.cross_toolchain_config.set(
                 XAR=cross_bindir / "llvm-ar",
                 # XLD
@@ -917,7 +913,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self._installkernel(kernconf=all_kernel_configs, install_dir=self.install_dir)
 
     def add_cross_build_options(self):
-        self.make_args.set_env(CC=self.host_CC, CXX=self.host_CXX, CPP=self.host_CPP)
+        self.make_args.set_env(CC=self.host_CC, CXX=self.host_CXX, CPP=self.host_CPP,
+                               STRIPBIN=shutil.which("strip") or shutil.which("llvm-strip") or "strip")
         # won't work on a case-insensitive file system and is also really slow (and missing tools on linux)
         self.make_args.set_with_options(MAN=False)
         # links from /usr/bin/mail to /usr/bin/Mail won't work on case-insensitve fs
