@@ -495,16 +495,35 @@ class _BuildDiskImageBase(SimpleProject):
                         ], cwd=self.rootfs_dir)
         self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
 
-    def build_riscv_gpt_image(self, root_partition: Path):
+    def make_riscv_disk_image(self):
         assert self.crosscompile_target.is_riscv(include_purecap=True)
-        # See mk_nogeli_gpt_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
-        self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
-                        # "-f", "raw",  # raw disk image instead of qcow2
-                        "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
-                        "-p", "freebsd-swap/swap::2G",
-                        "-o", self.disk_image_path  # output file
-                        ], cwd=self.rootfs_dir)
-        self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
+        root_partition = self.disk_image_path.with_suffix(".root.img")
+
+        # TODO: Make this unconditional once all branches support EFI
+        if (self.rootfs_dir / "boot/boot1.efi").exists():
+            efi_partition = self.disk_image_path.with_suffix(".efi.img")
+        else:
+            efi_partition = None
+
+        try:
+            if efi_partition is not None:
+                self.make_efi_partition(efi_partition)
+                mkimg_efi_args = ["-p", "efi:=" + str(efi_partition)]
+            else:
+                mkimg_efi_args = []
+
+            self.make_rootfs_image(root_partition)
+            self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
+                            # "-f", "raw",  # raw disk image instead of qcow2
+                            *mkimg_efi_args,
+                            "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
+                            "-p", "freebsd-swap/swap::2G",
+                            "-o", self.disk_image_path  # output file
+                            ], cwd=self.rootfs_dir)
+        finally:
+            self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
+            if efi_partition is not None:
+                self.delete_file(efi_partition)  # no need to keep the partition now that we have built the full image
 
     def make_aarch64_disk_image(self):
         assert self.crosscompile_target.is_aarch64(include_purecap=True)
@@ -629,10 +648,7 @@ class _BuildDiskImageBase(SimpleProject):
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
         elif self.crosscompile_target.is_riscv(
                 include_purecap=True) and self.target_info.is_cheribsd() and not self.is_minimal:
-            root_partition = self.disk_image_path.with_suffix(".partition.img")
-            self.make_rootfs_image(root_partition)
-            self.build_riscv_gpt_image(root_partition)
-            self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
+            self.make_riscv_disk_image()
         else:
             self.make_rootfs_image(self.disk_image_path)
 
