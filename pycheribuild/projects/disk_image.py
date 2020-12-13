@@ -523,14 +523,26 @@ class _BuildDiskImageBase(SimpleProject):
             self.delete_file(efi_partition)  # no need to keep the partition now that we have built the full image
 
     def make_efi_partition(self, efi_partition: Path):
+        # See Table 15. UEFI Image Types, UEFI spec v2.8 (Errata B)
+        efi_machine_type_short_names = {
+            CPUArchitecture.I386: "IA32",
+            CPUArchitecture.X86_64: "x64",
+            CPUArchitecture.ARM32: "ARM",
+            CPUArchitecture.AARCH64: "AA64",
+            CPUArchitecture.RISCV64: "RISCV64",
+            }
+        efi_machine_type_short_name = efi_machine_type_short_names[self.crosscompile_target.cpu_architecture]
+        efi_file = "BOOT" + efi_machine_type_short_name + ".EFI"
+
         with tempfile.NamedTemporaryFile(mode="w+") as tmp_mtree:
             use_makefs = True
             mtools = BuildMtools.get_instance(self, cross_target=CompilationTargets.NATIVE)
             mtools_bin = mtools.install_dir / "bin"
+
             if use_makefs:
                 # Makefs doesn't handle contents= right now
                 efi_mtree = MtreeFile()
-                efi_mtree.add_file(self.rootfs_dir / "boot/boot1.efi", path_in_image="efi/boot/bootaa64.efi",
+                efi_mtree.add_file(self.rootfs_dir / "boot/boot1.efi", path_in_image="efi/boot/" + efi_file.lower(),
                                    mode=0o644)
                 efi_mtree.write(tmp_mtree, pretend=self.config.pretend)
                 tmp_mtree.flush()  # ensure the file is actually written
@@ -550,7 +562,7 @@ class _BuildDiskImageBase(SimpleProject):
                 self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI")
                 self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI/BOOT")
                 self.run_cmd(mtools_bin / "mcopy", "-i", efi_partition,
-                             self.rootfs_dir / "boot/boot1.efi", "::/EFI/BOOT/BOOTAA64.EFI")
+                             self.rootfs_dir / "boot/boot1.efi", "::/EFI/BOOT/" + efi_file.upper())
             if (mtools_bin / "minfo").exists():
                 # Get some information about the created image information:
                 self.run_cmd(mtools_bin / "minfo", "-i", efi_partition)
