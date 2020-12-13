@@ -534,7 +534,7 @@ class _BuildDiskImageBase(SimpleProject):
             self.make_rootfs_image(root_partition)
             self.run_mkimg(["-s", "mbr",  # use MBR Partition Table
                             "-p", "efi:=" + str(efi_partition),  # EFI boot partition
-                            "-p", "freebsd:=" + str(root_partition),  # rootfs
+                            "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
                             "-o", self.disk_image_path  # output file
                             ], cwd=self.rootfs_dir)
         finally:
