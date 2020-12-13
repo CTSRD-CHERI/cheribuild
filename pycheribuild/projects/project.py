@@ -2252,14 +2252,12 @@ class Project(SimpleProject):
             options.set(MAKE=commandline_to_str([options.command] + compdb_extra_args))
             make_command = options.command
 
+        all_args = [make_command] + options.all_commandline_args
         if make_target:
-            all_args = [make_command] + options.all_commandline_args
             if isinstance(make_target, str):
                 all_args.append(make_target)
             else:
                 all_args.extend(make_target)
-        else:
-            all_args = [make_command] + options.all_commandline_args
         if parallel and options.can_pass_jflag:
             all_args.append(self.config.make_j_flag)
         if not self.config.make_without_nice:
