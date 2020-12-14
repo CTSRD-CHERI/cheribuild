@@ -150,7 +150,7 @@ class _BuildDiskImageBase(SimpleProject):
         assert cls.default_disk_image_path is not None
         cls.disk_image_path = cls.add_path_option("path", default=cls.default_disk_image_path, metavar="IMGPATH",
                                                   help="The output path for the QEMU disk image", show_help=True)
-        cls.force_overwrite = cls.add_bool_option("force-overwrite", default=False,
+        cls.force_overwrite = cls.add_bool_option("force-overwrite", default=True,
                                                   help="Overwrite an existing disk image without prompting")
 
     def __init__(self, config, source_class: "typing.Type[BuildFreeBSD]"):
