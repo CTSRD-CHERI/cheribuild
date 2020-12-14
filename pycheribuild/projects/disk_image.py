@@ -265,8 +265,6 @@ class _BuildDiskImageBase(SimpleProject):
         # Overlay extra-files over additional stuff over cheribsd rootfs dir
 
         fstab_contents = self.file_templates.get_fstab_template()
-        fstab_contents = fstab_contents.format_map(dict(tmpfsrem=""))
-
         self.create_file_for_image("/etc/fstab", contents=fstab_contents, show_contents_non_verbose=True)
 
         # enable ssh and set hostname
