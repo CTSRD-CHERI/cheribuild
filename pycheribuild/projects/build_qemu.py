@@ -256,6 +256,10 @@ class BuildQEMU(BuildQEMUBase):
             raise ValueError("Invalid xtarget" + str(xtarget))
         return caller.config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
 
+    @classmethod
+    def get_firmware_dir(cls, caller: SimpleProject, cross_target: CrossCompileTarget = None):
+        return cls.get_install_dir(caller, cross_target=cross_target) / "share/qemu"
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         if self.unaligned:
