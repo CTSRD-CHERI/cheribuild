@@ -1055,7 +1055,7 @@ class _X86FileTemplates(_AdditionalFileTemplates):
 class _AArch64FileTemplates(_AdditionalFileTemplates):
     def get_fstab_template(self):
         return """
-/dev/ufs/root	/	ufs	rw,noatime,async	1	1
+/dev/ufs/root	/	ufs	rw,noatime	1	1
 {tmpfsrem}tmpfs /tmp tmpfs rw,failok 0 0
 """
 

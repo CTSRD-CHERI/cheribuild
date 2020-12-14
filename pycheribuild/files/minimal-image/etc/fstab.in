@@ -1,2 +1,2 @@
 /dev/md0 / ufs rw,noatime,failok 0 0
-/dev/ada0 / ufs rw,noatime,async,failok 1 1
+/dev/ada0 / ufs rw,noatime,failok 1 1

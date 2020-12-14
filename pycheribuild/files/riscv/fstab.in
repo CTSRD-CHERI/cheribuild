@@ -1,4 +1,4 @@
-/dev/ufs/root / ufs rw,noatime,async,failok 1 1
+/dev/ufs/root / ufs rw,noatime,failok 1 1
 {tmpfsrem}tmpfs /tmp tmpfs rw,failok 0 0
 /dev/gpt/swap none swap sw 0 0
 
