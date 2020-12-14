@@ -543,6 +543,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=False)
             # Note: the STRIP variable contains the flag to be passed to install for stripping, whereas install reads
             # the XSTRIPBIN environment variable to determine the path to strip.
+
+            # We currently still need elftoolchain strip for installworld
+            self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
+
             self.cross_toolchain_config.set(
                 XAR=cross_bindir / "llvm-ar",
                 # XLD
