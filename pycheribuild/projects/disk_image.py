@@ -504,7 +504,7 @@ class _BuildDiskImageBase(SimpleProject):
         try:
             self.make_efi_partition(efi_partition)
             self.make_rootfs_image(root_partition)
-            self.run_mkimg(["-s", "mbr",  # use MBR Partition Table
+            self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
                             "-p", "efi:=" + str(efi_partition),  # EFI boot partition
                             "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
                             "-o", self.disk_image_path  # output file
