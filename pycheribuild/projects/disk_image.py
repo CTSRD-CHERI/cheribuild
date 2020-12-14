@@ -840,9 +840,6 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                                ]
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
-        def get_fstab_template(self):
-            return include_local_file("files/minimal-image/etc/fstab.in")
-
         def get_rc_conf_template(self):
             return include_local_file("files/minimal-image/etc/rc.conf.in")
 
@@ -1042,24 +1039,6 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         super().make_rootfs_image(rootfs_img)
 
 
-class _RISCVFileTemplates(_AdditionalFileTemplates):
-    def get_fstab_template(self):
-        return include_local_file("files/riscv/fstab.in")
-
-
-class _X86FileTemplates(_AdditionalFileTemplates):
-    def get_fstab_template(self):
-        return include_local_file("files/x86/fstab.in")
-
-
-class _AArch64FileTemplates(_AdditionalFileTemplates):
-    def get_fstab_template(self):
-        return """
-/dev/ufs/root	/	ufs	rw,noatime	1	1
-{tmpfsrem}tmpfs /tmp tmpfs rw,failok 0 0
-"""
-
-
 class BuildMultiArchDiskImage(_BuildDiskImageBase):
     do_not_add_to_targets = True
     _source_class = None  # type: typing.Type[SimpleProject]
@@ -1085,12 +1064,6 @@ class BuildMultiArchDiskImage(_BuildDiskImageBase):
         src_class = self._source_class.get_class_for_target(self.get_crosscompile_target(config))
         assert issubclass(src_class, BuildFreeBSD), src_class
         super().__init__(config, source_class=src_class)
-        if self.get_crosscompile_target(config).is_riscv(include_purecap=True):
-            self.file_templates = _RISCVFileTemplates()
-        elif self.is_x86:
-            self.file_templates = _X86FileTemplates()
-        elif self.crosscompile_target.is_aarch64(include_purecap=True):
-            self.file_templates = _AArch64FileTemplates()
 
 
 class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
