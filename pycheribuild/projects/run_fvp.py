@@ -437,8 +437,8 @@ class LaunchFVPBase(SimpleProject):
             # This should fix the extremely slow countdown in the loader (30 minutes instead of 10s) and might also
             # improve network reliability
             fvp_args += ["-C", "css.scp.CS_Counter.use_real_time=1"]
-            self.fvp_project.execute_fvp(fvp_args + ["--print-port-number"], disk_image_path=disk_image,
-                                         firmware_path=uefi_bin.parent, ssh_port=self.ssh_port)
+            self.fvp_project.execute_fvp(fvp_args, disk_image_path=disk_image, firmware_path=uefi_bin.parent,
+                                         ssh_port=self.ssh_port)
 
 
 class LaunchFVPCheriBSD(LaunchFVPBase):
