@@ -455,17 +455,21 @@ class _BuildDiskImageBase(SimpleProject):
             self.fatal("Missing mkimg command! Should be found in FreeBSD build dir (or set $MKIMG_CMD)")
         self.run_cmd([self.mkimg_cmd] + cmd, **kwargs)
 
-    def build_gpt_image(self, root_partition: Path):
+    def make_x86_disk_image(self):
         assert self.is_x86
-        # See mk_nogeli_gpt_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
-        self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
-                        # "-f", "raw",  # raw disk image instead of qcow2
-                        "-b", self.rootfs_dir / "boot/pmbr",  # bootload (MBR)
-                        "-p", "freebsd-boot:=" + str(self.rootfs_dir / "boot/gptboot"),  # gpt boot partition
-                        "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
-                        "-o", self.disk_image_path  # output file
-                        ], cwd=self.rootfs_dir)
-        self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
+        root_partition = self.disk_image_path.with_suffix(".root.img")
+        try:
+            self.make_rootfs_image(root_partition)
+            # See mk_nogeli_gpt_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
+            self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
+                            # "-f", "raw",  # raw disk image instead of qcow2
+                            "-b", self.rootfs_dir / "boot/pmbr",  # bootload (MBR)
+                            "-p", "freebsd-boot:=" + str(self.rootfs_dir / "boot/gptboot"),  # gpt boot partition
+                            "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
+                            "-o", self.disk_image_path  # output file
+                            ], cwd=self.rootfs_dir)
+        finally:
+            self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
 
     def make_riscv_disk_image(self):
         assert self.crosscompile_target.is_riscv(include_purecap=True)
@@ -614,10 +618,7 @@ class _BuildDiskImageBase(SimpleProject):
         if self.crosscompile_target.is_aarch64(include_purecap=True):
             self.make_aarch64_disk_image()
         elif self.is_x86:
-            root_partition = self.disk_image_path.with_suffix(".partition.img")
-            self.make_rootfs_image(root_partition)
-            self.build_gpt_image(root_partition)
-            self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
+            self.make_x86_disk_image()
         elif self.crosscompile_target.is_riscv(
                 include_purecap=True) and self.target_info.is_cheribsd() and not self.is_minimal:
             self.make_riscv_disk_image()
