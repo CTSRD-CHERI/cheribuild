@@ -415,7 +415,7 @@ class _BuildDiskImageBase(SimpleProject):
                         self.info("Adding KGDB binary", kgdb_binary, "to disk image")
                         self.add_file_to_image(kgdb_binary, mode=0o755, path_in_target="usr/bin/kgdb")
 
-        loader_conf_contents = "beastie_disable=\"yes\"\n"
+        loader_conf_contents = ""
         if self.is_x86:
             loader_conf_contents += "console=\"comconsole\"\n"
         self.create_file_for_image("/boot/loader.conf", contents=loader_conf_contents, mode=0o644)
