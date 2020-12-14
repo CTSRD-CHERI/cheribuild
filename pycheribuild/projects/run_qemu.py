@@ -147,15 +147,15 @@ class LaunchQEMUBase(SimpleProject):
         qemu_loader_or_kernel = self.current_kernel
         if self.use_uboot:
             xtarget = self.crosscompile_target
-            bare_xtarget = None
+            uboot_xtarget = None
             if xtarget.cpu_architecture == CPUArchitecture.RISCV64:
                 if xtarget.is_hybrid_or_purecap_cheri():
-                    bare_xtarget = CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID
+                    uboot_xtarget = CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID
                 else:
-                    bare_xtarget = CompilationTargets.BAREMETAL_NEWLIB_RISCV64
+                    uboot_xtarget = CompilationTargets.BAREMETAL_NEWLIB_RISCV64
 
-            if bare_xtarget is not None:
-                qemu_loader_or_kernel = BuildUBoot.get_firmware_path(self, self.config, cross_target=bare_xtarget)
+            if uboot_xtarget is not None:
+                qemu_loader_or_kernel = BuildUBoot.get_firmware_path(self, self.config, cross_target=uboot_xtarget)
             else:
                 self.warning("Unsupported U-Boot QEMU target", xtarget.generic_suffix, "- falling back on kernel")
 
