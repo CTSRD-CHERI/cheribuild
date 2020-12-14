@@ -50,6 +50,12 @@ class CPUArchitecture(Enum):
     RISCV64 = "riscv64"
     X86_64 = "x86_64"
 
+    def is_32bit(self) -> bool:
+        return self in (CPUArchitecture.ARM32, CPUArchitecture.I386)
+
+    def is_64bit(self) -> bool:
+        return not self.is_32bit()
+
 
 class CompilerType(Enum):
     """

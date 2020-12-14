@@ -291,8 +291,17 @@ class BuildFreeBSD(BuildFreeBSDBase):
                                                   help="Build the googletest test framework. This is off by default "
                                                        "since it is currently barely used and takes many minutes to "
                                                        "compile with an assertions-enabled LLVM.")
-        cls.fast_rebuild = cls.add_bool_option("fast",
-                                               help="Skip some (usually) unnecessary build steps to speed up rebuilds")
+                                                  help="Build the googletest test framework.")
+        if cls._xtarget is None or not cls._xtarget.cpu_architecture.is_32bit():
+            cls.build_lib32 = cls.add_bool_option(
+                "build-lib32", default=False,
+                help="Build the 32-bit compatibility userspace libraries (if supported for the current architecture)")
+        else:
+            # XXX: this is not correct if we were to support a CHERI-64 userspace
+            assert not cls._xtarget.is_hybrid_or_purecap_cheri()
+            cls.build_lib32 = False
+        cls.fast_rebuild = cls.add_bool_option(
+            "fast", help="Skip some (usually) unnecessary build steps to speed up rebuilds")
 
     def default_kernel_config(self):
         xtarget = self.crosscompile_target
@@ -508,8 +517,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
             LLDB=False,  # may be useful but means we need to build LLVM
             # Bootstrap compiler/ linker are not needed:
             GCC_BOOTSTRAP=False, CLANG_BOOTSTRAP=False, LLD_BOOTSTRAP=False,
-            LIB32=False,  # takes a long time and not needed
             )
+        if not self.build_lib32:
+            # takes a long time and usually not needed.
+            self.cross_toolchain_config.set_with_options(LIB32=False)
+
         if self.config.csetbounds_stats:
             self.cross_toolchain_config.set(CSETBOUNDS_LOGFILE=self.csetbounds_stats_file)
         if self.config.subobject_bounds:
