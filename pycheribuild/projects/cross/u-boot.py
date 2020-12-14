@@ -29,14 +29,14 @@
 #
 
 from pathlib import Path
-from ..project import (BuildType, CheriConfig, ComputedDefaultValue, DefaultInstallDir, GitRepository, MakeCommandKind,
-                       Project)
+from ..build_qemu import BuildQEMU
+from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompileTarget, DefaultInstallDir,
+                       GitRepository, MakeCommandKind, Project)
 from ...config.compilation_targets import CompilationTargets
 
 
-def uboot_install_dir(config: CheriConfig, project: "Project") -> Path:
-    dir_name = project.crosscompile_target.generic_suffix.replace("baremetal-", "")
-    return config.cheri_sdk_dir / ("u-boot" + project.build_dir_suffix) / dir_name
+def uboot_install_dir(config: CheriConfig, project: "BuildUBoot") -> Path:
+    return config.cheri_sdk_dir / ("u-boot" + project.build_dir_suffix) / project.uboot_suffix
 
 
 class BuildUBoot(Project):
@@ -91,6 +91,22 @@ class BuildUBoot(Project):
             return "qemu-riscv64_smode"
         assert False, "unhandled target"
 
+    @property
+    def uboot_suffix(self):
+        return self.crosscompile_target.generic_suffix.replace("baremetal-", "")
+
+    @property
+    def firmware_path(self):
+        # Prefer install path in QEMU for the QEMU firmware
+        if not self.build_dir_suffix:
+            qemu_fw_dir = BuildQEMU.get_firmware_dir(self, cross_target=CompilationTargets.NATIVE)
+            return qemu_fw_dir / ("u-boot-" + self.uboot_suffix)
+        return self.install_dir / "u-boot"
+
+    @classmethod
+    def get_firmware_path(cls, caller, config: CheriConfig = None, cross_target: CrossCompileTarget = None):
+        return cls.get_instance(caller, config=config, cross_target=cross_target).firmware_path
+
     def configure(self, **kwargs):
         self.run_make(self.platform + "_defconfig")
 
@@ -116,6 +132,12 @@ class BuildUBoot(Project):
     def install(self, **kwargs):
         self.install_file(self.build_dir / "u-boot", self.install_dir / "u-boot")
         self.install_file(self.build_dir / "u-boot.bin", self.install_dir / "u-boot.bin")
+        # Only install BuildUBoot as the QEMU firmware and not any other derived version by checking build_dir_suffix
+        if not self.build_dir_suffix:
+            # Install into the QEMU firware directory so that `-bios default` works
+            qemu_fw_path = self.firmware_path
+            assert qemu_fw_path != self.install_dir / "u-boot"
+            self.install_file(self.build_dir / "u-boot", qemu_fw_path)
 
     def run_make(self, *args, **kwargs):
         if 'cwd' in kwargs:
