@@ -41,6 +41,7 @@ from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD
 from .cross.freertos import BuildFreeRTOS
 from .cross.gdb import BuildGDB
 from .cross.rtems import BuildRtems
+from .cross.u_boot import BuildUBoot
 from .disk_image import (BuildCheriBSDDiskImage, BuildFreeBSDGFEDiskImage, BuildFreeBSDImage,
                          BuildFreeBSDWithDefaultOptionsDiskImage)
 from .project import CheriConfig, CPUArchitecture, SimpleProject, TargetAliasWithDependencies
@@ -69,6 +70,8 @@ class LaunchQEMUBase(SimpleProject):
     @classmethod
     def setup_config_options(cls, default_ssh_port: int = None, **kwargs):
         super().setup_config_options(**kwargs)
+        cls.use_uboot = cls.add_bool_option("use-u-boot", default=False,
+                                            help="Boot using U-Boot for UEFI if supported (only RISC-V)")
         cls.extra_qemu_options = cls.add_config_option("extra-options", default=[], kind=list, metavar="QEMU_OPTIONS",
                                                        help="Additional command line flags to pass to "
                                                             "qemu-system-cheri")
@@ -140,8 +143,24 @@ class LaunchQEMUBase(SimpleProject):
         if not self.qemu_binary.exists():
             self.dependency_error("QEMU is missing:", self.qemu_binary,
                                   install_instructions="Run `cheribuild.py qemu` or `cheribuild.py run -d`.")
-        if self.current_kernel is not None and not self.current_kernel.exists():
-            self.dependency_error("Kernel is missing:", self.current_kernel,
+
+        qemu_loader_or_kernel = self.current_kernel
+        if self.use_uboot:
+            xtarget = self.crosscompile_target
+            bare_xtarget = None
+            if xtarget.cpu_architecture == CPUArchitecture.RISCV64:
+                if xtarget.is_hybrid_or_purecap_cheri():
+                    bare_xtarget = CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID
+                else:
+                    bare_xtarget = CompilationTargets.BAREMETAL_NEWLIB_RISCV64
+
+            if bare_xtarget is not None:
+                qemu_loader_or_kernel = BuildUBoot.get_firmware_path(self, self.config, cross_target=bare_xtarget)
+            else:
+                self.warning("Unsupported U-Boot QEMU target", xtarget.generic_suffix, "- falling back on kernel")
+
+        if qemu_loader_or_kernel is not None and not qemu_loader_or_kernel.exists():
+            self.dependency_error("Loader/kernel is missing:", qemu_loader_or_kernel,
                                   install_instructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
 
         if self.forward_ssh_port and not self.is_port_available(self.ssh_forwarding_port):
@@ -246,7 +265,8 @@ class LaunchQEMUBase(SimpleProject):
                            sep=""))
 
         # input("Press enter to continue")
-        qemu_command = self.qemu_options.get_commandline(qemu_command=self.qemu_binary, kernel_file=self.current_kernel,
+        qemu_command = self.qemu_options.get_commandline(qemu_command=self.qemu_binary,
+                                                         kernel_file=qemu_loader_or_kernel,
                                                          disk_image=self.disk_image,
                                                          add_network_device=self.qemu_user_networking,
                                                          bios_args=self.bios_flags,
@@ -256,7 +276,7 @@ class LaunchQEMUBase(SimpleProject):
                                                          add_virtio_rng=self._add_virtio_rng)
         qemu_command += self._project_specific_options + self._after_disk_options + monitor_options
         qemu_command += logfile_options + self.extra_qemu_options + virtfs_args
-        self.info("About to run QEMU with image", self.disk_image, "and kernel", self.current_kernel)
+        self.info("About to run QEMU with image", self.disk_image, "and loader/kernel", qemu_loader_or_kernel)
 
         if self.config.wait_for_debugger or self.config.debugger_in_tmux_pane:
             gdb_socket_placeholder = find_free_port()
@@ -328,7 +348,7 @@ class LaunchQEMUBase(SimpleProject):
                 try:
                     if "TMUX" not in os.environ:
                         raise Exception("--debugger-in-tmux-pane set, but not in a tmux session")
-                    start_gdb_in_tmux_pane(gdb_command(self.current_kernel, "panic"))
+                    start_gdb_in_tmux_pane(gdb_command(path_to_kernel, "panic"))
                 except ImportError:
                     self.info(coloured(AnsiColour.red, "libtmux not installed, impossible to automatically start gdb"))
                 except Exception as e:
