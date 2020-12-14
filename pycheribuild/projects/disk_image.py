@@ -503,7 +503,7 @@ class _BuildDiskImageBase(SimpleProject):
 
     def make_aarch64_disk_image(self):
         assert self.crosscompile_target.is_aarch64(include_purecap=True)
-        root_partition = self.disk_image_path.with_suffix(".partition.img")
+        root_partition = self.disk_image_path.with_suffix(".root.img")
         efi_partition = self.disk_image_path.with_suffix(".efi.img")
         try:
             self.make_efi_partition(efi_partition)
