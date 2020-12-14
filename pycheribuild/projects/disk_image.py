@@ -455,32 +455,6 @@ class _BuildDiskImageBase(SimpleProject):
             self.fatal("Missing mkimg command! Should be found in FreeBSD build dir (or set $MKIMG_CMD)")
         self.run_cmd([self.mkimg_cmd] + cmd, **kwargs)
 
-    def build_mbr_image(self, root_partition: Path):  # FIXME: doesn't actually work
-        assert self.is_x86
-        # See mk_nogeli_mbr_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
-        # cat > ${src}/etc/fstab <<EOF
-        # /dev/ada0s1a	/		ufs	rw	1	1
-        # EOF
-        # makefs -t ffs -B little -s 200m ${img}.s1a ${src}
-        # mkimg -s bsd -b ${src}/boot/boot -p freebsd-ufs:=${img}.s1a -o ${img}.s1
-        # mkimg -a 1 -s mbr -b ${src}/boot/boot0sio -p freebsd:=${img}.s1 -o ${img}
-        # rm -f ${src}/etc/fstab
-        s1_path = self.disk_image_path.with_suffix(".s1.img")
-        self.run_mkimg(["-s", "bsd",
-                        "-f", "raw",  # raw disk image instead of qcow2
-                        "-b", self.rootfs_dir / "boot/boot",  # bootload (MBR)
-                        "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
-                        "-o", s1_path  # output file
-                        ], cwd=self.rootfs_dir)
-        self.run_mkimg(["-a", "1", "-s", "mbr",
-                        "-f", "raw",  # raw disk image instead of qcow2
-                        "-b", self.rootfs_dir / "boot/boot0sio",  # bootload (MBR)
-                        "-p", "freebsd:=" + str(s1_path),  # rootfs
-                        "-o", self.disk_image_path  # output file
-                        ], cwd=self.rootfs_dir)
-        self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
-        self.delete_file(s1_path)  # no need to keep the partition now that we have built the full image
-
     def build_gpt_image(self, root_partition: Path):
         assert self.is_x86
         # See mk_nogeli_gpt_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
