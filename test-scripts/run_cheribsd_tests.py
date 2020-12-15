@@ -222,14 +222,17 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
     poweroff_start = datetime.datetime.now()
     qemu.sendline("poweroff")
     i = qemu.expect(["Uptime: ", pexpect.TIMEOUT, pexpect.EOF], timeout=360)
+
     if i != 0:
-        boot_cheribsd.failure("Poweroff " + ("timed out" if i == 1 else "failed"))
+        # Note: we mark tests as failed instead exitings here so that JUnit XML files are still archived.
+        boot_cheribsd.failure("Poweroff " + ("timed out" if i == 1 else "failed"), exit=False)
         return False
     # 300 secs since it takes a lot longer on a full image (it took 44 seconds after installing kyua, so on a really
     # busy jenkins slave it might be a lot slower)
-    i = qemu.expect([pexpect.TIMEOUT, "Please press any key to reboot.", pexpect.EOF], timeout=300)
-    if i == 0:
-        boot_cheribsd.failure("QEMU didn't exit after shutdown!")
+    if qemu.expect([pexpect.TIMEOUT, "Please press any key to reboot.", pexpect.EOF], timeout=300) == 0:
+        # If we don't get the "press any key to reboot"/QEMU EOF, we mark the test as unstable.
+        # Note: we mark tests as failed instead exitings here so that JUnit XML files are still archived.
+        boot_cheribsd.failure("QEMU didn't exit after shutdown!", exit=False)
         return False
     boot_cheribsd.success("Poweroff took: ", datetime.datetime.now() - poweroff_start)
     if tests_successful and qemu.smb_failed:
