@@ -40,7 +40,7 @@ from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, Buil
 from .project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
-from ..processutils import extract_version, popen
+from ..processutils import extract_version, popen, print_command
 from ..utils import AnsiColour, cached_property, coloured, OSInfo
 
 
@@ -213,9 +213,12 @@ VOLUME /diskimg
         bg_processes = []
         if self.use_docker_container and x11 and OSInfo.IS_MAC and display:
             # To use X11 via docker on macos we need to run socat on port 6000
-            socat = popen(["socat", "TCP-LISTEN:6000,reuseaddr,fork", "UNIX-CLIENT:\"" + display + "\""],
-                          stdin=subprocess.DEVNULL)
-            bg_processes.append((socat, False))
+            socat_cmd = ["socat", "TCP-LISTEN:6000,reuseaddr,fork", "UNIX-CLIENT:\"" + display + "\""]
+            if self.config.pretend:
+                print_command(*socat_cmd)
+            else:
+                socat = popen(socat_cmd, stdin=subprocess.DEVNULL)
+                bg_processes.append((socat, False))
         try:
             extra_args = []
 
@@ -519,7 +522,7 @@ class LaunchFVPBase(SimpleProject):
                     "cluster0.NUM_CORES=1",
                     "bp.flashloader0.fname=" + str(fip_bin),
                     "bp.secureflashloader.fname=" + str(bl1_bin),
-                    ]
+                ]
                 fvp_args = [x for param in model_params for x in ("-C", param)]
                 self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number"] + fvp_args)
         else:
@@ -527,7 +530,7 @@ class LaunchFVPBase(SimpleProject):
             model_params += [
                 "displayController=0",  # won't work yet
                 # "css.cache_state_modelled=0",
-                ]
+            ]
             if not self.smp:
                 model_params += ["num_clusters=1", "num_cores=1"]
             if self.fvp_project.fvp_revision < (0, 10, 312):
@@ -537,7 +540,7 @@ class LaunchFVPBase(SimpleProject):
                 "board.virtio_rng.enabled=1",
                 "board.virtio_rng.seed=0",
                 "board.virtio_rng.generator=2",
-                ]
+            ]
             # prepend -C to each of the parameters:
             fvp_args = [x for param in model_params for x in ("-C", param)]
             # mcp_romfw_elf = self.ensure_file_exists("MCP ROM ELF firmware",
@@ -575,7 +578,7 @@ class LaunchFVPBase(SimpleProject):
                 # "-C", "css.nonTrustedROMloader.fname=" + str(uefi_bin),
                 # "-C", "css.trustedBootROMloader.fname=" + str(trusted_fw),
                 "-C", "css.pl011_uart_ap.unbuffered_output=1",
-                ]
+            ]
             # Update the Generic Timer counter at a real-time base frequency instead of simulator time
             # This should fix the extremely slow countdown in the loader (30 minutes instead of 10s) and might also
             # improve network reliability
