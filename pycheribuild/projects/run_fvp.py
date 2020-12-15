@@ -379,11 +379,19 @@ VOLUME /diskimg
     @cached_property
     def docker_memory_size(self):
         assert self.use_docker_container
-        memtotal = self.run_cmd(["docker", "run", "--rm", self.container_name, "grep", "MemTotal:",
-                                 "/proc/meminfo"], capture_output=True, run_in_pretend_mode=True).stdout
-        self.verbose_print("Docker memory total:", memtotal)
+        # try docker info first, and if that fails read /proc/meminfo in the container
         try:
-            return int(memtotal.split()[1]) * 1024
+            try:
+                memtotal = self.run_cmd(["docker", "info", "-f", "{{json .MemTotal}}"], capture_output=True,
+                                        run_in_pretend_mode=True).stdout
+                self.verbose_print("Docker memory total:", memtotal.strip())
+                return int(memtotal.strip())
+            except Exception as e:
+                self.warning("docker info failed:", e)
+                memtotal = self.run_cmd(["docker", "run", "--rm", self.container_name, "grep", "MemTotal:",
+                                         "/proc/meminfo"], capture_output=True, run_in_pretend_mode=True).stdout
+                self.verbose_print("Docker memory total:", memtotal)
+                return int(memtotal.split()[1]) * 1024
         except Exception as e:
             self.warning("Could not determine memory available to docker container:", e)
             return 0
