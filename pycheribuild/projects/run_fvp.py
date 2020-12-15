@@ -69,8 +69,6 @@ class InstallMorelloFVP(SimpleProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.installer_path = cls.add_path_option("installer-path", help="Path to the FVP installer.sh or installer.tgz")
-        cls.force_headless = cls.add_bool_option("force-headless", default=False,
-                                                 help="Force headless use of the FVP")
         # We can run the FVP on macOS by using docker. FreeBSD might be able to use Linux emulation.
         cls.use_docker_container = cls.add_bool_option("use-docker-container", default=OSInfo.IS_MAC,
                                                        help="Run the FVP inside a docker container")
@@ -177,7 +175,7 @@ VOLUME /diskimg
     def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True,
                     expose_telnet_ports=True, ssh_port=None, interactive=True, **kwargs) -> CompletedProcess:
         display = os.getenv("DISPLAY", None)
-        if not display or self.force_headless:
+        if not display:
             x11 = False  # Don't bother with the GUI
         pre_cmd, fvp_path = self._fvp_base_command(interactive=x11 or not interactive)
         if self.use_docker_container:
@@ -435,6 +433,8 @@ class LaunchFVPBase(SimpleProject):
         cls.arch_model_path = cls.add_path_option("simulator-path", help="Path to the FVP Model",
                                                   default="/usr/local/FVP_Base_RevC-Rainier")
         cls.smp = cls.add_bool_option("smp", help="Simulate multiple CPU cores in the FVP", default=True)
+        cls.force_headless = cls.add_bool_option("force-headless", default=False,
+                                                 help="Force headless use of the FVP")
 
     @property
     def use_virtio_net(self):
@@ -573,7 +573,7 @@ class LaunchFVPBase(SimpleProject):
             # improve network reliability
             fvp_args += ["-C", "css.scp.CS_Counter.use_real_time=1"]
             self.fvp_project.execute_fvp(fvp_args, disk_image_path=disk_image, firmware_path=uefi_bin.parent,
-                                         ssh_port=self.ssh_port)
+                                         x11=not self.force_headless, ssh_port=self.ssh_port)
 
 
 class LaunchFVPCheriBSD(LaunchFVPBase):
