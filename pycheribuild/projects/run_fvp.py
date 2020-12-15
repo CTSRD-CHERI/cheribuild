@@ -320,10 +320,10 @@ VOLUME /diskimg
                     if p.poll() is not None:
                         continue
                     if is_fvp:
+                        pgrp = os.getpgid(p.pid)
                         for i in range(5):
                             if i == 0:
                                 self.info("Stopping FVP... (this can sometimes take a while)")
-                            pgrp = os.getpgid(p.pid)
                             os.killpg(pgrp, signal.SIGTERM)
                             try:
                                 p.wait(timeout=15)
