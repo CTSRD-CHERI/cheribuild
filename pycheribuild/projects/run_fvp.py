@@ -331,8 +331,9 @@ VOLUME /diskimg
                             except KeyboardInterrupt:
                                 os.killpg(pgrp, signal.SIGKILL)
                                 break
-                            except Exception:
+                            except Exception as e:
                                 # Retry signaling
+                                self.warning("Got exception while stopping FVP, retrying:", e)
                                 continue
                         else:
                             self.warning("FVP did not exit in time; killing")
@@ -341,7 +342,8 @@ VOLUME /diskimg
                         p.send_signal(signal.SIGTERM)
                         try:
                             p.wait(timeout=5)
-                        except Exception:
+                        except Exception as e:
+                            self.warning("FVP did not terminate 5s after SIGTERM:", e)
                             p.kill()
                 except Exception as e:
                     self.warning("Error killing background process:", e)
