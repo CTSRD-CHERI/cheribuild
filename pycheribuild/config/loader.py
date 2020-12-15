@@ -797,6 +797,8 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             raise FileNotFoundError(self._parsed_args.config_file)
         else:
             # No config file bundled with cheribuild, look in ~/.config
+            # XXX: Ideally we would always load this file and merge the two if
+            # both exist, with the bundled config file setting new defaults.
             configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
             print("Checking", Path(configdir, self._config_path.name), "since", self._config_path, "doesn't exist")
             self._config_path = Path(configdir, self._config_path.name)
