@@ -136,11 +136,11 @@ class CheriConfig(ConfigBase):
                                                            group=loader.cross_compile_options_group,
                                                            help="Link cross compiled CHERI project with "
                                                                 "libstatcounters.")
-        self.skip_buildworld = loader.add_bool_option(
-            "skip-buildworld", "-skip-world", group=loader.freebsd_group,
-            help="Skip the buildworld step when building FreeBSD or CheriBSD")
-        self.skip_buildkernel = loader.add_bool_option(
-            "skip-buildkernel", group=loader.freebsd_group,
+        self.skip_world = loader.add_bool_option(
+            "skip-world", "-skip-buildworld", group=loader.freebsd_group,
+            help="Skip the buildworld-related steps when building FreeBSD or CheriBSD")
+        self.skip_kernel = loader.add_bool_option(
+            "skip-kernel", "-skip-buildkernel", group=loader.freebsd_group,
             help="Skip the buildkernel step when building FreeBSD or CheriBSD")
         self.freebsd_kernconf = loader.add_option("kernel-config", "-kernconf", group=loader.freebsd_group,
                                                   help_hidden=True, help="Override default kernel config to use.")
