@@ -381,7 +381,7 @@ VOLUME /diskimg
     @cached_property
     def docker_memory_size(self):
         assert self.use_docker_container
-        memtotal = self.run_cmd(["docker", "run", "-it", "--rm", self.container_name, "grep", "MemTotal:",
+        memtotal = self.run_cmd(["docker", "run", "--rm", self.container_name, "grep", "MemTotal:",
                                  "/proc/meminfo"], capture_output=True, run_in_pretend_mode=True).stdout
         self.verbose_print("Docker memory total:", memtotal)
         try:
