@@ -62,6 +62,10 @@ class BuildLLVMBase(CMakeProject):
         return True
 
     @classmethod
+    def can_build_with_ccache(cls):
+        return True
+
+    @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         if "included_projects" not in cls.__dict__:
@@ -82,7 +86,6 @@ class BuildLLVMBase(CMakeProject):
                                                         "documentation,examples and bindings)")
         cls.use_llvm_cxx = cls.add_bool_option("use-in-tree-cxx-libs", default=False,
                                                help="Use in-tree, not host, C++ runtime")
-        cls.use_ccache = cls.add_bool_option("use-ccache", default=False, help="Build with CCache")
         cls.use_modules_build = cls.add_bool_option(
             "use-llvm-modules-build", default=False,
             help="Use the LLVM modules build (may be faster in some cases but probably won't allow debugging)")

@@ -1739,6 +1739,10 @@ class Project(SimpleProject):
     def can_build_with_asan(self):
         return self._xtarget is None or not self._xtarget.is_cheri_purecap()
 
+    @classproperty
+    def can_build_with_ccache(cls):
+        return False
+
     @classmethod
     def get_default_install_dir_kind(cls) -> DefaultInstallDir:
         if cls.default_install_dir is not None:
@@ -1834,6 +1838,11 @@ class Project(SimpleProject):
                                                help="Build with AddressSanitizer enabled")
         else:
             cls.use_asan = False
+        if cls.can_build_with_ccache:
+            cls.use_ccache = cls.add_bool_option("use-ccache", default=False,
+                                                 help="Build with CCache")
+        else:
+            cls.use_ccache = False
         cls.auto_var_init = cls.add_config_option("auto-var-init", kind=AutoVarInit,
                                                   default=ComputedDefaultValue(
                                                       lambda config, proj: proj.default_auto_var_init,
