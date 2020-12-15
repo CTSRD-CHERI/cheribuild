@@ -90,8 +90,12 @@ class LaunchQEMUBase(SimpleProject):
         cls.cvtrace = cls.add_bool_option("cvtrace", help="Use binary trace output instead of textual")
         # TODO: -s will no longer work, not sure anyone uses it though
         if cls.forward_ssh_port:
+            default_ssh_port_computed = ComputedDefaultValue(function=lambda p, cls: default_ssh_port,
+                                                             as_string=str(default_ssh_port),
+                                                             as_readme_string="<UID-dependent>")
             cls.ssh_forwarding_port = cls.add_config_option("ssh-forwarding-port", kind=int,
-                                                            default=default_ssh_port, metavar="PORT", show_help=True,
+                                                            default=default_ssh_port_computed, metavar="PORT",
+                                                            show_help=True,
                                                             help="The port on localhost to forward to the QEMU ssh "
                                                                  "port. You can then use `ssh root@localhost -p $PORT` "
                                                                  "to connect to the VM")

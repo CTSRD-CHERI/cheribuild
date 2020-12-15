@@ -105,7 +105,11 @@ class DefaultCheriConfig(CheriConfig):
 
         self.make_without_nice = loader.add_bool_option("make-without-nice", help="Run make/ninja without nice(1)")
 
-        self.make_jobs = loader.add_option("make-jobs", "j", type=int, default=default_make_jobs_count(),
+        default_make_jobs = default_make_jobs_count()
+        default_make_jobs_computed = ComputedDefaultValue(lambda p, cls: default_make_jobs,
+                                                          as_string=str(default_make_jobs),
+                                                          as_readme_string="<system-dependent>")
+        self.make_jobs = loader.add_option("make-jobs", "j", type=int, default=default_make_jobs_computed,
                                            help="Number of jobs to use for compiling")
 
         # configurable paths
