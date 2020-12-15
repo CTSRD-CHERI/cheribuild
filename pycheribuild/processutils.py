@@ -270,6 +270,9 @@ class FakePopen:
     def terminate(self):
         pass
 
+    def poll(self):
+        return 0
+
     def __enter__(self):
         return self
 

@@ -40,7 +40,7 @@ from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, Buil
 from .project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
-from ..processutils import extract_version, popen, print_command
+from ..processutils import extract_version, popen
 from ..utils import AnsiColour, cached_property, coloured, find_free_port, OSInfo
 
 
@@ -214,11 +214,8 @@ VOLUME /diskimg
         if self.use_docker_container and x11 and OSInfo.IS_MAC and display:
             # To use X11 via docker on macos we need to run socat on port 6000
             socat_cmd = ["socat", "TCP-LISTEN:6000,reuseaddr,fork", "UNIX-CLIENT:\"" + display + "\""]
-            if self.config.pretend:
-                print_command(*socat_cmd)
-            else:
-                socat = popen(socat_cmd, stdin=subprocess.DEVNULL)
-                bg_processes.append((socat, False))
+            socat = popen(socat_cmd, stdin=subprocess.DEVNULL)
+            bg_processes.append((socat, False))
         try:
             extra_args = []
 
@@ -299,6 +296,9 @@ VOLUME /diskimg
                     fvp = popen(fvp_cmdline(), stdin=subprocess.DEVNULL, preexec_fn=os.setsid, **fvp_kwargs)
                     bg_processes.append((fvp, True))
                     self.info("Waiting for FVP to start...")
+                    self.info("Will connect to the FVP using telnet. Press", coloured(AnsiColour.yellow, "CTRL+]"),
+                              coloured(AnsiColour.cyan, "followed by"), coloured(AnsiColour.yellow, "q<ENTER>"),
+                              coloured(AnsiColour.cyan, "to exit telnet and kill the FVP."))
                     # Don't call get_ap_port() in --pretend mode since it will hang forever
                     ap_port = 5003 if self.config.pretend else get_ap_port()
                 finally:
