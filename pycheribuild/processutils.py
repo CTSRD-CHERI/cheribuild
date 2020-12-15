@@ -147,7 +147,7 @@ class TtyState:
 
 
 @contextlib.contextmanager
-def keep_terminal_sane():
+def keep_terminal_sane(gave_tty_control=False):
     # Programs such as QEMU can change the terminal state and if they don't exit cleanly this state is
     # propagated to the shell that invoked cheribuild.
     # This function attempts to restore the stdin/stdout/stderr state in those cases:
@@ -157,9 +157,17 @@ def keep_terminal_sane():
     try:
         yield
     finally:
-        stdin_state.restore()
-        stdout_state.restore()
-        stderr_state.restore()
+        # Can seemingly get unwanted SIGTTOU's whilst restoring so just ignore
+        # them temporarily.
+        if gave_tty_control:
+            hdlr = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
+        try:
+            stdin_state.restore()
+            stdout_state.restore()
+            stderr_state.restore()
+        finally:
+            if gave_tty_control:
+                signal.signal(signal.SIGTTOU, hdlr)
 
 
 def print_command(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remaining_args, output_file=None,
@@ -337,7 +345,7 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
     stdout = b""
     stderr = b""
     # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
-    with keep_terminal_sane():
+    with keep_terminal_sane(give_tty_control):
         with popen_handle_noexec(cmdline, **kwargs) as process:
             try:
                 stdout, stderr = process.communicate(input, timeout=timeout)
