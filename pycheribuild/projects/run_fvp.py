@@ -331,8 +331,10 @@ VOLUME /diskimg
                                 os.killpg(pgrp, signal.SIGKILL)
                                 break
                             except Exception as e:
-                                # Retry signaling
-                                self.warning("Got exception while stopping FVP, retrying:", e)
+                                if isinstance(e, subprocess.TimeoutExpired):
+                                    self.warning("Timed out waiting for FVP to exit, retrying")
+                                else:
+                                    self.warning("Got exception while stopping FVP, retrying:", e)
                                 continue
                         else:
                             self.warning("FVP did not exit in time; killing")
