@@ -87,6 +87,10 @@ class BuildFreeBSDBase(Project):
         # "-DWITH_LIBCHERI_JEMALLOC"  # use jemalloc instead of -lmalloc_simple
         ]
 
+    @classmethod
+    def can_build_with_ccache(cls):
+        return True
+
     @property
     def crossbuild(self):
         return not OSInfo.IS_FREEBSD
@@ -142,6 +146,9 @@ class BuildFreeBSDBase(Project):
         # tests off by default because they take a long time and often seems to break
         # the creation of disk-image (METALOG is invalid)
         self.make_args.set_with_options(TESTS=self.build_tests)
+
+        if self.use_ccache:
+            self.make_args.set_with_options(CCACHE_BUILD=True)
 
         # By default we only want to print the status updates -> use make -s so we have to do less filtering
         # However, jenkins builds default to --verbose and this amount of output is only useful when building
