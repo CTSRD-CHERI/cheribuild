@@ -268,7 +268,7 @@ VOLUME /diskimg
                     fvp_kwargs = {}
                     if self.use_docker_container:
                         ap_servsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        ap_servsock.bind(('', 0))
+                        ap_servsock.bind(('localhost', 0))
                         ap_servsock_port = ap_servsock.getsockname()[1]
                         ap_servsock.listen(1)
 
