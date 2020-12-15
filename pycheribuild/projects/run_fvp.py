@@ -296,9 +296,6 @@ VOLUME /diskimg
                     fvp = popen(fvp_cmdline(), stdin=subprocess.DEVNULL, preexec_fn=os.setsid, **fvp_kwargs)
                     bg_processes.append((fvp, True))
                     self.info("Waiting for FVP to start...")
-                    self.info("Will connect to the FVP using telnet. Press", coloured(AnsiColour.yellow, "CTRL+]"),
-                              coloured(AnsiColour.cyan, "followed by"), coloured(AnsiColour.yellow, "q<ENTER>"),
-                              coloured(AnsiColour.cyan, "to exit telnet and kill the FVP."))
                     # Don't call get_ap_port() in --pretend mode since it will hang forever
                     ap_port = 5003 if self.config.pretend else get_ap_port()
                 finally:
@@ -308,9 +305,12 @@ VOLUME /diskimg
                         finally:
                             pass
 
+                self.info("Connecting to the FVP using telnet. Press", coloured(AnsiColour.yellow, "CTRL+]"),
+                          coloured(AnsiColour.cyan, "followed by"), coloured(AnsiColour.yellow, "q<ENTER>"),
+                          coloured(AnsiColour.cyan, "to exit telnet and kill the FVP."))
+
                 # FVP only seems to listen on IPv4 so specify manually to avoid
                 # messages about first trying to connect to ::1.
-                self.info("Spawning telnet console; exiting with ^] quit will terminate the FVP")
                 return self.run_cmd(["telnet", "127.0.0.1", str(ap_port)], **kwargs)
         finally:
             while len(bg_processes):
