@@ -55,9 +55,11 @@ T = typing.TypeVar('T')
 
 class ComputedDefaultValue(typing.Generic[T]):
     def __init__(self, function: "typing.Callable[[CheriConfig, typing.Union[SimpleProject, Project]], T]",
-                 as_string: "typing.Union[str, typing.Callable[[typing.Any], str]]"):
+                 as_string: "typing.Union[str, typing.Callable[[typing.Any], str]]",
+                 as_readme_string: "typing.Union[str, typing.Callable[[typing.Any], str]]" = None):
         self.function = function
         self.as_string = as_string
+        self.as_readme_string = as_readme_string
 
     def __call__(self, config: "CheriConfig", obj: "SimpleProject") -> T:
         return self.function(config, obj)
@@ -171,6 +173,7 @@ class ConfigLoaderBase(object):
     _parsed_args = None
     _json = {}  # type: typing.Dict[str, _LoadedConfigValue]
     is_completing_arguments = "_ARGCOMPLETE" in os.environ
+    is_generating_readme = "_GENERATING_README" in os.environ
     _argcomplete_prefix = get_argcomplete_prefix() if is_completing_arguments else None
     _argcomplete_prefix_includes_slash = "/" in _argcomplete_prefix if _argcomplete_prefix else None
 
@@ -356,10 +359,14 @@ class ConfigOptionBase(object):
         self.default = default
         self.value_type = value_type
         if isinstance(default, ComputedDefaultValue):
-            if callable(default.as_string):
-                self.default_str = default.as_string(_owning_class)
+            if _loader.is_generating_readme and default.as_readme_string is not None:
+                as_string = default.as_readme_string
             else:
-                self.default_str = str(default.as_string)
+                as_string = default.as_string
+            if callable(as_string):
+                self.default_str = as_string(_owning_class)
+            else:
+                self.default_str = str(as_string)
         elif default is not None:
             if isinstance(default, Enum) or isinstance(value_type, _EnumArgparseType):
                 # allow append
