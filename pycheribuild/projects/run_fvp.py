@@ -27,6 +27,8 @@
 #
 import os
 import re
+import signal
+import socket
 import subprocess
 import tempfile
 import typing
@@ -57,10 +59,9 @@ class InstallMorelloFVP(SimpleProject):
         super().__init__(*args, **kwargs)
         if self.use_docker_container:
             self.add_required_system_tool("docker", homebrew="homebrew/cask/docker")
-            if self.use_docker_x11_forwarding:
-                self.add_required_system_tool("socat", homebrew="socat")
-                if OSInfo.IS_MAC:
-                    self.add_required_system_tool("Xquartz", homebrew="homebrew/cask/xquartz")
+            self.add_required_system_tool("socat", homebrew="socat")
+            if OSInfo.IS_MAC:
+                self.add_required_system_tool("Xquartz", homebrew="homebrew/cask/xquartz")
         if self.installer_path is None:
             self.add_required_system_tool("wget")
 
@@ -68,12 +69,11 @@ class InstallMorelloFVP(SimpleProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.installer_path = cls.add_path_option("installer-path", help="Path to the FVP installer.sh or installer.tgz")
+        cls.force_headless = cls.add_bool_option("force-headless", default=False,
+                                                 help="Force headless use of the FVP")
         # We can run the FVP on macOS by using docker. FreeBSD might be able to use Linux emulation.
         cls.use_docker_container = cls.add_bool_option("use-docker-container", default=OSInfo.IS_MAC,
                                                        help="Run the FVP inside a docker container")
-        # TODO: should add a general option to turn of X11 for CI.
-        cls.use_docker_x11_forwarding = cls.add_bool_option("use-docker-x11-forwarding", default=True,
-                                                            help="Forward X11 from the docker container to the host")
         cls.i_agree_to_the_contained_eula = cls.add_bool_option("agree-to-the-contained-eula")
 
     @property
@@ -133,7 +133,7 @@ class InstallMorelloFVP(SimpleProject):
                 # not seem possible to allow interactive prompts
                 self.write_file(Path(td, "Dockerfile"), contents="""
 FROM opensuse/leap:15.2
-RUN zypper in -y xterm gzip tar libdbus-1-3 libatomic1 telnet
+RUN zypper in -y xterm gzip tar libdbus-1-3 libatomic1 telnet socat
 COPY {installer_name} .
 RUN ./{installer_name} --i-agree-to-the-contained-eula --no-interactive --destination=/opt/FVP_Morello && \
     rm ./{installer_name}
@@ -176,12 +176,13 @@ VOLUME /diskimg
 
     def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True,
                     expose_telnet_ports=True, ssh_port=None, interactive=True, **kwargs) -> CompletedProcess:
-        pre_cmd, fvp_path = self._fvp_base_command(interactive=interactive)
+        display = os.getenv("DISPLAY", None)
+        if not display or self.force_headless:
+            x11 = False  # Don't bother with the GUI
+        pre_cmd, fvp_path = self._fvp_base_command(interactive=x11 or not interactive)
         if self.use_docker_container:
             assert pre_cmd[-1] == self.container_name + ":latest", pre_cmd[-1]
             pre_cmd = pre_cmd[0:-1]
-            if not self.use_docker_x11_forwarding or os.getenv("DISPLAY", None) is None:
-                x11 = False  # Don't bother with the GUI
             if expose_telnet_ports:
                 pre_cmd += ["-p", "5000-5007:5000-5007"]
             if ssh_port is not None:
@@ -209,20 +210,140 @@ VOLUME /diskimg
             if x11:
                 pre_cmd += ["-e", "DISPLAY=host.docker.internal:0"]
             pre_cmd += [self.container_name]
-        base_cmd = pre_cmd + [fvp_path]
         if interactive:
             kwargs["give_tty_control"] = True
-        if self.use_docker_container and x11 and OSInfo.IS_MAC and os.getenv("DISPLAY"):
+        bg_processes = []
+        if self.use_docker_container and x11 and OSInfo.IS_MAC and display:
             # To use X11 via docker on macos we need to run socat on port 6000
-            socat = popen(["socat", "TCP-LISTEN:6000,reuseaddr,fork", "UNIX-CLIENT:\"" + os.getenv("DISPLAY") + "\""],
+            socat = popen(["socat", "TCP-LISTEN:6000,reuseaddr,fork", "UNIX-CLIENT:\"" + display + "\""],
                           stdin=subprocess.DEVNULL)
-            try:
-                return self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
-            finally:
-                socat.terminate()
-                socat.kill()
-        else:
-            return self.run_cmd(base_cmd + self._plugin_args() + args, **kwargs)
+            bg_processes.append((socat, False))
+        try:
+            extra_args = []
+
+            def fvp_cmdline():
+                return pre_cmd + [fvp_path] + self._plugin_args() + args + extra_args
+
+            if x11 or not interactive:
+                return self.run_cmd(fvp_cmdline(), **kwargs)
+            else:
+                if self.use_docker_container and not self.docker_has_socat:
+                    self.fatal("Docker container needs updating to include socat for headless operation.",
+                               fixit_hint="Re-run `cheribuild.py --clean " + self.target + "`")
+
+                def disable_uart(param_base):
+                    nonlocal extra_args
+                    extra_args.extend([
+                        "-C", param_base + ".start_telnet=0",
+                        "-C", param_base + ".quiet=1",
+                    ])
+
+                disable_uart("board.terminal_uart0_board")
+                disable_uart("board.terminal_uart1_board")
+                disable_uart("css.mcp.terminal_uart0")
+                disable_uart("css.mcp.terminal_uart1")
+                disable_uart("css.scp.terminal_uart_aon")
+                disable_uart("css.terminal_sec_uart_ap")
+                disable_uart("css.terminal_uart1_ap")
+
+                extra_args.extend([
+                    "-q",
+                    "-C", "disable_visualisation=true",
+                    "-C", "css.terminal_uart_ap.quiet=1",
+                ])
+
+                # Although we know nothing else is using ports in the container
+                # and thus know what port will be allocated, we still need to
+                # be able to wait until the FVP has started listening inside
+                # the container otherwise telnet will fail to connect. So we
+                # might as well also read the port out for robustness. Ideally
+                # we'd just bind-mount the same FIFO as is used for the normal
+                # case, but that doesn't work with Docker for Mac.
+                #
+                # As for FreeBSD, we'd like to use a named FIFO rather than
+                # relying on the FVP keeping file descriptors open, but
+                # Linuxulator wants to make the write point at /tmp inside the
+                # compat chroot, so just use an anonymous pipe and hope Arm
+                # never break passing file descriptors through.
+                ap_servsock = None
+                try:
+                    fvp_kwargs = {}
+                    if self.use_docker_container:
+                        ap_servsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        ap_servsock.bind(('', 0))
+                        ap_servsock_port = ap_servsock.getsockname()[1]
+                        ap_servsock.listen(1)
+
+                        socat_cmd = "socat - TCP:host.docker.internal:" + str(ap_servsock_port)
+                        extra_args.extend([
+                            "-C", "css.terminal_uart_ap.terminal_command=echo %port | " + socat_cmd,
+                        ])
+
+                        def get_ap_port():
+                            (ap_sock, _) = ap_servsock.accept()
+                            with open(ap_sock.fileno(), 'r') as f:
+                                return int(f.readline())
+                    else:
+                        ap_pipe_rfd, ap_pipe_wfd = os.pipe()
+                        extra_args.extend([
+                            "-C", "css.terminal_uart_ap.terminal_command=echo %port >&" + str(ap_pipe_wfd),
+                        ])
+                        fvp_kwargs['pass_fds'] = [ap_pipe_wfd]
+
+                        def get_ap_port():
+                            with open(ap_pipe_rfd, 'r') as f:
+                                return int(f.readline())
+
+                    # Pass os.setsid to create a new process group so signals
+                    # are passed to children; docker exec does not seem to want
+                    # to behave so we have to signal its child too.
+                    fvp = popen(fvp_cmdline(), stdin=subprocess.DEVNULL, preexec_fn=os.setsid, **fvp_kwargs)
+                    bg_processes.append((fvp, True))
+                    self.info("Waiting for FVP to start...")
+                    ap_port = get_ap_port()
+                finally:
+                    if ap_servsock is not None:
+                        try:
+                            ap_servsock.close()
+                        finally:
+                            pass
+
+                # FVP only seems to listen on IPv4 so specify manually to avoid
+                # messages about first trying to connect to ::1.
+                self.info("Spawning telnet console; exiting with ^] quit will terminate the FVP")
+                return self.run_cmd(["telnet", "127.0.0.1", str(ap_port)], **kwargs)
+        finally:
+            while len(bg_processes):
+                (p, is_fvp) = bg_processes.pop()
+                try:
+                    if p.poll() is not None:
+                        continue
+                    if is_fvp:
+                        for i in range(5):
+                            if i == 0:
+                                self.info("Stopping FVP... (this can sometimes take a while)")
+                            pgrp = os.getpgid(p.pid)
+                            os.killpg(pgrp, signal.SIGTERM)
+                            try:
+                                p.wait(timeout=15)
+                                break
+                            except KeyboardInterrupt:
+                                os.killpg(pgrp, signal.SIGKILL)
+                                break
+                            except Exception:
+                                # Retry signaling
+                                continue
+                        else:
+                            self.warning("FVP did not exit in time; killing")
+                            os.killpg(pgrp, signal.SIGKILL)
+                    else:
+                        p.send_signal(signal.SIGTERM)
+                        try:
+                            p.wait(timeout=5)
+                        except Exception:
+                            p.kill()
+                except Exception as e:
+                    self.warning("Error killing background process:", e)
 
     @cached_property
     def fvp_revision(self) -> "typing.Tuple[int, int, int]":
@@ -242,6 +363,20 @@ VOLUME /diskimg
                 return self.latest_known_fvp  # for --pretend mode
             self.warning("Could not determine FVP revision, assuming ", result_if_invalid, ": ", e, sep="")
             return result_if_invalid
+
+    @cached_property
+    def docker_has_socat(self):
+        assert self.use_docker_container
+        has_socat = self.run_cmd(["docker", "run", "--rm", self.container_name, "sh", "-c",
+                                  "command -v socat >/dev/null 2>&1 && printf true || printf false"],
+                                 capture_output=True, run_in_pretend_mode=True).stdout
+        self.verbose_print("Has socat:", has_socat)
+        if has_socat == b'true':
+            return True
+        elif has_socat == b'false':
+            return False
+        else:
+            self.fatal("Could not determine whether container has socat:", has_socat)
 
     @cached_property
     def docker_memory_size(self):
