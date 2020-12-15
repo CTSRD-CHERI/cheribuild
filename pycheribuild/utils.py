@@ -162,7 +162,7 @@ class SocketAndPort(object):
 
 def find_free_port() -> SocketAndPort:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('', 0))
+    s.bind(('localhost', 0))
     return SocketAndPort(s, s.getsockname()[1])
 
 

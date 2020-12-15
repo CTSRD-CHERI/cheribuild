@@ -28,20 +28,20 @@
 import os
 import re
 import signal
-import socket
 import subprocess
 import tempfile
 import typing
 from pathlib import Path
 from subprocess import CompletedProcess
 
+from pycheribuild.utils import SocketAndPort
 from .disk_image import BuildCheriBSDDiskImage
 from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
 from .project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
 from ..processutils import extract_version, popen, print_command
-from ..utils import AnsiColour, cached_property, coloured, OSInfo
+from ..utils import AnsiColour, cached_property, coloured, find_free_port, OSInfo
 
 
 class InstallMorelloFVP(SimpleProject):
@@ -266,22 +266,20 @@ VOLUME /diskimg
                 # Linuxulator wants to make the write point at /tmp inside the
                 # compat chroot, so just use an anonymous pipe and hope Arm
                 # never break passing file descriptors through.
-                ap_servsock = None
+                ap_servsock = None  # type: typing.Optional[SocketAndPort]
                 try:
                     fvp_kwargs = {}
                     if self.use_docker_container:
-                        ap_servsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        ap_servsock.bind(('localhost', 0))
-                        ap_servsock_port = ap_servsock.getsockname()[1]
-                        ap_servsock.listen(1)
+                        ap_servsock = find_free_port()
+                        ap_servsock.socket.listen(1)
 
-                        socat_cmd = "socat - TCP:host.docker.internal:" + str(ap_servsock_port)
+                        socat_cmd = "socat - TCP:host.docker.internal:" + str(ap_servsock.port)
                         extra_args.extend([
                             "-C", "css.terminal_uart_ap.terminal_command=echo %port | " + socat_cmd,
                         ])
 
                         def get_ap_port():
-                            (ap_sock, _) = ap_servsock.accept()
+                            (ap_sock, _) = ap_servsock.socket.accept()
                             with open(ap_sock.fileno(), 'r') as f:
                                 return int(f.readline())
                     else:
@@ -301,11 +299,12 @@ VOLUME /diskimg
                     fvp = popen(fvp_cmdline(), stdin=subprocess.DEVNULL, preexec_fn=os.setsid, **fvp_kwargs)
                     bg_processes.append((fvp, True))
                     self.info("Waiting for FVP to start...")
-                    ap_port = get_ap_port()
+                    # Don't call get_ap_port() in --pretend mode since it will hang forever
+                    ap_port = 5003 if self.config.pretend else get_ap_port()
                 finally:
                     if ap_servsock is not None:
                         try:
-                            ap_servsock.close()
+                            ap_servsock.socket.close()
                         finally:
                             pass
 
