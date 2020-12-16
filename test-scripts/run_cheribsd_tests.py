@@ -232,7 +232,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
     if qemu.expect([pexpect.TIMEOUT, "Please press any key to reboot.", pexpect.EOF], timeout=300) == 0:
         # If we don't get the "press any key to reboot"/QEMU EOF, we mark the test as unstable.
         # Note: we mark tests as failed instead exitings here so that JUnit XML files are still archived.
-        boot_cheribsd.failure("QEMU didn't exit after shutdown!", exit=False)
+        boot_cheribsd.failure("Timeout waiting for QEMU to exit after shutdown!", exit=False)
         return False
     boot_cheribsd.success("Poweroff took: ", datetime.datetime.now() - poweroff_start)
     if tests_successful and qemu.smb_failed:
