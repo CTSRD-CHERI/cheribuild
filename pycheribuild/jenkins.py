@@ -33,7 +33,6 @@ import inspect
 import os
 import pprint
 import shutil
-import subprocess
 import sys
 import typing
 # noinspection PyUnresolvedReferences
@@ -49,7 +48,7 @@ from .projects.cross import *  # noqa: F401,F403
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project, SimpleProject
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
-from .processutils import commandline_to_str, get_program_version, run_command
+from .processutils import get_program_version, run_and_kill_children_on_exit, run_command
 from .utils import fatal_error, init_global_config, OSInfo, status_update, ThreadJoiner, warning_message
 
 EXTRACT_SDK_TARGET = "extract-sdk"
@@ -358,10 +357,4 @@ def strip_binaries(_: JenkinsConfig, project: SimpleProject, directory: Path):
 
 
 def jenkins_main():
-    try:
-        _jenkins_main()
-    except KeyboardInterrupt:
-        sys.exit("Exiting due to Ctrl+C")
-    except subprocess.CalledProcessError as err:
-        fatal_error("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code",
-                    err.returncode)
+    run_and_kill_children_on_exit(_jenkins_main)

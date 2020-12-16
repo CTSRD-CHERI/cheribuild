@@ -52,7 +52,8 @@ from .utils import (ConfigBase, fatal_error, get_global_config, OSInfo, status_u
 
 __all__ = ["print_command", "get_compiler_info", "CompilerInfo", "popen", "popen_handle_noexec",  # no-combine
            "run_command", "latest_system_clang_tool", "commandline_to_str", "set_env", "extract_version",  # no-combine
-           "get_program_version", "check_call_handle_noexec", "get_version_output", "keep_terminal_sane"]  # no-combine
+           "get_program_version", "check_call_handle_noexec", "get_version_output", "keep_terminal_sane",  # no-combine
+           "run_and_kill_children_on_exit"]  # no-combine
 
 
 def __filter_env(env: dict) -> dict:
@@ -620,3 +621,25 @@ def latest_system_clang_tool(config: ConfigBase, basename: str,
     # print("Candidates for", basename, results)
     newest = max(results, key=lambda p: (p[1], p[2]))
     return newest[0]
+
+
+def run_and_kill_children_on_exit(fn: "typing.Callable[[], typing.Any]"):
+    error = False
+    try:
+        if os.getpgrp() != os.getpid():
+            os.setpgrp()  # create new process group, become its leader
+        fn()
+    except KeyboardInterrupt:
+        error = True
+        sys.exit("Exiting due to Ctrl+C")
+    except subprocess.CalledProcessError as err:
+        error = True
+        extra_msg = (". Working directory was ", err.cwd) if hasattr(err, "cwd") else ()
+        if err.stderr is not None:
+            extra_msg += ("\nStandard error was:\n", err.stderr.decode("utf-8"))
+        fatal_error("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
+                    err.returncode, *extra_msg, fatal_when_pretending=True, sep="", exit_code=err.returncode)
+    finally:
+        if error:
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+            os.killpg(0, signal.SIGTERM)  # Tell all child processes to exit

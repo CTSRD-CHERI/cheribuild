@@ -52,7 +52,7 @@ from pathlib import Path
 
 from pycheribuild.colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
-from ..processutils import commandline_to_str, keep_terminal_sane
+from ..processutils import commandline_to_str, keep_terminal_sane, run_and_kill_children_on_exit
 from ..qemu_utils import QemuOptions, riscv_bios_arguments
 from ..utils import find_free_port
 
@@ -1239,9 +1239,10 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
          argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]" = None):
     # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
     with keep_terminal_sane():
-        _main(test_function=test_function, test_setup_function=test_setup_function,
-              argparse_setup_callback=argparse_setup_callback,
-              argparse_adjust_args_callback=argparse_adjust_args_callback)
+        run_and_kill_children_on_exit(
+            lambda: _main(test_function=test_function, test_setup_function=test_setup_function,
+                          argparse_setup_callback=argparse_setup_callback,
+                          argparse_adjust_args_callback=argparse_adjust_args_callback))
 
 
 if __name__ == "__main__":

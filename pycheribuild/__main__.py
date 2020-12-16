@@ -31,7 +31,6 @@ import fcntl
 import os
 import platform
 import shutil
-import signal
 import subprocess
 import sys
 # noinspection PyUnresolvedReferences
@@ -49,7 +48,7 @@ from .projects import *  # noqa: F401,F403
 from .projects.cross import *  # noqa: F401,F403
 from .projects.project import SimpleProject
 from .targets import target_manager
-from .processutils import commandline_to_str, get_program_version, print_command, run_command
+from .processutils import (get_program_version, print_command, run_and_kill_children_on_exit, run_command)
 from .utils import (AnsiColour, OSInfo, coloured, fatal_error, have_working_internet_connection, init_global_config,
                     status_update)
 DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent.parent]
@@ -267,25 +266,7 @@ def real_main():
 
 
 def main():
-    error = False
-    try:
-        if os.getpgrp() != os.getpid():
-            os.setpgrp()  # create new process group, become its leader
-        real_main()
-    except KeyboardInterrupt:
-        error = True
-        sys.exit("Exiting due to Ctrl+C")
-    except subprocess.CalledProcessError as err:
-        error = True
-        extra_msg = (". Working directory was ", err.cwd) if hasattr(err, "cwd") else ()
-        if err.stderr is not None:
-            extra_msg += ("\nStandard error was:\n", err.stderr.decode("utf-8"))
-        fatal_error("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
-                    err.returncode, *extra_msg, fatal_when_pretending=True, sep="", exit_code=err.returncode)
-    finally:
-        if error:
-            signal.signal(signal.SIGTERM, signal.SIG_IGN)
-            os.killpg(0, signal.SIGTERM)  # Tell all child processes to exit
+    run_and_kill_children_on_exit(real_main)
 
 
 if __name__ == "__main__":
