@@ -168,6 +168,7 @@ def keep_terminal_sane(gave_tty_control=False):
             stderr_state.restore()
         finally:
             if gave_tty_control:
+                # noinspection PyUnboundLocalVariable
                 signal.signal(signal.SIGTTOU, hdlr)
 
 
@@ -271,7 +272,8 @@ class FakePopen:
     def terminate(self):
         pass
 
-    def poll(self):
+    @staticmethod
+    def poll():
         return 0
 
     def __enter__(self):
