@@ -185,7 +185,6 @@ VOLUME /diskimg
                 pre_cmd += ["-p", "5000-5007:5000-5007"]
             if ssh_port is not None:
                 pre_cmd += ["-p", str(ssh_port) + ":" + str(ssh_port)]
-                print(coloured(AnsiColour.green, "Listening for SSH connections on localhost:", ssh_port, sep=""))
             if disk_image_path is not None:
                 pre_cmd += ["-v", str(disk_image_path) + ":" + str(disk_image_path)]
                 docker_settings_fixit = ""
@@ -304,6 +303,9 @@ VOLUME /diskimg
                             ap_servsock.socket.close()
                         finally:
                             pass
+
+                if ssh_port is not None:
+                    print(coloured(AnsiColour.green, "Listening for SSH connections on localhost:", ssh_port, sep=""))
 
                 self.info("Connecting to the FVP using telnet. Press", coloured(AnsiColour.yellow, "CTRL+]"),
                           coloured(AnsiColour.cyan, "followed by"), coloured(AnsiColour.yellow, "q<ENTER>"),
