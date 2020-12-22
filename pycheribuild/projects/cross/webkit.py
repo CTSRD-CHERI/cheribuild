@@ -121,7 +121,7 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
                                    ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=False)
         elif self.backend == JsBackend.TIER1ASM:
             self.add_cmake_options(ENABLE_C_LOOP=False, ENABLE_ASSEMBLER=True, ENABLE_JIT=False,
-                                   ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=False)
+                                   ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=True)
         elif self.backend == JsBackend.TIER2ASM:
             self.add_cmake_options(ENABLE_C_LOOP=False, ENABLE_ASSEMBLER=True, ENABLE_DISASSEMBLER=True,
                                    ENABLE_JIT=True)
