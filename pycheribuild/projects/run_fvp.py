@@ -48,9 +48,12 @@ class InstallMorelloFVP(SimpleProject):
     target = "install-morello-fvp"
     container_name = "morello-fvp"
     base_url = "https://developer.arm.com/-/media/Arm%20Developer%20Community/Downloads/OSS/FVP/Morello%20Platform/"
-    latest_known_fvp = (0, 11, 3)
-    installer_filename = "FVP_Morello_{}.{}_{}.tgz".format(*latest_known_fvp)
-
+    latest_known_fvp = (0, 11, 8)  # value reported by --version.
+    # For the 0.11.9 download, running --version reports 0.11.8 since not all components have a 0.11.9 version number.
+    installer_filename = "FVP_Morello_0.11_9.tgz"
+    # Uncomment once the installer and --version match again:
+    # installer_filename = "FVP_Morello_{}.{}_{}.tgz".format(*latest_known_fvp)
+    installer_sha256 = "78882c0073fa0b1c2073c89c0ba9b081972bd78299a7c6d544162daf77c774aa"
     # Seems like docker containers don't get the full amount configured in the settings so subtract a bit from 5GB/8GB
     min_ram_mb = 4900
     warn_ram_mb = 7900
@@ -84,8 +87,7 @@ class InstallMorelloFVP(SimpleProject):
             # noinspection PyAttributeOutsideInit
             self.installer_path = self.install_dir.parent / self.installer_filename
             downloaded_new_file = self.download_file(
-                self.installer_path, url=self.base_url + self.installer_filename,
-                sha256="2e52c34b80038fa025c590f49034a39350b8e7f8f3082fe389d5e5ca98f1cfe9")
+                self.installer_path, url=self.base_url + self.installer_filename, sha256=self.installer_sha256)
 
         # Return early if we didn't download a new file or are running without --clean
         if not downloaded_new_file and not self.config.clean:
