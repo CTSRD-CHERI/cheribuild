@@ -1612,9 +1612,9 @@ class GitRepository(SourceRepository):
 class DefaultInstallDir(Enum):
     DO_NOT_INSTALL = "Should not be installed"
     IN_BUILD_DIRECTORY = "$BUILD_DIR/test-install-prefix"
-    ROOTFS = "The rootfs for this target"
+    ROOTFS = "The rootfs for this target (<rootfs>/opt/<arch>/<program> by default)"
     COMPILER_RESOURCE_DIR = "The compiler resource directory"
-    SYSROOT = "The sysroot for this target"
+    SYSROOT = "The sysroot for this target (<rootfs>/usr/local/<arch> by default)"
     CHERI_SDK = "The CHERI SDK directory"
     MORELLO_SDK = "The Morello SDK directory"
     BOOTSTRAP_TOOLS = "The bootstap tools directory"
