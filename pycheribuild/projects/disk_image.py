@@ -373,7 +373,8 @@ class _BuildDiskImageBase(SimpleProject):
             ssh_keys = list(Path(os.path.expanduser("~/.ssh/")).glob("*.pub"))
             if len(ssh_keys) > 0:
                 print("Found the following ssh keys:", list(map(str, ssh_keys)))
-                if self.query_yes_no("Should they be added to /root/.ssh/authorized_keys?", default_result=True):
+                if self.query_yes_no("Would you like to add them to /root/.ssh/authorized_keys in the image?",
+                                     default_result=True):
                     contents = ""
                     for pubkey in ssh_keys:
                         contents += self.read_file(pubkey)
