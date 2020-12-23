@@ -34,7 +34,7 @@ import argparse
 from run_tests_common import boot_cheribsd, run_tests_main
 
 
-def run_simple_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
+def run_simple_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running tests")
     # TODO: copy over the logfile and enable coredumps?
     # Run tests with a two hour timeout:

@@ -55,6 +55,7 @@ class BuildUBoot(Project):
         ]
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
+    # noinspection PyTypeChecker
     _default_install_dir_fn = ComputedDefaultValue(function=uboot_install_dir,
                                                    as_string="$SDK_ROOT/u-boot/riscv{32,64}{,-hybrid,-purecap}")
 

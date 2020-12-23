@@ -100,7 +100,7 @@ def run_tests_main(test_function: Callable[[boot_cheribsd.QemuCheriBSDInstance, 
         if argparse_adjust_args_callback:
             argparse_adjust_args_callback(args)
 
-    def default_setup_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+    def default_setup_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace):
         # Also link the build directory in the target under the host path. This should allow more tests to pass,
         # i.e. the libc++ filesystem tests, etc.
         if should_mount_builddir:

@@ -210,15 +210,16 @@ class CheriBSDSpawnMixin(MixinBase):
     def expect_exact_ignore_panic(self, patterns, *, timeout: int):
         return super().expect_exact(patterns, timeout=timeout)
 
-    def expect(self, patterns: "typing.List[typing.Union[str, typing.Pattern]]", timeout=-1, pretend_result=None,
-               timeout_fatal=True, timeout_msg="timeout", **kwargs):
+    def expect(self, patterns: "typing.List[typing.Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]",
+               timeout=-1, pretend_result=None, timeout_fatal=True, timeout_msg="timeout", **kwargs):
         assert isinstance(patterns, list), "expected list and not " + str(patterns)
         info("Expecting regex ", coloured(AnsiColour.blue, str(patterns)))
         return self._expect_and_handle_panic_impl(patterns, timeout_msg, timeout_fatal=timeout_fatal,
                                                   timeout=timeout, expect_fn=super().expect, **kwargs)
 
-    def expect_exact(self, pattern_list: typing.List[typing.Union[str, typing.Pattern]], timeout=-1,
-                     pretend_result=None, timeout_fatal=True, timeout_msg="timeout", **kwargs):
+    def expect_exact(self, pattern_list:
+                     "typing.List[typing.Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]",
+                     timeout=-1, pretend_result=None, timeout_fatal=True, timeout_msg="timeout", **kwargs):
         assert isinstance(pattern_list, list), "expected list and not " + str(pattern_list)
         info("Expecting literal ", coloured(AnsiColour.blue, str(pattern_list)))
         return self._expect_and_handle_panic_impl(pattern_list, timeout_msg, timeout_fatal=timeout_fatal,
@@ -1233,8 +1234,8 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
         sys.exit(2)  # different exit code for test failures
 
 
-def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None,
-         test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
+def main(test_function: "typing.Callable[[QemuCheriBSDInstance, argparse.Namespace], bool]" = None,
+         test_setup_function: "typing.Callable[[QemuCheriBSDInstance, argparse.Namespace], None]" = None,
          argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]" = None,
          argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]" = None):
     # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
