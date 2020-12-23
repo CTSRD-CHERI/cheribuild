@@ -43,7 +43,7 @@ from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CompilerType as FreeBSDToolchainKind, CrossCompileTarget
 from ...processutils import latest_system_clang_tool, print_command
 from ...targets import target_manager
-from ...utils import classproperty, include_local_file, is_jenkins_build, OSInfo, ThreadJoiner
+from ...utils import cached_property, classproperty, include_local_file, is_jenkins_build, OSInfo, ThreadJoiner
 
 
 def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
@@ -794,16 +794,19 @@ class BuildFreeBSD(BuildFreeBSDBase):
             raise FileNotFoundError(make_cmd)
         return make_cmd
 
-    def _query_buildenv_path(self, args, var):
+    def _query_make_var(self, args, var):
         try:
             try:
                 bmake_binary = self.find_real_bmake_binary()
             except FileNotFoundError:
                 self.verbose_print("Cannot query buildenv path if bmake hasn't been bootstrapped")
                 return None
-            buildenv_cmd = str(bmake_binary) + " -V " + var
-            bw_flags = args.all_commandline_args + ["BUILD_WITH_STRICT_TMPPATH=0", "buildenv",
-                                                    "BUILDENV_SHELL=" + buildenv_cmd]
+            bw_flags = args.all_commandline_args + ["BUILD_WITH_STRICT_TMPPATH=0",
+                                                    "-f", self.source_dir / "Makefile.inc1",
+                                                    "-m", self.source_dir / "share/mk",
+                                                    "showconfig",
+                                                    "-D_NO_INCLUDE_COMPILERMK",  # avoid calling ${CC} --version
+                                                    "-V", var]
             if not self.source_dir.exists():
                 assert self.config.pretend, "This should only happen when running in a test environment"
                 return None
@@ -821,19 +824,16 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.warning("Could not query make variable", var, "for buildworld root objdir: ", e)
             return None
 
-    @property
+    @cached_property
     def objdir(self):
-        if self.__objdir is not None:
-            return self.__objdir
-        # TODO use https://github.com/pydanny/cached-property ?
-        self.__objdir = self._query_buildenv_path(self.buildworld_args, ".OBJDIR")
-        if self.__objdir is None:
-            self.__objdir = Path()
-        if not self.__objdir or self.__objdir == Path():
+        result = self._query_make_var(self.buildworld_args, ".OBJDIR")
+        if result is None:
+            result = Path()
+        if not result or result == Path():
             # just clean the whole directory instead
             self.warning("Could not infer buildworld root objdir")
             return self.build_dir
-        return self.__objdir
+        return result
 
     def kernel_objdir(self, config):
         result = self.objdir / "sys"
