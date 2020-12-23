@@ -48,7 +48,7 @@ __all__ = ["typing", "include_local_file", "Type_T", "init_global_config",  # no
            "SafeDict", "error_message", "ConfigBase", "final",  # no-combine
            "default_make_jobs_count", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
            "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
-           "is_case_sensitive_dir", "SocketAndPort", "replace_one", "cached_property"]  # no-combine
+           "is_case_sensitive_dir", "SocketAndPort", "replace_one", "cached_property", "remove_prefix"]  # no-combine
 
 if sys.version_info < (3, 5, 2):
     sys.exit("This script requires at least Python 3.5.2")
@@ -425,6 +425,14 @@ def replace_one(s: str, old, new) -> str:
     if result == s:
         raise ValueError(old + " not contained in " + s)
     return result
+
+
+def remove_prefix(s: str, prefix: str, prefix_required=False):
+    if not s.startswith(prefix):
+        if prefix_required:
+            raise ValueError(s + " does not start with " + prefix)
+        return s
+    return s[len(prefix):]
 
 
 # A dictionary for string formatting (format_map) that preserves values not

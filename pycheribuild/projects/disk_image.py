@@ -100,13 +100,14 @@ class _AdditionalFileTemplates(object):
 
 def _default_disk_image_name(config: CheriConfig, directory: Path, project: "_BuildDiskImageBase"):
     xtarget = project.get_crosscompile_target(config)
-    return directory / (project.disk_image_prefix + xtarget.build_suffix(config) + ".img")
+    # Don't add the os_prefix to the disk image name since it should already be encoded in project.disk_image_prefix)
+    return directory / (project.disk_image_prefix + project.build_configuration_suffix(xtarget) + ".img")
 
 
 def _default_disk_image_hostname(prefix: str) -> "ComputedDefaultValue[str]":
     # noinspection PyProtectedMember
     return ComputedDefaultValue(
-        function=lambda conf, proj: prefix + (proj._xtarget.build_suffix(conf) if proj._xtarget else "<TARGET>"),
+        function=lambda conf, proj: prefix + proj.build_configuration_suffix(),
         as_string=prefix + "-<ARCHITECTURE>")
 
 
@@ -525,7 +526,7 @@ class _BuildDiskImageBase(SimpleProject):
             CPUArchitecture.ARM32: "ARM",
             CPUArchitecture.AARCH64: "AA64",
             CPUArchitecture.RISCV64: "RISCV64",
-            }
+        }
         efi_machine_type_short_name = efi_machine_type_short_names[self.crosscompile_target.cpu_architecture]
         efi_file = "BOOT" + efi_machine_type_short_name + ".EFI"
 
@@ -596,7 +597,7 @@ class _BuildDiskImageBase(SimpleProject):
                 # which makes sure that the numeric UID values are correct
                 rootfs_img,  # output file
                 self.manifest_file,  # use METALOG as the manifest for the disk image
-                ], cwd=self.rootfs_dir)
+            ], cwd=self.rootfs_dir)
         except Exception:
             self.warning("makefs failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
                          " or cheribsd) and attach the METALOG file.")
@@ -666,7 +667,7 @@ class _BuildDiskImageBase(SimpleProject):
             old_names = ["-mips-hybrid128", "-mips-hybrid256"]
         elif self.crosscompile_target.is_x86_64(include_purecap=False):
             old_names = ["-native", "-x86-64"]
-        self._cleanup_old_files(self.disk_image_path, self.crosscompile_target.build_suffix(self.config), old_names)
+        self._cleanup_old_files(self.disk_image_path, self.build_configuration_suffix(), old_names)
 
         if not OSInfo.IS_FREEBSD and self.cross_build_image:
             with self.set_env(PATH=str(self.config.output_root / "freebsd-cross/bin") + ":" + os.getenv("PATH")):
@@ -932,7 +933,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             "libncursesw.so.9",
             "libxo.so.0",
             "libz.so.6",
-            ]
+        ]
         # additional cheribsdbox dependencies (PAM+SSL+BSM)
         # We don't know what ABI cheribsdbox is built for so let's just add the libraries for all ABIs
         required_libs += [
@@ -945,7 +946,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             "pam_permit.so.6",
             "pam_rootok.so",
             "pam_rootok.so.6",
-            ]
+        ]
         if self.rootfs_xtarget.is_mips(include_purecap=True):
             # Needed for most benchmarks (MIPS-only):
             required_libs.append("libstatcounters.so.3")
@@ -1075,6 +1076,7 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
 
 class BuildFreeBSDImage(BuildMultiArchDiskImage):
     target = "disk-image-freebsd"
+    include_os_in_target_suffix = False
     _source_class = BuildFreeBSD
     disk_image_prefix = "freebsd"
 

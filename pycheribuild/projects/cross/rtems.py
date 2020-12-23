@@ -39,6 +39,7 @@ class BuildRtems(CrossCompileProject):
                                force_branch=True, default_branch="cheri_waf1")
     target = "rtems"
     project_name = "rtems"
+    include_os_in_target_suffix = False
     dependencies = ["newlib", "compiler-rt-builtins"]
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot

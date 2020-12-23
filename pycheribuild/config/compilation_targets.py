@@ -224,7 +224,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def sysroot_dir(self):
-        return Path(self.config.sysroot_install_dir, "sysroot-freebsd" + self.target.build_suffix(self.config))
+        return Path(self.config.sysroot_install_dir, "sysroot" + self.target.build_suffix(self.config, include_os=True))
 
     @classmethod
     def is_freebsd(cls):
@@ -279,6 +279,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
     shortname = "CheriBSD"
+    os_prefix = ""  # CheriBSD is the default target, so we omit the OS prefix from target names
     FREEBSD_VERSION = 13
 
     def _get_sdk_root_dir_lazy(self):
@@ -295,7 +296,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         """
         :return: The sysroot path
         """
-        return self.config.sysroot_install_dir / ("sysroot" + self.target.build_suffix(self.config))
+        return self.config.sysroot_install_dir / ("sysroot" + self.target.build_suffix(self.config, include_os=False))
 
     @classmethod
     def is_cheribsd(cls):
@@ -581,7 +582,7 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
         """
         :return: The sysroot path
         """
-        return self.config.morello_sdk_dir / ("sysroot" + self.target.build_suffix(self.config))
+        return self.config.morello_sdk_dir / ("sysroot" + self.target.build_suffix(self.config, include_os=False))
 
     @property
     def linker(self) -> Path:
@@ -697,6 +698,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     shortname = "Newlib"
+    os_prefix = "baremetal-"
 
     @property
     def cmake_system_name(self) -> str:
@@ -922,17 +924,17 @@ class CompilationTargets(BasicCompilationTargets):
     CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips", CPUArchitecture.MIPS64, CheriOSTargetInfo, is_cheri_purecap=True)
 
     # Baremetal targets
-    BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips64", CPUArchitecture.MIPS64, NewlibBaremetalTargetInfo)
-    BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-mips64-purecap", CPUArchitecture.MIPS64,
+    BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, NewlibBaremetalTargetInfo)
+    BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("mips64-purecap", CPUArchitecture.MIPS64,
                                                          NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                          non_cheri_target=BAREMETAL_NEWLIB_MIPS64)
-    BAREMETAL_NEWLIB_RISCV64 = CrossCompileTarget("baremetal-riscv64", CPUArchitecture.RISCV64,
+    BAREMETAL_NEWLIB_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64,
                                                   NewlibBaremetalTargetInfo,
                                                   check_conflict_with=BAREMETAL_NEWLIB_MIPS64)
-    BAREMETAL_NEWLIB_RISCV64_HYBRID = CrossCompileTarget("baremetal-riscv64-hybrid", CPUArchitecture.RISCV64,
+    BAREMETAL_NEWLIB_RISCV64_HYBRID = CrossCompileTarget("riscv64-hybrid", CPUArchitecture.RISCV64,
                                                          NewlibBaremetalTargetInfo, is_cheri_hybrid=True,
                                                          non_cheri_target=BAREMETAL_NEWLIB_RISCV64)
-    BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget("baremetal-riscv64-purecap", CPUArchitecture.RISCV64,
+    BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64,
                                                           NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                           hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
 
@@ -950,8 +952,8 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_SUPPORTED_FREEBSD_TARGETS = [FREEBSD_AARCH64, FREEBSD_AMD64, FREEBSD_I386, FREEBSD_MIPS64, FREEBSD_RISCV64]
 
     # RTEMS targets
-    RTEMS_RISCV64 = CrossCompileTarget("rtems-riscv64", CPUArchitecture.RISCV64, RTEMSTargetInfo)
-    RTEMS_RISCV64_PURECAP = CrossCompileTarget("rtems-riscv64-purecap", CPUArchitecture.RISCV64, RTEMSTargetInfo,
+    RTEMS_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, RTEMSTargetInfo)
+    RTEMS_RISCV64_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, RTEMSTargetInfo,
                                                is_cheri_purecap=True, non_cheri_target=RTEMS_RISCV64)
 
     ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS = [CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI,

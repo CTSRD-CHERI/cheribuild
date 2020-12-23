@@ -400,7 +400,7 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
             def warning(*args, **kwags):
                 pass
 
-        prefix += target.build_suffix(self.config)
+        prefix += target.build_suffix(self.config, include_os=False)
         # Instantiate the target_info using the mock project:
         # noinspection PyTypeChecker
         target_info = target.target_info_cls(target, MockProject())

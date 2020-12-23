@@ -50,14 +50,14 @@ def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
     assert isinstance(project, BuildFreeBSD)
     xtarget = project.get_crosscompile_target(config)
     assert not xtarget.is_hybrid_or_purecap_cheri(), "FreeBSD does not build for CHERI (yet?)"
-    return config.output_root / ("freebsd" + xtarget.build_suffix(config))
+    return config.output_root / ("freebsd" + project.build_configuration_suffix(xtarget))
 
 
 # noinspection PyProtectedMember
 def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     assert isinstance(project, BuildCHERIBSD)
     xtarget = project.crosscompile_target
-    return config.output_root / ("rootfs" + xtarget.build_suffix(config))
+    return config.output_root / ("rootfs" + project.build_configuration_suffix(xtarget))
 
 
 def _clear_dangerous_make_env_vars():
@@ -74,6 +74,7 @@ class BuildFreeBSDBase(Project):
     make_kind = MakeCommandKind.BsdMake
     skip_world = False
     is_large_source_repository = True
+    include_os_in_target_suffix = False  # Avoid addding target_info.os_prefix to the target name.
     has_installsysroot_target = False
     default_extra_make_options = [
         # "-DWITHOUT_HTML",  # should not be needed
@@ -894,13 +895,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
             else:
                 if self.crosscompile_target.is_x86_64(include_purecap=False):
                     # remove the old -x86/-native rootfs dirs
-                    self._cleanup_old_files(self.install_dir, self.crosscompile_target.build_suffix(self.config),
-                                            ["-x86", "-native"])
+                    self._cleanup_old_files(self.install_dir, self.build_configuration_suffix(), ["-x86", "-native"])
                 elif self.crosscompile_target.is_mips(include_purecap=False):
                     # remove the old -mips rootfs dir (hybrid/purecap handled in cheribsd)
                     if not self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                        self._cleanup_old_files(self.install_dir, self.crosscompile_target.build_suffix(self.config),
-                                                ["-mips"])
+                        self._cleanup_old_files(self.install_dir, self.build_configuration_suffix(), ["-mips"])
                 # Ensure that METALOG does not contain stale values:
                 self.delete_file(self.install_dir / "METALOG.world")
                 self.run_make("installworld", options=install_world_args)
@@ -920,8 +919,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
                         old_suffixes = ["-mips"]
                     elif self.crosscompile_target.is_x86_64(include_purecap=False):
                         old_suffixes = ["-native", "-x86_64", "-x86"]
-                    self._cleanup_old_files(self.target_info.sysroot_dir,
-                                            self.crosscompile_target.build_suffix(self.config), old_suffixes)
+                    self._cleanup_old_files(self.target_info.sysroot_dir, self.build_configuration_suffix(),
+                                            old_suffixes)
 
         assert not sysroot_only, "Should not end up here"
         if self.config.skip_kernel:
@@ -1524,7 +1523,8 @@ class BuildCheriBsdMfsKernel(SimpleProject):
             config = caller.config
         if cross_target is None:
             cross_target = caller.crosscompile_target
-        guess = config.cheribsd_image_root / ("kernel" + cross_target.build_suffix(config) + "." + kernconf)
+        guess = config.cheribsd_image_root / (
+                    "kernel" + cross_target.build_suffix(config, include_os=False) + "." + kernconf)
         if prefer_benchmark_kernel:
             for benchmark_suffix in ("-BENCHMARK", "-NODEBUG", "_BENCHMARK", "_NODEBUG"):
                 benchmark_guess = guess.with_name(guess.name + benchmark_suffix)

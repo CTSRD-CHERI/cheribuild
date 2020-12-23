@@ -72,6 +72,8 @@ class CompilerType(Enum):
 
 class TargetInfo(ABC):
     shortname = "INVALID"  # type: str
+    # os_prefix defaults to shortname.lower() if not set
+    os_prefix = None  # type: typing.Optional[str]
 
     def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
         self.target = target
@@ -338,6 +340,7 @@ class AutoVarInit(Enum):
 
 class NativeTargetInfo(TargetInfo):
     shortname = "native"
+    os_prefix = ""  # Don't add an extra -native to target names
 
     @property
     def sdk_root_dir(self):
@@ -458,13 +461,15 @@ class CrossCompileTarget(object):
                  *, is_cheri_purecap=False, is_cheri_hybrid=False, check_conflict_with: "CrossCompileTarget" = None,
                  non_cheri_target: "CrossCompileTarget" = None, hybrid_target: "CrossCompileTarget" = None,
                  purecap_target: "CrossCompileTarget" = None):
-        if target_info_cls is None:
-            name_prefix = ""
+        assert not suffix.startswith("-"), suffix
+        name_prefix = target_info_cls.shortname
+        if target_info_cls.os_prefix is not None:
+            self.os_prefix = target_info_cls.os_prefix
         else:
-            assert not suffix.startswith("-"), suffix
-            name_prefix = target_info_cls.shortname
+            self.os_prefix = name_prefix.lower() + "-"
         self.name = name_prefix + "-" + suffix
-        self.generic_suffix = suffix
+        self.base_suffix = suffix  # Excluding the OS names
+        self.generic_suffix = self.os_prefix + suffix
         self.cpu_architecture = cpu_architecture
         # TODO: self.operating_system = ...
         self._is_cheri_purecap = is_cheri_purecap
@@ -516,9 +521,10 @@ class CrossCompileTarget(object):
     def create_target_info(self, project: "SimpleProject") -> TargetInfo:
         return self.target_info_cls(self, project)
 
-    def build_suffix(self, config: "CheriConfig"):
+    def build_suffix(self, config: "CheriConfig", *, include_os: bool):
         assert self.target_info_cls is not None
-        result = "-" + self.generic_suffix + self.cheri_config_suffix(config)
+        target_suffix = self.generic_suffix if include_os else self.base_suffix
+        result = "-" + target_suffix + self.cheri_config_suffix(config)
         return result
 
     def cheri_config_suffix(self, config: "CheriConfig"):

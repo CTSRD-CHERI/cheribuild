@@ -445,6 +445,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
 
 class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     do_not_add_to_targets = True
+    include_os_in_target_suffix = False
     _source_class = None
 
     @classproperty
@@ -696,6 +697,7 @@ target_manager.add_target_alias("run-x86_64", "run-amd64", deprecated=True)
 
 class BuildAndRunCheriBSD(TargetAliasWithDependencies):
     target = "build-and-run-cheribsd"
+    include_os_in_target_suffix = False
     dependencies = ["cheribsd", "disk-image", "run"]
     direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
 
@@ -706,6 +708,7 @@ class BuildAndRunCheriBSD(TargetAliasWithDependencies):
 
 class BuildAndRunFreeBSD(TargetAliasWithDependencies):
     target = "build-and-run-freebsd"
+    include_os_in_target_suffix = False
     dependencies = ["freebsd", "disk-image-freebsd", "run-freebsd"]
     direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
 

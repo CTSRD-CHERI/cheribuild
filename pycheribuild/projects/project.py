@@ -147,7 +147,12 @@ class ProjectSubclassDefinitionHook(type):
                     custom_target_cb = cls.custom_target_name
                     new_name = custom_target_cb(target_name, arch)
                 else:
-                    new_name = target_name + "-" + arch.generic_suffix
+                    if cls.include_os_in_target_suffix:
+                        new_name = target_name + "-" + arch.generic_suffix
+                    else:
+                        # Don't add the OS name to the target suffixed when building the OS: we want the target
+                        # to be called freebsd-amd64 and not freebsd-freebsd-amd64.
+                        new_name = target_name + "-" + arch.base_suffix
                 new_dict = cls.__dict__.copy()
                 new_dict["_xtarget"] = arch
                 new_dict["_should_not_be_instantiated"] = False  # unlike the subclass we can instantiate these
@@ -209,8 +214,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     _cached_filtered_deps = None  # type: typing.List[Target]
     is_alias = False
     is_sdk_target = False  # for --skip-sdk
+    # Set to true to omit the extra -<os> suffix in target names (otherwise we would end up with targets such as
+    # freebsd-freebsd-amd64, etc.)
+    include_os_in_target_suffix = True
     source_dir = None  # type: Path
     build_dir = None  # type: Path
+    build_dir_suffix = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
+    use_asan = False
+    add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
     install_dir = None  # type: Path
     build_in_source_dir = False  # For projects that can't build in the source dir
     # For target_info.py. Real value is only set for Project subclasses, since SimpleProject subclasses should not
@@ -502,6 +513,26 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def compiling_for_riscv(self, include_purecap: bool):
         return self.crosscompile_target.is_riscv(include_purecap=include_purecap)
 
+    def build_configuration_suffix(self, target: typing.Optional[CrossCompileTarget] = None) -> str:
+        """
+        :param target: the target to use
+        :return: a string such as -128/-native-asan that identifies the build configuration
+        """
+        config = self.config
+        if target is None:
+            target = self.get_crosscompile_target(config)
+        result = ""
+        if self.build_dir_suffix:
+            result += self.build_dir_suffix
+        if self.use_asan:
+            result += "-asan"
+        if self.auto_var_init != AutoVarInit.NONE:
+            result += "-init-" + str(self.auto_var_init.value)
+        # targets that only support native might not need a suffix
+        if not target.is_native() or self.add_build_dir_suffix_for_native:
+            result += target.build_suffix(config, include_os=self.include_os_in_target_suffix)
+        return result
+
     @property
     def triple_arch(self):
         target_triple = self.target_info.target_triple
@@ -523,7 +554,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def display_name(self):
         if self._xtarget is None:
             return self.project_name + " (target alias)"
-        return self.project_name + " (" + self._xtarget.build_suffix(self.config) + ")"
+        return self.project_name + " (" + self._xtarget.build_suffix(self.config,
+                                                                     include_os=self.include_os_in_target_suffix) + ")"
 
     @classmethod
     def get_class_for_target(cls: "typing.Type[Type_T]", arch: CrossCompileTarget) -> "typing.Type[Type_T]":
@@ -1661,10 +1693,6 @@ class Project(SimpleProject):
     compile_db_requires_bear = True
     do_not_add_to_targets = True
     set_pkg_config_path = True  # set the PKG_CONFIG_* environment variables when building
-
-    build_dir_suffix = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
-    add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
-
     default_source_dir = ComputedDefaultValue(function=_default_source_dir,
                                               as_string=lambda cls: "$SOURCE_ROOT/" + cls.project_name.lower())
 
@@ -1709,26 +1737,6 @@ class Project(SimpleProject):
     def get_install_dir(cls, caller: "SimpleProject", config: CheriConfig = None,
                         cross_target: CrossCompileTarget = None):
         return cls.get_instance(caller, config, cross_target).real_install_root_dir
-
-    def build_configuration_suffix(self, target: typing.Optional[CrossCompileTarget] = None) -> str:
-        """
-        :param target: the target to use
-        :return: a string such as -128/-native-asan that identifies the build configuration
-        """
-        config = self.config
-        if target is None:
-            target = self.get_crosscompile_target(config)
-        result = ""
-        if self.build_dir_suffix:
-            result += self.build_dir_suffix
-        if self.use_asan:
-            result += "-asan"
-        if self.auto_var_init != AutoVarInit.NONE:
-            result += "-init-" + str(self.auto_var_init.value)
-        # targets that only support native might not need a suffix
-        if not target.is_native() or self.add_build_dir_suffix_for_native:
-            result += target.build_suffix(config)
-        return result
 
     def build_dir_for_target(self, target: CrossCompileTarget):
         return self.config.build_root / (self.project_name.lower() + self.build_configuration_suffix(target) + "-build")
