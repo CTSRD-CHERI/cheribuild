@@ -32,7 +32,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
-from ..utils import OSInfo
+from ..utils import OSInfo, final
 
 if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine    # pytype: disable=pyi-error
@@ -224,6 +224,7 @@ class TargetInfo(ABC):
         """E.g. for baremetal target infos we have to link statically (and add the -static linker flag)"""
         return False
 
+    @final
     def get_rootfs_project(self, xtarget: "CrossCompileTarget" = None) -> "Project":
         return self._get_rootfs_project(xtarget if xtarget is not None else self.target)
 

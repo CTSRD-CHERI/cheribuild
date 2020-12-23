@@ -45,7 +45,7 @@ from .colour import AnsiColour, coloured
 __all__ = ["typing", "include_local_file", "Type_T", "init_global_config",  # no-combine
            "status_update", "fatal_error", "coloured", "AnsiColour",  # no-combine
            "warning_message", "DoNotUseInIfStmt", "ThreadJoiner",  # no-combine
-           "SafeDict", "error_message", "ConfigBase",  # no-combine
+           "SafeDict", "error_message", "ConfigBase", "final",  # no-combine
            "default_make_jobs_count", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
            "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
            "is_case_sensitive_dir", "SocketAndPort", "replace_one", "cached_property"]  # no-combine
@@ -54,6 +54,12 @@ if sys.version_info < (3, 5, 2):
     sys.exit("This script requires at least Python 3.5.2")
 
 Type_T = typing.TypeVar("Type_T")
+
+try:
+    from typing import final
+except ImportError:
+    def final(f):
+        return f
 
 
 # noinspection PyPep8Naming
