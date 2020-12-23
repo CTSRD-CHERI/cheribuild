@@ -133,9 +133,9 @@ def test_build_and_run(target_name, expected_list):
                   "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"]),
     # Note: QEMU not needed for aarch64/amd64 since we could also use the system QEMU
     pytest.param("run-aarch64", True,
-                 ["llvm-native", "cheribsd-aarch64", "gdb-aarch64", "disk-image-aarch64", "run-aarch64"]),
+                 ["qemu", "llvm-native", "cheribsd-aarch64", "gdb-aarch64", "disk-image-aarch64", "run-aarch64"]),
     pytest.param("run-amd64", True,
-                 ["llvm-native", "cheribsd-amd64", "gdb-amd64", "disk-image-amd64", "run-amd64"]),
+                 ["qemu", "llvm-native", "cheribsd-amd64", "gdb-amd64", "disk-image-amd64", "run-amd64"]),
     # Morello code won't run on QEMU (yet)
     pytest.param("run-fvp-morello-hybrid", True,
                  ["install-morello-fvp", "morello-llvm", "cheribsd-morello-hybrid", "gdb-morello-hybrid",

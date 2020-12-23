@@ -90,7 +90,7 @@ class LaunchQEMUBase(SimpleProject):
         cls.cvtrace = cls.add_bool_option("cvtrace", help="Use binary trace output instead of textual")
         # TODO: -s will no longer work, not sure anyone uses it though
         if cls.forward_ssh_port:
-            default_ssh_port_computed = ComputedDefaultValue(function=lambda p, cls: default_ssh_port,
+            default_ssh_port_computed = ComputedDefaultValue(function=lambda p, _: default_ssh_port,
                                                              as_string=str(default_ssh_port),
                                                              as_readme_string="<UID-dependent>")
             cls.ssh_forwarding_port = cls.add_config_option("ssh-forwarding-port", kind=int,
@@ -467,10 +467,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     @classmethod
     def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig):
         xtarget = cls.get_crosscompile_target(config)
-        result = []
-        if xtarget.is_mips(include_purecap=True) or xtarget.is_riscv(include_purecap=True):
-            result.append("qemu")
-        result.append(cls._source_class.get_class_for_target(xtarget).target)
+        result = ["qemu", cls._source_class.get_class_for_target(xtarget).target]
         return result
 
     def __init__(self, config, *, source_class=None, needs_disk_image=True):
