@@ -189,12 +189,6 @@ class BuildFreeBSDBase(Project):
     def jflag(self) -> list:
         return [self.config.make_j_flag] if self.config.make_jobs > 1 else []
 
-    # Return the path the a potetial sysroot created from installing this project
-    # Currently we only create sysroots for CheriBSD but we might change that in the future
-    def get_corresponding_sysroot(self) -> "typing.Optional[Path]":
-        assert self.has_installsysroot_target, "Not implemented yet"
-        return self.target_info.sysroot_dir
-
     def set_lto_binutils(self, ar, ranlib, nm, ld):
         self.fatal("Building FreeBSD/CheriBSD with LTO is not supported (yet).")
 
@@ -882,7 +876,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if self.has_installsysroot_target:
                 # No need for the files in /usr/share and the METALOG file
                 installsysroot_args.set(NO_SHARE=True)
-                installsysroot_args.set_env(DESTDIR=self.get_corresponding_sysroot())
+                installsysroot_args.set_env(DESTDIR=self.target_info.get_non_rootfs_sysroot_dir())
             if sysroot_only:
                 if not self.has_installsysroot_target:
                     self.fatal("Can't use installsysroot here")
@@ -1242,25 +1236,6 @@ class BuildCHERIBSD(BuildFreeBSD):
     def __init__(self, config: CheriConfig):
         self.install_as_root = os.getuid() == 0
         super().__init__(config)
-
-        if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-            self.make_args.set_with_options(CHERI=True)
-            if self.config.cheri_cap_table_abi:
-                self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
-
-        if self.compiling_for_riscv(include_purecap=True):
-            self.make_args.set(CROSS_BINUTILS_PREFIX=str(self.sdk_bindir / "llvm-"))
-            self.use_llvm_binutils = True
-
-        # Support for automatic variable initialization:
-        # See https://github.com/CTSRD-CHERI/cheribsd/commit/57e063b20ec04e543b8a4029871c63bf5cbe6897
-        # Explicitly disable first (in case the defaults in the source tree change)
-        self.make_args.set_with_options(INIT_ALL_ZERO=False, INIT_ALL_PATTERN=False)
-        if self.auto_var_init is AutoVarInit.ZERO:
-            self.make_args.set_with_options(INIT_ALL_ZERO=True)
-        elif self.auto_var_init is AutoVarInit.PATTERN:
-            self.make_args.set_with_options(INIT_ALL_PATTERN=True)
-
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
         if self.build_fpga_kernels:
@@ -1302,6 +1277,22 @@ class BuildCHERIBSD(BuildFreeBSD):
                     self.extra_kernels.append("FETT")
             else:
                 self.warning("Unsupported architecture for FETT kernels")
+
+    def setup(self):
+        super().setup()
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            self.make_args.set_with_options(CHERI=True)
+            if self.config.cheri_cap_table_abi:
+                self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
+
+        # Support for automatic variable initialization:
+        # See https://github.com/CTSRD-CHERI/cheribsd/commit/57e063b20ec04e543b8a4029871c63bf5cbe6897
+        # Explicitly disable first (in case the defaults in the source tree change)
+        self.make_args.set_with_options(INIT_ALL_ZERO=False, INIT_ALL_PATTERN=False)
+        if self.auto_var_init is AutoVarInit.ZERO:
+            self.make_args.set_with_options(INIT_ALL_ZERO=True)
+        elif self.auto_var_init is AutoVarInit.PATTERN:
+            self.make_args.set_with_options(INIT_ALL_PATTERN=True)
 
     def _remove_schg_flag(self, *paths: "typing.Iterable[str]"):
         if shutil.which("chflags"):

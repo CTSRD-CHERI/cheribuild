@@ -224,8 +224,16 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def sysroot_dir(self):
-        return Path(self.config.sysroot_install_dir, "sysroot" + self.target.build_suffix(self.config, include_os=True))
+        if is_jenkins_build():
+            # Jenkins builds compile against a sysroot that was extracted to a sysroot-<arch> directory and not the
+            # full rootfs
+            return self.get_non_rootfs_sysroot_dir()
+        return self.get_rootfs_project().get_install_dir(caller=self.project, config=self.config,
+                                                         cross_target=self.target)
 
+    def get_non_rootfs_sysroot_dir(self) -> Path:
+        return Path(self.config.sysroot_install_dir,
+                    "sysroot" + self.target.build_suffix(self.config, include_os=True))
     @classmethod
     def is_freebsd(cls):
         return True
@@ -284,19 +292,6 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     def _get_sdk_root_dir_lazy(self):
         return self.config.cheri_sdk_dir
-
-    @property
-    def sysroot_dir(self):
-        if is_jenkins_build():
-            # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
-            return self.config.sysroot_install_dir / "sysroot"
-        return self.get_cheribsd_sysroot_path()
-
-    def get_cheribsd_sysroot_path(self) -> Path:
-        """
-        :return: The sysroot path
-        """
-        return self.config.sysroot_install_dir / ("sysroot" + self.target.build_suffix(self.config, include_os=False))
 
     @classmethod
     def is_cheribsd(cls):
@@ -578,12 +573,6 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
             return "aarch64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
         return super().triple_for_target(target, config, include_version=include_version)
 
-    def get_cheribsd_sysroot_path(self) -> Path:
-        """
-        :return: The sysroot path
-        """
-        return self.config.morello_sdk_dir / ("sysroot" + self.target.build_suffix(self.config, include_os=False))
-
     @property
     def linker(self) -> Path:
         return self._compiler_dir / "ld.lld"
@@ -615,7 +604,7 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
 
     @property
     def sysroot_dir(self):
-        return self.config.sysroot_install_dir / "sysroot"
+        return Path("/this/path/should/not/be/used")
 
     @classmethod
     def is_cheribsd(cls):

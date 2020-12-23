@@ -721,8 +721,9 @@ def test_default_rootfs_and_sysroot_dir(target: str, args: list, expected_sysroo
     # Check that the cheribsd build dir is correct
     config = _parse_arguments(args)
     project = _get_target_instance(target, config, BuildFreeBSD)
-    sysroot_dir = project.cross_sysroot_path
-    assert sysroot_dir == project.target_info.sysroot_dir
+    assert project.cross_sysroot_path == project.target_info.sysroot_dir
+    assert isinstance(project.target_info, FreeBSDTargetInfo)
+    sysroot_dir = project.target_info.get_non_rootfs_sysroot_dir()
     assert str(sysroot_dir.relative_to(config.output_root)) == expected_sysroot
     rootfs_dir = project.install_dir
     assert str(rootfs_dir.relative_to(config.output_root)) == expected_rootfs
