@@ -995,13 +995,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 sysroot_var = "\"$$$${SYSROOT}\""
                 install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install {i} MK_TESTS=no DESTDIR={sysroot};" \
                                          " fi".format(make=make_in_subdir, sysroot=sysroot_var, i=install_nometalog_cmd)
-            if self.config.install_subdir_to_sysroot and self.has_installsysroot_target and \
-                    self.get_corresponding_sysroot() is not None:
-                if install_to_sysroot_cmd:
-                    install_to_sysroot_cmd += " && "
-                install_to_sysroot_cmd += "{make} install {i} MK_TESTS=no DESTDIR={sysroot}".format(
-                    make=make_in_subdir, sysroot=self.get_corresponding_sysroot(), i=install_nometalog_cmd)
-
         if skip_install:
             if install_to_sysroot_cmd:
                 install_cmd = install_to_sysroot_cmd
