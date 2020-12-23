@@ -34,7 +34,7 @@ from ..project import DefaultInstallDir
 class BuildFreeType2(CrossCompileCMakeProject):
     project_name = "freetype2"
     repository = GitRepository("https://github.com/freetype/freetype2.git")
-    cross_install_dir = DefaultInstallDir.SYSROOT_AND_ROOTFS
+    cross_install_dir = DefaultInstallDir.SYSROOT
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     path_in_rootfs = "/usr/local"
 
