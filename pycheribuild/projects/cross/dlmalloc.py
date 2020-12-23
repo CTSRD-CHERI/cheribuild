@@ -74,7 +74,8 @@ class DLMalloc(CrossCompileProject):
         cls.quar_unsafe = cls.add_bool_option("unsafe-quarantine",
                                               help="Don't isolate quarantine structures")
 
-    def compile(self, **kwargs):
+    def setup(self):
+        super().setup()
         if self.cheri_set_bounds:
             self.CFLAGS.append("-DCHERI_SET_BOUNDS")
 
@@ -118,16 +119,15 @@ class DLMalloc(CrossCompileProject):
         self.make_args.set(DEBUG=self.debug)
         self.make_args.set(CAPREVOKE=self.revoke)
         self.make_args.set(SRCDIR=self.source_dir)
+        self.make_args.set_env(CC=self.CC, CFLAGS=commandline_to_str(self.default_compiler_flags + self.CFLAGS))
         if not self.compiling_for_host():
-            self.CFLAGS.append("--sysroot=%s" % self.sdk_sysroot)
-        new_env = dict(CC=self.CC, CFLAGS=commandline_to_str(self.default_compiler_flags + self.CFLAGS))
-        if not self.compiling_for_host():
-            new_env["CHERI_SDK"] = self.target_info.sdk_root_dir,
-        with self.set_env(**new_env):
-            if self.just_so:
-                self.run_make("libdlmalloc_nonreuse.so", cwd=self.build_dir)
-            else:
-                self.run_make("all", cwd=self.build_dir)
+            self.make_args.set_env(CHERI_SDK=self.target_info.sdk_root_dir)
+
+    def compile(self, **kwargs):
+        if self.just_so:
+            self.run_make("libdlmalloc_nonreuse.so", cwd=self.build_dir)
+        else:
+            self.run_make("all", cwd=self.build_dir)
 
     def install(*args, **kwargs):
         pass
