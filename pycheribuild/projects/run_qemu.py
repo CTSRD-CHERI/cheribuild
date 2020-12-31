@@ -609,6 +609,14 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
 
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        if self.use_virtio_blk:
+            self._after_disk_options.extend([
+                "-drive", "file=" + str(BuildFreeRTOS.get_install_dir(self)) + "/FreeRTOS/Demo/bin/freertos.img,id=drv,format=raw",
+                "-device", "virtio-blk-device,drive=drv"
+                ])
+
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(defaultSshPort=None, **kwargs)
@@ -631,6 +639,10 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
                  "paramterized RISC-V-Generic. The BSP option chooses "
                  "platform, RISC-V arch and RISC-V abi in the "
                  "$platform-$arch-$abi format. See RISC-V-Generic/README for more details")
+
+        cls.use_virtio_blk = cls.add_bool_option("use_virtio_blk", show_help=True,
+            default=False,
+            help="Use VirtIO Block as a disk for FreeRTOS")
 
     def default_demo_bsp(self):
         return "qemu_virt-" + self.target_info.riscv_arch_string + "-" + \

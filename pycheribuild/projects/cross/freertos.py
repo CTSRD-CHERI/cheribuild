@@ -147,6 +147,10 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             default=False,
             help="Compartmentalize FreeRTOS")
 
+        cls.use_virtio_blk = cls.add_bool_option("use_virtio_blk", show_help=True,
+            default=False,
+            help="Use VirtIO Block as a disk for FreeRTOS")
+
         cls.demo_bsp = cls.add_config_option(
             "bsp", metavar="BSP", show_help=True,
             default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
@@ -207,6 +211,9 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
             if self.compartmentalize:
               config_options += ["--compartmentalize"]
+
+            if self.use_virtio_blk:
+              config_options += ["--use-virtio-blk"]
 
             self._run_waf("distclean", "configure", *config_options)
 
