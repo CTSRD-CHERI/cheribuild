@@ -56,7 +56,7 @@ class MockConfig(CheriConfig):
         self.output_root = source_root / "output"
         self.cheri_sdk_dir = self.output_root / "sdk"
         self.morello_sdk_dir = self.output_root / "morello-sdk"
-        self.sysroot_install_dir = self.cheri_sdk_dir
+        self.sysroot_output_root = self.output_root
         self.other_tools_dir = self.output_root / "other"
 
         assert self._ensure_required_properties_set()

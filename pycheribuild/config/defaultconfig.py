@@ -136,9 +136,9 @@ class DefaultCheriConfig(CheriConfig):
         self.morello_sdk_dir = loader.add_path_option("morello-sdk-root",
                                                       default=default_morello_sdk, group=loader.path_group,
                                                       help="The directory to find/install the Morello SDK")
-        self.sysroot_pfx = loader.add_path_option("sysroot-install-dir",
-                                                  default=lambda p, cls: p.tools_root, group=loader.path_group,
-                                                  help="Sysroot prefix (default: '<TOOLS_ROOT>')")
+        self.sysroot_output_root = loader.add_path_option("sysroot-install-root", "-sysroot-install-dir",
+                                                          default=lambda p, cls: p.tools_root, group=loader.path_group,
+                                                          help="Sysroot prefix (default: '<TOOLS_ROOT>')")
         loader.finalize_options(available_targets)
 
     def load(self):
@@ -146,7 +146,6 @@ class DefaultCheriConfig(CheriConfig):
         self.preferred_xtarget = None
         # now set some generic derived config options
         self.cheri_sdk_dir = self.tools_root / self.default_cheri_sdk_directory_name
-        self.sysroot_install_dir = self.sysroot_pfx / self.default_cheri_sdk_directory_name
         self.other_tools_dir = self.tools_root / "bootstrap"
         self.cheribsd_image_root = self.output_root  # TODO: allow this to be different?
 

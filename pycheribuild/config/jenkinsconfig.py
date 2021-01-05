@@ -159,7 +159,7 @@ class JenkinsConfig(CheriConfig):
                                               "$WORKSPACE/" + self.default_output_path)
         self.output_root = loader.add_commandline_only_option("output-path", default=default_output, type=Path,
                                                               help="Path for the output (relative to $WORKSPACE)")
-        self.sysroot_install_dir = loader.add_commandline_only_option(
+        self.sysroot_output_root = loader.add_commandline_only_option(
             "sysroot-output-path",
             default=ComputedDefaultValue(function=lambda c, _: c.output_root,
                                          as_string="$WORKSPACE/" + self.default_output_path),
@@ -189,6 +189,7 @@ class JenkinsConfig(CheriConfig):
 
     @property
     def default_cheri_sdk_directory_name(self):
+        # FIXME: remove this difference between jenkins and non-jenkins builds
         return "cherisdk"
 
     @property
@@ -221,7 +222,7 @@ class JenkinsConfig(CheriConfig):
             self.keep_install_dir = True
         if os.path.relpath(str(self.output_root), str(self.workspace)).startswith(".."):
             fatal_error("Output path", self.output_root, "must be inside workspace", self.workspace)
-        if os.path.relpath(str(self.sysroot_install_dir), str(self.workspace)).startswith(".."):
+        if os.path.relpath(str(self.sysroot_output_root), str(self.workspace)).startswith(".."):
             fatal_error("Sysroot output path", self.sysroot_output_path, "must be inside workspace", self.workspace)
 
         # expect the CheriBSD disk images in the workspace root

@@ -248,8 +248,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                                                          cross_target=self.target)
 
     def get_non_rootfs_sysroot_dir(self) -> Path:
-        return Path(self.config.sysroot_install_dir,
+        return Path(self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name,
                     "sysroot" + self.target.build_suffix(self.config, include_os=True))
+
     @classmethod
     def is_freebsd(cls):
         return True
@@ -599,6 +600,10 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     def linker(self) -> Path:
         return self._compiler_dir / "ld.lld"
 
+    def get_non_rootfs_sysroot_dir(self) -> Path:
+        return Path(self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name,
+                    "sysroot" + self.target.build_suffix(self.config, include_os=True))
+
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig"):
         return ["morello-llvm"]
@@ -682,7 +687,8 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
     @property
     def sysroot_dir(self):
         # Install to target triple as RTEMS' LLVM/Clang Driver expects
-        return self.config.sysroot_install_dir / ("sysroot-" + self.target.generic_suffix) / self.target_triple
+        return self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name / (
+                    "sysroot-" + self.target.generic_suffix) / self.target_triple
 
     def _get_sdk_root_dir_lazy(self) -> Path:
         return self.config.cheri_sdk_dir
@@ -725,7 +731,8 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
             suffix = "cheri" + self.config.mips_cheri_bits_str
         else:
             suffix = self.target.generic_suffix
-        return self.config.sysroot_install_dir / "baremetal" / suffix / self.target_triple
+        sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
+        return sysroot_dir / "baremetal" / suffix / self.target_triple
 
     @property
     def must_link_statically(self):
