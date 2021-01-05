@@ -9,7 +9,7 @@ import pytest
 
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
-from pycheribuild.config.compilation_targets import CompilationTargets
+from pycheribuild.config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
 from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
 # noinspection PyUnresolvedReferences
@@ -545,7 +545,7 @@ class SystemClangIfExistsElse:
                  FreeBSDToolchainKind.DEFAULT_COMPILER, []),
     pytest.param("freebsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
     pytest.param("freebsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
-    pytest.param("freebsd-mips64", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
+    pytest.param("freebsd-mips64", "$BUILD$/freebsd-mips64-build/tmp/usr/bin/clang",
                  FreeBSDToolchainKind.BOOTSTRAPPED, []),
     pytest.param("freebsd-mips64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
                  ["--freebsd-mips64/toolchain-path", "/path/to/custom/toolchain"]),
@@ -554,13 +554,14 @@ class SystemClangIfExistsElse:
     pytest.param("cheribsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.DEFAULT_COMPILER, []),
     pytest.param("cheribsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
     pytest.param("cheribsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
-    pytest.param("cheribsd-mips64", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
+    pytest.param("cheribsd-mips64", "$BUILD$/cheribsd-mips64-build/tmp/usr/bin/clang",
                  FreeBSDToolchainKind.BOOTSTRAPPED, []),
     pytest.param("cheribsd-mips64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
                  ["--cheribsd-mips64/toolchain-path", "/path/to/custom/toolchain"]),
     ])
 def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, extra_args):
-    args = ["--" + target + "/toolchain", kind.value]
+    # Avoid querying bmake for the objdir
+    args = ["--" + target + "/toolchain", kind.value, "--build-root=/some/path/that/does/not/exist"]
     args.extend(extra_args)
     config = _parse_arguments(args)
     project = _get_target_instance(target, config, BuildFreeBSD)
@@ -568,6 +569,7 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
         clang_root, _, _ = project._try_find_compatible_system_clang()
         expected_path = str(clang_root / "bin/clang") if clang_root is not None else expected_path.fallback
     expected_path = expected_path.replace("$OUTPUT$", str(config.output_root))
+    expected_path = expected_path.replace("$BUILD$", str(config.build_root))
     assert str(project.CC) == str(expected_path)
     if kind == FreeBSDToolchainKind.BOOTSTRAPPED:
         assert "XCC" not in project.buildworld_args.env_vars

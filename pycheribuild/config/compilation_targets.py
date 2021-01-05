@@ -219,8 +219,16 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return "FreeBSD"
 
     def _get_sdk_root_dir_lazy(self):
-        from ..projects.llvm import BuildUpstreamLLVM
-        return BuildUpstreamLLVM.get_install_dir(self.project, cross_target=CompilationTargets.NATIVE)
+        from ..projects.cross.cheribsd import BuildFreeBSD, FreeBSDToolchainKind
+        # Determine the toolchain based on --freebsd/toolchain=<>
+        fbsd = self._get_rootfs_project(self.target)
+        assert isinstance(fbsd, BuildFreeBSD)
+        configured_path = fbsd.build_toolchain_root_dir
+        if configured_path is None:
+            # If we couldn't find a working system compiler, default to cheribuild-compiled upstream LLVM.
+            assert fbsd.build_toolchain == FreeBSDToolchainKind.DEFAULT_COMPILER
+            return self._get_compiler_project().get_install_dir(self.project, cross_target=CompilationTargets.NATIVE)
+        return configured_path
 
     @property
     def sysroot_dir(self):
@@ -280,6 +288,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def cmake_prefix_paths(self) -> list:
         return [self.sysroot_install_prefix_absolute, self.sysroot_install_prefix_absolute / "libcheri/cmake"]
 
+    def _get_compiler_project(self) -> "typing.Type[Project]":
+        from ..projects.llvm import BuildUpstreamLLVM
+        return BuildUpstreamLLVM
+
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         from ..projects.cross.cheribsd import BuildFreeBSD
         return BuildFreeBSD.get_instance(self.project, cross_target=xtarget)
@@ -290,8 +302,9 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     os_prefix = ""  # CheriBSD is the default target, so we omit the OS prefix from target names
     FREEBSD_VERSION = 13
 
-    def _get_sdk_root_dir_lazy(self):
-        return self.config.cheri_sdk_dir
+    def _get_compiler_project(self) -> "typing.Type[Project]":
+        from ..projects.llvm import BuildCheriLLVM
+        return BuildCheriLLVM
 
     @classmethod
     def is_cheribsd(cls):
@@ -562,8 +575,9 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
 class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     shortname = "CheriBSD-Morello"
 
-    def _get_sdk_root_dir_lazy(self):
-        return self.config.morello_sdk_dir
+    def _get_compiler_project(self) -> "typing.Type[Project]":
+        from ..projects.llvm import BuildMorelloLLVM
+        return BuildMorelloLLVM
 
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config, *, include_version):
