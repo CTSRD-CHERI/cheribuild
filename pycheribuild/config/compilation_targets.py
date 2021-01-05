@@ -596,10 +596,6 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
             return "aarch64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
         return super().triple_for_target(target, config, include_version=include_version)
 
-    @property
-    def linker(self) -> Path:
-        return self._compiler_dir / "ld.lld"
-
     def get_non_rootfs_sysroot_dir(self) -> Path:
         return Path(self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name,
                     "sysroot" + self.target.build_suffix(self.config, include_os=True))
