@@ -108,10 +108,10 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             AS_FOR_TARGET=str(self.CC),  # + target_cflags,
             CC_FOR_TARGET=str(self.CC),  # + target_cflags,
             CXX_FOR_TARGET=str(self.CXX),  # + target_cflags,
-            AR_FOR_TARGET=bindir / "ar", STRIP_FOR_TARGET=bindir / "strip",
-            OBJCOPY_FOR_TARGET=bindir / "objcopy", RANLIB_FOR_TARGET=bindir / "ranlib",
+            AR_FOR_TARGET=self.target_info.ar, STRIP_FOR_TARGET=self.target_info.strip_tool,
+            OBJCOPY_FOR_TARGET=bindir / "objcopy", RANLIB_FOR_TARGET=self.target_info.ranlib,
             OBJDUMP_FOR_TARGET=bindir / "llvm-objdump",
-            READELF_FOR_TARGET=bindir / "readelf", NM_FOR_TARGET=bindir / "nm",
+            READELF_FOR_TARGET=bindir / "readelf", NM_FOR_TARGET=self.target_info.nm,
             # Set all the flags:
             CFLAGS_FOR_TARGET=target_cflags,
             CCASFLAGS_FOR_TARGET=target_cflags,

@@ -197,9 +197,9 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configure_environment["CXXFLAGS_FOR_BUILD"] = "-g -fcommon"
 
         if not self.compiling_for_host():
-            self.add_configure_env_arg("AR", self.sdk_bindir / "ar")
-            self.add_configure_env_arg("RANLIB", self.sdk_bindir / "ranlib")
-            self.add_configure_env_arg("NM", self.sdk_bindir / "nm")
+            self.add_configure_env_arg("AR", self.target_info.ar)
+            self.add_configure_env_arg("RANLIB", self.target_info.ranlib)
+            self.add_configure_env_arg("NM", self.target_info.nm)
 
         # Some of the configure scripts are invoked lazily (during the make invocation instead of from ./configure)
         # Therefore we need to set all the enviroment variables when compiling, too.
