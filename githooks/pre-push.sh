@@ -48,7 +48,7 @@ check_bad_commit_msg() {
     range=$1
     pattern=$2
     msg=$3
-    bad_commit=$(git rev-list -n 1 --grep "$pattern" "$range")
+    bad_commit=$(git rev-list --grep "$pattern" "$range" | grep -v fbb3f6dad35497ed5dcea7e96d0a228b3e383741 | grep -v 4063bcdfe4fcd33b9dd43bf39bd8be3771274ced)
     if [ -n "$bad_commit" ]
     then
         echo >&2 "Found $msg commit $bad_commit, not pushing"
