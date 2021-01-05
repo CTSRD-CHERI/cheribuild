@@ -387,32 +387,7 @@ class _BuildDiskImageBase(SimpleProject):
                         self.run_cmd("chmod", "0700", authorized_keys.parent.parent, authorized_keys.parent)
                         self.run_cmd("chmod", "0600", authorized_keys)
 
-        if self.include_gdb or self.include_kgdb:
-            cross_target = self.source_project.get_crosscompile_target(self.config)
-            if cross_target not in BuildGDB.supported_architectures:
-                self.warning("GDB cannot be built for architecture ", cross_target, " -> not addding it")
-            else:
-                if self.include_kgdb:
-                    gdb_instance = BuildKGDB.get_instance_for_cross_target(cross_target, self.config)  # type: BuildGDB
-                else:
-                    gdb_instance = BuildGDB.get_instance_for_cross_target(cross_target, self.config)  # type: BuildGDB
-                gdb_path = gdb_instance.real_install_root_dir
-                gdb_binary = gdb_path / "bin/gdb"
-                if not gdb_binary.exists():
-                    # try to add GDB from the build directory
-                    gdb_binary = gdb_instance.build_dir / "gdb/gdb"
-                    # self.info("Adding GDB binary from GDB build directory to image")
-                if gdb_binary.exists():
-                    self.info("Adding GDB binary", gdb_binary, "to disk image")
-                    self.add_file_to_image(gdb_binary, mode=0o755, path_in_target="usr/bin/gdb")
-                if self.include_kgdb:
-                    kgdb_binary = gdb_path / "bin/kgdb"
-                    if not kgdb_binary.exists():
-                        # try to add KGDB from the build directory
-                        kgdb_binary = gdb_instance.build_dir / "gdb/kgdb"
-                    if kgdb_binary.exists():
-                        self.info("Adding KGDB binary", kgdb_binary, "to disk image")
-                        self.add_file_to_image(kgdb_binary, mode=0o755, path_in_target="usr/bin/kgdb")
+        self.add_gdb()
 
         loader_conf_contents = ""
         if self.is_x86:
@@ -432,6 +407,36 @@ class _BuildDiskImageBase(SimpleProject):
                     random_data = os.urandom(4096)
                     f.write(random_data)
             self.add_file_to_image(entropy_file, base_directory=self.tmpdir)
+
+    def add_gdb(self):
+        if not self.include_gdb and not self.include_kgdb:
+            return
+        # FIXME: if /usr/local/bin/gdb is in the image make /usr/bin/gdb a symlink
+        cross_target = self.source_project.get_crosscompile_target(self.config)
+        if cross_target not in BuildGDB.supported_architectures:
+            self.warning("GDB cannot be built for architecture ", cross_target, " -> not addding it")
+            return
+        if self.include_kgdb:
+            gdb_instance = BuildKGDB.get_instance_for_cross_target(cross_target, self.config)
+        else:
+            gdb_instance = BuildGDB.get_instance_for_cross_target(cross_target, self.config)
+        gdb_path = gdb_instance.real_install_root_dir
+        gdb_binary = gdb_path / "bin/gdb"
+        if not gdb_binary.exists():
+            # try to add GDB from the build directory
+            gdb_binary = gdb_instance.build_dir / "gdb/gdb"
+            # self.info("Adding GDB binary from GDB build directory to image")
+        if gdb_binary.exists():
+            self.info("Adding GDB binary", gdb_binary, "to disk image")
+            self.add_file_to_image(gdb_binary, mode=0o755, path_in_target="usr/bin/gdb")
+        if self.include_kgdb:
+            kgdb_binary = gdb_path / "bin/kgdb"
+            if not kgdb_binary.exists():
+                # try to add KGDB from the build directory
+                kgdb_binary = gdb_instance.build_dir / "gdb/kgdb"
+            if kgdb_binary.exists():
+                self.info("Adding KGDB binary", kgdb_binary, "to disk image")
+                self.add_file_to_image(kgdb_binary, mode=0o755, path_in_target="usr/bin/kgdb")
 
     def add_all_files_in_dir(self, root_dir: Path):
         for root, dirnames, filenames in os.walk(str(root_dir)):
