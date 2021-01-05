@@ -387,9 +387,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 result["TARGET_CPUTYPE"] = "cheri"
         return result
 
-    def setup(self):
-        super().setup()
-
     def _setup_make_args(self):
         # Same as setup() but can be called multiple times.
         if self._setup_make_args_called:
@@ -468,32 +465,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.__objdir = None
-        if self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAPPED:
-            self.target_info._sdk_root_dir = Path("/this/path/should/not/be/used/when/bootstrapping")
-        elif self.build_toolchain in (FreeBSDToolchainKind.UPSTREAM_LLVM, FreeBSDToolchainKind.CHERI_LLVM,
-                                      FreeBSDToolchainKind.MORELLO_LLVM):
-            self.target_info._sdk_root_dir = BuildLLVMMonoRepoBase.get_install_dir_for_type(self, self.build_toolchain)
-        elif self.build_toolchain == FreeBSDToolchainKind.SYSTEM_LLVM:
-            system_clang_root, errmsg, fixit = self._try_find_compatible_system_clang()
-            if system_clang_root is None:
-                self.fatal(errmsg, fixit)
-            self.target_info._sdk_root_dir = system_clang_root
-        elif self.build_toolchain == FreeBSDToolchainKind.CUSTOM:
-            if self._cross_toolchain_root is None:
-                self.fatal("Requested custom toolchain but", self.get_config_option_name("_cross_toolchain_root"),
-                           "is not set.")
-            self.target_info._sdk_root_dir = self._cross_toolchain_root
-        else:
-            assert self.build_toolchain == FreeBSDToolchainKind.DEFAULT_COMPILER
-            if self.can_build_with_system_clang:
-                # Try to find system clang and if not we fall back to the default self-built clang
-                system_clang_root, errmsg, _ = self._try_find_compatible_system_clang()
-                if system_clang_root is not None:
-                    self.target_info._sdk_root_dir = system_clang_root
-                else:
-                    # Otherwise the default logic is used and we select clang based on self.target_info
-                    self.info(errmsg, "Will try to compile with a self-built one from", self.target_info.c_compiler)
-
         self._setup_make_args_called = False
         self.destdir = self.install_dir
         self._install_prefix = Path("/")
@@ -505,6 +476,33 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.subdir_override:
             # build only part of the tree
             self.make_args.set(SUBDIR_OVERRIDE=self.subdir_override)
+
+    @cached_property
+    def build_toolchain_root_dir(self) -> "typing.Optional[Path]":
+        if self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAPPED:
+            return self.objdir / "tmp/usr"
+        elif self.build_toolchain in (FreeBSDToolchainKind.UPSTREAM_LLVM, FreeBSDToolchainKind.CHERI_LLVM,
+                                      FreeBSDToolchainKind.MORELLO_LLVM):
+            return BuildLLVMMonoRepoBase.get_install_dir_for_type(self, self.build_toolchain)
+        elif self.build_toolchain == FreeBSDToolchainKind.SYSTEM_LLVM:
+            system_clang_root, errmsg, fixit = self._try_find_compatible_system_clang()
+            if system_clang_root is None:
+                self.fatal(errmsg, fixit)
+            return system_clang_root
+        elif self.build_toolchain == FreeBSDToolchainKind.CUSTOM:
+            if self._cross_toolchain_root is None:
+                self.fatal("Requested custom toolchain but", self.get_config_option_name("_cross_toolchain_root"),
+                           "is not set.")
+            return self._cross_toolchain_root
+        else:
+            assert self.build_toolchain == FreeBSDToolchainKind.DEFAULT_COMPILER
+            if self.can_build_with_system_clang:
+                # Try to find system clang and if not we fall back to the default self-built clang
+                system_clang_root, errmsg, _ = self._try_find_compatible_system_clang()
+                if system_clang_root is not None:
+                    return system_clang_root
+            # Otherwise, the default logic is used, and we select clang based on self.target_info
+            return None
 
     def _setup_cross_toolchain_config(self):
         if self.use_bootstrapped_toolchain:
@@ -551,7 +549,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
             self.cross_toolchain_config.set(
                 XAR=cross_bindir / "llvm-ar",
-                # XLD
                 XNM=cross_bindir / "llvm-nm",
                 XSIZE=cross_bindir / "llvm-size",
                 XSTRIPBIN=cross_bindir / "llvm-strip",
