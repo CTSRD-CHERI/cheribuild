@@ -1092,7 +1092,7 @@ class BuildFreeBSDImage(BuildMultiArchDiskImage):
         if self.crosscompile_target.is_x86_64(include_purecap=False):
             # remove the old -x86, -x86_64 and -native disk images
             self._cleanup_old_files(self.disk_image_path,
-                                    "-" + self.crosscompile_target.generic_suffix + self.cheri_config_suffix,
+                                    "-" + self.crosscompile_target.base_suffix + self.cheri_config_suffix,
                                     ["-x86", "-x86_64", "-native"])
 
 
