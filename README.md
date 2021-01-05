@@ -320,7 +320,7 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--no-include-toolchain-dependencies] [--compilation-db-in-source-dir] [--generate-cmakelists]
                      [--make-without-nice] [--make-jobs MAKE_JOBS] [--source-root SOURCE_ROOT]
                      [--output-root OUTPUT_ROOT] [--build-root BUILD_ROOT] [--tools-root TOOLS_ROOT]
-                     [--morello-sdk-root MORELLO_SDK_ROOT] [--sysroot-install-dir SYSROOT_INSTALL_DIR] [--qemu/gui]
+                     [--morello-sdk-root MORELLO_SDK_ROOT] [--sysroot-install-root SYSROOT_INSTALL_ROOT] [--qemu/gui]
                      [--qemu/targets QEMU/TARGETS] [--qemu/unaligned] [--qemu/statistics]
                      [--freebsd-universe/build-options OPTIONS] [--freebsd-universe/minimal]
                      [--freebsd-universe/no-build-tests] [--go/bootstrap-toolchain GO/BOOTSTRAP_TOOLCHAIN]
@@ -449,7 +449,7 @@ Configuration of default paths:
                         The directory to find sdk and bootstrap tools (default: '<OUTPUT_ROOT>')
   --morello-sdk-root MORELLO_SDK_ROOT
                         The directory to find/install the Morello SDK (default: ''<OUTPUT_ROOT>/morello-sdk'')
-  --sysroot-install-dir SYSROOT_INSTALL_DIR
+  --sysroot-install-root SYSROOT_INSTALL_ROOT
                         Sysroot prefix (default: '<TOOLS_ROOT>')
 
 Adjust flags used when compiling MIPS/CHERI projects:
