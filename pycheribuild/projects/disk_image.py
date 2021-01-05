@@ -387,8 +387,6 @@ class _BuildDiskImageBase(SimpleProject):
                         self.run_cmd("chmod", "0700", authorized_keys.parent.parent, authorized_keys.parent)
                         self.run_cmd("chmod", "0600", authorized_keys)
 
-        self.add_gdb()
-
         loader_conf_contents = ""
         if self.is_x86:
             loader_conf_contents += "console=\"comconsole\"\n"
@@ -420,23 +418,33 @@ class _BuildDiskImageBase(SimpleProject):
             gdb_instance = BuildKGDB.get_instance_for_cross_target(cross_target, self.config)
         else:
             gdb_instance = BuildGDB.get_instance_for_cross_target(cross_target, self.config)
-        gdb_path = gdb_instance.real_install_root_dir
-        gdb_binary = gdb_path / "bin/gdb"
-        if not gdb_binary.exists():
-            # try to add GDB from the build directory
-            gdb_binary = gdb_instance.build_dir / "gdb/gdb"
-            # self.info("Adding GDB binary from GDB build directory to image")
-        if gdb_binary.exists():
-            self.info("Adding GDB binary", gdb_binary, "to disk image")
-            self.add_file_to_image(gdb_binary, mode=0o755, path_in_target="usr/bin/gdb")
+        # If we already added GDB in /usr/local/bin (for full disk images), create a symlink to usr/bin/gdb instead of
+        # adding another copy.
+        if "usr/local/bin/gdb" in self.mtree:
+            assert "usr/bin/gdb" not in self.mtree, "GDB already added?"
+            self.mtree.add_symlink(path_in_image="usr/bin/gdb", symlink_dest=Path("/usr/local/bin/gdb"))
+        else:
+            gdb_binary = gdb_instance.real_install_root_dir / "bin/gdb"
+            if not gdb_binary.exists():
+                # try to add GDB from the build directory
+                gdb_binary = gdb_instance.build_dir / "gdb/gdb"
+                # self.info("Adding GDB binary from GDB build directory to image")
+            if gdb_binary.exists():
+                self.info("Adding GDB binary", gdb_binary, "to disk image")
+                self.add_file_to_image(gdb_binary, mode=0o755, path_in_target="usr/bin/gdb")
         if self.include_kgdb:
-            kgdb_binary = gdb_path / "bin/kgdb"
-            if not kgdb_binary.exists():
-                # try to add KGDB from the build directory
-                kgdb_binary = gdb_instance.build_dir / "gdb/kgdb"
-            if kgdb_binary.exists():
-                self.info("Adding KGDB binary", kgdb_binary, "to disk image")
-                self.add_file_to_image(kgdb_binary, mode=0o755, path_in_target="usr/bin/kgdb")
+            # If KGDB was already installed
+            if "usr/local/bin/kgdb" in self.mtree:
+                assert "usr/bin/kgdb" not in self.mtree, "KGDB already added?"
+                self.mtree.add_symlink(path_in_image="usr/bin/kgdb", symlink_dest=Path("/usr/local/bin/kgdb"))
+            else:
+                kgdb_binary = gdb_instance.real_install_root_dir / "bin/kgdb"
+                if not kgdb_binary.exists():
+                    # try to add KGDB from the build directory
+                    kgdb_binary = gdb_instance.build_dir / "gdb/kgdb"
+                if kgdb_binary.exists():
+                    self.info("Adding KGDB binary", kgdb_binary, "to disk image")
+                    self.add_file_to_image(kgdb_binary, mode=0o755, path_in_target="usr/bin/kgdb")
 
     def add_all_files_in_dir(self, root_dir: Path):
         for root, dirnames, filenames in os.walk(str(root_dir)):
@@ -752,7 +760,8 @@ class _BuildDiskImageBase(SimpleProject):
             if not os.getenv("_TEST_SKIP_METALOG"):
                 # skip adding to the metalog in the git push hook since it takes a long time and isn't that useful
                 self.add_unlisted_files_to_metalog()
-
+            # Add/symlink GDB (if requested).
+            self.add_gdb()
             # finally create the disk image
             self.make_disk_image()
         self.tmpdir = None
