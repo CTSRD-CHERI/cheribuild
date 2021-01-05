@@ -151,6 +151,16 @@ class TargetInfo(ABC):
 
     @property
     @abstractmethod
+    def ranlib(self) -> Path:
+        ...
+
+    @property
+    @abstractmethod
+    def nm(self) -> Path:
+        ...
+
+    @property
+    @abstractmethod
     def strip_tool(self) -> Path:
         ...
 
@@ -393,8 +403,15 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def ar(self) -> Path:
-        # Should rarely be needed
         return self.c_compiler.parent / "ar"
+
+    @property
+    def ranlib(self) -> Path:
+        return self.c_compiler.parent / "ranlib"
+
+    @property
+    def nm(self) -> Path:
+        return self.c_compiler.parent / "nm"
 
     @property
     def strip_tool(self) -> Path:

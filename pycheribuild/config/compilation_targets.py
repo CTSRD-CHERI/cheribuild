@@ -86,6 +86,14 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         return self._compiler_dir / "llvm-ar"
 
     @property
+    def ranlib(self) -> Path:
+        return self._compiler_dir / "llvm-ranlib"
+
+    @property
+    def nm(self) -> Path:
+        return self._compiler_dir / "llvm-nm"
+
+    @property
     def strip_tool(self) -> Path:
         return self._compiler_dir / "llvm-strip"
 
@@ -878,6 +886,14 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
     @property
     def ar(self) -> Path:
         return self.bindir / (self.binary_prefix + "ar")
+
+    @property
+    def ranlib(self) -> Path:
+        return self.bindir / (self.binary_prefix + "ranlib")
+
+    @property
+    def nm(self) -> Path:
+        return self.bindir / (self.binary_prefix + "nm")
 
     @property
     def strip_tool(self) -> Path:

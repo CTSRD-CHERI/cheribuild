@@ -86,8 +86,8 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         # Fortunetaly we don't need this when building only BBL.
         self.add_configure_and_make_env_arg("OBJCOPY", self.sdk_bindir / "llvm-objcopy")
         self.add_configure_and_make_env_arg("READELF", self.sdk_bindir / "llvm-readelf")
-        self.add_configure_and_make_env_arg("RANLIB", self.sdk_bindir / "llvm-ranlib")
-        self.add_configure_and_make_env_arg("AR", self.sdk_bindir / "llvm-ar")
+        self.add_configure_and_make_env_arg("RANLIB", self.target_info.ranlib)
+        self.add_configure_and_make_env_arg("AR", self.target_info.ar)
 
         if self.without_payload:
             # Build an OpenSBI fw_jump style BBL
