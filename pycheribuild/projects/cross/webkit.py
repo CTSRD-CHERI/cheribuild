@@ -42,7 +42,7 @@ class JsBackend(Enum):
 
 class BuildMorelloWebkit(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/webkit",
-                               default_branch="webkit-2.27.2-morello")
+                               default_branch="master")
     project_name = "webkit"
     dependencies = ["icu4c"]
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
