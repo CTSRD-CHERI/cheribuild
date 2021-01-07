@@ -45,7 +45,8 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
                                default_branch="master")
     project_name = "webkit"
     dependencies = ["icu4c"]
-    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    cross_install_dir = DefaultInstallDir.ROOTFS
 
     @classmethod
     def setup_config_options(cls, **kwargs):
