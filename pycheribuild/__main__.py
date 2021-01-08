@@ -95,6 +95,12 @@ def ensure_fd_is_blocking(fd):
         fatal_error("fd", fd, "is set to nonblocking and could not unset flag")
 
 
+def check_not_root():
+    if os.geteuid() == 0:
+        fatal_error("You are running cheribuild as root. This is dangerous, bad practice and can cause builds to fail."
+                    " Please re-run as a non-root user.", pretend=False)
+
+
 def check_macos_big_sur(config: DefaultCheriConfig):
     if not OSInfo.IS_MAC:
         return
@@ -116,6 +122,8 @@ def real_main():
     ensure_fd_is_blocking(sys.stdin.fileno())
     ensure_fd_is_blocking(sys.stdout.fileno())
     ensure_fd_is_blocking(sys.stderr.fileno())
+
+    check_not_root()
 
     config_loader = JsonAndCommandLineConfigLoader()
     # Don't suggest deprecated names when tab-completing
