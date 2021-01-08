@@ -56,7 +56,9 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         "RISC-V-Generic"]
 
     # Map Demos and the FreeRTOS apps we support building/running for
-    supported_demo_apps = {"RISC-V-Generic": ["main_blinky",
+    supported_demo_apps = {"RISC-V-Generic": [
+                                              "aws_ota",
+                                              "main_blinky",
                                               "main_compartment_test",
                                               "main_peekpoke",
                                               "main_servers",
@@ -195,6 +197,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                 program_root = "./modbus_demo"
             elif "servers" in self.demo_app:
                 program_root = "./demo/servers"
+            elif "aws_ota" in self.demo_app:
+                program_root = "coreMQTT-Agent"
             else:
                 program_root = "/no/path"
 
