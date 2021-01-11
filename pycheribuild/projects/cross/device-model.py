@@ -40,7 +40,7 @@ class BuildDeviceModel(CrossCompileAutotoolsProject):
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_MIPS64]
-    default_install_dir = DefaultInstallDir.SYSROOT
+    default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     build_in_source_dir = True  # Cannot build out-of-source
 
     def install(self, **kwargs):

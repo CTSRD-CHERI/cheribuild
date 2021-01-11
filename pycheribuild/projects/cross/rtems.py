@@ -44,7 +44,7 @@ class BuildRtems(CrossCompileProject):
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
-    default_install_dir = DefaultInstallDir.SYSROOT
+    default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     # RTEMS BSPs to build
     rtems_bsps = []

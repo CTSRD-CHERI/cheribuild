@@ -1612,9 +1612,13 @@ class GitRepository(SourceRepository):
 class DefaultInstallDir(Enum):
     DO_NOT_INSTALL = "Should not be installed"
     IN_BUILD_DIRECTORY = "$BUILD_DIR/test-install-prefix"
-    ROOTFS = "The rootfs for this target (<rootfs>/opt/<arch>/<program> by default)"
+    # Note: ROOTFS_LOCALBASE will be searched for libraries, ROOTFS_OPTBASE will not. The former should be used for
+    # libraries that will be used by other programs, and the latter should be used for standalone programs (such as
+    # PostgreSQL or WebKit).
+    # Note: for ROOTFS_OPTBASE, the path_in_rootfs attribute can be used to override the default of /opt/...
+    ROOTFS_OPTBASE = "The rootfs for this target (<rootfs>/opt/<arch>/<program> by default)"
+    ROOTFS_LOCALBASE = "The sysroot for this target (<rootfs>/usr/local/<arch> by default)"
     COMPILER_RESOURCE_DIR = "The compiler resource directory"
-    SYSROOT = "The sysroot for this target (<rootfs>/usr/local/<arch> by default)"
     CHERI_SDK = "The CHERI SDK directory"
     MORELLO_SDK = "The Morello SDK directory"
     BOOTSTRAP_TOOLS = "The bootstap tools directory"
@@ -1633,8 +1637,8 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         return _DO_NOT_INSTALL_PATH
     elif install_dir == DefaultInstallDir.IN_BUILD_DIRECTORY:
         return project.build_dir / "test-install-prefix"
-    elif install_dir == DefaultInstallDir.ROOTFS:
-        assert not project.compiling_for_host(), "Should not use DefaultInstallDir.ROOTFS for native builds!"
+    elif install_dir == DefaultInstallDir.ROOTFS_OPTBASE:
+        assert not project.compiling_for_host(), "Should not use DefaultInstallDir.ROOTFS_OPTBASE for native builds!"
         rootfs_target = project.target_info.get_rootfs_project()
         if hasattr(project, "path_in_rootfs"):
             assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
@@ -1648,19 +1652,19 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         if project.compiling_for_host():
             compiler_for_resource_dir = config.cheri_sdk_bindir / "clang"
         return get_compiler_info(compiler_for_resource_dir, config=config).get_resource_dir()
-    elif install_dir == DefaultInstallDir.SYSROOT:
+    elif install_dir == DefaultInstallDir.ROOTFS_LOCALBASE:
         return project.sdk_sysroot
     elif install_dir == DefaultInstallDir.CHERI_SDK:
         assert project.compiling_for_host(), "CHERI_SDK is only a valid install dir for native, " \
-                                             "use SYSROOT/ROOTFS for cross"
+                                             "use ROOTFS_LOCALBASE/ROOTFS_OPTBASE for cross"
         return config.cheri_sdk_dir
     elif install_dir == DefaultInstallDir.MORELLO_SDK:
         assert project.compiling_for_host(), "MORELLO_SDK is only a valid install dir for native, " \
-                                             "use SYSROOT/ROOTFS for cross"
+                                             "use ROOTFS_LOCALBASE/ROOTFS_OPTBASE for cross"
         return config.morello_sdk_dir
     elif install_dir == DefaultInstallDir.BOOTSTRAP_TOOLS:
         assert project.compiling_for_host(), "BOOTSTRAP_TOOLS is only a valid install dir for native, " \
-                                             "use SYSROOT/ROOTS for cross"
+                                             "use ROOTFS_LOCALBASE/ROOTS for cross"
         return config.other_tools_dir
     elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
         return _INVALID_INSTALL_DIR
@@ -1768,9 +1772,9 @@ class Project(SimpleProject):
         if install_dir == DefaultInstallDir.SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE:
             if cls._xtarget is not None and (
                     cls._xtarget.target_info_cls.is_baremetal() or cls._xtarget.target_info_cls.is_rtems()):
-                install_dir = DefaultInstallDir.SYSROOT
+                install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
             else:
-                install_dir = DefaultInstallDir.ROOTFS
+                install_dir = DefaultInstallDir.ROOTFS_OPTBASE
         return install_dir
 
     default_install_dir = None  # type: typing.Optional[DefaultInstallDir]
@@ -2076,7 +2080,7 @@ class Project(SimpleProject):
         if not self.compiling_for_host():
             install_dir_kind = self.get_default_install_dir_kind()
             # Install to SDK if CHERIBSD_ROOTFS is the install dir but we are not building for CheriBSD
-            if install_dir_kind == DefaultInstallDir.SYSROOT:
+            if install_dir_kind == DefaultInstallDir.ROOTFS_LOCALBASE:
                 if self.target_info.is_baremetal():
                     self.destdir = typing.cast(Path, self.sdk_sysroot.parent)
                     self._install_prefix = Path("/", self.target_info.target_triple)
@@ -2086,7 +2090,7 @@ class Project(SimpleProject):
                 else:
                     self._install_prefix = Path("/", self.target_info.sysroot_install_prefix_relative)
                     self.destdir = self._install_dir
-            elif install_dir_kind == DefaultInstallDir.ROOTFS:
+            elif install_dir_kind == DefaultInstallDir.ROOTFS_OPTBASE:
                 self.rootfs_path = self.target_info.get_rootfs_project().install_dir
                 relative_to_rootfs = os.path.relpath(str(self._install_dir), str(self.rootfs_path))
                 if relative_to_rootfs.startswith(os.path.pardir):
@@ -2221,7 +2225,7 @@ class Project(SimpleProject):
 
     @property
     def rootfs_dir(self):
-        assert self.get_default_install_dir_kind() == DefaultInstallDir.ROOTFS
+        assert self.get_default_install_dir_kind() == DefaultInstallDir.ROOTFS_OPTBASE
         return self.rootfs_path
 
     @property

@@ -65,7 +65,7 @@ class TemporarilyRemoveProgramsFromSdk(object):
 class BuildGDB(CrossCompileAutotoolsProject):
     path_in_rootfs = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    cross_install_dir = DefaultInstallDir.ROOTFS
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     repository = GitRepository(
         "https://github.com/CTSRD-CHERI/gdb.git",
         # Branch name is changed for every major GDB release:

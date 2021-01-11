@@ -41,7 +41,7 @@ class BuildOpenSSH(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/openssh-portable.git")
 
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
-    cross_install_dir = DefaultInstallDir.ROOTFS
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     # LD is used with CFLAGS so don't set to ld/ld.lld
     _define_ld = False
 

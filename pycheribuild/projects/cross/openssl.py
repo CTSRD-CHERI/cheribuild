@@ -41,7 +41,7 @@ class BuildOpenSSL(CrossCompileProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/openssl.git")
 
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
-    cross_install_dir = DefaultInstallDir.ROOTFS
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     def setup(self):
         super().setup()

@@ -34,7 +34,7 @@ from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir
 class BuildRsync(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/rsync.git")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     build_in_source_dir = True  # Cannot build out-of-source
 
     def configure(self, **kwargs):

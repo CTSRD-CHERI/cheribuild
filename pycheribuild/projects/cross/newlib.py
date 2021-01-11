@@ -48,7 +48,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
     # CC,CFLAGS, etc. are the compilers for the build host not the target -> don't set automatically
     _autotools_add_default_compiler_args = False
 
-    cross_install_dir = DefaultInstallDir.SYSROOT
+    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     supported_architectures = \
         [CompilationTargets.BAREMETAL_NEWLIB_MIPS64,
          CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP,

@@ -988,8 +988,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         install_nometalog_cmd = "INSTALL=\"install -N " + str(self.source_dir / "etc") + " -U\" METALOG=/dev/null"
         if is_lib:
             if install_to_internal_sysroot:
-                # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
-                sysroot_var = "\"$$$${SYSROOT}\""
+                # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand ROOTFS_LOCALBASE
+                sysroot_var = "\"$$$${ROOTFS_LOCALBASE}\""
                 install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install {i} MK_TESTS=no DESTDIR={sysroot};" \
                                          " fi".format(make=make_in_subdir, sysroot=sysroot_var, i=install_nometalog_cmd)
         if skip_install:
