@@ -106,11 +106,11 @@ class BuildFreeBSDBase(Project):
                                                     show_help=True)
 
         if "minimal" not in cls.__dict__:
-            cls.minimal = cls.add_bool_option("minimal", show_help=True,
+            cls.minimal = cls.add_bool_option("minimal", show_help=False,
                                               help="Don't build all of FreeBSD, just what is needed for running most "
                                                    "CHERI tests/benchmarks")
         if "build_tests" not in cls.__dict__:
-            cls.build_tests = cls.add_bool_option("build-tests", help="Build the tests too (-DWITH_TESTS)",
+            cls.build_tests = cls.add_bool_option("build-tests", help="Build the tests (-DWITH_TESTS/-DWITHOUT_TESTS)",
                                                   show_help=True, default=True)
 
         cls.debug_kernel = cls.add_bool_option("debug-kernel", help="Build the kernel with -O0 and verbose boot output",
@@ -1183,7 +1183,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                                      "<OUTPUT>/rootfs-mips64-hybrid or <OUTPUT>/rootfs-riscv64-purecap, " \
                                      "etc. depending on target)"
         super().setup_config_options(install_directory_help=install_directory_help, use_upstream_llvm=False)
-        cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=True,
+        cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=False,
                                                help="Only build a sysroot instead of the full system. This will only "
                                                     "build the libraries and skip all binaries")
 
@@ -1193,7 +1193,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.build_fpga_kernels = cls.add_bool_option("build-fpga-kernels", show_help=True, _allow_unknown_targets=True,
                                                      only_add_for_targets=fpga_targets,
                                                      help="Also build kernels for the FPGA.")
-        cls.build_fett_kernels = cls.add_bool_option("build-fett-kernels", show_help=True, _allow_unknown_targets=True,
+        cls.build_fett_kernels = cls.add_bool_option("build-fett-kernels", show_help=False, _allow_unknown_targets=True,
                                                      only_add_for_targets=fpga_targets,
                                                      help="Also build kernels for FETT.")
         cls.mfs_root_image = cls.add_path_option("mfs-root-image",
