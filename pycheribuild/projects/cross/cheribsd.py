@@ -284,8 +284,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         cls.add_debug_info_flag = cls.add_bool_option("debug-info", default=debug_info_by_default, show_help=True,
                                                       help="pass make flags for building with debug info")
-        cls.auto_obj = cls.add_bool_option("auto-obj", help="Use -DWITH_AUTO_OBJ (experimental)", show_help=True,
-                                           default=True)
         cls.with_manpages = cls.add_bool_option("with-manpages", help="Also install manpages. This is off by default"
                                                                       " since they can just be read from the host.")
         cls.build_googletest = cls.add_bool_option("build-googletest", default=True,
@@ -607,13 +605,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def buildworld_args(self) -> MakeOptions:
         self._setup_make_args()  # ensure make args are complete
         result = self.make_args.copy()
-        # FIXME: once it works for buildkernel remove here
-        if self.auto_obj:
-            result.set_with_options(AUTO_OBJ=True)
-
         if self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.RISCV64]):
-            # CheriBSD installworld currently get's very confused that libcheri CCDL is forced to false
-            # and attempts to install the files during installworld
+            # CheriBSD installworld currently gets very confused that libcheri CCDL is forced to false and attempts
+            # to install the files during installworld.
             result.set_with_options(CDDL=False)
         result.update(self.cross_toolchain_config)
         return result
@@ -700,8 +694,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Don't build a compiler if we are using and external toolchain (only build config, etc)
             if not self.use_bootstrapped_toolchain:
                 kernel_toolchain_opts.set_with_options(LLD_BOOTSTRAP=False, CLANG=False, CLANG_BOOTSTRAP=False)
-            if self.auto_obj:
-                kernel_toolchain_opts.set_with_options(AUTO_OBJ=True)
             self.run_make("kernel-toolchain", options=kernel_toolchain_opts)
             self.kernel_toolchain_exists = True
         self.info("Building kernels for configs:", kernconf)
