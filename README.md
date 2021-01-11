@@ -297,9 +297,8 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--build-and-test] [--list-targets] [--print-chosen-targets] [--dump-configuration]
                      [--print-targets-only] [--clang-path CLANG_PATH] [--clang++-path CLANG++_PATH]
                      [--clang-cpp-path CLANG_CPP_PATH] [--pass-k-to-make] [--with-libstatcounters] [--skip-world]
-                     [--skip-kernel] [--freebsd-subdir SUBDIRS] [--no-install-subdir-to-sysroot] [--buildenv]
-                     [--libcompat-buildenv] [--debug-output] [--mips-float-abi {soft,hard}]
-                     [--cross-compile-linkage {dynamic,static}]
+                     [--skip-kernel] [--freebsd-subdir SUBDIRS] [--buildenv] [--libcompat-buildenv] [--debug-output]
+                     [--mips-float-abi {soft,hard}] [--cross-compile-linkage {dynamic,static}]
                      [--subobject-bounds {conservative,subobject-safe,aggressive,very-aggressive,everywhere-unsafe}]
                      [--no-subobject-debug] [--no-clang-colour-diags] [--use-sdk-clang-for-native-xbuild]
                      [--configure-only] [--skip-install] [--skip-build] [--skip-sdk] [--trap-on-unrepresentable]
@@ -320,32 +319,26 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--no-include-toolchain-dependencies] [--compilation-db-in-source-dir] [--generate-cmakelists]
                      [--make-without-nice] [--make-jobs MAKE_JOBS] [--source-root SOURCE_ROOT]
                      [--output-root OUTPUT_ROOT] [--build-root BUILD_ROOT] [--tools-root TOOLS_ROOT]
-                     [--morello-sdk-root MORELLO_SDK_ROOT] [--sysroot-install-root SYSROOT_INSTALL_ROOT] [--qemu/gui]
-                     [--qemu/targets QEMU/TARGETS] [--qemu/unaligned] [--qemu/statistics]
-                     [--freebsd-universe/build-options OPTIONS] [--freebsd-universe/minimal]
-                     [--freebsd-universe/no-build-tests] [--go/bootstrap-toolchain GO/BOOTSTRAP_TOOLCHAIN]
-                     [--run-rtems/monitor-over-telnet PORT] [--sail-cheri-mips/trace-support]
-                     [--sail-riscv/trace-support] [--sail-cheri-riscv/trace-support] [--cheri-syzkaller/run-sysgen]
+                     [--morello-sdk-root MORELLO_SDK_ROOT] [--sysroot-install-root SYSROOT_INSTALL_ROOT]
+                     [--qemu/targets QEMU/TARGETS] [--qemu/statistics] [--cheri-syzkaller/run-sysgen]
                      [--run-syzkaller/syz-config RUN_SYZKALLER/SYZ_CONFIG]
                      [--run-syzkaller/ssh-privkey syzkaller_id_rsa] [--run-syzkaller/workdir DIR]
-                     [--cheribsd/build-options OPTIONS] [--cheribsd/minimal] [--cheribsd/no-build-tests]
-                     [--cheribsd/subdir SUBDIRS] [--cheribsd/kernel-config CONFIG] [--cheribsd/no-debug-info]
-                     [--cheribsd/no-auto-obj] [--cheribsd/sysroot-only] [--cheribsd/build-fpga-kernels]
-                     [--cheribsd/build-fett-kernels] [--cheribsd/pure-cap-kernel] [--cheribsd/caprevoke-kernel]
-                     [--cheribsd-mfs-root-kernel/no-build-fpga-kernels] [--cheribsd-sysroot/remote-sdk-path PATH]
-                     [--disk-image-minimal/extra-files DIR] [--disk-image-minimal/hostname HOSTNAME]
-                     [--disk-image-minimal/path IMGPATH] [--disk-image/extra-files DIR] [--disk-image/hostname HOSTNAME]
-                     [--disk-image/path IMGPATH] [--disk-image-freebsd/extra-files DIR]
-                     [--disk-image-freebsd/hostname HOSTNAME] [--disk-image-freebsd/path IMGPATH] [--freertos/demo DEMO]
-                     [--freertos/prog PROG] [--freertos/bsp BSP] [--run/monitor-over-telnet PORT]
-                     [--run/ssh-forwarding-port PORT] [--run-freertos/monitor-over-telnet PORT]
-                     [--run-freertos/demo DEMO] [--run-freertos/prog PROG] [--run-freertos/bsp BSP]
-                     [--run-minimal/monitor-over-telnet PORT] [--run-minimal/ssh-forwarding-port PORT]
-                     [--bash/set-as-root-shell] [--qtbase-dev/no-build-tests] [--qtbase-dev/build-examples]
-                     [--qtbase-dev/no-assertions] [--qtbase-dev/no-minimal] [--qtwebkit/build-jsc-only]
-                     [--webkit/backend {cloop,tier1asm,tier2asm}] [--webkit/no-tier2ptrliterals]
-                     [--webkit/jsheapoffsets]
-                     [TARGET [TARGET ...]]
+                     [--freebsd/build-options OPTIONS] [--freebsd/no-build-tests] [--freebsd/subdir SUBDIRS]
+                     [--freebsd/kernel-config CONFIG] [--freebsd/no-debug-info] [--cheribsd/build-options OPTIONS]
+                     [--cheribsd/no-build-tests] [--cheribsd/subdir SUBDIRS] [--cheribsd/kernel-config CONFIG]
+                     [--cheribsd/no-debug-info] [--cheribsd/build-fpga-kernels] [--cheribsd/pure-cap-kernel]
+                     [--cheribsd/caprevoke-kernel] [--cheribsd-mfs-root-kernel/no-build-fpga-kernels]
+                     [--cheribsd-sysroot/remote-sdk-path PATH] [--disk-image-minimal/extra-files DIR]
+                     [--disk-image-minimal/path IMGPATH] [--disk-image/extra-files DIR] [--disk-image/path IMGPATH]
+                     [--disk-image-freebsd/extra-files DIR] [--disk-image-freebsd/path IMGPATH] [--freertos/demo DEMO]
+                     [--freertos/prog PROG] [--freertos/bsp BSP] [--run/ssh-forwarding-port PORT]
+                     [--run/remote-kernel-path RUN/REMOTE_KERNEL_PATH] [--run-freertos/demo DEMO]
+                     [--run-freertos/prog PROG] [--run-freertos/bsp BSP] [--run-minimal/ssh-forwarding-port PORT]
+                     [--run-minimal/remote-kernel-path RUN_MINIMAL/REMOTE_KERNEL_PATH] [--bash/set-as-root-shell]
+                     [--qtbase-dev/no-build-tests] [--qtbase-dev/build-examples] [--qtbase-dev/no-assertions]
+                     [--qtbase-dev/no-minimal] [--qtwebkit/build-jsc-only] [--webkit/backend {cloop,tier1asm,tier2asm}]
+                     [--webkit/no-tier2ptrliterals] [--webkit/jsheapoffsets]
+                     [TARGET ...]
 
 positional arguments:
   TARGET                The targets to build
@@ -449,7 +442,7 @@ Configuration of default paths:
                         The directory to find sdk and bootstrap tools (default: '<OUTPUT_ROOT>')
   --morello-sdk-root MORELLO_SDK_ROOT
                         The directory to find/install the Morello SDK (default: ''<OUTPUT_ROOT>/morello-sdk'')
-  --sysroot-install-root SYSROOT_INSTALL_ROOT
+  --sysroot-install-root SYSROOT_INSTALL_ROOT, --sysroot-install-dir SYSROOT_INSTALL_ROOT
                         Sysroot prefix (default: '<TOOLS_ROOT>')
 
 Adjust flags used when compiling MIPS/CHERI projects:
@@ -530,9 +523,6 @@ FreeBSD and CheriBSD build configuration:
                         Only build subdirs SUBDIRS of FreeBSD/CheriBSD instead of the full tree. Useful for quickly
                         rebuilding individual programs/libraries. If more than one dir is passed they will be processed
                         in order. Note: This will break if not all dependencies have been built.
-  --no-install-subdir-to-sysroot
-                        Do not when using the --subdir option for CheriBSD targets also install the built libraries into
-                        the sysroot.
   --buildenv            Open a shell with the right environment for building the project. Currently only works for
                         FreeBSD/CheriBSD (default: 'False')
   --libcompat-buildenv, --libcheri-buildenv
@@ -547,47 +537,11 @@ Options controlling the use of docker for building:
                         container name (default: 'False')
 
 Options for target 'qemu':
-  --qemu/gui            Build a the graphical UI bits for QEMU (SDL,VNC) (default: 'False')
   --qemu/targets QEMU/TARGETS
                         Build QEMU for the following targets (default:
                         'cheri128-softmmu,mips64-softmmu,riscv64-softmmu,riscv64cheri-
                         softmmu,riscv32-softmmu,x86_64-softmmu,aarch64-softmmu')
-  --qemu/unaligned      Permit un-aligned loads/stores (default: 'False')
   --qemu/statistics     Collect statistics on out-of-bounds capability creation. (default: 'False')
-
-Options for target 'freebsd-universe':
-  --freebsd-universe/build-options OPTIONS
-                        Additional make options to be passed to make when building FreeBSD/CheriBSD. See `man src.conf`
-                        for more info. (default: '[]')
-  --freebsd-universe/minimal
-                        Don't build all of FreeBSD, just what is needed for running most CHERI tests/benchmarks
-                        (default: 'False')
-  --freebsd-universe/no-build-tests
-                        Do not build the tests too (-DWITH_TESTS)
-
-Options for target 'go':
-  --go/bootstrap-toolchain GO/BOOTSTRAP_TOOLCHAIN
-                        Path to alternate go bootstrap toolchain.
-
-Options for target 'run-rtems':
-  --run-rtems/monitor-over-telnet PORT
-                        If set, the QEMU monitor will be reachable by connecting to localhost at $PORT via telnet
-                        instead of using CTRL+A,C
-
-Options for target 'sail-cheri-mips':
-  --sail-cheri-mips/trace-support
-                        Build sail-cheri-mips simulators with tracing support (they will be slow but the traces are
-                        useful to debug failing tests) (default: 'False')
-
-Options for target 'sail-riscv':
-  --sail-riscv/trace-support
-                        Build sail-cheri-mips simulators with tracing support (they will be slow butthe traces are
-                        useful to debug failing tests) (default: 'False')
-
-Options for target 'sail-cheri-riscv':
-  --sail-cheri-riscv/trace-support
-                        Build sail-cheri-mips simulators with tracing support (they will be slow but the traces are
-                        useful to debug failing tests) (default: 'False')
 
 Options for target 'cheri-syzkaller':
   --cheri-syzkaller/run-sysgen
@@ -603,14 +557,29 @@ Options for target 'run-syzkaller':
   --run-syzkaller/workdir DIR
                         Working directory for syzkaller output.
 
+Options for target 'freebsd':
+  --freebsd/build-options OPTIONS
+                        Additional make options to be passed to make when building FreeBSD/CheriBSD. See `man src.conf`
+                        for more info. (default: '[]')
+  --freebsd/no-build-tests
+                        Do not build the tests (-DWITH_TESTS/-DWITHOUT_TESTS)
+  --freebsd/subdir SUBDIRS
+                        Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding an individual
+                        programs/libraries. If more than one dir is passed, they will be processed in order. Note: This
+                        will break if not all dependencies have been built. (default: 'the value of the global
+                        --freebsd-subdir options')
+  --freebsd/kernel-config CONFIG
+                        The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64) (default:
+                        'target-dependent default')
+  --freebsd/no-debug-info
+                        Do not pass make flags for building with debug info
+
 Options for target 'cheribsd':
   --cheribsd/build-options OPTIONS
                         Additional make options to be passed to make when building FreeBSD/CheriBSD. See `man src.conf`
                         for more info. (default: '[]')
-  --cheribsd/minimal    Don't build all of FreeBSD, just what is needed for running most CHERI tests/benchmarks
-                        (default: 'False')
   --cheribsd/no-build-tests
-                        Do not build the tests too (-DWITH_TESTS)
+                        Do not build the tests (-DWITH_TESTS/-DWITHOUT_TESTS)
   --cheribsd/subdir SUBDIRS
                         Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding an individual
                         programs/libraries. If more than one dir is passed, they will be processed in order. Note: This
@@ -621,15 +590,8 @@ Options for target 'cheribsd':
                         'target-dependent default')
   --cheribsd/no-debug-info
                         Do not pass make flags for building with debug info
-  --cheribsd/no-auto-obj
-                        Do not use -DWITH_AUTO_OBJ (experimental)
-  --cheribsd/sysroot-only
-                        Only build a sysroot instead of the full system. This will only build the libraries and skip all
-                        binaries (default: 'False')
   --cheribsd/build-fpga-kernels
                         Also build kernels for the FPGA. (default: 'False')
-  --cheribsd/build-fett-kernels
-                        Also build kernels for FETT. (default: 'False')
   --cheribsd/pure-cap-kernel
                         Build kernel with pure capability ABI (experimental) (default: 'False')
   --cheribsd/caprevoke-kernel
@@ -647,8 +609,6 @@ Options for target 'disk-image-minimal':
   --disk-image-minimal/extra-files DIR
                         A directory with additional files that will be added to the image (default: '$SOURCE_ROOT/extra-
                         files-minimal')
-  --disk-image-minimal/hostname HOSTNAME
-                        The hostname to use for the QEMU image (default: 'cheribsd-minimal-<ARCHITECTURE>')
   --disk-image-minimal/path IMGPATH
                         The output path for the QEMU disk image (default: '$OUTPUT_ROOT/cheribsd-
                         minimal-<TARGET>-disk.img depending on architecture')
@@ -657,8 +617,6 @@ Options for target 'disk-image':
   --disk-image/extra-files DIR
                         A directory with additional files that will be added to the image (default: '$SOURCE_ROOT/extra-
                         files')
-  --disk-image/hostname HOSTNAME
-                        The hostname to use for the QEMU image (default: 'cheribsd-<ARCHITECTURE>')
   --disk-image/path IMGPATH
                         The output path for the QEMU disk image (default: '$OUTPUT_ROOT/cheribsd-<TARGET>-disk.img
                         depending on architecture')
@@ -667,8 +625,6 @@ Options for target 'disk-image-freebsd':
   --disk-image-freebsd/extra-files DIR
                         A directory with additional files that will be added to the image (default: '$SOURCE_ROOT/extra-
                         files')
-  --disk-image-freebsd/hostname HOSTNAME
-                        The hostname to use for the QEMU image (default: 'freebsd-<ARCHITECTURE>')
   --disk-image-freebsd/path IMGPATH
                         The output path for the QEMU disk image (default: '$OUTPUT_ROOT/freebsd-<TARGET>-disk.img
                         depending on architecture')
@@ -681,17 +637,14 @@ Options for target 'freertos':
                         RISC-V-Generic/README for more details (default: 'target-dependent default')
 
 Options for target 'run':
-  --run/monitor-over-telnet PORT
-                        If set, the QEMU monitor will be reachable by connecting to localhost at $PORT via telnet
-                        instead of using CTRL+A,C
   --run/ssh-forwarding-port PORT
                         The port on localhost to forward to the QEMU ssh port. You can then use `ssh root@localhost -p
-                        $PORT` to connect to the VM (default: '<UID-dependent>')
+                        $PORT` to connect to the VM (default: '19500')
+  --run/remote-kernel-path RUN/REMOTE_KERNEL_PATH
+                        When set rsync will be used to update the kernel image from a remote host before launching QEMU.
+                        Useful when building and running on separate machines.
 
 Options for target 'run-freertos':
-  --run-freertos/monitor-over-telnet PORT
-                        If set, the QEMU monitor will be reachable by connecting to localhost at $PORT via telnet
-                        instead of using CTRL+A,C
   --run-freertos/demo DEMO
                         The FreeRTOS Demo to run. (default: 'RISC-V-Generic')
   --run-freertos/prog PROG
@@ -702,16 +655,16 @@ Options for target 'run-freertos':
                         Generic/README for more details (default: 'target-dependent default')
 
 Options for target 'run-minimal':
-  --run-minimal/monitor-over-telnet PORT
-                        If set, the QEMU monitor will be reachable by connecting to localhost at $PORT via telnet
-                        instead of using CTRL+A,C
   --run-minimal/ssh-forwarding-port PORT
                         The port on localhost to forward to the QEMU ssh port. You can then use `ssh root@localhost -p
-                        $PORT` to connect to the VM (default: '<UID-dependent>')
+                        $PORT` to connect to the VM (default: '19519')
+  --run-minimal/remote-kernel-path RUN_MINIMAL/REMOTE_KERNEL_PATH
+                        When set rsync will be used to update the kernel image from a remote host before launching QEMU.
+                        Useful when building and running on separate machines.
 
 Options for target 'bash':
   --bash/set-as-root-shell
-                        Set root's shell to bash (default: 'False')
+                        Set root's shell to bash (in the target rootfs) (default: 'False')
 
 Options for target 'qtbase-dev':
   --qtbase-dev/no-build-tests
