@@ -398,12 +398,10 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        if not OSInfo.IS_FREEBSD:
-            cls.remote_kernel_path = cls.add_config_option("remote-kernel-path", show_help=False,
-                help="Path to the FreeBSD kernel image on a remote host. Useful when building and running on separate "
-                     "machines.")
-            cls.skip_kernel_update = cls.add_bool_option("skip-kernel-update", show_help=False,
-                                                         help="Don't update the kernel from the remote host")
+        cls.remote_kernel_path = cls.add_config_option(
+            "remote-kernel-path", show_help=True,
+            help="When set rsync will be used to update the kernel image from a remote host before launching QEMU. "
+                 "Useful when building and running on separate machines.")
 
     def __init__(self, config: CheriConfig, source_class: "typing.Type[BuildFreeBSD]" = None,
                  disk_image_class: "typing.Type[BuildFreeBSDImage]" = None, needs_disk_image=True):
@@ -418,27 +416,15 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             self.rootfs_path = source_class.get_rootfs_dir(self, config=config)
         if needs_disk_image:
             self.disk_image = disk_image_class.get_instance(self).disk_image_path
-        self.needs_remote_kernel_copy = True
-        # no need to copy from remote host if we were crossbuilding
-        if OSInfo.IS_FREEBSD or source_class.get_instance(self).crossbuild:
-            self.needs_remote_kernel_copy = False
-        # same if skip-update was passed
-        elif self.skip_kernel_update or self.config.skip_update:
-            self.needs_remote_kernel_copy = False
 
     def _copy_kernel_image_from_remote_host(self):
-        self.info("Copying kernel image from FreeBSD build machine")
-        if not self.remote_kernel_path:
-            self.fatal("Path to the remote disk image is not set, option '--", self.target, "/",
-                       "remote-kernel-path' must be set to a path that scp understands",
-                       " (e.g. vica:/foo/bar/kernel)", sep="")
-            return
         scp_path = os.path.expandvars(self.remote_kernel_path)
+        self.info("Copying kernel image from build machine:", scp_path)
         self.makedirs(self.current_kernel.parent)
         self.copy_remote_file(scp_path, self.current_kernel)
 
     def process(self):
-        if self.needs_remote_kernel_copy:
+        if self.remote_kernel_path is not None:
             self._copy_kernel_image_from_remote_host()
         super().process()
 
