@@ -278,10 +278,9 @@ class BuildSailCheriMips(ProjectUsingOpam):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.with_trace_support = cls.add_bool_option("trace-support", show_help=False,
-                                                     help="Build sail-cheri-mips simulators with tracing support (they "
-                                                          "will be slow but the traces are useful to debug failing "
-                                                          "tests)")
+        cls.with_trace_support = cls.add_bool_option(
+            "trace-support", show_help=False,
+            help="Build sail-cheri-mips simulators with tracing support (slow, but useful to debug failing tests)")
 
     def compile(self, **kwargs):
         if self.with_trace_support:
@@ -328,17 +327,7 @@ class BuildSailRISCV(ProjectUsingOpam):
         super().__init__(config)
         self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.with_trace_support = cls.add_bool_option("trace-support", show_help=True,
-                                                     help="Build sail-cheri-mips simulators with tracing support (they "
-                                                          "will be slow but"
-                                                          "the traces are useful to debug failing tests)")
-
     def compile(self, **kwargs):
-        if self.with_trace_support:
-            self.make_args.set(TRACE="yes")
         cmd = [self.make_args.command, self.config.make_j_flag, "opam-build"] + self.make_args.all_commandline_args
         self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
@@ -361,17 +350,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
         super().__init__(config)
         self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.with_trace_support = cls.add_bool_option("trace-support", show_help=True,
-                                                     help="Build sail-cheri-mips simulators with tracing support (they "
-                                                          "will be slow but the traces are useful to debug failing "
-                                                          "tests)")
-
     def compile(self, **kwargs):
-        if self.with_trace_support:
-            self.make_args.set(TRACE="yes")
         cmd = [self.make_args.command, self.config.make_j_flag, "opam-build"] + self.make_args.all_commandline_args
         self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
