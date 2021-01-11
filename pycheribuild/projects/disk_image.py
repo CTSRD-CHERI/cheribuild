@@ -132,7 +132,7 @@ class _BuildDiskImageBase(SimpleProject):
                                                        "image (default: "
                                                        "'$SOURCE_ROOT/extra-files" + extra_files_suffix + "')",
                                                   metavar="DIR")
-        cls.hostname = cls.add_config_option("hostname", show_help=True, default=default_hostname, metavar="HOSTNAME",
+        cls.hostname = cls.add_config_option("hostname", show_help=False, default=default_hostname, metavar="HOSTNAME",
                                              help="The hostname to use for the QEMU image")
         if "use_qcow2" not in cls.__dict__:
             cls.use_qcow2 = cls.add_bool_option("use-qcow2",
