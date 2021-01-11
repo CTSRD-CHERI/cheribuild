@@ -44,7 +44,7 @@ from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUAr
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile
 from ..targets import target_manager
-from ..utils import AnsiColour, classproperty, coloured, include_local_file, OSInfo
+from ..utils import AnsiColour, classproperty, coloured, include_local_file
 
 
 # Notes:
@@ -137,10 +137,9 @@ class _BuildDiskImageBase(SimpleProject):
         if "use_qcow2" not in cls.__dict__:
             cls.use_qcow2 = cls.add_bool_option("use-qcow2",
                                                 help="Convert the disk image to QCOW2 format instead of raw")
-        if not OSInfo.IS_FREEBSD:
-            cls.remote_path = cls.add_config_option("remote-path", show_help=True, metavar="PATH",
-                                                    help="The path on the "
-                                                         "remote FreeBSD machine from where to copy the disk image")
+        cls.remote_path = cls.add_config_option("remote-path", show_help=False, metavar="PATH",
+                                                help="When set rsync will be used to update the image from "
+                                                     "the remote server instead of building it locally.")
         cls.wget_via_tmp = cls.add_bool_option("wget-via-tmp",
                                                help="Use a directory in /tmp for recursive wget operations;"
                                                     "of interest in rare cases, like extra-files on smbfs.")
@@ -170,7 +169,6 @@ class _BuildDiskImageBase(SimpleProject):
         self.rootfs_dir = self.source_project.get_install_dir(self)
         assert self.rootfs_dir is not None
         self.user_group_db_dir = self.rootfs_dir / "etc"
-        self.cross_build_image = self.source_project.crossbuild
         self.minimum_image_size = "1g"  # minimum image size = 1GB
         self.mtree = MtreeFile()
         self.input_metalogs = [self.rootfs_dir / "METALOG.world", self.rootfs_dir / "METALOG.kernel"]
@@ -656,18 +654,12 @@ class _BuildDiskImageBase(SimpleProject):
                 self.run_cmd(qemu_img_command, "info", self.disk_image_path)
 
     def copy_from_remote_host(self):
-        self.info("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
-        if not self.remote_path:
-            self.fatal("Path to the remote disk image is not set, option '--", self.target,
-                       "/remote-path' must be set to a path that scp understands (e.g. vica:/foo/bar/disk.img)", sep="")
-            return
-        # noinspection PyAttributeOutsideInit
-        self.remote_path = os.path.expandvars(self.remote_path)
-        self.info("Will copy the disk-image from ", self.remote_path, sep="")
+        self.info("Copying disk image instead of building it.")
+        rsync_path = os.path.expandvars(self.remote_path)
+        self.info("Will copy the disk-image from ", rsync_path, sep="")
         if not self.query_yes_no("Continue?"):
             return
-
-        self.copy_remote_file(self.remote_path, self.disk_image_path)
+        self.copy_remote_file(rsync_path, self.disk_image_path)
 
     def process(self):
         # Remove some old disk image names:
@@ -679,12 +671,7 @@ class _BuildDiskImageBase(SimpleProject):
         elif self.crosscompile_target.is_x86_64(include_purecap=False):
             old_names = ["-native", "-x86-64"]
         self._cleanup_old_files(self.disk_image_path, self.build_configuration_suffix(), old_names)
-
-        if not OSInfo.IS_FREEBSD and self.cross_build_image:
-            with self.set_env(PATH=str(self.config.output_root / "freebsd-cross/bin") + ":" + os.getenv("PATH")):
-                self.__process()
-        else:
-            self.__process()
+        self.__process()
 
     @staticmethod
     def path_from_env(var, default=None) -> typing.Optional[Path]:
@@ -713,7 +700,7 @@ class _BuildDiskImageBase(SimpleProject):
             self.delete_file(self.disk_image_path)
 
         # we can only build disk images on FreeBSD, so copy the file if we aren't
-        if not OSInfo.IS_FREEBSD and not self.cross_build_image:
+        if self.remote_path is not None:
             self.copy_from_remote_host()
             return
 
