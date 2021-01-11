@@ -278,7 +278,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.with_trace_support = cls.add_bool_option("trace-support", show_help=True,
+        cls.with_trace_support = cls.add_bool_option("trace-support", show_help=False,
                                                      help="Build sail-cheri-mips simulators with tracing support (they "
                                                           "will be slow but the traces are useful to debug failing "
                                                           "tests)")

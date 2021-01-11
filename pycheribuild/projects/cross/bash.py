@@ -55,7 +55,7 @@ class BuildBash(CrossCompileAutotoolsProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.set_as_root_shell = cls.add_bool_option("set-as-root-shell", show_help=True,
-                                                    help="Set root's shell to bash")
+                                                    help="Set root's shell to bash (in the target rootfs)")
 
     def install(self, **kwargs):
         if self.destdir:

@@ -201,7 +201,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     _default_install_dir_fn = ComputedDefaultValue(function=freebsd_install_dir,
                                                    as_string="$INSTALL_ROOT/freebsd-{mips/x86}")
-    hide_options_from_help = True  # hide this for now (only show cheribsd)
     add_custom_make_options = True
     use_llvm_binutils = False
 
@@ -1034,11 +1033,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
                          env=make_args.env_vars, cwd=self.source_dir)
 
 
+# FIXME: is this still needed???
 class BuildFreeBSDGFE(BuildFreeBSD):
     project_name = "freebsd-gfe"
     target = "freebsd-gfe"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git", default_branch="freebsd-crossbuild")
     supported_architectures = [CompilationTargets.FREEBSD_RISCV64]
+    hide_options_from_help = True  # hide this from --help for now
 
 
 # Build FreeBSD with the default options (build the bundled clang instead of using the SDK one)
@@ -1049,11 +1050,7 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     build_dir_suffix = "-default-options"
     add_custom_make_options = False
-
-    # also try to support building for RISCV
-    supported_architectures = BuildFreeBSD.supported_architectures
-    if not OSInfo.IS_FREEBSD:
-        crossbuild = True
+    hide_options_from_help = True  # hide this from --help for now
 
     def clean(self) -> ThreadJoiner:
         # Bootstrapping LLVM takes forever with FreeBSD makefiles
@@ -1098,6 +1095,8 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     target = "freebsd-universe"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    minimal = False
+    hide_options_from_help = True  # hide this from --help for now
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -1345,7 +1344,7 @@ class BuildCheriBSDFett(BuildCHERIBSD):
     target = "cheribsd-fett"
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
-    hide_options_from_help = True
+    hide_options_from_help = True  # hide this from --help for now
 
     def __init__(self, config):
         super().__init__(config)

@@ -66,7 +66,7 @@ class BuildQEMUBase(AutotoolsProject):
                                            help="Don't require SMB support when building QEMU (warning: most --test "
                                                 "targets will fail without smbd support)")
 
-        cls.gui = cls.add_bool_option("gui", show_help=True, default=False,
+        cls.gui = cls.add_bool_option("gui", show_help=False, default=False,
                                       help="Build a the graphical UI bits for QEMU (SDL,VNC)")
         cls.qemu_targets = cls.add_config_option("targets",
                                                  show_help=True, help="Build QEMU for the following targets",
@@ -237,7 +237,7 @@ class BuildQEMU(BuildQEMUBase):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options()
         # Turn on unaligned loads/stores by default
-        cls.unaligned = cls.add_bool_option("unaligned", show_help=True, help="Permit un-aligned loads/stores",
+        cls.unaligned = cls.add_bool_option("unaligned", show_help=False, help="Permit un-aligned loads/stores",
                                             default=False)
         cls.statistics = cls.add_bool_option("statistics", show_help=True,
                                              help="Collect statistics on out-of-bounds capability creation.")

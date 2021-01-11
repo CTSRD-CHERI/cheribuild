@@ -80,7 +80,7 @@ class LaunchQEMUBase(SimpleProject):
         cls.log_directory = cls.add_path_option("log-directory", default=None, metavar="DIR",
                                                 help="If set QEMU will log to a timestamped file in this directory. "
                                                      "Will be ignored if the 'logfile' option is set")
-        cls.use_telnet = cls.add_config_option("monitor-over-telnet", kind=int, metavar="PORT", show_help=True,
+        cls.use_telnet = cls.add_config_option("monitor-over-telnet", kind=int, metavar="PORT", show_help=False,
                                                help="If set, the QEMU monitor will be reachable by connecting to "
                                                     "localhost at $PORT via telnet instead of using CTRL+A,C")
 
@@ -399,10 +399,10 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         if not OSInfo.IS_FREEBSD:
-            cls.remote_kernel_path = cls.add_config_option("remote-kernel-path", show_help=True,
-                                                           help="Path to the FreeBSD kernel image on a remote host. "
-                                                                "Needed because FreeBSD cannot be cross-compiled.")
-            cls.skip_kernel_update = cls.add_bool_option("skip-kernel-update", show_help=True,
+            cls.remote_kernel_path = cls.add_config_option("remote-kernel-path", show_help=False,
+                help="Path to the FreeBSD kernel image on a remote host. Useful when building and running on separate "
+                     "machines.")
+            cls.skip_kernel_update = cls.add_bool_option("skip-kernel-update", show_help=False,
                                                          help="Don't update the kernel from the remote host")
 
     def __init__(self, config: CheriConfig, source_class: "typing.Type[BuildFreeBSD]" = None,
