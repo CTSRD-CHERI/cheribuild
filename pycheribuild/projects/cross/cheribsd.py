@@ -250,8 +250,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         cls.kernel_config = cls.add_config_option(
             "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
             default=ComputedDefaultValue(function=lambda _, p: p.default_kernel_config(),
-                                         as_string="target-dependent default"),
-            help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64)")  # type: str
+                                         as_string="target-dependent, usually GENERIC"),
+            help="The kernel configuration to use for `make buildkernel`")  # type: str
 
         if cls._xtarget is not None and cls._xtarget.is_hybrid_or_purecap_cheri():
             # When targeting CHERI we have to use CHERI LLVM

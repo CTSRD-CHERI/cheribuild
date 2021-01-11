@@ -569,8 +569,8 @@ Options for target 'freebsd':
                         will break if not all dependencies have been built. (default: 'the value of the global
                         --freebsd-subdir options')
   --freebsd/kernel-config CONFIG
-                        The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64) (default:
-                        'target-dependent default')
+                        The kernel configuration to use for `make buildkernel` (default: 'target-dependent, usually
+                        GENERIC')
   --freebsd/no-debug-info
                         Do not pass make flags for building with debug info
 
@@ -586,8 +586,8 @@ Options for target 'cheribsd':
                         will break if not all dependencies have been built. (default: 'the value of the global
                         --freebsd-subdir options')
   --cheribsd/kernel-config CONFIG
-                        The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64) (default:
-                        'target-dependent default')
+                        The kernel configuration to use for `make buildkernel` (default: 'target-dependent, usually
+                        GENERIC')
   --cheribsd/no-debug-info
                         Do not pass make flags for building with debug info
   --cheribsd/build-fpga-kernels
