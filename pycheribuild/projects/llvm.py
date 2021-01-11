@@ -434,7 +434,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     skip_cheri_symlinks = False
     is_sdk_target = True
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    cross_install_dir = DefaultInstallDir.ROOTFS
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     default_architecture = CompilationTargets.NATIVE
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
 

@@ -35,7 +35,7 @@ class SNMalloc(CrossCompileCMakeProject):
     project_name = "snmalloc"
     repository = GitRepository("https://github.com/nwf/snmalloc")
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    cross_install_dir = DefaultInstallDir.ROOTFS
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     default_build_type = BuildType.DEBUG
 
     @classmethod

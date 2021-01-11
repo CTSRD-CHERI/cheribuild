@@ -42,7 +42,7 @@ class BuildCheriExercises(CrossCompileProject):
                                CompilationTargets.CHERIBSD_MORELLO_PURECAP,
                                CompilationTargets.CHERIBSD_MIPS_PURECAP,  # untested, but should work
                                ]
-    default_install_dir = DefaultInstallDir.ROOTFS
+    default_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     path_in_rootfs = "/opt/cheri-exercises"
 
     def __init__(self, *args, **kwargs):

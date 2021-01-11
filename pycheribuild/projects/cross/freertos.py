@@ -47,7 +47,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     supported_architectures = [
         CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
         CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
-    default_install_dir = DefaultInstallDir.SYSROOT
+    default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     # FreeRTOS Demos to build
     supported_freertos_demos = [

@@ -33,7 +33,7 @@ from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir
 class BuildAsio(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/chriskohlhoff/asio/")
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.SYSROOT
+    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def setup(self):
         super().setup()

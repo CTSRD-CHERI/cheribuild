@@ -129,7 +129,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     def default_install_dir(self):
         # Install compiler-rt to the sysroot to handle purecap and non-CHERI RTEMS
         if self._xtarget is CompilationTargets.RTEMS_RISCV64_PURECAP:
-            return DefaultInstallDir.SYSROOT
+            return DefaultInstallDir.ROOTFS_LOCALBASE
         return DefaultInstallDir.COMPILER_RESOURCE_DIR
 
     def __init__(self, config: CheriConfig):

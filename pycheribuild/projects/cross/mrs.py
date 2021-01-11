@@ -36,7 +36,7 @@ class MRS(CrossCompileCMakeProject):
     project_name = "mrs"
     repository = GitRepository("https://github.com/CTSRD-CHERI/mrs")
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
-    cross_install_dir = DefaultInstallDir.ROOTFS
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     # set --mrs/build-type <type> to control build type, default is RelWithDebInfo
 

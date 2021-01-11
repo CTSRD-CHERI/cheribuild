@@ -290,7 +290,7 @@ class LaunchQEMUBase(SimpleProject):
 
             def gdb_command(main_binary, bp=None, extra_binary=None) -> str:
                 gdb_cmd = BuildGDB.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"
-                # Set the sysroot to ensure that the .debug file is loaded from $SYSROOT/usr/lib/debug/boot/kernel
+                # Set the sysroot to ensure that the .debug file is loaded from <ROOTFS>/usr/lib/debug/boot/kernel
                 result = [gdb_cmd, main_binary, "--init-eval-command=set sysroot " + str(self.rootfs_path)]
                 # Once the file has been loaded set a breakpoint on panic() and connect to the remote host
                 if bp:

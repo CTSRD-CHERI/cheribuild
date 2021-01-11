@@ -43,7 +43,7 @@ class BuildZlib(CrossCompileAutotoolsProject):
     _configure_supports_variables_on_cmdline = False
 
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
-    cross_install_dir = DefaultInstallDir.ROOTFS
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     def setup(self):
         super().setup()

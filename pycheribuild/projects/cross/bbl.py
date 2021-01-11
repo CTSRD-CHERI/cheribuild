@@ -45,7 +45,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     is_sdk_target = False
     needs_sysroot = False  # Should be buildable without a sysroot
     kernel_class = None
-    cross_install_dir = DefaultInstallDir.ROOTFS
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     without_payload = False
     mem_start = "0x80000000"
 

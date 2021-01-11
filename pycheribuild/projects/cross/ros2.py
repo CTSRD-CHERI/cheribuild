@@ -39,7 +39,7 @@ class BuildRos2(CrossCompileCMakeProject):
     # as a library for building other applications using cheribuild
     # therefore, the _install_dir doesn't do anything, but cheribuild requires them
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     dependencies = ["poco"]
     _extra_git_clean_excludes = ["--exclude=src"]  # don't delete src/ when running clean
 

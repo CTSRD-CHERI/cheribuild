@@ -40,7 +40,7 @@ class BuildSQLbox(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/kristapsdz/sqlbox.git")
 
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     make_kind = MakeCommandKind.BsdMake
     add_host_target_build_config_options = False
