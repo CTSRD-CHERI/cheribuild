@@ -42,8 +42,7 @@ from .cross.freertos import BuildFreeRTOS
 from .cross.gdb import BuildGDB
 from .cross.rtems import BuildRtems
 from .cross.u_boot import BuildUBoot
-from .disk_image import (BuildCheriBSDDiskImage, BuildFreeBSDGFEDiskImage, BuildFreeBSDImage,
-                         BuildFreeBSDWithDefaultOptionsDiskImage)
+from .disk_image import (BuildCheriBSDDiskImage, BuildFreeBSDImage, BuildFreeBSDWithDefaultOptionsDiskImage)
 from .project import CheriConfig, CPUArchitecture, SimpleProject, TargetAliasWithDependencies
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
@@ -632,17 +631,6 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
     project_name = "run-freebsd-with-default-options"
     hide_options_from_help = True
     _source_class = BuildFreeBSDWithDefaultOptionsDiskImage
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        add_to_port = cls.get_cross_target_index()
-        super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
-
-
-class LaunchFreeBSDGFE(_RunMultiArchFreeBSDImage):
-    project_name = "run-freebsd-gfe"
-    hide_options_from_help = True
-    _source_class = BuildFreeBSDGFEDiskImage
 
     @classmethod
     def setup_config_options(cls, **kwargs):

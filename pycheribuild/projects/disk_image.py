@@ -37,7 +37,7 @@ import typing
 from pathlib import Path
 
 from .cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdDeviceModel, BuildFreeBSD, BuildFreeBSDDeviceModel,
-                             BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions)
+                             BuildFreeBSDWithDefaultOptions)
 from .cross.gdb import (BuildGDB, BuildKGDB)
 from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget,
                       DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
@@ -1100,12 +1100,6 @@ class BuildFreeBSDImage(BuildMultiArchDiskImage):
 class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
     project_name = "disk-image-freebsd-with-default-options"
     _source_class = BuildFreeBSDWithDefaultOptions
-    hide_options_from_help = True
-
-
-class BuildFreeBSDGFEDiskImage(BuildFreeBSDImage):
-    project_name = "disk-image-freebsd-gfe"
-    _source_class = BuildFreeBSDGFE
     hide_options_from_help = True
 
 

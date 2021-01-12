@@ -1025,15 +1025,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
                          env=make_args.env_vars, cwd=self.source_dir)
 
 
-# FIXME: is this still needed???
-class BuildFreeBSDGFE(BuildFreeBSD):
-    project_name = "freebsd-gfe"
-    target = "freebsd-gfe"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git", default_branch="freebsd-crossbuild")
-    supported_architectures = [CompilationTargets.FREEBSD_RISCV64]
-    hide_options_from_help = True  # hide this from --help for now
-
-
 # Build FreeBSD with the default options (build the bundled clang instead of using the SDK one)
 # also don't add any of the default -DWITHOUT/DWITH_FOO options
 class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
