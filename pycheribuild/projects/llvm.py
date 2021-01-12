@@ -33,6 +33,7 @@ import typing
 from pathlib import Path
 
 from .project import BuildType, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject
+from ..config.chericonfig import CheriConfig
 from ..config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTargetInfo, CompilationTargets,
                                           FreeBSDTargetInfo)
 from ..config.loader import ComputedDefaultValue
@@ -418,13 +419,26 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
     @classmethod
     def get_install_dir_for_type(cls, caller: SimpleProject, compiler_type: CompilerType):
         if compiler_type == CompilerType.CHERI_LLVM:
-            return BuildCheriLLVM.get_install_dir(caller, cross_target=CompilationTargets.NATIVE)
+            return BuildCheriLLVM.get_native_install_path(caller.config)
         if compiler_type == CompilerType.MORELLO_LLVM:
-            return BuildMorelloLLVM.get_install_dir(caller, cross_target=CompilationTargets.NATIVE)
+            return BuildMorelloLLVM.get_native_install_path(caller.config)
         if compiler_type == CompilerType.UPSTREAM_LLVM:
-            return BuildUpstreamLLVM.get_install_dir(caller, cross_target=CompilationTargets.NATIVE)
+            return BuildUpstreamLLVM.get_native_install_path(caller.config)
         else:
             raise ValueError("Invalid compiler type: " + str(compiler_type))
+
+    def process(self):
+        if self.compiling_for_host() and not is_jenkins_build():
+            if self.get_native_install_path(self.config) != self.install_dir:
+                self.fatal("Overriding the install directory of ", self.target,
+                           " is not supported, set the global path properties instead.", fatal_when_pretending=True)
+        return super().process()
+
+    @classmethod
+    def get_native_install_path(cls, config: CheriConfig):
+        # This returns the path where the installed compiler is expected to be
+        # Note: When building LLVM in Jenkins this will not match the install_directory
+        raise NotImplementedError()
 
 
 class BuildCheriLLVM(BuildLLVMMonoRepoBase):
@@ -485,6 +499,10 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
             ]
         return [x + "-" for x in triples]
 
+    @classmethod
+    def get_native_install_path(cls, config: CheriConfig):
+        return config.cheri_sdk_dir
+
 
 class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://git.morello-project.org/morello/llvm-project.git")
@@ -525,6 +543,10 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
         for tgt in CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS:
             self.add_compiler_with_config_file("cheribsd", tgt)
 
+    @classmethod
+    def get_native_install_path(cls, config: CheriConfig):
+        return config.morello_sdk_dir
+
 
 class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://github.com/llvm/llvm-project.git")
@@ -534,6 +556,10 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
         function=lambda config, project: config.output_root / "upstream-llvm",
         as_string="$INSTALL_ROOT/upstream-llvm")
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
+
+    @classmethod
+    def get_native_install_path(cls, config: CheriConfig):
+        return config.output_root / "upstream-llvm"
 
 
 class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
@@ -549,6 +575,10 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
     def configure(self, **kwargs):
         self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips;host")
         super().configure(**kwargs)
+
+    @classmethod
+    def get_native_install_path(cls, config: CheriConfig):
+        return config.output_root / "cherios-sdk"
 
 
 # Keep around the build infrastructure for building the split repos for now (needed for SOAAP):

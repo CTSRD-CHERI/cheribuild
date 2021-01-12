@@ -235,7 +235,8 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         if configured_path is None:
             # If we couldn't find a working system compiler, default to cheribuild-compiled upstream LLVM.
             assert fbsd.build_toolchain == FreeBSDToolchainKind.DEFAULT_COMPILER
-            return self._get_compiler_project().get_install_dir(self.project, cross_target=CompilationTargets.NATIVE)
+            # noinspection PyUnresolvedReferences
+            return self._get_compiler_project().get_native_install_path(self.config)
         return configured_path
 
     @property

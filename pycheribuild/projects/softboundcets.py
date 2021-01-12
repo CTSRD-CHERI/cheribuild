@@ -35,6 +35,8 @@ from .project import DefaultInstallDir, GitRepository
 
 # install_to_soaap_dir = ComputedDefaultValue(function=lambda config, project: config.output_root / "soaap",
 #                                            as_string="$INSTALL_ROOT/soaap")
+from ..config.chericonfig import CheriConfig
+from ..config.compilation_targets import CompilationTargets
 
 
 class BuildSoftBoundCETS(BuildLLVMMonoRepoBase):
@@ -52,3 +54,7 @@ class BuildSoftBoundCETS(BuildLLVMMonoRepoBase):
 
     def install(self, **kwargs):
         self.info("Not installing, to use SoftBoundCETS run from the source dir")
+
+    @classmethod
+    def get_native_install_path(cls, config: CheriConfig):
+        return cls.get_instance(None, config, cross_target=CompilationTargets.NATIVE).install_dir

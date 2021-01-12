@@ -213,7 +213,7 @@ class JenkinsConfig(CheriConfig):
         super().load()
 
         if not self.workspace or not self.workspace.is_dir():
-            fatal_error("WORKSPACE is not set to a valid directory:", self.workspace)
+            fatal_error("WORKSPACE is not set to a valid directory:", self.workspace, pretend=self.pretend)
         self.source_root = self.workspace
         self.build_root = self.workspace
         if self.output_root != self.workspace / self.default_output_path:
