@@ -166,8 +166,17 @@ class SocketAndPort(object):
         self.port = port
 
 
-def find_free_port() -> SocketAndPort:
+def find_free_port(preferred_port: int = None) -> SocketAndPort:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    if preferred_port is not None:
+        try:
+            s.bind(("127.0.0.1", preferred_port))
+            return SocketAndPort(s, s.getsockname()[1])
+        except socket.error as e:
+            import errno
+            if e.errno != errno.EADDRINUSE:
+                warning_message("Got unexpected error when checking whether port", preferred_port, "is free:", e)
+            status_update("Port", preferred_port, "is not available, falling back to using a random port")
     s.bind(('localhost', 0))
     return SocketAndPort(s, s.getsockname()[1])
 

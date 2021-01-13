@@ -282,7 +282,7 @@ class LaunchQEMUBase(SimpleProject):
         self.info("About to run QEMU with image", self.disk_image, "and loader/kernel", qemu_loader_or_kernel)
 
         if self.config.wait_for_debugger or self.config.debugger_in_tmux_pane:
-            gdb_socket_placeholder = find_free_port()
+            gdb_socket_placeholder = find_free_port(preferred_port=1234)
             gdb_port = gdb_socket_placeholder.port if self.config.gdb_random_port else 1234
             self.info("QEMU is waiting for GDB to attach (using `target remote :{}`)."
                       " Once connected enter 'continue\\n' to continue booting".format(gdb_port))
