@@ -461,6 +461,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        self.install_as_root = os.getuid() == 0
         self.__objdir = None
         self._setup_make_args_called = False
         self.destdir = self.install_dir
@@ -754,6 +755,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 all_kernel_configs = self.kernel_config
             self._buildkernel(kernconf=all_kernel_configs, mfs_root_image=mfs_root_image)
 
+    def _remove_schg_flag(self, *paths: "typing.Iterable[str]"):
+        if shutil.which("chflags"):
+            for i in paths:
+                file = self.install_dir / i
+                if file.exists():
+                    self.run_cmd("chflags", "noschg", str(file))
+
     def _remove_old_rootfs(self):
         assert self.config.clean or not self.keep_old_rootfs
         if self.config.skip_world:
@@ -761,8 +769,25 @@ class BuildFreeBSD(BuildFreeBSDBase):
         else:
             # make sure the old install is purged before building, otherwise we might get strange errors
             # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
-            # We have to keep the rootfs directory in case it has been NFS mounted
-            self.clean_directory(self.install_dir, keep_root=True)
+            # We have to keep the rootfs directory in case it has been NFS mounted (but we can delete subdirs)
+            if self.install_as_root:
+                # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
+                self._remove_schg_flag(
+                    "lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3", "libexec/ld-cheri-elf.so.1",
+                    "libexec/ld-elf.so.1", "sbin/init", "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass",
+                    "usr/bin/ypchfn", "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
+                    "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab", "usr/lib/librt.so.1",
+                    "var/empty"
+                    )
+            # We keep 3rd-party programs (anything installed in /usr/local + /opt), but delete everything else prior
+            # to installworld to avoid having stale files in the generated disk images
+            if self.install_dir.exists():
+                dirs_to_delete = [x for x in self.install_dir.iterdir() if x.name not in ("opt", "usr")]
+                if (self.install_dir / "usr").exists():
+                    dirs_to_delete.extend(x for x in (self.install_dir / "usr").iterdir() if x.name != "local")
+                self._delete_directories(*dirs_to_delete)
+            else:
+                self.makedirs(self.install_dir)
 
     def find_real_bmake_binary(self) -> Path:
         """return the path the bmake binary used for building. On FreeBSD this will generally be /usr/bin/make,
@@ -1206,7 +1231,6 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                    help="Build kernel with caprevoke support (experimental)")
 
     def __init__(self, config: CheriConfig):
-        self.install_as_root = os.getuid() == 0
         super().__init__(config)
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
@@ -1265,26 +1289,6 @@ class BuildCHERIBSD(BuildFreeBSD):
             self.make_args.set_with_options(INIT_ALL_ZERO=True)
         elif self.auto_var_init is AutoVarInit.PATTERN:
             self.make_args.set_with_options(INIT_ALL_PATTERN=True)
-
-    def _remove_schg_flag(self, *paths: "typing.Iterable[str]"):
-        if shutil.which("chflags"):
-            for i in paths:
-                file = self.install_dir / i
-                if file.exists():
-                    self.run_cmd("chflags", "noschg", str(file))
-
-    def _remove_old_rootfs(self):
-        if not self.config.skip_world:
-            if self.install_as_root:
-                # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
-                self._remove_schg_flag(
-                    "lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3", "libexec/ld-cheri-elf.so.1",
-                    "libexec/ld-elf.so.1", "sbin/init", "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass",
-                    "usr/bin/ypchfn", "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
-                    "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab", "usr/lib/librt.so.1",
-                    "var/empty"
-                    )
-        super()._remove_old_rootfs()
 
     def compile(self, **kwargs):
         if self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_PURECAP:
