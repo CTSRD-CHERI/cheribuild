@@ -34,14 +34,14 @@ import typing
 from pathlib import Path
 from subprocess import CompletedProcess
 
-from pycheribuild.utils import SocketAndPort
-from .disk_image import BuildCheriBSDDiskImage
+from .disk_image import BuildCheriBSDDiskImage, BuildFreeBSDImage, BuildMultiArchDiskImage
 from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
 from .project import SimpleProject
+from ..config.chericonfig import CheriConfig
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
 from ..processutils import extract_version, popen
-from ..utils import AnsiColour, cached_property, coloured, find_free_port, OSInfo
+from ..utils import AnsiColour, cached_property, classproperty, coloured, find_free_port, OSInfo, SocketAndPort
 
 
 class InstallMorelloFVP(SimpleProject):
@@ -413,9 +413,15 @@ VOLUME /diskimg
 
 class LaunchFVPBase(SimpleProject):
     do_not_add_to_targets = True
-    _source_class = BuildCheriBSDDiskImage
-    dependencies = ["install-morello-fvp", _source_class.target, "morello-firmware"]
-    supported_architectures = _source_class.supported_architectures
+    _source_class = None  # type: BuildMultiArchDiskImage
+
+    @classmethod
+    def dependencies(cls, _: CheriConfig):
+        return ["install-morello-fvp", cls._source_class.target, "morello-firmware"]
+
+    @classproperty
+    def supported_architectures(self):
+        return self._source_class.supported_architectures
 
     def __init__(self, config):
         super().__init__(config)
@@ -598,3 +604,9 @@ class LaunchFVPCheriBSD(LaunchFVPBase):
     target = "run-fvp"
     _source_class = BuildCheriBSDDiskImage
     supported_architectures = [CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP]
+
+
+class LaunchFVPFreeBsd(LaunchFVPBase):
+    target = "run-fvp-freebsd"
+    _source_class = BuildFreeBSDImage
+    supported_architectures = [CompilationTargets.FREEBSD_AARCH64]
