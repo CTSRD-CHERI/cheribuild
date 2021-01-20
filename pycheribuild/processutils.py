@@ -267,6 +267,7 @@ def _become_tty_foreground_process():
     with suppress_sigttou():
         tty = os.open('/dev/tty', os.O_RDWR)
         os.tcsetpgrp(tty, os.getpgrp())
+        os.close(tty)
 
 
 # Python 3.7 has contextlib.nullcontext
