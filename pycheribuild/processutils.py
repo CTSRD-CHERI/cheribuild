@@ -262,7 +262,7 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
 
 
 # https://stackoverflow.com/a/15257702/894271
-def _become_tty_foreground_process():
+def _new_tty_foreground_process_group():
     os.setpgrp()
     with suppress_sigttou():
         tty = os.open('/dev/tty', os.O_RDWR)
@@ -353,7 +353,7 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
         else:
             kwargs["env"] = dict((k, str(v)) for k, v in env_arg.items())
     if give_tty_control:
-        kwargs["preexec_fn"] = _become_tty_foreground_process
+        kwargs["preexec_fn"] = _new_tty_foreground_process_group
     stdout = b""
     stderr = b""
     # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
