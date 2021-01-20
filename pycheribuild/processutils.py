@@ -148,6 +148,18 @@ class TtyState:
 
 
 @contextlib.contextmanager
+def suppress_sigttou(suppress=True):
+    if suppress:
+        hdlr = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
+    try:
+        yield
+    finally:
+        if suppress:
+            # noinspection PyUnboundLocalVariable
+            signal.signal(signal.SIGTTOU, hdlr)
+
+
+@contextlib.contextmanager
 def keep_terminal_sane(gave_tty_control=False):
     # Programs such as QEMU can change the terminal state and if they don't exit cleanly this state is
     # propagated to the shell that invoked cheribuild.
@@ -160,16 +172,10 @@ def keep_terminal_sane(gave_tty_control=False):
     finally:
         # Can seemingly get unwanted SIGTTOU's whilst restoring so just ignore
         # them temporarily.
-        if gave_tty_control:
-            hdlr = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
-        try:
+        with suppress_sigttou(suppress=gave_tty_control):
             stdin_state.restore()
             stdout_state.restore()
             stderr_state.restore()
-        finally:
-            if gave_tty_control:
-                # noinspection PyUnboundLocalVariable
-                signal.signal(signal.SIGTTOU, hdlr)
 
 
 def print_command(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remaining_args, output_file=None,
@@ -258,10 +264,9 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
 # https://stackoverflow.com/a/15257702/894271
 def _become_tty_foreground_process():
     os.setpgrp()
-    hdlr = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
-    tty = os.open('/dev/tty', os.O_RDWR)
-    os.tcsetpgrp(tty, os.getpgrp())
-    signal.signal(signal.SIGTTOU, hdlr)
+    with suppress_sigttou():
+        tty = os.open('/dev/tty', os.O_RDWR)
+        os.tcsetpgrp(tty, os.getpgrp())
 
 
 # Python 3.7 has contextlib.nullcontext
