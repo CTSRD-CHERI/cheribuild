@@ -640,8 +640,12 @@ def run_and_kill_children_on_exit(fn: "typing.Callable[[], typing.Any]"):
             os.setpgrp()
             # Preserve whether our process group is the terminal leader
             with suppress_sigttou():
-                tty = os.open('/dev/tty', os.O_RDWR)
-                if os.tcgetpgrp(tty) == opgrp:
+                tty = None
+                try:
+                    tty = os.open('/dev/tty', os.O_RDWR)
+                except OSError:
+                    pass
+                if tty is not None and os.tcgetpgrp(tty) == opgrp:
                     os.tcsetpgrp(tty, os.getpgrp())
         fn()
     except KeyboardInterrupt:
