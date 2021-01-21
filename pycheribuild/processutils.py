@@ -634,8 +634,15 @@ def latest_system_clang_tool(config: ConfigBase, basename: str,
 def run_and_kill_children_on_exit(fn: "typing.Callable[[], typing.Any]"):
     error = False
     try:
-        if os.getpgrp() != os.getpid():
-            os.setpgrp()  # create new process group, become its leader
+        opgrp = os.getpgrp()
+        if opgrp != os.getpid():
+            # Create new process group and become its leader
+            os.setpgrp()
+            # Preserve whether our process group is the terminal leader
+            with suppress_sigttou():
+                tty = os.open('/dev/tty', os.O_RDWR)
+                if os.tcgetpgrp(tty) == opgrp:
+                    os.tcsetpgrp(tty, os.getpgrp())
         fn()
     except KeyboardInterrupt:
         error = True
