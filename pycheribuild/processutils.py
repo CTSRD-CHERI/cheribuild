@@ -647,6 +647,7 @@ def run_and_kill_children_on_exit(fn: "typing.Callable[[], typing.Any]"):
                     pass
                 if tty is not None and os.tcgetpgrp(tty) == opgrp:
                     os.tcsetpgrp(tty, os.getpgrp())
+                    os.close(tty)
         fn()
     except KeyboardInterrupt:
         error = True
