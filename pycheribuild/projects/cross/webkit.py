@@ -127,6 +127,8 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
             self.add_cmake_options(ENABLE_C_LOOP=False, ENABLE_ASSEMBLER=True, ENABLE_DISASSEMBLER=True,
                                    ENABLE_JIT=True)
             if self.crosscompile_target.is_cheri_purecap():
+                if self.jsheapoffsets:
+                    self.warning("integer heap offsets are not yet supported for the tier 2 backend!")
                 self.add_cmake_options(ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=True,
                                        ENABLE_JSHEAP_CHERI_OFFSET_REFS=False)
             else:
