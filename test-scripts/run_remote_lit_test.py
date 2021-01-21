@@ -116,7 +116,8 @@ def flush_thread(f, qemu: boot_cheribsd.QemuCheriBSDInstance, should_exit_event:
         if should_exit_event.is_set():
             break
         # keep reading line-by-line to output any QEMU trap messages:
-        i = qemu.expect([pexpect.TIMEOUT, "KDB: enter:", pexpect.EOF, qemu.crlf], timeout=qemu.flush_interval)
+        i = qemu.expect([pexpect.TIMEOUT, "KDB: enter:", pexpect.EOF, qemu.crlf], timeout=qemu.flush_interval,
+                        log_patterns=False)
         if boot_cheribsd.PRETEND:
             time.sleep(1)
         elif i == 1:
