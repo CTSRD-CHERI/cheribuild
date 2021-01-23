@@ -359,7 +359,7 @@ class OSInfo(object):
         return "<system package manager>"
 
     @classmethod
-    def install_instructions(cls, name, is_lib, homebrew=None, apt=None, zypper=None, freebsd=None,
+    def install_instructions(cls, name, is_lib, default=None, homebrew=None, apt=None, zypper=None, freebsd=None,
                              cheribuild_target=None) -> "typing.Union[str, typing.Callable[[], str]]":
         if cheribuild_target:
             return "Run `cheribuild.py " + cheribuild_target + "`"
@@ -397,6 +397,9 @@ class OSInfo(object):
         else:
             guessed_package = True
             install_name = name
+        if guessed_package and default:
+            guessed_package = False
+            install_name = default
         if guessed_package:
             # not sure if the package name is correct:
             return "Possibly running `" + cls.package_manager() + " install " + install_name + \
