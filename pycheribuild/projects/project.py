@@ -720,26 +720,31 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         assert not self._setup_called, "Should only be called once"
         self._setup_called = True
 
-    def add_required_system_tool(self, executable: str, install_instructions=None, freebsd: str = None, apt: str = None,
-                                 zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
+    def add_required_system_tool(self, executable: str, install_instructions=None, default: str = None,
+                                 freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
+                                 cheribuild_target: str = None):
         if not install_instructions:
-            install_instructions = OSInfo.install_instructions(executable, False, freebsd=freebsd, zypper=zypper,
-                                                               apt=apt,
+            install_instructions = OSInfo.install_instructions(executable, False, default=default,
+                                                               freebsd=freebsd, zypper=zypper, apt=apt,
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__required_system_tools[executable] = install_instructions
 
-    def add_required_pkg_config(self, package: str, install_instructions=None, freebsd: str = None, apt: str = None,
-                                zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
+    def add_required_pkg_config(self, package: str, install_instructions=None, default: str = None,
+                                freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
+                                cheribuild_target: str = None):
         self.add_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
         if not install_instructions:
-            install_instructions = OSInfo.install_instructions(package, True, freebsd=freebsd, zypper=zypper, apt=apt,
+            install_instructions = OSInfo.install_instructions(package, True, default=default,
+                                                               freebsd=freebsd, zypper=zypper, apt=apt,
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__required_pkg_config[package] = install_instructions
 
-    def add_required_system_header(self, header: str, install_instructions=None, freebsd: str = None, apt: str = None,
-                                   zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
+    def add_required_system_header(self, header: str, install_instructions=None, default: str = None,
+                                   freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
+                                   cheribuild_target: str = None):
         if not install_instructions:
-            install_instructions = OSInfo.install_instructions(header, True, freebsd=freebsd, zypper=zypper, apt=apt,
+            install_instructions = OSInfo.install_instructions(header, True, default=default,
+                                                               freebsd=freebsd, zypper=zypper, apt=apt,
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__required_system_headers[header] = install_instructions
 
