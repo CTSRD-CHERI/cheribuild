@@ -81,9 +81,9 @@ class BuildQEMUBase(AutotoolsProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.add_required_system_tool("glibtoolize" if self.target_info.is_macos() else "libtoolize",
-                                      homebrew="libtool")
-        self.add_required_system_tool("autoreconf", homebrew="autoconf")
-        self.add_required_system_tool("aclocal", homebrew="automake")
+                                      default="libtool")
+        self.add_required_system_tool("autoreconf", default="autoconf")
+        self.add_required_system_tool("aclocal", default="automake")
 
         self.add_required_pkg_config("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",
                                      freebsd="pixman")

@@ -61,8 +61,8 @@ class BuildMtools(AutotoolsProject):
 
     def __init__(self, config):
         super().__init__(config)
-        self.add_required_system_tool("autoreconf", homebrew="autoconf")
-        self.add_required_system_tool("aclocal", homebrew="automake")
+        self.add_required_system_tool("autoreconf", default="autoconf")
+        self.add_required_system_tool("aclocal", default="automake")
         # Manpages won't build:
         self.make_args.set(MAN1="", MAN5="")
 

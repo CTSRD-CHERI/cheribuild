@@ -28,7 +28,7 @@ brew install homebrew/cask/docker homebrew/cask/xquartz socat dtc
 If you are building CHERI on a Debian/Ubuntu-based machine, please install the following packages:
 
 ```shell
-apt install libtool pkg-config clang bison cmake ninja-build samba flex texinfo libglib2.0-dev libpixman-1-dev libarchive-dev libarchive-tools libbz2-dev libattr1-dev libcap-ng-dev
+apt install autoconf automake libtool pkg-config clang bison cmake ninja-build samba flex texinfo libglib2.0-dev libpixman-1-dev libarchive-dev libarchive-tools libbz2-dev libattr1-dev libcap-ng-dev
 ```
 
 Older versions of Ubuntu may report errors when trying to install `libarchive-tools`. In this case try using `apt install bsdtar` instead.
