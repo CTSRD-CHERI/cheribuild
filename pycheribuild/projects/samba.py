@@ -46,7 +46,8 @@ class BuildSamba(Project):
         make_kind = MakeCommandKind.CustomMakeTool
     else:
         build_in_source_dir = True
-    repository = GitRepository("https://github.com/samba-team/samba.git",
+    repository = GitRepository("https://github.com/CTSRD-CHERI/samba.git",
+                               old_urls=[b"https://github.com/samba-team/samba.git"],
                                default_branch="v4-12-stable", force_branch=True)
 
     def __init__(self, config: CheriConfig):
