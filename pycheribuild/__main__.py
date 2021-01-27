@@ -29,7 +29,6 @@
 #
 import fcntl
 import os
-import platform
 import shutil
 import subprocess
 import sys
@@ -49,7 +48,7 @@ from .projects.cross import *  # noqa: F401,F403
 from .projects.project import SimpleProject
 from .targets import target_manager
 from .processutils import (get_program_version, print_command, run_and_kill_children_on_exit, run_command)
-from .utils import (AnsiColour, OSInfo, coloured, fatal_error, have_working_internet_connection, init_global_config,
+from .utils import (AnsiColour, coloured, fatal_error, have_working_internet_connection, init_global_config,
                     status_update)
 DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent.parent]
 
