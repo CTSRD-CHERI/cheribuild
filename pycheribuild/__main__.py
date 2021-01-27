@@ -29,7 +29,6 @@
 #
 import fcntl
 import os
-import platform
 import shutil
 import subprocess
 import sys
@@ -49,7 +48,7 @@ from .projects.cross import *  # noqa: F401,F403
 from .projects.project import SimpleProject
 from .targets import target_manager
 from .processutils import (get_program_version, print_command, run_and_kill_children_on_exit, run_command)
-from .utils import (AnsiColour, OSInfo, coloured, fatal_error, have_working_internet_connection, init_global_config,
+from .utils import (AnsiColour, coloured, fatal_error, have_working_internet_connection, init_global_config,
                     status_update)
 DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent.parent]
 
@@ -99,22 +98,6 @@ def check_not_root():
     if os.geteuid() == 0:
         fatal_error("You are running cheribuild as root. This is dangerous, bad practice and can cause builds to fail."
                     " Please re-run as a non-root user.", pretend=False)
-
-
-def check_macos_big_sur(config: DefaultCheriConfig):
-    if not OSInfo.IS_MAC:
-        return
-    macos_version_str = platform.mac_ver()[0]
-    # Note: os.uname().release 20.0.0 and 20.1.0 are broken, once we know a version where it's fixed, we can change
-    # this to an os.uname() range check.
-    macos_version = tuple(map(int, macos_version_str.split('.')))
-    if macos_version[0] == 10:
-        return
-    if macos_version[0] != 11:  # if next year's macOS 12 suffers from the same bug I will be very sad
-        fatal_error("Unknown macOS major version " + str(macos_version[0]) + "!", pretend=False)
-    fatal_error("You are using macOS Big Sur; this is known to be unstable and lead to lockups, requiring a machine "
-                "reboot when building CheriBSD. Please use a pre-Big Sur version of macOS or a different OS entirely.",
-                pretend=os.getenv("CHERIBUILD_BIG_SUR_NON_FATAL"))
 
 
 def real_main():
@@ -175,8 +158,6 @@ def real_main():
 
     assert any(x in cheri_config.action for x in (CheribuildAction.TEST, CheribuildAction.PRINT_CHOSEN_TARGETS,
                                                   CheribuildAction.BUILD, CheribuildAction.BENCHMARK))
-
-    check_macos_big_sur(cheri_config)
 
     if cheri_config.docker:
         cheribuild_dir = str(Path(__file__).absolute().parent.parent)
