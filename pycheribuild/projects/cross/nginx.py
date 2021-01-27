@@ -117,6 +117,11 @@ class BuildNginx(CrossCompileAutotoolsProject):
         self.run_make(cwd=self.source_dir)
 
 
+class BuildNginxColoc(BuildNginx):
+    project_name = "nginx-coloc"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git", default_branch="master")  # TODO: New branch
+
+
 class BuildFettNginx(FettProjectMixin, BuildNginx):
     project_name = "fett-nginx"
     path_in_rootfs = "/fett/nginx"
