@@ -280,7 +280,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             CPUArchitecture.MIPS64: self.config.mips_float_abi.freebsd_target_arch(),
             CPUArchitecture.RISCV64: "riscv64",
             CPUArchitecture.X86_64: "amd64",
-            }
+        }
         return mapping[self.target.cpu_architecture]
 
     @classmethod
@@ -601,8 +601,11 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
         return super().triple_for_target(target, config, include_version=include_version)
 
     def get_non_rootfs_sysroot_dir(self) -> Path:
-        return Path(self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name,
-                    "sysroot" + self.target.build_suffix(self.config, include_os=True))
+        if is_jenkins_build():
+            dirname = "sysroot"
+        else:
+            dirname = "sysroot" + self.target.build_suffix(self.config, include_os=True)
+        return Path(self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name, dirname)
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig"):
@@ -688,7 +691,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
     def sysroot_dir(self):
         # Install to target triple as RTEMS' LLVM/Clang Driver expects
         return self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name / (
-                    "sysroot-" + self.target.generic_suffix) / self.target_triple
+                "sysroot-" + self.target.generic_suffix) / self.target_triple
 
     def _get_sdk_root_dir_lazy(self) -> Path:
         return self.config.cheri_sdk_dir
@@ -767,7 +770,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
             return [
                 "-D_GNU_SOURCE=1",  # needed for the locale functions
                 "-D_POSIX_TIMERS=1", "-D_POSIX_MONOTONIC_CLOCK=1",  # pretend that we have a monotonic clock
-                ]
+            ]
         else:
             return []
 

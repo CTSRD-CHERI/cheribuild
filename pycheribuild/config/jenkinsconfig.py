@@ -223,7 +223,8 @@ class JenkinsConfig(CheriConfig):
         if os.path.relpath(str(self.output_root), str(self.workspace)).startswith(".."):
             fatal_error("Output path", self.output_root, "must be inside workspace", self.workspace)
         if os.path.relpath(str(self.sysroot_output_root), str(self.workspace)).startswith(".."):
-            fatal_error("Sysroot output path", self.sysroot_output_path, "must be inside workspace", self.workspace)
+            fatal_error("Sysroot output path", self.sysroot_output_root, "must be inside workspace", self.workspace,
+                        pretend=False, fatal_when_pretending=True)
 
         # expect the CheriBSD disk images in the workspace root
         self.cheribsd_image_root = self.workspace
