@@ -198,7 +198,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 class BuildQtBaseDev(CrossCompileCMakeProject):
     project_name = "qtbase"
     target = "qtbase-dev"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="dev", force_branch=True)
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="dev-cheri", force_branch=True)
     is_large_source_repository = True
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
