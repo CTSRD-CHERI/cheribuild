@@ -242,15 +242,18 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     @property
     def sysroot_dir(self):
         if is_jenkins_build():
-            # Jenkins builds compile against a sysroot that was extracted to a sysroot-<arch> directory and not the
+            # Jenkins builds compile against a sysroot that was extracted to sdk/sysroot directory and not the
             # full rootfs
             return self.get_non_rootfs_sysroot_dir()
         return self.get_rootfs_project().get_install_dir(caller=self.project, config=self.config,
                                                          cross_target=self.target)
 
     def get_non_rootfs_sysroot_dir(self) -> Path:
-        return Path(self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name,
-                    "sysroot" + self.target.build_suffix(self.config, include_os=True))
+        if is_jenkins_build():
+            dirname = "sysroot"
+        else:
+            dirname = "sysroot" + self.target.build_suffix(self.config, include_os=True)
+        return Path(self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name, dirname)
 
     @classmethod
     def is_freebsd(cls):
