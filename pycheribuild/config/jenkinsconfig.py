@@ -161,8 +161,7 @@ class JenkinsConfig(CheriConfig):
                                                               help="Path for the output (relative to $WORKSPACE)")
         self.sysroot_output_root = loader.add_commandline_only_option(
             "sysroot-output-path",
-            default=ComputedDefaultValue(function=lambda c, _: c.output_root,
-                                         as_string="$WORKSPACE/" + self.default_output_path),
+            default=ComputedDefaultValue(function=lambda c, _: c.workspace, as_string="$WORKSPACE"),
             type=Path, help="Path for the installed sysroot (defaults to the same value as --output-path)")
         # self.strip_install_prefix_from_archive = loader.add_commandline_only_bool_option(
         # "strip-install-prefix-from-archive",
