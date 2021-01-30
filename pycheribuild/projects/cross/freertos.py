@@ -153,6 +153,14 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             default=False,
             help="Use VirtIO Block as a disk for FreeRTOS")
 
+        cls.create_disk_image = cls.add_bool_option("create_disk_image", show_help=True,
+            default=False,
+            help="Create, parition, format and write data into an external blk disk image")
+
+        cls.debug = cls.add_bool_option("debug", show_help=True,
+            default=False,
+            help="Enable FreeRTOS debug featuers")
+
         cls.demo_bsp = cls.add_config_option(
             "bsp", metavar="BSP", show_help=True,
             default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
@@ -218,6 +226,12 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
             if self.use_virtio_blk:
               config_options += ["--use-virtio-blk"]
+
+            if self.create_disk_image:
+              config_options += ["--create-disk-image"]
+
+            if self.debug:
+              config_options += ["--debug"]
 
             self._run_waf("distclean", "configure", *config_options)
 
