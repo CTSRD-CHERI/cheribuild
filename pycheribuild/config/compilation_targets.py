@@ -525,6 +525,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             # Free the port that we reserved for QEMU before starting beri-fpga-bsd-boot.py
             if qemu_ssh_socket is not None:
                 qemu_ssh_socket.socket.close()
+            # noinspection PyTypeChecker
             self.project.run_cmd(
                 [cheribuild_path / "beri-fpga-bsd-boot.py"] + basic_args + ["-vvvvv", "runbench"] + runbench_args)
         else:
