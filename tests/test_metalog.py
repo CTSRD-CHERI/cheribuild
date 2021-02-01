@@ -53,12 +53,12 @@ def _get_as_str(mtree: MtreeFile) -> str:
 
 
 def test_empty():
-    mtree = MtreeFile()
+    mtree = MtreeFile(verbose=False)
     assert "#mtree 2.0\n# END\n" == _get_as_str(mtree)
 
 
 def test_add_dir():
-    mtree = MtreeFile()
+    mtree = MtreeFile(verbose=False)
     mtree.add_dir("bin")
     expected = """#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
@@ -66,14 +66,14 @@ def test_add_dir():
 # END
 """
     assert expected == _get_as_str(mtree)
-    mtree = MtreeFile()
+    mtree = MtreeFile(verbose=False)
     # same with a trailing slash
     mtree.add_dir("bin/", mode="0755")
     assert expected == _get_as_str(mtree)
 
 
 def test_add_dir_infer_mode():
-    mtree = MtreeFile()
+    mtree = MtreeFile(verbose=False)
     with tempfile.TemporaryDirectory() as td:
         parent_dir = _create_dir(Path(td), "parent", 0o750)
         testdir = _create_dir(parent_dir, "testdir", 0o700)
@@ -88,7 +88,7 @@ def test_add_dir_infer_mode():
 
 
 def test_add_file_infer_mode():
-    mtree = MtreeFile()
+    mtree = MtreeFile(verbose=False)
     with tempfile.TemporaryDirectory() as td:
         parent_dir = _create_dir(Path(td), "parent", 0o750)
         testdir = _create_dir(parent_dir, "testdir", 0o700)
@@ -113,7 +113,7 @@ def test_add_file_infer_mode():
 
 # Check that we override the permissions for .ssh and authorized_keys to avoid surprising ssh auth failures
 def test_add_file_infer_ssh_mode():
-    mtree = MtreeFile()
+    mtree = MtreeFile(verbose=False)
     with tempfile.TemporaryDirectory() as td:
         root_dir = _create_dir(Path(td), "root", 0o744)
         ssh_dir = _create_dir(root_dir, ".ssh", 0o777)
@@ -164,7 +164,7 @@ def test_normalize_paths():
     # ./usr/lib/debug/usr/tests
     # One of the two was added by cheribuild because a file with the double slash was added so
     # the mtree code assumed the file did not exist:
-    mtree = MtreeFile()
+    mtree = MtreeFile(verbose=False)
     assert len(mtree._mtree) == 0
     mtree.add_dir("usr/lib/debug/usr/tests")
     assert len(mtree._mtree) == 6
@@ -188,7 +188,7 @@ def test_normalize_paths_loaded_from_file():
 # END
 """
     # check that we deduplicate these:
-    mtree = MtreeFile(io.StringIO(file))
+    mtree = MtreeFile(file=io.StringIO(file), verbose=False)
     print(_get_as_str(mtree), file=sys.stderr)
     assert normalized_usr_tests_duplicate_mtree == _get_as_str(mtree)
     assert len(mtree._mtree) == 6
@@ -203,7 +203,7 @@ def test_contents_root():
 ./bin/cheribsdbox type=file uname=root gname=wheel mode=0755 contents=/path/to/rootfs/bin/cheribsdbox
 # END
 """
-    mtree = MtreeFile(io.StringIO(file), contents_root=Path("/path/to/rootfs"))
+    mtree = MtreeFile(file=io.StringIO(file), contents_root=Path("/path/to/rootfs"), verbose=False)
     assert """#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
 ./bin type=dir uname=root gname=wheel mode=0755
@@ -214,7 +214,7 @@ def test_contents_root():
 
 
 def test_add_file():
-    mtree = MtreeFile()
+    mtree = MtreeFile(verbose=False)
     mtree.add_file(Path("/foo/bar"), "tmp/mysh", mode=0o755)
     print(_get_as_str(mtree), file=sys.stderr)
     expected = """#mtree 2.0
@@ -238,7 +238,7 @@ def temp_symlink():
 
 # noinspection PyShadowingNames
 def test_symlink_symlink(temp_symlink):
-    mtree = MtreeFile()
+    mtree = MtreeFile(verbose=False)
     print(temp_symlink)
     mtree.add_file(temp_symlink[0], "tmp/link", mode=0o755, parent_dir_mode=0o755)
     mtree.add_file(temp_symlink[1], "tmp/testfile", mode=0o755, parent_dir_mode=0o755)
@@ -255,7 +255,7 @@ def test_symlink_symlink(temp_symlink):
 
 # noinspection PyShadowingNames
 def test_symlink_infer_mode(temp_symlink):
-    mtree = MtreeFile()
+    mtree = MtreeFile(verbose=False)
     print(temp_symlink)
     mtree.add_file(temp_symlink[0], "tmp/link", parent_dir_mode=0o755)
     mtree.add_file(temp_symlink[1], "tmp/testfile", parent_dir_mode=0o755)

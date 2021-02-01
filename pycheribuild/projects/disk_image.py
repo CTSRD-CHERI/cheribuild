@@ -170,7 +170,7 @@ class _BuildDiskImageBase(SimpleProject):
         assert self.rootfs_dir is not None
         self.user_group_db_dir = self.rootfs_dir / "etc"
         self.minimum_image_size = "1g"  # minimum image size = 1GB
-        self.mtree = MtreeFile()
+        self.mtree = MtreeFile(verbose=self.config.verbose)
         self.input_metalogs = [self.rootfs_dir / "METALOG.world", self.rootfs_dir / "METALOG.kernel"]
         # used during process to generated files
         self.tmpdir = None  # type: typing.Optional[Path]
@@ -546,7 +546,7 @@ class _BuildDiskImageBase(SimpleProject):
 
             if use_makefs:
                 # Makefs doesn't handle contents= right now
-                efi_mtree = MtreeFile()
+                efi_mtree = MtreeFile(verbose=self.config.verbose)
                 efi_mtree.add_file(self.rootfs_dir / "boot/boot1.efi", path_in_image="efi/boot/" + efi_file.lower(),
                                    mode=0o644)
                 efi_mtree.write(tmp_mtree, pretend=self.config.pretend)

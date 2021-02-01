@@ -67,7 +67,7 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
             self.fatal("METALOG " + str(self.METALOG) + "does not exist")
             return
 
-        mtree = MtreeFile(self.METALOG)
+        mtree = MtreeFile(file=self.METALOG, verbose=self.config.verbose)
         src = self.source_dir
 
         # general config

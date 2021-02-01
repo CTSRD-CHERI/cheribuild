@@ -97,7 +97,9 @@ class MtreeEntry(object):
 
 
 class MtreeFile(object):
-    def __init__(self, file: "typing.Union[io.StringIO,Path,typing.IO]" = None, contents_root: Path = None):
+    def __init__(self, *, verbose: bool, file: "typing.Union[io.StringIO,Path,typing.IO]" = None,
+                 contents_root: Path = None):
+        self.verbose = verbose
         self._mtree = OrderedDict()  # type: typing.Dict[str, MtreeEntry]
         if file:
             self.load(file, contents_root=contents_root, append=False)
@@ -121,7 +123,12 @@ class MtreeFile(object):
                 key = str(entry.path)
                 assert key == "." or os.path.normpath(key[2:]) == key[2:]
                 if key in self._mtree:
-                    warning_message("Found duplicate definition for", entry.path)
+                    # Currently the FreeBSD build system can produce duplicate directory entries in the mtree file
+                    # when installing in parallel. Ignore those duplicates by default since it makes the output
+                    # rather noisy. There are also a few duplicate files (mostly in /etc), so suppress it for all
+                    # duplicates (in non-verbose mode) until the build system has been fixed
+                    if self.verbose:  # TODO: or entry.attributes.get("type") != "dir"
+                        warning_message("Found duplicate definition for", entry.path)
                 self._mtree[key] = entry
             except Exception as e:
                 warning_message("Could not parse line", line, "in mtree file", file, ":", e)
