@@ -61,6 +61,8 @@ class QemuOptions:
             self.can_boot_kernel_directly = False  # boot from disk
             # Try to use KVM instead of TCG if possible to speed up emulation
             self.machine_flags = ["-M", "accel=kvm:xen:hax:tcg"]  # default CPU (and NOT -M virt!)
+            # Use a more modern CPU than the QEMU default (but old enough to be supported by KVM almost everywhere)
+            self.machine_flags += ["-cpu", "Haswell-noTSX"]
         elif xtarget.is_aarch64(include_purecap=False):  # No morello QEMU (yet)
             self.qemu_arch_sufffix = "aarch64"
             self.can_boot_kernel_directly = False  # boot from disk
