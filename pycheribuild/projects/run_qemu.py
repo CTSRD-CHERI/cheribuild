@@ -63,6 +63,7 @@ class LaunchQEMUBase(SimpleProject):
     forward_tftp_port = False
     forward_http_port = False
     forward_cli_port = False
+    forward_modbus_port = True
     _can_provide_src_via_smb = False
     ssh_forwarding_port = None  # type: int
     custom_qemu_smb_mount = None
@@ -293,6 +294,12 @@ class LaunchQEMUBase(SimpleProject):
             user_network_options += ",hostfwd=tcp::" + str(self.http_forwarding_port) + "-:80"
             # bind the qemu http port to the hosts port
             print(coloured(AnsiColour.green, "\nListening for HTTP connections on localhost:", self.http_forwarding_port,
+                           sep=""))
+
+        if self.forward_modbus_port:
+            user_network_options += ",hostfwd=tcp::" + str(self.modbus_forwarding_port) + "-:502"
+            # bind the qemu modbus port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for Modbus connections on localhost:", self.modbus_forwarding_port,
                            sep=""))
 
         # input("Press enter to continue")
@@ -612,6 +619,8 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     tftp_forwarding_port = 10069
     cli_forwarding_port = 10023
     http_forwarding_port = 8080
+    modbus_forwarding_port = 1502
+
 
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
