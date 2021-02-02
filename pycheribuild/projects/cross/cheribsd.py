@@ -1673,7 +1673,7 @@ class BuildCheriBsdSysroot(SimpleProject):
 
     @property
     def sysroot_archive(self):
-        return self.cross_sysroot_path.parent / (self.cross_sysroot_path.name + ".tar.gz")
+        return self.cross_sysroot_path.parent / ("sysroot" + self.build_configuration_suffix() + ".tar.gz")
 
     def create_sysroot(self):
         # we need to add include files and libraries to the sysroot directory
