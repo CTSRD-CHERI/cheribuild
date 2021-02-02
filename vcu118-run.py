@@ -265,7 +265,7 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     # Open the serial connection first to check that it's available:
     serial_conn = get_console(tty_info)
     success("Connected to TTY")
-    if not bios_image.exists():
+    if bios_image is None or not bios_image.exists():
         failure("Missing bios image: ", bios_image)
     # First start openocd
     gdb_start_time = datetime.datetime.utcnow()
@@ -339,7 +339,7 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     return FpgaConnection(gdb, openocd, serial_conn)
 
 
-def find_vcu118_tty() -> ListPortInfo:
+def find_vcu118_tty(pretend: bool) -> ListPortInfo:
     # find the serial port:
     expected_vendor_id = 0x10c4
     expected_product_id = 0xea70
@@ -347,6 +347,8 @@ def find_vcu118_tty() -> ListPortInfo:
         assert isinstance(info, ListPortInfo)
         if info.pid == expected_product_id and info.vid == expected_vendor_id:
             return info
+    if pretend:
+        return ListPortInfo("/dev/fakeTTY")
     raise ValueError("Could not find USB TTY with VID", hex(expected_vendor_id), "PID", hex(expected_product_id))
 
 
@@ -355,12 +357,14 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--bitfile", help="The bitfile to load", type=abspath_arg)
     parser.add_argument("--ltxfile", help="The LTX file to use", type=abspath_arg)
-    parser.add_argument("--bios", default="openocd", help="The machine-mode program to load", type=abspath_arg)
+    parser.add_argument("--bios", help="The machine-mode program to load", type=abspath_arg)
     parser.add_argument("--kernel", help="The supervisor-mode program to load", type=abspath_arg)
     parser.add_argument("--kernel-debug-file", help="Debug info file for the kernel", type=abspath_arg)
     parser.add_argument("--gdb", default=shutil.which("gdb") or "gdb", help="Path to GDB binary", type=Path)
     parser.add_argument("--openocd", default=shutil.which("openocd") or "openocd", help="Path to openocd binary",
                         type=abspath_arg)
+    parser.add_argument("--test-command", help="Run a command non-interatively instead of opening a console")
+    parser.add_argument("--test-timeout", type=int, default=60 * 60, help="Timeout for the test command")
     parser.add_argument("--pretend", help="Don't actually run the commands just show what would happen",
                         action="store_true")
     parser.add_argument("action", choices=["all", "bitfile", "boot", "console"],
@@ -381,7 +385,7 @@ def main():
         if args.action == "bitfile":
             sys.exit(0)
 
-    tty_info = find_vcu118_tty()
+    tty_info = find_vcu118_tty(args.pretend)
     success("Found TTY:", tty_info)
     info(tty_info.usb_info())
     if args.action == "console":
@@ -399,9 +403,17 @@ def main():
     console.cheribsd.logfile_send = None
     console.show_help_message()
     if args.action == "console":
-        pass
-        # TODO? console.sendintr()  # Send CTRL+C to get a clean prompt
-    console.cheribsd.interact()
+        console.cheribsd.interact()
+        return
+
+    if args.test_command is not None:
+        success("Running test command")
+        console.cheribsd.checked_run(args.test_command, timeout=args.test_timeout)
+    # Finally interact with the console (if possible)
+    if not sys.__stdin__.isatty():
+        success("Not interating with console since stdin is not a TTY. Exiting now.")
+    else:
+        console.cheribsd.interact()
 
 
 if __name__ == "__main__":

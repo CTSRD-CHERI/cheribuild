@@ -151,7 +151,13 @@ class PretendSpawn(pexpect.spawn):
         info("Interacting with (fake) ", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
 
     def sendcontrol(self, char):
-        info("Sending CTRL+", char, " to (fake) ", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
+        info("Sending ", coloured(AnsiColour.yellow, "CTRL+", char), coloured(AnsiColour.blue, " to (fake) "),
+             coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
+
+    def sendline(self, s=''):
+        info("Sending ", coloured(AnsiColour.yellow, s), coloured(AnsiColour.blue, " to (fake) "),
+             coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
+        super().sendline(s)
 
 
 class CheriBSDCommandFailed(Exception):
