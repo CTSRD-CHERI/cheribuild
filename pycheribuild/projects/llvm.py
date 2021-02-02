@@ -133,7 +133,8 @@ class BuildLLVMBase(CMakeProject):
         self.add_cmake_options(LLVM_CCACHE_BUILD=self.use_ccache)
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for
         # libunwind/libcxx)
-        self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
+        # Note: Newer CMake uses Python3_EXECUTABLE instead of PYTHON_EXECUTABLE.
+        self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable, Python3_EXECUTABLE=sys.executable)
 
         # Install the llvm binutils symlinks since they now seem to work fine.
         self.add_cmake_options(LLVM_INSTALL_BINUTILS_SYMLINKS=True)
