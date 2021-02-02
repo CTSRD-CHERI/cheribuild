@@ -183,6 +183,42 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                  "platform, RISC-V arch and RISC-V abi in the "
                  "$platform-$arch-$abi format. See RISC-V-Generic/README for more details")
 
+        cls.modbus_microbenchmark = cls.add_bool_option("modbus_microbenchmark", show_help=True,
+            default=False,
+            help="Compile FreeRTOS Modbus server for microbenchmarking")
+
+        cls.modbus_macrobenchmark = cls.add_bool_option("modbus_macrobenchmark", show_help=True,
+            default=False,
+            help="Compile FreeRTOS Modbus server for macrobenchmarking")
+
+        cls.modbus_exec_period = cls.add_config_option(
+            "modbus_exec_period", metavar="MODBUS_EXEC_PERIOD", show_help=True,
+            default="0",
+            help="The execution period for the Modbus server in milliseconds"
+            " (default = 0)")  # type: str
+
+        cls.modbus_network_delay = cls.add_config_option(
+            "modbus_network_delay", metavar="MODBUS_NETWORK_DELAY", show_help=True,
+            default="0",
+            help="The simulated network delay for the Modbus server in milliseconds"
+            " (default = 0)")  # type: str
+
+        cls.modbus_object_caps = cls.add_bool_option("modbus_object_caps", show_help=True,
+            default=False,
+            help="Compile FreeRTOS Modbus server to use local object capabilities")
+
+        cls.modbus_object_caps_stubs = \
+        cls.add_bool_option("modbus_object_caps_stubs", show_help=True,
+            default=False,
+            help="Compile FreeRTOS Modbus server to call into, but not use, "
+            "the local object capabilities layer.  Used to measure cost of "
+            "theobject capabilities shim layer.")
+
+        cls.modbus_network_caps = cls.add_bool_option("modbus_network_caps", show_help=True,
+            default=False,
+            help="Compile FreeRTOS Modbus server to use network capabilities")
+
+
     def default_demo_bsp(self):
         return "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True) + "-" + \
                self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
@@ -252,6 +288,35 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
             if self.debug:
               config_options += ["--debug"]
+
+            if self.modbus_microbenchmark:
+                config_options += ["--modbus_microbenchmark"]
+
+            if self.modbus_macrobenchmark:
+                config_options += ["--modbus_macrobenchmark"]
+
+            if self.modbus_exec_period:
+                config_options += [
+                        "--modbus_exec_period", self.modbus_exec_period,
+                        ]
+
+            if self.modbus_network_delay:
+                config_options += [
+                        "--modbus_network_delay", self.modbus_network_delay,
+                        ]
+
+            if self.modbus_object_caps:
+                config_options += ["--modbus_object_caps"]
+
+            if self.modbus_object_caps_stubs:
+                config_options += ["--modbus_object_caps_stubs"]
+
+            if self.modbus_object_caps and self.modbus_object_caps_stubs:
+                self.fatal("Building with both modbus_object_caps and "
+                        "modbus_object_caps_stubs is not supported")
+
+            if self.modbus_network_caps:
+                config_options += ["--modbus_network_caps"]
 
             self._run_waf("distclean", "configure", *config_options)
 
