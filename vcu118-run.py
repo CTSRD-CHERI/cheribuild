@@ -179,6 +179,14 @@ class SerialConnection:
                                              logfile=sys.stdout, encoding="utf-8", timeout=60)
         assert isinstance(self.cheribsd, CheriBSDSpawnMixin)
 
+    def interact(self):
+        # interact() prints all input+output -> disable logfile
+        self.cheribsd.logfile = None
+        self.cheribsd.logfile_read = None
+        self.cheribsd.logfile_send = None
+        self.show_help_message()
+        self.cheribsd.interact()
+
     @abstractmethod
     def show_help_message(self): ...
 
@@ -390,6 +398,8 @@ def main():
     info(tty_info.usb_info())
     if args.action == "console":
         console = get_console(tty_info)
+        console.interact()
+        return
     else:
         conn = load_and_start_kernel(gdb_cmd=args.gdb, openocd_cmd=args.openocd, bios_image=args.bios,
                                      kernel_image=args.kernel, kernel_debug_file=args.kernel_debug_file,
@@ -397,14 +407,6 @@ def main():
         console = conn.serial
         if args.action == "boot":
             sys.exit(0)
-    # interact() prints all input+output -> disable logfile
-    console.cheribsd.logfile = None
-    console.cheribsd.logfile_read = None
-    console.cheribsd.logfile_send = None
-    console.show_help_message()
-    if args.action == "console":
-        console.cheribsd.interact()
-        return
 
     if args.test_command is not None:
         success("Running test command")
@@ -413,7 +415,7 @@ def main():
     if not sys.__stdin__.isatty():
         success("Not interating with console since stdin is not a TTY. Exiting now.")
     else:
-        console.cheribsd.interact()
+        console.interact()
 
 
 if __name__ == "__main__":
