@@ -29,7 +29,7 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
-from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
+from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
 from ...utils import classproperty, is_jenkins_build
 

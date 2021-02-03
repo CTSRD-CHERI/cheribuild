@@ -302,7 +302,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return [self.sysroot_install_prefix_absolute, self.sysroot_install_prefix_absolute / "libcheri/cmake"]
 
     def _get_compiler_project(self) -> "typing.Type[Project]":
-        from ..projects.llvm import BuildUpstreamLLVM
+        from ..projects.cross.llvm import BuildUpstreamLLVM
         return BuildUpstreamLLVM
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
@@ -316,7 +316,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     FREEBSD_VERSION = 13
 
     def _get_compiler_project(self) -> "typing.Type[Project]":
-        from ..projects.llvm import BuildCheriLLVM
+        from ..projects.cross.llvm import BuildCheriLLVM
         return BuildCheriLLVM
 
     @classmethod
@@ -590,7 +590,7 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     shortname = "CheriBSD-Morello"
 
     def _get_compiler_project(self) -> "typing.Type[Project]":
-        from ..projects.llvm import BuildMorelloLLVM
+        from ..projects.cross.llvm import BuildMorelloLLVM
         return BuildMorelloLLVM
 
     @classmethod
@@ -630,7 +630,7 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
         raise ValueError("Should not be called")
 
     def _get_sdk_root_dir_lazy(self):
-        from ..projects.llvm import BuildCheriOSLLVM
+        from ..projects.cross.llvm import BuildCheriOSLLVM
         return BuildCheriOSLLVM.get_install_dir(self.project, cross_target=CompilationTargets.NATIVE)
 
     @property

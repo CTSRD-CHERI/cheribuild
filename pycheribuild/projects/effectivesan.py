@@ -29,7 +29,7 @@
 #
 import tempfile
 
-from .llvm import BuildLLVMMonoRepoBase
+from .cross.llvm import BuildLLVMMonoRepoBase
 from .project import ComputedDefaultValue, GitRepository
 from ..utils import OSInfo
 

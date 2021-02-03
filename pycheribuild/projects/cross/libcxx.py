@@ -34,8 +34,8 @@ import sys
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
                                   GitRepository)
+from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..build_qemu import BuildQEMU
-from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import CMakeProject, ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD
 from ...config.chericonfig import BuildType

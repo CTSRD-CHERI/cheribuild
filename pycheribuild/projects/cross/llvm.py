@@ -32,14 +32,14 @@ import sys
 import typing
 from pathlib import Path
 
-from .project import BuildType, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject
-from ..config.chericonfig import CheriConfig
-from ..config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTargetInfo, CompilationTargets,
+from ..project import BuildType, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject
+from ...config.chericonfig import CheriConfig
+from ...config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTargetInfo, CompilationTargets,
                                           FreeBSDTargetInfo)
-from ..config.loader import ComputedDefaultValue
-from ..config.target_info import CompilerType, CrossCompileTarget
-from ..processutils import CompilerInfo
-from ..utils import is_jenkins_build, OSInfo, ThreadJoiner
+from ...config.loader import ComputedDefaultValue
+from ...config.target_info import CompilerType, CrossCompileTarget
+from ...processutils import CompilerInfo
+from ...utils import is_jenkins_build, OSInfo, ThreadJoiner
 
 _true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
                                                   as_string="True unless build-everything is set")

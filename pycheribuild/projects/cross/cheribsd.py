@@ -35,7 +35,7 @@ import tempfile
 import typing
 from pathlib import Path
 
-from ..llvm import BuildLLVMMonoRepoBase
+from .llvm import BuildLLVMMonoRepoBase
 from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
                        MakeCommandKind, MakeOptions, Project, SimpleProject, TargetBranchInfo)
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo

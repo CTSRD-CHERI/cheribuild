@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .llvm import BuildLLVMSplitRepoBase
+from .cross.llvm import BuildLLVMSplitRepoBase
 from .project import CMakeProject, GitRepository
 from ..config.loader import ComputedDefaultValue
 

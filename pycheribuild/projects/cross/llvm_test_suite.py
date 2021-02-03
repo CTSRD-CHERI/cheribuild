@@ -31,7 +31,7 @@ from pathlib import Path
 
 from .crosscompileproject import (BuildType, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
                                   GitRepository)
-from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
+from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ...config.loader import ComputedDefaultValue
 
 
