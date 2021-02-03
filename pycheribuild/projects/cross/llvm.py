@@ -35,7 +35,7 @@ from pathlib import Path
 from ..project import BuildType, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTargetInfo, CompilationTargets,
-                                          FreeBSDTargetInfo)
+                                           FreeBSDTargetInfo)
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import CompilerType, CrossCompileTarget
 from ...processutils import CompilerInfo
