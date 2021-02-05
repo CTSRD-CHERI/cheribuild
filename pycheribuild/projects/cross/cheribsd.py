@@ -70,7 +70,7 @@ def _clear_dangerous_make_env_vars():
 
 class BuildFreeBSDBase(Project):
     do_not_add_to_targets = True  # base class only
-    repository = GitRepository("https://github.com/freebsd/freebsd.git")
+    repository = GitRepository("https://github.com/freebsd/freebsd-src.git", default_branch="main")
     make_kind = MakeCommandKind.BsdMake
     skip_world = False
     is_large_source_repository = True
