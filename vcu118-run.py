@@ -371,7 +371,7 @@ def main():
     parser.add_argument("--gdb", default=shutil.which("gdb") or "gdb", help="Path to GDB binary", type=Path)
     parser.add_argument("--openocd", default=shutil.which("openocd") or "openocd", help="Path to openocd binary",
                         type=abspath_arg)
-    parser.add_argument("--test-command", action=append,
+    parser.add_argument("--test-command", action='append',
                         help="Run a command non-interactively before possibly opening a console")
     parser.add_argument("--test-timeout", type=int, default=60 * 60, help="Timeout for the test command")
     parser.add_argument("--pretend", help="Don't actually run the commands just show what would happen",
