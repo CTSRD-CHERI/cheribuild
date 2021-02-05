@@ -109,9 +109,9 @@ class QemuOptions:
     def user_network_args(self, extra_options):
         # We'd like to use virtio everwhere, but FreeBSD doesn't like it on BE mips.
         if self.has_default_nic:
-            return ["-nic", "user,id=net0,ipv6=off" + extra_options]
+            return ["-nic", "user,id=net0" + extra_options]
         network_device_kind = self._qemu_network_config()[0]
-        return ["-device", network_device_kind + ",netdev=net0", "-netdev", "user,id=net0,ipv6=off" + extra_options]
+        return ["-device", network_device_kind + ",netdev=net0", "-netdev", "user,id=net0" + extra_options]
 
     def get_qemu_binary(self) -> "typing.Optional[Path]":
         found_in_path = shutil.which("qemu-system-" + self.qemu_arch_sufffix)
