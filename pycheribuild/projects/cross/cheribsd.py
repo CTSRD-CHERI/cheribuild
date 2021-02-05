@@ -642,6 +642,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     kernel_options.remove_var("X" + binutil_name)
             kernel_options.set_env(LDFLAGS=fuse_ld_flag, XLDFLAGS=fuse_ld_flag)
         kernel_options.set(KERNCONF=kernconf)
+        if self.add_debug_info_flag:
+            self.make_args.set(DEBUG="-g")
         if extra_make_args:
             self.make_args.set(**extra_make_args)
         return kernel_options
