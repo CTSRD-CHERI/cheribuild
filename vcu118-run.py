@@ -371,7 +371,8 @@ def main():
     parser.add_argument("--gdb", default=shutil.which("gdb") or "gdb", help="Path to GDB binary", type=Path)
     parser.add_argument("--openocd", default=shutil.which("openocd") or "openocd", help="Path to openocd binary",
                         type=abspath_arg)
-    parser.add_argument("--test-command", help="Run a command non-interatively instead of opening a console")
+    parser.add_argument("--test-command", action=append,
+                        help="Run a command non-interactively before possibly opening a console")
     parser.add_argument("--test-timeout", type=int, default=60 * 60, help="Timeout for the test command")
     parser.add_argument("--pretend", help="Don't actually run the commands just show what would happen",
                         action="store_true")
@@ -409,8 +410,9 @@ def main():
             sys.exit(0)
 
     if args.test_command is not None:
-        success("Running test command")
-        console.cheribsd.checked_run(args.test_command, timeout=args.test_timeout)
+        success("Running test commands")
+        for test_command in args.test_command:
+            console.cheribsd.checked_run(args.test_command, timeout=args.test_timeout)
     # Finally interact with the console (if possible)
     if not sys.__stdin__.isatty():
         success("Not interating with console since stdin is not a TTY. Exiting now.")
