@@ -132,12 +132,11 @@ class BuildFreeBSDBase(Project):
             self.add_required_pkg_config("libarchive", apt="libarchive-dev", zypper="libarchive-devel")
         self.make_args.set(
             DB_FROM_SRC=True,  # don't use the system passwd file
-            NO_CLEAN=True,  # don't clean, we have the --clean flag for that
             I_REALLY_MEAN_NO_CLEAN=True,  # Also skip the useless delete-old step
             NO_ROOT=True,  # use this even if current user is root, as without it the METALOG file is not created
             BUILD_WITH_STRICT_TMPPATH=True,  # This can catch lots of depdency errors
             )
-        # FreeBSD has renamed NO_CLEAN to WITHOUT_CLEAN, so set both to silence the annoying warning
+        # FreeBSD has renamed NO_CLEAN to WITHOUT_CLEAN
         self.make_args.set_with_options(CLEAN=False)
 
         if self.minimal:
