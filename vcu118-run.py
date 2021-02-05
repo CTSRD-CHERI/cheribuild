@@ -412,7 +412,7 @@ def main():
     if args.test_command is not None:
         success("Running test commands")
         for test_command in args.test_command:
-            console.cheribsd.checked_run(args.test_command, timeout=args.test_timeout)
+            console.cheribsd.checked_run(test_command, timeout=args.test_timeout)
     # Finally interact with the console (if possible)
     if not sys.__stdin__.isatty():
         success("Not interating with console since stdin is not a TTY. Exiting now.")
