@@ -106,7 +106,7 @@ class LaunchQEMUBase(SimpleProject):
         self.disk_image = None  # type: typing.Optional[Path]
         self._project_specific_options = []
         self.bios_flags = []
-        self.qemu_options = QemuOptions(self.crosscompile_target)
+        self.qemu_options = QemuOptions(self.crosscompile_target, want_debugger=self.config.wait_for_debugger)
         self.qemu_user_networking = True
         self.rootfs_path = None  # type:typing.Optional[Path]
         self._after_disk_options = []
