@@ -149,6 +149,10 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             default=False,
             help="Compartmentalize FreeRTOS")
 
+        cls.compartmentalization_mode = cls.add_config_option("compartmentalization_mode", show_help=True,
+            default="objs",
+            help="'Comparmentalization mode (either objs or libs)")
+
         cls.use_virtio_blk = cls.add_bool_option("use_virtio_blk", show_help=True,
             default=False,
             help="Use VirtIO Block as a disk for FreeRTOS")
@@ -223,6 +227,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
             if self.compartmentalize:
               config_options += ["--compartmentalize"]
+              config_options += ["--compartmentalization_mode", self.compartmentalization_mode]
 
             if self.use_virtio_blk:
               config_options += ["--use-virtio-blk"]
