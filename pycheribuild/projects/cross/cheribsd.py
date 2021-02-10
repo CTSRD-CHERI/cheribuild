@@ -426,19 +426,21 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def _try_find_compatible_system_clang(self):
         min_version = (10, 0)
-        cc_info = self.get_compiler_info(self.host_CC)
-        # Use the compiler configured in the cheribuild config if possible
-        if cc_info.is_clang and not cc_info.is_apple_clang and cc_info.version >= min_version:
-            compiler_path = cc_info.path
-        elif OSInfo.IS_MAC:
+        if OSInfo.IS_MAC:
             # Don't use apple_clang from /usr/bin
             compiler_path = shutil.which("clang", path="/usr/local/opt/llvm/bin:/usr/local/bin:/usr/bin")
         else:
             # Try using the latest installed clang
             compiler_path = latest_system_clang_tool(self.config, "clang", None)
         if not compiler_path:
-            return (None, "Could not find an installation of clang.",
-                    "Please install a recent upstream clang or use the 'custom' or 'upstream-llvm' toolchain option.")
+            # No system clang found, fall back to trying the compiler specified as the host path
+            cc_info = self.get_compiler_info(self.host_CC)
+            # Use the compiler configured in the cheribuild config if possible
+            if cc_info.is_clang and not cc_info.is_apple_clang and cc_info.version >= min_version:
+                compiler_path = cc_info.path
+            else:
+                return (None, "Could not find an installation of clang. Please install a recent upstream clang "
+                              "or use the 'custom' or 'upstream-llvm' toolchain option.")
         self.info("Checking if", compiler_path, "can be used to build FreeBSD...")
         cc_info = self.get_compiler_info(compiler_path)
         if cc_info.is_apple_clang:
