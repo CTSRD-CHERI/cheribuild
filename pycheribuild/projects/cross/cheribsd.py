@@ -439,8 +439,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if cc_info.is_clang and not cc_info.is_apple_clang and cc_info.version >= min_version:
                 compiler_path = cc_info.path
             else:
-                return (None, "Could not find an installation of clang. Please install a recent upstream clang "
-                              "or use the 'custom' or 'upstream-llvm' toolchain option.")
+                return (None, "Could not find a system installation of clang.",
+                        "Please install a recent upstream clang or use the 'custom' or 'upstream-llvm' toolchain "
+                        "option.")
         self.info("Checking if", compiler_path, "can be used to build FreeBSD...")
         cc_info = self.get_compiler_info(compiler_path)
         if cc_info.is_apple_clang:
