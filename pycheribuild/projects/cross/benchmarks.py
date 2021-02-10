@@ -556,7 +556,7 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
 
 class BuildSpec2006New(CrossCompileCMakeProject):
     repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite)
-    default_build_type = BuildType.RELEASE
+    default_build_type = BuildType.RELWITHDEBINFO
     target = "spec2006-new"
     project_name = "spec2006-new"
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
