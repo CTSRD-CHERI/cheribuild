@@ -546,8 +546,7 @@ class SystemClangIfExistsElse:
     pytest.param("freebsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
     pytest.param("freebsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
     pytest.param("freebsd-mips64", "$BUILD$/freebsd-mips64-build/tmp/usr/bin/clang",
-                 FreeBSDToolchainKind.BOOTSTRAPPED, [],
-                 marks=pytest.mark.xfail(reason="Results in $SOURCE$/tmp/usr/bin/clang on some systems")),
+                 FreeBSDToolchainKind.BOOTSTRAPPED, []),
     pytest.param("freebsd-mips64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
                  ["--freebsd-mips64/toolchain-path", "/path/to/custom/toolchain"]),
 
@@ -556,14 +555,13 @@ class SystemClangIfExistsElse:
     pytest.param("cheribsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
     pytest.param("cheribsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
     pytest.param("cheribsd-mips64", "$BUILD$/cheribsd-mips64-build/tmp/usr/bin/clang",
-                 FreeBSDToolchainKind.BOOTSTRAPPED, [],
-                 marks=pytest.mark.xfail(reason="Results in $SOURCE$/tmp/usr/bin/clang on some systems")),
+                 FreeBSDToolchainKind.BOOTSTRAPPED, []),
     pytest.param("cheribsd-mips64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
                  ["--cheribsd-mips64/toolchain-path", "/path/to/custom/toolchain"]),
     ])
 def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, extra_args):
     # Avoid querying bmake for the objdir
-    args = ["--" + target + "/toolchain", kind.value, "--build-root=/some/path/that/does/not/exist"]
+    args = ["--" + target + "/toolchain", kind.value, "--build-root=/some/path/that/does/not/exist", "--pretend"]
     args.extend(extra_args)
     config = _parse_arguments(args)
     project = _get_target_instance(target, config, BuildFreeBSD)
