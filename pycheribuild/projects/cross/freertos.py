@@ -145,6 +145,17 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             default="qemu_virt",
             help="The FreeRTOS platform to build for.")  # type: str
 
+        # Default to QEMU addresses
+        cls.ipaddr = cls.add_config_option(
+            "ipaddr", metavar="IPADDR", show_help=True,
+            default="10.0.2.15",
+            help="The static IP to assign to FreeRTOS.")  # type: str
+
+        cls.gateway = cls.add_config_option(
+            "gateway", metavar="GATEWAY", show_help=True,
+            default="10.0.2.2",
+            help="The static gateway IP for FreeRTOS.")  # type: str
+
         cls.compartmentalize= cls.add_bool_option("compartmentalize", show_help=True,
             default=False,
             help="Compartmentalize FreeRTOS")
@@ -220,7 +231,9 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                           "--toolchain", self.toolchain,
                           "--riscv-platform", self.platform,
                           "--program-path", program_root,
-                          "--sysroot",  str(self.sdk_sysroot)
+                          "--sysroot",  str(self.sdk_sysroot),
+                          "--ipaddr", self.ipaddr,
+                          "--gateway", self.gateway
                           ]
 
             config_options += ["--purecap"] if self.target_info.target.is_cheri_purecap() else []
