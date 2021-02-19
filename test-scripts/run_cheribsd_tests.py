@@ -138,6 +138,8 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
             qemu.checked_run("kyua help", timeout=60)
             # Try to load the pf module for the pfctl test
             qemu.run("kldstat -m pf || kldload pf  || echo 'failed to load pf module'")
+            # The tests in lib/libc/tests/rpc are skipped unless rpcbind is running
+            qemu.run("service rpcbind onestart")
         for i, tests_file in enumerate(args.kyua_tests_files):
             # TODO: is the results file too big for tmpfs? No should be fine, only a few megabytes
             qemu.checked_run("rm -f /tmp/results.db")
