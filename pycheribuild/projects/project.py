@@ -3007,8 +3007,8 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
             self.install_file(self.build_dir / "compile_commands.json", self.source_dir / "compile_commands.json",
                               force=True)
 
-    def install(self, _stdout_filter="__DEFAULT__"):
-        if _stdout_filter == "__DEFAULT__":
+    def install(self, _stdout_filter=_default_stdout_filter):
+        if _stdout_filter is _default_stdout_filter:
             _stdout_filter = self._cmake_install_stdout_filter
         super().install(_stdout_filter=_stdout_filter)
 

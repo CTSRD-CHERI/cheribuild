@@ -39,6 +39,7 @@ from .project import (AutotoolsProject, BuildType, CheriConfig, CrossCompileTarg
                       MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
 from ..config.loader import ComputedDefaultValue
+from ..utils import cached_property
 
 
 class BuildQEMUBase(AutotoolsProject):
@@ -52,6 +53,7 @@ class BuildQEMUBase(AutotoolsProject):
     can_build_with_asan = True
     default_targets = "some-invalid-target"
     lto_by_default = True
+    _initial_meson_commit = "a56650518f5ba84ed15b9415fa1041311eeeece0"
 
     @classmethod
     def is_toolchain_target(cls):
@@ -212,6 +214,10 @@ class BuildQEMUBase(AutotoolsProject):
         if cxxflags:
             self.configure_args.append("--extra-cxxflags=" + self.commandline_to_str(cxxflags))
 
+    @cached_property
+    def have_meson_build_system(self) -> bool:
+        return self.repository.contains_commit(self, self._initial_meson_commit, src_dir=self.source_dir)
+
     def run_tests(self):
         self.run_make("check", cwd=self.build_dir)
 
@@ -224,6 +230,13 @@ class BuildQEMUBase(AutotoolsProject):
         if (self.source_dir / "pixman/pixman").exists():
             self.warning("QEMU might build the broken pixman submodule, run `git submodule deinit -f pixman` to clean")
         super().update()
+
+    def _stdout_filter(self, line: bytes):
+        # TODO: remove this once we depend on meson.
+        if self.have_meson_build_system:
+            # When compiling with ninja, we need to disable filtering to see warning messages.
+            return self._show_line_stdout_filter(line)
+        return super()._stdout_filter(line)
 
 
 class BuildQEMU(BuildQEMUBase):
