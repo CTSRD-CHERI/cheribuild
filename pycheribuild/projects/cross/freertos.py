@@ -150,7 +150,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         # Default to QEMU addresses
         cls.ipaddr = cls.add_config_option(
             "ipaddr", metavar="IPADDR", show_help=True,
-            default="10.0.2.15",
+            default="10.0.2.15/24",
             help="The static IP to assign to FreeRTOS.")  # type: str
 
         cls.gateway = cls.add_config_option(
