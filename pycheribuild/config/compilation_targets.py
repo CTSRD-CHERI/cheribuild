@@ -242,17 +242,17 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         if xtarget.is_cheri_purecap():
             if xtarget.cpu_architecture == CPUArchitecture.RISCV32:
                 # 32-bit soft-float
-                return "ilp32"
-            else:
-                # 64-bit soft-float
-                return "lp64"
-        else:
-            if xtarget.cpu_architecture == CPUArchitecture.RISCV32:
-                # 32-bit soft-float
                 return "il32pc64"
             else:
                 # 64-bit soft-float
                 return "l64pc128"
+        else:
+            if xtarget.cpu_architecture == CPUArchitecture.RISCV32:
+                # 32-bit soft-float
+                return "ilp32"
+            else:
+                # 64-bit soft-float
+                return "lp64"
 
 
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
