@@ -55,7 +55,7 @@ from ..processutils import (check_call_handle_noexec, commandline_to_str, Compil
                             set_env)
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import (AnsiColour, cached_property, classproperty, coloured, fatal_error, include_local_file,
-                     is_jenkins_build, OSInfo, replace_one, status_update, ThreadJoiner, warning_message)
+                     is_jenkins_build, OSInfo, remove_prefix, replace_one, status_update, ThreadJoiner, warning_message)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
@@ -1376,6 +1376,35 @@ class GitRepository(SourceRepository):
                 return target_override.branch
         return self._default_branch
 
+    @staticmethod
+    def contains_commit(current_project: "Project", commit: str, *, src_dir: Path, expected_branch="HEAD",
+                        invalid_commit_ref_result: typing.Any = False):
+        # Note: merge-base --is-ancestor exits with code 0/1, so we need to pass allow_unexpected_returncode
+        is_ancestor = run_command("git", "merge-base", "--is-ancestor", commit, expected_branch, cwd=src_dir,
+                                  print_verbose_only=True, capture_error=True, allow_unexpected_returncode=True,
+                                  run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, raise_in_pretend_mode=True)
+        if is_ancestor.returncode == 0:
+            current_project.verbose_print(coloured(AnsiColour.blue, expected_branch, "contains commit", commit))
+            return True
+        elif is_ancestor.returncode == 1:
+            current_project.verbose_print(
+                coloured(AnsiColour.blue, expected_branch, "does not contains commit", commit))
+            return False
+        elif is_ancestor.returncode == 128 or (
+                is_ancestor.stderr and (b"Not a valid commit name" in is_ancestor.stderr or  # e.g. not fetched yet
+                                        b"no upstream configured" in is_ancestor.stderr)):  # @{u} without an upstream.
+            # Strip the fatal: prefix from the error message for easier to understand debug output.
+            error_message = remove_prefix(is_ancestor.stderr.decode("utf-8"), "fatal: ").strip()
+            current_project.verbose_print(coloured(AnsiColour.blue, "Could not determine if ", expected_branch,
+                                                   " contains ", commit, ":", sep=""),
+                                          coloured(AnsiColour.yellow, error_message))
+            return invalid_commit_ref_result
+        else:
+            current_project.warning("Unknown return code", is_ancestor)
+            # some other error -> raise so that I can see what went wrong
+            raise subprocess.CalledProcessError(is_ancestor.retcode, is_ancestor.args, output=is_ancestor.stdout,
+                                                stderr=is_ancestor.stderr)
+
     def ensure_cloned(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path,
                       skip_submodules=False) -> None:
         if current_project.config.skip_clone:
@@ -1556,28 +1585,23 @@ class GitRepository(SourceRepository):
 
         # We don't need to update if the upstream commit is an ancestor of the current HEAD.
         # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
-        # Note: merge-base --is-ancestor exits with code 0/1 instead of printing output so we need a try/catch
-        is_ancestor = run_command("git", "merge-base", "--is-ancestor", "@{upstream}", "HEAD", cwd=src_dir,
-                                  print_verbose_only=True, capture_error=True, allow_unexpected_returncode=True,
-                                  run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, raise_in_pretend_mode=True)
-        if is_ancestor.returncode == 0:
-            current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is up-to-date or ahead of upstream."))
+        # When checking if we are up to date, we treat a missing @{upstream} reference (no upstream branch
+        # configured) as success to avoid getting an error from git pull.
+        up_to_date = self.contains_commit(current_project, "@{upstream}", src_dir=src_dir,
+                                          invalid_commit_ref_result="invalid")
+        if up_to_date is True:
+            current_project.info("Skipping update: Current HEAD is up-to-date or ahead of upstream.")
             return
-        elif is_ancestor.returncode == 128 or (is_ancestor.stderr and "no upstream configured" in is_ancestor.stderr):
-            current_project.info("No upstream configured to update from")
+        elif up_to_date == "invalid":
+            # Info message was already printed.
+            current_project.info("Skipping update: no upstream configured to update from.")
             return
-        elif is_ancestor.returncode == 1:
-            current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
-        else:
-            current_project.warning("Unknown return code", is_ancestor)
-            # some other error -> raise so that I can see what went wrong
-            raise subprocess.CalledProcessError(is_ancestor.retcode, is_ancestor.args, output=is_ancestor.stdout,
-                                                stderr=is_ancestor.stderr)
+        assert up_to_date is False
+        current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
 
         # make sure we run git stash if we discover any local changes
         has_changes = len(run_command("git", "diff", "--stat", "--ignore-submodules",
                                       capture_output=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
-
         pull_cmd = ["git", "pull"]
         has_autostash = False
         git_version = get_program_version(Path(shutil.which("git"))) if shutil.which("git") else (0, 0, 0)
