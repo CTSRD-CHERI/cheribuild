@@ -264,11 +264,11 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
     def process(self):
 
-        if self.demo not in self.supported_freertos_demos:
-            self.fatal("Demo " + self.demo + "is not supported")
+        #if self.demo not in self.supported_freertos_demos:
+        #    self.fatal("Demo " + self.demo + "is not supported")
 
-        if self.demo_app not in self.supported_demo_apps[self.demo]:
-            self.fatal(self.demo + " Demo doesn't support/have " + self.demo_app)
+        #if self.demo_app not in self.supported_demo_apps[self.demo]:
+        #    self.fatal(self.demo + " Demo doesn't support/have " + self.demo_app)
 
         if self.toolchain == "llvm":
             with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
