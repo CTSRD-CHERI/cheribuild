@@ -92,31 +92,24 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                                                                                       softfloat=True) + \
                                 self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
 
-        # We only support building FreeRTOS with llvm from cheribuild
-        self.make_args.set(TOOLCHAIN="llvm")
+        # Galois uses make build sysetm
+        if self.demo == "RISC-V_Galois_demo":
 
-        # For backward compatibility. CheriFreeRTOS used to be built within a NIX env.
-        # Override that with no and set the appopriate flags here.
-        self.make_args.set(NIX_ENV="no")
+            if self.toolchain == "llvm":
+                self.make_args.set(USE_CLANG="yes")
 
-        # Only build 64-bit FreeRTOS as cheribuild currently only supports building
-        # for RV64
-        self.make_args.set(RISCV_XLEN="64")
+            # Galois demo only runs on VCU118/GFE
+            self.make_args.set(BSP="vcu118")
 
-        # Set sysroot Makefile arg to pick up libc
-        self.make_args.set(SYSROOT=str(self.sdk_sysroot))
+            # Only build 64-bit FreeRTOS as cheribuild currently only supports building
+            # for RV64
+            self.make_args.set(XLEN="64")
 
-        # Add compiler-rt location to the search path
-        # self.make_args.set(LDFLAGS="-L"+str(self.compiler_resource / "lib"))
+            # Set sysroot Makefile arg to pick up libc
+            self.make_args.set(SYSROOT_DIR=str(self.sdk_sysroot))
 
-        if self.target_info.target.is_cheri_purecap():
-            # CHERI-RISC-V sophisticated Demo with more advanced device drivers
-            # and currently only runs on FPGA-GFE, purecap
-            self.supported_freertos_demos.append("RISC-V_Galois_P1")
-            self.supported_demo_apps["RISC-V_Galois_P1"] = ["main_blinky", "main_netboot"]
-            self.supported_demo_apps["RISC-V-Generic"].append("main_compartment_test")
-
-            self.make_args.set(EXTENSION="cheri")
+            if self.target_info.target.is_cheri_purecap():
+                self.make_args.set(CHERI="1")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -201,19 +194,19 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             self._run_waf("build", self.config.make_j_flag)
             return
 
-        self.make_args.set(BSP=self.demo_bsp)
-
         if self.demo_app == "main_compartment_test":
           self.run_compartmentalize()
 
-        # Need to clean before/between building apps, otherwise
-        # irrelevant objs will be picked up from incompatible apps/builds
-        self.make_args.set(PROG=self.demo_app)
-        self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
+        # Galois only currently has make build system
+        if self.demo == "RISC-V_Galois_demo":
+            # Need to clean before/between building apps, otherwise
+            # irrelevant objs will be picked up from incompatible apps/builds
+            self.make_args.set(PROG=self.demo_app)
+            self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
 
-        self.run_make(cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
-        self.move_file(self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo_app + ".elf"),
-                       self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"))
+            self.run_make(cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
+            self.move_file(self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo_app + ".elf"),
+                           self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"))
 
     def configure(self):
         if self.build_system == "waf":
