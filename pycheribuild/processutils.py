@@ -34,6 +34,7 @@
 import contextlib
 import fcntl
 import functools
+import io
 import os
 import re
 import shlex
@@ -102,7 +103,7 @@ class TtyState:
             self.attrs = termios.tcgetattr(fd)
         except Exception as e:
             # Can happen if sys.stdin/sys.stdout/sys.stderr is not a TTY
-            if os.isatty(fd.fileno()):
+            if self._isatty():
                 warning_message("Failed to query TTY state for", context, fd_name, "-", e)
             self.attrs = None
         try:
@@ -111,8 +112,14 @@ class TtyState:
             # Can happen if sys.stdin/sys.stdout/sys.stderr is not a real file.  When running tests with pytest, this
             # will raise UnsupportedOperation("redirected stdin is pseudofile, has no fileno()")
             self.flags = None
-            if os.isatty(fd.fileno()):
+            if self._isatty():
                 warning_message("Failed to query TTY flags for", context, fd_name, "-", e)
+
+    def _isatty(self):
+        try:
+            return os.isatty(self.fd.fileno())
+        except io.UnsupportedOperation:
+            return False
 
     def _restore_attrs(self):
         try:
