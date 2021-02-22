@@ -366,6 +366,7 @@ class LaunchQEMUBase(SimpleProject):
                              "-S"  # freeze CPU at startup (use 'c' to start execution)
                              ]
         # We want stdout/stderr here even when running with --quiet
+        # FIXME: it seems like QEMU often breaks the line wrapping state: https://bugs.launchpad.net/qemu/+bug/1857449
         self.run_cmd(qemu_command, stdout=sys.stdout, stderr=sys.stderr, give_tty_control=True)
 
     def print_port_usage(self, port: int):

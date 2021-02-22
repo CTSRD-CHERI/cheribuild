@@ -68,7 +68,8 @@ class QemuOptions:
             # TCG does not support AVX, so pick the newest pre-AVX Intel CPU (Nehalem)
             # self.machine_flags += ["-cpu", "Nehalem"]
             # FIXME: SSE4.2 is broken in QEMU: https://bugs.launchpad.net/qemu/+bug/1916269
-            # We have to use the ancient default instead to avoid kernel panics (https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=253617)
+            # We have to use the ancient default instead to avoid kernel panics.
+            # See https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=253617 for details.
         elif xtarget.is_aarch64(include_purecap=False):  # No morello QEMU (yet)
             self.qemu_arch_sufffix = "aarch64"
             self.can_boot_kernel_directly = False  # boot from disk
