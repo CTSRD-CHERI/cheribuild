@@ -51,8 +51,8 @@ from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchi
                                   TargetInfo)
 from ..filesystemutils import FileSystemUtils
 from ..processutils import (check_call_handle_noexec, commandline_to_str, CompilerInfo, get_compiler_info,
-                            get_program_version, get_version_output, popen_handle_noexec, print_command, run_command,
-                            set_env)
+                            get_program_version, get_version_output, keep_terminal_sane, popen_handle_noexec,
+                            print_command, run_command, set_env)
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import (AnsiColour, cached_property, classproperty, coloured, fatal_error, include_local_file,
                      is_jenkins_build, OSInfo, remove_prefix, replace_one, status_update, ThreadJoiner, warning_message)
@@ -854,8 +854,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 # just run the process connected to the current stdout/stdin
                 check_call_handle_noexec(args, cwd=str(cwd), env=new_env)
             else:
-                make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, env=new_env)
-                self.__run_process_with_filtered_output(make, None, stdout_filter, args)
+                with keep_terminal_sane(name=args[0]):
+                    make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, env=new_env)
+                    self.__run_process_with_filtered_output(make, None, stdout_filter, args)
             return
 
         # open file in append mode
@@ -870,8 +871,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 # a lot more efficient than filtering every line
                 check_call_handle_noexec(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=new_env)
                 return
-            make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=new_env)
-            self.__run_process_with_filtered_output(make, logfile, stdout_filter, args)
+            with keep_terminal_sane(name=args[0]):
+                make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                           env=new_env)
+                self.__run_process_with_filtered_output(make, logfile, stdout_filter, args)
 
     def __run_process_with_filtered_output(self, proc: subprocess.Popen, logfile: "typing.Optional[typing.IO]",
                                            stdout_filter: "typing.Callable[[bytes], None]",
