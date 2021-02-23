@@ -107,7 +107,7 @@ class JenkinsConfig(CheriConfig):
             "compiler-archive-output-path", type=Path, default=_infer_compiler_output_path,
             help="The path where to extract the compiler")  # type: Path
         self.compiler_type = loader.add_commandline_only_option(
-            "compiler-type", type=CompilerType, default=None,
+            "compiler-type", type=CompilerType, default=CompilerType.CHERI_LLVM,
             enum_choices=[CompilerType.CHERI_LLVM, CompilerType.MORELLO_LLVM, CompilerType.UPSTREAM_LLVM],
             help="The type of the compiler to extract (used to infer the output "
                  " path)")  # type: typing.Optional[CompilerType]
@@ -212,7 +212,8 @@ class JenkinsConfig(CheriConfig):
         super().load()
 
         if not self.workspace or not self.workspace.is_dir():
-            fatal_error("WORKSPACE is not set to a valid directory:", self.workspace, pretend=self.pretend)
+            fatal_error("WORKSPACE is not set to a valid directory:", self.workspace, pretend=self.pretend,
+                        fatal_when_pretending=True)
         self.source_root = self.workspace
         self.build_root = self.workspace
         if self.output_root != self.workspace / self.default_output_path:
