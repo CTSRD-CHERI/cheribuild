@@ -596,6 +596,10 @@ class LaunchFVPBase(SimpleProject):
             # This should fix the extremely slow countdown in the loader (30 minutes instead of 10s) and might also
             # improve network reliability
             fvp_args += ["-C", "css.scp.CS_Counter.use_real_time=1"]
+            # With newer FVP version we hav to pass another flag to allow the bootloader countdown to roughly match
+            # real time since otherwise each second of countdown takes around 2 minutes:
+            if self.fvp_project.fvp_revision >= (0, 11, 13):
+                fvp_args += ["-C", "board.rtc_clk_frequency=300"]
             self.fvp_project.execute_fvp(fvp_args, disk_image_path=disk_image, firmware_path=uefi_bin.parent,
                                          x11=not self.force_headless, ssh_port=self.ssh_port)
 
