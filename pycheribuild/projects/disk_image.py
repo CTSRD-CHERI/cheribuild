@@ -806,8 +806,10 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     project_name = "disk-image-minimal"
     disk_image_prefix = "cheribsd-minimal"
     dependencies = ["cheribsd"]  # TODO: include gdb?
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
+    supported_architectures = [CompilationTargets.CHERIBSD_AARCH64,
+                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
                                CompilationTargets.CHERIBSD_MIPS_PURECAP,
+                               CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP,
                                CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_RISCV_HYBRID,
                                CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
                                ]
