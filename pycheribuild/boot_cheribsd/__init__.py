@@ -878,11 +878,11 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
 
     for archive in test_archives:
         if smb_dirs:
-            run_host_command(["tar", "xJf", str(archive), "-C", str(smb_dirs[0].hostdir)])
+            run_host_command(["tar", "xf", str(archive), "-C", str(smb_dirs[0].hostdir)])
         else:
             # Extract to temporary directory and scp over
             with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix="test_files_") as tmp:
-                run_host_command(["tar", "xJf", str(archive), "-C", tmp])
+                run_host_command(["tar", "xf", str(archive), "-C", tmp])
                 run_host_command(["ls", "-la"], cwd=tmp)
                 do_scp(tmp)
     ld_preload_target_paths = []

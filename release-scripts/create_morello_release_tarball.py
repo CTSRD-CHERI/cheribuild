@@ -126,7 +126,7 @@ Path(output_root, "sources/cheribuild/cheribuild.json").write_text("""{
 }
 """)
 # Create the tarball
-run_command("bsdtar", "-cJvf", output_root / "release.tar.xz", "-C", output_root,
+run_command("bsdtar", "-cavf", output_root / "release.tar.xz", "-C", output_root,
             "--options=xz:threads=" + str(default_make_jobs_count()),
             "--options=compression-level=9",  # reduce size a bit more
             "output/morello-sdk/firmware",

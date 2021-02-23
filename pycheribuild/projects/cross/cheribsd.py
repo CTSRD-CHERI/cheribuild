@@ -1720,7 +1720,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         self.fix_symlinks()
         # create an archive to make it easier to copy the sysroot to another machine
         self.delete_file(self.sysroot_archive, print_verbose_only=True)
-        self.run_cmd("tar", "-czf", self.sysroot_archive, self.cross_sysroot_path.name,
+        self.run_cmd("tar", "-caf", self.sysroot_archive, self.cross_sysroot_path.name,
                      cwd=self.cross_sysroot_path.parent)
         self.info("Successfully populated sysroot")
 
