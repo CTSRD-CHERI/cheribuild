@@ -98,7 +98,7 @@ class SdkArchive(object):
     def extract(self):
         assert self.archive.exists(), str(self.archive)
         self.cheri_config.FS.makedirs(self.output_dir)
-        run_command(["tar", "Jxf", self.archive, "-C", self.output_dir] + self.extra_args,
+        run_command(["tar", "xf", self.archive, "-C", self.output_dir] + self.extra_args,
                     cwd=self.cheri_config.workspace)
         self.check_required_files()
 
