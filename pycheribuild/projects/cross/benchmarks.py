@@ -439,7 +439,7 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test \
     def create_tests_dir(self, output_dir: Path) -> Path:
         self.__check_valid_benchmark_list()
         spec_archive = self.build_dir / "spec/{}.cpu2006bundle.bz2".format(self.config_name)
-        self.run_cmd("tar", "-xvjf", spec_archive, cwd=output_dir,
+        self.run_cmd("tar", "xvf", spec_archive, cwd=output_dir,
                      run_in_pretend_mode=spec_archive.exists() and output_dir.exists(), raise_in_pretend_mode=False)
         spec_root = output_dir / "benchspec/CPU2006"
         if spec_root.exists():
@@ -494,7 +494,7 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test \
             self.fatal("Cannot run these benchmarks for non-MIPS yet")
             return
         # self.makedirs(self.build_dir / "test")
-        # self.run_cmd("tar", "-xvjf", self.build_dir / "spec/{}.cpu2006bundle.bz2".format(self.config_name),
+        # self.run_cmd("tar", "xvf", self.build_dir / "spec/{}.cpu2006bundle.bz2".format(self.config_name),
         #             cwd=self.build_dir / "test")
         # self.run_cmd("find", ".", cwd=self.build_dir / "test")
         self.clean_directory(self.build_dir / "spec-test-dir")
