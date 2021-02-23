@@ -124,13 +124,15 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List
     clang_archive = SdkArchive(cheri_config, cheri_config.compiler_archive_name,
                                output_dir=cheri_config.compiler_archive_output_path,
                                required_globs=["bin/clang"], extra_args=["--strip-components", "1"])
-    if not clang_archive.archive.exists():
+    all_archives = []
+    if clang_archive.archive.exists():
+        all_archives.append(clang_archive)
+    else:
         warning_message("Compiler archive", clang_archive.archive, "does not exists, will use only existing tools")
-        return []
     if not needs_cheribsd_sysroot or cheri_config.extract_compiler_only:
-        return [clang_archive]  # only need the clang archive
+        return all_archives  # only need the clang archive
     # if we only extracted the compiler, extract the sysroot now
-    extra_args = ["--strip-components", "2"]
+    extra_args = ["--strip-components", "1"]
     sysroot_archive = SdkArchive(cheri_config, cheri_config.sysroot_archive_name,
                                  output_dir=cheri_config.sysroot_archive_output_path,
                                  required_globs=["usr/include"], extra_args=extra_args)
@@ -138,8 +140,16 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List
         warning_message("Project needs a sysroot archive but ", sysroot_archive.archive,
                         "is missing. Will attempt to build anyway but build will most likely fail.")
         run_command("ls", "-la", cwd=cheri_config.workspace)
-        return [clang_archive]
-    return [clang_archive, sysroot_archive]
+        return all_archives
+    else:
+        all_archives.append(sysroot_archive)
+        # Old sysroot archives had a leading ./, newer ones don't anymore
+        # TODO: remove when master has been updated
+        contents = run_command("tar", "tf", sysroot_archive.archive, capture_output=True)
+        if contents.stdout.startswith(b'./'):
+            warning_message("Old sysroot archive detected, stripping one more path component")
+            sysroot_archive.extra_args = ["--strip-components", "2"]
+    return all_archives
 
 
 def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[SdkArchive]"):
