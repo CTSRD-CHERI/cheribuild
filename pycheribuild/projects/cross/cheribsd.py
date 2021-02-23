@@ -1587,8 +1587,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 #         # TODO: install bin/sh? bin/csh?
 
 
-class BuildCheriBsdSysroot(SimpleProject):
-    # TODO: could use this to build only cheribsd sysroot by extending build-cheribsd
+class BuildCheriBsdSysrootArchive(SimpleProject):
     project_name = "cheribsd-sysroot"
     is_sdk_target = True
     rootfs_source_class = BuildCHERIBSD  # type: typing.Type[BuildCHERIBSD]
@@ -1672,8 +1671,10 @@ class BuildCheriBsdSysroot(SimpleProject):
             return
 
         # now copy the files
-        self.clean_directory(self.cross_sysroot_path, ensure_dir_exists=True)
-        self.copy_remote_file(remote_sysroot_dir + "/", self.cross_sysroot_path)
+        self.copy_remote_file(remote_sysroot_dir + "/", self.cross_sysroot_path.parent)
+        # TODO: could also extract the remote archive?
+        # with self.async_clean_directory(self.cross_sysroot_path / "usr"):
+        #    extract_sysroot_archive()
 
     @property
     def sysroot_archive(self):
@@ -1729,18 +1730,16 @@ class BuildCheriBsdSysroot(SimpleProject):
             self.info("Not building sysroot because --skip-world was passed")
             return
 
-        with self.async_clean_directory(self.cross_sysroot_path):
-            building_on_host = OSInfo.IS_FREEBSD or self.rootfs_source_class.get_instance(self).crossbuild
-            if self.copy_remote_sysroot or not building_on_host:
-                self.copy_sysroot_from_remote_machine()
-            else:
-                self.create_sysroot()
-            if (self.cross_sysroot_path / "usr/libcheri/").is_dir():
-                # clang++ expects libgcc_eh to exist:
-                libgcc_eh = self.cross_sysroot_path / "usr/libcheri/libgcc_eh.a"
-                if not libgcc_eh.is_file():
-                    self.warning("CHERI libgcc_eh missing! You should probably update CheriBSD")
-                    self.run_cmd("ar", "rc", libgcc_eh)
+        if self.copy_remote_sysroot:
+            self.copy_sysroot_from_remote_machine()
+        else:
+            self.create_sysroot()
+        if (self.cross_sysroot_path / "usr/libcheri/").is_dir():
+            # clang++ expects libgcc_eh to exist:
+            libgcc_eh = self.cross_sysroot_path / "usr/libcheri/libgcc_eh.a"
+            if not libgcc_eh.is_file():
+                self.warning("CHERI libgcc_eh missing! You should probably update CheriBSD")
+                self.run_cmd("ar", "rc", libgcc_eh)
 
 
 # Add a target aliases for old script invocations
