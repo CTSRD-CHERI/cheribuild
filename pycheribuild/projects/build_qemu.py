@@ -216,7 +216,7 @@ class BuildQEMUBase(AutotoolsProject):
 
     @cached_property
     def have_meson_build_system(self) -> bool:
-        return self.repository.contains_commit(self, self._initial_meson_commit, src_dir=self.source_dir)
+        return (self.source_dir / "meson.build").is_file()
 
     def run_tests(self):
         self.run_make("check", cwd=self.build_dir)
