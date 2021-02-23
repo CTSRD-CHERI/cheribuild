@@ -946,28 +946,35 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             "pam_rootok.so",
             "pam_rootok.so.6",
         ]
-        if self.rootfs_xtarget.is_mips(include_purecap=True):
-            # Needed for most benchmarks (MIPS-only):
-            required_libs.append("libstatcounters.so.3")
+        # Libraries to include if they exist
+        optional_libs = [
+            # Needed for most benchmarks, but not supported on all architectures
+            "libstatcounters.so.3"
+        ]
 
         if self._have_cplusplus_support(libdirs):
             required_libs += ["libc++.so.1", "libcxxrt.so.1", "libgcc_s.so.1"]
 
-        for library_basename in required_libs:
-            full_lib_path = None
-            for library_dir in libdirs:
-                guess = self.rootfs_dir / library_dir / library_basename
-                if guess.exists():
-                    full_lib_path = guess
-            if full_lib_path is None:
-                if len(libdirs) == 1:
-                    prefix = libdirs[0] + "/"
-                else:
-                    prefix = "{" + ",".join(libdirs) + "}/"
-                self.fatal("Could not find required library '", prefix + library_basename, "' in rootfs ",
-                           self.rootfs_dir, sep="")
-                continue
-            self.add_file_to_image(full_lib_path, base_directory=self.rootfs_dir)
+        for libs, required in [(required_libs, True), (optional_libs, False)]:
+            for library_basename in libs:
+                full_lib_path = None
+                for library_dir in libdirs:
+                    guess = self.rootfs_dir / library_dir / library_basename
+                    if guess.exists():
+                        full_lib_path = guess
+                if full_lib_path is None:
+                    if len(libdirs) == 1:
+                        prefix = libdirs[0] + "/"
+                    else:
+                        prefix = "{" + ",".join(libdirs) + "}/"
+                    if required:
+                        self.fatal("Could not find required library '", prefix + library_basename, "' in rootfs ",
+                                   self.rootfs_dir, sep="")
+                    else:
+                        self.info("Could not find optional library '", prefix + library_basename, "' in rootfs ",
+                                  self.rootfs_dir, sep="")
+                    continue
+                self.add_file_to_image(full_lib_path, base_directory=self.rootfs_dir)
 
     def prepare_rootfs(self):
         super().prepare_rootfs()
