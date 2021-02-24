@@ -606,7 +606,7 @@ class BuildSpec2006New(CrossCompileCMakeProject):
 
     def setup(self):
         super().setup()
-        # Only build MiBench
+        # Only build spec2006
         self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006",
                                TEST_SUITE_COPY_DATA=True,
                                TEST_SUITE_COLLECT_CODE_SIZE=False,
@@ -621,6 +621,10 @@ class BuildSpec2006New(CrossCompileCMakeProject):
         if not (self.extracted_spec_sources / "install.sh").exists():
             self.clean_directory(self.extracted_spec_sources)  # clean up partial builds
             self.run_cmd("bsdtar", "xf", self.spec_iso_path, "-C", self.extracted_spec_sources, cwd=self.build_dir)
+            # Some of the files in that archive are not user-writable; go pave
+            # over the permissions so that we don't die if we try to clean up
+            # later.
+            self.run_cmd("chmod", "-R", "u+rwX", self.extracted_spec_sources, cwd=self.build_dir)
         super().configure(**kwargs)
 
     def install(self, **kwargs):
