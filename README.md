@@ -251,7 +251,7 @@ For example a `~/.config/stable-cheribuild.json` could look like this:
 	"#include": "cheribuild-common.json",
 	"cheribsd": {
 		"source-directory": "/my/other/cheribsd/worktree/with/the/stable/branch"
-    }
+	}
 }
 ```
 
