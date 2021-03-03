@@ -83,6 +83,12 @@ class BuildUBoot(Project):
             OBJCOPY=str(self.sdk_bindir / "llvm-objcopy") + " --allow-broken-links",
             OBJDUMP=self.sdk_bindir / "llvm-objdump",
             )
+
+        self.kconfig_overrides = {
+            "CONFIG_SREC": False,
+            "CONFIG_GAP_FILL": False,
+        }
+
         if self.config.verbose:
             self.make_args.set(V=True)
 
@@ -111,15 +117,10 @@ class BuildUBoot(Project):
     def configure(self, **kwargs):
         self.run_make(self.platform + "_defconfig")
 
-        configure_args = {
-            "CONFIG_SREC": False,
-            "CONFIG_GAP_FILL": False,
-        }
-
         def override_config(old):
             new = []
             for line in old:
-                for key, value in configure_args.items():
+                for key, value in self.kconfig_overrides.items():
                     if line.startswith(key + "=") or line.startswith("# " + key + " is not set"):
                         if isinstance(value, bool):
                             value = "y" if value else "n"
