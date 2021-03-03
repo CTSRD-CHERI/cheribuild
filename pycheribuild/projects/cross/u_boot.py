@@ -146,3 +146,18 @@ class BuildUBoot(Project):
             assert kwargs['cwd'] == self.build_dir
             del kwargs['cwd']
         super().run_make(*args, **kwargs, cwd=self.source_dir)
+
+
+class BuildUBootFETT(BuildUBoot):
+    target = "u-boot-fett"
+    project_name = "u-boot"  # reuse same source dir
+    build_dir_suffix = "-fett"  # but not the build dir
+
+    _default_install_dir_fn = ComputedDefaultValue(function=uboot_install_dir,
+                                                   as_string="$SDK_ROOT/u-boot-fett/riscv{32,64}{,-hybrid,-purecap}")
+
+    @property
+    def platform(self):
+        if self.crosscompile_target.is_riscv():
+            return "fett-riscv64_smode"
+        assert False, "unhandled target"
