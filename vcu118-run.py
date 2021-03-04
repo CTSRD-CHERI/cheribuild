@@ -92,7 +92,8 @@ puts "Done!"
 exit 0
 """
 
-OPENOCD_SCIPRT = b"""
+def generate_openocd_script(num_cores: int):
+    openocd_script = """
 interface ftdi
 transport select jtag
 bindto 0.0.0.0
@@ -109,9 +110,21 @@ reset_config none
 
 set _CHIPNAME riscv
 jtag newtap $_CHIPNAME cpu -irlen 18 -ignore-version -expected-id 0x04B31093
+"""
 
-set _TARGETNAME $_CHIPNAME.cpu
-target create $_TARGETNAME riscv -chain-position $_TARGETNAME
+    for core in range(num_cores):
+        openocd_script += "\nset _TARGETNAME_{0:d} $_CHIPNAME.cpu{0:d}".format(core)
+        openocd_script += "\ntarget create $_TARGETNAME_{0:d} riscv -chain-position $_CHIPNAME.cpu -coreid {0:d}".format(core)
+        if core == 0:
+            openocd_script += " -rtos hwthread"
+        openocd_script += "\n"
+
+    if num_cores > 0:
+        openocd_script += "\ntarget smp"
+        for core in range(num_cores):
+            openocd_script += " $_TARGETNAME_{:d}".format(core)
+
+    openocd_script += """
 
 riscv set_ir dtmcs 0x022924
 riscv set_ir dmi 0x003924
@@ -121,6 +134,7 @@ init
 halt
 reset halt
 """
+    return openocd_script.encode()
 
 
 def load_bitfile(bitfile: Path, ltxfile: Path, fu: FileSystemUtils):
@@ -238,9 +252,9 @@ def reset_soc(conn: FpgaConnection):
     conn.gdb.sendintr()
 
 
-def start_openocd(openocd_cmd: Path) -> typing.Tuple[pexpect.spawn, int]:
+def start_openocd(openocd_cmd: Path, num_cores: int) -> typing.Tuple[pexpect.spawn, int]:
     with tempfile.NamedTemporaryFile() as t:
-        t.write(OPENOCD_SCIPRT)
+        t.write(generate_openocd_script(num_cores))
         t.flush()
         cmdline = [str(openocd_cmd), "-f", t.name]
         print_command(cmdline, config=get_global_config())
@@ -269,7 +283,7 @@ def get_console(tty_info: ListPortInfo) -> SerialConnection:
 
 
 def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path, kernel_image: Path = None,
-                          kernel_debug_file: Path = None, tty_info: ListPortInfo) -> FpgaConnection:
+                          kernel_debug_file: Path = None, tty_info: ListPortInfo, num_cores: int) -> FpgaConnection:
     # Open the serial connection first to check that it's available:
     serial_conn = get_console(tty_info)
     success("Connected to TTY")
@@ -277,7 +291,7 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
         failure("Missing bios image: ", bios_image)
     # First start openocd
     gdb_start_time = datetime.datetime.utcnow()
-    openocd, openocd_gdb_port = start_openocd(openocd_cmd)
+    openocd, openocd_gdb_port = start_openocd(openocd_cmd, num_cores)
     # openocd is running, now start GDB
     args = [str(Path(bios_image).absolute()),
             "-ex", "target extended-remote :" + str(openocd_gdb_port)]
@@ -301,6 +315,13 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
         args += ["-ex", "symbol-file " + shlex.quote(str(kernel_debug_file.absolute()))]
         args += ["-ex", "load " + shlex.quote(str(kernel_image.absolute()))]
     args += ["-ex", "load " + shlex.quote(str(Path(bios_image).absolute()))]
+    if num_cores > 1:
+        args += ["-ex", "set $entry_point = $pc"] # Record the entry point to the bios
+        for core in range(1, num_cores):
+            args += ["-ex", "thread {:d}".format(core + 1)] # switch to thread (core + 1) (GDB counts from 1)
+            args += ["-ex", "si 5"] # execute bootrom on every other core
+            args += ["-ex", "set $pc=$entry_point"] # set every other core to the start of the bios
+        args += ["-ex", "thread 1"] # switch back to core 0
     print_command(str(gdb_cmd), *args, config=get_global_config())
     if get_global_config().pretend:
         gdb = PretendSpawn(str(gdb_cmd), args, timeout=60)
@@ -333,6 +354,10 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     load_end_time = datetime.datetime.utcnow()
     success("Finished loading bootloader image in ", load_end_time - load_start_time)
     gdb_finish_time = load_end_time
+    if num_cores > 1:
+        for core in range(1, num_cores):
+            gdb.expect_exact(["0x0000000044000000"])
+        success("Done executing bootrom on all other cores")
     gdb.sendline("continue")
     success("Starting CheriBSD after ", datetime.datetime.utcnow() - gdb_start_time)
     i = serial_conn.cheribsd.expect_exact(["bbl loader", "---<<BOOT>>---", pexpect.TIMEOUT], timeout=30)
@@ -371,6 +396,7 @@ def main():
     parser.add_argument("--gdb", default=shutil.which("gdb") or "gdb", help="Path to GDB binary", type=Path)
     parser.add_argument("--openocd", default=shutil.which("openocd") or "openocd", help="Path to openocd binary",
                         type=abspath_arg)
+    parser.add_argument("--num-cores", type=int, default=1, help="Number of harts on bitstream")
     parser.add_argument("--test-command", action='append',
                         help="Run a command non-interactively before possibly opening a console")
     parser.add_argument("--test-timeout", type=int, default=60 * 60, help="Timeout for the test command")
@@ -404,7 +430,7 @@ def main():
     else:
         conn = load_and_start_kernel(gdb_cmd=args.gdb, openocd_cmd=args.openocd, bios_image=args.bios,
                                      kernel_image=args.kernel, kernel_debug_file=args.kernel_debug_file,
-                                     tty_info=tty_info)
+                                     tty_info=tty_info, num_cores=args.num_cores)
         console = conn.serial
         if args.action == "boot":
             sys.exit(0)
