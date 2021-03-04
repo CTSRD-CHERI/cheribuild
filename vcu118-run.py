@@ -363,8 +363,8 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     i = serial_conn.cheribsd.expect_exact(["bbl loader", "---<<BOOT>>---", pexpect.TIMEOUT], timeout=30)
     if i == 0:
         success("bbl loader started")
-    elif i == 0:
-        success("FreeBSD booot started")
+    elif i == 1:
+        success("FreeBSD boot started")
     else:
         failure("Did not get expected boot output", exit=True)
     # TODO: network_iface="xae0", but DHCP doesn't work
