@@ -504,7 +504,7 @@ class BuildDiskImageBase(SimpleProject):
         root_partition = self.disk_image_path.with_suffix(".root.img")
 
         # TODO: Make this unconditional once all branches support EFI
-        if (self.rootfs_dir / "boot/boot1.efi").exists():
+        if (self.rootfs_dir / "boot/loader.efi").exists():
             efi_partition = self.disk_image_path.with_suffix(".efi.img")
         else:
             efi_partition = None
@@ -556,6 +556,8 @@ class BuildDiskImageBase(SimpleProject):
         }
         efi_machine_type_short_name = efi_machine_type_short_names[self.crosscompile_target.cpu_architecture]
         efi_file = "BOOT" + efi_machine_type_short_name + ".EFI"
+        # Use loader_simp for minimal images as it's smaller and doesn't require any additional files
+        loader_file = "loader_simp.efi" if self.is_minimal else "loader.efi"
 
         with tempfile.NamedTemporaryFile(mode="w+") as tmp_mtree:
             use_makefs = True
@@ -565,7 +567,7 @@ class BuildDiskImageBase(SimpleProject):
             if use_makefs:
                 # Makefs doesn't handle contents= right now
                 efi_mtree = MtreeFile(verbose=self.config.verbose)
-                efi_mtree.add_file(self.rootfs_dir / "boot/boot1.efi", path_in_image="efi/boot/" + efi_file.lower(),
+                efi_mtree.add_file(self.rootfs_dir / "boot" / loader_file, path_in_image="efi/boot/" + efi_file.lower(),
                                    mode=0o644)
                 efi_mtree.write(tmp_mtree, pretend=self.config.pretend)
                 tmp_mtree.flush()  # ensure the file is actually written
@@ -585,7 +587,7 @@ class BuildDiskImageBase(SimpleProject):
                 self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI")
                 self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI/BOOT")
                 self.run_cmd(mtools_bin / "mcopy", "-i", efi_partition,
-                             self.rootfs_dir / "boot/boot1.efi", "::/EFI/BOOT/" + efi_file.upper())
+                             self.rootfs_dir / "boot" / loader_file, "::/EFI/BOOT/" + efi_file.upper())
             if (mtools_bin / "minfo").exists():
                 # Get some information about the created image information:
                 self.run_cmd(mtools_bin / "minfo", "-i", efi_partition)
