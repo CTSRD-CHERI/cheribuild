@@ -483,6 +483,29 @@ class BuildDiskImageBase(SimpleProject):
             self.fatal("Missing mkimg command! Should be found in FreeBSD build dir (or set $MKIMG_CMD)")
         self.run_cmd([self.mkimg_cmd] + cmd, **kwargs)
 
+    @property
+    def include_efi_partition(self):
+        if self.crosscompile_target.is_mips(include_purecap=True):
+            return False
+        # TODO: Make this unconditional once all branches support EFI
+        if self.crosscompile_target.is_riscv(include_purecap=True):
+            return (self.rootfs_dir / "boot/loader.efi").exists()
+        return True
+
+    @property
+    def include_swap_partition(self):
+        return self.crosscompile_target.is_riscv(include_purecap=True)
+
+    @property
+    def rootfs_only(self):
+        if self.crosscompile_target.is_mips(include_purecap=True):
+            return True
+        # Upstream's QEMU config wants /dev/vtbd0 (ours also looks for
+        # /dev/ufs/root), so until we boot with UEFI we have to use that
+        if not self.target_info.is_cheribsd() and self.crosscompile_target.is_riscv():
+            return True
+        return False
+
     def make_x86_disk_image(self):
         assert self.is_x86
         root_partition = self.disk_image_path.with_suffix(".root.img")
@@ -499,12 +522,10 @@ class BuildDiskImageBase(SimpleProject):
         finally:
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
 
-    def make_riscv_disk_image(self):
-        assert self.crosscompile_target.is_riscv(include_purecap=True)
+    def make_gpt_disk_image(self):
         root_partition = self.disk_image_path.with_suffix(".root.img")
 
-        # TODO: Make this unconditional once all branches support EFI
-        if (self.rootfs_dir / "boot/loader.efi").exists():
+        if self.include_efi_partition:
             efi_partition = self.disk_image_path.with_suffix(".efi.img")
         else:
             efi_partition = None
@@ -516,34 +537,23 @@ class BuildDiskImageBase(SimpleProject):
             else:
                 mkimg_efi_args = []
 
+            if self.include_swap_partition:
+                mkimg_swap_args = ["-p", "freebsd-swap/swap::2G"]
+            else:
+                mkimg_swap_args = []
+
             self.make_rootfs_image(root_partition)
             self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
                             # "-f", "raw",  # raw disk image instead of qcow2
                             *mkimg_efi_args,
                             "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
-                            "-p", "freebsd-swap/swap::2G",
+                            *mkimg_swap_args,
                             "-o", self.disk_image_path  # output file
                             ], cwd=self.rootfs_dir)
         finally:
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
             if efi_partition is not None:
                 self.delete_file(efi_partition)  # no need to keep the partition now that we have built the full image
-
-    def make_aarch64_disk_image(self):
-        assert self.crosscompile_target.is_aarch64(include_purecap=True)
-        root_partition = self.disk_image_path.with_suffix(".root.img")
-        efi_partition = self.disk_image_path.with_suffix(".efi.img")
-        try:
-            self.make_efi_partition(efi_partition)
-            self.make_rootfs_image(root_partition)
-            self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
-                            "-p", "efi:=" + str(efi_partition),  # EFI boot partition
-                            "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
-                            "-o", self.disk_image_path  # output file
-                            ], cwd=self.rootfs_dir)
-        finally:
-            self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
-            self.delete_file(efi_partition)  # no need to keep the partition now that we have built the full image
 
     def make_efi_partition(self, efi_partition: Path):
         # See Table 15. UEFI Image Types, UEFI spec v2.8 (Errata B)
@@ -644,16 +654,15 @@ class BuildDiskImageBase(SimpleProject):
                 qemu_img_command = Path(system_qemu_img)
             else:
                 self.info("qemu-img command was not found. Will not be able to create QCOW2 images")
-        # AArch64 and x86 require different disk images:
-        if self.crosscompile_target.is_aarch64(include_purecap=True):
-            self.make_aarch64_disk_image()
-        elif self.is_x86:
-            self.make_x86_disk_image()
-        elif self.crosscompile_target.is_riscv(
-                include_purecap=True) and self.target_info.is_cheribsd() and not self.is_minimal:
-            self.make_riscv_disk_image()
-        else:
+
+        if self.rootfs_only:
             self.make_rootfs_image(self.disk_image_path)
+        elif self.is_x86:
+            # X86 currently requires special handling
+            # TODO: Switch to normal UEFI booting
+            self.make_x86_disk_image()
+        else:
+            self.make_gpt_disk_image()
 
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if not self.config.quiet and qemu_img_command.exists():
@@ -859,6 +868,10 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
     def _get_source_class_target(self, config):
         return self.rootfs_xtarget
 
+    @property
+    def include_swap_partition(self):
+        return False
+
     @staticmethod
     def _have_cplusplus_support(_: "typing.List[str]"):
         # C++ runtime was not available for RISC-V purecap due to https://github.com/CTSRD-CHERI/llvm-project/issues/379
@@ -1041,6 +1054,10 @@ class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
     project_name = "disk-image-mfs-root"
     disk_image_prefix = "cheribsd-mfs-root"
     include_boot = False
+
+    @property
+    def rootfs_only(self):
+        return True
 
     @property
     def cheribsd_class(self):
