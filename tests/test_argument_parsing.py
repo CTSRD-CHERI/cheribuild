@@ -18,7 +18,7 @@ from pycheribuild.projects.cross import *  # noqa: F401, F403
 from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, FreeBSDToolchainKind
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 # noinspection PyProtectedMember
-from pycheribuild.projects.disk_image import _BuildDiskImageBase, BuildCheriBSDDiskImage
+from pycheribuild.projects.disk_image import BuildDiskImageBase, BuildCheriBSDDiskImage
 # Override the default config loader:
 from pycheribuild.projects.project import SimpleProject
 from pycheribuild.projects.run_qemu import LaunchCheriBSD
@@ -612,7 +612,7 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     ])
 def test_disk_image_path(target, expected_name):
     config = _parse_arguments([])
-    project = _get_target_instance(target, config, _BuildDiskImageBase)
+    project = _get_target_instance(target, config, BuildDiskImageBase)
     assert str(project.disk_image_path) == str(config.output_root / expected_name)
 
 

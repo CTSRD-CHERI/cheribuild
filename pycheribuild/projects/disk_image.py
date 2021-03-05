@@ -98,7 +98,7 @@ class _AdditionalFileTemplates(object):
         return include_local_file("files/cheribsd/dot.bash_profile.in")
 
 
-def _default_disk_image_name(config: CheriConfig, directory: Path, project: "_BuildDiskImageBase"):
+def _default_disk_image_name(config: CheriConfig, directory: Path, project: "BuildDiskImageBase"):
     xtarget = project.get_crosscompile_target(config)
     # Don't add the os_prefix to the disk image name since it should already be encoded in project.disk_image_prefix)
     return directory / (project.disk_image_prefix + project.build_configuration_suffix(xtarget) + ".img")
@@ -111,16 +111,28 @@ def _default_disk_image_hostname(prefix: str) -> "ComputedDefaultValue[str]":
         as_string=prefix + "-<ARCHITECTURE>")
 
 
-class _BuildDiskImageBase(SimpleProject):
+class BuildDiskImageBase(SimpleProject):
     do_not_add_to_targets = True
     disk_image_path = None  # type: Path
-    _freebsd_build_class = None
+    _source_class = None  # type: typing.Type[SimpleProject]
     strip_binaries = False  # True by default for minimal disk-image
     is_minimal = False  # To allow building a much smaller image
     disk_image_prefix = None  # type: str
     default_disk_image_path = ComputedDefaultValue(
         function=lambda conf, proj: _default_disk_image_name(conf, conf.output_root, proj),
         as_string=lambda cls: "$OUTPUT_ROOT/" + cls.disk_image_prefix + "-<TARGET>-disk.img depending on architecture")
+
+    @classproperty
+    def default_architecture(self) -> CrossCompileTarget:
+        return self._source_class.default_architecture
+
+    @classproperty
+    def supported_architectures(self):
+        return self._source_class.supported_architectures
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig):
+        return [cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
 
     @classmethod
     def setup_config_options(cls, *, default_hostname, extra_files_suffix="", **kwargs):
@@ -153,7 +165,8 @@ class _BuildDiskImageBase(SimpleProject):
         cls.force_overwrite = cls.add_bool_option("force-overwrite", default=True,
                                                   help="Overwrite an existing disk image without prompting")
 
-    def __init__(self, config, source_class: "typing.Type[BuildFreeBSD]"):
+    def __init__(self, config):
+        # TODO: different extra-files directory
         super().__init__(config)
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
@@ -164,6 +177,8 @@ class _BuildDiskImageBase(SimpleProject):
 
         self.makefs_cmd = None  # type: typing.Optional[Path]
         self.mkimg_cmd = None  # type: typing.Optional[Path]
+        source_class = self._source_class.get_class_for_target(self._get_source_class_target(config))
+        assert issubclass(source_class, BuildFreeBSD), source_class
         self.source_project = source_class.get_instance(self)
         assert isinstance(self.source_project, BuildFreeBSD)
         self.rootfs_dir = self.source_project.get_install_dir(self)
@@ -178,6 +193,9 @@ class _BuildDiskImageBase(SimpleProject):
         self.hostname = os.path.expandvars(self.hostname)  # Expand env vars in hostname to allow $CHERI_BITS
         # MIPS needs big-endian disk images
         self.big_endian = self.compiling_for_mips(include_purecap=True)
+
+    def _get_source_class_target(self, config):
+        return self.get_crosscompile_target(config)
 
     def add_file_to_image(self, file: Path, *, base_directory: Path = None, user="root", group="wheel", mode=None,
                           path_in_target=None):
@@ -458,7 +476,7 @@ class _BuildDiskImageBase(SimpleProject):
 
     @property
     def is_x86(self):
-        return False
+        return self.crosscompile_target.is_any_x86()
 
     def run_mkimg(self, cmd: list, **kwargs):
         if not self.mkimg_cmd or not self.mkimg_cmd.exists():
@@ -802,17 +820,10 @@ class _BuildDiskImageBase(SimpleProject):
             self.add_file_to_image(public_key, base_directory=self.extra_files_dir, mode="0644")
 
 
-class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
+class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
     project_name = "disk-image-minimal"
+    _source_class = BuildCHERIBSD
     disk_image_prefix = "cheribsd-minimal"
-    dependencies = ["cheribsd"]  # TODO: include gdb?
-    supported_architectures = [CompilationTargets.CHERIBSD_AARCH64,
-                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
-                               CompilationTargets.CHERIBSD_MIPS_PURECAP,
-                               CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP,
-                               CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_RISCV_HYBRID,
-                               CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
-                               ]
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
         def get_rc_conf_template(self):
@@ -835,15 +846,15 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             self.rootfs_xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
         if self.rootfs_xtarget.is_cheri_hybrid([CPUArchitecture.RISCV64]) and self.use_cheribsd_purecap_rootfs:
             self.rootfs_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
-        self.cheribsd_class = BuildCHERIBSD.get_class_for_target(
-            self.rootfs_xtarget)  # type: typing.Type[BuildCHERIBSD]
-        assert self.cheribsd_class.get_crosscompile_target(config) == self.rootfs_xtarget
-        super().__init__(config, source_class=self.cheribsd_class)
+        super().__init__(config)
         self.minimum_image_size = "20m"  # let's try to shrink the image size
         # The base input is only cheribsdbox and all the symlinks
         self.input_metalogs = [self.rootfs_dir / "cheribsdbox.mtree"]
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
+
+    def _get_source_class_target(self, config):
+        return self.rootfs_xtarget
 
     @staticmethod
     def _have_cplusplus_support(_: "typing.List[str]"):
@@ -1020,35 +1031,12 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             self.run_cmd("sh", "-c", "du -ah '{}' | sort -h".format(self.tmpdir))
         super().make_rootfs_image(rootfs_img)
 
-
-class BuildMultiArchDiskImage(_BuildDiskImageBase):
-    do_not_add_to_targets = True
-    _source_class = None  # type: typing.Type[SimpleProject]
-
-    @classproperty
-    def default_architecture(self) -> CrossCompileTarget:
-        return self._source_class.default_architecture
-
-    @classproperty
-    def supported_architectures(self):
-        return self._source_class.supported_architectures
-
-    @classmethod
-    def dependencies(cls, config: CheriConfig):
-        return [cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
-
     @property
-    def is_x86(self):
-        return self.crosscompile_target.is_any_x86()
-
-    def __init__(self, config: CheriConfig):
-        # TODO: different extra-files directory
-        src_class = self._source_class.get_class_for_target(self.get_crosscompile_target(config))
-        assert issubclass(src_class, BuildFreeBSD), src_class
-        super().__init__(config, source_class=src_class)
+    def cheribsd_class(self):
+        return self._source_class
 
 
-class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
+class BuildCheriBSDDiskImage(BuildDiskImageBase):
     project_name = "disk-image"
     _source_class = BuildCHERIBSD
     _always_add_suffixed_targets = True  # preparation for future multi-target support
@@ -1082,7 +1070,7 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
         super().process()
 
 
-class BuildFreeBSDImage(BuildMultiArchDiskImage):
+class BuildFreeBSDImage(BuildDiskImageBase):
     target = "disk-image-freebsd"
     include_os_in_target_suffix = False
     _source_class = BuildFreeBSD
