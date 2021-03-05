@@ -161,17 +161,17 @@ def test_remove_duplicates():
     assert _sort_targets(["binutils", "llvm"], add_dependencies=True) == ["llvm-native"]
 
 
-def test_minimal_run():
+def test_mfs_root_run():
     # Check that we build the mfs root first
     assert _sort_targets(["disk-image-minimal-mips64-hybrid",
                           "cheribsd-mfs-root-kernel-mips64-hybrid",
-                          "run-minimal-mips64-hybrid"]) == ["disk-image-minimal-mips64-hybrid",
-                                                            "cheribsd-mfs-root-kernel-mips64-hybrid",
-                                                            "run-minimal-mips64-hybrid"]
+                          "run-mfs-root-mips64-hybrid"]) == ["disk-image-minimal-mips64-hybrid",
+                                                             "cheribsd-mfs-root-kernel-mips64-hybrid",
+                                                             "run-mfs-root-mips64-hybrid"]
     assert _sort_targets(["cheribsd-mfs-root-kernel-mips64-hybrid", "disk-image-minimal-mips64-hybrid",
-                          "run-minimal-mips64-hybrid"]) == ["disk-image-minimal-mips64-hybrid",
-                                                            "cheribsd-mfs-root-kernel-mips64-hybrid",
-                                                            "run-minimal-mips64-hybrid"]
+                          "run-mfs-root-mips64-hybrid"]) == ["disk-image-minimal-mips64-hybrid",
+                                                             "cheribsd-mfs-root-kernel-mips64-hybrid",
+                                                             "run-mfs-root-mips64-hybrid"]
 
 
 def _check_deps_not_cached(classes):

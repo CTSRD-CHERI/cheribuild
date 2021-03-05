@@ -42,7 +42,8 @@ from .cross.freertos import BuildFreeRTOS
 from .cross.gdb import BuildGDB
 from .cross.rtems import BuildRtems
 from .cross.u_boot import BuildUBoot
-from .disk_image import (BuildCheriBSDDiskImage, BuildFreeBSDImage, BuildFreeBSDWithDefaultOptionsDiskImage)
+from .disk_image import (BuildCheriBSDDiskImage, BuildFreeBSDImage, BuildFreeBSDWithDefaultOptionsDiskImage,
+                         BuildMinimalCheriBSDDiskImage)
 from .project import CheriConfig, CPUArchitecture, SimpleProject, TargetAliasWithDependencies
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
@@ -480,7 +481,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     @classmethod
     def setup_config_options(cls, **kwargs):
         if "default_ssh_port" in kwargs:
-            # CheribsdMfsRoot case
+            # Subclass case
             super().setup_config_options(**kwargs)
         else:
             add_to_port = cls.get_cross_target_index()
@@ -643,14 +644,22 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
         super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
 
 
-class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
+class LaunchMinimalCheriBSD(LaunchCheriBSD):
     project_name = "run-minimal"
-    _source_class = BuildCheriBsdMfsKernel
+    _source_class = BuildMinimalCheriBSDDiskImage
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         add_to_port = cls.get_cross_target_index()
         super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
+
+    def run_tests(self):
+        self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", "--minimal-image")
+
+
+class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
+    project_name = "run-mfs-root"
+    _source_class = BuildCheriBsdMfsKernel
 
     def __init__(self, config):
         # noinspection PyTypeChecker
@@ -660,9 +669,6 @@ class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
             if str(self.remote_kernel_path).endswith("MFS_ROOT"):
                 self.remote_kernel_path += "_BENCHMARK"
         self.rootfs_path = BuildCHERIBSD.get_rootfs_dir(self, config)
-
-    def run_tests(self):
-        self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", "--minimal-image")
 
 
 # Backwards compatibility:
