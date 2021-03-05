@@ -1353,8 +1353,8 @@ class BuildCheriBSDFett(BuildCHERIBSD):
 # FIXME: this should inherit from BuildCheriBSD to avoid subtle problems
 class BuildCheriBsdMfsKernel(SimpleProject):
     project_name = "cheribsd-mfs-root-kernel"
-    dependencies = ["disk-image-minimal"]
-    # TODO: also support building a non-CHERI kernel... But that needs a plain MIPS disk-image-minimal first...
+    dependencies = ["disk-image-mfs-root"]
+    # TODO: also support building a non-CHERI kernel... But that needs a plain MIPS disk-image-mfs-root first...
     _always_add_suffixed_targets = True
 
     @classproperty
@@ -1369,12 +1369,12 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        from ..disk_image import BuildMinimalCheriBSDDiskImage
-        self.minimal_image_instance = BuildMinimalCheriBSDDiskImage.get_instance(self)
+        from ..disk_image import BuildMfsRootCheriBSDDiskImage
+        self.mfs_root_image_instance = BuildMfsRootCheriBSDDiskImage.get_instance(self)
         # Re-use the same build directory as the CheriBSD target that was used for the disk image
         # This ensure that the kernel build tools can be found in the build directory
-        self.image = self.minimal_image_instance.disk_image_path
-        self.build_cheribsd_instance = self.minimal_image_instance.cheribsd_class.get_instance(self)
+        self.image = self.mfs_root_image_instance.disk_image_path
+        self.build_cheribsd_instance = self.mfs_root_image_instance.cheribsd_class.get_instance(self)
 
     def process(self):
         default_kernconf = self._get_kernconf_to_build(self.build_cheribsd_instance)

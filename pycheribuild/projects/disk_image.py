@@ -824,6 +824,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
     project_name = "disk-image-minimal"
     _source_class = BuildCHERIBSD
     disk_image_prefix = "cheribsd-minimal"
+    include_boot = True
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
         def get_rc_conf_template(self):
@@ -884,6 +885,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                         include_local_file("files/minimal-image/etc.files")]
         if self._have_cplusplus_support(["lib", "usr/lib"]):
             files_to_add.append(include_local_file("files/minimal-image/need-cplusplus.files"))
+        if self.include_boot:
+            files_to_add.append(include_local_file("files/minimal-image/boot.files"))
 
         for files_list in files_to_add:
             self.process_files_list(files_list)
@@ -1030,6 +1033,12 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             self.run_cmd("du", "-ah", self.tmpdir)
             self.run_cmd("sh", "-c", "du -ah '{}' | sort -h".format(self.tmpdir))
         super().make_rootfs_image(rootfs_img)
+
+
+class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
+    project_name = "disk-image-mfs-root"
+    disk_image_prefix = "cheribsd-mfs-root"
+    include_boot = False
 
     @property
     def cheribsd_class(self):

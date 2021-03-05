@@ -163,13 +163,13 @@ def test_remove_duplicates():
 
 def test_mfs_root_run():
     # Check that we build the mfs root first
-    assert _sort_targets(["disk-image-minimal-mips64-hybrid",
+    assert _sort_targets(["disk-image-mfs-root-mips64-hybrid",
                           "cheribsd-mfs-root-kernel-mips64-hybrid",
-                          "run-mfs-root-mips64-hybrid"]) == ["disk-image-minimal-mips64-hybrid",
+                          "run-mfs-root-mips64-hybrid"]) == ["disk-image-mfs-root-mips64-hybrid",
                                                              "cheribsd-mfs-root-kernel-mips64-hybrid",
                                                              "run-mfs-root-mips64-hybrid"]
-    assert _sort_targets(["cheribsd-mfs-root-kernel-mips64-hybrid", "disk-image-minimal-mips64-hybrid",
-                          "run-mfs-root-mips64-hybrid"]) == ["disk-image-minimal-mips64-hybrid",
+    assert _sort_targets(["cheribsd-mfs-root-kernel-mips64-hybrid", "disk-image-mfs-root-mips64-hybrid",
+                          "run-mfs-root-mips64-hybrid"]) == ["disk-image-mfs-root-mips64-hybrid",
                                                              "cheribsd-mfs-root-kernel-mips64-hybrid",
                                                              "run-mfs-root-mips64-hybrid"]
 
