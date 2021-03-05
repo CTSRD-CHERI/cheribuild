@@ -34,7 +34,7 @@ import typing
 from pathlib import Path
 from subprocess import CompletedProcess
 
-from .disk_image import BuildCheriBSDDiskImage, BuildFreeBSDImage, BuildMultiArchDiskImage
+from .disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase, BuildFreeBSDImage
 from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
 from .project import SimpleProject
 from ..config.chericonfig import CheriConfig
@@ -413,7 +413,7 @@ VOLUME /diskimg
 
 class LaunchFVPBase(SimpleProject):
     do_not_add_to_targets = True
-    _source_class = None  # type: BuildMultiArchDiskImage
+    _source_class = None  # type: BuildDiskImageBase
 
     @classmethod
     def dependencies(cls, _: CheriConfig):
