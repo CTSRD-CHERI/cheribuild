@@ -1354,7 +1354,6 @@ class BuildCheriBSDFett(BuildCHERIBSD):
 class BuildCheriBsdMfsKernel(SimpleProject):
     project_name = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-mfs-root"]
-    # TODO: also support building a non-CHERI kernel... But that needs a plain MIPS disk-image-mfs-root first...
     _always_add_suffixed_targets = True
 
     @classproperty
