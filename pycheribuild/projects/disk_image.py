@@ -178,6 +178,7 @@ class _BuildDiskImageBase(SimpleProject):
         self.hostname = os.path.expandvars(self.hostname)  # Expand env vars in hostname to allow $CHERI_BITS
         # MIPS needs big-endian disk images
         self.big_endian = self.compiling_for_mips(include_purecap=True)
+        self.efi_loader = "loader_lua.efi" # Which loader to use when booting via UEFI
 
     def add_file_to_image(self, file: Path, *, base_directory: Path = None, user="root", group="wheel", mode=None,
                           path_in_target=None):
@@ -486,7 +487,7 @@ class _BuildDiskImageBase(SimpleProject):
         root_partition = self.disk_image_path.with_suffix(".root.img")
 
         # TODO: Make this unconditional once all branches support EFI
-        if (self.rootfs_dir / "boot/boot1.efi").exists():
+        if (self.rootfs_dir / "boot" / self.efi_loader).exists():
             efi_partition = self.disk_image_path.with_suffix(".efi.img")
         else:
             efi_partition = None
@@ -547,12 +548,12 @@ class _BuildDiskImageBase(SimpleProject):
             if use_makefs:
                 # Makefs doesn't handle contents= right now
                 efi_mtree = MtreeFile(verbose=self.config.verbose)
-                efi_mtree.add_file(self.rootfs_dir / "boot/boot1.efi", path_in_image="efi/boot/" + efi_file.lower(),
+                efi_mtree.add_file(self.rootfs_dir / "boot" / self.efi_loader, path_in_image="efi/boot/" + efi_file.lower(),
                                    mode=0o644)
                 efi_mtree.write(tmp_mtree, pretend=self.config.pretend)
                 tmp_mtree.flush()  # ensure the file is actually written
                 self.run_cmd("cat", tmp_mtree.name)
-                self.run_cmd([self.makefs_cmd, "-t", "msdos", "-s", "1m",  # 1 MB
+                self.run_cmd([self.makefs_cmd, "-t", "msdos", "-s", "2m",  # 1 MB
                               # "-d", "0x2fffffff",  # super verbose output
                               # "-d", "0x20000000",  # MSDOSFS debug output
                               "-B", "le",  # byte order little endian
@@ -567,7 +568,7 @@ class _BuildDiskImageBase(SimpleProject):
                 self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI")
                 self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI/BOOT")
                 self.run_cmd(mtools_bin / "mcopy", "-i", efi_partition,
-                             self.rootfs_dir / "boot/boot1.efi", "::/EFI/BOOT/" + efi_file.upper())
+                             self.rootfs_dir / "boot" / self.efi_loader, "::/EFI/BOOT/" + efi_file.upper())
             if (mtools_bin / "minfo").exists():
                 # Get some information about the created image information:
                 self.run_cmd(mtools_bin / "minfo", "-i", efi_partition)
@@ -844,6 +845,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.input_metalogs = [self.rootfs_dir / "cheribsdbox.mtree"]
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
+        self.efi_loader = "loader_simp.efi" # Smaller loader that doesn't need files in the root filesystem
 
     @staticmethod
     def _have_cplusplus_support(_: "typing.List[str]"):
