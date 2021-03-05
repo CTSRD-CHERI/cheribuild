@@ -1,0 +1,2 @@
+# Only the default kernel; no debug symbols and no modules
+boot/kernel/kernel
