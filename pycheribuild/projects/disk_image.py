@@ -875,6 +875,9 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                         include_local_file("files/minimal-image/etc.files")]
         if self._have_cplusplus_support(["lib", "usr/lib"]):
             files_to_add.append(include_local_file("files/minimal-image/need-cplusplus.files"))
+        # AArch64 boots from UEFI, include the kernel for loader.efi to load
+        if self.crosscompile_target.is_aarch64(include_purecap=True):
+            files_to_add.append("boot/kernel/kernel")
 
         for files_list in files_to_add:
             self.process_files_list(files_list)
