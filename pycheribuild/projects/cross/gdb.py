@@ -75,6 +75,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
                                                                   directory_name="morello-gdb"),
             CompilationTargets.CHERIBSD_MORELLO_HYBRID: TargetBranchInfo(branch="morello-8.3",
                                                                          directory_name="morello-gdb"),
+            CompilationTargets.CHERIBSD_MORELLO_PURECAP: TargetBranchInfo(branch="morello-8.3",
+                                                                          directory_name="morello-gdb"),
             },
         old_urls=[b'https://github.com/bsdjhb/gdb.git'])
     make_kind = MakeCommandKind.GnuMake
