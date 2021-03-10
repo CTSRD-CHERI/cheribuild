@@ -562,6 +562,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # However, we do want to install the host tools
         self.cross_toolchain_config.set_with_options(TOOLCHAIN=True)
 
+        if self.crosscompile_target.is_i386() and xccinfo.is_clang and xccinfo.version < (11, 0):
+            # The i686 default was added in commit 02cfa7530d9e7cfd8ea940dab4173afb7938b831 (LLVM 11.0). When
+            # building with an older clang we have to explicitly set the flag otherwise we get build failures.
+            self.cross_toolchain_config.set(TARGET_CPUTYPE="i686")
+
         if self.linker_for_world == "bfd":
             # self.cross_toolchain_config.set_env(XLDFLAGS="-fuse-ld=bfd")
             target_flags += " -fuse-ld=bfd -Qunused-arguments"
