@@ -533,6 +533,8 @@ class BuildDiskImageBase(SimpleProject):
         try:
             if efi_partition is not None:
                 self.make_efi_partition(efi_partition)
+                if not efi_partition.exists():
+                    self.fatal("Failed to create the EFI partition", efi_partition)
                 mkimg_efi_args = ["-p", "efi:=" + str(efi_partition)]
             else:
                 mkimg_efi_args = []
@@ -582,7 +584,9 @@ class BuildDiskImageBase(SimpleProject):
                 efi_mtree.write(tmp_mtree, pretend=self.config.pretend)
                 tmp_mtree.flush()  # ensure the file is actually written
                 self.run_cmd("cat", tmp_mtree.name)
-                self.run_cmd([self.makefs_cmd, "-t", "msdos", "-s", "1m",  # 1 MB
+                # Note: it appears msdosfs makefs only works if you pass a fixed size, so use 2m which is large
+                # enough to fit either loader_simp.efi or loader.efi.
+                self.run_cmd([self.makefs_cmd, "-t", "msdos", "-s", "2m",
                               # "-d", "0x2fffffff",  # super verbose output
                               # "-d", "0x20000000",  # MSDOSFS debug output
                               "-B", "le",  # byte order little endian
@@ -592,8 +596,8 @@ class BuildDiskImageBase(SimpleProject):
                 # Use this (and mtools) instead: https://wiki.osdev.org/UEFI_Bare_Bones#Creating_the_FAT_image
                 if not (mtools_bin / "mformat").exists():
                     self.fatal("Build mtools first: `cheribuild.py mtools`")
-                self.run_cmd("dd", "if=/dev/zero", "of=" + str(efi_partition), "bs=1k", "count=1440")
-                self.run_cmd(mtools_bin / "mformat", "-i", efi_partition, "-f", "1440", "::")
+                self.run_cmd("dd", "if=/dev/zero", "of=" + str(efi_partition), "bs=1k", "count=2048")
+                self.run_cmd(mtools_bin / "mformat", "-i", efi_partition, "-f", "2048", "::")
                 self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI")
                 self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI/BOOT")
                 self.run_cmd(mtools_bin / "mcopy", "-i", efi_partition,
