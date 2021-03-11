@@ -64,6 +64,7 @@ class LaunchQEMUBase(SimpleProject):
     forward_tftp_port = False
     forward_http_port = False
     forward_cli_port = False
+    forward_print_port = False
     _can_provide_src_via_smb = False
     ssh_forwarding_port = None  # type: int
     custom_qemu_smb_mount = None
@@ -315,6 +316,12 @@ class LaunchQEMUBase(SimpleProject):
             user_network_options += ",hostfwd=tcp::" + str(self.cli_forwarding_port) + "-:23"
             # bind the qemu CLI port to the hosts port
             print(coloured(AnsiColour.green, "\nListening for CLI connections on localhost:", self.cli_forwarding_port,
+                           sep=""))
+
+        if self.forward_print_port:
+            user_network_options += ",hostfwd=udp::" + str(self.print_forwarding_port) + "-:45000"
+            # bind the qemu CLI port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for UDP/printf connections on localhost:", self.print_forwarding_port,
                            sep=""))
 
         if self.forward_http_port:
@@ -675,12 +682,14 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     forward_tftp_port = True
     forward_http_port = True
     forward_cli_port = True
+    forward_print_port = True
     qemu_user_networking = True
     _enable_smbfs_support = False
     _add_virtio_rng = False
     ftp_forwarding_port = 10021
     tftp_forwarding_port = 10069
     cli_forwarding_port = 10023
+    print_forwarding_port = 45000
     http_forwarding_port = 8080
 
     default_demo = "RISC-V-Generic"
