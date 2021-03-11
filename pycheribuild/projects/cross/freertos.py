@@ -224,6 +224,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                 program_root = "coremark"
             elif "mibench" in self.demo_app:
                 program_root = "MiBench2"
+            elif "ipc_benchmark" in self.demo_app:
+                program_root = "./demo/ipc_benchmark"
             else:
                 program_root = "/no/path"
 
