@@ -34,7 +34,8 @@ import typing
 from pathlib import Path
 
 from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, CrossCompileTarget, DefaultInstallDir,
-                       GitRepository, Linkage, MakeCommandKind, MakefileProject, Project, commandline_to_str)
+                       GitRepository, Linkage, MakeCommandKind, MakefileProject, MesonProject, Project,
+                       commandline_to_str)
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import AutoVarInit
 from ...utils import AnsiColour, coloured
@@ -43,7 +44,7 @@ __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProj
            "CrossCompileTarget", "CrossCompileProject", "MakeCommandKind", "Linkage",  # no-combine
            "DefaultInstallDir", "BuildType", "CompilationTargets", "GitRepository",  # no-combine
            "CrossCompileMixin", "FettProjectMixin", "CrossCompileMakefileProject",  # no-combine
-           "commandline_to_str"]  # no-combine
+           "CrossCompileMesonProject", "commandline_to_str"]  # no-combine
 
 
 # This mixin sets supported_architectures to ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS and thereby
@@ -65,6 +66,10 @@ class CrossCompileMakefileProject(CrossCompileMixin, MakefileProject):
 
 
 class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
+    do_not_add_to_targets = True  # only used as base class
+
+
+class CrossCompileMesonProject(CrossCompileMixin, MesonProject):
     do_not_add_to_targets = True  # only used as base class
 
 

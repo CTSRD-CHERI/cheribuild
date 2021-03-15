@@ -1,0 +1,102 @@
+[constants]
+target_triple = '@TOOLCHAIN_TARGET_TRIPLE@'
+toolchain_bindir = '@TOOLCHAIN_SDK_BINDIR@'
+compiler_bindir = '@TOOLCHAIN_COMPILER_BINDIR@'
+toolchain_c_compiler = '@TOOLCHAIN_C_COMPILER@'
+toolchain_cxx_compiler = '@TOOLCHAIN_CXX_COMPILER@'
+toolchain_linker = '@TOOLCHAIN_LINKER@'
+toolchain_linker_flags = @TOOLCHAIN_LINKER_FLAGS@
+toolchain_ar = '@TOOLCHAIN_AR@'
+toolchain_ranlib = '@TOOLCHAIN_RANLIB@'
+toolchain_nm = '@TOOLCHAIN_NM@'
+toolchain_strip = '@TOOLCHAIN_STRIP@'
+system_name = '@TOOLCHAIN_SYSTEM_NAME@'
+system_version = '@TOOLCHAIN_SYSTEM_VERSION@'
+system_processor = '@TOOLCHAIN_SYSTEM_PROCESSOR@'
+sysroot_dir = '@TOOLCHAIN_SYSROOT@'
+common_flags = @TOOLCHAIN_COMMON_FLAGS@
+toolchain_pkg_config_dirs = @TOOLCHAIN_PKGCONFIG_DIRS@
+toolchain_c_flags = @TOOLCHAIN_C_FLAGS@
+toolchain_asm_flags = @TOOLCHAIN_ASM_FLAGS@
+toolchain_cxx_flags = @TOOLCHAIN_CXX_FLAGS@
+
+@COMMENT_IF_NATIVE@[properties]
+@COMMENT_IF_NATIVE@# TODO: qemu-user
+@COMMENT_IF_NATIVE@needs_exe_wrapper = true
+@COMMENT_IF_NATIVE@sys_root = sysroot_dir
+@COMMENT_IF_NATIVE@pkg_config_libdir = toolchain_pkg_config_dirs
+# meson sets `defaults['CMAKE_SIZEOF_VOID_P'] = ['8' if self.minfo.is_64_bit else '4']`,
+# so we need to manually populate all CMake variables
+@COMMENT_IF_NATIVE@cmake_defaults = false
+
+@COMMENT_IF_NATIVE@[host_machine]
+@COMMENT_IF_NATIVE@system = system_name
+@COMMENT_IF_NATIVE@cpu_family = '@TOOLCHAIN_MESON_CPU_FAMILY@'
+@COMMENT_IF_NATIVE@cpu = 'generic'
+@COMMENT_IF_NATIVE@endian = '@TOOLCHAIN_ENDIANESS@'
+
+[built-in options]
+cmake_prefix_path = @TOOLCHAIN_PREFIX_PATHS@
+c_args = common_flags + toolchain_c_flags
+cpp_args = common_flags + toolchain_cxx_flags
+c_link_args = common_flags + toolchain_linker_flags
+cpp_link_args = common_flags + toolchain_linker_flags
+# To force static libs:
+# default_library = 'static'
+# [cmake]
+# CMAKE_SHARED_LIBRARY_SUFFIX = '.a'
+# CMAKE_FIND_LIBRARY_SUFFIXES = '.a'
+# CMAKE_EXTRA_SHARED_LIBRARY_SUFFIXES = '.a'
+
+[binaries]
+c = toolchain_c_compiler
+cpp = toolchain_cxx_compiler
+c_ld = toolchain_linker
+cpp_ld = toolchain_linker
+ar = toolchain_ar
+strip = toolchain_strip
+ralib = toolchain_ranlib
+nm = toolchain_nm
+pkgconfig = '@TOOLCHAIN_PKGCONFIG_BINARY@'
+cmake = '@TOOLCHAIN_CMAKE_BINARY@'
+
+[cmake]
+CMAKE_AR = toolchain_ar
+CMAKE_RANLIB = toolchain_ranlib
+CMAKE_C_COMPILER = toolchain_c_compiler
+CMAKE_CXX_COMPILER = toolchain_cxx_compiler
+CMAKE_ASM_COMPILER = toolchain_c_compiler
+CMAKE_C_COMPILER_TARGET = target_triple
+CMAKE_CXX_COMPILER_TARGET = target_triple
+CMAKE_ASM_COMPILER_TARGET = target_triple
+CMAKE_C_FLAGS_INIT   = common_flags + toolchain_c_flags
+CMAKE_ASM_FLAGS_INIT = common_flags + toolchain_asm_flags
+CMAKE_CXX_FLAGS_INIT = common_flags + toolchain_cxx_flags
+CMAKE_SYSROOT = sysroot_dir
+CMAKE_FIND_ROOT_PATH = sysroot_dir
+# CMAKE_TRY_COMPILE_PLATFORM_VARIABLES = CHERI_SDK_BINDIR CHERIBSD_SYSROOT CHERIBSD_COMMON_FLAGS CHERIBSD_LINK_FLAGS LIB_SUFFIX PKG_CONFIG_USE_CMAKE_PREFIX_PATH
+CMAKE_EXE_LINKER_FLAGS_INIT    = toolchain_linker_flags
+CMAKE_SHARED_LINKER_FLAGS_INIT = toolchain_linker_flags
+CMAKE_MODULE_LINKER_FLAGS_INIT = toolchain_linker_flags
+# Probably not needed: since we have cmake_prefix_path above
+# CMAKE_PREFIX_PATH = @TOOLCHAIN_PREFIX_PATHS@
+
+## Cross-only flags:
+@COMMENT_IF_NATIVE@CMAKE_SYSTEM_NAME = system_name
+@COMMENT_IF_NATIVE@CMAKE_SYSTEM_VERSION = system_version
+@COMMENT_IF_NATIVE@CMAKE_SYSTEM_PROCESSOR = system_processor
+
+@COMMENT_IF_NATIVE@# Use -pthread flag https://gitlab.kitware.com/cmake/cmake/issues/16920
+@COMMENT_IF_NATIVE@THREADS_HAVE_PTHREAD_ARG = 'TRUE'
+@COMMENT_IF_NATIVE@PKG_CONFIG_USE_CMAKE_PREFIX_PATH = 'FALSE'
+
+@COMMENT_IF_NATIVE@PKG_CONFIG_LIBDIR = toolchain_pkg_config_dirs
+@COMMENT_IF_NATIVE@PKG_CONFIG_SYSROOT_DIR = sysroot_dir
+@COMMENT_IF_NATIVE@PKG_CONFIG_PATH = toolchain_pkg_config_dirs
+@COMMENT_IF_NATIVE@# Ensure we search in the custom install prefix that we install everything to:
+@COMMENT_IF_NATIVE@CMAKE_FIND_ROOT_PATH_MODE_PROGRAM = 'NEVER'
+@COMMENT_IF_NATIVE@# for libraries and headers in the target directories
+@COMMENT_IF_NATIVE@CMAKE_FIND_ROOT_PATH_MODE_LIBRARY = 'ONLY'
+@COMMENT_IF_NATIVE@CMAKE_FIND_ROOT_PATH_MODE_INCLUDE = 'ONLY'
+
+
