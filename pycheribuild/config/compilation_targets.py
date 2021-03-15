@@ -189,6 +189,8 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 result += ["-march=morello", "-mabi=aapcs"]
             elif xtarget.is_cheri_purecap():
                 result += ["-march=morello+c64", "-mabi=purecap"]
+        elif xtarget.is_x86_64():
+            pass  # No additional flags needed for x86_64.
         else:
             project.warning("Compiler flags might be wong, only native + MIPS checked so far")
         return result
@@ -225,6 +227,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     @property
     def cmake_system_name(self) -> str:
         return "FreeBSD"
+
+    @property
+    def toolchain_system_version(self) -> str:
+        return str(self.FREEBSD_VERSION) + ".0"
 
     def _get_sdk_root_dir_lazy(self):
         from ..projects.cross.cheribsd import BuildFreeBSD, FreeBSDToolchainKind
@@ -288,10 +294,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return ["freebsd"]
 
     @property
-    def pkgconfig_dirs(self) -> str:
+    def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
-        return str(self.sysroot_dir / "lib/pkgconfig") + ":" + str(
-            self.sysroot_install_prefix_absolute / "lib/pkgconfig")
+        return [str(self.sysroot_dir / "lib/pkgconfig"), str(self.sysroot_install_prefix_absolute / "lib/pkgconfig")]
 
     @property
     def sysroot_install_prefix_relative(self) -> Path:
@@ -575,11 +580,11 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         return "lib"
 
     @property
-    def pkgconfig_dirs(self) -> str:
+    def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
-        return str(self.sysroot_dir / "usr" / self._sysroot_libdir / "pkgconfig") + ":" + str(
-            self.sysroot_dir / self._sysroot_libdir / "pkgconfig") + ":" + str(
-            self.sysroot_install_prefix_absolute / "lib/pkgconfig")
+        return [str(self.sysroot_dir / "usr" / self._sysroot_libdir / "pkgconfig"),
+                str(self.sysroot_dir / self._sysroot_libdir / "pkgconfig"),
+                str(self.sysroot_install_prefix_absolute / "lib/pkgconfig")]
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         from ..projects.cross.cheribsd import BuildCHERIBSD
@@ -659,9 +664,9 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
         return ["cherios"]
 
     @property
-    def pkgconfig_dirs(self) -> str:
+    def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
-        return ""
+        return []
 
 
 class RTEMSTargetInfo(_ClangBasedTargetInfo):
@@ -990,8 +995,8 @@ class CompilationTargets(BasicCompilationTargets):
                                            CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI]
     ALL_CHERIBSD_NON_MORELLO_TARGETS = ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS + [CHERIBSD_AARCH64, CHERIBSD_X86_64]
     ALL_CHERIBSD_MORELLO_TARGETS = [CHERIBSD_MORELLO_PURECAP, CHERIBSD_MORELLO_HYBRID]
-    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = \
-        ALL_CHERIBSD_NON_MORELLO_TARGETS + ALL_CHERIBSD_MORELLO_TARGETS + [BasicCompilationTargets.NATIVE]
+    ALL_CHERIBSD_TARGETS = ALL_CHERIBSD_NON_MORELLO_TARGETS + ALL_CHERIBSD_MORELLO_TARGETS
+    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = ALL_CHERIBSD_TARGETS + [BasicCompilationTargets.NATIVE]
 
     ALL_CHERIBSD_NON_CHERI_TARGETS = [CHERIBSD_MIPS_NO_CHERI, CHERIBSD_RISCV_NO_CHERI, CHERIBSD_AARCH64,
                                       CHERIBSD_X86_64]

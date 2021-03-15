@@ -1685,6 +1685,8 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
             compiler_for_resource_dir = config.cheri_sdk_bindir / "clang"
         return get_compiler_info(compiler_for_resource_dir, config=config).get_resource_dir()
     elif install_dir == DefaultInstallDir.ROOTFS_LOCALBASE:
+        assert not project.compiling_for_host(), "ROOTFS_LOCALBASE is only a valid install dir for cross-builds, " \
+                                                 "use BOOTSTRAP_TOOLS/CUSTOM_INSTALL_DIR/IN_BUILD_DIRECTORY for native"
         return project.sdk_sysroot
     elif install_dir == DefaultInstallDir.CHERI_SDK:
         assert project.compiling_for_host(), "CHERI_SDK is only a valid install dir for native, " \
@@ -2179,14 +2181,14 @@ class Project(SimpleProject):
 
     def setup(self):
         super().setup()
-        if not self.compiling_for_host() and self.needs_sysroot:
+        if not self.compiling_for_host() and self.needs_sysroot and self.set_pkg_config_path:
             # We need to set the PKG_CONFIG variables both when configuring and when running make since some projects
             # (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set PKG_CONFIG_*
             # these configure steps will find the libraries on the host instead and cause the build to fail
             # PKG_CONFIG_PATH: list of directories to be searched for .pc files before the default locations.
             # PKG_CONFIG_LIBDIR: list of directories to replace the default pkg-config search path.
             # Since we only want libraries from our sysroots we set both.
-            pkgconfig_dirs = self.target_info.pkgconfig_dirs
+            pkgconfig_dirs = ":".join(self.target_info.pkgconfig_dirs)
             pkg_config_args = dict(
                 PKG_CONFIG_PATH=pkgconfig_dirs,
                 PKG_CONFIG_LIBDIR=pkgconfig_dirs,
@@ -2437,13 +2439,14 @@ class Project(SimpleProject):
         if not self.should_run_configure():
             return
 
-        _configure_path = self.configure_command
-        if configure_path:
-            _configure_path = configure_path
-        if not Path(_configure_path).exists():
-            self.fatal("Configure command ", _configure_path, "does not exist!")
-        if _configure_path:
-            self.run_with_logfile([_configure_path] + self.configure_args, logfile_name="configure", cwd=cwd,
+        if configure_path is None:
+            configure_path = self.configure_command
+        if configure_path is None:
+            self.verbose_print("No configure command specified, skippping configure step.")
+        else:
+            if not Path(configure_path).exists():
+                self.fatal("Configure command ", configure_path, "does not exist!")
+            self.run_with_logfile([configure_path] + self.configure_args, logfile_name="configure", cwd=cwd,
                                   env=self.configure_environment)
 
     def compile(self, cwd: Path = None, parallel: bool = True):
@@ -2791,11 +2794,30 @@ class _CMakeAndMesonSharedLogic(Project):
     _toolchain_template = None  # type: str
     _toolchain_file = None  # type: Path
 
-    def __init__(self, config):
-        super().__init__(config)
+    class CommandLineArgs:
+        """Simple wrapper to distinguish CMake (space-separated string) from Meson (python-style list)"""
+        def __init__(self, args: list):
+            self.args = args
+
+        def __str__(self):
+            return str(self.args)
+
+    class EnvVarPathList:
+        """Simple wrapper to distinguish CMake (:-separated string) from Meson (python-style list)"""
+        def __init__(self, paths: list):
+            self.paths = paths
+
+        def __str__(self):
+            return str(self.paths)
 
     def _toolchain_file_list_to_str(self, value: list) -> str:
         raise NotImplementedError()
+
+    def _toolchain_file_command_args_to_str(self, value: CommandLineArgs) -> str:
+        return self._toolchain_file_list_to_str(value.args)
+
+    def _toolchain_file_env_var_path_list_to_str(self, value: EnvVarPathList) -> str:
+        return self._toolchain_file_list_to_str(value.paths)
 
     def _bool_to_str(self, value: bool) -> str:
         raise NotImplementedError()
@@ -2807,6 +2829,10 @@ class _CMakeAndMesonSharedLogic(Project):
                 continue
             if isinstance(value, bool):
                 strval = self._bool_to_str(value)
+            elif isinstance(value, _CMakeAndMesonSharedLogic.CommandLineArgs):
+                strval = self._toolchain_file_command_args_to_str(value)
+            elif isinstance(value, _CMakeAndMesonSharedLogic.EnvVarPathList):
+                strval = self._toolchain_file_env_var_path_list_to_str(value)
             elif isinstance(value, list):
                 strval = self._toolchain_file_list_to_str(value)
             else:
@@ -2817,8 +2843,10 @@ class _CMakeAndMesonSharedLogic(Project):
             result = updated_file
         # work around jenkins paths that might contain @[0-9]+ in the path:
         configured_jenkins_workaround = re.sub(r"@\d+", "", result)
-        if "@" in configured_jenkins_workaround:
-            self.fatal("Did not replace all keys:", configured_jenkins_workaround)
+        at_index = configured_jenkins_workaround.find("@")
+        if at_index != -1:
+            self.fatal("Did not replace all keys:", configured_jenkins_workaround[at_index:],
+                       fatal_when_pretending=True)
         self.write_file(contents=result, file=file, overwrite=True)
 
     def _prepare_toolchain_file_common(self, output_file: Path = None, **kwargs):
@@ -2827,24 +2855,31 @@ class _CMakeAndMesonSharedLogic(Project):
         assert self._toolchain_template is not None
         # XXX: We currently use CHERI LLVM tools for native builds
         sdk_bindir = self.sdk_bindir if not self.compiling_for_host() else self.config.cheri_sdk_bindir
+        cmdline = _CMakeAndMesonSharedLogic.CommandLineArgs
         self._replace_values_in_toolchain_file(
             self._toolchain_template, output_file,
             TOOLCHAIN_SDK_BINDIR=sdk_bindir,
             TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
             TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
-            TOOLCHAIN_COMMON_FLAGS=self.default_compiler_flags,
-            TOOLCHAIN_C_FLAGS=self.CFLAGS,
-            TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
-            TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
-            TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
+            TOOLCHAIN_COMMON_FLAGS=cmdline(self.default_compiler_flags),
+            TOOLCHAIN_C_FLAGS=cmdline(self.CFLAGS),
+            TOOLCHAIN_LINKER_FLAGS=cmdline(self.LDFLAGS + self.default_ldflags),
+            TOOLCHAIN_CXX_FLAGS=cmdline(self.CXXFLAGS),
+            TOOLCHAIN_ASM_FLAGS=cmdline(self.ASMFLAGS),
             TOOLCHAIN_C_COMPILER=self.CC,
             TOOLCHAIN_CXX_COMPILER=self.CXX,
-            TOOLCHAIN_SYSROOT=self.sdk_sysroot,
+            TOOLCHAIN_AR=self.target_info.ar,
+            TOOLCHAIN_RANLIB=self.target_info.ranlib,
+            TOOLCHAIN_NM=self.target_info.nm,
+            TOOLCHAIN_STRIP=self.target_info.strip_tool,
+            TOOLCHAIN_SYSROOT=self.sdk_sysroot if self.needs_sysroot else "",
             TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
-            TOOLCHAIN_SYSTEM_NAME=self.target_info.cmake_system_name,
-            TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs if self.needs_sysroot else "",
-            TOOLCHAIN_PREFIX_PATHS=";".join(map(str, self.target_info.cmake_prefix_paths)),
-            TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
+            TOOLCHAIN_SYSTEM_NAME=self.target_info.cmake_system_name if not self.compiling_for_host() else sys.platform,
+            TOOLCHAIN_SYSTEM_VERSION=self.target_info.toolchain_system_version or "",
+            TOOLCHAIN_PREFIX_PATHS=self.target_info.cmake_prefix_paths,
+            TOOLCHAIN_PKGCONFIG_DIRS=_CMakeAndMesonSharedLogic.EnvVarPathList(
+                self.target_info.pkgconfig_dirs if self.needs_sysroot else []),
+            COMMENT_IF_NATIVE="#" if self.compiling_for_host() else "",
             **kwargs)
 
     def _add_configure_options(self, *, _include_empty_vars=False, _replace=True, _config_file_options: list, **kwargs):
@@ -2858,9 +2893,9 @@ class _CMakeAndMesonSharedLogic(Project):
                 continue
             if isinstance(value, bool):
                 value = "ON" if value else "OFF"
-            assert not isinstance(value, list), "Lists must be converted to strings explicitly: " + str(value)
-            if not str(value) and not _include_empty_vars:
+            if (not str(value) or not value) and not _include_empty_vars:
                 continue
+            assert not isinstance(value, list), "Lists must be converted to strings explicitly: " + str(value)
             assert value is not None
             self.configure_args.append("-D" + option + "=" + str(value))
 
@@ -2868,6 +2903,7 @@ class _CMakeAndMesonSharedLogic(Project):
         raise NotImplementedError()
 
     def check_system_dependencies(self):
+        assert self.configure_command is not None
         if not Path(self.configure_command).is_absolute():
             abspath = shutil.which(self.configure_command)
             if abspath:
@@ -2905,7 +2941,14 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     default_build_type = BuildType.RELWITHDEBINFO
 
     def _toolchain_file_list_to_str(self, value: list) -> str:
-        return self.commandline_to_str(value)
+        return ";".join(map(str, value))
+
+    def _toolchain_file_command_args_to_str(self, value: _CMakeAndMesonSharedLogic.CommandLineArgs) -> str:
+        return commandline_to_str(value.args)
+
+    def _toolchain_file_env_var_path_list_to_str(self, value: _CMakeAndMesonSharedLogic.EnvVarPathList) -> str:
+        # We store the raw ':'-separated list in the CMake toolchain file since it's also set using set(ENV{FOO} ...)
+        return ":".join(map(str, value.paths))
 
     def _bool_to_str(self, value: bool) -> str:
         return "TRUE" if value else "FALSE"
@@ -2923,8 +2966,10 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
 
     def __init__(self, config, generator=Generator.Ninja):
         super().__init__(config)
-        self.configure_command = os.getenv("CMAKE_COMMAND", "cmake")
-        self.add_required_system_tool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
+        self.configure_command = os.getenv("CMAKE_COMMAND", None)
+        if self.configure_command is None:
+            self.configure_command = "cmake"
+            self.add_required_system_tool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
         # allow a -G flag in cmake-options to override the default generator (e.g. use makefiles for CLion)
         custom_generator = next((x for x in self.cmake_options if x.startswith("-G")), None)
         if custom_generator:
@@ -3006,7 +3051,8 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
 """
         else:
             add_lib_suffix = "# no lib suffix needed for non-purecap"
-        self._prepare_toolchain_file_common(file, ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix)
+        self._prepare_toolchain_file_common(file, ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
+                                            TOOLCHAIN_FORCE_STATIC=self.force_static_linkage)
 
     def configure(self, **kwargs):
         if self.install_prefix != self.install_dir:

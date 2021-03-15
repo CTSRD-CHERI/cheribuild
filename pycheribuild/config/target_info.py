@@ -56,6 +56,21 @@ class CPUArchitecture(Enum):
     def is_64bit(self) -> bool:
         return not self.is_32bit()
 
+    def as_meson_cpu_family(self) -> str:
+        # https://mesonbuild.com/Reference-tables.html#cpu-families
+        if self is CPUArchitecture.I386:
+            return "x86"
+        if self is CPUArchitecture.ARM32:
+            return "arm"
+        # All others match the Meson table
+        return self.value
+
+    def endianess(self) -> str:
+        # Meson expects us to pass this manually... Why not query the compiler???
+        if self is CPUArchitecture.MIPS64:
+            return "big"
+        return "little"
+
 
 class CompilerType(Enum):
     """
@@ -94,6 +109,10 @@ class TargetInfo(ABC):
     @abstractmethod
     def cmake_system_name(self) -> str:
         ...
+
+    @property
+    def toolchain_system_version(self) -> "typing.Optional[str]":
+        return None
 
     @property
     def cmake_prefix_paths(self) -> list:
@@ -215,8 +234,8 @@ class TargetInfo(ABC):
         return []
 
     @property
-    def pkgconfig_dirs(self) -> str:
-        return ""  # whatever the default is
+    def pkgconfig_dirs(self) -> "typing.List[str]":
+        return []  # whatever the default is
 
     @property
     def install_prefix_dirname(self):
