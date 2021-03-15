@@ -854,7 +854,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 # just run the process connected to the current stdout/stdin
                 check_call_handle_noexec(args, cwd=str(cwd), env=new_env)
             else:
-                with keep_terminal_sane(name=args[0]):
+                with keep_terminal_sane(command=args):
                     make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, env=new_env)
                     self.__run_process_with_filtered_output(make, None, stdout_filter, args)
             return
@@ -871,7 +871,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 # a lot more efficient than filtering every line
                 check_call_handle_noexec(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=new_env)
                 return
-            with keep_terminal_sane(name=args[0]):
+            with keep_terminal_sane(command=args):
                 make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                            env=new_env)
                 self.__run_process_with_filtered_output(make, logfile, stdout_filter, args)

@@ -95,16 +95,15 @@ def set_env(*, print_verbose_only=True, config: ConfigBase = None, **environ):
 
 class TtyState:
     # noinspection PyBroadException
-    def __init__(self, fd: "typing.TextIO", context: str, fd_name: str):
+    def __init__(self, fd: "typing.TextIO", context: str):
         self.fd = fd
         self.context = context
-        self.fd_name = fd_name
         try:
             self.attrs = termios.tcgetattr(fd)
         except Exception as e:
             # Can happen if sys.stdin/sys.stdout/sys.stderr is not a TTY
             if self._isatty():
-                warning_message("Failed to query TTY state for", context, fd_name, "-", e)
+                warning_message("Failed to query TTY state for", context, "-", e)
             self.attrs = None
         try:
             self.flags = fcntl.fcntl(fd, fcntl.F_GETFL)
@@ -113,7 +112,7 @@ class TtyState:
             # will raise UnsupportedOperation("redirected stdin is pseudofile, has no fileno()")
             self.flags = None
             if self._isatty():
-                warning_message("Failed to query TTY flags for", context, fd_name, "-", e)
+                warning_message("Failed to query TTY flags for", context, "-", e)
 
     def _isatty(self):
         try:
@@ -126,21 +125,21 @@ class TtyState:
             # Run drain first to ensure that we get the most recent state.
             termios.tcdrain(self.fd)
         except Exception as e:
-            warning_message(self.context, self.fd_name, "error while draining:", e)
+            warning_message(self.context, "error while draining:", e)
         new_attrs = termios.tcgetattr(self.fd)
         if new_attrs == self.attrs:
             return
-        warning_message(self.context, self.fd_name, "TTY flags for", self.fd.name, "changed, resetting them")
+        warning_message(self.context, "TTY flags for", self.fd.name, "changed, resetting them")
         print("Previous state", self.attrs)
         print("New state", new_attrs)
         try:
             termios.tcsetattr(self.fd, termios.TCSADRAIN, self.attrs)
             termios.tcdrain(self.fd)
         except Exception as e:
-            warning_message(self.context, self.fd_name, "error while restoring TTY flags:", e)
+            warning_message(self.context, "error while restoring TTY flags:", e)
         new_attrs = termios.tcgetattr(self.fd)
         if new_attrs != self.attrs:
-            warning_message(self.context, self.fd_name, "failed to restore TTY flags for", self.fd.name)
+            warning_message(self.context, "failed to restore TTY flags for", self.fd.name)
             print("Previous state", self.attrs)
             print("New state", new_attrs)
 
@@ -148,13 +147,13 @@ class TtyState:
         new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         if new_flags == self.flags:
             return
-        warning_message(self.context, self.fd_name, "FD flags for", self.fd.name, "changed, resetting them")
+        warning_message(self.context, "FD flags for", self.fd.name, "changed, resetting them")
         print("Previous flags", self.flags)
         print("New flags", new_flags)
         fcntl.fcntl(self.fd, fcntl.F_SETFL, self.flags)
         new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         if new_flags != self.flags:
-            warning_message(self.context, self.fd_name, "failed to restore TTY flags for", self.fd.name)
+            warning_message(self.context, "failed to restore TTY flags for", self.fd.name)
             print("Previous flags", self.flags)
             print("New flags", new_flags)
 
@@ -178,13 +177,14 @@ def suppress_sigttou(suppress=True):
 
 
 @contextlib.contextmanager
-def keep_terminal_sane(gave_tty_control=False, name=""):
+def keep_terminal_sane(gave_tty_control=False, command: list = None):
     # Programs such as QEMU can change the terminal state and if they don't exit cleanly this state is
     # propagated to the shell that invoked cheribuild.
     # This function attempts to restore the stdin/stdout/stderr state in those cases:
-    stdin_state = TtyState(sys.stdin, name, "stdin")
-    stdout_state = TtyState(sys.stdout, name, "stdout")
-    stderr_state = TtyState(sys.stderr, name, "stderr")
+    context = "'" + commandline_to_str(command) + "'" if command else ""
+    stdin_state = TtyState(sys.__stdin__, context)
+    stdout_state = TtyState(sys.__stdout__, context)
+    stderr_state = TtyState(sys.__stderr__, context)
     try:
         yield
     finally:
@@ -255,12 +255,12 @@ def _make_called_process_error(retcode, args, *, stdout=None, stderr=None, cwd=N
 
 def check_call_handle_noexec(cmdline: "typing.List[str]", **kwargs):
     try:
-        with keep_terminal_sane(name=cmdline[0]):
+        with keep_terminal_sane(command=cmdline):
             return subprocess.check_call(cmdline, **kwargs)
     except PermissionError as e:
         interpreter = get_interpreter(cmdline)
         if interpreter:
-            with keep_terminal_sane(name=cmdline[0]):
+            with keep_terminal_sane(command=cmdline):
                 return subprocess.check_call(interpreter + cmdline, **kwargs)
         raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
     except FileNotFoundError as e:
@@ -375,7 +375,7 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
     stdout = b""
     stderr = b""
     # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
-    with keep_terminal_sane(give_tty_control, name=cmdline[0]):
+    with keep_terminal_sane(give_tty_control, command=cmdline):
         with popen_handle_noexec(cmdline, **kwargs) as process:
             try:
                 stdout, stderr = process.communicate(input, timeout=timeout)
