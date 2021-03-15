@@ -2191,7 +2191,7 @@ class Project(SimpleProject):
                 PKG_CONFIG_PATH=pkgconfig_dirs,
                 PKG_CONFIG_LIBDIR=pkgconfig_dirs,
                 PKG_CONFIG_SYSROOT_DIR=self.target_info.sysroot_dir
-                )
+            )
             self.configure_environment.update(pkg_config_args)
             self.make_args.set_env(**pkg_config_args)
         cc_info = self.get_compiler_info(self.CC)
@@ -2789,6 +2789,7 @@ class _CMakeAndMesonSharedLogic(Project):
     _minimum_cmake_or_meson_version = None  # type: Tuple[int, int, int]
     _configure_tool_name = None  # type: str
     _toolchain_template = None  # type: str
+    _toolchain_file = None  # type: Path
 
     def __init__(self, config):
         super().__init__(config)
@@ -2820,7 +2821,9 @@ class _CMakeAndMesonSharedLogic(Project):
             self.fatal("Did not replace all keys:", configured_jenkins_workaround)
         self.write_file(contents=result, file=file, overwrite=True)
 
-    def _prepare_toolchain_file_common(self, output_file: Path, **kwargs):
+    def _prepare_toolchain_file_common(self, output_file: Path = None, **kwargs):
+        if output_file is None:
+            output_file = self._toolchain_file
         assert self._toolchain_template is not None
         # XXX: We currently use CHERI LLVM tools for native builds
         sdk_bindir = self.sdk_bindir if not self.compiling_for_host() else self.config.cheri_sdk_bindir
@@ -2942,27 +2945,28 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             if not custom_generator:
                 self.configure_args.append("-GUnix Makefiles")
             self.make_args.kind = MakeCommandKind.DefaultMake
-
-        if self.build_type != BuildType.DEFAULT:
-            # no CMake equivalent for MinSizeRelWithDebInfo -> set minsizerel and force debug info
-            if self.build_type == BuildType.MINSIZERELWITHDEBINFO:
-                self.build_type = BuildType.MINSIZEREL
-                self._force_debug_info = True
-
-        self.configure_args.append("-DCMAKE_BUILD_TYPE=" + str(self.build_type.value))
-        # TODO: always generate it?
-        if self.config.create_compilation_db:
-            self.configure_args.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
-            # Don't add the user provided options here, add them in configure() so that they are put last
-        # This must come first:
         if not self.compiling_for_host():
-            # Despite the name it should also work for baremetal newlib
             assert self.target_info.is_freebsd() or self.target_info.is_baremetal() or self.target_info.is_rtems()
-            self._toolchain_template = include_local_file("files/CrossToolchain.cmake.in")
-            self.toolchain_file = self.build_dir / "CrossToolchain.cmake"
-            self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchain_file)
-            # The toolchain files need at least CMake 3.9
+            # The toolchain files need at least CMake 3.9 (before setup() since check_system_deps() is called first)
             self.set_minimum_cmake_version(3, 9)
+
+    def setup(self):
+        super().setup()
+        if self.build_type != BuildType.DEFAULT:
+            if self.build_type == BuildType.MINSIZERELWITHDEBINFO:
+                # no CMake equivalent for MinSizeRelWithDebInfo -> set minsizerel and force debug info
+                self._force_debug_info = True
+                self.add_cmake_options(CMAKE_BUILD_TYPE=BuildType.MINSIZEREL.value)
+            else:
+                self.add_cmake_options(CMAKE_BUILD_TYPE=self.build_type.value)
+        if self.config.create_compilation_db:
+            # TODO: always generate it?
+            self.configure_args.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
+        if not self.compiling_for_host():
+            self._toolchain_template = include_local_file("files/CrossToolchain.cmake.in")
+            self._toolchain_file = self.build_dir / "CrossToolchain.cmake"
+            self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self._toolchain_file)
+        # Don't add the user provided options here, add them in configure() so that they are put last
 
     def add_cmake_options(self, *, _include_empty_vars=False, _replace=True, **kwargs):
         return self._add_configure_options(_config_file_options=self.cmake_options, _replace=_replace,
@@ -3025,11 +3029,11 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
                 custom_ldflags + self.target_info.additional_shared_library_link_flags),
             CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(
                 custom_ldflags + self.target_info.additional_shared_library_link_flags),
-            )
+        )
         if not self.compiling_for_host():
             # TODO: set CMAKE_STRIP, CMAKE_NM, CMAKE_OBJDUMP, CMAKE_READELF, CMAKE_DLLTOOL, CMAKE_DLLTOOL,
             #  CMAKE_ADDR2LINE
-            self.generate_cmake_toolchain_file(self.toolchain_file)
+            self.generate_cmake_toolchain_file(self._toolchain_file)
             self.add_cmake_options(
                 _CMAKE_TOOLCHAIN_LOCATION=self.target_info.sdk_root_dir / "bin",
                 CMAKE_LINKER=self.target_info.linker)
@@ -3163,7 +3167,7 @@ class MakefileProject(Project):
             CXXFLAGS=commandline_to_str(cppflags + self.CXXFLAGS),
             CPPFLAGS=commandline_to_str(cppflags + self.CFLAGS),
             LDFLAGS=commandline_to_str(self.default_ldflags + self.LDFLAGS),
-            )
+        )
 
     def set_make_cmd_with_args(self, var, cmd: Path, args: list):
         value = str(cmd)
