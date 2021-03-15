@@ -2783,13 +2783,113 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     self.prepare_install_dir_for_archiving()
 
 
-class CMakeProject(Project):
+# Shared between meson and CMake
+class _CMakeAndMesonSharedLogic(Project):
+    do_not_add_to_targets = True
+    _minimum_cmake_or_meson_version = None  # type: Tuple[int, int, int]
+    _configure_tool_name = None  # type: str
+    _toolchain_template = None  # type: str
+
+    def __init__(self, config):
+        super().__init__(config)
+
+    def _toolchain_file_list_to_str(self, value: list) -> str:
+        raise NotImplementedError()
+
+    def _bool_to_str(self, value: bool) -> str:
+        raise NotImplementedError()
+
+    def _replace_values_in_toolchain_file(self, template: str, file: Path, **kwargs):
+        result = template
+        for key, value in kwargs.items():
+            if value is None:
+                continue
+            if isinstance(value, bool):
+                strval = self._bool_to_str(value)
+            elif isinstance(value, list):
+                strval = self._toolchain_file_list_to_str(value)
+            else:
+                strval = str(value)
+            updated_file = result.replace("@" + key + "@", strval)
+            if result == updated_file:
+                raise ValueError(key + "not used in toolchain file")
+            result = updated_file
+        # work around jenkins paths that might contain @[0-9]+ in the path:
+        configured_jenkins_workaround = re.sub(r"@\d+", "", result)
+        if "@" in configured_jenkins_workaround:
+            self.fatal("Did not replace all keys:", configured_jenkins_workaround)
+        self.write_file(contents=result, file=file, overwrite=True)
+
+    def _prepare_toolchain_file_common(self, output_file: Path, **kwargs):
+        assert self._toolchain_template is not None
+        # XXX: We currently use CHERI LLVM tools for native builds
+        sdk_bindir = self.sdk_bindir if not self.compiling_for_host() else self.config.cheri_sdk_bindir
+        self._replace_values_in_toolchain_file(
+            self._toolchain_template, output_file,
+            TOOLCHAIN_SDK_BINDIR=sdk_bindir,
+            TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
+            TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
+            TOOLCHAIN_COMMON_FLAGS=self.default_compiler_flags,
+            TOOLCHAIN_C_FLAGS=self.CFLAGS,
+            TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
+            TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
+            TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
+            TOOLCHAIN_C_COMPILER=self.CC,
+            TOOLCHAIN_CXX_COMPILER=self.CXX,
+            TOOLCHAIN_SYSROOT=self.sdk_sysroot,
+            TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
+            TOOLCHAIN_SYSTEM_NAME=self.target_info.cmake_system_name,
+            TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs if self.needs_sysroot else "",
+            TOOLCHAIN_PREFIX_PATHS=";".join(map(str, self.target_info.cmake_prefix_paths)),
+            TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
+            **kwargs)
+
+    def _add_configure_options(self, *, _include_empty_vars=False, _replace=True, _config_file_options: list, **kwargs):
+        for option, value in kwargs.items():
+            if not _replace and any(x.startswith("-D" + option + "=") for x in self.configure_args):
+                self.verbose_print("Not replacing ", option, "since it is already set.")
+                return
+            if any(x.startswith("-D" + option) for x in _config_file_options):
+                self.info("Not using default value of '", value, "' for CMake option '", option,
+                          "' since it is explicitly overwritten in the configuration", sep="")
+                continue
+            if isinstance(value, bool):
+                value = "ON" if value else "OFF"
+            assert not isinstance(value, list), "Lists must be converted to strings explicitly: " + str(value)
+            if not str(value) and not _include_empty_vars:
+                continue
+            assert value is not None
+            self.configure_args.append("-D" + option + "=" + str(value))
+
+    def _get_configure_tool_version(self):
+        raise NotImplementedError()
+
+    def check_system_dependencies(self):
+        if not Path(self.configure_command).is_absolute():
+            abspath = shutil.which(self.configure_command)
+            if abspath:
+                self.configure_command = abspath
+        super().check_system_dependencies()
+        if self._minimum_cmake_or_meson_version:
+            version_components = self._get_configure_tool_version()
+            # noinspection PyTypeChecker
+            if version_components < self._minimum_cmake_or_meson_version:
+                version_str = ".".join(map(str, version_components))
+                expected_str = ".".join(map(str, self._minimum_cmake_or_meson_version))
+                tool = self._configure_tool_name
+                instrs = "Use your package manager to install {tool} > {exp}".format(tool=tool, exp=expected_str)
+                if self._configure_tool_name == "CMake":  # TODO: handle Meson
+                    instrs += " or run `cheribuild.py cmake` to install the latest version locally"
+                self.dependency_error(tool, "version", version_str, "is too old (need at least", expected_str + ")",
+                                      install_instructions=instrs)
+
+
+class CMakeProject(_CMakeAndMesonSharedLogic):
     """
     Like Project but automatically sets up the defaults for CMake projects
     Sets configure command to CMake, adds -DCMAKE_INSTALL_PREFIX=installdir
     and checks that CMake is installed
     """
-    __minimum_cmake_version = None  # type: Tuple[int, int, int]
     do_not_add_to_targets = True
     compile_db_requires_bear = False  # cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON does it
     generate_cmakelists = False  # There is already a CMakeLists.txt
@@ -2800,6 +2900,12 @@ class CMakeProject(Project):
         Makefiles = 2
 
     default_build_type = BuildType.RELWITHDEBINFO
+
+    def _toolchain_file_list_to_str(self, value: list) -> str:
+        return self.commandline_to_str(value)
+
+    def _bool_to_str(self, value: bool) -> str:
+        return "TRUE" if value else "FALSE"
 
     @property
     def _build_type_basic_compiler_flags(self):
@@ -2851,49 +2957,19 @@ class CMakeProject(Project):
         # This must come first:
         if not self.compiling_for_host():
             # Despite the name it should also work for baremetal newlib
-            assert self.target_info.is_cheribsd() or self.target_info.is_baremetal() or self.target_info.is_rtems()
-            self._cmake_template = include_local_file("files/CrossToolchain.cmake.in")
+            assert self.target_info.is_freebsd() or self.target_info.is_baremetal() or self.target_info.is_rtems()
+            self._toolchain_template = include_local_file("files/CrossToolchain.cmake.in")
             self.toolchain_file = self.build_dir / "CrossToolchain.cmake"
             self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchain_file)
-        # The toolchain files need at least CMake 3.7
-        self.set_minimum_cmake_version(3, 7)
-
-    def _prepare_toolchain_file(self, file: Path, **kwargs):
-        configured_template = self._cmake_template
-        for key, value in kwargs.items():
-            if value is None:
-                continue
-            if isinstance(value, bool):
-                strval = "1" if value else "0"
-            elif isinstance(value, list):
-                strval = self.commandline_to_str(value)
-            else:
-                strval = str(value)
-            assert "@" + key + "@" in configured_template, key
-            configured_template = configured_template.replace("@" + key + "@", strval)
-        # work around jenkins paths that might contain @[0-9]+ in the path:
-        configured_jenkins_workaround = re.sub(r"@\d+", "", configured_template)
-        assert "@" not in configured_jenkins_workaround, configured_jenkins_workaround
-        self.write_file(contents=configured_template, file=file, overwrite=True)
+            # The toolchain files need at least CMake 3.9
+            self.set_minimum_cmake_version(3, 9)
 
     def add_cmake_options(self, *, _include_empty_vars=False, _replace=True, **kwargs):
-        for option, value in kwargs.items():
-            if not _replace and any(x.startswith("-D" + option + "=") for x in self.configure_args):
-                self.verbose_print("Not replacing ", option, "since it is already set.")
-                return
-            if any(x.startswith("-D" + option) for x in self.cmake_options):
-                self.info("Not using default value of '", value, "' for CMake option '", option,
-                          "' since it is explicitly overwritten in the configuration", sep="")
-                continue
-            if isinstance(value, bool):
-                value = "ON" if value else "OFF"
-            if not str(value) and not _include_empty_vars:
-                continue
-            assert value is not None
-            self.configure_args.append("-D" + option + "=" + str(value))
+        return self._add_configure_options(_config_file_options=self.cmake_options, _replace=_replace,
+                                           _include_empty_vars=_include_empty_vars, **kwargs)
 
     def set_minimum_cmake_version(self, major: int, minor: int, patch: int = 0):
-        self.__minimum_cmake_version = (major, minor, patch)
+        self._minimum_cmake_or_meson_version = (major, minor, patch)
 
     def _cmake_install_stdout_filter(self, line: bytes):
         # don't show the up-to date install lines
@@ -2919,8 +2995,6 @@ class CMakeProject(Project):
         # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
         # TODO: avoid the toolchain file and set all flags on the command line
         if self.crosscompile_target.is_cheri_purecap() and self.target_info.is_cheribsd():
-            if self._get_cmake_version() < (3, 9, 0):
-                self.fatal("CMake 3.9 or newer is required to cross-compile for CheriBSD")
             add_lib_suffix = """
 # cheri libraries are found in /usr/libcheri:
 set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
@@ -2928,27 +3002,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
 """
         else:
             add_lib_suffix = "# no lib suffix needed for non-purecap"
-        self._prepare_toolchain_file(
-            file=file,
-            TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else
-            self.config.cheri_sdk_bindir,
-            TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
-            TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
-            TOOLCHAIN_COMMON_FLAGS=self.default_compiler_flags,
-            TOOLCHAIN_C_FLAGS=self.CFLAGS,
-            TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
-            TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
-            TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
-            TOOLCHAIN_C_COMPILER=self.CC,
-            TOOLCHAIN_CXX_COMPILER=self.CXX,
-            TOOLCHAIN_SYSROOT=self.sdk_sysroot,
-            ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
-            TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
-            TOOLCHAIN_SYSTEM_NAME=self.target_info.cmake_system_name,
-            TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs if self.needs_sysroot else "",
-            TOOLCHAIN_PREFIX_PATHS=";".join(map(str, self.target_info.cmake_prefix_paths)),
-            TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
-            )
+        self._prepare_toolchain_file_common(file, ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix)
 
     def configure(self, **kwargs):
         if self.install_prefix != self.install_dir:
@@ -3015,7 +3069,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
             _stdout_filter = self._cmake_install_stdout_filter
         super().install(_stdout_filter=_stdout_filter)
 
-    def _get_cmake_version(self):
+    def _get_configure_tool_version(self):
         cmd = Path(self.configure_command)
         assert self.configure_command is not None
         if not cmd.is_absolute() or not Path(self.configure_command).exists():
@@ -3023,23 +3077,6 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
             return 0, 0, 0
         assert cmd.is_absolute()
         return get_program_version(cmd, program_name=b"cmake")
-
-    def check_system_dependencies(self):
-        if not Path(self.configure_command).is_absolute():
-            abspath = shutil.which(self.configure_command)
-            if abspath:
-                self.configure_command = abspath
-        super().check_system_dependencies()
-        if self.__minimum_cmake_version:
-            version_components = self._get_cmake_version()
-            # noinspection PyTypeChecker
-            if version_components < self.__minimum_cmake_version:
-                version_str = ".".join(map(str, version_components))
-                expected_str = ".".join(map(str, self.__minimum_cmake_version))
-                instrs = "Use your package manager to install CMake > " + expected_str + \
-                         " or run `cheribuild.py cmake` to install the latest version locally"
-                self.dependency_error("CMake version", version_str, "is too old (need at least", expected_str + ")",
-                                      install_instructions=instrs)
 
     @staticmethod
     def find_package(name: str) -> bool:
