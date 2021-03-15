@@ -62,3 +62,17 @@ class BuildExpat(CrossCompileCMakeProject):
         # The actual source is in a subdirectory, so update configure_args
         self.configure_args[0] = str(self.source_dir / "expat")
         super().configure(**kwargs)
+
+
+
+class BuildLibFFI(CrossCompileAutotoolsProject):
+    repository = GitRepository("https://github.com/libffi/libffi.git")
+    project_name = "libffi"
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
+                              CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
+
+    def configure(self, **kwargs):
+        self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
+        super().configure(**kwargs)
