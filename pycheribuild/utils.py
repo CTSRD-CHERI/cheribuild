@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import functools
 import os
 import shutil
 import socket
@@ -239,6 +240,7 @@ def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, ex
         sys.exit(exit_code)
 
 
+@functools.lru_cache(maxsize=20)
 def include_local_file(path: str) -> str:
     file = Path(__file__).parent / path  # type: Path
     if not file.is_file():
