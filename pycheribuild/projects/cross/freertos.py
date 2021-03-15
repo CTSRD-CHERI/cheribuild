@@ -174,6 +174,10 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             default=False,
             help="Enable FreeRTOS debug featuers")
 
+        cls.log_udp = cls.add_bool_option("log_udp", show_help=True,
+            default=False,
+            help="Send output over UDP instead of stdout/serial")
+
         cls.demo_bsp = cls.add_config_option(
             "bsp", metavar="BSP", show_help=True,
             default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
@@ -254,6 +258,9 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
             if self.debug:
               config_options += ["--debug"]
+
+            if self.log_udp:
+              config_options += ["--log_udp"]
 
             self._run_waf("distclean", "configure", *config_options)
 
