@@ -45,3 +45,20 @@ class BuildEPollShim(CrossCompileCMakeProject):
             # external/microatf/cmake/ATFTestAddTests.cmake breaks cross-compilation
             self.add_cmake_options(BUILD_TESTING=False)
         super().configure()
+
+
+class BuildExpat(CrossCompileCMakeProject):
+    target = "libexpat"
+    project_name = "libexpat"
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
+    repository = GitRepository("https://github.com/libexpat/libexpat")
+    # TODO: could build it native on FreeBSD as well
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS + \
+                              CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
+
+    def configure(self, **kwargs):
+        # README says CMake is still experimental, let's see if it works
+        # The actual source is in a subdirectory, so update configure_args
+        self.configure_args[0] = str(self.source_dir / "expat")
+        super().configure(**kwargs)
