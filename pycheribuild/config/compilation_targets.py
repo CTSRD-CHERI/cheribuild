@@ -296,7 +296,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
-        return [str(self.sysroot_dir / "lib/pkgconfig"), str(self.sysroot_install_prefix_absolute / "lib/pkgconfig")]
+        return [str(self.sysroot_dir / "lib/pkgconfig"),
+                str(self.sysroot_install_prefix_absolute / "lib/pkgconfig"),
+                str(self.sysroot_install_prefix_absolute / "libdata/pkgconfig")]
 
     @property
     def sysroot_install_prefix_relative(self) -> Path:
@@ -584,7 +586,8 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
         return [str(self.sysroot_dir / "usr" / self._sysroot_libdir / "pkgconfig"),
                 str(self.sysroot_dir / self._sysroot_libdir / "pkgconfig"),
-                str(self.sysroot_install_prefix_absolute / "lib/pkgconfig")]
+                str(self.sysroot_install_prefix_absolute / "lib/pkgconfig"),
+                str(self.sysroot_install_prefix_absolute / "libdata/pkgconfig")]
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         from ..projects.cross.cheribsd import BuildCHERIBSD
