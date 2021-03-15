@@ -63,6 +63,22 @@ class BuildType(Enum):
     def is_debug(self):
         return self is BuildType.DEBUG
 
+    def to_meson_args(self) -> dict:
+        if self is BuildType.DEFAULT:
+            return dict()  # Note: Meson default value is debug
+        if self in BuildType.DEBUG:
+            return {"buildtype": "debug"}  # -O0 -g
+        elif self is BuildType.RELEASE:
+            return {"buildtype": "release"}  # -O3 no debug
+        elif self is BuildType.RELWITHDEBINFO:
+            return {"buildtype": "debugoptimized"}  # -O2 -g
+        elif self is BuildType.MINSIZEREL:
+            return {"buildtype": "debugoptimized"}  # -Os no debug
+        elif self is BuildType.MINSIZERELWITHDEBINFO:
+            return {"buildtype": "custom", "optimization": "s", "debug": True}  # -Os -g
+        else:
+            raise NotImplementedError()
+
 
 def _default_arm_none_eabi_prefix(c: "CheriConfig", _):
     # see if the local install exists:
