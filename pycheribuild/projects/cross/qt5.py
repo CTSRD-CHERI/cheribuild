@@ -446,31 +446,27 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 
 
 # it also needs libxml2
-class BuildLibXml2(CrossCompileAutotoolsProject):
+class BuildLibXml2(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/libxml2")
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     make_kind = MakeCommandKind.GnuMake
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
+                              CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
 
     def linkage(self):
-        if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, self.config).force_static_linkage:
+        if not self.compiling_for_host() and self.target_info.is_cheribsd() and \
+                BuildQtWebkit.get_instance(self, self.config).force_static_linkage:
             return Linkage.STATIC  # make sure it works with webkit
         return super().linkage()
 
-    def __init__(self, config):
-        super().__init__(config)
-        if (self.source_dir / "configure").exists():
-            self.configure_command = self.source_dir / "configure"
-        else:
-            self.configure_command = self.source_dir / "autogen.sh"
-        self.configure_args.extend([
-            "--without-python", "--without-modules", "--without-lzma",
-            ])
-        if OSInfo.IS_MAC:
-            self.add_required_system_tool("glibtoolize", homebrew="libtool")
-            self.configure_environment["LIBTOOLIZE"] = "glibtoolize"
-        self.cross_warning_flags += ["-Wno-error",
-                                     "-Wno-error=cheri-capability-misuse"]  # FIXME: build with capability -Werror
+    def setup(self):
+        super().setup()
+        # TODO: could enable these for the host version
+        self.add_cmake_options(LIBXML2_WITH_PYTHON=False, LIBXML2_WITH_LZMA=False, LIBXML2_WITH_MODULES=False)
+
+        # FIXME: build with capability -Werror
+        self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-capability-misuse"]
 
 
 class BuildQtWebkit(CrossCompileCMakeProject):
