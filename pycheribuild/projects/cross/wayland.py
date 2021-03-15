@@ -76,3 +76,26 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
     def configure(self, **kwargs):
         self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
         super().configure(**kwargs)
+
+
+class BuildWayland(CrossCompileMesonProject):
+    # TODO: drop epoll-shim once we support native builds on Linux
+    dependencies = [
+        "epoll-shim",
+        "libexpat",
+        "libffi",
+        "libxml2",  # for dtd validation (option)
+    ]
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
+    repository = GitRepository("https://gitlab.freedesktop.org/wayland/wayland.git")
+    # TODO: can build native on non-macOS
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS + \
+                              CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
+
+    def setup(self):
+        super().setup()
+        # Can set to False to avoid libxml2 depdency:
+        self.add_meson_options(dtd_validation=True)
+        # Avoid docbook depedency
+        self.add_meson_options(documentation=False)
