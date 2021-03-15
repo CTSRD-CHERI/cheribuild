@@ -172,7 +172,6 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                     result.append("-cheri=" + config.mips_cheri_bits_str)
                     result.append("-mcpu=beri")
         elif xtarget.is_riscv(include_purecap=True):
-            assert xtarget.cpu_architecture == CPUArchitecture.RISCV64
             # Note: Baremetal/FreeRTOS currently only supports softfloat
             softfloat = cls.is_baremetal()
             # Use the insane RISC-V arch string to enable CHERI
