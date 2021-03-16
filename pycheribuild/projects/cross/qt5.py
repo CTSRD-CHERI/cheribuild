@@ -451,8 +451,7 @@ class BuildLibXml2(CrossCompileCMakeProject):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     make_kind = MakeCommandKind.GnuMake
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
-                              CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def linkage(self):
         if not self.compiling_for_host() and self.target_info.is_cheribsd() and \

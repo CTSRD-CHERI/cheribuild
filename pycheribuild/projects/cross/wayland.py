@@ -38,8 +38,7 @@ class BuildEPollShim(CrossCompileCMakeProject):
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     repository = GitRepository("https://github.com/jiixyj/epoll-shim")
     # TODO: could build it native on FreeBSD as well
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS + \
-                              CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS
 
     def configure(self, **kwargs):
         if not self.compiling_for_host():
@@ -54,9 +53,7 @@ class BuildExpat(CrossCompileCMakeProject):
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     repository = GitRepository("https://github.com/libexpat/libexpat")
-    # TODO: could build it native on FreeBSD as well
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS + \
-                              CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def configure(self, **kwargs):
         if not self.compiling_for_host():
@@ -72,8 +69,7 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
     project_name = "libffi"
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
-                              CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def configure(self, **kwargs):
         self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
@@ -98,9 +94,7 @@ class BuildWayland(CrossCompileMesonProject):
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     # TODO: upstream patches and use https://gitlab.freedesktop.org/wayland/wayland.git
     repository = GitRepository("https://github.com/CTSRD-CHERI/wayland")
-    # TODO: can build native on non-macOS
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
-                              CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def setup(self):
         super().setup()
