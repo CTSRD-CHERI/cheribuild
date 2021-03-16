@@ -480,7 +480,8 @@ class BuildDiskImageBase(SimpleProject):
 
     def run_mkimg(self, cmd: list, **kwargs):
         if not self.mkimg_cmd or not self.mkimg_cmd.exists():
-            self.fatal("Missing mkimg command! Should be found in FreeBSD build dir (or set $MKIMG_CMD)")
+            self.fatal("Missing mkimg command ('{}')! Should be found in FreeBSD build dir.".format(self.mkimg_cmd),
+                fixit_hint="Pass an explicit path to mkimg by setting the MKIMG_CMD environment variable")
         self.run_cmd([self.mkimg_cmd] + cmd, **kwargs)
 
     @property
@@ -752,9 +753,9 @@ class BuildDiskImageBase(SimpleProject):
                 self.mkimg_cmd = mkimg_xtool
 
         if not self.makefs_cmd or not self.makefs_cmd.exists():
-            self.fatal(
-                "Missing makefs command ('{}')! Should be found in FreeBSD build dir (or set $MAKEFS_CMD)".format(
-                    self.makefs_cmd))
+            self.fatal("Missing makefs command ('{}')! Should be found in FreeBSD build dir ({})".format(
+                self.makefs_cmd, freebsd_builddir),
+                fixit_hint="Pass an explicit path to makefs by setting the MAKEFS_CMD environment variable")
         self.info("Disk image will be saved to", self.disk_image_path)
         self.info("Disk image root fs is", self.rootfs_dir)
         self.info("Extra files for the disk image will be copied from", self.extra_files_dir)
