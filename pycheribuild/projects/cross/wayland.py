@@ -88,7 +88,8 @@ class BuildWayland(CrossCompileMesonProject):
     ]
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
-    repository = GitRepository("https://gitlab.freedesktop.org/wayland/wayland.git")
+    # TODO: upstream patches and use https://gitlab.freedesktop.org/wayland/wayland.git
+    repository = GitRepository("https://github.com/CTSRD-CHERI/wayland")
     # TODO: can build native on non-macOS
     supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS + \
                               CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
