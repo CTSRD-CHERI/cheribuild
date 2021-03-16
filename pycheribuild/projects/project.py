@@ -2090,7 +2090,7 @@ class Project(SimpleProject):
                                self.source_dir)
             self.build_dir = self.source_dir
 
-        self.configure_command = ""
+        self.configure_command = None
         # non-assignable variables:
         self.configure_args = []  # type: typing.List[str]
         self.configure_environment = {}  # type: typing.Dict[str,str]
@@ -2444,6 +2444,7 @@ class Project(SimpleProject):
         if configure_path is None:
             self.verbose_print("No configure command specified, skippping configure step.")
         else:
+            assert configure_path, "configure_command should not be empty!"
             if not Path(configure_path).exists():
                 self.fatal("Configure command ", configure_path, "does not exist!")
             self.run_with_logfile([configure_path] + self.configure_args, logfile_name="configure", cwd=cwd,
