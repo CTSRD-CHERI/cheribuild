@@ -464,6 +464,7 @@ class BuildLibXml2(CrossCompileCMakeProject):
         super().setup()
         # TODO: could enable these for the host version
         self.add_cmake_options(LIBXML2_WITH_PYTHON=False, LIBXML2_WITH_LZMA=False, LIBXML2_WITH_MODULES=False)
+        self.add_cmake_options(BUILD_SHARED_LIBS=not self.force_static_linkage)
 
         # FIXME: build with capability -Werror
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-capability-misuse"]
