@@ -3062,7 +3062,8 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
         else:
             add_lib_suffix = "# no lib suffix needed for non-purecap"
         self._prepare_toolchain_file_common(file, ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
-                                            TOOLCHAIN_FORCE_STATIC=self.force_static_linkage)
+                                            TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
+                                            TOOLCHAIN_FILE_PATH=file.absolute())
 
     def configure(self, **kwargs):
         if self.install_prefix != self.install_dir:
