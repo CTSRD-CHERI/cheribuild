@@ -466,9 +466,6 @@ class BuildLibXml2(CrossCompileCMakeProject):
         self.add_cmake_options(LIBXML2_WITH_PYTHON=False, LIBXML2_WITH_LZMA=False, LIBXML2_WITH_MODULES=False)
         self.add_cmake_options(BUILD_SHARED_LIBS=not self.force_static_linkage)
 
-        # FIXME: build with capability -Werror
-        self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-capability-misuse"]
-
 
 class BuildQtWebkit(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtwebkit",
