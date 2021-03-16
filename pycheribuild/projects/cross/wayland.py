@@ -58,11 +58,12 @@ class BuildExpat(CrossCompileCMakeProject):
                               CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
 
     def configure(self, **kwargs):
-        # README says CMake is still experimental, let's see if it works
+        if not self.compiling_for_host():
+            # Work around CMAKE_CXX_FLAGS being overwritten (https://github.com/libexpat/libexpat/pull/442)
+            self.add_cmake_options(EXPAT_BUILD_TESTS=False)
         # The actual source is in a subdirectory, so update configure_args
         self.configure_args[0] = str(self.source_dir / "expat")
         super().configure(**kwargs)
-
 
 
 class BuildLibFFI(CrossCompileAutotoolsProject):
