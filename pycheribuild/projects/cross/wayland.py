@@ -27,6 +27,7 @@
 #
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
 from ..project import DefaultInstallDir, GitRepository
+from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import CompilationTargets
 
 
@@ -80,24 +81,33 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
 
 
 class BuildWayland(CrossCompileMesonProject):
-    # TODO: drop epoll-shim once we support native builds on Linux
-    dependencies = [
-        "epoll-shim",
-        "libexpat",
-        "libffi",
-        "libxml2",  # for dtd validation (option)
-    ]
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    @classmethod
+    def dependencies(cls, config: CheriConfig):
+        deps = super().dependencies(config)
+        target = cls.get_crosscompile_target(config)
+        if not target.is_native():
+            # For native builds we use the host libraries
+            deps.extend(["libexpat", "libffi", "libxml2"])
+            # We need a native wayland-scanner during the build
+            deps.append("wayland-native")
+        if target.target_info_cls.is_freebsd():
+            deps += ["epoll-shim"]
+        return deps
+
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     # TODO: upstream patches and use https://gitlab.freedesktop.org/wayland/wayland.git
     repository = GitRepository("https://github.com/CTSRD-CHERI/wayland")
     # TODO: can build native on non-macOS
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS + \
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
                               CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
 
     def setup(self):
         super().setup()
-        # Can set to False to avoid libxml2 depdency:
+        # Can be set to False to avoid libxml2 depdency:
         self.add_meson_options(dtd_validation=True)
         # Avoid docbook depedency
         self.add_meson_options(documentation=False)
+        if self.target_info.is_macos():
+            # Only build wayland-scanner
+            self.add_meson_options(libraries=False)
