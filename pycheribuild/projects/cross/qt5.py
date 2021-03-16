@@ -489,11 +489,6 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             return self.config.cheri_sdk_bindir  # Use the CHERI SDK for native
         return self.target_info.sdk_root_dir / "bin"
 
-    def linkage(self):
-        if not self.compiling_for_host():
-            return Linkage.STATIC  # currently dynamic doesn't work
-        return super().linkage()
-
     def __init__(self, config: CheriConfig):
         # There is a bug in the cmake ninja generator that makes it use a response file for linking
         # WebCore but not actually generating it
