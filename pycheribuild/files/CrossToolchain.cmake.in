@@ -116,7 +116,7 @@ set(THREADS_HAVE_PTHREAD_ARG TRUE)
 
 
 # Ensure we search in the custom install prefix that we install everything to:
-set(CMAKE_PREFIX_PATH "@TOOLCHAIN_PREFIX_PATHS@;${CMAKE_PREFIX_PATH}")
+set(CMAKE_PREFIX_PATH "@TOOLCHAIN_CMAKE_PREFIX_PATH@;${CMAKE_PREFIX_PATH}")
 SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 # for libraries and headers in the target directories
 SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)

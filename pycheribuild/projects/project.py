@@ -2886,7 +2886,7 @@ class _CMakeAndMesonSharedLogic(Project):
             TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
             TOOLCHAIN_SYSTEM_NAME=self.target_info.cmake_system_name if not self.compiling_for_host() else sys.platform,
             TOOLCHAIN_SYSTEM_VERSION=self.target_info.toolchain_system_version or "",
-            TOOLCHAIN_PREFIX_PATHS=self.target_info.cmake_prefix_paths,
+            TOOLCHAIN_CMAKE_PREFIX_PATH=self.target_info.cmake_prefix_paths,
             TOOLCHAIN_PKGCONFIG_DIRS=_CMakeAndMesonSharedLogic.EnvVarPathList(
                 self.target_info.pkgconfig_dirs if self.needs_sysroot else []),
             COMMENT_IF_NATIVE="#" if self.compiling_for_host() else "",
@@ -3264,9 +3264,13 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             # TODO: should add a cheribuild target, the ubuntu version will be way too old...
             self.add_required_system_tool("meson", homebrew="meson", zypper="meson", apt="meson", freebsd="meson")
         self.configure_args.insert(0, "setup")
-        if not self.compiling_for_host():
-            # We generate a toolchain file when cross-compiling and the toolchain files need at least 0.57
-            self.set_minimum_meson_version(0, 57)
+        # We generate a toolchain file when cross-compiling and the toolchain files need at least 0.57
+        self.set_minimum_meson_version(0, 57)
+
+    @property
+    def _native_toolchain_file(self) -> Path:
+        assert not self.compiling_for_host()
+        return self.build_dir / "meson-native-file.ini"
 
     def add_meson_options(self, _include_empty_vars=False, _replace=True, **kwargs):
         return self._add_configure_options(_config_file_options=self.meson_options, _replace=_replace,
@@ -3274,11 +3278,13 @@ class MesonProject(_CMakeAndMesonSharedLogic):
 
     def setup(self):
         super().setup()
-        self._toolchain_template = include_local_file("files/meson-cross-file.ini.in")
+        self._toolchain_template = include_local_file("files/meson-machine-file.ini.in")
         if not self.compiling_for_host():
             assert self.target_info.is_freebsd(), "Only tested with FreeBSD so far"
             self._toolchain_file = self.build_dir / "meson-cross-file.ini"
             self.configure_args.extend(["--cross-file", str(self._toolchain_file)])
+            # We also have to pass a native machine file to override pkg-config/cmake search dirs for host tools
+            self.configure_args.extend(["--native-file", str(self._native_toolchain_file)])
         else:
             # Recommended way to override compiler is using a native config file:
             self._toolchain_file = self.build_dir / "meson-native-file.ini"
@@ -3304,14 +3310,26 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         return "true" if value else "false"
 
     def configure(self, **kwargs):
+        pkg_config_bin = shutil.which("pkg-config") or "pkg-config"
+        cmake_bin = shutil.which(os.getenv("CMAKE_COMMAND", "cmake")) or "cmake"
         self._prepare_toolchain_file_common(
             self._toolchain_file,
             TOOLCHAIN_LINKER=self.target_info.linker,
             TOOLCHAIN_MESON_CPU_FAMILY=self.crosscompile_target.cpu_architecture.as_meson_cpu_family(),
             TOOLCHAIN_ENDIANESS=self.crosscompile_target.cpu_architecture.endianess(),
-            TOOLCHAIN_PKGCONFIG_BINARY=shutil.which("pkg-config") or "",
-            TOOLCHAIN_CMAKE_BINARY=shutil.which(os.getenv("CMAKE_COMMAND", "cmake")) or "",
+            TOOLCHAIN_PKGCONFIG_BINARY=pkg_config_bin,
+            TOOLCHAIN_CMAKE_BINARY=cmake_bin,
         )
+        if not self.compiling_for_host():
+            native_toolchain_template = include_local_file("files/meson-cross-file-native-env.ini.in")
+            self._replace_values_in_toolchain_file(
+                native_toolchain_template, self._native_toolchain_file,
+                NATIVE_C_COMPILER=self.host_CC, NATIVE_CXX_COMPILER=self.host_CXX,
+                TOOLCHAIN_PKGCONFIG_BINARY=pkg_config_bin, TOOLCHAIN_CMAKE_BINARY=cmake_bin,
+                # To find native packages we have to add the bootstrap tools to PKG_CONFIG_PATH and CMAKE_PREFIX_PATH .
+                NATIVE_PKG_CONFIG_PATH=[self.config.other_tools_dir / "lib/pkgconfig"],
+                NATIVE_CMAKE_PREFIX_PATH=[self.config.other_tools_dir],
+            )
 
         if self.install_prefix != self.install_dir:
             assert self.destdir, "custom install prefix requires DESTDIR being set!"

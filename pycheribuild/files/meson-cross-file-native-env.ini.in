@@ -1,0 +1,12 @@
+[built-in options]
+# Extra paths for cheribuild bootstrap tools
+cmake_prefix_path = @NATIVE_CMAKE_PREFIX_PATH@
+pkg_config_path = @NATIVE_PKG_CONFIG_PATH@
+
+[binaries]
+c = '@NATIVE_C_COMPILER@'
+cpp = '@NATIVE_CXX_COMPILER@'
+pkgconfig = '@TOOLCHAIN_PKGCONFIG_BINARY@'
+cmake = '@TOOLCHAIN_CMAKE_BINARY@'
+
+

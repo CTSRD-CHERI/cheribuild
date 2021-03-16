@@ -306,7 +306,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def cmake_prefix_paths(self) -> list:
-        return [self.sysroot_install_prefix_absolute, self.sysroot_install_prefix_absolute / "libcheri/cmake"]
+        return [self.sysroot_install_prefix_absolute, self.sysroot_install_prefix_absolute / "lib/cmake"]
 
     def _get_compiler_project(self) -> "typing.Type[Project]":
         from ..projects.cross.llvm import BuildUpstreamLLVM
