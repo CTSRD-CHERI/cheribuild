@@ -34,11 +34,10 @@ from ...config.compilation_targets import CompilationTargets
 class BuildEPollShim(CrossCompileCMakeProject):
     target = "epoll-shim"
     project_name = "epoll-shim"
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     repository = GitRepository("https://github.com/jiixyj/epoll-shim")
-    # TODO: could build it native on FreeBSD as well
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
 
     def configure(self, **kwargs):
         if not self.compiling_for_host():

@@ -680,3 +680,6 @@ class CrossCompileTarget(object):
 class BasicCompilationTargets:
     # XXX: should probably not harcode x86_64 for native
     NATIVE = CrossCompileTarget("native", CPUArchitecture.X86_64, NativeTargetInfo)
+    NATIVE_IF_FREEBSD = [NATIVE] if OSInfo.IS_FREEBSD else []
+    NATIVE_IF_LINUX = [NATIVE] if OSInfo.IS_LINUX else []
+    NATIVE_IF_MACOS = [NATIVE] if OSInfo.IS_MAC else []
