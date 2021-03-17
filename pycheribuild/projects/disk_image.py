@@ -481,7 +481,7 @@ class BuildDiskImageBase(SimpleProject):
     def run_mkimg(self, cmd: list, **kwargs):
         if not self.mkimg_cmd or not self.mkimg_cmd.exists():
             self.fatal("Missing mkimg command ('{}')! Should be found in FreeBSD build dir.".format(self.mkimg_cmd),
-                fixit_hint="Pass an explicit path to mkimg by setting the MKIMG_CMD environment variable")
+                       fixit_hint="Pass an explicit path to mkimg by setting the MKIMG_CMD environment variable")
         self.run_cmd([self.mkimg_cmd] + cmd, **kwargs)
 
     @property
