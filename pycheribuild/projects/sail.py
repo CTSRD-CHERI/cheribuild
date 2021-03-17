@@ -67,7 +67,8 @@ class OpamMixin(_MixinBase):
         super().check_system_dependencies()  # pytype: disable=attribute-error
         opam_path = shutil.which("opam")
         if opam_path:
-            opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?")
+            opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?",
+                                               config=self.config)
             if opam_version < (2, 0, 0):
                 self.dependency_error("Opam version", opam_version, "is too old. Need at least 2.0.0",
                                       # pytype: disable=attribute-error

@@ -1609,7 +1609,7 @@ class GitRepository(SourceRepository):
                                       capture_output=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
         pull_cmd = ["git", "pull"]
         has_autostash = False
-        git_version = get_program_version(Path(shutil.which("git"))) if shutil.which("git") else (0, 0, 0)
+        git_version = get_program_version(Path(shutil.which("git") or "git"), config=current_project.config)
         # Use the autostash flag for Git >= 2.14 (https://stackoverflow.com/a/30209750/894271)
         if git_version >= (2, 14):
             has_autostash = True

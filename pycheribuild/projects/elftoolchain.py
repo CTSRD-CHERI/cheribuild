@@ -87,7 +87,8 @@ class BuildElftoolchain(Project):
     def compile(self, **kwargs):
         is_old_broken_bmake = True
         try:
-            version = get_program_version(Path(self.make_args.command), ("-V", "MAKE_VERSION"), regex=b"(.+)")[0]
+            version = get_program_version(Path(self.make_args.command), ("-V", "MAKE_VERSION"), regex=b"(.+)",
+                                          config=self.config)[0]
             # The version of bmake shipped with ubuntu doesn't handle depedencies correctly
             if version > 20170101:
                 is_old_broken_bmake = False

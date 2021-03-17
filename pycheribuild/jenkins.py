@@ -319,7 +319,8 @@ def create_tarball(cheri_config):
         tar_cmd = None
         tar_flags = ["--invalid-flag"]
         if bsdtar_path:
-            bsdtar_version = get_program_version(Path(bsdtar_path), regex=b"bsdtar\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?")
+            bsdtar_version = get_program_version(Path(bsdtar_path), regex=b"bsdtar\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?",
+                                                 config=cheri_config)
             if bsdtar_version > (3, 0, 0):
                 # Only newer versions support --uid/--gid
                 tar_cmd = bsdtar_path

@@ -576,6 +576,8 @@ def get_version_output(program: Path, command_args: tuple = None, *, config: Con
         config = get_global_config()  # TODO: remove
     if command_args is None:
         command_args = ["--version"]
+    if program == Path():
+        raise ValueError("Empty path?")
     prog = run_command([str(program)] + list(command_args), config=config, stdin=subprocess.DEVNULL,
                        stderr=subprocess.STDOUT, capture_output=True, run_in_pretend_mode=True)
     return prog.stdout
@@ -584,7 +586,7 @@ def get_version_output(program: Path, command_args: tuple = None, *, config: Con
 @functools.lru_cache(maxsize=20)
 def get_program_version(program: Path, command_args: tuple = None, component_kind: "typing.Type[Type_T]" = int,
                         regex=None, program_name: bytes = None, *,
-                        config: ConfigBase = None) -> "typing.Tuple[Type_T, Type_T, Type_T]":
+                        config: ConfigBase) -> "typing.Tuple[Type_T, Type_T, Type_T]":
     if config is None:
         config = get_global_config()  # TODO: remove
     if program_name is None:
