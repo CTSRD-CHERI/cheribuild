@@ -31,6 +31,7 @@
 import os
 import shutil
 import subprocess
+import sys
 import threading
 import typing
 from pathlib import Path
@@ -302,6 +303,17 @@ class FileSystemUtils(object):
             return False
         # print(d, "is empty")
         return True
+
+    @staticmethod
+    def realpath(p: Path):
+        # TODO: Require 3.6 after Ubuntu 16.04 EOL (scheduled for April 30, 2021)
+        # Python 3.5 always raises an exception for non-existent files.
+        if sys.version_info > (3, 6):
+            return p.resolve(strict=False)
+        else:
+            if p.exists():
+                return p.resolve()
+            return Path(os.path.normpath(str(p.absolute())))
 
     def sha256sum(self, file: Path) -> str:
         # Based on https://stackoverflow.com/a/44873382/894271

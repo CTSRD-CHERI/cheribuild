@@ -845,9 +845,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
         result = self._query_make_var(self.buildworld_args, ".OBJDIR")
         if result is None:
             result = Path()
+        if self.realpath(result) == self.realpath(self.source_dir):
+            self.warning("bmake claims the build dir for", self.target, "is the source dir, assuming",
+                         self.build_dir, "instead.")
+            return self.build_dir
         if not result or result == Path():
             # just clean the whole directory instead
-            self.warning("Could not infer buildworld root objdir")
+            self.warning("Could not infer buildworld root objdir for", self.target)
             return self.build_dir
         return result
 
