@@ -39,7 +39,6 @@ import typing
 from abc import abstractmethod
 from pathlib import Path
 
-
 _cheribuild_root = Path(__file__).resolve().parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
 assert (_pexpect_dir / "pexpect/__init__.py").exists()
@@ -92,6 +91,7 @@ puts "Done!"
 exit 0
 """
 
+
 def generate_openocd_script(num_cores: int):
     openocd_script = """
 interface ftdi
@@ -114,7 +114,8 @@ jtag newtap $_CHIPNAME cpu -irlen 18 -ignore-version -expected-id 0x04B31093
 
     for core in range(num_cores):
         openocd_script += "\nset _TARGETNAME_{0:d} $_CHIPNAME.cpu{0:d}".format(core)
-        openocd_script += "\ntarget create $_TARGETNAME_{0:d} riscv -chain-position $_CHIPNAME.cpu -coreid {0:d}".format(core)
+        openocd_script += "\ntarget create $_TARGETNAME_{0:d} riscv -chain-position $_CHIPNAME.cpu" \
+                          " -coreid {0:d}".format(core)
         if core == 0:
             openocd_script += " -rtos hwthread"
         openocd_script += "\n"
@@ -202,7 +203,8 @@ class SerialConnection:
         self.cheribsd.interact()
 
     @abstractmethod
-    def show_help_message(self): ...
+    def show_help_message(self):
+        ...
 
 
 class PicoComConnection(SerialConnection):
@@ -316,12 +318,12 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
         args += ["-ex", "load " + shlex.quote(str(kernel_image.absolute()))]
     args += ["-ex", "load " + shlex.quote(str(Path(bios_image).absolute()))]
     if num_cores > 1:
-        args += ["-ex", "set $entry_point = $pc"] # Record the entry point to the bios
+        args += ["-ex", "set $entry_point = $pc"]  # Record the entry point to the bios
         for core in range(1, num_cores):
-            args += ["-ex", "thread {:d}".format(core + 1)] # switch to thread (core + 1) (GDB counts from 1)
-            args += ["-ex", "si 5"] # execute bootrom on every other core
-            args += ["-ex", "set $pc=$entry_point"] # set every other core to the start of the bios
-        args += ["-ex", "thread 1"] # switch back to core 0
+            args += ["-ex", "thread {:d}".format(core + 1)]  # switch to thread (core + 1) (GDB counts from 1)
+            args += ["-ex", "si 5"]  # execute bootrom on every other core
+            args += ["-ex", "set $pc=$entry_point"]  # set every other core to the start of the bios
+        args += ["-ex", "thread 1"]  # switch back to core 0
     print_command(str(gdb_cmd), *args, config=get_global_config())
     if get_global_config().pretend:
         gdb = PretendSpawn(str(gdb_cmd), args, timeout=60)
@@ -376,10 +378,10 @@ def find_vcu118_tty(pretend: bool) -> ListPortInfo:
     # find the serial port:
     expected_vendor_id = 0x10c4
     expected_product_id = 0xea70
-    for info in comports(include_links=True):
-        assert isinstance(info, ListPortInfo)
-        if info.pid == expected_product_id and info.vid == expected_vendor_id:
-            return info
+    for portinfo in comports(include_links=True):
+        assert isinstance(portinfo, ListPortInfo)
+        if portinfo.pid == expected_product_id and portinfo.vid == expected_vendor_id:
+            return portinfo
     if pretend:
         return ListPortInfo("/dev/fakeTTY")
     raise ValueError("Could not find USB TTY with VID", hex(expected_vendor_id), "PID", hex(expected_product_id))

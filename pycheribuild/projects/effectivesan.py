@@ -31,15 +31,20 @@ import tempfile
 
 from .cross.llvm import BuildLLVMMonoRepoBase
 from .project import ComputedDefaultValue, GitRepository
+from ..config.chericonfig import CheriConfig
 from ..utils import OSInfo
 
 
 # TODO: build from source
 class BuildEffectiveSan(BuildLLVMMonoRepoBase):
+    @classmethod
+    def get_native_install_path(cls, config: CheriConfig):
+        return config.output_root / "effectivesan"
+
     project_name = "EffectiveSan"
     repository = GitRepository("https://github.com/GJDuck/EffectiveSan")
     _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, project: config.output_root / "effectivesan",
+        function=lambda config, project: project.get_native_install_path(config),
         as_string="$INSTALL_ROOT/effectivesan")
     skip_cheri_symlinks = True
     llvm_subdir = "llvm-4.0.1.src"

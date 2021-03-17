@@ -30,6 +30,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+# noinspection PyProtectedMember
 from pycheribuild.utils import default_make_jobs_count, GlobalConfig, warning_message
 from pycheribuild.processutils import run_command
 

@@ -48,13 +48,14 @@ from enum import Enum
 
 if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine
-    from ..projects.project import SimpleProject, Project  # no-combine
+    from ..projects.project import SimpleProject  # no-combine
 
 T = typing.TypeVar('T')
+AnyProjectSubclass = typing.TypeVar('AnyProjectSubclass', bound='SimpleProject')
 
 
 class ComputedDefaultValue(typing.Generic[T]):
-    def __init__(self, function: "typing.Callable[[CheriConfig, typing.Union[SimpleProject, Project]], T]",
+    def __init__(self, function: "typing.Callable[[CheriConfig, AnyProjectSubclass], T]",
                  as_string: "typing.Union[str, typing.Callable[[typing.Any], str]]",
                  as_readme_string: "typing.Union[str, typing.Callable[[typing.Any], str]]" = None):
         self.function = function

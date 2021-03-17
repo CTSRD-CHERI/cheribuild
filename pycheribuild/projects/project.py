@@ -61,7 +61,7 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
            "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo",  # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
-           "ReuseOtherProjectDefaultTargetRepository", "MakefileProject",  # no-combine
+           "ReuseOtherProjectDefaultTargetRepository", "MakefileProject",  "MesonProject",  # no-combine
            "TargetBranchInfo", "Linkage", "BasicCompilationTargets", "DefaultInstallDir", "BuildType"]  # no-combine
 
 Type_T = typing.TypeVar("Type_T")
@@ -1787,7 +1787,7 @@ class Project(SimpleProject):
         return self._xtarget is None or not self._xtarget.is_cheri_purecap()
 
     @classproperty
-    def can_build_with_ccache(cls):
+    def can_build_with_ccache(self):
         return False
 
     @classmethod
@@ -2449,7 +2449,7 @@ class Project(SimpleProject):
             assert configure_path, "configure_command should not be empty!"
             if not Path(configure_path).exists():
                 self.fatal("Configure command ", configure_path, "does not exist!")
-            self.run_with_logfile([configure_path] + self.configure_args, logfile_name="configure", cwd=cwd,
+            self.run_with_logfile([str(configure_path)] + self.configure_args, logfile_name="configure", cwd=cwd,
                                   env=self.configure_environment)
 
     def compile(self, cwd: Path = None, parallel: bool = True):

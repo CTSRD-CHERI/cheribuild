@@ -590,7 +590,7 @@ def do_network_on(console: boot_cheribsd.CheriBSDInstance, args, timeout=300):
     console.run('/sbin/ifconfig {} up'.format(ifc))
     if ifc != "le0":
         # apparently the le0 driver doesn't print this message
-        console.expect_exact('{}: link state changed to UP'.format(ifc))
+        console.expect_exact(['{}: link state changed to UP'.format(ifc)])
     # Send a newline to ensure a prompt:
     console.sendline()
     console.expect_prompt()

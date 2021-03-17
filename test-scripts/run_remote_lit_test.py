@@ -86,7 +86,7 @@ def adjust_common_cmdline_args(args: argparse.Namespace):
         os.makedirs(str(shared_tmpdir), exist_ok=True)
         args.shared_tmpdir_local = shared_tmpdir
         args.smb_mount_directories.append(
-            boot_cheribsd.SmbMount(shared_tmpdir, readonly=False, in_target="/shared-tmpdir"))
+            boot_cheribsd.SmbMount(str(shared_tmpdir), readonly=False, in_target="/shared-tmpdir"))
 
 
 def mp_debug(cmdline_args: argparse.Namespace, *args, **kwargs):
