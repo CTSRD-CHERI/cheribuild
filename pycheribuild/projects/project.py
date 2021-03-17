@@ -3300,7 +3300,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             # Recommended way to override compiler is using a native config file:
             self._toolchain_file = self.build_dir / "meson-native-file.ini"
             self.configure_args.extend(["--native-file", str(self._toolchain_file)])
-        if self.config.force_configure and (self.build_dir / "meson-info").exists():
+        if self.config.force_configure and not self.config.clean and (self.build_dir / "meson-info").exists():
             self.configure_args.append("--reconfigure")
         self.add_meson_options(**self.build_type.to_meson_args())
         if self.use_lto:
@@ -3354,6 +3354,9 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             self.add_meson_options(prefix=self.install_dir)
         self.configure_args.append(str(self.source_dir))
         self.configure_args.append(str(self.build_dir))
+        if self.config.force_configure:
+            self.clean_directory(self.build_dir / "meson-info", ensure_dir_exists=False)
+            self.clean_directory(self.build_dir / "meson-private", ensure_dir_exists=False)
         super().configure(**kwargs)
         if self.config.copy_compilation_db_to_source_dir and (self.build_dir / "compile_commands.json").exists():
             self.install_file(self.build_dir / "compile_commands.json", self.source_dir / "compile_commands.json",
