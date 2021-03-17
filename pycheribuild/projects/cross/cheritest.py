@@ -60,8 +60,6 @@ class _BuildCheriMipsTestBase(Project):
             self.make_args.set(CAP_SIZE=self.config.mips_cheri_bits)
             self.make_args.set_env(PYTEST_ADDOPTS="--color=yes")
 
-    _stdout_filter = None  # don't filter output during make
-
     # Should run tests both for --test and --build
     def compile(self, **kwargs):
         if self.run_tests_with_build:

@@ -1166,9 +1166,6 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     def install(self, **kwargs):
         self.info("freebsd-universe is a compile-only target")
 
-    # Don't filter lines here
-    _stdout_filter = Project._show_line_stdout_filter
-
     def process(self):
         if not OSInfo.IS_FREEBSD and not self.crossbuild:
             self.info("Can't build FreeBSD on a non-FreeBSD host (yet)!")
