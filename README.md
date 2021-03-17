@@ -219,12 +219,12 @@ For example if you want cheribuild.py to behave as if you had passed
 `--source-root /foo/bar/cheri/src --output-root /foo/bar/cheri/output --build-root /build -j 4 --cheribsd/build-options "-DWITHOUT_ZFS FOO=bar"`, you can write the following JSON to
 `~/.config/cheribuild.json`:
 
-```json
+```jsonc
 {
   "source-root": "/foo/bar/cheri/src",
-  # build-root defaults to <source-root>/build
+  // build-root defaults to <source-root>/build
   "build-root": "/build",
-  # output-root defaults to <source-root>/output
+  // output-root defaults to <source-root>/output
   "output-root": "/foo/bar/cheri/output",
   "make-jobs": 4,
   "cheribsd": {
