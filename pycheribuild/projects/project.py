@@ -2869,6 +2869,11 @@ class _CMakeAndMesonSharedLogic(Project):
         # XXX: We currently use CHERI LLVM tools for native builds
         sdk_bindir = self.sdk_bindir if not self.compiling_for_host() else self.config.cheri_sdk_bindir
         cmdline = _CMakeAndMesonSharedLogic.CommandLineArgs
+        system_name = self.target_info.cmake_system_name if not self.compiling_for_host() else sys.platform
+        if isinstance(self, MesonProject):
+            # Meson expects lower-case system names:
+            # https://mesonbuild.com/Reference-tables.html#operating-system-names
+            system_name = system_name.lower()
         self._replace_values_in_toolchain_file(
             self._toolchain_template, output_file,
             TOOLCHAIN_SDK_BINDIR=sdk_bindir,
@@ -2887,7 +2892,7 @@ class _CMakeAndMesonSharedLogic(Project):
             TOOLCHAIN_STRIP=self.target_info.strip_tool,
             TOOLCHAIN_SYSROOT=self.sdk_sysroot if self.needs_sysroot else "",
             TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
-            TOOLCHAIN_SYSTEM_NAME=self.target_info.cmake_system_name if not self.compiling_for_host() else sys.platform,
+            TOOLCHAIN_SYSTEM_NAME=system_name,
             TOOLCHAIN_SYSTEM_VERSION=self.target_info.toolchain_system_version or "",
             TOOLCHAIN_CMAKE_PREFIX_PATH=self.target_info.cmake_prefix_paths,
             TOOLCHAIN_PKGCONFIG_DIRS=_CMakeAndMesonSharedLogic.EnvVarPathList(
