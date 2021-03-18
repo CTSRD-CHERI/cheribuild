@@ -45,6 +45,12 @@ class BuildEPollShim(CrossCompileCMakeProject):
             self.add_cmake_options(BUILD_TESTING=False)
         super().configure()
 
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.run_make("test")
+        else:
+            self.info("Don't know how to run tests for", self.target, "when cross-compiling.")
+
 
 class BuildExpat(CrossCompileCMakeProject):
     target = "libexpat"
