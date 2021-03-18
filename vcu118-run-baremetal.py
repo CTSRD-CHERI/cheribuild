@@ -260,7 +260,7 @@ def get_console(tty_info: ListPortInfo) -> SerialConnection:
 
 def load_and_start_exe(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
                           tty_info: ListPortInfo, num_cores: int,
-                          expected_output) -> FpgaConnection:
+                          expected_output, expected_output_timeout: int) -> FpgaConnection:
     # Open the serial connection first to check that it's available:
     serial_conn = get_console(tty_info)
     print("Connected to TTY")
@@ -309,7 +309,7 @@ def load_and_start_exe(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     gdb_finish_time = load_end_time
     gdb.sendline("continue")
 
-    serial_conn.program.expect_exact(expected_output)
+    serial_conn.program.expect_exact(expected_output, timeout=expected_output_timeout)
     print(serial_conn.program.before.decode('utf-8'))
 
     return FpgaConnection(gdb, openocd, serial_conn)
@@ -343,6 +343,7 @@ def main():
     parser.add_argument("action", choices=["all", "bitfile", "boot", "console"],
                         default="all", nargs=argparse.OPTIONAL)
     parser.add_argument("--expected-output", default="", help="Expected outout from the loaded software image")
+    parser.add_argument("--expected-output-timeout", type=int, default=60, help="Second to wait for expected output")
     try:
         # noinspection PyUnresolvedReferences
         import argcomplete
@@ -363,7 +364,8 @@ def main():
     print("Found TTY:", tty_info)
     conn = load_and_start_exe(gdb_cmd=args.gdb, openocd_cmd=args.openocd, bios_image=args.bios,
                                  tty_info=tty_info, num_cores=args.num_cores,
-                                 expected_output=args.expected_output)
+                                 expected_output=args.expected_output,
+                                 expected_output_timeout=args.expected_output_timeout)
     sys.exit(0)
 
 
