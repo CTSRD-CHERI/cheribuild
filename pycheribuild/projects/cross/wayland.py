@@ -49,7 +49,7 @@ class BuildEPollShim(CrossCompileCMakeProject):
 class BuildExpat(CrossCompileCMakeProject):
     target = "libexpat"
     project_name = "libexpat"
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     repository = GitRepository("https://github.com/libexpat/libexpat")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]

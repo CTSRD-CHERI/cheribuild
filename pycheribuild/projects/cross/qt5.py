@@ -448,7 +448,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 # it also needs libxml2
 class BuildLibXml2(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/libxml2")
-    native_install_dir = DefaultInstallDir.CHERI_SDK
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     make_kind = MakeCommandKind.GnuMake
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
