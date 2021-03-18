@@ -668,7 +668,6 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
 
     @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
-        assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
         return []
 
 
