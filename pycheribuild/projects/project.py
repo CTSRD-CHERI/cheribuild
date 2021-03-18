@@ -3377,6 +3377,12 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             self.install_file(self.build_dir / "compile_commands.json", self.source_dir / "compile_commands.json",
                               force=True)
 
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.run_cmd(self.configure_command, "test")
+        else:
+            self.info("Don't know how to run tests for", self.target, "when cross-compiling.")
+
 
 # A target that is just an alias for at least one other targets but does not force building of dependencies
 class TargetAlias(SimpleProject):
