@@ -2192,9 +2192,9 @@ class Project(SimpleProject):
                 pkg_config_args = dict(
                     PKG_CONFIG_PATH=":".join(self.target_info.pkgconfig_dirs + [os.getenv("PKG_CONFIG_PATH", "")]))
             elif self.needs_sysroot:
-                # We need to set the PKG_CONFIG variables both when configuring and when running make since some projects
-                # (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set PKG_CONFIG_*
-                # these configure steps will find the libraries on the host instead and cause the build to fail
+                # We need to set the PKG_CONFIG variables both when configuring and when running make since some
+                # projects (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set
+                # them*, these configure steps will find the libraries on the host instead and cause the build to fail.
                 # PKG_CONFIG_PATH: list of directories to be searched for .pc files before the default locations.
                 # PKG_CONFIG_LIBDIR: list of directories to replace the default pkg-config search path.
                 # Since we only want libraries from our sysroots we set both.
