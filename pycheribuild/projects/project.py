@@ -61,7 +61,7 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
            "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo",  # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
-           "ReuseOtherProjectDefaultTargetRepository", "MakefileProject",  "MesonProject",  # no-combine
+           "ReuseOtherProjectDefaultTargetRepository", "MakefileProject", "MesonProject",  # no-combine
            "TargetBranchInfo", "Linkage", "BasicCompilationTargets", "DefaultInstallDir", "BuildType"]  # no-combine
 
 Type_T = typing.TypeVar("Type_T")
@@ -812,6 +812,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self._last_stdout_line_can_be_overwritten = False
 
     _stdout_filter = None  # don't filter output by default
+
     # Subclasses can add the following:
     # def _stdout_filter(self, line: bytes):
     #     self._line_not_important_stdout_filter(line)
@@ -2800,6 +2801,7 @@ class _CMakeAndMesonSharedLogic(Project):
 
     class CommandLineArgs:
         """Simple wrapper to distinguish CMake (space-separated string) from Meson (python-style list)"""
+
         def __init__(self, args: list):
             self.args = args
 
@@ -2808,6 +2810,7 @@ class _CMakeAndMesonSharedLogic(Project):
 
     class EnvVarPathList:
         """Simple wrapper to distinguish CMake (:-separated string) from Meson (python-style list)"""
+
         def __init__(self, paths: list):
             self.paths = paths
 
@@ -3273,7 +3276,12 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         self.configure_command = os.getenv("MESON_COMMAND", None)
         if self.configure_command is None:
             self.configure_command = "meson"
-            self.add_required_system_tool("meson", homebrew="meson", zypper="meson", apt="meson", freebsd="meson")
+            # Ubuntu/Debian's packages are way too old, suggest pip instead
+            install_instructions = None
+            if OSInfo.is_ubuntu() or OSInfo.is_debian():
+                install_instructions = "Try running `pip3 install --upgrade --user meson`"
+            self.add_required_system_tool("meson", homebrew="meson", zypper="meson", freebsd="meson", apt="meson",
+                                          install_instructions=install_instructions)
         self.configure_args.insert(0, "setup")
         # We generate a toolchain file when cross-compiling and the toolchain files need at least 0.57
         self.set_minimum_meson_version(0, 57)
