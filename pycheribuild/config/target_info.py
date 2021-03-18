@@ -348,6 +348,11 @@ class TargetInfo(ABC):
             return config.cheri_sdk_bindir / "clang-cpp"
         return config.clang_cpp_path
 
+    @staticmethod
+    def host_pkgconfig_dirs(config) -> "typing.List[str]":
+        # We need to add the bootstrap tools pkgconfig dirs to PKG_CONFIG_PATH to find e.g. libxml2, etc.
+        return [str(config.other_tools_dir / "lib/pkgconfig")]
+
 
 # https://reviews.llvm.org/rG14daa20be1ad89639ec209d969232d19cf698845
 class AutoVarInit(Enum):
@@ -451,6 +456,10 @@ class NativeTargetInfo(TargetInfo):
     @classmethod
     def is_native(cls):
         return True
+
+    @property
+    def pkgconfig_dirs(self) -> "typing.List[str]":
+        return self.host_pkgconfig_dirs(self.config)
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",

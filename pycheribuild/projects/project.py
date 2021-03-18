@@ -2184,21 +2184,29 @@ class Project(SimpleProject):
 
     def setup(self):
         super().setup()
-        if not self.compiling_for_host() and self.needs_sysroot and self.set_pkg_config_path:
-            # We need to set the PKG_CONFIG variables both when configuring and when running make since some projects
-            # (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set PKG_CONFIG_*
-            # these configure steps will find the libraries on the host instead and cause the build to fail
-            # PKG_CONFIG_PATH: list of directories to be searched for .pc files before the default locations.
-            # PKG_CONFIG_LIBDIR: list of directories to replace the default pkg-config search path.
-            # Since we only want libraries from our sysroots we set both.
-            pkgconfig_dirs = ":".join(self.target_info.pkgconfig_dirs)
-            pkg_config_args = dict(
-                PKG_CONFIG_PATH=pkgconfig_dirs,
-                PKG_CONFIG_LIBDIR=pkgconfig_dirs,
-                PKG_CONFIG_SYSROOT_DIR=self.target_info.sysroot_dir
-            )
-            self.configure_environment.update(pkg_config_args)
-            self.make_args.set_env(**pkg_config_args)
+        if self.set_pkg_config_path:
+            pkg_config_args = dict()
+            if self.compiling_for_host():
+                # We have to add the boostrap tools pkgconfig directory to PKG_CONFIG_PATH so that it is searched in
+                # addition to the default paths. Note: We do not set PKG_CONFIG_LIBDIR since that overrides the default.
+                pkg_config_args = dict(
+                    PKG_CONFIG_PATH=":".join(self.target_info.pkgconfig_dirs + [os.getenv("PKG_CONFIG_PATH", "")]))
+            elif self.needs_sysroot:
+                # We need to set the PKG_CONFIG variables both when configuring and when running make since some projects
+                # (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set PKG_CONFIG_*
+                # these configure steps will find the libraries on the host instead and cause the build to fail
+                # PKG_CONFIG_PATH: list of directories to be searched for .pc files before the default locations.
+                # PKG_CONFIG_LIBDIR: list of directories to replace the default pkg-config search path.
+                # Since we only want libraries from our sysroots we set both.
+                pkgconfig_dirs = ":".join(self.target_info.pkgconfig_dirs)
+                pkg_config_args = dict(
+                    PKG_CONFIG_PATH=pkgconfig_dirs,
+                    PKG_CONFIG_LIBDIR=pkgconfig_dirs,
+                    PKG_CONFIG_SYSROOT_DIR=self.target_info.sysroot_dir
+                )
+            if pkg_config_args:
+                self.configure_environment.update(pkg_config_args)
+                self.make_args.set_env(**pkg_config_args)
         cc_info = self.get_compiler_info(self.CC)
         if self.use_lto and self.CC.exists():
             self.add_lto_build_options(cc_info)
@@ -2898,8 +2906,7 @@ class _CMakeAndMesonSharedLogic(Project):
             TOOLCHAIN_SYSTEM_NAME=system_name,
             TOOLCHAIN_SYSTEM_VERSION=self.target_info.toolchain_system_version or "",
             TOOLCHAIN_CMAKE_PREFIX_PATH=self.target_info.cmake_prefix_paths,
-            TOOLCHAIN_PKGCONFIG_DIRS=_CMakeAndMesonSharedLogic.EnvVarPathList(
-                self.target_info.pkgconfig_dirs if self.needs_sysroot else []),
+            TOOLCHAIN_PKGCONFIG_DIRS=_CMakeAndMesonSharedLogic.EnvVarPathList(self.target_info.pkgconfig_dirs),
             COMMENT_IF_NATIVE="#" if self.compiling_for_host() else "",
             **kwargs)
 

@@ -37,6 +37,7 @@ toolchain_cxx_flags = @TOOLCHAIN_CXX_FLAGS@
 
 [built-in options]
 cmake_prefix_path = @TOOLCHAIN_CMAKE_PREFIX_PATH@
+pkg_config_path = toolchain_pkg_config_dirs
 c_args = common_flags + toolchain_c_flags
 cpp_args = common_flags + toolchain_cxx_flags
 c_link_args = common_flags + toolchain_linker_flags
