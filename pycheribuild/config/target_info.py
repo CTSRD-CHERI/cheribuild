@@ -351,7 +351,8 @@ class TargetInfo(ABC):
     @staticmethod
     def host_pkgconfig_dirs(config) -> "typing.List[str]":
         # We need to add the bootstrap tools pkgconfig dirs to PKG_CONFIG_PATH to find e.g. libxml2, etc.
-        return [str(config.other_tools_dir / "lib/pkgconfig")]
+        # Note: some packages also install to libdata/pkgconfig
+        return [str(config.other_tools_dir / "lib/pkgconfig"), str(config.other_tools_dir / "libdata/pkgconfig")]
 
 
 # https://reviews.llvm.org/rG14daa20be1ad89639ec209d969232d19cf698845
