@@ -3379,7 +3379,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
 
     def run_tests(self):
         if self.compiling_for_host():
-            self.run_cmd(self.configure_command, "test")
+            self.run_cmd(self.configure_command, "test", "--print-errorlogs")
         else:
             self.info("Don't know how to run tests for", self.target, "when cross-compiling.")
 
