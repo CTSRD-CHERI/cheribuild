@@ -227,6 +227,18 @@ class BuildQEMUBase(AutotoolsProject):
         super().update()
 
 
+class BuildUpstreamQEMU(BuildQEMUBase):
+    repository = GitRepository("https://github.com/qemu/qemu.git")
+    project_name = "upstream-qemu"
+    target = "upstream-qemu"
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, project: config.output_root / "upstream-qemu",
+        as_string="$INSTALL_ROOT/upstream-qemu")
+    default_targets = "mips64-softmmu," \
+                      "riscv64-softmmu,riscv32-softmmu," \
+                      "x86_64-softmmu,aarch64-softmmu"
+
+
 class BuildQEMU(BuildQEMUBase):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri")
     default_targets = "cheri128-softmmu,mips64-softmmu," \
