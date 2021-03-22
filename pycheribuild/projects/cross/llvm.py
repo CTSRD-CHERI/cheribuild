@@ -140,6 +140,10 @@ class BuildLLVMBase(CMakeProject):
         # Install the llvm binutils symlinks since they now seem to work fine.
         self.add_cmake_options(LLVM_INSTALL_BINUTILS_SYMLINKS=True)
 
+        # No need for libxml2 (only used for c-index-test and WindowsManifestMerger. The build system doesn't set RPATH
+        # correctly for libxml2, so linking against libxml2 in bootstrap tools breaks the build.
+        self.add_cmake_options(LLVM_ENABLE_LIBXML2=False)
+
         if self.use_modules_build:
             self.add_cmake_options(LLVM_ENABLE_MODULES=True,
                                    LLVM_ENABLE_MODULE_DEBUGGING=self.should_include_debug_info)
