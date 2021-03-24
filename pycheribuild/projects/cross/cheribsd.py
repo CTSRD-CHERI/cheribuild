@@ -942,6 +942,23 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     self._cleanup_old_files(self.target_info.sysroot_dir, self.build_configuration_suffix(),
                                             old_suffixes)
 
+                # Enable toor user with a shell of sh for those who dislike root's csh
+                def rewrite_passwd(old):
+                    new = []
+                    for line in old:
+                        fields = line.split(':')
+                        if len(fields) == 10 and fields[0] == "toor" and fields[1] == "*" and fields[9] == "":
+                            fields[1] = ""
+                            fields[9] = "/bin/sh"
+                            line = ':'.join(fields)
+                        new.append(line)
+                    return new
+
+                pwd_mkdb_cmd = self.objdir / "tmp/legacy/usr/bin/pwd_mkdb"
+                self.rewrite_file(self.destdir / "etc/master.passwd", rewrite_passwd)
+                self.run_cmd([pwd_mkdb_cmd, "-p", "-d", self.install_dir / "etc",
+                              self.install_dir / "etc/master.passwd"])
+
         assert not sysroot_only, "Should not end up here"
         if self.config.skip_kernel:
             return
