@@ -57,7 +57,8 @@ class QemuOptions:
             self.machine_flags = ["-M", "virt"]
             self.can_boot_kernel_directly = True
         elif xtarget.is_any_x86():
-            self.qemu_arch_sufffix = "x86_64" if xtarget.is_x86_64() else "i386"
+            # We boot i386 FreeBSD in a x86_64 QEMU. This avoids having to build another version of QEMU.
+            self.qemu_arch_sufffix = "x86_64"
             self.can_boot_kernel_directly = False  # boot from disk
             # Try to use KVM instead of TCG if possible to speed up emulation
             if not want_debugger:
