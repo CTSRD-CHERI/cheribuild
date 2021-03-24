@@ -214,6 +214,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     _cached_filtered_deps = None  # type: typing.List[Target]
     is_alias = False
     is_sdk_target = False  # for --skip-sdk
+    manual_sysroot_dependencies = False  # For sysroot targets that need a partial sysroot
     # Set to true to omit the extra -<os> suffix in target names (otherwise we would end up with targets such as
     # freebsd-freebsd-amd64, etc.)
     include_os_in_target_suffix = True
@@ -297,7 +298,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if not explicit_dependencies_only:
             if include_toolchain_dependencies:
                 dependencies.extend(cls._xtarget.target_info_cls.toolchain_targets(cls._xtarget, config))
-            if include_sdk_dependencies and cls.needs_sysroot:
+            if include_sdk_dependencies and cls.needs_sysroot and not cls.manual_sysroot_dependencies:
                 dependencies.extend(cls._xtarget.target_info_cls.base_sysroot_targets(cls._xtarget, config))
         # Try to resovle the target names to actual targets and potentially add recursive depdencies
         for dep_name in dependencies:

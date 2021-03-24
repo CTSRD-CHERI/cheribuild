@@ -119,6 +119,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     _check_install_dir_conflict = False
     is_sdk_target = True
     dependencies = ["newlib"]
+    manual_sysroot_dependencies = True  # We need --sysroot but avoid cycle through ourselves
     supported_architectures = \
         CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
     _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
