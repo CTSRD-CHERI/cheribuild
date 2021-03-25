@@ -131,8 +131,8 @@ class DefaultCheriConfig(CheriConfig):
                                                  help="The directory to find sdk and bootstrap tools (default: "
                                                       "'<OUTPUT_ROOT>')")
         default_morello_sdk = ComputedDefaultValue(
-            function=lambda p, cls: (p.output_root / p.default_morello_sdk_directory_name),
-            as_string="'<OUTPUT_ROOT>/morello-sdk'")
+            function=lambda p, cls: (p.tools_root / p.default_morello_sdk_directory_name),
+            as_string="'<TOOLS_ROOT>/morello-sdk'")
         self.morello_sdk_dir = loader.add_path_option("morello-sdk-root",
                                                       default=default_morello_sdk, group=loader.path_group,
                                                       help="The directory to find/install the Morello SDK")
