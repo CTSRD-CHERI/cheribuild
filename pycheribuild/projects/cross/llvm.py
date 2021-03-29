@@ -98,9 +98,9 @@ class BuildLLVMBase(CMakeProject):
                                                                "toolchain (this is useful to avoid excessive compile "
                                                                "times with LTO)")
 
-    minimal_toolchain_targets = ["clang", "clang-format", "lld", "llvm-ar", "llvm-cxxfilt", "llvm-mc", "llvm-nm",
-                                 "llvm-objcopy", "llvm-objdump", "llvm-ranlib", "llvm-readelf", "llvm-readobj",
-                                 "llvm-size", "llvm-strings", "llvm-strip", "llvm-symbolizer"]
+    minimal_toolchain_targets = ["clang", "clang-format", "llc", "lld", "llvm-ar", "llvm-cxxfilt", "llvm-mc",
+                                 "llvm-nm", "llvm-objcopy", "llvm-objdump", "llvm-ranlib", "llvm-readelf",
+                                 "llvm-readobj", "llvm-size", "llvm-strings", "llvm-strip", "llvm-symbolizer"]
 
     def setup(self):
         super().setup()
