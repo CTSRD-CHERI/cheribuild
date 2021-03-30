@@ -1199,14 +1199,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     project_name = "cheribsd"
     target = "cheribsd"
     can_build_with_system_clang = False  # We need CHERI LLVM for most architectures
-    repository = GitRepository(
-        url="https://github.com/CTSRD-CHERI/cheribsd.git",
-        per_target_branches={
-            CompilationTargets.CHERIBSD_MORELLO_HYBRID: TargetBranchInfo(branch="morello-dev",
-                                                                         directory_name="morello-cheribsd"),
-            CompilationTargets.CHERIBSD_MORELLO_PURECAP: TargetBranchInfo(branch="morello-dev",
-                                                                          directory_name="morello-cheribsd")
-            })
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git")
     _default_install_dir_fn = cheribsd_install_dir
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
                                CompilationTargets.CHERIBSD_RISCV_NO_CHERI, CompilationTargets.CHERIBSD_RISCV_HYBRID,
