@@ -41,7 +41,8 @@ from ..config.chericonfig import CheriConfig
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
 from ..processutils import extract_version, popen
-from ..utils import AnsiColour, cached_property, classproperty, coloured, find_free_port, OSInfo, SocketAndPort
+from ..utils import AnsiColour, cached_property, classproperty, coloured, fatal_error, find_free_port, OSInfo,
+                    SocketAndPort
 
 
 class InstallMorelloFVP(SimpleProject):
@@ -182,9 +183,17 @@ VOLUME /diskimg
         interactive_headless = interactive and not x11
         # Interactive headless puts the FVP in the background with telnet as the point of interaction
         pre_cmd, fvp_path = self._fvp_base_command(need_tty=not interactive_headless)
+        default_ap_port = 5003
+        docker_host_ap_port = None
         if self.use_docker_container:
             assert pre_cmd[-1] == self.container_name + ":latest", pre_cmd[-1]
             pre_cmd = pre_cmd[0:-1]
+            if interactive_headless:
+                docker_host_ap_port = find_free_port().port
+                # Should always get the preferred port inside the container,
+                # and no way to recover otherwise anyway given we can't change
+                # port forwarding after running.
+                pre_cmd += ["-p", str(docker_host_ap_port) + ":" + str(default_ap_port)]
             if ssh_port is not None:
                 pre_cmd += ["-p", str(ssh_port) + ":" + str(ssh_port)]
             if disk_image_path is not None:
@@ -255,9 +264,11 @@ VOLUME /diskimg
                 # and thus know what port will be allocated, we still need to
                 # be able to wait until the FVP has started listening inside
                 # the container otherwise telnet will fail to connect. So we
-                # might as well also read the port out for robustness. Ideally
-                # we'd just bind-mount the same FIFO as is used for the normal
-                # case, but that doesn't work with Docker for Mac.
+                # might as well also read the port out for robustness, and if
+                # it doesn't match what we're expecting we can't do anything
+                # but can print an error. Ideally we'd just bind-mount the same
+                # FIFO as is used for the normal case, but that doesn't work
+                # with Docker for Mac.
                 #
                 # As for FreeBSD, we'd like to use a named FIFO rather than
                 # relying on the FVP keeping file descriptors open, but
@@ -279,7 +290,12 @@ VOLUME /diskimg
                         def get_ap_port():
                             (ap_sock, _) = ap_servsock.socket.accept()
                             with open(ap_sock.fileno(), 'r') as f:
-                                return int(f.readline())
+                                # Check the port in the container is the
+                                # expected default.
+                                port = int(f.readline())
+                                if port != default_ap_port:
+                                    fatal_error("Unexpected port " + str(port) + " used by FVP in container")
+                                return docker_host_ap_port
                     else:
                         ap_pipe_rfd, ap_pipe_wfd = os.pipe()
                         extra_args.extend([
@@ -298,7 +314,7 @@ VOLUME /diskimg
                     bg_processes.append((fvp, True))
                     self.info("Waiting for FVP to start...")
                     # Don't call get_ap_port() in --pretend mode since it will hang forever
-                    ap_port = 5003 if self.config.pretend else get_ap_port()
+                    ap_port = default_ap_port if self.config.pretend else get_ap_port()
                 finally:
                     if ap_servsock is not None:
                         try:
