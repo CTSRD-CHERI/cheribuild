@@ -164,27 +164,27 @@ VOLUME /diskimg
             return ["--plugin", Path("/opt/FVP_Morello", plugin_path)]
         return ["--plugin", self.ensure_file_exists("Morello FVP plugin", self.install_dir / plugin_path)]
 
-    def _fvp_base_command(self, interactive=True, docker_image=None) -> typing.Tuple[list, Path]:
+    def _fvp_base_command(self, need_tty=True, docker_image=None) -> typing.Tuple[list, Path]:
         model_relpath = "models/Linux64_GCC-6.4/FVP_Morello"
         if self.use_docker_container:
             if docker_image is None:
                 docker_image = self.container_name + ":latest"
-            return (["docker", "run"] + (["-it"] if interactive else []) + ["--rm", docker_image],
+            return (["docker", "run"] + (["-it"] if need_tty else []) + ["--rm", docker_image],
                     Path("/opt/FVP_Morello", model_relpath))
         else:
             return [], self.install_dir / model_relpath
 
     def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True,
-                    expose_telnet_ports=True, ssh_port=None, interactive=True, **kwargs) -> CompletedProcess:
+                    ssh_port=None, interactive=True, **kwargs) -> CompletedProcess:
         display = os.getenv("DISPLAY", None)
-        if not display:
+        if not display or not interactive:
             x11 = False  # Don't bother with the GUI
-        pre_cmd, fvp_path = self._fvp_base_command(interactive=x11 or not interactive)
+        interactive_headless = interactive and not x11
+        # Interactive headless puts the FVP in the background with telnet as the point of interaction
+        pre_cmd, fvp_path = self._fvp_base_command(need_tty=not interactive_headless)
         if self.use_docker_container:
             assert pre_cmd[-1] == self.container_name + ":latest", pre_cmd[-1]
             pre_cmd = pre_cmd[0:-1]
-            if expose_telnet_ports:
-                pre_cmd += ["-p", "5000-5007:5000-5007"]
             if ssh_port is not None:
                 pre_cmd += ["-p", str(ssh_port) + ":" + str(ssh_port)]
             if disk_image_path is not None:
@@ -212,7 +212,7 @@ VOLUME /diskimg
         if interactive:
             kwargs["give_tty_control"] = True
         bg_processes = []
-        if self.use_docker_container and x11 and OSInfo.IS_MAC and display:
+        if self.use_docker_container and x11 and OSInfo.IS_MAC:
             # To use X11 via docker on macos we need to run socat on port 6000
             socat_cmd = ["socat", "TCP-LISTEN:6000,reuseaddr,fork", "UNIX-CLIENT:\"" + display + "\""]
             socat = popen(socat_cmd, stdin=subprocess.DEVNULL)
@@ -223,7 +223,7 @@ VOLUME /diskimg
             def fvp_cmdline():
                 return pre_cmd + [fvp_path] + self._plugin_args() + args + extra_args
 
-            if x11 or not interactive:
+            if not interactive_headless:
                 return self.run_cmd(fvp_cmdline(), **kwargs)
             else:
                 if self.use_docker_container and not self.docker_has_socat:
@@ -358,7 +358,7 @@ VOLUME /diskimg
         return self._get_version(result_if_invalid=self.latest_known_fvp)
 
     def _get_version(self, docker_image=None, *, result_if_invalid) -> "typing.Tuple[int, int, int]":
-        pre_cmd, fvp_path = self._fvp_base_command(interactive=False, docker_image=docker_image)
+        pre_cmd, fvp_path = self._fvp_base_command(need_tty=False, docker_image=docker_image)
         try:
             version_out = self.run_cmd(pre_cmd + [fvp_path, "--version"], capture_output=True, run_in_pretend_mode=True)
             result = extract_version(version_out.stdout,
@@ -407,8 +407,8 @@ VOLUME /diskimg
             return 0
 
     def run_tests(self):
-        self.execute_fvp(["--help"], x11=False, expose_telnet_ports=False, interactive=False)
-        self.execute_fvp(["--cyclelimit", "1000"], x11=False, expose_telnet_ports=False, interactive=False)
+        self.execute_fvp(["--help"], x11=False, interactive=False)
+        self.execute_fvp(["--cyclelimit", "1000"], x11=False, interactive=False)
 
 
 class LaunchFVPBase(SimpleProject):
