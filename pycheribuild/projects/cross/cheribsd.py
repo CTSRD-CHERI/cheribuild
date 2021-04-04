@@ -326,6 +326,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return "QEMU"  # default to the QEMU config
         elif xtarget.is_aarch64(include_purecap=True):
             if xtarget in (CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP):
+                if self.purecap_kernel:
+                    return "GENERIC-MORELLO-PURECAP"
                 return "GENERIC-MORELLO"
             return "GENERIC"
         else:
@@ -1241,7 +1243,9 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                  only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP,
                                                                        CompilationTargets.CHERIBSD_MIPS_HYBRID,
                                                                        CompilationTargets.CHERIBSD_RISCV_PURECAP,
-                                                                       CompilationTargets.CHERIBSD_RISCV_HYBRID],
+                                                                       CompilationTargets.CHERIBSD_RISCV_HYBRID,
+                                                                       CompilationTargets.CHERIBSD_MORELLO_PURECAP,
+                                                                       CompilationTargets.CHERIBSD_MORELLO_HYBRID],
                                                  help="Build kernel with pure capability ABI (experimental)")
         cls.caprevoke_kernel = cls.add_bool_option("caprevoke-kernel", show_help=True, _allow_unknown_targets=True,
                                                    only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP,
