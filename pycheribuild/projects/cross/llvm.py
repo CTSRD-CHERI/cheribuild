@@ -148,6 +148,9 @@ class BuildLLVMBase(CMakeProject):
             self.add_cmake_options(LLVM_ENABLE_MODULES=True,
                                    LLVM_ENABLE_MODULE_DEBUGGING=self.should_include_debug_info)
 
+        # We aren't ready yet to switch over to the new pass manager
+        self.add_cmake_options(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER=False)
+
         if not self.build_everything:
             self.add_cmake_options(
                 LLVM_ENABLE_OCAMLDOC=False,
