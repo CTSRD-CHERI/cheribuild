@@ -150,6 +150,8 @@ class BuildLLVMBase(CMakeProject):
 
         # We aren't ready yet to switch over to the new pass manager
         self.add_cmake_options(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER=False)
+        # CLANG_ROUND_TRIP_CC1_ARGS doesn't work for us yet. See e.g. https://reviews.llvm.org/D97462#2677130
+        self.add_cmake_options(CLANG_ROUND_TRIP_CC1_ARGS=False)
 
         if not self.build_everything:
             self.add_cmake_options(
