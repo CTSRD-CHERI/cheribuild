@@ -82,6 +82,10 @@ class InstallMorelloFVP(SimpleProject):
     def install_dir(self):
         return self.config.morello_sdk_dir / "FVP_Morello"
 
+    @property
+    def plugin_dir(self):
+        return self.install_dir / "plugins" / "Linux64_GCC-6.4"
+
     def process(self):
         downloaded_new_file = False
         if self.installer_path is None:
@@ -176,7 +180,7 @@ VOLUME /diskimg
             return [], self.install_dir / model_relpath
 
     def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True,
-                    ssh_port=None, interactive=True, **kwargs) -> CompletedProcess:
+                    ssh_port=None, gdb_port=None, interactive=True, **kwargs) -> CompletedProcess:
         display = os.getenv("DISPLAY", None)
         if not display or not interactive:
             x11 = False  # Don't bother with the GUI
@@ -196,6 +200,8 @@ VOLUME /diskimg
                 pre_cmd += ["-p", str(docker_host_ap_port) + ":" + str(default_ap_port)]
             if ssh_port is not None:
                 pre_cmd += ["-p", str(ssh_port) + ":" + str(ssh_port)]
+            if gdb_port is not None:
+                pre_cmd += ["-p", str(gdb_port) + ":" + str(gdb_port)]
             if disk_image_path is not None:
                 pre_cmd += ["-v", str(disk_image_path) + ":" + str(disk_image_path)]
                 docker_settings_fixit = ""
@@ -608,6 +614,16 @@ class LaunchFVPBase(SimpleProject):
                 # "-C", "css.trustedBootROMloader.fname=" + str(trusted_fw),
                 "-C", "css.pl011_uart_ap.unbuffered_output=1",
             ]
+
+            gdb_port = None
+            if self.config.wait_for_debugger:
+                gdb_port = find_free_port(preferred_port=1234).port if self.config.gdb_random_port else 1234
+                fvp_args += [
+                    "--allow-debug-plugin",
+                    "--plugin", self.fvp_project.plugin_dir / "GDBRemoteConnection.so",
+                    "-C", "REMOTE_CONNECTION.GDBRemoteConnection.listen_address=127.0.0.1",
+                    "-C", "REMOTE_CONNECTION.GDBRemoteConnection.port={}".format(gdb_port)]
+
             # Update the Generic Timer counter at a real-time base frequency instead of simulator time
             # This should fix the extremely slow countdown in the loader (30 minutes instead of 10s) and might also
             # improve network reliability
@@ -617,7 +633,7 @@ class LaunchFVPBase(SimpleProject):
             if self.fvp_project.fvp_revision >= (0, 11, 13):
                 fvp_args += ["-C", "board.rtc_clk_frequency=300"]
             self.fvp_project.execute_fvp(fvp_args, disk_image_path=disk_image, firmware_path=uefi_bin.parent,
-                                         x11=not self.force_headless, ssh_port=self.ssh_port)
+                                         x11=not self.force_headless, ssh_port=self.ssh_port, gdb_port=gdb_port)
 
 
 class LaunchFVPCheriBSD(LaunchFVPBase):
