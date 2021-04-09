@@ -481,6 +481,9 @@ class LaunchFVPBase(SimpleProject):
         cls.smp = cls.add_bool_option("smp", help="Simulate multiple CPU cores in the FVP", default=True)
         cls.force_headless = cls.add_bool_option("force-headless", default=False,
                                                  help="Force headless use of the FVP")
+        cls.fvp_trace = cls.add_path_option("trace", help="Enable FVP tracing plugin to output to the given file")
+        cls.fvp_trace_icount = cls.add_config_option("trace-start-icount",
+                                                     help="Instruction count from which to start Tarmac trace")
 
     @property
     def use_virtio_net(self):
@@ -497,13 +500,6 @@ class LaunchFVPBase(SimpleProject):
             self.copy_remote_file(self.remote_disk_image_path, disk_image_project.disk_image_path)
         disk_image = self.ensure_file_exists("disk image", disk_image_project.disk_image_path,
                                              fixit_hint="Run `cheribuild.py " + disk_image_project.target + "`")
-        # TODO: tracing support:
-        # TARMAC_TRACE="--plugin ${PLUGIN_DIR}/TarmacTrace.so"
-        # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.trace-file=${HOME}/rainier/rainier.tarmac.trace"
-        # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.quantum-size=0x1"
-        # TARMAC_TRACE="${TARMAC_TRACE} -C TRACE.TarmacTrace.start-instruction-count=4400000000" # just after login
-        # ARCH_MSG="--plugin ${PLUGIN_DIR}/ArchMsgTrace.so -C
-        # ARCH_MSG="${ARCH_MSG} -C TRACE.ArchMsgTrace.trace-file=${HOME}/rainier/rainier.archmsg.trace"
         model_params = []
 
         def add_board_params(*params):
@@ -623,6 +619,38 @@ class LaunchFVPBase(SimpleProject):
                     "--plugin", self.fvp_project.plugin_dir / "GDBRemoteConnection.so",
                     "-C", "REMOTE_CONNECTION.GDBRemoteConnection.listen_address=127.0.0.1",
                     "-C", "REMOTE_CONNECTION.GDBRemoteConnection.port={}".format(gdb_port)]
+
+            if self.fvp_trace:
+                fvp_args += [
+                    "--plugin", self.fvp_project.plugin_dir / "TarmacTrace.so",
+                    "-C", "TRACE.TarmacTrace.trace-file={}".format(self.fvp_trace),
+                    "-C", "TRACE.TarmacTrace.quantum-size=0x1",
+                    "-C", "TRACE.TarmacTrace.trace_mmu=false",
+                    "-C", "TRACE.TarmacTrace.trace_loads_stores=false",
+                    "-C", "TRACE.TarmacTrace.trace_ete=false",
+                    "-C", "TRACE.TarmacTrace.trace_dap=false",
+                    "-C", "TRACE.TarmacTrace.trace_cache=false",
+                    "-C", "TRACE.TarmacTrace.trace_atomic=false",
+                    "-C", "TRACE.TarmacTrace.trace_instructions=true"]
+                # Enable the ToggleMTI plugin to be able to programmaticaly start/stop traces
+                # with magic nops as we do in qemu
+                fvp_args += [
+                    "--plugin", self.fvp_project.plugin_dir / "ToggleMTIPlugin.so",
+                    "-C", "TRACE.ToggleMTIPlugin.diagnostics=false",
+                    "-C", "TRACE.ToggleMTIPlugin.disable_mti_from_start=true",
+                    "-C", "TRACE.ToggleMTIPlugin.use_hlt=true",
+                    "-C", "TRACE.ToggleMTIPlugin.hlt_imm16=0xbeef",
+                    "-C", "css.cluster0.cpu0.enable_trace_special_hlt_imm16=1",
+                    "-C", "css.cluster0.cpu1.enable_trace_special_hlt_imm16=1",
+                    "-C", "css.cluster1.cpu0.enable_trace_special_hlt_imm16=1",
+                    "-C", "css.cluster1.cpu1.enable_trace_special_hlt_imm16=1",
+                    "-C", "css.cluster0.cpu0.trace_special_hlt_imm16=0xbeef",
+                    "-C", "css.cluster0.cpu1.trace_special_hlt_imm16=0xbeef",
+                    "-C", "css.cluster1.cpu0.trace_special_hlt_imm16=0xbeef",
+                    "-C", "css.cluster1.cpu1.trace_special_hlt_imm16=0xbeef"
+                ]
+                if self.fvp_trace_icount:
+                    fvp_args += ["-C", "TRACE.TarmacTrace.start-instruction-count={}".format(self.fvp_trace_icount)]
 
             # Update the Generic Timer counter at a real-time base frequency instead of simulator time
             # This should fix the extremely slow countdown in the loader (30 minutes instead of 10s) and might also
