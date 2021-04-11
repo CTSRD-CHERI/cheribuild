@@ -482,6 +482,7 @@ class LaunchFVPBase(SimpleProject):
         cls.force_headless = cls.add_bool_option("force-headless", default=False,
                                                  help="Force headless use of the FVP")
         cls.fvp_trace = cls.add_path_option("trace", help="Enable FVP tracing plugin to output to the given file")
+        cls.fvp_trace_mmu = cls.add_bool_option("trace-mmu", default=False, help="Emit FVP MMU trace events")
         cls.fvp_trace_icount = cls.add_config_option("trace-start-icount",
                                                      help="Instruction count from which to start Tarmac trace")
 
@@ -625,7 +626,7 @@ class LaunchFVPBase(SimpleProject):
                     "--plugin", self.fvp_project.plugin_dir / "TarmacTrace.so",
                     "-C", "TRACE.TarmacTrace.trace-file={}".format(self.fvp_trace),
                     "-C", "TRACE.TarmacTrace.quantum-size=0x1",
-                    "-C", "TRACE.TarmacTrace.trace_mmu=false",
+                    "-C", "TRACE.TarmacTrace.trace_mmu={}".format("true" if self.fvp_trace_mmu else "false"),
                     "-C", "TRACE.TarmacTrace.trace_loads_stores=false",
                     "-C", "TRACE.TarmacTrace.trace_ete=false",
                     "-C", "TRACE.TarmacTrace.trace_dap=false",
