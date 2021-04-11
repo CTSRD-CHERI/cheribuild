@@ -100,6 +100,10 @@ class LaunchQEMUBase(SimpleProject):
                                                                  "port. You can then use `ssh root@localhost -p $PORT` "
                                                                  "to connect to the VM")
 
+        cls.extra_tcp_forwarding = cls.add_config_option("extra-tcp-forwarding", kind=list, default=(),
+                                                         help="Additional TCP bridge ports beyond ssh/22; "
+                                                              "list of [hostip:]port=[guestip:]port")
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.qemu_binary = None  # type: typing.Optional[Path]
@@ -273,6 +277,19 @@ class LaunchQEMUBase(SimpleProject):
             # qemu_command += ["-redir", "tcp:" + str(self.ssh_forwarding_port) + "::22"]
             print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.ssh_forwarding_port,
                            sep=""))
+
+        for x in self.extra_tcp_forwarding:
+            # QEMU insists on having : field delimeters; add if not given
+            hg = x.split('=')
+            if len(hg) != 2:
+                self.fatal("Bad extra-tcp-forwarding (not just one '=' in '%s')" % x)
+            (h, g) = hg
+            if ':' not in h:
+                h = ':' + h
+            if ':' not in g:
+                g = ':' + g
+
+            user_network_options += ",hostfwd=tcp:" + h + "-" + g
 
         # input("Press enter to continue")
         qemu_command = self.qemu_options.get_commandline(qemu_command=self.qemu_binary,
