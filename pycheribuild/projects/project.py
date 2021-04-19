@@ -62,7 +62,8 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
            "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo",  # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
            "ReuseOtherProjectDefaultTargetRepository", "MakefileProject", "MesonProject",  # no-combine
-           "TargetBranchInfo", "Linkage", "BasicCompilationTargets", "DefaultInstallDir", "BuildType"]  # no-combine
+           "TargetBranchInfo", "Linkage", "BasicCompilationTargets", "DefaultInstallDir", "BuildType",  # no-combine
+           "SubversionRepository"]  # no-combine
 
 Type_T = typing.TypeVar("Type_T")
 
@@ -1676,6 +1677,44 @@ class GitRepository(SourceRepository):
             run_command("git", "submodule", "update", "--init", "--recursive", cwd=src_dir, print_verbose_only=True)
         if has_changes and not has_autostash:
             run_command("git", "stash", "pop", cwd=src_dir, print_verbose_only=True)
+
+
+class SubversionRepository(SourceRepository):
+    def __init__(self, url, *, default_branch: str = None):
+        self.url = url
+        self._default_branch = default_branch
+
+    def ensure_cloned(self, current_project: "Project", src_dir: Path, **kwargs):
+        if (src_dir / ".svn").is_dir():
+            return
+
+        if current_project.config.skip_clone:
+            current_project.fatal("Sources for", str(src_dir), " missing!")
+            return
+
+        assert isinstance(self.url, str), self.url
+        assert not self.url.startswith("<"), "Invalid URL " + self.url
+        checkout_url = self.url
+        if self._default_branch:
+            checkout_url = checkout_url + '/' + self._default_branch
+        if current_project.config.confirm_clone and not current_project.query_yes_no(
+                str(src_dir) + " is not a subversion checkout. Checkout from '" + checkout_url + "'?",
+                default_result=True):
+            current_project.fatal("Sources for", str(src_dir), " missing!")
+            return
+
+        checkout_cmd = ["svn", "checkout"]
+        current_project.run_cmd(checkout_cmd + [checkout_url, src_dir], cwd="/")
+
+    def update(self, current_project: "Project", *, src_dir: Path, **kwargs):
+        self.ensure_cloned(current_project, src_dir=src_dir)
+        if current_project.skip_update:
+            return
+        if not src_dir.exists():
+            return
+
+        update_command = ["svn", "update"]
+        run_command(update_command, cwd=src_dir)
 
 
 class DefaultInstallDir(Enum):
