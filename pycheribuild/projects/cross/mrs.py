@@ -74,9 +74,8 @@ class MRS(CrossCompileCMakeProject):
                                                          help="limit the quarantine size to QUARANTINE_HIGHWATER "
                                                               "bytes (supersedes QUARANTINE_RATIO)")
 
-    def __init__(self, config: CheriConfig, *args, **kwargs):
-        super().__init__(config, *args, **kwargs)
-
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         if self.debug:
             self.add_cmake_options(DEBUG=True)
         if self.offload_quarantine:

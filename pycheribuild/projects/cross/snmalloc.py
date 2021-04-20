@@ -79,8 +79,8 @@ class SNMalloc(CrossCompileCMakeProject):
         # XXX misnamed now, but so be it
         cls.revoke_verbose = cls.add_bool_option("revoke-verbose", help="Report revocation statistics")
 
-    def __init__(self, config: CheriConfig, *args, **kwargs):
-        super().__init__(config, *args, **kwargs)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
 
         if self.revoke:
             self.quarantine = True

@@ -94,8 +94,8 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             return BuildSoftBoundCETS.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang++"
         return super().CXX
 
-    def __init__(self, config: CheriConfig, *args, **kwargs):
-        super().__init__(config, *args, **kwargs)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         if self.get_compiler_info(self.CC).is_clang:
             self.common_warning_flags.append("-Wno-unused-command-line-argument")
         if self.compiling_for_host():

@@ -37,6 +37,6 @@ class BuildPoco(CrossCompileCMakeProject):
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
-    def __init__(self, config: CheriConfig, *args, **kwargs):
-        super().__init__(config, *args, **kwargs)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         self.COMMON_FLAGS.append("-DHAVE_STDINT_H=1")

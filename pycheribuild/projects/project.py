@@ -2970,14 +2970,9 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     do_not_add_to_targets = True
     compile_db_requires_bear = False  # cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON does it
     generate_cmakelists = False  # There is already a CMakeLists.txt
+    make_kind = MakeCommandKind.Ninja  # We default to using the Ninja generator
     _configure_tool_name = "CMake"
     _configure_tool_extra_install_instrs = " or run `cheribuild.py cmake` to install the latest version locally"
-
-    class Generator(Enum):
-        Default = 0
-        Ninja = 1
-        Makefiles = 2
-
     default_build_type = BuildType.RELWITHDEBINFO
 
     def _toolchain_file_list_to_str(self, value: list) -> str:
@@ -3008,32 +3003,12 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         cls.cmake_options = cls.add_config_option("cmake-options", default=[], kind=list, metavar="OPTIONS",
                                                   help="Additional command line options to pass to CMake")
 
-    def __init__(self, config, generator=Generator.Ninja):
+    def __init__(self, config):
         super().__init__(config)
         self.configure_command = os.getenv("CMAKE_COMMAND", None)
         if self.configure_command is None:
             self.configure_command = "cmake"
             self.add_required_system_tool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
-        # allow a -G flag in cmake-options to override the default generator (e.g. use makefiles for CLion)
-        custom_generator = next((x for x in self.cmake_options if x.startswith("-G")), None)
-        if custom_generator:
-            if "Unix Makefiles" in custom_generator:
-                generator = CMakeProject.Generator.Makefiles
-            elif "Ninja" in custom_generator:
-                generator = CMakeProject.Generator.Ninja
-            else:
-                # TODO: add support for cmake --build <dir> --target <tgt> -- <args>
-                self.fatal("Unknown CMake Generator", custom_generator, "-> don't know which build command to run")
-        self.generator = generator
-        self.configure_args.append(str(self.source_dir))  # TODO: use undocumented -H and -B options?
-        if self.generator == CMakeProject.Generator.Ninja:
-            if not custom_generator:
-                self.configure_args.append("-GNinja")
-            self.make_args.kind = MakeCommandKind.Ninja
-        if self.generator == CMakeProject.Generator.Makefiles:
-            if not custom_generator:
-                self.configure_args.append("-GUnix Makefiles")
-            self.make_args.kind = MakeCommandKind.DefaultMake
         if not self.compiling_for_host():
             assert self.target_info.is_freebsd() or self.target_info.is_baremetal() or self.target_info.is_rtems()
             # The toolchain files need at least CMake 3.9 (before setup() since check_system_deps() is called first)
@@ -3041,6 +3016,22 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
 
     def setup(self):
         super().setup()
+        # allow a -G flag in cmake-options to override the default generator.
+        custom_generator = next((x for x in self.cmake_options if x.startswith("-G")), None)
+        if custom_generator:
+            if "Makefiles" in custom_generator:
+                self.make_kind = MakeCommandKind.DefaultMake
+            elif "Ninja" in custom_generator:
+                self.make_kind = MakeCommandKind.Ninja
+            else:
+                # TODO: add support for cmake --build <dir> --target <tgt> -- <args>
+                self.fatal("Unknown CMake Generator", custom_generator, "-> don't know which build command to run")
+        self.configure_args.append(str(self.source_dir))  # TODO: use undocumented -H and -B options?
+        if self.make_kind == MakeCommandKind.Ninja:
+            if not custom_generator:
+                self.configure_args.append("-GNinja")
+            self.make_kind = MakeCommandKind.Ninja
+        self.make_args.kind = self.make_kind
         if self.build_type != BuildType.DEFAULT:
             if self.build_type == BuildType.MINSIZERELWITHDEBINFO:
                 # no CMake equivalent for MinSizeRelWithDebInfo -> set minsizerel and force debug info
@@ -3079,7 +3070,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             return True
         # CMake is smart enough to detect when it must be reconfigured -> skip configure if cache exists
         cmake_cache = self.build_dir / "CMakeCache.txt"
-        build_file = "build.ninja" if self.generator == CMakeProject.Generator.Ninja else "Makefile"
+        build_file = "build.ninja" if self.make_kind == MakeCommandKind.Ninja else "Makefile"
         return not cmake_cache.exists() or not (self.build_dir / build_file).exists()
 
     def generate_cmake_toolchain_file(self, file: Path):
@@ -3258,7 +3249,7 @@ class MakefileProject(Project):
 
 class MesonProject(_CMakeAndMesonSharedLogic):
     do_not_add_to_targets = True
-    make_kind = MakeCommandKind.Ninja  # Default to GNU make since that's what most makefile projects use
+    make_kind = MakeCommandKind.Ninja
     compile_db_requires_bear = False  # generated by default
     generate_cmakelists = False  # Can use compilation DB
     # Meson already sets PKG_CONFIG_* variables internally based on the cross toolchain

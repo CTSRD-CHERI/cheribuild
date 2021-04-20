@@ -37,8 +37,8 @@ class BuildLibMemwalk(CrossCompileCMakeProject):
     default_build_type = BuildType.DEBUG
     project_name = "libmemwalk"
 
-    def __init__(self, config: CheriConfig, *args, **kwargs):
-        super().__init__(config, *args, **kwargs)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
     def install(*args, **kwargs):
