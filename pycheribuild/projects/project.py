@@ -3026,7 +3026,11 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             else:
                 # TODO: add support for cmake --build <dir> --target <tgt> -- <args>
                 self.fatal("Unknown CMake Generator", custom_generator, "-> don't know which build command to run")
-        self.configure_args.append(str(self.source_dir))  # TODO: use undocumented -H and -B options?
+        # CMake 3.13+ supports explicit source+build dir arguments
+        if self._get_configure_tool_version() >= (3, 13):
+            self.configure_args.extend(["-S", str(self.source_dir), "-B", str(self.build_dir)])
+        else:
+            self.configure_args.append(str(self.source_dir))
         if self.make_kind == MakeCommandKind.Ninja:
             if not custom_generator:
                 self.configure_args.append("-GNinja")
