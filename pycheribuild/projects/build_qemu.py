@@ -227,6 +227,7 @@ class BuildQEMUBase(AutotoolsProject):
         super().update()
 
 
+# noinspection PyAbstractClass
 class BuildUpstreamQEMU(BuildQEMUBase):
     repository = GitRepository("https://github.com/qemu/qemu.git")
     project_name = "upstream-qemu"

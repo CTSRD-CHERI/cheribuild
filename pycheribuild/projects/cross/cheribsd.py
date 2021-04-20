@@ -326,6 +326,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return "QEMU"  # default to the QEMU config
         elif xtarget.is_aarch64(include_purecap=True):
             if xtarget in (CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP):
+                assert isinstance(self, BuildCHERIBSD)
                 if self.purecap_kernel:
                     return "GENERIC-MORELLO-PURECAP"
                 return "GENERIC-MORELLO"
