@@ -489,12 +489,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         return self.target_info.sdk_root_dir / "bin"
 
     def __init__(self, config: CheriConfig):
-        # There is a bug in the cmake ninja generator that makes it use a response file for linking
-        # WebCore but not actually generating it
-        super().__init__(config,
-                         # generator=BuildQtWebkit.Generator.Makefiles
-                         generator=BuildQtWebkit.Generator.Ninja
-                         )
+        super().__init__(config)
         self.add_required_system_tool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info")
         self.add_required_system_tool("ruby", apt="ruby")
 
