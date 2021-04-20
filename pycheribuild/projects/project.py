@@ -45,7 +45,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Tuple, Union
 
-from ..config.chericonfig import BuildType, CheriConfig
+from ..config.chericonfig import supported_build_type_strings, BuildType, CheriConfig
 from ..config.loader import (ComputedDefaultValue, ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption)
 from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, Linkage,
                                   TargetInfo)
@@ -1940,7 +1940,7 @@ class Project(SimpleProject):
                                                     "CMake (as well as 'DEFAULT' which"
                                                     " does not pass any additional flags to the configure command).",
                                                default=cls.default_build_type, kind=BuildType,
-                                               enum_choice_strings=[t.value for t in BuildType])  # type: BuildType
+                                               enum_choice_strings=supported_build_type_strings)  # type: BuildType
 
     def linkage(self):
         if self.target_info.must_link_statically:

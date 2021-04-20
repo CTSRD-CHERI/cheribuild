@@ -80,6 +80,9 @@ class BuildType(Enum):
             raise NotImplementedError()
 
 
+supported_build_type_strings = [t.value for t in BuildType]
+
+
 def _default_arm_none_eabi_prefix(c: "CheriConfig", _):
     # see if the local install exists:
     default_path = c.output_root / c.local_arm_none_eabi_toolchain_relpath
