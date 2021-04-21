@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import shutil
+from pathlib import Path
 
 from .cross.llvm import BuildLLVMMonoRepoBase
 from .project import DefaultInstallDir, GitRepository
@@ -44,7 +45,7 @@ class BuildSoftBoundCETS(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://github.com/santoshn/SoftBoundCETS-3.9")
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     skip_cheri_symlinks = True
-    llvm_subdir = "llvm-3.9"
+    root_cmakelists_subdirectory = Path("llvm-3.9")
 
     def compile(self, **kwargs):
         super().compile(**kwargs)

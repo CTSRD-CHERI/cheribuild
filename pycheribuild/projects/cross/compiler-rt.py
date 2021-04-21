@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
+from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir, Path
 from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
 from ...utils import classproperty, is_jenkins_build
@@ -120,6 +120,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     is_sdk_target = True
     dependencies = ["newlib"]
     manual_sysroot_dependencies = True  # We need --sysroot but avoid cycle through ourselves
+    root_cmakelists_subdirectory = Path("lib/builtins")
     supported_architectures = \
         CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
     _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
@@ -163,10 +164,6 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             )
         if self.should_include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
-
-    def configure(self, **kwargs):
-        self.configure_args[0] = str(self.source_dir / "lib/builtins")
-        super().configure()
 
     def install(self, **kwargs):
         super().install(**kwargs)

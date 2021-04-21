@@ -25,7 +25,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from .crosscompileproject import CrossCompileCMakeProject
+from .crosscompileproject import CrossCompileCMakeProject, Path
 from ..project import DefaultInstallDir, GitRepository
 from ...config.compilation_targets import CompilationTargets
 
@@ -37,11 +37,10 @@ class BuildExpat(CrossCompileCMakeProject):
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     repository = GitRepository("https://github.com/libexpat/libexpat")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    root_cmakelists_subdirectory = Path("expat")
 
-    def configure(self, **kwargs):
+    def setup(self):
+        super().setup()
         if not self.compiling_for_host():
             # Work around CMAKE_CXX_FLAGS being overwritten (https://github.com/libexpat/libexpat/pull/442)
             self.add_cmake_options(EXPAT_BUILD_TESTS=False)
-        # The actual source is in a subdirectory, so update configure_args
-        self.configure_args[0] = str(self.source_dir / "expat")
-        super().configure(**kwargs)

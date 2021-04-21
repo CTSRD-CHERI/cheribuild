@@ -2998,6 +2998,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     _configure_tool_name = "CMake"
     _configure_tool_extra_install_instrs = " or run `cheribuild.py cmake` to install the latest version locally"
     default_build_type = BuildType.RELWITHDEBINFO
+    # Some projects (e.g. LLVM) don't store the CMakeLists.txt in the project root directory.
+    root_cmakelists_subdirectory = None  # type: Path
 
     def _toolchain_file_list_to_str(self, value: list) -> str:
         return ";".join(map(str, value))
@@ -3053,10 +3055,14 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     def setup(self):
         super().setup()
         # CMake 3.13+ supports explicit source+build dir arguments
+        cmakelists_dir = self.source_dir
+        if self.root_cmakelists_subdirectory is not None:
+            assert not self.root_cmakelists_subdirectory.is_absolute()
+            cmakelists_dir = self.source_dir / self.root_cmakelists_subdirectory
         if self._get_configure_tool_version() >= (3, 13):
-            self.configure_args.extend(["-S", str(self.source_dir), "-B", str(self.build_dir)])
+            self.configure_args.extend(["-S", str(cmakelists_dir), "-B", str(self.build_dir)])
         else:
-            self.configure_args.append(str(self.source_dir))
+            self.configure_args.append(str(cmakelists_dir))
         if self.build_type != BuildType.DEFAULT:
             if self.build_type == BuildType.MINSIZERELWITHDEBINFO:
                 # no CMake equivalent for MinSizeRelWithDebInfo -> set minsizerel and force debug info
