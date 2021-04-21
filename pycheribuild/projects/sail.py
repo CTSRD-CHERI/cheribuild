@@ -371,14 +371,6 @@ class OcamlProject(OpamMixin, Project):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        # The homebrew version of ocaml doesn't seem compatible -> suggest --without-ocaml --without-aspcud
-        # This avoids pulling in incompatible ocaml and the python@2 formula
-        # self.add_required_system_tool("opam", homebrew="opam --without-ocaml --without-camlp4 --without-aspcud")
-        self.add_required_system_tool("opam",
-                                      homebrew="Installing with hombrew generates a broken ocaml env, "
-                                               "use this instead: "
-                                               "`wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh "
-                                               "-O - | sh -s /usr/local/bin`")
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
