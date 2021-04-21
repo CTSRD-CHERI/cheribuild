@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-# Copyright (c) 2020 Alex Richardson
+# Copyright (c) 2021 Alex Richardson
 #
 # This work was supported by Innovate UK project 105694, "Digital Security by
 # Design (DSbD) Technology Platform Prototype".
@@ -50,23 +50,6 @@ class BuildEPollShim(CrossCompileCMakeProject):
             self.run_make("test")
         else:
             self.info("Don't know how to run tests for", self.target, "when cross-compiling.")
-
-
-class BuildExpat(CrossCompileCMakeProject):
-    target = "libexpat"
-    project_name = "libexpat"
-    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
-    repository = GitRepository("https://github.com/libexpat/libexpat")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
-
-    def configure(self, **kwargs):
-        if not self.compiling_for_host():
-            # Work around CMAKE_CXX_FLAGS being overwritten (https://github.com/libexpat/libexpat/pull/442)
-            self.add_cmake_options(EXPAT_BUILD_TESTS=False)
-        # The actual source is in a subdirectory, so update configure_args
-        self.configure_args[0] = str(self.source_dir / "expat")
-        super().configure(**kwargs)
 
 
 class BuildLibFFI(CrossCompileAutotoolsProject):
