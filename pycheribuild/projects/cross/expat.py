@@ -38,9 +38,3 @@ class BuildExpat(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/libexpat/libexpat")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
     root_cmakelists_subdirectory = Path("expat")
-
-    def setup(self):
-        super().setup()
-        if not self.compiling_for_host():
-            # Work around CMAKE_CXX_FLAGS being overwritten (https://github.com/libexpat/libexpat/pull/442)
-            self.add_cmake_options(EXPAT_BUILD_TESTS=False)
