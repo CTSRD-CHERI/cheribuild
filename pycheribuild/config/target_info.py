@@ -239,7 +239,7 @@ class TargetInfo(ABC):
 
     @property
     def install_prefix_dirname(self):
-        """The name of the root directory to install to: i.e. for CheriBSD /usr/local/mips-purecap or
+        """The name of the root directory to install to: i.e. for CheriBSD /usr/local/mips64-purecap or
         /usr/local/riscv64-hybrid"""
         result = self.target.generic_suffix
         if self.config.cross_target_suffix:

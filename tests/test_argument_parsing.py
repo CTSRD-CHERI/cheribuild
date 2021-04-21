@@ -733,11 +733,8 @@ def test_default_rootfs_and_sysroot_dir(target: str, args: list, expected_sysroo
 
 def test_backwards_compat_old_suffixes():
     config = _parse_config_file_and_args(b'{"qtbase-mips-purecap/build-directory": "/some/build/dir"}')
-    # Check that qtbase-mips-purecap is a (deprecated) target alias for qtbase-mips64-purecap
-    # and that we still load config options for that old target name
+    # Check that qtbase-mips-purecap is a (deprecated) config file alias for qtbase-mips64-purecap
     qtbase_mips_purecap = _get_target_instance("qtbase-mips64-purecap", config, BuildQtBase)
-    assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
-    qtbase_mips_purecap = _get_target_instance("qtbase-mips-purecap", config, BuildQtBase)
     assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
 
 

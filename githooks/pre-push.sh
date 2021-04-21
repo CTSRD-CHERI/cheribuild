@@ -100,8 +100,8 @@ do
 		try_run ./cheribuild.py -p __run_everything__ --clean --build --test --benchmark
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --allow-more-than-one-target --build --test --cpu=default -p __run_everything__
 		# Regression for --benchmark-clean-boot:
-		try_run ./cheribuild.py mibench-mips-nocheri --benchmark --benchmark-clean-boot -p
-		try_run ./cheribuild.py mibench-mips-hybrid --benchmark --benchmark-clean-boot -p
+		try_run ./cheribuild.py mibench-mips64 --benchmark --benchmark-clean-boot -p
+		try_run ./cheribuild.py mibench-mips64-hybrid --benchmark --benchmark-clean-boot -p
 		# Various jenkins things that have failed in the past
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --test --tarball -p libcxx-riscv64-purecap
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p run-mips64-purecap

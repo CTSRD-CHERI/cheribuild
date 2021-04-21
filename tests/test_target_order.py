@@ -250,16 +250,12 @@ def test_riscv():
 
 
 # Check that libcxx deps with skip sdk pick the matching -native/-mips versions
-# Also the libcxx target should resolve to libcxx-mips-purecap:
+# Also the libcxx target should resolve to libcxx-mips64-purecap:
 @pytest.mark.parametrize("suffix,expected_suffix", [
     pytest.param("-native", "-native", id="native"),
-    pytest.param("-mips64", "-mips64", id="mips-nocheri"),
+    pytest.param("-mips64", "-mips64", id="mips64"),
     pytest.param("-mips64-hybrid", "-mips64-hybrid", id="mips64-hybrid"),
     pytest.param("-mips64-purecap", "-mips64-purecap", id="mips64-purecap"),
-    # legacy suffixes
-    pytest.param("-mips-nocheri", "-mips64", id="mips-nocheri"),
-    pytest.param("-mips64-hybrid", "-mips64-hybrid", id="mips-hybrid"),
-    pytest.param("-mips-purecap", "-mips64-purecap", id="mips-purecap"),
     ])
 def test_libcxx_deps(suffix, expected_suffix):
     expected = ["libunwind" + expected_suffix, "libcxxrt" + expected_suffix, "libcxx" + expected_suffix]

@@ -182,9 +182,7 @@ class CheriConfig(ConfigBase):
                                                      choices=("pcrel", "plt", "fn-desc"),
                                                      help="The ABI to use for cap-table mode")
         self.cross_target_suffix = loader.add_option("cross-target-suffix", help_hidden=True, default="",
-                                                     help="Add a suffix to the cross build and install directories. "
-                                                          "With VALUE=-pcrel it will use "
-                                                          "/opt/mips-purecap-pcrel/$PROJECT")
+                                                     help="Add a suffix to the cross build and install directories.")
 
         # Attributes for code completion:
         self.verbose = None  # type: Optional[bool]

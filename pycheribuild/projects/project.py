@@ -177,14 +177,6 @@ class ProjectSubclassDefinitionHook(type):
                         elif arch.is_x86_64(include_purecap=False):
                             new_cls._config_file_aliases += (replace_one(new_name, "-amd64", "-x86"),
                                                              replace_one(new_name, "-amd64", "-x86_64"))
-                # Temporary: add deprecated aliases: mips-* -> mips64*
-                if arch.is_mips(include_purecap=True) and (
-                        new_name.endswith("-mips64-purecap") or new_name.endswith("-mips64-hybrid")):
-                    target_manager.add_target_alias(replace_one(new_name, "-mips64-", "-mips-"), new_name,
-                                                    deprecated=True)
-                elif arch.is_mips(include_purecap=False) and (new_name.endswith("-mips64")):
-                    target_manager.add_target_alias(replace_one(new_name, "-mips64", "-mips-nocheri"), new_name,
-                                                    deprecated=True)
                 if len(set(new_cls._config_file_aliases)) != len(new_cls._config_file_aliases):
                     raise ValueError("Duplicate aliases for {}: {}".format(new_name, new_cls._config_file_aliases))
         else:
