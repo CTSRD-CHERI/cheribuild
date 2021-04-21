@@ -147,10 +147,8 @@ class CheriConfig(ConfigBase):
                                                      help="The C preprocessor to use for host binaries (must be "
                                                           "compatible with Clang >= 3.7)")
 
-        self.pass_dash_k_to_make = loader.add_commandline_only_bool_option("pass-k-to-make", "k",
-                                                                           help="Pass the -k flag to make to continue "
-                                                                                "after"
-                                                                                " the first error")
+        self.pass_dash_k_to_make = loader.add_commandline_only_bool_option(
+            "pass-k-to-make", "k", help="Pass the -k flag to make to continue after the first error")
         self.with_libstatcounters = loader.add_bool_option("with-libstatcounters",
                                                            group=loader.cross_compile_options_group,
                                                            help="Link cross compiled CHERI project with "

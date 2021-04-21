@@ -45,7 +45,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Tuple, Union
 
-from ..config.chericonfig import supported_build_type_strings, BuildType, CheriConfig
+from ..config.chericonfig import BuildType, CheriConfig, supported_build_type_strings
 from ..config.loader import (ComputedDefaultValue, ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption)
 from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, Linkage,
                                   TargetInfo)
@@ -721,6 +721,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         assert not self._setup_called, "Should only be called once"
         self._setup_called = True
 
+    def has_required_system_tool(self, executable: str):
+        return executable in self.__required_system_tools
+
     def add_required_system_tool(self, executable: str, install_instructions=None, default: str = None,
                                  freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
                                  cheribuild_target: str = None):
@@ -728,12 +731,15 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             install_instructions = OSInfo.install_instructions(executable, False, default=default,
                                                                freebsd=freebsd, zypper=zypper, apt=apt,
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
+        if executable in self.__required_system_tools:
+            assert install_instructions == self.__required_system_tools[executable], "changed install instructions"
         self.__required_system_tools[executable] = install_instructions
 
     def add_required_pkg_config(self, package: str, install_instructions=None, default: str = None,
                                 freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
                                 cheribuild_target: str = None):
-        self.add_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
+        if not self.has_required_system_tool("pkg-config"):
+            self.add_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(package, True, default=default,
                                                                freebsd=freebsd, zypper=zypper, apt=apt,
@@ -1099,6 +1105,7 @@ class MakeCommandKind(Enum):
     GnuMake = "GNU make"
     BsdMake = "BSD make"
     Ninja = "ninja"
+    CMake = "cmake"
     CustomMakeTool = "custom make tool"
 
 
@@ -1112,6 +1119,9 @@ class MakeOptions(object):
         self.env_vars = {}  # type: typing.Dict[str, str]
         self.set(**kwargs)
         self.kind = kind
+        # We currently need to differentiate cmake driving ninja and cmake driving make since there is no
+        # generator-independent option to pass -k (and ninja/make expect a different format)
+        self.subkind = None
         self.__can_pass_j_flag = None  # type: typing.Optional[bool]
         self.__command = None  # type: typing.Optional[str]
         self.__command_args = []  # type: typing.List[str]
@@ -1186,8 +1196,7 @@ class MakeOptions(object):
             if OSInfo.IS_MAC and shutil.which("gmake"):
                 # Using /usr/bin/make on macOS breaks compilation DB creation with bear since SIP prevents it from
                 # injecting shared libraries into any process that is installed as part of the system.
-                # Prefer homebrew-installed gmake if it is available
-                self.__project.add_required_system_tool("gmake", homebrew="make")
+                # Prefer homebrew-installed gmake if it is available.
                 return "gmake"
             else:
                 self.__project.add_required_system_tool("make")
@@ -1212,6 +1221,10 @@ class MakeOptions(object):
         elif self.kind == MakeCommandKind.Ninja:
             self.__project.add_required_system_tool("ninja", homebrew="ninja", apt="ninja-build")
             return "ninja"
+        elif self.kind == MakeCommandKind.CMake:
+            assert self.__project.has_required_system_tool("cmake")
+            assert self.subkind is not None
+            return "cmake"
         else:
             if self.__command is not None:
                 return self.__command
@@ -1232,8 +1245,31 @@ class MakeOptions(object):
 
     @property
     def all_commandline_args(self) -> list:
+        return self.get_commandline_args()
+
+    def get_commandline_args(self, *, targets: "typing.Iterable[str]" = None, jobs: int = None, verbose=False,
+                             continue_on_error=False) -> "typing.List[str]":
         assert self.kind
         result = list(self.__command_args)
+        if self.kind == MakeCommandKind.CMake:
+            result.extend(["--build", "."])
+        # For CMake we pass target, jobs, and verbose directly to cmake, all other options are fowarded to the real
+        # build tool. Ideally we wouldn't care about the real build tool, but we want to be able to pass the -k flag.
+        if jobs and self.can_pass_jflag:
+            result.append("-j" + str(jobs))
+        # Cmake and ninja have an explicit verbose flag, other build tools use custom env vars, etc.
+        if verbose and self.kind in (MakeCommandKind.Ninja, MakeCommandKind.CMake):
+            result.append("-v")
+        if targets:
+            if self.kind == MakeCommandKind.CMake:
+                for t in targets:
+                    result.extend(["--target", t])
+            else:
+                result.extend(targets)
+        # For CMake all other options are now forwarded to the actual tool
+        if self.kind == MakeCommandKind.CMake:
+            assert self.subkind is not None
+            result.append("--")
         # First all the variables
         for k, v in self._vars.items():
             assert isinstance(v, str)
@@ -1246,6 +1282,12 @@ class MakeOptions(object):
             result.append(self._get_defined_var("WITH_" if v else "WITHOUT_") + k)
         # and finally the command line flags like -k
         result.extend(self._flags)
+        if continue_on_error:
+            continue_flag = "-k"
+            if self.kind == MakeCommandKind.Ninja or self.subkind == MakeCommandKind.Ninja:
+                # Ninja expects a maximum number of jobs that can fail instead of continuing for as long as possible.
+                continue_flag += "50"
+            result.append(continue_flag)
         return result
 
     def remove_var(self, variable):
@@ -1272,7 +1314,6 @@ class MakeOptions(object):
 
     def copy(self):
         result = copy.copy(self)
-
         # Make sure that the list and dict objects are different
         result._vars = copy.deepcopy(self._vars)
         result._with_options = copy.deepcopy(self._with_options)
@@ -2315,23 +2356,13 @@ class Project(SimpleProject):
             options.set(MAKE=commandline_to_str([options.command] + compdb_extra_args))
             make_command = options.command
 
-        all_args = [make_command] + options.all_commandline_args
-        if make_target:
-            if isinstance(make_target, str):
-                all_args.append(make_target)
-            else:
-                all_args.extend(make_target)
-        if parallel and options.can_pass_jflag:
-            all_args.append(self.config.make_j_flag)
+        all_args = [make_command] + options.get_commandline_args(
+            targets=[make_target] if isinstance(make_target, str) else make_target,
+            jobs=self.config.make_jobs if parallel else None,
+            verbose=self.config.verbose, continue_on_error=self.config.pass_dash_k_to_make
+        )
         if not self.config.make_without_nice:
             all_args = ["nice"] + all_args
-        if self.config.debug_output and options.kind == MakeCommandKind.Ninja:
-            all_args.append("-v")
-        if self.config.pass_dash_k_to_make:
-            all_args.append("-k")
-            if options.kind == MakeCommandKind.Ninja:
-                # ninja needs the maximum number of failed jobs as an argument
-                all_args.append("50")
         return all_args
 
     def get_make_commandline(self, make_target: "typing.Union[str, typing.List[str]]", make_command: str = None,
@@ -2970,7 +3001,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     do_not_add_to_targets = True
     compile_db_requires_bear = False  # cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON does it
     generate_cmakelists = False  # There is already a CMakeLists.txt
-    make_kind = MakeCommandKind.Ninja  # We default to using the Ninja generator
+    make_kind = MakeCommandKind.CMake
+    _default_cmake_generator_arg = "-GNinja"  # We default to using the Ninja generator since it's faster
     _configure_tool_name = "CMake"
     _configure_tool_extra_install_instrs = " or run `cheribuild.py cmake` to install the latest version locally"
     default_build_type = BuildType.RELWITHDEBINFO
@@ -3013,29 +3045,26 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             assert self.target_info.is_freebsd() or self.target_info.is_baremetal() or self.target_info.is_rtems()
             # The toolchain files need at least CMake 3.9 (before setup() since check_system_deps() is called first)
             self.set_minimum_cmake_version(3, 9)
+        # allow a -G flag in cmake-options to override the default generator (Ninja).
+        custom_generator = next((x for x in self.cmake_options if x.startswith("-G")), None)
+        generator = custom_generator if custom_generator else self._default_cmake_generator_arg
+        self.configure_args.append(generator)
+        if "Ninja" in generator:
+            self.make_args.subkind = MakeCommandKind.Ninja
+            self.add_required_system_tool("ninja", homebrew="ninja", apt="ninja-build")
+        elif "Makefiles" in generator:
+            self.make_args.subkind = MakeCommandKind.DefaultMake
+            self.add_required_system_tool("make")
+        else:
+            self.make_args.subkind = MakeCommandKind.CustomMakeTool  # VS/XCode, etc.
 
     def setup(self):
         super().setup()
-        # allow a -G flag in cmake-options to override the default generator.
-        custom_generator = next((x for x in self.cmake_options if x.startswith("-G")), None)
-        if custom_generator:
-            if "Makefiles" in custom_generator:
-                self.make_kind = MakeCommandKind.DefaultMake
-            elif "Ninja" in custom_generator:
-                self.make_kind = MakeCommandKind.Ninja
-            else:
-                # TODO: add support for cmake --build <dir> --target <tgt> -- <args>
-                self.fatal("Unknown CMake Generator", custom_generator, "-> don't know which build command to run")
         # CMake 3.13+ supports explicit source+build dir arguments
         if self._get_configure_tool_version() >= (3, 13):
             self.configure_args.extend(["-S", str(self.source_dir), "-B", str(self.build_dir)])
         else:
             self.configure_args.append(str(self.source_dir))
-        if self.make_kind == MakeCommandKind.Ninja:
-            if not custom_generator:
-                self.configure_args.append("-GNinja")
-            self.make_kind = MakeCommandKind.Ninja
-        self.make_args.kind = self.make_kind
         if self.build_type != BuildType.DEFAULT:
             if self.build_type == BuildType.MINSIZERELWITHDEBINFO:
                 # no CMake equivalent for MinSizeRelWithDebInfo -> set minsizerel and force debug info
