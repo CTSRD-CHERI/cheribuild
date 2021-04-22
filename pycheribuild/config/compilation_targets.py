@@ -435,7 +435,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         cmd += list(script_args)
         if self.config.test_extra_args:
             cmd.extend(map(str, self.config.test_extra_args))
-        self.project.run_cmd(cmd)
+        self.project.run_cmd(cmd, give_tty_control=True)
 
     def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,
                            benchmark_script_args: list = None, extra_runbench_args: list = None):
@@ -534,9 +534,11 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                 qemu_ssh_socket.socket.close()
             # noinspection PyTypeChecker
             self.project.run_cmd(
-                [cheribuild_path / "beri-fpga-bsd-boot.py"] + basic_args + ["-vvvvv", "runbench"] + runbench_args)
+                [cheribuild_path / "beri-fpga-bsd-boot.py"] + basic_args + ["-vvvvv", "runbench"] + runbench_args,
+                give_tty_control=True)
         else:
-            self.project.run_shell_script(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
+            # the setup script needs bash not sh
+            self.project.run_shell_script(beri_fpga_bsd_boot_script, shell="bash", give_tty_control=True)
 
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config, *, include_version):
