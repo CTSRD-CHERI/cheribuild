@@ -582,11 +582,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # noinspection PyShadowingBuiltins
     def run_cmd(self, *args, capture_output=False, capture_error=False, input: typing.Union[str, bytes] = None,
                 timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
-                no_print=False, replace_env=False, **kwargs):
+                no_print=False, replace_env=False, give_tty_control=False, **kwargs):
         return run_command(*args, capture_output=capture_output, capture_error=capture_error, input=input,
                            timeout=timeout, config=self.config, print_verbose_only=print_verbose_only,
                            run_in_pretend_mode=run_in_pretend_mode, raise_in_pretend_mode=raise_in_pretend_mode,
-                           no_print=no_print, replace_env=replace_env, **kwargs)
+                           no_print=no_print, replace_env=replace_env, give_tty_control=give_tty_control, **kwargs)
 
     def set_env(self, *, print_verbose_only=True, **environ):
         return set_env(print_verbose_only=print_verbose_only, config=self.config, **environ)
