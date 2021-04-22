@@ -148,11 +148,6 @@ class BuildLLVMBase(CMakeProject):
             self.add_cmake_options(LLVM_ENABLE_MODULES=True,
                                    LLVM_ENABLE_MODULE_DEBUGGING=self.should_include_debug_info)
 
-        # We aren't ready yet to switch over to the new pass manager
-        self.add_cmake_options(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER=False)
-        # CLANG_ROUND_TRIP_CC1_ARGS doesn't work for us yet. See e.g. https://reviews.llvm.org/D97462#2677130
-        self.add_cmake_options(CLANG_ROUND_TRIP_CC1_ARGS=False)
-
         if not self.build_everything:
             self.add_cmake_options(
                 LLVM_ENABLE_OCAMLDOC=False,
@@ -474,6 +469,11 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
         if not self.build_all_targets:
             # Save some time by only building the targets that we need.
             self.add_cmake_options(LLVM_TARGETS_TO_BUILD="AArch64;ARM;Mips;RISCV;X86;host")
+
+        # We aren't ready yet to switch over to the new pass manager
+        self.add_cmake_options(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER=False)
+        # CLANG_ROUND_TRIP_CC1_ARGS doesn't work for us yet. See e.g. https://reviews.llvm.org/D97462#2677130
+        self.add_cmake_options(CLANG_ROUND_TRIP_CC1_ARGS=False)
 
     def install(self, **kwargs):
         super().install(**kwargs)
