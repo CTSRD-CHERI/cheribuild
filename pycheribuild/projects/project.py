@@ -1020,8 +1020,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def run_shell_script(self, script, shell="sh", **kwargs):
         print_args = dict(**kwargs)
-        if "capture_output" in print_args:
-            del print_args["capture_output"]
+        # Remove kwargs not supported by print_command
+        print_args.pop("capture_output", None)
+        print_args.pop("give_tty_control", None)
         print_command(shell, "-xe" if self.config.verbose else "-e", "-c", script, **print_args)
         kwargs["no_print"] = True
         return run_command(shell, "-xe" if self.config.verbose else "-e", "-c", script, **kwargs)
