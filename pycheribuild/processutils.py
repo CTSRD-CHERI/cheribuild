@@ -279,13 +279,36 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
         raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
 
 
+@contextlib.contextmanager
+def scoped_open(*args, ignore_open_error, **kwargs):
+    fd = None
+    try:
+        fd = os.open(*args, **kwargs)
+    except OSError:
+        if not ignore_open_error:
+            raise
+    try:
+        yield fd
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
 # https://stackoverflow.com/a/15257702/894271
 def _new_tty_foreground_process_group():
-    os.setpgrp()
+    try:
+        os.setpgrp()
+    except Exception as e:
+        warning_message("Failed to call os.setpgrp()", e)
+        raise e
     with suppress_sigttou():
-        tty = os.open('/dev/tty', os.O_RDWR)
-        os.tcsetpgrp(tty, os.getpgrp())
-        os.close(tty)
+        try:
+            with scoped_open('/dev/tty', os.O_RDWR, ignore_open_error=True) as tty:
+                if tty is not None:
+                    os.tcsetpgrp(tty, os.getpgrp())
+        except Exception as e:
+            warning_message("Failed to call os.tcsetpgrp()", e)
+            raise e
 
 
 # Python 3.7 has contextlib.nullcontext
@@ -660,14 +683,9 @@ def run_and_kill_children_on_exit(fn: "typing.Callable[[], typing.Any]"):
             os.setpgrp()
             # Preserve whether our process group is the terminal leader
             with suppress_sigttou():
-                tty = None
-                try:
-                    tty = os.open('/dev/tty', os.O_RDWR)
-                except OSError:
-                    pass
-                if tty is not None and os.tcgetpgrp(tty) == opgrp:
-                    os.tcsetpgrp(tty, os.getpgrp())
-                    os.close(tty)
+                with scoped_open('/dev/tty', os.O_RDWR, ignore_open_error=True) as tty:
+                    if tty is not None and os.tcgetpgrp(tty) == opgrp:
+                        os.tcsetpgrp(tty, os.getpgrp())
         fn()
     except KeyboardInterrupt:
         error = True
