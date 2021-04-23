@@ -1,10 +1,13 @@
 #
-# Copyright (c) 2016 Alex Richardson
+# Copyright (c) 2016, 2021 Alex Richardson
 # All rights reserved.
 #
 # This software was developed by SRI International and the University of
 # Cambridge Computer Laboratory under DARPA/AFRL contract FA8750-10-C-0237
 # ("CTSRD"), as part of the DARPA CRASH research programme.
+#
+# This work was supported by Innovate UK project 105694, "Digital Security by
+# Design (DSbD) Technology Platform Prototype".
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,7 +30,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository
+from .project import (AutotoolsProject, CheriConfig, CMakeProject, DefaultInstallDir, GitRepository,
+                      ReuseOtherProjectDefaultTargetRepository)
+from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
+from ..utils import replace_one
 
 
 # Not really autotools but same sequence of commands (other than the script being call bootstrap instead of configure)
@@ -42,3 +48,33 @@ class BuildCMake(AutotoolsProject):
         super().__init__(config, configure_script="bootstrap")
         self.configure_args.append("--parallel=" + str(self.config.make_jobs))
         # TODO: do we need to use gmake on FreeBSD?
+
+
+# When cross-compiling CMake, we do so using the CMake files instead of the bootstrap script
+class BuildCrossCompiledCMake(CMakeProject):
+    @staticmethod
+    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
+        assert not xtarget.is_native()
+        return replace_one(base_target, "-crosscompiled", "") + "-" + xtarget.generic_suffix
+
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildCMake, do_update=True)
+    target = "cmake-crosscompiled"  # Can't use cmake here due to command line option conflict
+    project_name = "cmake"
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS
+
+    def setup(self):
+        super().setup()
+        # Don't bother building the ncurses or Qt GUIs even if libs are available
+        self.add_cmake_options(BUILD_CursesDialog=False, BUILD_QtDialog=False)
+        # Prefer static libraries for 3rd-party dependencies
+        self.add_cmake_options(BUILD_SHARED_LIBS=False)
+
+    def run_tests(self):
+        assert not self.compiling_for_host(), "Target is cross-compilation only"
+        # TODO: generate JUnit output once https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6020 is merged
+        # Can't run the testsuite since many tests depend on having a C compiler installed.
+        test_command = "cd /build && ./bin/ctest -N"
+        self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
+                                                  "--test-timeout", str(120 * 60),
+                                                  mount_builddir=True, mount_sourcedir=True, mount_sysroot=True)
