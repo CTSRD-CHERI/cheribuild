@@ -1383,8 +1383,8 @@ class ReuseOtherProjectRepository(SourceRepository):
 
 
 class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
-    def __init__(self, source_project: "typing.Type[Project]", *, subdirectory="."):
-        super().__init__(source_project, subdirectory=subdirectory,
+    def __init__(self, source_project: "typing.Type[Project]", *, subdirectory=".", do_update=False):
+        super().__init__(source_project, subdirectory=subdirectory, do_update=do_update,
                          repo_for_target=source_project.supported_architectures[0])
 
 

@@ -159,7 +159,7 @@ class BuildMibench(CrossCompileProject):
 
 
 class BuildMiBenchNew(CrossCompileCMakeProject):
-    repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite)
+    repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
     default_build_type = BuildType.RELEASE
     target = "mibench-new"
     project_name = "mibench-new"
@@ -555,7 +555,7 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
 
 
 class BuildSpec2006New(CrossCompileCMakeProject):
-    repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite)
+    repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
     default_build_type = BuildType.RELWITHDEBINFO
     target = "spec2006-new"
     project_name = "spec2006-new"
