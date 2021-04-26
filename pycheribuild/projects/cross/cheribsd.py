@@ -86,7 +86,7 @@ class BuildFreeBSDBase(Project):
         # "-DWITH_INSTALL_AS_USER", should be enforced by -DNO_ROOT
         # "-DWITH_DIRDEPS_BUILD", "-DWITH_DIRDEPS_CACHE",  # experimental fast build options
         # "-DWITH_LIBCHERI_JEMALLOC"  # use jemalloc instead of -lmalloc_simple
-        ]
+    ]
 
     @classmethod
     def can_build_with_ccache(cls):
@@ -135,7 +135,7 @@ class BuildFreeBSDBase(Project):
             I_REALLY_MEAN_NO_CLEAN=True,  # Also skip the useless delete-old step
             NO_ROOT=True,  # use this even if current user is root, as without it the METALOG file is not created
             BUILD_WITH_STRICT_TMPPATH=True,  # This can catch lots of depdency errors
-            )
+        )
         # FreeBSD has renamed NO_CLEAN to WITHOUT_CLEAN
         self.make_args.set_with_options(CLEAN=False)
 
@@ -361,7 +361,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         assert isinstance(self.target_info, FreeBSDTargetInfo)
         result = {
             "TARGET_ARCH": self.target_info.freebsd_target_arch,
-            }
+        }
         if self.compiling_for_mips(include_purecap=True):
             result["TARGET"] = "mips"
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
@@ -517,7 +517,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             LLDB=False,  # may be useful but means we need to build LLVM
             # Bootstrap compiler/ linker are not needed:
             GCC_BOOTSTRAP=False, CLANG_BOOTSTRAP=False, LLD_BOOTSTRAP=False,
-            )
+        )
         if not self.build_lib32:
             # takes a long time and usually not needed.
             self.cross_toolchain_config.set_with_options(LIB32=False)
@@ -539,7 +539,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.cross_toolchain_config.set_env(
             XCC=self.CC, XCXX=self.CXX, XCPP=self.CPP,
             X_COMPILER_TYPE=xccinfo.compiler,  # This is needed otherwise the build assumes it should build with $CC
-            )
+        )
         if not self.use_llvm_binutils:
             self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
         else:
@@ -558,7 +558,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 XSTRINGS=cross_bindir / "llvm-strings",
                 XOBJCOPY=cross_bindir / "llvm-objcopy",
                 XRANLIB=cross_bindir / "llvm-ranlib",
-                )
+            )
         if xccinfo.is_clang and xccinfo.version < (10, 0):
             # llvm-ranlib didn't support -D flag (see https://bugs.llvm.org/show_bug.cgi?id=41707)
             self.cross_toolchain_config.set(RANLIBFLAGS="")
@@ -790,7 +790,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     "usr/bin/ypchfn", "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
                     "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab", "usr/lib/librt.so.1",
                     "var/empty"
-                    )
+                )
             # We keep 3rd-party programs (anything installed in /usr/local + /opt), but delete everything else prior
             # to installworld to avoid having stale files in the generated disk images
             if self.install_dir.exists():
@@ -1515,7 +1515,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         if cross_target is None:
             cross_target = caller.crosscompile_target
         guess = config.cheribsd_image_root / (
-                    "kernel" + cross_target.build_suffix(config, include_os=False) + "." + kernconf)
+                "kernel" + cross_target.build_suffix(config, include_os=False) + "." + kernconf)
         if prefer_benchmark_kernel:
             for benchmark_suffix in ("-BENCHMARK", "-NODEBUG", "_BENCHMARK", "_NODEBUG"):
                 benchmark_guess = guess.with_name(guess.name + benchmark_suffix)
