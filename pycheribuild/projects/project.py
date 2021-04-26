@@ -1255,11 +1255,12 @@ class MakeOptions(object):
         if verbose and self.kind in (MakeCommandKind.Ninja, MakeCommandKind.CMake):
             result.append("-v")
         if targets:
-            if self.kind == MakeCommandKind.CMake:
-                for t in targets:
+            for t in targets:
+                assert t and isinstance(t, str), "Invalid empty/non-string target name"
+                if self.kind == MakeCommandKind.CMake:
                     result.extend(["--target", t])
-            else:
-                result.extend(targets)
+                else:
+                    result.append(t)
         # For CMake all other options are now forwarded to the actual tool
         if self.kind == MakeCommandKind.CMake:
             assert self.subkind is not None
@@ -2368,7 +2369,7 @@ class Project(SimpleProject):
                                    self.__class__.__name__)
         self.__dict__[name] = value
 
-    def _get_make_commandline(self, make_target: "typing.Union[str, typing.List[str]]", make_command,
+    def _get_make_commandline(self, make_target: "typing.Optional[typing.Union[str, typing.List[str]]]", make_command,
                               options: MakeOptions, parallel: bool = True, compilation_db_name: str = None):
         assert options is not None
         assert make_command is not None
@@ -2389,7 +2390,7 @@ class Project(SimpleProject):
             make_command = options.command
 
         all_args = [make_command] + options.get_commandline_args(
-            targets=[make_target] if isinstance(make_target, str) else make_target,
+            targets=[make_target] if isinstance(make_target, str) and make_target else make_target,
             jobs=self.config.make_jobs if parallel else None,
             verbose=self.config.verbose, continue_on_error=self.config.pass_dash_k_to_make
         )
@@ -2406,9 +2407,9 @@ class Project(SimpleProject):
             make_command = self.make_args.command
         return self._get_make_commandline(make_target, make_command, options, parallel, compilation_db_name)
 
-    def run_make(self, make_target: "typing.Union[str, typing.List[str]]" = "", *, make_command: str = None,
-                 options: MakeOptions = None, logfile_name: str = None, cwd: Path = None, append_to_logfile=False,
-                 compilation_db_name="compile_commands.json", parallel: bool = True,
+    def run_make(self, make_target: "typing.Optional[typing.Union[str, typing.List[str]]]" = None, *,
+                 make_command: str = None, options: MakeOptions = None, logfile_name: str = None, cwd: Path = None,
+                 append_to_logfile=False, compilation_db_name="compile_commands.json", parallel: bool = True,
                  stdout_filter: "typing.Optional[typing.Callable[[bytes], None]]" = _default_stdout_filter) -> None:
         if not options:
             options = self.make_args
