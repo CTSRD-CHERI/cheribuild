@@ -88,7 +88,7 @@ def run_tests_main(test_function: Callable[[boot_cheribsd.QemuCheriBSDInstance, 
             args.smb_mount_directories.append(
                 boot_cheribsd.SmbMount(args.source_dir, readonly=True, in_target="/source"))
         if should_mount_sysroot or args.sysroot_dir:
-            args.source_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.sysroot_dir)))
+            args.sysroot_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.sysroot_dir)))
             args.smb_mount_directories.append(
                 boot_cheribsd.SmbMount(args.sysroot_dir, readonly=True, in_target="/sysroot"))
         if should_mount_installdir or args.install_destdir:
