@@ -1041,7 +1041,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
                         help="The environment variable to set to LD_PRELOAD a library. should be set to either "
                              "LD_PRELOAD or "
                              "LD_CHERI_PRELOAD")
-    parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
+    parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60,
+                        help="Timeout in seconds for running tests")
     # noinspection PyTypeChecker
     parser.add_argument("--qemu-logfile", help="File to write all interactions with QEMU to", type=Path)
     parser.add_argument("--test-environment-only", action="store_true",
