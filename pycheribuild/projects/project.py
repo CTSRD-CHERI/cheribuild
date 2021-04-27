@@ -508,6 +508,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def compiling_for_riscv(self, include_purecap: bool):
         return self.crosscompile_target.is_riscv(include_purecap=include_purecap)
 
+    def compiling_for_aarch64(self, include_purecap: bool):
+        return self.crosscompile_target.is_aarch64(include_purecap=include_purecap)
+
     def build_configuration_suffix(self, target: typing.Optional[CrossCompileTarget] = None) -> str:
         """
         :param target: the target to use
