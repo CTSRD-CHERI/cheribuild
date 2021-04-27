@@ -304,22 +304,16 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return "GENERIC"
         elif xtarget.is_mips(include_purecap=True):
             if xtarget.is_hybrid_or_purecap_cheri():
-                # use purecap kernel if selected
                 assert isinstance(self, BuildCHERIBSD)
-                kernconf_name = "CHERI{pure}_MALTA64"
-                cheri_pure = "_PURECAP" if self.purecap_kernel else ""
-                return kernconf_name.format(pure=cheri_pure)
+                return "CHERI_MALTA64"
             return "MALTA64"
         elif xtarget.is_riscv(include_purecap=True):
-            # TODO: purecap/hybrid kernel
             if xtarget.is_hybrid_or_purecap_cheri():
                 assert isinstance(self, BuildCHERIBSD)
                 if self.caprevoke_kernel:
                     if self.build_fett_kernels:
                         return "CHERI-CAPREVOKE-QEMU-FETT"
                     return "CHERI-CAPREVOKE-QEMU"
-                if self.purecap_kernel:
-                    return "CHERI-PURECAP-QEMU-NODEBUG"
                 if self.build_fett_kernels:
                     return "CHERI-QEMU-FETT"
                 return "CHERI-QEMU"
@@ -1239,15 +1233,15 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                  help="Path to an MFS root image to be embedded in the kernel for "
                                                       "booting")
 
+        cls.default_kernel = cls.add_config_option("default-kernel", show_help=True, _allow_unknown_targets=True,
+                                                   choices=["hybrid", "purecap"], default="hybrid",
+                                                   help="Select default kernel to build")
+
         # We also want to add this config option to the fake "cheribsd" target (to keep the config file manageable)
-        cls.purecap_kernel = cls.add_bool_option("pure-cap-kernel", show_help=True, _allow_unknown_targets=True,
-                                                 only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP,
-                                                                       CompilationTargets.CHERIBSD_MIPS_HYBRID,
-                                                                       CompilationTargets.CHERIBSD_RISCV_PURECAP,
-                                                                       CompilationTargets.CHERIBSD_RISCV_HYBRID,
-                                                                       CompilationTargets.CHERIBSD_MORELLO_PURECAP,
-                                                                       CompilationTargets.CHERIBSD_MORELLO_HYBRID],
-                                                 help="Build kernel with pure capability ABI (experimental)")
+        cls.build_purecap_kernels = cls.add_bool_option("build-purecap-kernels", show_help=True, _allow_unknown_targets=True,
+                                                        only_add_for_targets=CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS +
+                                                        CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS,
+                                                        help="Also build kernels with pure capability ABI")
         cls.caprevoke_kernel = cls.add_bool_option("caprevoke-kernel", show_help=True, _allow_unknown_targets=True,
                                                    only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP,
                                                                          CompilationTargets.CHERIBSD_MIPS_HYBRID,
@@ -1259,40 +1253,25 @@ class BuildCHERIBSD(BuildFreeBSD):
         super().__init__(config)
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
-        if self.build_fpga_kernels:
-            if self.compiling_for_mips(include_purecap=True):
-                purecap_prefix = "PURECAP_" if self.purecap_kernel else ""
-                if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                    prefix = "CHERI_{}DE4_".format(purecap_prefix)
-                else:
-                    prefix = "BERI_DE4_"
-                # TODO: build the benchmark kernels? TODO: NFSROOT?
-                # XXX-AM: Skip these for now as the purecap kernel version is untested
-                if not self.purecap_kernel:
-                    for conf in ("USBROOT", "USBROOT_BENCHMARK", "NFSROOT"):
-                        self.extra_kernels.append(prefix + conf)
-                if self.mfs_root_image:
-                    self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT")
-                    self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT_FUZZ")
-                    self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT_BENCHMARK")
-            elif self.compiling_for_riscv(include_purecap=True):
-                if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                    if self.caprevoke_kernel:
-                        self.extra_kernels_with_mfs.append("CHERI-CAPREVOKE-GFE")
-                    elif self.purecap_kernel:
-                        self.extra_kernels_with_mfs.append("CHERI-PURECAP-GFE")
-                    else:
-                        self.extra_kernels_with_mfs.append("CHERI-GFE")
-                else:
-                    self.extra_kernels_with_mfs.append("GFE")
+
+        if self.build_purecap_kernels:
+            purecap_kernels = self.get_purecap_kernel_configs()
+            if self.default_kernel == "hybrid":
+                self.extra_kernels += purecap_kernels
             else:
-                self.fatal("Unsupported architecture for FPGA kernels")
+                # XXX-AM: should be build the hybrid kernel when the default is purecap?
+                # The default config has already been added
+                self.extra_kernels += purecap_kernels[1:]
+
+        self.extra_kernels += self.get_fpga_kernel_configs()
+        self.extra_kernels_with_mfs += self.get_fpga_kernel_mfs_configs()
+
         if self.build_fett_kernels:
             if self.compiling_for_riscv(include_purecap=True):
                 if self.crosscompile_target.is_hybrid_or_purecap_cheri():
                     if self.caprevoke_kernel:
                         self.extra_kernels.append("CHERI-CAPREVOKE-FETT")
-                    elif self.purecap_kernel:
+                    elif self.build_purecap_kernels:
                         self.extra_kernels.append("CHERI-PURECAP-FETT-NODEBUG")
                     else:
                         self.extra_kernels.append("CHERI-FETT")
@@ -1300,6 +1279,89 @@ class BuildCHERIBSD(BuildFreeBSD):
                     self.extra_kernels.append("FETT")
             else:
                 self.warning("Unsupported architecture for FETT kernels")
+
+    def default_kernel_config(self):
+        if self.default_kernel == "hybrid":
+            return super().default_kernel_config()
+        else:
+            if not (self.compiling_for_mips(include_purecap=True) or
+                    self.compiling_for_riscv(include_purecap=True) or
+                    self.compiling_for_aarch64(include_purecap=True)):
+                self.fatal("Can not selected default purecap kernel for non-CHERI target")
+            return self.get_purecap_kernel_configs()[0]
+
+
+    def get_purecap_kernel_configs(self) -> list:
+        """
+        Return a list of pure capability kernels to build, the first one is used as the default
+        when the purecap kernel is selected as the default kernel
+        """
+        purecap_kernels = []
+        assert self.crosscompile_target.is_hybrid_or_purecap_cheri()
+        if self.compiling_for_mips(include_purecap=True):
+            purecap_kernels.append("CHERI_PURECAP_MALTA64")
+        elif self.compiling_for_riscv(include_purecap=True):
+            purecap_kernels.append("CHERI-PURECAP-QEMU-NODEBUG")
+        elif self.compiling_for_aarch64(include_purecap=True):
+            purecap_kernels.append("GENERIC-MORELLO-PURECAP")
+        else:
+            self.fatal("Unsupported purecap kernel architecture")
+        return purecap_kernels
+
+    def get_fpga_kernel_configs(self) -> list:
+        if not self.build_fpga_kernels:
+            return []
+
+        fpga_kernels = []
+        if self.compiling_for_mips(include_purecap=True):
+            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                prefix = "CHERI_DE4_"
+            else:
+                prefix = "BERI_DE4_"
+            # TODO: build the benchmark kernels? TODO: NFSROOT?
+            for conf in ("USBROOT", "USBROOT_BENCHMARK", "NFSROOT"):
+                fpga_kernels.append(prefix + conf)
+        elif self.compiling_for_riscv(include_purecap=True):
+            return []
+        else:
+            self.fatal("Unsupported architecture for FPGA kernels")
+        return fpga_kernels
+
+    def get_fpga_kernel_mfs_configs(self) -> list:
+        if not self.build_fpga_kernels or not self.mfs_root_image:
+            return []
+
+        fpga_kernels = []
+        if self.compiling_for_mips(include_purecap=True):
+            if self.build_purecap_kernels:
+                assert self.crosscompile_target.is_hybrid_or_purecap_cheri()
+                prefix = "CHERI_PURECAP_DE4_"
+                fpga_kernels.append(prefix + "MFS_ROOT")
+                fpga_kernels.append(prefix + "MFS_ROOT_FUZZ")
+                fpga_kernels.append(prefix + "MFS_ROOT_BENCHMARK")
+
+            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                prefix = "CHERI_DE4_"
+            else:
+                prefix = "BERI_DE4_"
+            fpga_kernels.append(prefix + "MFS_ROOT")
+            fpga_kernels.append(prefix + "MFS_ROOT_FUZZ")
+            fpga_kernels.append(prefix + "MFS_ROOT_BENCHMARK")
+        elif self.compiling_for_riscv(include_purecap=True):
+            if self.caprevoke_kernel:
+                fpga_kernels.append("CHERI-CAPREVOKE-GFE")
+            if self.build_purecap_kernels:
+                assert self.crosscompile_target.is_hybrid_or_purecap_cheri()
+                fpga_kernels.append("CHERI-PURECAP-GFE")
+
+            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                fpga_kernels.append("CHERI-GFE")
+            else:
+                fpga_kernels.append("GFE")
+        else:
+            self.fatal("Unsupported architecture for FPGA kernels")
+        return fpga_kernels
+
 
     def setup(self):
         super().setup()
@@ -1378,10 +1440,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     project_name = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-mfs-root"]
     _always_add_suffixed_targets = True
-
-    @classproperty
-    def supported_architectures(self) -> list:
-        return list(CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS)
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -1433,14 +1492,14 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     def fpga_kernconf(self):
         if self.compiling_for_mips(include_purecap=True):
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                purecap = "PURECAP_" if self.build_cheribsd_instance.purecap_kernel else ""
+                purecap = "PURECAP_" if self.build_cheribsd_instance.build_purecap_kernels else ""
                 return "CHERI_{}DE4_MFS_ROOT".format(purecap)
             return "BERI_DE4_MFS_ROOT"
         elif self.compiling_for_riscv(include_purecap=True):
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
                 if self.build_cheribsd_instance.caprevoke_kernel:
                     return "CHERI-CAPREVOKE-GFE"
-                elif self.build_cheribsd_instance.purecap_kernel:
+                elif self.build_cheribsd_instance.build_purecap_kernels:
                     return "CHERI-PURECAP-GFE"
                 return "CHERI-GFE"
             return "GFE"
