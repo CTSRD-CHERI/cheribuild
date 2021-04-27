@@ -667,6 +667,9 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
         success(prefix, "checked SSH connection")
         return True
 
+    def send(self, s):
+        return self.stderr.write(s)
+
 
 def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
     success("===> Setting up QEMU networking")
