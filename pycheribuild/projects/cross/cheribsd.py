@@ -37,7 +37,7 @@ from pathlib import Path
 
 from .llvm import BuildLLVMMonoRepoBase
 from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
-                       MakeCommandKind, MakeOptions, Project, SimpleProject, TargetAlias)
+                       MakeCommandKind, MakeOptions, Project, SimpleProject, TargetAliasWithDependencies)
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CompilerType as FreeBSDToolchainKind, CrossCompileTarget
@@ -1524,9 +1524,10 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         return guess
 
 
-class BuildCheriBsdMfsImageAndKernels(TargetAlias):
+class BuildCheriBsdMfsImageAndKernels(TargetAliasWithDependencies):
     target = "cheribsd-mfs-kernels"
     dependencies = ["disk-image-mfs-root", "cheribsd-mfs-root-kernel"]
+    direct_dependencies_only = True
 
     @classproperty
     def supported_architectures(self):
