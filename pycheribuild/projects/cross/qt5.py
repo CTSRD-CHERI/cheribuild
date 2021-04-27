@@ -354,7 +354,7 @@ class BuildQt5(BuildQtWithConfigureScript):
 
 class BuildQtBase(BuildQtWithConfigureScript):
     do_not_add_to_targets = False  # Even though it ends in Base this is not a Base class
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="5.10", force_branch=True)
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="5.15", force_branch=True)
     is_large_source_repository = True
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
