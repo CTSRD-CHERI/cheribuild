@@ -217,7 +217,8 @@ class CheriBSDSpawnMixin(MixinBase):
         return super().expect_exact(patterns, timeout=timeout)
 
     def expect(self, patterns: "typing.List[typing.Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]",
-               timeout=-1, pretend_result=None, ignore_timeout=False, log_patterns=True, timeout_msg="timeout", **kwargs):
+               timeout=-1, pretend_result=None, ignore_timeout=False, log_patterns=True, timeout_msg="timeout",
+               **kwargs):
         assert isinstance(patterns, list), "expected list and not " + str(patterns)
         if log_patterns:
             info("Expecting regex ", coloured(AnsiColour.blue, str(patterns)))
