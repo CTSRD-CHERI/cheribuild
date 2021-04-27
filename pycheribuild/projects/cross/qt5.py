@@ -53,8 +53,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.configure_command = self.source_dir / "configure"
-        if not self.compiling_for_host():
-            self._linkage = Linkage.STATIC
 
     def setup(self):
         super().setup()
@@ -93,7 +91,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = self.default_compiler_flags
             linker_flags = self.default_ldflags + ["-target", self.target_info.target_triple]
-            assert self.force_static_linkage, "Currently only static linking is supported!"
 
             if self.crosscompile_target.is_cheri_purecap():
                 # Note: we are using the hybrid sysroot, so base system libraries are in usr/libcheri:
