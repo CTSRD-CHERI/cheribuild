@@ -319,7 +319,7 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
         else:
             # TODO: run `ctest --show-only=json-v1` to get list of tests
             self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=False,
-                                                      mount_sysroot=True)
+                                                      mount_sysroot=True, mount_sourcedir=True)
 
 
 class BuildQt5(BuildQtWithConfigureScript):
@@ -382,7 +382,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
             self.run_cmd("make", "check", cwd=self.build_dir)
         else:
             self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True,
-                                                      mount_sysroot=True)
+                                                      mount_sysroot=True, mount_sourcedir=True)
 
 
 # Webkit needs ICU (and recommended for QtBase too):
