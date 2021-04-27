@@ -95,11 +95,14 @@ class BuildGDB(CrossCompileAutotoolsProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
+    def linkage(self):
+        if not self.compiling_for_host():
+            # We always want to build the CheriBSD binary static so that we can just scp it over to QEMU
+            return Linkage.STATIC
+        return super().linkage()
+
     def __init__(self, config: CheriConfig):
         self._compile_status_message = None
-        if not self._xtarget.is_native():
-            # We always want to build the CheriBSD binary static so that we can just scp it over to QEMU
-            self._linkage = Linkage.STATIC
         super().__init__(config)
 
     @property
