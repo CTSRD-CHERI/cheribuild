@@ -363,7 +363,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
                                      "-Wno-error=cheri-bitwise-operations"]  # FIXME: remove after update to 5.12
 
     def compile(self, **kwargs):
-        if self.minimal:
+        if self.minimal and False:
             self.run_make("sub-src")
             if self.build_tests:
                 # only build the tests for corelib:
