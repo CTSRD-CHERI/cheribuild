@@ -217,28 +217,29 @@ class CheriBSDSpawnMixin(MixinBase):
         return super().expect_exact(patterns, timeout=timeout)
 
     def expect(self, patterns: "typing.List[typing.Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]",
-               timeout=-1, pretend_result=None, timeout_fatal=True, log_patterns=True, timeout_msg="timeout", **kwargs):
+               timeout=-1, pretend_result=None, ignore_timeout=False, log_patterns=True, timeout_msg="timeout", **kwargs):
         assert isinstance(patterns, list), "expected list and not " + str(patterns)
         if log_patterns:
             info("Expecting regex ", coloured(AnsiColour.blue, str(patterns)))
-        return self._expect_and_handle_panic_impl(patterns, timeout_msg, timeout_fatal=timeout_fatal,
+        return self._expect_and_handle_panic_impl(patterns, timeout_msg, ignore_timeout=ignore_timeout,
                                                   timeout=timeout, expect_fn=super().expect, **kwargs)
 
     def expect_exact(self, pattern_list:
                      "typing.List[typing.Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]",
-                     timeout=-1, pretend_result=None, timeout_fatal=True, log_patterns=True, timeout_msg="timeout",
+                     timeout=-1, pretend_result=None, ignore_timeout=False, log_patterns=True, timeout_msg="timeout",
                      **kwargs):
         assert isinstance(pattern_list, list), "expected list and not " + str(pattern_list)
         if log_patterns:
             info("Expecting literal ", coloured(AnsiColour.blue, str(pattern_list)))
-        return self._expect_and_handle_panic_impl(pattern_list, timeout_msg, timeout_fatal=timeout_fatal,
-                                                  timeout=timeout, expect_fn=super().expect_exact, **kwargs)
+        return self._expect_and_handle_panic_impl(pattern_list, timeout_msg, timeout=timeout,
+                                                  ignore_timeout=ignore_timeout, expect_fn=super().expect_exact,
+                                                  **kwargs)
 
-    def expect_prompt(self, timeout=-1, timeout_msg="timeout", timeout_fatal=True, **kwargs):
+    def expect_prompt(self, timeout=-1, timeout_msg="timeout waiting for prompt", ignore_timeout=False, **kwargs):
         return self.expect_exact([PEXPECT_PROMPT], timeout=timeout, timeout_msg=timeout_msg,
-                                 timeout_fatal=timeout_fatal, **kwargs)
+                                 ignore_timeout=ignore_timeout, **kwargs)
 
-    def _expect_and_handle_panic_impl(self, options: list, timeout_msg, *, timeout_fatal=True, expect_fn, **kwargs):
+    def _expect_and_handle_panic_impl(self, options: list, timeout_msg, *, ignore_timeout=True, expect_fn, **kwargs):
         assert PANIC not in options
         assert STOPPED not in options
         assert PANIC_KDB not in options
@@ -250,8 +251,11 @@ class CheriBSDSpawnMixin(MixinBase):
                 debug_kernel_panic(self)
                 failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
             return i
-        except pexpect.TIMEOUT:
-            failure(timeout_msg, ": ", str(self), exit=timeout_fatal)
+        except pexpect.TIMEOUT as e:
+            if ignore_timeout:
+                failure(timeout_msg, ": ", str(e), exit=False)
+            else:
+                raise e
 
     def run(self, cmd: str, *, expected_output=None, error_output=None, cheri_trap_fatal=True, ignore_cheri_trap=False,
             timeout=60):
@@ -525,12 +529,12 @@ def run_cheribsd_command(qemu: CheriBSDSpawnMixin, cmd: str, expected_output=Non
         raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd, execution_time=runtime)
     elif i == error_output_index:
         # wait up to 20 seconds for a prompt to ensure the full output has been printed
-        qemu.expect_prompt(timeout=20, timeout_fatal=False)
+        qemu.expect_prompt(timeout=20, ignore_timeout=True)
         qemu.flush()
         raise CheriBSDMatchedErrorOutput("Matched error output ", error_output, " in ", cmd, execution_time=runtime)
     elif i in cheri_trap_indices:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
-        qemu.expect_prompt(timeout=20, timeout_fatal=False)
+        qemu.expect_prompt(timeout=20, ignore_timeout=True)
         qemu.flush()
         if cheri_trap_fatal:
             raise CheriBSDCommandFailed("Got CHERI TRAP!", execution_time=runtime)
@@ -545,38 +549,35 @@ def checked_run_cheribsd_command(qemu: CheriBSDSpawnMixin, cmd: str, timeout=600
         cmd + " ;if test $? -eq 0; then echo '__COMMAND' 'SUCCESSFUL__'; else echo '__COMMAND' 'FAILED__'; fi")
     cheri_trap_indices = tuple()
     error_output_index = None
-    results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", PEXPECT_CONTINUATION_PROMPT_RE]
-    try:
-        if not ignore_cheri_trap:
-            cheri_trap_indices = (len(results), len(results) + 1)
-            results.append(CHERI_TRAP_MIPS)
-            results.append(CHERI_TRAP_RISCV)
-        if error_output:
-            error_output_index = len(results)
-            results.append(error_output)
-        i = qemu.expect(results, timeout=timeout, **kwargs)
-    except pexpect.TIMEOUT:
-        i = -1
+    results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", PEXPECT_CONTINUATION_PROMPT_RE, pexpect.TIMEOUT]
+    if not ignore_cheri_trap:
+        cheri_trap_indices = (len(results), len(results) + 1)
+        results.append(CHERI_TRAP_MIPS)
+        results.append(CHERI_TRAP_RISCV)
+    if error_output:
+        error_output_index = len(results)
+        results.append(error_output)
+    i = qemu.expect(results, timeout=timeout, **kwargs)
     runtime = datetime.datetime.now() - starttime
-    if i == -1:  # Timeout
-        raise CheriBSDCommandTimeout("timeout after ", runtime, " running '", cmd, "': ", str(qemu),
-                                     execution_time=runtime)
-    elif i == 0:
+    if i == 0:
         success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
         qemu.expect_prompt(timeout=10)
         qemu.flush()
         return True
     elif i == 2:
         raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd, execution_time=runtime)
+    elif i == 3:
+        raise CheriBSDCommandTimeout("timeout after ", runtime, " running '", cmd, "': ", str(qemu),
+                                     execution_time=runtime)
     elif i in cheri_trap_indices:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
-        qemu.expect_prompt(timeout=20, timeout_fatal=False)
+        qemu.expect_prompt(timeout=20, ignore_timeout=True)
         qemu.flush()
         raise CheriBSDCommandFailed("Got CHERI trap running '", cmd, "' (after '", runtime.total_seconds(), "s)",
                                     execution_time=runtime)
     elif i == error_output_index:
         # wait up to 20 seconds for the shell prompt
-        qemu.expect_prompt(timeout=20, timeout_fatal=False)
+        qemu.expect_prompt(timeout=20, ignore_timeout=True)
         qemu.flush()
         assert isinstance(error_output, str)
         raise CheriBSDMatchedErrorOutput("Matched error output '" + error_output + "' running '", cmd, "' (after '",
