@@ -674,6 +674,7 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
     def sendintr(self):
         self.stderr.write("^C\n")
 
+
 def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
     success("===> Setting up QEMU networking")
     qemu.sendline("ifconfig {network_iface} up && dhclient {network_iface}".format(network_iface=network_iface))
