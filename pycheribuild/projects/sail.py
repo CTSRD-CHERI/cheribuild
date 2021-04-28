@@ -30,6 +30,7 @@
 import os
 import shlex
 import shutil
+import tempfile
 import typing
 from pathlib import Path
 from subprocess import CalledProcessError
@@ -159,14 +160,15 @@ class Opam2(SimpleProject):
             self.add_required_system_tool("bwrap", cheribuild_target="bubblewrap")
 
     def process(self):
-        if OSInfo.IS_LINUX:
+        if OSInfo.IS_LINUX and self.crosscompile_target.is_x86_64():
             self.makedirs(self.config.other_tools_dir / "bin")
-            # NOTE: 2.0.2 won't work for me
-            self.run_cmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.7/opam-2.0.7-x86_64-linux", "-O",
-                         self.config.other_tools_dir / "bin/opam")
-            # Make it executable
-            if not self.config.pretend:
-                (self.config.other_tools_dir / "bin/opam").chmod(0o755)
+            with tempfile.TemporaryDirectory() as td:
+                base_url = "https://github.com/ocaml/opam/releases/download/"
+                self.download_file(Path(td, "opam"), url=base_url + "2.0.8/opam-2.0.8-x86_64-linux",
+                                   sha256="95365a873d9e3ae6fb48e6109b5fc5df3b4e526c9d65d20652a78e263f745a35")
+                self.install_file(Path(td, "opam"), self.config.other_tools_dir / "bin/opam", force=True,
+                                  print_verbose_only=False, mode=0o755)
+                self.delete_file(self.config.other_tools_dir / "bin/opam.downloaded", print_verbose_only=False)
         else:
             self.fatal("This target is only implement for Linux x86_64, for others operating systems you will have"
                        " to install opam 2.0 manually")
