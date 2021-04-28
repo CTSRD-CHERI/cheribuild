@@ -671,6 +671,8 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
     def send(self, s):
         return self.stderr.write(s)
 
+    def sendintr(self):
+        self.stderr.write("^C\n")
 
 def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
     success("===> Setting up QEMU networking")
@@ -1058,7 +1060,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
                         help="Don't actually boot CheriBSD just print what would happen")
     parser.add_argument("--interact", "-i", action="store_true")
     parser.add_argument("--test-kernel-init-only", action="store_true")
-    parser.add_argument("--enable-coredumps", action="store_true", dest="enable_coredumps", default=True)
+    parser.add_argument("--enable-coredumps", action="store_true", dest="enable_coredumps", default=False)
     parser.add_argument("--disable-coredumps", action="store_false", dest="enable_coredumps")
 
     # Ensure that we don't get a race when running multiple shards:

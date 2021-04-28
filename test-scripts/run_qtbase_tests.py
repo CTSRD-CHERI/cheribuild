@@ -63,6 +63,9 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
             except boot_cheribsd.CheriBSDCommandFailed as e:
                 boot_cheribsd.failure("Failed to run ", f.name, ": ", str(e), exit=False)
                 failed_tests.append(f)
+                # Kill the process that timed out:
+                qemu.sendintr()
+                qemu.expect_prompt(timeout=60)
         # Ignore .moc and .obj directories:
         dirs[:] = [d for d in dirs if not d.startswith(".")]
     endtime = datetime.datetime.now()
