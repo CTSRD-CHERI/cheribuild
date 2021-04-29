@@ -528,12 +528,12 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             basic_args.append("--jenkins-bitfile=cheri128")
             mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self._get_mfs_kernel_xtarget(),
                                                                               self.config, caller=self.project)
-            if self.config.benchmark_with_debug_kernel:
-                kernel_config = mfs_kernel.fpga_kernconf
-            else:
-                kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
-            basic_args.append(
-                "--kernel-img=" + str(mfs_kernel.installed_kernel_for_config(self.project, kernel_config)))
+            kernel_configs = mfs_kernel.get_kernel_configs(kernABI=mfs_kernel.get_default_kernel_abi(),
+                                                           platform=ConfigPlatform.BERI,
+                                                           benchmark=(not self.config.benchmark_with_debug_kernel))
+            assert len(kernel_configs), "No matching kernel configurations"
+            kernel_image = mfs_kernel.get_kernel_install_path(kernel_configs[0].kernconf)
+            basic_args.append("--kernel-img=" + str(kernel_image))
         else:
             runbench_args.append("--skip-boot")
         if benchmark_script:
@@ -1016,6 +1016,7 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_CHERIBSD_NON_CHERI_TARGETS = [CHERIBSD_MIPS_NO_CHERI, CHERIBSD_RISCV_NO_CHERI, CHERIBSD_AARCH64,
                                       CHERIBSD_X86_64]
     ALL_FREEBSD_AND_CHERIBSD_TARGETS = ALL_CHERIBSD_TARGETS + ALL_SUPPORTED_FREEBSD_TARGETS
+    ALL_CHERIBSD_CHERI_TARGETS = (set(ALL_CHERIBSD_TARGETS) - set(ALL_CHERIBSD_NON_CHERI_TARGETS))
 
     # Same as above, but the default is purecap RISC-V
     FETT_DEFAULT_ARCHITECTURE = CHERIBSD_RISCV_PURECAP
