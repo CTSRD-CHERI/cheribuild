@@ -29,6 +29,7 @@
 #
 
 from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject
+from .cheribsd import ConfigPlatform
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompileTarget, DefaultInstallDir,
                        GitRepository, MakeCommandKind, Project)
@@ -96,7 +97,9 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         else:
             # Add the kernel as a payload:
             assert self.kernel_class is not None
-            kernel_path = self.kernel_class.get_installed_kernel_path(self, cross_target=self.crosscompile_target)
+            kernel_project = self.kernel_class.get_instance(self)
+            kernel_config = kernel_project.default_kernel_config(ConfigPlatform.QEMU)
+            kernel_path = kernel_project.get_kernel_install_path(kernel_config)
             self.configure_args.append("--with-payload=" + str(kernel_path))
 
     def compile(self, **kwargs):

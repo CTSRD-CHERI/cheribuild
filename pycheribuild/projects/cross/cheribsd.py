@@ -1526,36 +1526,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
 
-        xtarget = self.crosscompile_target
-        if xtarget.is_hybrid_or_purecap_cheri():
-            kernABI = KernelABI.HYBRID
-        else:
-            kernABI = KernelABI.NATIVE
-
-        configs = []
-        if self.build_purecap_kernels:
-            # The default config has already been added if the default is purecap
-            # XXX-AM: should be build the hybrid kernel when the default is purecap?
-            if self.default_kernel == KernelABI.HYBRID:
-                configs.append(CheriBSDConfigTable.get_unique(xtarget, ConfigGroup.DEFAULT,
-                                                              KernelABI.PURECAP, mfsroot=False))
-
-        if self.build_fpga_kernels:
-            configs += CheriBSDConfigTable.get_configs(xtarget, ConfigGroup.FPGA_DEFAULT, kernABI)
-            configs += CheriBSDConfigTable.get_configs(xtarget, ConfigGroup.FPGA, kernABI)
-            if self.build_purecap_kernels:
-                configs += CheriBSDConfigTable.get_configs(xtarget, ConfigGroup.FPGA_DEFAULT, KernelABI.PURECAP)
-                configs += CheriBSDConfigTable.get_configs(xtarget, ConfigGroup.FPGA, KernelABI.PURECAP)
-
-        if self.build_fett_kernels:
-            if self.compiling_for_riscv(include_purecap=True):
-                configs += CheriBSDConfigTable.get_configs(xtarget, ConfigGroup.FETT, kernABI,
-                                                           caprevoke=self.caprevoke_kernel)
-                if self.build_purecap_kernels:
-                    configs += CheriBSDConfigTable.get_configs(xtarget, ConfigGroup.FETT, KernelABI.PURECAP)
-            else:
-                self.warning("Unsupported architecture for FETT kernels")
-
+        configs = self.extra_kernel_configs()
         self.extra_kernels += [c.kernconf for c in configs if not c.mfsroot]
         self.extra_kernels_with_mfs += [c.kernconf for c in configs if c.mfsroot]
 

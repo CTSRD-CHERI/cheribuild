@@ -329,13 +329,17 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def is_cheribsd(cls):
         return True
 
-    def _get_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
+    def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
         assert self.is_cheribsd(), "Other cases not handled yet"
         from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel
-        if use_benchmark_kernel:
-            return BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self.project)
-        else:
-            return BuildCheriBsdMfsKernel.get_installed_kernel_path(self.project)
+        xtarget = self._get_mfs_kernel_xtarget()
+        if xtarget not in BuildCheriBsdMfsKernel.supported_architectures:
+            self.project.fatal("No MFS kernel for target", xtarget)
+            return None
+        mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(
+            xtarget, self.config, caller=self.project)
+        kernconf = mfs_kernel.default_kernel_config(platform, benchmark=use_benchmark_kernel)
+        return mfs_kernel.get_kernel_install_path(kernconf)
 
     def _get_mfs_kernel_xtarget(self):
         kernel_xtarget = self.target
@@ -385,6 +389,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 from ..projects.disk_image import BuildMinimalCheriBSDDiskImage
                 disk_image_path = BuildMinimalCheriBSDDiskImage.get_instance(self.project).disk_image_path
         elif kernel_path is None and "--kernel" not in self.config.test_extra_args:
+            from ..projects.cross.cheribsd import ConfigPlatform
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
             # --no-use-minimal-benchmark-kernel on the command line or in the config JSON
             use_benchmark_kernel_value = self.config.use_minimal_benchmark_kernel  # Load the value first to ensure
@@ -393,8 +398,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             assert isinstance(use_benchmark_config_option, ConfigOptionBase)
             want_benchmark_kernel = use_benchmark_kernel_value or (
                     use_benchmark_kernel_by_default and use_benchmark_config_option.is_default_value)
-            kernel_path = self._get_mfs_root_kernel(use_benchmark_kernel=want_benchmark_kernel)
-            if not kernel_path.exists() and is_jenkins_build():
+            kernel_path = self._get_mfs_root_kernel(ConfigPlatform.QEMU, want_benchmark_kernel)
+            if (kernel_path is None or not kernel_path.exists()) and is_jenkins_build():
                 jenkins_kernel_path = self.config.cheribsd_image_root / "kernel.xz"
                 if jenkins_kernel_path.exists():
                     kernel_path = jenkins_kernel_path
@@ -517,10 +522,10 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if self.config.tests_interact:
             runbench_args.append("--interact")
 
-        from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel
+        from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel, ConfigPlatform
         if self.config.benchmark_with_qemu:
             # When benchmarking with QEMU we always spawn a new instance
-            kernel_image = self._get_mfs_root_kernel(use_benchmark_kernel=not self.config.benchmark_with_debug_kernel)
+            kernel_image = self._get_mfs_root_kernel(ConfigPlatform.QEMU, not self.config.benchmark_with_debug_kernel)
             basic_args.append("--kernel-img=" + str(kernel_image))
         elif self.config.benchmark_clean_boot:
             # use a bitfile from jenkins. TODO: add option for overriding
@@ -528,11 +533,9 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             basic_args.append("--jenkins-bitfile=cheri128")
             mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self._get_mfs_kernel_xtarget(),
                                                                               self.config, caller=self.project)
-            kernel_configs = mfs_kernel.get_kernel_configs(kernABI=mfs_kernel.get_default_kernel_abi(),
-                                                           platform=ConfigPlatform.BERI,
-                                                           benchmark=(not self.config.benchmark_with_debug_kernel))
-            assert len(kernel_configs), "No matching kernel configurations"
-            kernel_image = mfs_kernel.get_kernel_install_path(kernel_configs[0].kernconf)
+            kernel_config = mfs_kernel.default_kernel_config(ConfigPlatform.BERI,
+                                                             benchmark=not self.config.benchmark_with_debug_kernel)
+            kernel_image = mfs_kernel.get_kernel_install_path(kernel_config)
             basic_args.append("--kernel-img=" + str(kernel_image))
         else:
             runbench_args.append("--skip-boot")
