@@ -31,9 +31,10 @@
 
 import json
 import os
+import sys
 
 from .build_qemu import BuildQEMU
-from .cross.cheribsd import BuildCHERIBSD
+from .cross.cheribsd import BuildCHERIBSD, ConfigPlatform, CheriBSDConfigTable
 from .cross.crosscompileproject import CheriConfig, CompilationTargets, CrossCompileProject
 from .disk_image import BuildCheriBSDDiskImage
 from .project import DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject
@@ -169,17 +170,22 @@ class RunSyzkaller(SimpleProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        # XXX this should be a cross target
+        xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
 
-        self.qemu_binary = BuildQEMU.qemu_cheri_binary(self, xtarget=CompilationTargets.CHERIBSD_MIPS_HYBRID)
-        self.syzkaller_binary = BuildSyzkaller.get_instance(
-            self, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID).syzkaller_binary()
-        self.kernel_path = BuildCHERIBSD.get_installed_kernel_path(
-            self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP)
-        mips_purecap_cheribsd = BuildCHERIBSD.get_instance(self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP)
-        self.kernel_src_path = mips_purecap_cheribsd.source_dir
-        self.kernel_build_path = mips_purecap_cheribsd.build_dir
-        self.disk_image = BuildCheriBSDDiskImage.get_instance(
-            self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).disk_image_path
+        self.qemu_binary = BuildQEMU.qemu_cheri_binary(self, xtarget=xtarget)
+        self.syzkaller_binary = BuildSyzkaller.get_instance(self, cross_target=xtarget).syzkaller_binary()
+        kernel_project = BuildCHERIBSD.get_instance(self, cross_target=xtarget)
+        kernel_config = CheriBSDConfigTable.get_configs(xtarget, ConfigPlatform.QEMU,
+                                                        kernel_project.get_default_kernel_abi(), fuzzing=True)
+        if len(kernel_config) == 0:
+            self.fatal("No kcov kernel configuration found")
+            sys.exit("Can not continue...")
+        self.kernel_path = kernel_project.get_kernel_install_path(kernel_config[0].kernconf)
+
+        self.kernel_src_path = kernel_project.source_dir
+        self.kernel_build_path = kernel_project.build_dir
+        self.disk_image = BuildCheriBSDDiskImage.get_instance(self, cross_target=xtarget).disk_image_path
 
     def syzkaller_config(self):
         """ Get path of syzkaller configuration file to use. """

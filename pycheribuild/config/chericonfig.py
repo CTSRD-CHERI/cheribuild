@@ -386,6 +386,9 @@ class CheriConfig(ConfigBase):
             "build-morello-firmware-from-source", help_hidden=False,
             help="Build the firmware from source instead of downloading the latest release.")
 
+        self.list_kernels = loader.add_bool_option("list-kernels",
+                                                   help="List available kernel configs to run and exit")
+
         self.targets = None  # type: typing.Optional[typing.List[str]]
         self.__optional_properties = ["preferred_xtarget", "internet_connection_last_checked_at"]
 

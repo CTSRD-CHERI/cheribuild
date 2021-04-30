@@ -37,7 +37,7 @@ from pathlib import Path
 
 from .build_qemu import BuildCheriOSQEMU, BuildMorelloQEMU, BuildQEMU
 from .cherios import BuildCheriOS
-from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD
+from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform
 from .cross.freertos import BuildFreeRTOS
 from .cross.gdb import BuildGDB
 from .cross.rtems import BuildRtems
@@ -100,7 +100,8 @@ class LaunchQEMUBase(SimpleProject):
                                                                  "port. You can then use `ssh root@localhost -p $PORT` "
                                                                  "to connect to the VM")
         cls.ephemeral = cls.add_bool_option("ephemeral", show_help=True,
-                                           help="Run qemu in 'snapshot' mode, changes to the disk image are non-persistent")
+                                            help="Run qemu in 'snapshot' mode, changes to the disk image "
+                                                 "are non-persistent")
 
         cls.extra_tcp_forwarding = cls.add_config_option("extra-tcp-forwarding", kind=list, default=(),
                                                          help="Additional TCP bridge ports beyond ssh/22; "
@@ -434,20 +435,47 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             "remote-kernel-path", show_help=True,
             help="When set rsync will be used to update the kernel image from a remote host before launching QEMU. "
                  "Useful when building and running on separate machines.")
+        cls.kernel_config = cls.add_config_option(
+            "alternative-kernel", show_help=True,
+            help="Select the kernel to run by specifying the kernel build configuration name."
+                 "The list of available kernel configurations is given by --list-kernels")
 
     def __init__(self, config: CheriConfig, source_class: "typing.Type[BuildFreeBSD]" = None,
                  disk_image_class: "typing.Type[BuildFreeBSDImage]" = None, needs_disk_image=True):
         super().__init__(config)
         if source_class is None and disk_image_class is not None:
             # noinspection PyProtectedMember
-            source_class = disk_image_class.get_instance(self).source_project
-        self.source_class = source_class
-        self.current_kernel = source_class.get_installed_kernel_path(self)
+            self.source_project = disk_image_class.get_instance(self).source_project
+        else:
+            self.source_project = source_class.get_instance(self)
+
+        if self.kernel_config:
+            if self.kernel_config not in self._valid_kernel_configs():
+                self.fatal("Selected kernel configuration", self.kernel_config, "is not available")
+                self._list_kernel_configs()
+        else:
+            self.kernel_config = self.source_project.default_kernel_config(ConfigPlatform.QEMU)
+        self.current_kernel = self.source_project.get_kernel_install_path(self.kernel_config)
+
+        if self.qemu_options.can_boot_kernel_directly:
+            self._project_specific_options += ["-append", "kern.module_path={}".format(self.current_kernel.parent)]
         if hasattr(source_class, "get_rootfs_dir"):
             # noinspection PyCallingNonCallable
             self.rootfs_path = source_class.get_rootfs_dir(self, config=config)
         if needs_disk_image:
             self.disk_image = disk_image_class.get_instance(self).disk_image_path
+
+    def _valid_kernel_configs(self):
+        return self.source_project.get_kernel_configs(platform=ConfigPlatform.QEMU)
+
+    def _list_kernel_configs(self):
+        self.info("Available kernels for qemu:")
+        for conf in self._valid_kernel_configs():
+            path = self.source_project.get_kernel_install_path(conf)
+            if conf == self.source_project.kernel_config:
+                self.info("*", conf, path)
+            else:
+                self.info(conf, path)
 
     def _copy_kernel_image_from_remote_host(self):
         scp_path = os.path.expandvars(self.remote_kernel_path)
@@ -456,6 +484,9 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         self.copy_remote_file(scp_path, self.current_kernel)
 
     def process(self):
+        if self.config.list_kernels:
+            self._list_kernel_configs()
+            return
         if self.remote_kernel_path is not None:
             self._copy_kernel_image_from_remote_host()
         super().process()
@@ -688,7 +719,8 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
         # noinspection PyTypeChecker
         super().__init__(config, source_class=BuildCheriBsdMfsKernel, needs_disk_image=False)
         if self.config.use_minimal_benchmark_kernel:
-            self.current_kernel = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self)
+            kernel_config = self.source_project.default_kernel_config(ConfigPlatform.QEMU, benchmark=True)
+            self.current_kernel = self.source_project.get_kernel_install_path(kernel_config)
             if str(self.remote_kernel_path).endswith("MFS_ROOT"):
                 self.remote_kernel_path += "_BENCHMARK"
         self.rootfs_path = BuildCHERIBSD.get_rootfs_dir(self, config)
