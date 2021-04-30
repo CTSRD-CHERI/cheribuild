@@ -99,6 +99,8 @@ class LaunchQEMUBase(SimpleProject):
                                                             help="The port on localhost to forward to the QEMU ssh "
                                                                  "port. You can then use `ssh root@localhost -p $PORT` "
                                                                  "to connect to the VM")
+        cls.ephemeral = cls.add_bool_option("ephemeral", show_help=True,
+                                           help="Run qemu in 'snapshot' mode, changes to the disk image are non-persistent")
 
         cls.extra_tcp_forwarding = cls.add_config_option("extra-tcp-forwarding", kind=list, default=(),
                                                          help="Additional TCP bridge ports beyond ssh/22; "
@@ -289,6 +291,9 @@ class LaunchQEMUBase(SimpleProject):
                 g = ':' + g
 
             user_network_options += ",hostfwd=tcp:" + h + "-" + g
+
+        if self.ephemeral:
+            self._after_disk_options += ["-snapshot"]
 
         # input("Press enter to continue")
         qemu_command = self.qemu_options.get_commandline(qemu_command=self.qemu_binary,
