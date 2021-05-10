@@ -33,7 +33,7 @@ def add_tag_and_push(repo, tag_name=None):
             sys.exit("Failed to push tag to " + str(repo))
 
 
-add_tag_and_push(Path.home() / "devel/cheribuild", tag_name="morello-2020.10")
+add_tag_and_push(Path(__file__).parent.parent, tag_name="morello-2020.10")
 for r in ["cheribsd", "gdb",
           # firmware forks where we can't use the morello/release-1.0 tag:
           "morello-trusted-firmware-a", "morello-edk2/edk2-platforms"]:
