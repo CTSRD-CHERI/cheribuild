@@ -61,35 +61,39 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
         # Ignore .moc and .obj directories:
         dirs[:] = [d for d in dirs if not d.startswith(".")]
     # Ensure that we run the tests in a reproducible order
+    test_xml = build_dir / "test.xml"
     for f in sorted(tests):
         starttime = datetime.datetime.utcnow()
         try:
-            # TODO: -o /path/to/file -junitxml
-            qemu.checked_run("rm -f /build/test.xml && {} -o /build/test.xml,junitxml -o -,txt -v1".format(f),
-                             timeout=10)
-            endtime = datetime.datetime.utcnow()
+            # Output textual results to stdout and write JUnit XML to /build/test.xml
+            qemu.checked_run("rm -f /build/test.xml && "
+                             "{} -o /build/test.xml,junitxml -o -,txt -v1 && "
+                             "fsync /build/test.xml".format(f),
+                             timeout=5 * 60)
             successful_tests.append(f)
-            qemu.checked_run("fsync /build/test.xml")
-            test_xml = build_dir / "test.xml"
-            qt_test = junitparser.JUnitXml.fromfile(str(test_xml))
-            if not isinstance(qt_test, junitparser.TestSuite):
-                raise ValueError("Got unexpected parse result loading JUnit Xml: " + qt_test.tostring())
-            if qt_test.name.lower() != f.name:
-                raise ValueError("Got unexpected test suite name: '{}' instead of '{}'".format(qt_test.name, f.name))
-            if not qt_test.time:
-                qt_test.time = (endtime - starttime).total_seconds()
-            boot_cheribsd.info("Results for ", f.name, ": ", qt_test)
-            xml.add_testsuite(qt_test)
-        except Exception as e:
-            if isinstance(e, boot_cheribsd.CheriBSDCommandFailed):
-                boot_cheribsd.failure("Failed to run ", f.name, ": ", str(e), exit=False)
-            else:
-                boot_cheribsd.failure("Error loading JUnit result for", f.name, ": ", str(e), exit=False)
-            failed_tests.append(f)
-            add_junit_failure(xml, f, str(e), starttime)
-            # Kill the process that timed out:
+        except boot_cheribsd.CheriBSDCommandFailed as e:
+            boot_cheribsd.failure("Failed to run ", f.name, ": ", str(e), exit=False)
+            # Send CTRL+C in case the process timed out.
             qemu.sendintr()
             qemu.expect_prompt(timeout=60)
+        try:
+            endtime = datetime.datetime.utcnow()
+            qt_test = junitparser.JUnitXml.fromfile(str(test_xml))
+            boot_cheribsd.info("Results for ", f.name, ": ", qt_test)
+            if not isinstance(qt_test, junitparser.TestSuite):
+                raise ValueError("Got unexpected parse result loading JUnit Xml: " + qt_test.tostring())
+            if qt_test.tests < 1:
+                raise ValueError("No test found in: " + qt_test.tostring())
+            if not qt_test.time:
+                qt_test.time = (endtime - starttime).total_seconds()
+            xml.add_testsuite(qt_test)
+        except Exception as e:
+            boot_cheribsd.failure("Error loading JUnit result for", f.name, ": ", str(e), exit=False)
+            failed_tests.append(f)
+            add_junit_failure(xml, f, str(e), starttime)
+        finally:
+            if test_xml.is_file():
+                test_xml.unlink()
 
 
 def add_junit_failure(xml: junitparser.JUnitXml, test: Path, message: str, starttime: datetime.datetime):
