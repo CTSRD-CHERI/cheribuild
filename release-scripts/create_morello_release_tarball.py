@@ -31,6 +31,8 @@ import tempfile
 from pathlib import Path
 
 # noinspection PyProtectedMember
+module_dir = Path(__file__).resolve().parent.parent
+sys.path.append(str(module_dir))
 from pycheribuild.utils import default_make_jobs_count, GlobalConfig, warning_message
 from pycheribuild.processutils import run_command
 
