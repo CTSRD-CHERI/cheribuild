@@ -51,11 +51,9 @@ class Target:
 targets = [
     Target("morello-llvm", "054c38b78badede5f9264c0f12200172f5eefefc"),  # should be "morello/release-1.0"
     Target("cheribsd-morello-purecap", "b126ea817bbeb7369b4dfe5fed62f9cebb4f2e62"),
-    # FIXME: -hybrid is currently needed for the gdb sysroot, we should build agains purecap instead.
-    Target("cheribsd-morello-hybrid", "b126ea817bbeb7369b4dfe5fed62f9cebb4f2e62"),
     # XXX: build the morello commit for ld.bfd instead of mips-cheri gdb?
     Target("gdb-native", "99492d2e8abd5c50708577ce4eeaa91bfcaae30f"),
-    Target("gdb-morello-hybrid", "875e6a8c672668669c518534e27ee90ed1874689"),
+    Target("gdb-morello-hybrid-for-purecap-rootfs", "875e6a8c672668669c518534e27ee90ed1874689"),
     # Firmware
     Target("arm-none-eabi-toolchain", None),  # no git repo
     Target("morello-acpica", None),  # Already hardcoded
