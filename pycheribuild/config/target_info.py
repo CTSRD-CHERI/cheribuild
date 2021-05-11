@@ -32,7 +32,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
-from ..utils import OSInfo, final
+from ..utils import cached_property, OSInfo, final
 
 if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine    # pytype: disable=pyi-error
@@ -143,9 +143,12 @@ class TargetInfo(ABC):
         """
         return Path()
 
-    @property
-    @abstractmethod
+    @cached_property
     def target_triple(self) -> str:
+        return self.get_target_triple(include_version=True)
+
+    @abstractmethod
+    def get_target_triple(self, *, include_version: bool) -> str:
         ...
 
     @property
@@ -399,8 +402,7 @@ class NativeTargetInfo(TargetInfo):
             return ["llvm-native"]
         return []  # use host tools -> no target needed
 
-    @property
-    def target_triple(self):
+    def get_target_triple(self, *, include_version: bool) -> str:
         return self.project.get_compiler_info(self.c_compiler).default_target
 
     @property

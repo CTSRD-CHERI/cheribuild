@@ -102,9 +102,8 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", *, include_version: bool) -> str:
         ...
 
-    @property
-    def target_triple(self) -> str:
-        return self.triple_for_target(self.target, self.config, include_version=True)
+    def get_target_triple(self, *, include_version: bool) -> str:
+        return self.triple_for_target(self.target, self.config, include_version=include_version)
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "_ClangBasedTargetInfo", *,
@@ -540,18 +539,6 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             # the setup script needs bash not sh
             self.project.run_shell_script(beri_fpga_bsd_boot_script, shell="bash", give_tty_control=True)
 
-    @classmethod
-    def triple_for_target(cls, target: "CrossCompileTarget", config, *, include_version):
-        if target.is_cheri_purecap():
-            # anything over 10 should use libc++ by default
-            if target.is_mips(include_purecap=True):
-                return "mips64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
-            elif target.is_riscv(include_purecap=True):
-                return "riscv64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
-            else:
-                assert False, "Unsuported purecap target" + str(cls)
-        return super().triple_for_target(target, config, include_version=include_version)
-
     @property
     def freebsd_target_arch(self):
         base = super().freebsd_target_arch
@@ -859,8 +846,7 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         return []  # TODO: add a target to download the tarball and extract it
 
-    @property
-    def target_triple(self) -> str:
+    def get_target_triple(self, *, include_version: bool) -> str:
         raise ValueError("Should not be used directly")
 
     @property
