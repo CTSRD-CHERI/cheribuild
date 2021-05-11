@@ -93,13 +93,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             compiler_flags = self.default_compiler_flags
             linker_flags = self.default_ldflags + ["-target", self.target_info.target_triple]
 
-            if self.crosscompile_target.is_cheri_purecap():
-                # Note: we are using the hybrid sysroot, so base system libraries are in usr/libcheri:
-                self.configure_args.append("QMAKE_LIBDIR=" + str(self.cross_sysroot_path / "usr/libcheri"))
-            elif self.compiling_for_mips(include_purecap=False):
-                # self.configure_args.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
-                pass
-
             # The build system already passes these:
             linker_flags = filter(lambda s: not s.startswith("--sysroot"), linker_flags)
             compiler_flags = filter(lambda s: not s.startswith("--sysroot"), compiler_flags)
