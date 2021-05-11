@@ -34,6 +34,7 @@ from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, Cr
                                   CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
                                   Linkage, MakeCommandKind)
 from ...config.loader import ComputedDefaultValue
+from ...processutils import set_env
 from ...utils import OSInfo
 
 
@@ -374,7 +375,11 @@ class BuildQtBase(BuildQtWithConfigureScript):
 
     def run_tests(self):
         if self.compiling_for_host():
-            self.run_cmd("make", "check", cwd=self.build_dir)
+            # tst_QDate::startOfDay_endOfDay(epoch) is broken in BST (at least on macOS), use Europe/Oslo to match the
+            # official CI.
+            # Possibly similar to https://bugreports.qt.io/browse/QTBUG-87662
+            with set_env(TZ="Europe/Oslo"):
+                self.run_cmd("make", "check", cwd=self.build_dir)
         else:
             self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True,
                                                       mount_sysroot=True, mount_sourcedir=True)
