@@ -357,6 +357,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         # mount_sysroot may be needed for projects such as QtWebkit where the minimal image doesn't contain all the
         # necessary libraries
         xtarget = self.target
+        from ..qemu_utils import QemuOptions
+        qemu_options = QemuOptions(xtarget)
         if xtarget.cpu_architecture not in (CPUArchitecture.MIPS64, CPUArchitecture.RISCV64,
                                             CPUArchitecture.X86_64, CPUArchitecture.AARCH64):
             self.project.warning("CheriBSD test scripts currently only work for MIPS, RISC-V, AArch64 and x86-64")
@@ -365,7 +367,14 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             self.project.warning("CheriBSD test scripts currently don't support the Morello FVP - "
                                  "remove when Morello QEMU support done")
             return
-        if kernel_path is None and "--kernel" not in self.config.test_extra_args:
+        if not qemu_options.can_boot_kernel_directly:
+            # We need to boot the disk image instead of running the kernel directly (amd64)
+            assert xtarget.cpu_architecture == CPUArchitecture.X86_64, "All other architectures can boot directly"
+            assert self.is_cheribsd(), "Not supported for FreeBSD yet"
+            if disk_image_path is None and "--disk-image" not in self.config.test_extra_args:
+                from ..projects.disk_image import BuildMinimalCheriBSDDiskImage
+                disk_image_path = BuildMinimalCheriBSDDiskImage.get_instance(self.project).disk_image_path
+        elif kernel_path is None and "--kernel" not in self.config.test_extra_args:
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
             # --no-use-minimal-benchmark-kernel on the command line or in the config JSON
             use_benchmark_kernel_value = self.config.use_minimal_benchmark_kernel  # Load the value first to ensure
@@ -389,11 +398,11 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             self.project.fatal("Could not find test script", script)
 
         cmd = [script, "--ssh-key", self.config.test_ssh_key, "--architecture", xtarget.generic_suffix]
-        if "--kernel" not in self.config.test_extra_args:
+        if kernel_path and "--kernel" not in self.config.test_extra_args:
             cmd.extend(["--kernel", kernel_path])
         if "--qemu-cmd" not in self.config.test_extra_args:
             qemu_path = None
-            if xtarget.is_riscv(include_purecap=True) or xtarget.is_mips(include_purecap=True):
+            if xtarget.is_hybrid_or_purecap_cheri():
                 from ..projects.build_qemu import BuildQEMU
                 qemu_path = BuildQEMU.qemu_cheri_binary(self.project)
                 if not qemu_path.exists():
@@ -407,8 +416,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 if not qemu_path.exists():
                     self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
             else:
-                from ..qemu_utils import QemuOptions
-                binary_name = "qemu-system-" + QemuOptions(xtarget).qemu_arch_sufffix
+                binary_name = "qemu-system-" + qemu_options.qemu_arch_sufffix
                 if (self.config.qemu_bindir / binary_name).is_file():
                     qemu_path = self.config.qemu_bindir / binary_name
             if qemu_path is not None:

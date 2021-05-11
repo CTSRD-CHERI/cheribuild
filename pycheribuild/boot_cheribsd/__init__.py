@@ -354,6 +354,10 @@ def info(*args, **kwargs):
     print(MESSAGE_PREFIX, "\033[0;34m", *args, "\033[0m", file=sys.stderr, sep="", flush=True, **kwargs)
 
 
+def warn(*args, **kwargs):
+    print(MESSAGE_PREFIX, "\033[0;35m", *args, "\033[0m", file=sys.stderr, sep="", flush=True, **kwargs)
+
+
 def success(*args, **kwargs):
     print("\n", MESSAGE_PREFIX, "\033[0;32m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
 
@@ -733,8 +737,11 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
         kernel_commandline.append("cheribuild.skip_sshd=1")
         kernel_commandline.append("cheribuild.skip_entropy=1")
     if kernel_commandline:
-        qemu_args.append("-append")
-        qemu_args.append(" ".join(kernel_commandline))
+        if kernel_image is not None and qemu_options.can_boot_kernel_directly:
+            qemu_args.append("-append")
+            qemu_args.append(" ".join(kernel_commandline))
+        else:
+            warn("Cannot pass kernel command line when booting disk image: ", kernel_commandline, exit=False)
     success("Starting QEMU: ", " ".join(qemu_args))
     qemu_starttime = datetime.datetime.now()
     global _SSH_SOCKET_PLACEHOLDER
@@ -1181,8 +1188,10 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
 
         force_decompression = True
         keep_compressed_images = False
-    kernel = maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images, args=args,
-                              what="kernel")
+    kernel = None
+    if args.kernel is not None:
+        kernel = maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images,
+                                  args=args, what="kernel")
     diskimg = None
     if args.disk_image:
         diskimg = maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images,
