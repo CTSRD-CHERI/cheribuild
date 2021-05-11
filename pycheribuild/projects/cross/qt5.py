@@ -47,12 +47,15 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     make_kind = MakeCommandKind.GnuMake
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     hide_options_from_help = True  # hide this for now
-
     default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.configure_command = self.source_dir / "configure"
+
+    @classmethod
+    def can_build_with_ccache(cls):
+        return True
 
     def setup(self):
         super().setup()
@@ -180,7 +183,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-no-gui",
                 "-no-iconv"
                 ])
-
+        if self.use_ccache:
+            self.configure_args.append("-ccache")
         self.configure_args.extend(["-opensource", "-confirm-license"])
 
         self.delete_file(self.build_dir / "config.cache")
