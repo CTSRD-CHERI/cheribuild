@@ -349,8 +349,6 @@ class BuildQtBase(BuildQtWithConfigureScript):
 
     def setup(self):
         super().setup()
-        self.cross_warning_flags += ["-Wno-shadow",
-                                     "-Wno-error=cheri-bitwise-operations"]  # FIXME: remove after update to 5.12
 
     def compile(self, **kwargs):
         if self.minimal and False:
