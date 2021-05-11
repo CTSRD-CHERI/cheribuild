@@ -3142,7 +3142,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             return True
         # CMake is smart enough to detect when it must be reconfigured -> skip configure if cache exists
         cmake_cache = self.build_dir / "CMakeCache.txt"
-        build_file = "build.ninja" if self.make_kind == MakeCommandKind.Ninja else "Makefile"
+        assert self.make_args.kind == MakeCommandKind.CMake
+        build_file = "build.ninja" if self.make_args.subkind == MakeCommandKind.Ninja else "Makefile"
         return not cmake_cache.exists() or not (self.build_dir / build_file).exists()
 
     def generate_cmake_toolchain_file(self, file: Path):
