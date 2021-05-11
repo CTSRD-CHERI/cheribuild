@@ -69,9 +69,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         cls.build_examples = cls.add_bool_option("build-examples", show_help=True, help="build the Qt examples")
         cls.assertions = cls.add_bool_option("assertions", default=False, show_help=True, help="Include assertions")
         cls.minimal = cls.add_bool_option("minimal", show_help=True, help="Don't build QtWidgets or QtGui, etc")
-        cls.optimized_debug_build = cls.add_bool_option("optimized-debug-build",
-                                                        help="Don't build with -Os instead of -O0 for debug info "
-                                                             "builds")
 
     def configure(self, **kwargs):
         if self.force_static_linkage:
@@ -234,9 +231,6 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
         cls.assertions = cls.add_bool_option("assertions", default=True, show_help=True, help="Include assertions")
         cls.minimal = cls.add_bool_option("minimal", show_help=True, default=True,
                                           help="Don't build QtWidgets or QtGui, etc")
-        cls.optimized_debug_build = cls.add_bool_option("optimized-debug-build",
-                                                        help="Don't build with -Os instead of -O0 for debug info "
-                                                             "builds")
 
     def __init__(self, config):
         super().__init__(config)
