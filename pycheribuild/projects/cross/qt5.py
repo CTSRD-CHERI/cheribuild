@@ -161,7 +161,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         if self.assertions:
             self.configure_args.append("-force-asserts")
 
-        self.configure_args.append("-no-pch")  # slows down build but gives useful crash testcases
+        # self.configure_args.append("-no-pch")  # slows down build but gives useful crash testcases
 
         #  -reduce-exports ...... Reduce amount of exported symbols [auto]
         self.configure_args.append("-reduce-exports")
