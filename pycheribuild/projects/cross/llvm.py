@@ -497,12 +497,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
         triples = [
             "cheri-unknown-freebsd",  # for compat
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, self.config,
-                                                 include_version=True),
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, self.config,
                                                  include_version=False),
-            # RISC-V triple is the same for NO_CHERI and PURECAP so only give once
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config,
-                                                 include_version=True),
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config,
                                                  include_version=False),
             ]
@@ -527,8 +522,6 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
         triples = [
             CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config,
                                                         include_version=False),
-            CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config,
-                                                        include_version=True),
             ]
         return [x + "-" for x in triples]
 
