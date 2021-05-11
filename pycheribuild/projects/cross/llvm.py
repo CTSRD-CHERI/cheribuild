@@ -499,6 +499,10 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
                                                  include_version=False),
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config,
                                                  include_version=False),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_AARCH64, self.config,
+                                                 include_version=False),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_X86_64, self.config,
+                                                 include_version=False),
             ]
         return [x + "-" for x in triples]
 
