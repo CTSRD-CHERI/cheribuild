@@ -49,12 +49,9 @@ class InstallMorelloFVP(SimpleProject):
     target = "install-morello-fvp"
     container_name = "morello-fvp"
     base_url = "https://developer.arm.com/-/media/Arm%20Developer%20Community/Downloads/OSS/FVP/Morello%20Platform/"
-    latest_known_fvp = (0, 11, 8)  # value reported by --version.
-    # For the 0.11.9 download, running --version reports 0.11.8 since not all components have a 0.11.9 version number.
-    installer_filename = "FVP_Morello_0.11_9.tgz"
-    # Uncomment once the installer and --version match again:
-    # installer_filename = "FVP_Morello_{}.{}_{}.tgz".format(*latest_known_fvp)
-    installer_sha256 = "78882c0073fa0b1c2073c89c0ba9b081972bd78299a7c6d544162daf77c774aa"
+    latest_known_fvp = (0, 11, 16)  # value reported by --version.
+    installer_filename = "FVP_Morello_{}.{}_{}.tgz".format(*latest_known_fvp)
+    installer_sha256 = "518f7eca3319e54e84b42e74e93592091bbbdce7f822d928abfed1ab09c152a2"
     # Seems like docker containers don't get the full amount configured in the settings so subtract a bit from 5GB/8GB
     min_ram_mb = 4900
     warn_ram_mb = 7900
