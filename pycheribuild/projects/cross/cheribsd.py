@@ -1384,6 +1384,10 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
+        cls.build_bench_kernels = cls.add_bool_option("build-bench-kernels", show_help=True, default=True,
+                                                      _allow_unknown_targets=True,
+                                                      help="Also build benchmark kernels.")
+
         cls.build_fpga_kernels = cls.add_bool_option("build-fpga-kernels", show_help=True, _allow_unknown_targets=True,
                                                      default=True, help="Also build kernels for the FPGA.")
 
@@ -1405,7 +1409,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         elif self.build_cheribsd_instance.crosscompile_target.is_riscv(include_purecap=True):
             benchmark_suffix = "-NODEBUG"
         # also build the benchmark kernel:
-        if benchmark_suffix:
+        if self.build_bench_kernels and benchmark_suffix:
             if default_kernconf.endswith(benchmark_suffix):
                 kernel_configs.append(default_kernconf[0:-len(benchmark_suffix)])
             else:
@@ -1413,7 +1417,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         if self.build_fpga_kernels:
             fpga_conf = self.fpga_kernconf
             kernel_configs.append(fpga_conf)
-            if benchmark_suffix:
+            if self.build_bench_kernels and benchmark_suffix:
                 if fpga_conf.endswith(benchmark_suffix):
                     kernel_configs.append(fpga_conf[0:-len(benchmark_suffix)])
                 else:
