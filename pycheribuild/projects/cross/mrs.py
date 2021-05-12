@@ -35,7 +35,9 @@ from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileC
 class MRS(CrossCompileCMakeProject):
     project_name = "mrs"
     repository = GitRepository("https://github.com/CTSRD-CHERI/mrs")
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP,
+                               CompilationTargets.CHERIBSD_RISCV_PURECAP,
+                               CompilationTargets.CHERIBSD_MORELLO_PURECAP]
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     # set --mrs/build-type <type> to control build type, default is RelWithDebInfo
@@ -66,6 +68,8 @@ class MRS(CrossCompileCMakeProject):
         cls.just_quarantine = cls.add_bool_option("just-quarantine", help="do bookkeeping and quarantining")
         cls.just_paint_bitmap = cls.add_bool_option("just-paint-bitmap",
                                                     help="do bookkeeping, quarantining, and bitmap painting")
+        cls.load_side_revocation = cls.add_bool_option("load-side-revocation",
+                                                       help="use Reloaded")
 
         cls.quarantine_ratio = cls.add_config_option("quarantine-ratio", kind=int,
                                                      help="limit the quarantine size to 1/QUARANTINE_RATIO times the "
@@ -101,6 +105,8 @@ class MRS(CrossCompileCMakeProject):
             self.add_cmake_options(JUST_QUARANTINE=True)
         if self.just_paint_bitmap:
             self.add_cmake_options(JUST_PAINT_BITMAP=True)
+        if self.load_side_revocation:
+            self.add_cmake_options(LOAD_SIDE_REVOCATION=True)
 
         if self.quarantine_ratio:
             self.add_cmake_options(QUARANTINE_RATIO=self.quarantine_ratio)
