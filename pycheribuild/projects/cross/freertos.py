@@ -214,6 +214,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             # Need to clean before/between building apps, otherwise
             # irrelevant objs will be picked up from incompatible apps/builds
             self.make_args.set(PROG=self.demo_app)
+            self.make_args.set(DEMO="cyberphys")
             self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
 
             self.run_make(cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
@@ -235,6 +236,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                 program_root = "MiBench2"
             elif "ipc_benchmark" in self.demo_app:
                 program_root = "./demo/ipc_benchmark"
+            elif "cyberphys" in self.demo_app:
+                program_root = "./demo/cyberphys"
             else:
                 program_root = "/no/path"
 
