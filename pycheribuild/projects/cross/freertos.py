@@ -143,6 +143,11 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             default="qemu_virt",
             help="The FreeRTOS platform to build for.")  # type: str
 
+        cls.mem_start = cls.add_config_option(
+            "memstart", metavar="MEMSTART", show_help=True,
+            default=0x80000000,
+            help="The DRAM start address")
+
         # Default to QEMU addresses
         cls.ipaddr = cls.add_config_option(
             "ipaddr", metavar="IPADDR", show_help=True,
@@ -240,6 +245,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                           "--riscv-platform", self.platform,
                           "--program-path", program_root,
                           "--sysroot",  str(self.sdk_sysroot),
+                          "--mem-start", self.mem_start,
                           "--ipaddr", self.ipaddr,
                           "--gateway", self.gateway
                           ]
