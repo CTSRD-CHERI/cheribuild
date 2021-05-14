@@ -245,6 +245,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                           "--prefix", str(self.real_install_root_dir) + '/FreeRTOS/Demo/',
                           "--program", self.demo_app,
                           "--toolchain", self.toolchain,
+                          "--riscv-arch", self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True),
+                          "--riscv-abi", self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True),
                           "--riscv-platform", self.platform,
                           "--program-path", program_root,
                           "--sysroot",  str(self.sdk_sysroot),
