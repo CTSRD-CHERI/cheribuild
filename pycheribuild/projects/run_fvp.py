@@ -394,9 +394,14 @@ VOLUME /diskimg
     @cached_property
     def docker_has_socat(self):
         assert self.use_docker_container
-        has_socat = self.run_cmd(["docker", "run", "--rm", self.container_name, "sh", "-c",
-                                  "command -v socat >/dev/null 2>&1 && printf true || printf false"],
-                                 capture_output=True, run_in_pretend_mode=True).stdout
+        has_socat = None  # type: str
+        try:
+            has_socat = self.run_cmd(["docker", "run", "--rm", self.container_name, "sh", "-c",
+                                      "command -v socat >/dev/null 2>&1 && printf true || printf false"],
+                                     capture_output=True, run_in_pretend_mode=True).stdout
+        except Exception as e:
+            self.fatal("Could not determine whether container has socat:", e)
+            return True
         self.verbose_print("Has socat:", has_socat)
         if has_socat == b'true':
             return True
@@ -404,6 +409,7 @@ VOLUME /diskimg
             return False
         else:
             self.fatal("Could not determine whether container has socat:", has_socat)
+            return True
 
     @cached_property
     def docker_memory_size(self):
