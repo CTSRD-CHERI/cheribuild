@@ -465,7 +465,10 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     @classmethod
     def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig):
         xtarget = cls.get_crosscompile_target(config)
-        result = ["qemu", cls._source_class.get_class_for_target(xtarget).target]
+        qemu = "qemu"
+        if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            qemu = "morello-qemu"
+        result = [qemu, cls._source_class.get_class_for_target(xtarget).target]
         return result
 
     def __init__(self, config, *, source_class=None, needs_disk_image=True):
