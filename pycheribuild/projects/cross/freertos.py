@@ -66,14 +66,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                                               "main_peekpoke",
                                               "main_servers",
                                               "mibench",
-                                              "modbus_baseline",
-                                              "modbus_baseline_microbenchmark",
-                                              "modbus_cheri_layer",
-                                              "modbus_cheri_layer_microbenchmark",
-                                              "modbus_macaroons_layer",
-                                              "modbus_macaroons_layer_microbenchmark",
-                                              "modbus_cheri_macaroons_layers",
-                                              "modbus_cheri_macaroons_layers_microbenchmark"
+                                              "modbus",
                                              ]}
 
     default_demo = "RISC-V-Generic"
@@ -224,9 +217,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     def configure(self):
         if self.build_system == "waf":
 
-            if "modbus" in self.demo_app:
-                program_root = "./modbus_demo"
-            elif "servers" in self.demo_app:
+            if "servers" in self.demo_app:
                 program_root = "./demo/servers"
             elif "aws_ota" in self.demo_app:
                 program_root = "coreMQTT-Agent"
@@ -238,6 +229,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                 program_root = "./demo/ipc_benchmark"
             elif "cyberphys" in self.demo_app:
                 program_root = "./demo/cyberphys"
+            elif "modbus" in self.demo_app:
+                program_root = "./modcap"
             else:
                 program_root = "/no/path"
 
