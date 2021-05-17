@@ -607,7 +607,7 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig"):
-        return ["morello-llvm"]
+        return ["morello-llvm-native"]
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs):
@@ -815,7 +815,7 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["morello-llvm"]
+        return ["morello-llvm-native"]
 
     @classmethod
     def triple_for_target(cls, target, config, include_version: bool) -> str:
