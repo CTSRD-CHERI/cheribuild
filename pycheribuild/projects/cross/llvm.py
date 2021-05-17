@@ -518,7 +518,9 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
     skip_cheri_symlinks = False  # add target-specific symlinks
     is_sdk_target = True
     native_install_dir = DefaultInstallDir.MORELLO_SDK
-    supported_architectures = [CompilationTargets.NATIVE]
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    default_architecture = CompilationTargets.NATIVE
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
 
     @property
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
