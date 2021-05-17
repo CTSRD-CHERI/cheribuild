@@ -44,7 +44,15 @@ class QemuOptions:
         self.can_boot_kernel_directly = False
         self.memory_size = "2048"
         self.has_default_nic = False
-        if xtarget.is_mips(include_purecap=True):
+        if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            self.qemu_arch_sufffix = "morello"
+            self.can_boot_kernel_directly = False  # boot from disk
+            # XXX: Use a CHERI-aware firmware. EL3 is disabled by default for
+            # virt, so CPTR_EL3 doesn't exist and CheriBSD can enable
+            # CPTR_EL2.CEN freely and thus we can get away without CHERI-aware
+            # firmware so long as loader(8) is plain AArch64.
+            self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "morello", "-bios", "edk2-aarch64-code.fd"]
+        elif xtarget.is_mips(include_purecap=True):
             # Note: we always use the CHERI QEMU
             self.qemu_arch_sufffix = "cheri128"
             self.machine_flags = ["-M", "malta"]
@@ -75,14 +83,6 @@ class QemuOptions:
             self.qemu_arch_sufffix = "aarch64"
             self.can_boot_kernel_directly = False  # boot from disk
             self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "cortex-a72", "-bios", "edk2-aarch64-code.fd"]
-        elif xtarget.is_aarch64(include_purecap=True):
-            self.qemu_arch_sufffix = "morello"
-            self.can_boot_kernel_directly = False  # boot from disk
-            # XXX: Use a CHERI-aware firmware. EL3 is disabled by default for
-            # virt, so CPTR_EL3 doesn't exist and CheriBSD can enable
-            # CPTR_EL2.CEN freely and thus we can get away without CHERI-aware
-            # firmware so long as loader(8) is plain AArch64.
-            self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "morello", "-bios", "edk2-aarch64-code.fd"]
         else:
             raise ValueError("Unknown target " + str(xtarget))
 

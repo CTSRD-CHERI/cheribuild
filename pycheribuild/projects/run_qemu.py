@@ -127,16 +127,16 @@ class LaunchQEMUBase(SimpleProject):
         elif xtarget.is_mips(include_purecap=True):
             self.qemu_binary = BuildQEMU.qemu_cheri_binary(self)
             self._can_provide_src_via_smb = True
+        elif xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            # Only use Morello QEMU for Morello for now, not AArch64 too, as we
+            # don't want to force everyone to build Morello QEMU while it's in
+            # a separate branch.
+            self.qemu_binary = BuildMorelloQEMU.qemu_cheri_binary(self)
+            self._can_provide_src_via_smb = True
         elif xtarget.is_any_x86() or xtarget.is_aarch64(include_purecap=False):
             # Use the system QEMU instead of CHERI QEMU (for now)
             # Note: x86_64 can be either CHERI QEMU or system QEMU:
             self.add_required_system_tool("qemu-system-" + self.qemu_options.qemu_arch_sufffix)
-        elif xtarget.is_aarch64(include_purecap=True):
-            # Only use Morello QEMU for Morello for now, not AArch64 too, as we
-            # don't want to force everyone to build Morello QEMU while it's in
-            # a separate branch. Must come after the AArch64 check above.
-            self.qemu_binary = BuildMorelloQEMU.qemu_cheri_binary(self)
-            self._can_provide_src_via_smb = True
         else:
             assert False, "Unknown target " + str(xtarget)
         if self.qemu_binary is None:
