@@ -138,10 +138,10 @@ def test_build_and_run(target_name, expected_list):
                  ["qemu", "llvm-native", "cheribsd-amd64", "gdb-amd64", "disk-image-amd64", "run-amd64"]),
     # Morello code won't run on QEMU (yet)
     pytest.param("run-fvp-morello-hybrid", True,
-                 ["install-morello-fvp", "morello-llvm", "cheribsd-morello-hybrid", "gdb-morello-hybrid",
+                 ["install-morello-fvp", "morello-llvm-native", "cheribsd-morello-hybrid", "gdb-morello-hybrid",
                   "morello-firmware", "disk-image-morello-hybrid", "run-fvp-morello-hybrid"]),
     pytest.param("run-fvp-morello-purecap", True,
-                 ["install-morello-fvp", "morello-llvm", "cheribsd-morello-purecap",
+                 ["install-morello-fvp", "morello-llvm-native", "cheribsd-morello-purecap",
                   "gdb-morello-hybrid-for-purecap-rootfs", "morello-firmware", "disk-image-morello-purecap",
                   "run-fvp-morello-purecap"]),
     ])
@@ -279,7 +279,8 @@ def test_libcxx_deps(suffix, expected_suffix):
     pytest.param("morello-uefi", False, False, ["morello-uefi"], True),
     pytest.param("morello-uefi", False, True, ["morello-uefi"], True),
     pytest.param("morello-uefi", True, False, ["morello-uefi"], True),
-    pytest.param("morello-uefi", True, True, ["gdb-native", "morello-acpica", "morello-llvm", "morello-uefi"], True),
+    pytest.param("morello-uefi", True, True,
+                 ["gdb-native", "morello-acpica", "morello-llvm-native", "morello-uefi"], True),
     ])
 def test_skip_toolchain_deps(target_name, include_recursive_deps, include_toolchain, expected_deps,
                              morello_from_source):
