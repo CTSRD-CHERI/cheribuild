@@ -71,10 +71,18 @@ class QemuOptions:
             # FIXME: SSE4.2 is broken in QEMU: https://bugs.launchpad.net/qemu/+bug/1916269
             # We have to use the ancient default instead to avoid kernel panics.
             # See https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=253617 for details.
-        elif xtarget.is_aarch64(include_purecap=False):  # No morello QEMU (yet)
+        elif xtarget.is_aarch64(include_purecap=False):
             self.qemu_arch_sufffix = "aarch64"
             self.can_boot_kernel_directly = False  # boot from disk
             self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "cortex-a72", "-bios", "edk2-aarch64-code.fd"]
+        elif xtarget.is_aarch64(include_purecap=True):
+            self.qemu_arch_sufffix = "morello"
+            self.can_boot_kernel_directly = False  # boot from disk
+            # XXX: Use a CHERI-aware firmware. EL3 is disabled by default for
+            # virt, so CPTR_EL3 doesn't exist and CheriBSD can enable
+            # CPTR_EL2.CEN freely and thus we can get away without CHERI-aware
+            # firmware so long as loader(8) is plain AArch64.
+            self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "morello", "-bios", "edk2-aarch64-code.fd"]
         else:
             raise ValueError("Unknown target " + str(xtarget))
 

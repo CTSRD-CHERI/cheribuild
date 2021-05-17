@@ -461,8 +461,16 @@ class CheriConfig(ConfigBase):
         return self.cheri_sdk_dir / "bin"
 
     @property
+    def morello_sdk_bindir(self):
+        return self.morello_sdk_dir / "bin"
+
+    @property
     def qemu_bindir(self):
         return self.cheri_sdk_bindir
+
+    @property
+    def morello_qemu_bindir(self):
+        return self.morello_sdk_bindir
 
     def _ensure_required_properties_set(self) -> bool:
         for key in self.__dict__.keys():

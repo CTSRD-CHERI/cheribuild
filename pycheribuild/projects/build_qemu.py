@@ -309,6 +309,27 @@ class BuildQEMU(BuildQEMUBase):
                 ])
 
 
+class BuildMorelloQEMU(BuildQEMU):
+    repository = GitRepository("https://github.com/LawrenceEsswood/qemu.git", default_branch="qemu-morello",
+                               force_branch=True)
+    native_install_dir = DefaultInstallDir.MORELLO_SDK
+    default_targets = "aarch64-softmmu,morello-softmmu"
+    project_name = "morello-qemu"
+    target = "morello-qemu"
+    hide_options_from_help = True
+
+    @classmethod
+    def qemu_cheri_binary(cls, caller: SimpleProject, xtarget: CrossCompileTarget = None):
+        if xtarget is None:
+            xtarget = caller.get_crosscompile_target(caller.config)
+        if xtarget.is_aarch64(include_purecap=True):
+            # Always use the Morello qemu even for plain AArch64:
+            binary_name = "qemu-system-morello"
+        else:
+            raise ValueError("Invalid xtarget" + str(xtarget))
+        return caller.config.morello_qemu_bindir / os.getenv("QEMU_MORELLO_PATH", binary_name)
+
+
 class BuildCheriOSQEMU(BuildQEMU):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="cherios", force_branch=True)
     default_targets = "cheri128-softmmu"

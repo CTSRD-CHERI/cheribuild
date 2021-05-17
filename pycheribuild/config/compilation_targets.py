@@ -398,6 +398,14 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 qemu_path = BuildQEMU.qemu_cheri_binary(self.project)
                 if not qemu_path.exists():
                     self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
+            elif xtarget.is_aarch64(include_purecap=True) and not xtarget.is_aarch64(include_purecap=False):
+                # Only use Morello QEMU for Morello for now, not AArch64 too,
+                # as we don't want to force everyone to build Morello QEMU
+                # while it's in a separate branch.
+                from ..projects.build_qemu import BuildMorelloQEMU
+                qemu_path = BuildMorelloQEMU.qemu_cheri_binary(self.project)
+                if not qemu_path.exists():
+                    self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
             else:
                 from ..qemu_utils import QemuOptions
                 binary_name = "qemu-system-" + QemuOptions(xtarget).qemu_arch_sufffix

@@ -35,7 +35,7 @@ import sys
 import typing
 from pathlib import Path
 
-from .build_qemu import BuildCheriOSQEMU, BuildQEMU
+from .build_qemu import BuildCheriOSQEMU, BuildMorelloQEMU, BuildQEMU
 from .cherios import BuildCheriOS
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD
 from .cross.freertos import BuildFreeRTOS
@@ -131,6 +131,12 @@ class LaunchQEMUBase(SimpleProject):
             # Use the system QEMU instead of CHERI QEMU (for now)
             # Note: x86_64 can be either CHERI QEMU or system QEMU:
             self.add_required_system_tool("qemu-system-" + self.qemu_options.qemu_arch_sufffix)
+        elif xtarget.is_aarch64(include_purecap=True):
+            # Only use Morello QEMU for Morello for now, not AArch64 too, as we
+            # don't want to force everyone to build Morello QEMU while it's in
+            # a separate branch. Must come after the AArch64 check above.
+            self.qemu_binary = BuildMorelloQEMU.qemu_cheri_binary(self)
+            self._can_provide_src_via_smb = True
         else:
             assert False, "Unknown target " + str(xtarget)
         if self.qemu_binary is None:
@@ -470,13 +476,6 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
 class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     project_name = "run"
     _source_class = BuildCheriBSDDiskImage
-
-    @classproperty
-    def supported_architectures(self):
-        # We don't have QEMU for Morello (yet)
-        unsupported_targets = (CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP)
-        result = filter(lambda x: x not in unsupported_targets, self._source_class.supported_architectures)
-        return list(result)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
