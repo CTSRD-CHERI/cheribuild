@@ -121,11 +121,11 @@ class TtyState:
             return False
 
     def _restore_attrs(self):
-        try:
-            # Run drain first to ensure that we get the most recent state.
-            termios.tcdrain(self.fd)
-        except Exception as e:
-            warning_message(self.context, "error while draining:", e)
+        #try:
+        #    # Run drain first to ensure that we get the most recent state.
+        #    termios.tcdrain(self.fd)
+        #except Exception as e:
+        #    warning_message(self.context, "error while draining:", e)
         new_attrs = termios.tcgetattr(self.fd)
         if new_attrs == self.attrs:
             return
@@ -190,7 +190,7 @@ def keep_terminal_sane(gave_tty_control=False, command: list = None):
     finally:
         # Can seemingly get unwanted SIGTTOU's whilst restoring so just ignore
         # them temporarily.
-        with suppress_sigttou(suppress=gave_tty_control):
+        with suppress_sigttou():
             stdin_state.restore()
             stdout_state.restore()
             stderr_state.restore()
