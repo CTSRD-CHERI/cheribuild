@@ -34,7 +34,7 @@ import sys
 import tempfile
 import typing
 from pathlib import Path
-
+from collections import OrderedDict
 from enum import Enum
 
 from .llvm import BuildLLVMMonoRepoBase
@@ -92,23 +92,219 @@ class CheriBSDConfig:
     Cheribuild configuration descriptor for a CheriBSD kernel configuration file
     """
 
-    def __init__(self, kernconf: str, platform: ConfigPlatform, **kwargs):
+    def __init__(self, kernconf: str, platform: ConfigPlatform, kABI=KernelABI.NOCHERI, default=False, caprevoke=False,
+                 mfsroot=False, debug=False, benchmark=False, fuzzing=False, fett=False):
         self.kernconf = kernconf
         self.platform = {platform} if type(platform) != set else platform
-        self.kABI = kwargs.get("kABI", KernelABI.NOCHERI)
-        self.default = kwargs.get("default", False)
-        self.caprevoke = kwargs.get("caprevoke", False)
-        self.mfsroot = kwargs.get("mfsroot", False)
-        self.debug = kwargs.get("debug", False)
-        self.benchmark = kwargs.get("benchmark", False)
-        self.fuzzing = kwargs.get("fuzzing", False)
-        self.fett = kwargs.get("fett", False)
+        self.kABI = kABI
+        self.default = default
+        self.caprevoke = caprevoke
+        self.mfsroot = mfsroot
+        self.debug = debug
+        self.benchmark = benchmark
+        self.fuzzing = fuzzing
+        self.fett = fett
 
     def __repr__(self):
         flags = [key for key, val in self.__dict__.items() if type(val) == bool and val]
         return "CheriBSDConfig({kernconf} {platform}:{kABI} [{flags}])".format(
             kernconf=self.kernconf, platform=str(self.platform), kABI=self.kABI.value,
             flags=" ".join(flags))
+
+
+class KernelConfigFactory:
+    kernconf_components = OrderedDict([(k, None) for k in (
+        "kabi_name", "platform_name", "flags")])
+    separator = "_"
+    platform_name_map = {}
+
+    def get_kabi_name(self, platform, kABI):
+        if kABI == KernelABI.NOCHERI:
+            return None
+        elif kABI == KernelABI.HYBRID:
+            return "CHERI"
+        elif kABI == KernelABI.PURECAP:
+            return "CHERI{sep}PURECAP".format(sep=self.separator)
+
+    def get_platform_name(self, platform):
+        if type(platform) == set:
+            # Only use the first matching platform in the set
+            for key, name in self.platform_name_map.items():
+                if key in platform:
+                    return name
+            assert False, "Should not be reached..."
+        return self.platform_name_map[platform]
+
+    def get_flag_names(self, mfsroot=False, fuzzing=False):
+        flags = []
+        if mfsroot:
+            flags.append("MFS{sep}ROOT".format(sep=self.separator))
+        if fuzzing:
+            flags.append("FUZZ")
+        return flags
+
+    def _prepare_kernconf_context(self, platform, kABI, base_context=None, **kwargs):
+        if base_context is None:
+            base_context = self.kernconf_components
+        ctx = OrderedDict(base_context)
+        if "kabi_name" in ctx:
+            ctx["kabi_name"] = self.get_kabi_name(platform, kABI)
+        if "platform_name" in ctx:
+            ctx["platform_name"] = self.get_platform_name(platform)
+        if "flags" in ctx:
+            flag_list = self.get_flag_names(**kwargs)
+            if flag_list:
+                ctx["flags"] = self.separator.join(flag_list)
+        return ctx
+
+    def make_config(self, platform, kABI, base_context=None, **kwargs):
+        kernconf_ctx = self._prepare_kernconf_context(platform, kABI, base_context=base_context, **kwargs)
+        valid_ctx_items = (v for v in kernconf_ctx.values() if v is not None)
+        kernconf = self.separator.join(valid_ctx_items)
+        return CheriBSDConfig(kernconf, platform, kABI=kABI, **kwargs)
+
+
+class MIPSKernelConfigFactory(KernelConfigFactory):
+    platform_name_map = {
+        ConfigPlatform.QEMU: "MALTA64",
+        ConfigPlatform.BERI: "DE4"
+    }
+
+    def get_kabi_name(self, platform, kABI):
+        if platform == ConfigPlatform.BERI and kABI == KernelABI.NOCHERI:
+            return "BERI"
+        return super().get_kabi_name(platform, kABI)
+
+    def get_flag_names(self, usbroot=False, nfsroot=False, default=False, caprevoke=False,
+                       mfsroot=False, debug=False, benchmark=False, fuzzing=False, fett=False):
+        flags = []
+        if usbroot:
+            flags.append("USBROOT")
+        if nfsroot:
+            flags.append("NFSROOT")
+        flags += super().get_flag_names(mfsroot=mfsroot, fuzzing=fuzzing)
+        if benchmark:
+            flags.append("BENCHMARK")
+        return flags
+
+    def make_config(self, platform, kABI, base_context=None, **kwargs):
+        kernconf_ctx = self._prepare_kernconf_context(platform, kABI, base_context=base_context, **kwargs)
+        valid_ctx_items = (v for v in kernconf_ctx.values() if v is not None)
+        kernconf = self.separator.join(valid_ctx_items)
+        # Drop MIPS-only flags only used to generate kernel variants
+        kwargs.pop("usbroot", None)
+        kwargs.pop("nfsroot", None)
+        return CheriBSDConfig(kernconf, platform, kABI=kABI, **kwargs)
+
+    def make_all(self):
+        configs = []
+        # Generate QEMU kernels
+        for kABI in KernelABI:
+            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, default=True))
+            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, fuzzing=True))
+            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, mfsroot=True, default=True))
+            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, mfsroot=True, benchmark=True, default=True))
+        # Generate BERI/CHERI-FPGA kernels
+        for kABI in KernelABI:
+            configs.append(self.make_config(ConfigPlatform.BERI, kABI, mfsroot=True, default=True))
+            configs.append(self.make_config(ConfigPlatform.BERI, kABI, mfsroot=True, benchmark=True, default=True))
+            configs.append(self.make_config(ConfigPlatform.BERI, kABI, mfsroot=True, fuzzing=True))
+            configs.append(self.make_config(ConfigPlatform.BERI, kABI, mfsroot=True, benchmark=True, fuzzing=True))
+        # Generate extra FPGA kernels
+        for kABI in [KernelABI.NOCHERI, KernelABI.HYBRID]:
+            configs.append(self.make_config(ConfigPlatform.BERI, kABI, usbroot=True))
+            configs.append(self.make_config(ConfigPlatform.BERI, kABI, usbroot=True, benchmark=True))
+            configs.append(self.make_config(ConfigPlatform.BERI, kABI, nfsroot=True))
+
+        return configs
+
+
+class RISCVKernelConfigFactory(KernelConfigFactory):
+    kernconf_components = OrderedDict([(k, None) for k in (
+        "kabi_name", "caprevoke", "platform_name", "flags")])
+    separator = "-"
+    platform_name_map = {
+        ConfigPlatform.QEMU: "QEMU",
+        ConfigPlatform.GFE: "GFE"
+    }
+
+    def __init__(self):
+        # Note: the FETT FPGA kernels do not have the platform name in
+        # the name, so we drop the platform from the kerconf components
+        self.fett_gfe_kernconf_components = OrderedDict(self.kernconf_components)
+        del self.fett_gfe_kernconf_components["platform_name"]
+
+    def get_flag_names(self, default=False, caprevoke=False, mfsroot=False, debug=False,
+                       benchmark=False, fuzzing=False, fett=False):
+        flags = []
+        if fett:
+            flags.append("FETT")
+        flags += super().get_flag_names(mfsroot=mfsroot, fuzzing=fuzzing)
+        if benchmark:
+            flags.append("NODEBUG")
+        return flags
+
+    def _prepare_kernconf_context(self, platform, kABI, **kwargs):
+        ctx = super()._prepare_kernconf_context(platform, kABI, **kwargs)
+        if kwargs.get("caprevoke", False):
+            ctx["caprevoke"] = "CAPREVOKE"
+        return ctx
+
+    def make_all(self):
+        configs = []
+        # Generate QEMU kernels
+        for kABI in KernelABI:
+            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, default=True))
+            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, mfsroot=True, default=True))
+            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, mfsroot=True, benchmark=True, default=True))
+        # Generate GFE-FPGA kernels
+        for kABI in KernelABI:
+            configs.append(self.make_config(ConfigPlatform.GFE, kABI, mfsroot=True, default=True))
+            configs.append(self.make_config(ConfigPlatform.GFE, kABI, mfsroot=True, benchmark=True, default=True))
+
+        # Generate default FETT and caprevoke kernels
+        configs.append(self.make_config(ConfigPlatform.QEMU, KernelABI.HYBRID,
+                                        fett=True, caprevoke=True, default=True))
+        configs.append(self.make_config(ConfigPlatform.QEMU, KernelABI.HYBRID,
+                                        fett=True, default=True))
+        configs.append(self.make_config(ConfigPlatform.GFE, KernelABI.HYBRID,
+                                        caprevoke=True, mfsroot=True, default=True))
+
+        # Generate extra FETT kernels
+        for kABI in [KernelABI.NOCHERI, KernelABI.HYBRID]:
+            configs.append(self.make_config(ConfigPlatform.GFE, kABI,
+                                            base_context=self.fett_gfe_kernconf_components, fett=True))
+        configs.append(self.make_config(ConfigPlatform.GFE, KernelABI.HYBRID,
+                                        base_context=self.fett_gfe_kernconf_components, fett=True, caprevoke=True))
+        configs.append(self.make_config(ConfigPlatform.QEMU, KernelABI.HYBRID, fett=True, caprevoke=True))
+
+        return configs
+
+
+class AArch64KernelConfigFactory(KernelConfigFactory):
+    kernconf_components = OrderedDict([(k, None) for k in (
+        "platform_name", "kabi_name")])
+    separator = "-"
+    platform_name_map = {
+        ConfigPlatform.QEMU: "GENERIC",
+        ConfigPlatform.FVP: "GENERIC"
+    }
+
+    def get_kabi_name(self, platform, kABI):
+        if kABI == KernelABI.NOCHERI:
+            return ""
+        elif kABI == KernelABI.HYBRID:
+            return "MORELLO"
+        elif kABI == KernelABI.PURECAP:
+            return "MORELLO{sep}PURECAP".format(sep=self.separator)
+
+    def make_all(self):
+        configs = []
+        # Generate QEMU/FVP kernels
+        for kABI in KernelABI:
+            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True))
+
+        return configs
 
 
 def filter_kernel_configs(configs: list, **filter_kwargs):
@@ -141,151 +337,32 @@ class CheriBSDConfigTable:
     - Default configurations must select an unique (platform, kernel, flags) set, non-default
       configurations may select multiple kernels.
     """
-    # XXX-AM: For now hardcode the lists, ideally these may be generated
 
     X86_CONFIGS = [
         CheriBSDConfig("GENERIC", ConfigPlatform.QEMU, default=True)
     ]
-
-    MIPS_CONFIGS = [
-        # Default qemu
-        CheriBSDConfig("MALTA64", ConfigPlatform.QEMU, default=True),
-        CheriBSDConfig("CHERI_MALTA64", ConfigPlatform.QEMU, default=True,
-                       kABI=KernelABI.HYBRID),
-        CheriBSDConfig("CHERI_PURECAP_MALTA64", ConfigPlatform.QEMU, default=True,
-                       kABI=KernelABI.PURECAP),
-        # Default QEMU MFS
-        CheriBSDConfig("MALTA64_MFS_ROOT", ConfigPlatform.QEMU, default=True,
-                       mfsroot=True),
-        CheriBSDConfig("CHERI_MALTA64_MFS_ROOT", ConfigPlatform.QEMU, default=True,
-                       kABI=KernelABI.HYBRID, mfsroot=True),
-        CheriBSDConfig("CHERI_PURECAP_MALTA64_MFS_ROOT", ConfigPlatform.QEMU, default=True,
-                       kABI=KernelABI.PURECAP, mfsroot=True),
-        # Default QEMU MFS benchmark variant
-        CheriBSDConfig("MALTA64_MFS_ROOT_BENCHMARK", ConfigPlatform.QEMU, default=True,
-                       mfsroot=True, benchmark=True),
-        CheriBSDConfig("CHERI_MALTA64_MFS_ROOT_BENCHMARK", ConfigPlatform.QEMU, default=True,
-                       kABI=KernelABI.HYBRID, mfsroot=True, benchmark=True),
-        CheriBSDConfig("CHERI_PURECAP_MALTA64_MFS_ROOT_BENCHMARK", ConfigPlatform.QEMU, default=True,
-                       kABI=KernelABI.PURECAP, mfsroot=True, benchmark=True),
-        # Default BERI
-        CheriBSDConfig("BERI_DE4_MFS_ROOT", ConfigPlatform.BERI, mfsroot=True, default=True),
-        CheriBSDConfig("CHERI_DE4_MFS_ROOT", ConfigPlatform.BERI,
-                       kABI=KernelABI.HYBRID, mfsroot=True, default=True),
-        CheriBSDConfig("CHERI_PURECAP_DE4_MFS_ROOT", ConfigPlatform.BERI,
-                       kABI=KernelABI.PURECAP, mfsroot=True, default=True),
-        # Default BERI benchmark variant
-        CheriBSDConfig("BERI_DE4_MFS_ROOT_BENCHMARK", ConfigPlatform.BERI,
-                       mfsroot=True, benchmark=True, default=True),
-        CheriBSDConfig("CHERI_DE4_MFS_ROOT_BENCHMARK", ConfigPlatform.BERI,
-                       kABI=KernelABI.HYBRID, mfsroot=True, benchmark=True, default=True),
-        CheriBSDConfig("CHERI_PURECAP_DE4_MFS_ROOT_BENCHMARK", ConfigPlatform.BERI,
-                       kABI=KernelABI.PURECAP, mfsroot=True, benchmark=True, default=True),
-
-        # Extra kernels
-        CheriBSDConfig("BERI_DE4_USBROOT", ConfigPlatform.BERI),
-        CheriBSDConfig("BERI_DE4_USBROOT_BENCHMARK", ConfigPlatform.BERI, benchmark=True),
-        CheriBSDConfig("BERI_DE4_NFSROOT", ConfigPlatform.BERI),
-        CheriBSDConfig("CHERI_DE4_USBROOT", ConfigPlatform.BERI, kABI=KernelABI.HYBRID),
-        CheriBSDConfig("CHERI_DE4_USBROOT_BENCHMARK", ConfigPlatform.BERI,
-                       kABI=KernelABI.HYBRID, benchmark=True),
-        CheriBSDConfig("CHERI_DE4_NFSROOT", ConfigPlatform.BERI, kABI=KernelABI.HYBRID),
-
-        # KCOV kernels
-        CheriBSDConfig("BERI_DE4_MFS_ROOT_FUZZ", ConfigPlatform.BERI,
-                       mfsroot=True, fuzzing=True),
-        CheriBSDConfig("BERI_DE4_MFS_ROOT_FUZZ_BENCHMARK", ConfigPlatform.BERI,
-                       mfsroot=True, benchmark=True, fuzzing=True),
-        CheriBSDConfig("CHERI_DE4_MFS_ROOT_FUZZ", ConfigPlatform.BERI,
-                       kABI=KernelABI.HYBRID, mfsroot=True, fuzzing=True),
-        CheriBSDConfig("CHERI_DE4_MFS_ROOT_FUZZ_BENCHMARK", ConfigPlatform.BERI,
-                       kABI=KernelABI.HYBRID, mfsroot=True, benchmark=True, fuzzing=True),
-        CheriBSDConfig("CHERI_PURECAP_DE4_MFS_ROOT_FUZZ", ConfigPlatform.BERI,
-                       kABI=KernelABI.PURECAP, mfsroot=True, fuzzing=True),
-        CheriBSDConfig("CHERI_PURECAP_DE4_MFS_ROOT_FUZZ_BENCHMARK", ConfigPlatform.BERI,
-                       kABI=KernelABI.PURECAP, mfsroot=True, benchmark=True, fuzzing=True),
-        CheriBSDConfig("CHERI_MALTA64_FUZZ", ConfigPlatform.QEMU,
-                       kABI=KernelABI.HYBRID, fuzzing=True),
-        CheriBSDConfig("CHERI_PURECAP_MALTA64_FUZZ", ConfigPlatform.QEMU,
-                       kABI=KernelABI.PURECAP, fuzzing=True),
-    ]
-
-    RISCV_CONFIGS = [
-        # Defaults
-        CheriBSDConfig("QEMU", ConfigPlatform.QEMU, default=True),
-        CheriBSDConfig("CHERI-QEMU", ConfigPlatform.QEMU, default=True,
-                       kABI=KernelABI.HYBRID),
-        CheriBSDConfig("CHERI-PURECAP-QEMU", ConfigPlatform.QEMU, default=True,
-                       kABI=KernelABI.PURECAP),
-
-        CheriBSDConfig("QEMU-MFS-ROOT", ConfigPlatform.QEMU, mfsroot=True, default=True),
-        CheriBSDConfig("CHERI-QEMU-MFS-ROOT", ConfigPlatform.QEMU,
-                       kABI=KernelABI.HYBRID, mfsroot=True, default=True),
-        CheriBSDConfig("CHERI-PURECAP-QEMU-MFS-ROOT", ConfigPlatform.QEMU,
-                       kABI=KernelABI.PURECAP, mfsroot=True, default=True),
-        # Default MFS QEMU benchmark variants
-        CheriBSDConfig("QEMU-MFS-ROOT-NODEBUG", ConfigPlatform.QEMU,
-                       mfsroot=True, benchmark=True, default=True),
-        CheriBSDConfig("CHERI-QEMU-MFS-ROOT-NODEBUG", ConfigPlatform.QEMU,
-                       kABI=KernelABI.HYBRID, mfsroot=True, benchmark=True, default=True),
-        CheriBSDConfig("CHERI-PURECAP-QEMU-MFS-ROOT-NODEBUG", ConfigPlatform.QEMU,
-                       kABI=KernelABI.PURECAP, mfsroot=True, benchmark=True, default=True),
-
-        CheriBSDConfig("GFE", ConfigPlatform.GFE, mfsroot=True, default=True),
-        CheriBSDConfig("CHERI-GFE", ConfigPlatform.GFE, kABI=KernelABI.HYBRID,
-                       mfsroot=True, default=True),
-        CheriBSDConfig("CHERI-PURECAP-GFE", ConfigPlatform.GFE, kABI=KernelABI.PURECAP,
-                       mfsroot=True, default=True),
-        # Default MFS GFE benchmark variants
-        CheriBSDConfig("GFE-NODEBUG", ConfigPlatform.GFE,
-                       mfsroot=True, benchmark=True, default=True),
-        CheriBSDConfig("CHERI-GFE-NODEBUG", ConfigPlatform.GFE, kABI=KernelABI.HYBRID,
-                       mfsroot=True, benchmark=True, default=True),
-        CheriBSDConfig("CHERI-PURECAP-GFE-NODEBUG", ConfigPlatform.GFE, kABI=KernelABI.PURECAP,
-                       mfsroot=True, benchmark=True, default=True),
-
-        CheriBSDConfig("CHERI-QEMU-FETT", ConfigPlatform.QEMU, kABI=KernelABI.HYBRID,
-                       fett=True, default=True),
-
-        CheriBSDConfig("CHERI-CAPREVOKE-QEMU", ConfigPlatform.QEMU, kABI=KernelABI.HYBRID,
-                       caprevoke=True, default=True),
-        CheriBSDConfig("CHERI-CAPREVOKE-GFE", ConfigPlatform.GFE, kABI=KernelABI.HYBRID,
-                       caprevoke=True, mfsroot=True, default=True),
-
-        # Extra kernels
-        CheriBSDConfig("CHERI-CAPREVOKE-QEMU-FETT", ConfigPlatform.QEMU,
-                       kABI=KernelABI.HYBRID, caprevoke=True, fett=True),
-
-        CheriBSDConfig("FETT", ConfigPlatform.GFE, fett=True),
-        CheriBSDConfig("CHERI-FETT", ConfigPlatform.GFE,
-                       kABI=KernelABI.HYBRID, fett=True),
-        CheriBSDConfig("CHERI-CAPREVOKE-FETT", ConfigPlatform.GFE,
-                       kABI=KernelABI.HYBRID, caprevoke=True, fett=True),
-        CheriBSDConfig("CHERI-PURECAP-FETT-NODEBUG", ConfigPlatform.GFE,
-                       kABI=KernelABI.PURECAP, fett=True),
-    ]
-
-    AARCH64_CONFIGS = [
-        # Defaults
-        CheriBSDConfig("GENERIC", {ConfigPlatform.FVP, ConfigPlatform.QEMU}, default=True),
-        CheriBSDConfig("GENERIC-MORELLO", {ConfigPlatform.FVP, ConfigPlatform.QEMU},
-                       kABI=KernelABI.HYBRID, default=True),
-        CheriBSDConfig("GENERIC-MORELLO-PURECAP", {ConfigPlatform.FVP, ConfigPlatform.QEMU},
-                       kABI=KernelABI.PURECAP, default=True),
-    ]
+    MIPS_CONFIGS = []
+    RISCV_CONFIGS = []
+    AARCH64_CONFIGS = []
 
     @classmethod
     def get_target_configs(cls, xtarget):
         if xtarget.is_any_x86():
+            factory = None
             config_list = cls.X86_CONFIGS
         elif xtarget.is_mips(include_purecap=True):
+            factory = MIPSKernelConfigFactory()
             config_list = cls.MIPS_CONFIGS
         elif xtarget.is_riscv(include_purecap=True):
+            factory = RISCVKernelConfigFactory()
             config_list = cls.RISCV_CONFIGS
         elif xtarget.is_aarch64(include_purecap=True):
+            factory = AArch64KernelConfigFactory()
             config_list = cls.AARCH64_CONFIGS
         else:
             assert False, "Invalid target architecture"
+        if len(config_list) == 0:
+            config_list.extend(factory.make_all())
         return config_list
 
     @classmethod
