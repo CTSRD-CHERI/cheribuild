@@ -646,8 +646,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         assert not xtarget.is_hybrid_or_purecap_cheri(), "Unexpected FreeBSD target"
         if platform is None:
             platform = self.get_default_kernel_platform()
-        config = CheriBSDConfigTable.get_default(xtarget, platform, KernelABI.NOCHERI,
-                                                 **filter_kwargs)
+        config = CheriBSDConfigTable.get_default(xtarget, platform, KernelABI.NOCHERI, **filter_kwargs)
         return config.kernconf
 
     def _stdout_filter(self, line: bytes):
@@ -1624,8 +1623,8 @@ class BuildCHERIBSD(BuildFreeBSD):
         if xtarget.is_riscv(include_purecap=True):
             filter_kwargs.setdefault("fett", self.build_fett_kernels)
         filter_kwargs.setdefault("caprevoke", self.caprevoke_kernel)
-        config = CheriBSDConfigTable.get_default(xtarget, platform, self.default_kernel,
-                                                 **filter_kwargs)
+        kABI = filter_kwargs.pop("kABI", self.default_kernel)
+        config = CheriBSDConfigTable.get_default(xtarget, platform, kABI, **filter_kwargs)
         return config.kernconf
 
     def extra_kernel_configs(self):
@@ -1793,11 +1792,11 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     def default_kernel_config(self, platform: ConfigPlatform = None, **filter_kwargs) -> str:
         if platform is None:
             platform = self.get_default_kernel_platform()
+        kABI = filter_kwargs.pop("kABI", self.get_default_kernel_abi())
+        filter_kwargs["mfsroot"] = True
         if self.caprevoke_kernel:
             filter_kwargs["caprevoke"] = True
-        config = CheriBSDConfigTable.get_default(self.crosscompile_target, platform,
-                                                 self.get_default_kernel_abi(),
-                                                 mfsroot=True, **filter_kwargs)
+        config = CheriBSDConfigTable.get_default(self.crosscompile_target, platform, kABI, **filter_kwargs)
         return config.kernconf
 
     def get_kernel_configs(self, **filter_kwargs) -> "typing.Sequence[str]":

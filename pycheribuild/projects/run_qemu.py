@@ -37,7 +37,7 @@ from pathlib import Path
 
 from .build_qemu import BuildCheriOSQEMU, BuildMorelloQEMU, BuildQEMU
 from .cherios import BuildCheriOS
-from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform
+from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.freertos import BuildFreeRTOS
 from .cross.gdb import BuildGDB
 from .cross.rtems import BuildRtems
@@ -439,6 +439,10 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             "alternative-kernel", show_help=True,
             help="Select the kernel to run by specifying the kernel build configuration name."
                  "The list of available kernel configurations is given by --list-kernels")
+        cls.kernel_abi = cls.add_config_option(
+            "kernel-abi", show_help=True,
+            kind=KernelABI, enum_choices=[KernelABI.HYBRID, KernelABI.PURECAP],
+            help="Select extra kernel variant with the given ABI to run.")
 
     def __init__(self, config: CheriConfig, source_class: "typing.Type[BuildFreeBSD]" = None,
                  disk_image_class: "typing.Type[BuildFreeBSDImage]" = None, needs_disk_image=True):
@@ -454,7 +458,14 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
                 self.fatal("Selected kernel configuration", self.kernel_config, "is not available")
                 self._list_kernel_configs()
         else:
-            self.kernel_config = self.source_project.default_kernel_config(ConfigPlatform.QEMU)
+            config_filters = {}
+            if self.kernel_abi:
+                if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                    config_filters["kABI"] = self.kernel_abi
+                else:
+                    self.warning("Can not select kernel ABI to run for non-CHERI target, ignoring --kernel-abi")
+            self.kernel_config = self.source_project.default_kernel_config(ConfigPlatform.QEMU, **config_filters)
+
         self.current_kernel = self.source_project.get_kernel_install_path(self.kernel_config)
 
         if self.qemu_options.can_boot_kernel_directly:
