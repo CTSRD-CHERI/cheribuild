@@ -1277,7 +1277,9 @@ class BuildCHERIBSD(BuildFreeBSD):
                     self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT_BENCHMARK")
             elif self.compiling_for_riscv(include_purecap=True):
                 if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                    if self.purecap_kernel:
+                    if self.caprevoke_kernel:
+                        self.extra_kernels_with_mfs.append("CHERI-CAPREVOKE-GFE")
+                    elif self.purecap_kernel:
                         self.extra_kernels_with_mfs.append("CHERI-PURECAP-GFE")
                     else:
                         self.extra_kernels_with_mfs.append("CHERI-GFE")
@@ -1436,7 +1438,9 @@ class BuildCheriBsdMfsKernel(SimpleProject):
             return "BERI_DE4_MFS_ROOT"
         elif self.compiling_for_riscv(include_purecap=True):
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                if self.build_cheribsd_instance.purecap_kernel:
+                if self.build_cheribsd_instance.caprevoke_kernel:
+                    return "CHERI-CAPREVOKE-GFE"
+                elif self.build_cheribsd_instance.purecap_kernel:
                     return "CHERI-PURECAP-GFE"
                 return "CHERI-GFE"
             return "GFE"
