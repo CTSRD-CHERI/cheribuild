@@ -32,7 +32,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
-from ..utils import cached_property, OSInfo, final
+from ..utils import cached_property, final, OSInfo
 
 if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine    # pytype: disable=pyi-error
@@ -291,7 +291,8 @@ class TargetInfo(ABC):
 
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
-                                 mount_installdir=False, use_benchmark_kernel_by_default=False):
+                                 use_full_disk_image=False, mount_installdir=False,
+                                 use_benchmark_kernel_by_default=False):
         raise ValueError("run_cheribsd_test_script only supports CheriBSD targets")
 
     def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,

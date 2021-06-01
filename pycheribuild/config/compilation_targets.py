@@ -350,7 +350,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
-                                 mount_installdir=False, use_benchmark_kernel_by_default=False):
+                                 use_full_disk_image=False, mount_installdir=False,
+                                 use_benchmark_kernel_by_default=False):
         assert self.is_cheribsd(), "Only CheriBSD targets supported right now"
         if typing.TYPE_CHECKING:
             assert isinstance(self.project, Project)
@@ -367,9 +368,18 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             self.project.warning("CheriBSD test scripts currently don't support the Morello FVP - "
                                  "remove when Morello QEMU support done")
             return
-        if not qemu_options.can_boot_kernel_directly:
+        if use_full_disk_image:
+            assert self.is_cheribsd(), "Not supported for FreeBSD yet"
+            from ..projects.run_qemu import LaunchCheriBSD
+            instance = LaunchCheriBSD.get_instance(self.project)
+            if qemu_options.can_boot_kernel_directly:
+                if kernel_path is None and "--kernel" not in self.config.test_extra_args:
+                    kernel_path = instance.current_kernel
+            if disk_image_path is None and "--disk-image" not in self.config.test_extra_args:
+                disk_image_path = instance.disk_image
+        elif not qemu_options.can_boot_kernel_directly:
             # We need to boot the disk image instead of running the kernel directly (amd64)
-            assert xtarget.cpu_architecture == CPUArchitecture.X86_64, "All other architectures can boot directly"
+            assert xtarget.is_any_x86() or xtarget.is_aarch64(), "All other architectures can boot directly"
             assert self.is_cheribsd(), "Not supported for FreeBSD yet"
             if disk_image_path is None and "--disk-image" not in self.config.test_extra_args:
                 from ..projects.disk_image import BuildMinimalCheriBSDDiskImage
