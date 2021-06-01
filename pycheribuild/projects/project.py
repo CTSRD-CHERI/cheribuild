@@ -1250,7 +1250,8 @@ class MakeOptions(object):
         # For CMake we pass target, jobs, and verbose directly to cmake, all other options are fowarded to the real
         # build tool. Ideally we wouldn't care about the real build tool, but we want to be able to pass the -k flag.
         if jobs and self.can_pass_jflag:
-            result.append("-j" + str(jobs))
+            result.append("-j")
+            result.append(str(jobs))
         # Cmake and ninja have an explicit verbose flag, other build tools use custom env vars, etc.
         if verbose and self.kind in (MakeCommandKind.Ninja, MakeCommandKind.CMake):
             result.append("-v")
