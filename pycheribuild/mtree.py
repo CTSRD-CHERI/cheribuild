@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 
+import fnmatch
 import io
 import os
 import shlex
@@ -258,6 +259,29 @@ class MtreeFile(object):
     def __contains__(self, item):
         mtree_path = self._ensure_mtree_path_fmt(str(item))
         return mtree_path in self._mtree
+
+    def exclude_matching(self, globs, exceptions=[], print_status=False):
+        """Remove paths matching any pattern in globs (but not matching any in exceptions)"""
+        if type(globs) == str:
+            globs = [globs]
+        for glob in globs + exceptions:
+            # glob must be anchored at the root (./) or start with a pattern
+            assert glob[:2] == "./" or glob[:1] == "?" or glob[:1] == "*"
+        paths_to_remove = set()
+        for (path, entry) in self._mtree.items():
+            for glob in globs:
+                if fnmatch.fnmatch(path, glob):
+                    delete = True
+                    for exception in exceptions:
+                        if fnmatch.fnmatch(path, exception):
+                            delete = False
+                            break
+                    if delete:
+                        paths_to_remove.add(path)
+        for path in paths_to_remove:
+            if print_status:
+                status_update("Deleting", path, "from mtree", file=sys.stderr)
+            self._mtree.pop(path)
 
     def __repr__(self):
         import pprint
