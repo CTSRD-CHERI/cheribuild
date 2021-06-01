@@ -48,6 +48,10 @@ def setup_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
     boot_cheribsd.prepend_ld_library_path(qemu, "/build/lib")
     qemu.run("export QT_PLUGIN_PATH=/build/plugins")
+    # Running GDB to get stack traces sometimes causes freezes when reading the debug info from smbfs (could also be
+    # extremely long wait times, I killed the test after about 10 minutes).
+    # Disable stack traces for now since we can always run the crashing tests under gdb manually.
+    qemu.run("export QTEST_DISABLE_STACK_DUMP=1")
 
 
 def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitparser.JUnitXml,
