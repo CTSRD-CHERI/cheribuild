@@ -1241,46 +1241,72 @@ class MakeOptions(object):
     def all_commandline_args(self) -> list:
         return self.get_commandline_args()
 
-    def get_commandline_args(self, *, targets: "typing.Iterable[str]" = None, jobs: int = None, verbose=False,
+    def get_commandline_args(self, *, targets: "typing.List[str]" = None, jobs: int = None, verbose=False,
                              continue_on_error=False) -> "typing.List[str]":
         assert self.kind
         result = list(self.__command_args)
-        if self.kind == MakeCommandKind.CMake:
-            result.extend(["--build", "."])
-        # For CMake we pass target, jobs, and verbose directly to cmake, all other options are fowarded to the real
-        # build tool. Ideally we wouldn't care about the real build tool, but we want to be able to pass the -k flag.
-        if jobs and self.can_pass_jflag:
-            result.append("-j")
-            result.append(str(jobs))
-        # Cmake and ninja have an explicit verbose flag, other build tools use custom env vars, etc.
-        if verbose and self.kind in (MakeCommandKind.Ninja, MakeCommandKind.CMake):
-            result.append("-v")
-        if targets:
-            for t in targets:
-                assert t and isinstance(t, str), "Invalid empty/non-string target name"
-                if self.kind == MakeCommandKind.CMake:
-                    result.extend(["--target", t])
-                else:
-                    result.append(t)
-        # For CMake all other options are now forwarded to the actual tool
+        actual_build_tool = self.kind
+        # TODO: this code is rather ugly. It would probably be a lot simpler to use inheritance.
         if self.kind == MakeCommandKind.CMake:
             assert self.subkind is not None
+            # For CMake we pass target, jobs, and verbose directly to cmake, all other options are fowarded to the real
+            # build tool. Ideally we wouldn't care about the underlying build tool, but we want to be able to pass the
+            # -k flag.
+            actual_build_tool = self.subkind
+            result.extend(["--build", "."])
+            # TODO: pass CMake version instead of using the minimum to check for --build features
+            # noinspection PyProtectedMember
+            cmake_version = CMakeProject._minimum_cmake_or_meson_version
+            if jobs:
+                # -j added in 3.12: https://cmake.org/cmake/help/latest/release/3.12.html#command-line
+                assert cmake_version >= (3, 12, 0)
+                result.extend(["-j", str(jobs)])
+                jobs = None  # don't pass the flag to the build tool again
+            if verbose:
+                # --verbose added in 3.14: https://cmake.org/cmake/help/latest/release/3.14.html#command-line
+                if cmake_version >= (3, 14, 0):
+                    result.append("--verbose")
+                    verbose = None  # don't pass the flag to the build tool again
+            if targets:
+                # CMake 3.15 allows multiple targets to be passed to --target. For older versions we pass the
+                # targets as arguments to the build tool. This will work for make and ninja (and other generators are
+                # not really supported anyway).
+                result.append("--target")
+                assert all(isinstance(t, str) for t in targets), "Invalid empty/non-string target name"
+                if cmake_version >= (3, 15, 0):
+                    result.extend(targets)
+                    targets = None  # don't pass the targets to the build tool again
+                else:
+                    result.append(targets[0])
+                    targets = targets[1:]  # pass remaining targets to the build tool directly
+            # Forward all remaining arguments to make/ninja
             result.append("--")
-        # First all the variables
+
+        # All other options are forwarded to the actual tool.
+        if jobs and self.can_pass_jflag:
+            result.append("-j" + str(jobs))
+        # Cmake and ninja have an explicit verbose flag, other build tools use custom env vars, etc.
+        if verbose and actual_build_tool == MakeCommandKind.Ninja:
+            result.append("-v")
+        if targets:
+            assert all(isinstance(t, str) for t in targets), "Invalid empty/non-string target name"
+            result.extend(targets)
+
+        # First all the variables:
         for k, v in self._vars.items():
             assert isinstance(v, str)
             if v == "1":
                 result.append(self._get_defined_var(k))
             else:
                 result.append(k + "=" + v)
-        # then the WITH/WITHOUT variables
+        # then the WITH/WITHOUT variables:
         for k, v in self._with_options.items():
             result.append(self._get_defined_var("WITH_" if v else "WITHOUT_") + k)
         # and finally the command line flags like -k
         result.extend(self._flags)
         if continue_on_error:
             continue_flag = "-k"
-            if self.kind == MakeCommandKind.Ninja or self.subkind == MakeCommandKind.Ninja:
+            if actual_build_tool == MakeCommandKind.Ninja:
                 # Ninja expects a maximum number of jobs that can fail instead of continuing for as long as possible.
                 continue_flag += "50"
             result.append(continue_flag)
