@@ -25,9 +25,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from .crosscompileproject import CrossCompileCMakeProject, Path
+from .crosscompileproject import CrossCompileCMakeProject
 from ..project import DefaultInstallDir, GitRepository
 from ...config.compilation_targets import CompilationTargets
+
+from pathlib import Path
 
 
 class BuildExpat(CrossCompileCMakeProject):
