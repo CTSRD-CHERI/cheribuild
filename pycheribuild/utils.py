@@ -426,7 +426,8 @@ class OSInfo(object):
         if guessed_package:
             # not sure if the package name is correct:
             return InstallInstructions("Possibly running `" + cls.package_manager() + " install " + install_name +
-                   "` fixes this. Note: package name may not be correct.", cheribuild_target, alternative)
+                                       "` fixes this. Note: package name may not be correct.", cheribuild_target,
+                                       alternative)
         else:
             return InstallInstructions("Run `" + cls.package_manager() + " install " + install_name + "`",
                                        cheribuild_target, alternative)
