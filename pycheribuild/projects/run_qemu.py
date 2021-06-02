@@ -151,8 +151,7 @@ class LaunchQEMUBase(SimpleProject):
     def process(self):
         assert self.qemu_binary is not None
         if not self.qemu_binary.exists():
-            self.dependency_error("QEMU is missing:", self.qemu_binary,
-                                  install_instructions="Run `cheribuild.py qemu` or `cheribuild.py run -d`.")
+            self.dependency_error("QEMU is missing:", self.qemu_binary, cheribuild_target="qemu")
 
         qemu_loader_or_kernel = self.current_kernel
         if self.use_uboot:

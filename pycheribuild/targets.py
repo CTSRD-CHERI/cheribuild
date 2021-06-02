@@ -117,6 +117,10 @@ class Target(object):
             # TODO: make this an error once I have a clean solution for the pseudo targets
             warning_message(self.name, "has already been executed!")
             return
+        if config.print_targets_only:
+            status_update("Will build target", coloured(AnsiColour.yellow, self.name))
+            print("    Dependencies for", self.name, "are", self.project_class.all_dependency_names(config))
+            return
         assert self.__project is not None, "Should have been initialized in check_system_deps()"
         # noinspection PyProtectedMember
         assert not self.__project._setup_called, str(self._project_class) + ".setup() should not have been called yet."
@@ -408,11 +412,7 @@ class TargetManager(object):
             target.check_system_deps(config)
         # all dependencies exist -> run the targets
         for target in chosen_targets:
-            if config.print_targets_only:
-                status_update("Will build target", coloured(AnsiColour.yellow, target.name))
-                print("    Dependencies for", target.name, "are", target.project_class.all_dependency_names(config))
-            else:
-                target.execute(config)
+            target.execute(config)
 
     def get_all_chosen_targets(self, config) -> "typing.Iterable[Target]":
         # check that all target dependencies are correct:

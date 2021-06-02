@@ -55,7 +55,8 @@ from ..processutils import (check_call_handle_noexec, commandline_to_str, Compil
                             print_command, run_command, set_env)
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import (AnsiColour, cached_property, classproperty, coloured, fatal_error, include_local_file,
-                     is_jenkins_build, OSInfo, remove_prefix, replace_one, status_update, ThreadJoiner, warning_message)
+                     InstallInstructions, is_jenkins_build, OSInfo, remove_prefix, replace_one, status_update,
+                     ThreadJoiner, warning_message)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
@@ -304,7 +305,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 raise
             # Handle --include-dependencies when --skip-sdk/--no-include-toolchain-dependencies is passed
             if explicit_dependencies_only:
-                pass  # add all explicit direct depedencies
+                pass  # add all explicit direct dependencies
             elif not include_sdk_dependencies and dep_target.project_class.is_sdk_target:
                 if config.verbose:
                     status_update("Not adding ", cls.target, "dependency", dep_target.name,
@@ -699,9 +700,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
         assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
             self.__class__)
-        self.__required_system_tools = {}  # type: typing.Dict[str, typing.Any]
-        self.__required_system_headers = {}  # type: typing.Dict[str, typing.Any]
-        self.__required_pkg_config = {}  # type: typing.Dict[str, typing.Any]
+        self.__required_system_tools = {}  # type: typing.Dict[str, InstallInstructions]
+        self.__required_system_headers = {}  # type: typing.Dict[str, InstallInstructions]
+        self.__required_pkg_config = {}  # type: typing.Dict[str, InstallInstructions]
         self._system_deps_checked = False
         self._setup_called = False
         assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
@@ -717,36 +718,43 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def has_required_system_tool(self, executable: str):
         return executable in self.__required_system_tools
 
-    def add_required_system_tool(self, executable: str, install_instructions=None, default: str = None,
+    def add_required_system_tool(self, executable: str, install_instructions: str = None, default: str = None,
                                  freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
-                                 cheribuild_target: str = None):
-        if not install_instructions:
-            install_instructions = OSInfo.install_instructions(executable, False, default=default,
-                                                               freebsd=freebsd, zypper=zypper, apt=apt,
-                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
+                                 cheribuild_target: str = None, alternative_instructions: str = None):
+        if install_instructions is not None:
+            instructions = InstallInstructions(install_instructions, cheribuild_target=cheribuild_target,
+                                               alternative=alternative_instructions)
+        else:
+            instructions = OSInfo.install_instructions(executable, False, default=default, freebsd=freebsd,
+                                                       zypper=zypper, apt=apt, homebrew=homebrew,
+                                                       cheribuild_target=cheribuild_target)
         if executable in self.__required_system_tools:
-            assert install_instructions == self.__required_system_tools[executable], "changed install instructions"
-        self.__required_system_tools[executable] = install_instructions
+            assert instructions.fixit_hint() == self.__required_system_tools[executable].fixit_hint()
+        self.__required_system_tools[executable] = instructions
 
-    def add_required_pkg_config(self, package: str, install_instructions=None, default: str = None,
+    def add_required_pkg_config(self, package: str, install_instructions: str = None, default: str = None,
                                 freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
-                                cheribuild_target: str = None):
+                                cheribuild_target: str = None, alternative_instructions: str = None):
         if not self.has_required_system_tool("pkg-config"):
             self.add_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
-        if not install_instructions:
-            install_instructions = OSInfo.install_instructions(package, True, default=default,
-                                                               freebsd=freebsd, zypper=zypper, apt=apt,
-                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
-        self.__required_pkg_config[package] = install_instructions
+        if install_instructions is not None:
+            instructions = InstallInstructions(install_instructions, cheribuild_target=cheribuild_target,
+                                               alternative=alternative_instructions)
+        else:
+            instructions = OSInfo.install_instructions(package, True, default=default, freebsd=freebsd, zypper=zypper,
+                                                       apt=apt, homebrew=homebrew, cheribuild_target=cheribuild_target)
+        self.__required_pkg_config[package] = instructions
 
-    def add_required_system_header(self, header: str, install_instructions=None, default: str = None,
+    def add_required_system_header(self, header: str, install_instructions: str = None, default: str = None,
                                    freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
-                                   cheribuild_target: str = None):
-        if not install_instructions:
-            install_instructions = OSInfo.install_instructions(header, True, default=default,
-                                                               freebsd=freebsd, zypper=zypper, apt=apt,
-                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
-        self.__required_system_headers[header] = install_instructions
+                                   cheribuild_target: str = None, alternative_instructions: str = None):
+        if install_instructions is not None:
+            instructions = InstallInstructions(install_instructions, cheribuild_target=cheribuild_target,
+                                               alternative=alternative_instructions)
+        else:
+            instructions = OSInfo.install_instructions(header, True, default=default, freebsd=freebsd, zypper=zypper,
+                                                       apt=apt, homebrew=homebrew, cheribuild_target=cheribuild_target)
+        self.__required_system_headers[header] = instructions
 
     @staticmethod
     def _query_yes_no(config: CheriConfig, message: str = "", *, default_result=False, force_result=True,
@@ -968,10 +976,18 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     if self.query_yes_no("Would you like to remove the old directory " + str(old_path)):
                         self._delete_directories(old_path)
 
-    def dependency_error(self, *args, install_instructions: str = None):
+    def dependency_error(self, *args, install_instructions: "typing.Union[str, typing.Callable[[], str]]" = None,
+                         cheribuild_target: str = None):
         self._system_deps_checked = True  # make sure this is always set
         if callable(install_instructions):
             install_instructions = install_instructions()
+        if cheribuild_target:
+            self.warning("Dependency for", self.target, "missing:", *args, fixit_hint=install_instructions)
+            if self.query_yes_no("Would you like to install the dependency using cheribuild?", force_result=True):
+                dep_target = target_manager.get_target(cheribuild_target, None, config=self.config, caller=self)
+                dep_target.check_system_deps(self.config)
+                dep_target.execute(self.config)
+                return  # should be installed now
         self.fatal("Dependency for", self.target, "missing:", *args, fixit_hint=install_instructions)
 
     def check_system_dependencies(self) -> None:
@@ -979,13 +995,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         Checks that all the system dependencies (required tool, etc) are available
         :return: Throws an error if dependencies are missing
         """
-        for (tool, install_instructions) in self.__required_system_tools.items():
+        for (tool, instructions) in self.__required_system_tools.items():
+            assert isinstance(instructions, InstallInstructions)
             if not shutil.which(str(tool)):
-                if install_instructions is None or install_instructions == "":
-                    install_instructions = "Try installing `" + tool + "` using your system package manager."
                 self.dependency_error("Required program", tool, "is missing!",
-                                      install_instructions=install_instructions)
+                                      install_instructions=instructions.fixit_hint(),
+                                      cheribuild_target=instructions.cheribuild_target)
         for (package, instructions) in self.__required_pkg_config.items():
+            assert isinstance(instructions, InstallInstructions)
             if not shutil.which("pkg-config"):
                 # error should already have printed above
                 break
@@ -993,10 +1010,15 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             print_command(check_cmd, print_verbose_only=True)
             exit_code = subprocess.call(check_cmd)
             if exit_code != 0:
-                self.dependency_error("Required library", package, "is missing!", install_instructions=instructions)
+                self.dependency_error("Required library", package, "is missing!",
+                                      install_instructions=instructions.fixit_hint(),
+                                      cheribuild_target=instructions.cheribuild_target)
         for (header, instructions) in self.__required_system_headers.items():
+            assert isinstance(instructions, InstallInstructions)
             if not Path("/usr/include", header).exists() and not Path("/usr/local/include", header).exists():
-                self.dependency_error("Required C header", header, "is missing!", install_instructions=instructions)
+                self.dependency_error("Required C header", header, "is missing!",
+                                      install_instructions=instructions.fixit_hint(),
+                                      cheribuild_target=instructions.cheribuild_target)
         self._system_deps_checked = True
 
     def process(self):
@@ -2207,10 +2229,10 @@ class Project(SimpleProject):
             if self.make_args.is_gnu_make and False:
                 # use compiledb instead of bear for gnu make
                 # https://blog.jetbrains.com/clion/2018/08/working-with-makefiles-in-clion-using-compilation-db/
-                self.add_required_system_tool("compiledb", install_instructions="Run `pip2 install --user compiledb``")
+                self.add_required_system_tool("compiledb", install_instructions="Run `pip install --user compiledb``")
                 self._compiledb_tool = "compiledb"
             else:
-                self.add_required_system_tool("bear", install_instructions="Run `cheribuild.py bear`")
+                self.add_required_system_tool("bear", cheribuild_target="bear")
                 self._compiledb_tool = "bear"
         self._force_clean = False
         self._prevent_assign = True
@@ -2260,7 +2282,7 @@ class Project(SimpleProject):
             # clang currently gets the TLS model wrong:
             # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901
             self.COMMON_FLAGS.append("-ftls-model=initial-exec")
-            # TODO: remove the data-depedent provenance flag:
+            # TODO: remove the data-dependent provenance flag:
             if self.should_use_extra_c_compat_flags():
                 self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
 
@@ -2680,7 +2702,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
     def copy_asan_dependencies(self, dest_libdir):
         # ASAN depends on libraries that are not included in the benchmark image by default:
         assert self.compiling_for_mips(include_purecap=False) and self.use_asan
-        self.info("Adding ASAN library depedencies to", dest_libdir)
+        self.info("Adding ASAN library dependencies to", dest_libdir)
         self.makedirs(dest_libdir)
         for lib in ("usr/lib/librt.so.1", "usr/lib/libexecinfo.so.1", "lib/libgcc_s.so.1", "lib/libelf.so.2"):
             self.install_file(self.sdk_sysroot / lib, dest_libdir / Path(lib).name, force=True,
@@ -2895,7 +2917,7 @@ class _CMakeAndMesonSharedLogic(Project):
     do_not_add_to_targets = True
     _minimum_cmake_or_meson_version = None  # type: Tuple[int, int, int]
     _configure_tool_name = None  # type: str
-    _configure_tool_extra_install_instrs = ""
+    _configure_tool_cheribuild_target = None
     _toolchain_template = None  # type: str
     _toolchain_file = None  # type: Path
 
@@ -3032,6 +3054,9 @@ class _CMakeAndMesonSharedLogic(Project):
     def _get_version_args(self) -> dict:
         raise NotImplementedError()
 
+    def _configure_tool_install_instructions(self) -> InstallInstructions:
+        raise NotImplementedError()
+
     def check_system_dependencies(self):
         assert self.configure_command is not None
         if not Path(self.configure_command).is_absolute():
@@ -3046,10 +3071,10 @@ class _CMakeAndMesonSharedLogic(Project):
                 version_str = ".".join(map(str, version_components))
                 expected_str = ".".join(map(str, self._minimum_cmake_or_meson_version))
                 tool = self._configure_tool_name
-                instrs = "Use your package manager to install {tool} > {exp}".format(tool=tool, exp=expected_str)
-                instrs += self._configure_tool_extra_install_instrs
+                install_instrs = self._configure_tool_install_instructions()
                 self.dependency_error(tool, "version", version_str, "is too old (need at least", expected_str + ")",
-                                      install_instructions=instrs)
+                                      install_instructions=install_instrs.fixit_hint(),
+                                      cheribuild_target=install_instrs.cheribuild_target)
 
 
 class CMakeProject(_CMakeAndMesonSharedLogic):
@@ -3064,7 +3089,6 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     make_kind = MakeCommandKind.CMake
     _default_cmake_generator_arg = "-GNinja"  # We default to using the Ninja generator since it's faster
     _configure_tool_name = "CMake"
-    _configure_tool_extra_install_instrs = " or run `cheribuild.py cmake` to install the latest version locally"
     default_build_type = BuildType.RELWITHDEBINFO
     # Some projects (e.g. LLVM) don't store the CMakeLists.txt in the project root directory.
     root_cmakelists_subdirectory = None  # type: Path
@@ -3083,6 +3107,9 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
 
     def _bool_to_str(self, value: bool) -> str:
         return "TRUE" if value else "FALSE"
+
+    def _configure_tool_install_instructions(self) -> InstallInstructions:
+        return OSInfo.install_instructions("cmake", False, default="cmake", cheribuild_target="cmake")
 
     @property
     def _get_version_args(self) -> dict:
@@ -3359,12 +3386,16 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     # Meson already sets PKG_CONFIG_* variables internally based on the cross toolchain
     set_pkg_config_path = False
     _configure_tool_name = "Meson"
-    configure_tool_extra_install_instrs = " or run `pip3 install --upgrade --user meson` to install the latest version"
 
     def set_minimum_meson_version(self, major: int, minor: int, patch: int = 0):
         new_version = (major, minor, patch)
         assert self._minimum_cmake_or_meson_version is None or new_version >= self._minimum_cmake_or_meson_version
         self._minimum_cmake_or_meson_version = new_version
+
+    def _configure_tool_install_instructions(self) -> InstallInstructions:
+        return OSInfo.install_instructions(
+            "meson", False, default="meson",
+            alternative="run `pip3 install --upgrade --user meson` to install the latest version")
 
     @classmethod
     def setup_config_options(cls, **kwargs):

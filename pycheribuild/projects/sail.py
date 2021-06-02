@@ -72,9 +72,9 @@ class OpamMixin(_MixinBase):
                                                config=self.config)
             if opam_version < (2, 0, 0):
                 self.dependency_error("Opam version", opam_version, "is too old. Need at least 2.0.0",
-                                      # pytype: disable=attribute-error
                                       install_instructions="Install opam 2.0 with your system package manager or run "
-                                                           "`cheribuild.py opam-2.0` (Linux-only)")
+                                                           "`cheribuild.py opam-2.0` (Linux-only)",
+                                      cheribuild_target="opam-2.0" if OSInfo.IS_LINUX else None)
 
     @property
     def opam_binary(self):

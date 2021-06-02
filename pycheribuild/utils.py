@@ -45,7 +45,7 @@ from .colour import AnsiColour, coloured
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "include_local_file", "Type_T", "init_global_config",  # no-combine
            "status_update", "fatal_error", "coloured", "AnsiColour",  # no-combine
-           "warning_message", "DoNotUseInIfStmt", "ThreadJoiner",  # no-combine
+           "warning_message", "DoNotUseInIfStmt", "ThreadJoiner", "InstallInstructions",  # no-combine
            "SafeDict", "error_message", "ConfigBase", "final",  # no-combine
            "default_make_jobs_count", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
            "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
@@ -305,6 +305,29 @@ def is_case_sensitive_dir(d: Path):
     return True
 
 
+class InstallInstructions:
+    def __init__(self, message: "typing.Union[str, typing.Callable[[], str]]",
+                 cheribuild_target: "typing.Optional[str]", alternative: str):
+        self._message = message
+        self.cheribuild_target = cheribuild_target
+        self._alternative = alternative
+
+    def fixit_hint(self):
+        if callable(self._message):
+            result = self._message()
+        else:
+            result = self._message
+        if self.cheribuild_target:
+            if result:
+                result += "\nYou can also try running "
+            else:
+                result = "Run "
+            result += "`cheribuild.py " + self.cheribuild_target + "` to install locally."
+        if self._alternative:
+            assert result, "Can't have an alternative without a default option!"
+            result += "\nAlternatively " + self._alternative
+
+
 class OSInfo(object):
     IS_LINUX = sys.platform.startswith("linux")
     IS_FREEBSD = sys.platform.startswith("freebsd")
@@ -362,9 +385,7 @@ class OSInfo(object):
 
     @classmethod
     def install_instructions(cls, name, is_lib, default=None, homebrew=None, apt=None, zypper=None, freebsd=None,
-                             cheribuild_target=None) -> "typing.Union[str, typing.Callable[[], str]]":
-        if cheribuild_target:
-            return "Run `cheribuild.py " + cheribuild_target + "`"
+                             cheribuild_target=None, alternative=None) -> InstallInstructions:
         guessed_package = False
         if cls.IS_MAC and homebrew:
             install_name = homebrew
@@ -390,10 +411,9 @@ class OSInfo(object):
                             if msg_start:
                                 hint = hint[msg_start:]
                             return hint
-                        return "Could not find package for program " + name + ". Maybe `zypper in " + name + "` will " \
-                                                                                                             "work."
-
-                    return command_not_found
+                        return "Could not find package for program " + name + ". " \
+                               "Maybe `zypper in " + name + "` will work."
+                    return InstallInstructions(command_not_found, cheribuild_target, alternative)
                 guessed_package = True
                 install_name = "lib" + name + "-devel" if is_lib else name
         else:
@@ -402,12 +422,14 @@ class OSInfo(object):
         if guessed_package and default:
             guessed_package = False
             install_name = default
+
         if guessed_package:
             # not sure if the package name is correct:
-            return "Possibly running `" + cls.package_manager() + " install " + install_name + \
-                   "` fixes this. Note: package name may not be correct."
+            return InstallInstructions("Possibly running `" + cls.package_manager() + " install " + install_name +
+                   "` fixes this. Note: package name may not be correct.", cheribuild_target, alternative)
         else:
-            return "Run `" + cls.package_manager() + " install " + install_name + "`"
+            return InstallInstructions("Run `" + cls.package_manager() + " install " + install_name + "`",
+                                       cheribuild_target, alternative)
 
     @classmethod
     def uses_apt(cls):
