@@ -57,7 +57,6 @@ class BuildCheriOS(CMakeProject):
         self.add_cmake_options(SMP_CORES=self.smp_cores)
         self.add_cmake_options(CMAKE_AR=self.sdk_bindir / "llvm-ar")
         self.add_cmake_options(CMAKE_RANLIB=self.sdk_bindir / "llvm-ranlib")
-        self.set_minimum_cmake_version(3, 4)
 
     def install(self, **kwargs):
         pass  # nothing to install yet
