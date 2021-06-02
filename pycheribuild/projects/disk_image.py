@@ -883,24 +883,14 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "strip", default=True, help="strip ELF files to reduce size of generated image")
         cls.include_cheribsdtest = cls.add_bool_option(
             "include-cheribsdtest", default=True, help="Also add static cheribsdtest base variants to the disk image")
-        cls.use_cheribsd_purecap_rootfs = cls.add_bool_option(
-            "use-cheribsd-purecap-rootfs", default=False, help="Use the rootfs built by cheribsd-purecap instead")
 
     def __init__(self, config: CheriConfig):
-        self.rootfs_xtarget = self.get_crosscompile_target(config)
-        if self.rootfs_xtarget.is_cheri_hybrid([CPUArchitecture.MIPS64]) and self.use_cheribsd_purecap_rootfs:
-            self.rootfs_xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
-        if self.rootfs_xtarget.is_cheri_hybrid([CPUArchitecture.RISCV64]) and self.use_cheribsd_purecap_rootfs:
-            self.rootfs_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
         super().__init__(config)
         self.minimum_image_size = "20m"  # let's try to shrink the image size
         # The base input is only cheribsdbox and all the symlinks
         self.input_metalogs = [self.rootfs_dir / "cheribsdbox.mtree"]
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
-
-    def _get_source_class_target(self, config):
-        return self.rootfs_xtarget
 
     @property
     def include_swap_partition(self):
