@@ -3042,6 +3042,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     default_build_type = BuildType.RELWITHDEBINFO
     # Some projects (e.g. LLVM) don't store the CMakeLists.txt in the project root directory.
     root_cmakelists_subdirectory = None  # type: Path
+    # 3.13.4 is the minimum version for LLVM and that also allows us to use "cmake --build -j <N>" unconditionally.
+    _minimum_cmake_or_meson_version = (3, 13, 4)
 
     def _toolchain_file_list_to_str(self, value: list) -> str:
         return ";".join(map(str, value))
@@ -3077,10 +3079,6 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         if self.configure_command is None:
             self.configure_command = "cmake"
             self.add_required_system_tool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
-        if not self.compiling_for_host():
-            assert self.target_info.is_freebsd() or self.target_info.is_baremetal() or self.target_info.is_rtems()
-            # The toolchain files need at least CMake 3.9 (before setup() since check_system_deps() is called first)
-            self.set_minimum_cmake_version(3, 9)
         # allow a -G flag in cmake-options to override the default generator (Ninja).
         custom_generator = next((x for x in self.cmake_options if x.startswith("-G")), None)
         generator = custom_generator if custom_generator else self._default_cmake_generator_arg
@@ -3126,7 +3124,9 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                                            _include_empty_vars=_include_empty_vars, **kwargs)
 
     def set_minimum_cmake_version(self, major: int, minor: int, patch: int = 0):
-        self._minimum_cmake_or_meson_version = (major, minor, patch)
+        new_version = (major, minor, patch)
+        assert self._minimum_cmake_or_meson_version is None or new_version >= self._minimum_cmake_or_meson_version
+        self._minimum_cmake_or_meson_version = new_version
 
     def _cmake_install_stdout_filter(self, line: bytes):
         # don't show the up-to date install lines
@@ -3336,7 +3336,9 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     configure_tool_extra_install_instrs = " or run `pip3 install --upgrade --user meson` to install the latest version"
 
     def set_minimum_meson_version(self, major: int, minor: int, patch: int = 0):
-        self._minimum_cmake_or_meson_version = (major, minor, patch)
+        new_version = (major, minor, patch)
+        assert self._minimum_cmake_or_meson_version is None or new_version >= self._minimum_cmake_or_meson_version
+        self._minimum_cmake_or_meson_version = new_version
 
     @classmethod
     def setup_config_options(cls, **kwargs):
