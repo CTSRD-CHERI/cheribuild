@@ -1863,10 +1863,14 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     # We want the CheriBSD config options as well, so that defaults (e.g. build-alternate-abi-kernels) are inherited.
     _config_inherits_from = BuildCHERIBSD
 
+    @classproperty
+    def mfs_root_image_class(self):
+        from ..disk_image import BuildMfsRootCheriBSDDiskImage
+        return BuildMfsRootCheriBSDDiskImage
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        from ..disk_image import BuildMfsRootCheriBSDDiskImage
-        self.mfs_root_image_instance = BuildMfsRootCheriBSDDiskImage.get_instance(self)
+        self.mfs_root_image_instance = self.mfs_root_image_class.get_instance(self)
         # Re-use the same build directory as the CheriBSD target that was used for the disk image
         # This ensure that the kernel build tools can be found in the build directory
         self.image = self.mfs_root_image_instance.disk_image_path
@@ -1964,6 +1968,15 @@ class BuildCheriBsdMfsImageAndKernels(TargetAliasWithDependencies):
     @classproperty
     def supported_architectures(self):
         return BuildCheriBsdMfsKernel.supported_architectures
+
+
+class BuildBesspinCheriBsdMfsKernel(BuildCheriBsdMfsKernel):
+    target = "besspin-cheribsd-mfs-root-kernel"
+
+    @classproperty
+    def mfs_root_image_class(self):
+        from ..disk_image import BuildBesspinMfsRootCheriBSDDiskImage
+        return BuildBesspinMfsRootCheriBSDDiskImage
 
 
 # def cheribsd_minimal_install_dir(config: CheriConfig, project: SimpleProject):
