@@ -32,7 +32,7 @@ from pathlib import Path
 
 from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
 from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
-from ..project import ReuseOtherProjectDefaultTargetRepository
+from ..project import ReuseOtherProjectDefaultTargetRepository, Linkage
 from ...utils import classproperty, is_jenkins_build
 
 
@@ -122,9 +122,8 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     target = "compiler-rt-builtins"
     _check_install_dir_conflict = False
     is_sdk_target = True
-    dependencies = ["newlib"]
-    manual_sysroot_dependencies = True  # We need --sysroot but avoid cycle through ourselves
     root_cmakelists_subdirectory = Path("lib/builtins")
+    needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = \
         CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
     _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
@@ -137,10 +136,16 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             return DefaultInstallDir.ROOTFS_LOCALBASE
         return DefaultInstallDir.COMPILER_RESOURCE_DIR
 
+    def linkage(self):
+        # The default value of STATIC (for baremetal targets) would add additional flags that are not be needed
+        # since the CMake files already ensure that we link statically.
+        # Forcing static linkage also depends on CMake 3.15 but we should be able to build this with the baseline
+        # version of 3.13.4.
+        return Linkage.DEFAULT
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         assert self.target_info.is_baremetal() or self.target_info.is_rtems(), "No other targets supported yet"
-        assert self.target_info.is_newlib(), "No other targets supported yet"
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
         if self.compiling_for_mips(include_purecap=False):
@@ -179,16 +184,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         else:
             self.move_file(self.install_dir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
 
-            if self.compiling_for_cheri():
-                # compatibility with older compilers
-                self.create_symlink(self.real_install_root_dir / "lib" / libname,
-                                    self.real_install_root_dir / "lib" / "libclang_rt.builtins-cheri.a",
-                                    print_verbose_only=False)
-                self.create_symlink(self.real_install_root_dir / "lib" / libname,
-                                    self.real_install_root_dir / "lib" / "libclang_rt.builtins-mips64.a",
-                                    print_verbose_only=False)
-            # HACK: we don't really need libunwind but the toolchain pulls it in automatically
-            # TODO: is there an easier way to create empty .a files?
-            self.run_cmd("ar", "rcv", self.install_dir / "lib/libunwind.a", "/dev/null")
-            self.run_cmd("ar", "dv", self.install_dir / "lib/libunwind.a", "null")
-            self.run_cmd("ar", "t", self.install_dir / "lib/libunwind.a")  # should be empty now
+            if self.compiling_for_mips(include_purecap=True):
+                # HACK: we don't really need libunwind but the toolchain pulls it in automatically
+                # TODO: is there an easier way to create empty .a files?
+                self.run_cmd("ar", "rcv", self.install_dir / "lib/libunwind.a", "/dev/null")
+                self.run_cmd("ar", "dv", self.install_dir / "lib/libunwind.a", "null")
+                self.run_cmd("ar", "t", self.install_dir / "lib/libunwind.a")  # should be empty now
