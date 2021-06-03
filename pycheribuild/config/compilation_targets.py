@@ -172,7 +172,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                     result.append("-cheri=" + config.mips_cheri_bits_str)
                     result.append("-mcpu=beri")
         elif xtarget.is_riscv(include_purecap=True):
-            softfloat = True if config.riscv_float_abi == "soft" else False
+            softfloat = not config.riscv_baremetal_hardfloat
             # Use the insane RISC-V arch string to enable CHERI
             result.append("-march=" + cls.get_riscv_arch_string(xtarget, softfloat=softfloat))
             result.append("-mabi=" + cls.get_riscv_abi(xtarget, softfloat=softfloat))

@@ -201,9 +201,9 @@ class CheriConfig(ConfigBase):
         self.mips_float_abi = loader.add_option("mips-float-abi", default=MipsFloatAbi.SOFT, type=MipsFloatAbi,
                                                 group=loader.cross_compile_options_group,
                                                 help="The floating point ABI to use for building MIPS+CHERI programs")
-        self.riscv_float_abi = loader.add_option("riscv-float-abi", default="hard",
+        self.riscv_baremetal_hardfloat = loader.add_bool_option("riscv-baremetal-hardfloat", default=False,
                                                 group=loader.cross_compile_options_group,
-                                                help="The floating point ABI to use for building CHERI-RISC-V programs")
+                                                help="Use hard floating point ABI for building CHERI-RISC-V programs")
         self.crosscompile_linkage = loader.add_option("cross-compile-linkage", default=Linkage.DYNAMIC, type=Linkage,
                                                       group=loader.cross_compile_options_group,
                                                       enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
