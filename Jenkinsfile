@@ -121,11 +121,11 @@ pipeline {
   environment {
     PYTHONDONTWRITEBYTECODE = '1'
   }
-  post {
-    failure {
-      mail(to: 'alr48@cl.cam.ac.uk', subject: "Failed Pipeline: ${currentBuild.fullDisplayName}", body: "Something is wrong with ${env.BUILD_URL}")
-    }
-  }
+  //post {
+  //  failure {
+  //    mail(to: 'alr48@cl.cam.ac.uk', subject: "Failed Pipeline: ${currentBuild.fullDisplayName}", body: "Something is wrong with ${env.BUILD_URL}")
+  //  }
+  // }
   options {
     checkoutToSubdirectory('src')
     timestamps()
