@@ -172,10 +172,9 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                     result.append("-cheri=" + config.mips_cheri_bits_str)
                     result.append("-mcpu=beri")
         elif xtarget.is_riscv(include_purecap=True):
-            # Note: Baremetal/FreeRTOS currently only supports softfloat
-            softfloat = cls.is_baremetal()
+            softfloat = True if config.riscv_float_abi == "soft" else False
             # Use the insane RISC-V arch string to enable CHERI
-            result.append("-march=" + cls.get_riscv_arch_string(xtarget, softfloat=cls.is_baremetal()))
+            result.append("-march=" + cls.get_riscv_arch_string(xtarget, softfloat=softfloat))
             result.append("-mabi=" + cls.get_riscv_abi(xtarget, softfloat=softfloat))
             result.append("-mno-relax")  # Linker relaxations are not supported with clang+lld
 
@@ -197,8 +196,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, softfloat: bool):
         assert xtarget.is_riscv(include_purecap=True)
         # Use the insane RISC-V arch string to enable CHERI
-        if cls.is_baremetal():
-            # Baremetal/FreeRTOS only supports softfloat
+        if softfloat:
             if xtarget.cpu_architecture == CPUArchitecture.RISCV32:
                 arch_string = "rv32imac"
             else:
@@ -217,7 +215,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     def get_riscv_abi(cls, xtarget: CrossCompileTarget, *, softfloat: bool):
         assert xtarget.is_riscv(include_purecap=True)
 
-        if cls.is_baremetal():
+        if softfloat:
             return cls.riscv_softfloat_abi(xtarget)  # Baremetal/FreeRTOS only supports softfloat
 
         if xtarget.is_cheri_purecap():
