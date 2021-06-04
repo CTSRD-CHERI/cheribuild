@@ -3517,7 +3517,10 @@ class TargetAlias(SimpleProject):
     is_alias = True
 
     def process(self):
-        assert len(self.dependencies) > 0
+        dependencies = self.dependencies
+        if callable(self.dependencies):
+            dependencies = self.dependencies(self.config)
+        assert any(True for _ in dependencies), "Expected non-empty dependencies for " + self.target
 
 
 # A target that does nothing (used for e.g. the "all" target)

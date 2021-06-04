@@ -38,7 +38,7 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolc
     return result
 
 
-freestanding_deps = ["llvm-native", "qemu", "gdb-native", "freestanding-sdk"]
+freestanding_deps = ["llvm-native", "qemu", "gdb-native", "freestanding-cheri-sdk"]
 baremetal_deps = freestanding_deps + ["newlib-baremetal-mips64", "compiler-rt-builtins-baremetal-mips64",
                                       "libunwind-baremetal-mips64", "libcxxrt-baremetal-mips64",
                                       "libcxx-baremetal-mips64", "baremetal-sdk"]
@@ -51,6 +51,9 @@ cheribsd_sdk_deps = freestanding_deps + ["cheribsd-mips64-hybrid", "cheribsd-sdk
     # Ensure that cheribsd is added to deps even on Linux/Mac
     pytest.param("cheribsd-sdk-mips64-hybrid", cheribsd_sdk_deps, id="cheribsd-sdk"),
     pytest.param("sdk-mips64-hybrid", cheribsd_sdk_deps + ["sdk-mips64-hybrid"], id="sdk"),
+    pytest.param("sdk-morello-purecap", ["morello-llvm-native", "morello-qemu", "freestanding-morello-sdk",
+                                         "cheribsd-morello-purecap", "cheribsd-sdk-morello-purecap",
+                                         "sdk-morello-purecap"], id="morello-purecap"),
     ])
 def test_sdk(target_name, expected_list):
     assert _sort_targets([target_name]) == expected_list
