@@ -179,7 +179,7 @@ class BuildQEMUBase(AutotoolsProject):
                 self.fatal("Could not find smbd -> QEMU SMB shares networking will not work",
                            fixit_hint="Either install samba using the system package manager or with cheribuild. "
                                       "If you really don't need QEMU host shares you can disable the samba dependency "
-                                      "by setting --qemu/no-use-smbd")
+                                      "by setting --" + self.target + "/no-use-smbd")
 
         self.configure_args.extend([
             "--target-list=" + self.qemu_targets,
