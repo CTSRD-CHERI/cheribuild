@@ -38,6 +38,10 @@ from .project import CheriConfig, SimpleProject
 from ..config.compilation_targets import CompilationTargets
 
 
+repos = ["cheribuild", "cheribsd", "gdb",
+         "morello-llvm-project", "morello-qemu",
+         "morello-trusted-firmware-a", "qemu"]
+
 class Tag(SimpleProject):
     project_name = "tag"
     
@@ -52,9 +56,6 @@ class Tag(SimpleProject):
 
     def process(self):
         source_root = self.config.source_root
-        repos = ["cheribuild", "cheribsd", "gdb",
-                 "morello-llvm-project", "morello-qemu",
-                 "morello-trusted-firmware-a"]
         for repo in repos:
             run_command("git", "-C", repo, "tag", self.gittag, cwd=source_root)
 
@@ -72,9 +73,6 @@ class UnTag(SimpleProject):
 
     def process(self):
         source_root = self.config.source_root
-        repos = ["cheribuild", "cheribsd", "gdb",
-                 "morello-llvm-project", "morello-qemu",
-                 "morello-trusted-firmware-a"]
         for repo in repos:
             run_command("git", "-C", repo, "tag", "-d", self.gittag, cwd=source_root)
 
