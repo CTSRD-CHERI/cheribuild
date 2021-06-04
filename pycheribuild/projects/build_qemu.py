@@ -61,8 +61,6 @@ class BuildQEMUBase(AutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.with_sanitizers = cls.add_bool_option("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)",
-                                                  default=False)
         cls.use_smbd = cls.add_bool_option("use-smbd", show_help=False, default=True,
                                            help="Don't require SMB support when building QEMU (warning: most --test "
                                                 "targets will fail without smbd support)")
@@ -119,9 +117,7 @@ class BuildQEMUBase(AutotoolsProject):
             # Try to optimize as much as possible:
             self.configure_args.extend(["--disable-stack-protector"])
 
-        if self.with_sanitizers:
-            self.warning("Option --qemu/sanitizers is deprecated, use --qemu/use-asan instead")
-        if self.with_sanitizers or self.use_asan:
+        if self.use_asan:
             self.configure_args.append("--enable-sanitizers")
             if self.use_lto:
                 self.info("Disabling LTO for ASAN instrumented builds")
