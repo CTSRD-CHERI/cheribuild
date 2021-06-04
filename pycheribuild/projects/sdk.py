@@ -35,7 +35,7 @@ from .cross.cheribsd import BuildCHERIBSD
 from .project import (CheriConfig, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject,
                       TargetAliasWithDependencies)
 from ..targets import target_manager
-from ..utils import classproperty, include_local_file, OSInfo
+from ..utils import classproperty, include_local_file
 
 
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
@@ -70,11 +70,6 @@ class BuildFreestandingSdk(SimpleProject):
     dependencies = ["llvm-native", "qemu", "gdb-native"]
     dependencies_must_be_built = True
     is_sdk_target = True
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        if OSInfo.IS_FREEBSD:
-            self.add_required_system_tool("ar")
 
     def install_cmake_config(self):
         date = datetime.datetime.now()
