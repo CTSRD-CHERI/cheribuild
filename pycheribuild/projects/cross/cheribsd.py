@@ -994,6 +994,18 @@ class BuildFreeBSD(BuildFreeBSDBase):
         else:
             return self.async_clean_directory(builddir)
 
+    def _list_kernel_configs(self):
+        """Emit a list of valid kernel configurations that can be given as --kernel-config overrides"""
+        conf_dir = self.source_dir / "sys" / self.target_info.freebsd_target_cputype / "conf"
+        configs = conf_dir.glob("*")
+        blacklist = ["NOTES", "LINT", "DEFAULTS"]
+        self.info("Valid kernel configuration files for --freebsd/kernel-config:")
+        for conf in configs:
+            if (conf.name in blacklist or conf.name.startswith("std.") or conf.name.endswith(".hints") or
+                    conf.name.endswith("~")):
+                continue
+            self.info(conf.name)
+
     def _buildkernel(self, kernconf: str, mfs_root_image: Path = None, extra_make_args=None,
                      ignore_skip_kernel=False):
         # Check that --skip-kernel is respected. However, we ignore it for the cheribsd-mfs-root-kernel targets
@@ -1313,6 +1325,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if not OSInfo.IS_FREEBSD:
             assert self.crossbuild
         _clear_dangerous_make_env_vars()
+
+        if self.config.list_kernels:
+            self._list_kernel_configs()
+            return
 
         if self.explicit_subdirs_only:
             # Allow building a single FreeBSD/CheriBSD directory using the BUILDENV_SHELL trick

@@ -277,6 +277,23 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return target.cpu_architecture.value + common_suffix
 
     @property
+    def freebsd_target_cputype(self):
+        """
+        Return the name of the target CPU type, which is also the name of
+        the machine-dependent code directory in the source tree.
+        (e.g. <arch> in sys/<arch>)
+        """
+        mapping = {
+            CPUArchitecture.AARCH64: "arm64",
+            CPUArchitecture.ARM32: "arm",
+            CPUArchitecture.I386: "i386",
+            CPUArchitecture.MIPS64: "mips",
+            CPUArchitecture.RISCV64: "riscv",
+            CPUArchitecture.X86_64: "amd64",
+        }
+        return mapping[self.target.cpu_architecture]
+
+    @property
     def freebsd_target_arch(self):
         mapping = {
             CPUArchitecture.AARCH64: "aarch64",
