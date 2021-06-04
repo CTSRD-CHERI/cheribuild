@@ -34,13 +34,13 @@
 # device.
 #
 import argparse
-import atexit
 import datetime
 import os
 import random
 import re
 import shlex
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -678,6 +678,12 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
     def sendintr(self):
         self.stderr.write("^C\n")
 
+    def interact(self, **kwargs):
+        if self.should_quit:
+            super().kill(signal.SIGTERM)
+            time.sleep(0.1)
+        info("Interacting (fake) ...")
+
 
 def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
     success("===> Setting up QEMU networking")
@@ -702,8 +708,9 @@ def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
 
 def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path], kernel_image: Path,
                   disk_image: typing.Optional[Path], ssh_port: typing.Optional[int],
-                  ssh_pubkey: typing.Optional[Path], *, smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False,
-                  trap_on_unrepresentable=False, skip_ssh_setup=False, bios_path: Path = None) -> QemuCheriBSDInstance:
+                  ssh_pubkey: typing.Optional[Path], *, write_disk_image_changes: bool,
+                  smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False, trap_on_unrepresentable=False,
+                  skip_ssh_setup=False, bios_path: Path = None) -> QemuCheriBSDInstance:
     user_network_args = ""
     if smb_dirs is None:
         smb_dirs = []
@@ -726,6 +733,7 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
         bios_args = []
     qemu_args = qemu_options.get_commandline(qemu_command=qemu_command, kernel_file=kernel_image, disk_image=disk_image,
                                              bios_args=bios_args, user_network_args=user_network_args,
+                                             write_disk_image_changes=write_disk_image_changes,
                                              add_network_device=True,
                                              trap_on_unrepresentable=trap_on_unrepresentable,  # For debugging
                                              add_virtio_rng=True  # faster entropy gathering
@@ -1030,11 +1038,9 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--reuse-image", action="store_true")
     parser.add_argument("--keep-compressed-images", action="store_true", default=True, dest="keep_compressed_images")
     parser.add_argument("--no-keep-compressed-images", action="store_false", dest="keep_compressed_images")
-    parser.add_argument("--make-disk-image-copy", default=True, action="store_true",
-                        help="Make a copy of the disk image before running tests")
-    parser.add_argument("--no-make-disk-image-copy", action="store_false", dest="disk_image_copy")
-    parser.add_argument("--keep-disk-image-copy", default=False, action="store_true",
-                        help="Keep the copy of the disk image (if a copy was made)")
+    parser.add_argument("--write-disk-image-changes", default=False, action="store_true",
+                        help="Commit changes made to the disk image (by default the image is immutable)")
+    parser.add_argument("--no-write-disk-image-changes", action="store_false", dest="write_disk_image_changes")
     parser.add_argument("--trap-on-unrepresentable", action="store_true",
                         help="CHERI trap on unrepresentable caps instead of detagging")
     parser.add_argument("--ssh-key", default=default_ssh_key())
@@ -1107,6 +1113,8 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
         args.kernel = args.internal_kernel_override
     if args.internal_disk_image_override:
         args.disk_image = args.internal_disk_image_override
+        # Allow running multiple jobs in parallel by using the -snaptshot QEMU option
+        assert not args.write_disk_image_changes, "Should not be writing changes when running sharded tests!"
     if args.test_environment_only:
         args.interact = True
     xtarget = SUPPORTED_ARCHITECTURES.get(args.architecture, None)
@@ -1197,24 +1205,12 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
         diskimg = maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images,
                                    args=args, what="disk image")
 
-    # Allow running multiple jobs in parallel by making a copy of the disk image
-    if diskimg is not None and args.make_disk_image_copy:
-        assert isinstance(diskimg, Path)
-        str(os.getpid())
-        new_img = diskimg.with_suffix(
-            ".img.runtests." + datetime.datetime.now().strftime("%Y%m%d%H%M%S") + ".pid" + str(os.getpid()))
-        assert not new_img.exists()
-        run_host_command(["cp", "-fv", str(diskimg), str(new_img)])
-        if not args.keep_disk_image_copy:
-            atexit.register(run_host_command, ["rm", "-fv", str(new_img)])
-        diskimg = new_img
-
     boot_starttime = datetime.datetime.now()
     qemu = boot_cheribsd(qemu_options, qemu_command=args.qemu_cmd, kernel_image=kernel, disk_image=diskimg,
                          ssh_port=args.ssh_port, ssh_pubkey=Path(args.ssh_key), smb_dirs=args.smb_mount_directories,
                          kernel_init_only=args.test_kernel_init_only,
                          trap_on_unrepresentable=args.trap_on_unrepresentable, skip_ssh_setup=args.skip_ssh_setup,
-                         bios_path=args.bios)
+                         bios_path=args.bios, write_disk_image_changes=args.write_disk_image_changes)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
     tests_okay = True
@@ -1241,7 +1237,7 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
 
     if args.interact:
         success("===> Interacting with CheriBSD, use CTRL+A,x to exit")
-        # interac() prints all input+output -> disable logfile
+        # interact() prints all input+output -> disable logfile
         qemu.logfile = None
         qemu.logfile_read = None
         qemu.logfile_send = None
