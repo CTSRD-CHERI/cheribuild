@@ -617,9 +617,38 @@ def test_disk_image_path(target, expected_name):
 
 
 @pytest.mark.parametrize("target,config_options,expected_name,extra_kernels", [
+    # RISCV kernconf tests
     pytest.param("cheribsd-riscv64-purecap", [], "CHERI-QEMU", []),
+    pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-fpga-kernels"], "CHERI-QEMU", []),
+    pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-alternate-abi-kernels"],
+                 "CHERI-QEMU", ["CHERI-PURECAP-QEMU"]),
+    pytest.param("cheribsd-riscv64-purecap",
+                 ["--cheribsd/build-alternate-abi-kernels",
+                  "--cheribsd/default-kernel-abi", "purecap"],
+                 "CHERI-PURECAP-QEMU", ["CHERI-QEMU"]),
+    pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-fett-kernels"],
+                 "CHERI-QEMU-FETT", ["CHERI-QEMU"]),
+    pytest.param("cheribsd-riscv64-purecap",
+                 ["--cheribsd/build-fett-kernels",
+                  "--cheribsd/build-alternate-abi-kernels"],
+                 "CHERI-QEMU-FETT", ["CHERI-QEMU", "CHERI-PURECAP-QEMU"]),
+    pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-bench-kernels"],
+                 "CHERI-QEMU", ["CHERI-QEMU-NODEBUG"]),
+    # MIPS kernconf tests
     pytest.param("cheribsd-mips64-purecap", ["--cheribsd/build-fpga-kernels"],
-                 "CHERI_MALTA64", ["CHERI_DE4_USBROOT", "CHERI_DE4_USBROOT_BENCHMARK", "CHERI_DE4_NFSROOT"]),
+                 "CHERI_MALTA64", ["CHERI_DE4_USBROOT", "CHERI_DE4_NFSROOT"]),
+    pytest.param("cheribsd-mips64-purecap", ["--cheribsd/build-fpga-kernels", "--cheribsd/build-bench-kernels"],
+                 "CHERI_MALTA64", ["CHERI_DE4_USBROOT_BENCHMARK", "CHERI_DE4_USBROOT", "CHERI_DE4_NFSROOT"]),
+    pytest.param("cheribsd-mips64-purecap", ["--cheribsd/build-alternate-abi-kernels"],
+                 "CHERI_MALTA64", ["CHERI_PURECAP_MALTA64"]),
+    pytest.param("cheribsd-mips64-purecap",
+                 ["--cheribsd/build-alternate-abi-kernels",
+                  "--cheribsd/default-kernel-abi", "purecap"],
+                 "CHERI_PURECAP_MALTA64", ["CHERI_MALTA64"]),
+    # Morello kernconf tests
+    pytest.param("cheribsd-morello-purecap", [], "GENERIC-MORELLO", []),
+    pytest.param("cheribsd-morello-purecap", ["--cheribsd/build-alternate-abi-kernels"],
+                 "GENERIC-MORELLO", ["GENERIC-MORELLO-PURECAP"]),
 ])
 def test_kernel_configs(target, config_options: "list[str]", expected_name, extra_kernels):
     config = _parse_arguments(config_options)
