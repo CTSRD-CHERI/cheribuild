@@ -256,6 +256,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         # Generate QEMU kernels
         for kABI in KernelABI:
             configs.append(self.make_config(ConfigPlatform.QEMU, kABI, default=True))
+            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, benchmark=True, default=True))
             configs.append(self.make_config(ConfigPlatform.QEMU, kABI, mfsroot=True, default=True))
             configs.append(self.make_config(ConfigPlatform.QEMU, kABI, mfsroot=True, benchmark=True, default=True))
         # Generate GFE-FPGA kernels
