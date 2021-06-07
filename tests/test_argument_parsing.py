@@ -18,7 +18,7 @@ from pycheribuild.projects.cross import *  # noqa: F401, F403
 from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, FreeBSDToolchainKind
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 # noinspection PyProtectedMember
-from pycheribuild.projects.disk_image import BuildDiskImageBase, BuildCheriBSDDiskImage
+from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase
 # Override the default config loader:
 from pycheribuild.projects.project import SimpleProject
 from pycheribuild.projects.run_qemu import LaunchCheriBSD
@@ -614,6 +614,18 @@ def test_disk_image_path(target, expected_name):
     config = _parse_arguments([])
     project = _get_target_instance(target, config, BuildDiskImageBase)
     assert str(project.disk_image_path) == str(config.output_root / expected_name)
+
+
+@pytest.mark.parametrize("target,config_options,expected_name,extra_kernels", [
+    pytest.param("cheribsd-riscv64-purecap", [], "CHERI-QEMU", []),
+    pytest.param("cheribsd-mips64-purecap", ["--cheribsd/build-fpga-kernels"],
+                 "CHERI_MALTA64", ["CHERI_DE4_USBROOT", "CHERI_DE4_USBROOT_BENCHMARK", "CHERI_DE4_NFSROOT"]),
+])
+def test_kernel_configs(target, config_options: "list[str]", expected_name, extra_kernels):
+    config = _parse_arguments(config_options)
+    project = _get_target_instance(target, config, BuildCHERIBSD)
+    assert project.kernel_config == expected_name
+    assert project.extra_kernels == extra_kernels
 
 
 # noinspection PyTypeChecker
