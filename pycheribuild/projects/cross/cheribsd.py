@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import itertools
 import os
 import shutil
 import subprocess
@@ -307,7 +308,7 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
         return configs
 
 
-def filter_kernel_configs(configs: list, **filter_kwargs):
+def filter_kernel_configs(configs: list, **filter_kwargs) -> "typing.Sequence[CheriBSDConfig]":
     """
     Helper function to filter kernel configuration lists.
     Keyword filter arguments are mapped to CheriBSDConfig properties.
@@ -1606,6 +1607,11 @@ class BuildCHERIBSD(BuildFreeBSD):
             only_add_for_targets=(CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS +
                                   CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS),
             help="Also build kernels with non-default ABI (purecap or hybrid)")
+
+        cls.build_bench_kernels = cls.add_bool_option("build-bench-kernels", show_help=True,
+                                                      _allow_unknown_targets=True,
+                                                      help="Also build benchmark kernels")
+
         cls.caprevoke_kernel = cls.add_bool_option("caprevoke-kernel", show_help=True, _allow_unknown_targets=True,
                                                    only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP,
                                                                          CompilationTargets.CHERIBSD_MIPS_HYBRID,
@@ -1629,6 +1635,42 @@ class BuildCHERIBSD(BuildFreeBSD):
             kernABI = KernelABI.NOCHERI
         return kernABI
 
+    def _get_config_variants(self, platforms: list, kernABIs: list, combine_flags: list, **filter_kwargs):
+        flag_values = itertools.product([True, False], repeat=len(combine_flags))
+        combine_tuples = list(itertools.product(platforms, kernABIs, flag_values))
+        configs = []
+        for platform, kernABI, flag_tuple in combine_tuples:
+            combined_filter = {flag: v for flag, v in zip(combine_flags, flag_tuple)}
+            filter_kwargs.update(combined_filter)
+            configs += CheriBSDConfigTable.get_configs(self.crosscompile_target, platform, kernABI, **filter_kwargs)
+        return configs
+
+    def _get_kABIs_to_build(self):
+        default_kABI = self.get_default_kernel_abi()
+        kernABIs = [default_kABI]
+        if self.build_alternate_abi_kernels:
+            otherABI = KernelABI.PURECAP if default_kABI != KernelABI.PURECAP else KernelABI.HYBRID
+            kernABIs.append(otherABI)
+        return kernABIs
+
+    def _get_all_kernel_configs(self):
+        kernABIs = self._get_kABIs_to_build()
+        platform = self.get_default_kernel_platform()
+        combinations = []
+        if self.build_bench_kernels:
+            combinations.append("benchmark")
+        if self.caprevoke_kernel:
+            combinations.append("caprevoke")
+        if self.build_fett_kernels:
+            if not self.compiling_for_riscv(include_purecap=True):
+                self.warning("Unsupported architecture for FETT kernels")
+            combinations.append("fett")
+        configs = self._get_config_variants([platform], kernABIs, combinations)
+        if self.build_fpga_kernels:
+            configs += self._get_config_variants([ConfigPlatform.fpga_platforms()], kernABIs,
+                                                 combinations + ["mfsroot"])
+        return configs
+
     def default_kernel_config(self, platform: ConfigPlatform = None, **filter_kwargs) -> str:
         xtarget = self.crosscompile_target
         if not xtarget.is_hybrid_or_purecap_cheri():
@@ -1636,43 +1678,18 @@ class BuildCHERIBSD(BuildFreeBSD):
         # Handle CheriBSD hybrid and purecap configs
         if platform is None:
             platform = self.get_default_kernel_platform()
+        kABI = filter_kwargs.pop("kABI", self.get_default_kernel_abi())
         if xtarget.is_riscv(include_purecap=True):
             filter_kwargs.setdefault("fett", self.build_fett_kernels)
         filter_kwargs.setdefault("caprevoke", self.caprevoke_kernel)
-        kABI = filter_kwargs.pop("kABI", self.default_kernel)
         config = CheriBSDConfigTable.get_default(xtarget, platform, kABI, **filter_kwargs)
         return config.kernconf
 
     def extra_kernel_configs(self):
-        xtarget = self.crosscompile_target
-        kernABI = self.get_default_kernel_abi()
-        otherABI = KernelABI.PURECAP if kernABI != KernelABI.PURECAP else KernelABI.HYBRID
-        platform = self.get_default_kernel_platform()
-        configs = []
-        if self.build_alternate_abi_kernels:
-            # The default config has already been added if the default is purecap
-            configs.append(CheriBSDConfigTable.get_default(xtarget, platform, otherABI))
-
-        if self.build_fpga_kernels:
-            configs += CheriBSDConfigTable.get_configs(xtarget, ConfigPlatform.fpga_platforms(), kernABI,
-                                                       mfsroot="any")
-            if self.caprevoke_kernel:
-                configs += CheriBSDConfigTable.get_configs(xtarget, ConfigPlatform.fpga_platforms(), kernABI,
-                                                           mfsroot="any", caprevoke=True)
-            if self.build_alternate_abi_kernels:
-                configs += CheriBSDConfigTable.get_configs(xtarget, ConfigPlatform.fpga_platforms(),
-                                                           otherABI, mfsroot="any")
-
-        if self.build_fett_kernels:
-            if self.compiling_for_riscv(include_purecap=True):
-                # Any default fett kernel is already built by the default rule
-                configs += CheriBSDConfigTable.get_configs(xtarget, platform, kernABI, default=False,
-                                                           caprevoke=self.caprevoke_kernel, fett=True)
-                if self.build_alternate_abi_kernels:
-                    configs += CheriBSDConfigTable.get_configs(xtarget, platform, otherABI, fett=True)
-            else:
-                self.warning("Unsupported architecture for FETT kernels")
-        return configs
+        # Everything that is not the default kernconf
+        configs = self._get_all_kernel_configs()
+        default_kernconf = self.default_kernel_config()
+        return [c for c in configs if c.kernconf != default_kernconf]
 
     def get_kernel_configs(self, **filter_kwargs) -> "typing.Sequence[str]":
         default = super().get_kernel_configs(**filter_kwargs)
@@ -1805,31 +1822,32 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
                     fullkernel_install_path = kernel_install_path.with_name(kernel_install_path.name + ".full")
                     self.install_file(dbg_info_kernel, fullkernel_install_path, force=True, print_verbose_only=False)
 
+    def _get_all_kernel_configs(self):
+        kernABIs = self._get_kABIs_to_build()
+        platform = self.get_default_kernel_platform()
+        combinations = []
+        if self.build_bench_kernels:
+            combinations.append("benchmark")
+        if self.caprevoke_kernel:
+            combinations.append("caprevoke")
+        configs = self._get_config_variants([platform], kernABIs, combinations, mfsroot=True)
+        if self.build_fpga_kernels:
+            configs += self._get_config_variants([ConfigPlatform.fpga_platforms()], kernABIs,
+                                                 combinations, mfsroot=True)
+        return configs
+
     def default_kernel_config(self, platform: ConfigPlatform = None, **filter_kwargs) -> str:
         if platform is None:
             platform = self.get_default_kernel_platform()
         kABI = filter_kwargs.pop("kABI", self.get_default_kernel_abi())
+        filter_kwargs.setdefault("caprevoke", self.caprevoke_kernel)
+        filter_kwargs.setdefault("benchmark", self.build_bench_kernels)
         filter_kwargs["mfsroot"] = True
-        if self.caprevoke_kernel:
-            filter_kwargs["caprevoke"] = True
         config = CheriBSDConfigTable.get_default(self.crosscompile_target, platform, kABI, **filter_kwargs)
         return config.kernconf
 
     def get_kernel_configs(self, **filter_kwargs) -> "typing.Sequence[str]":
-        xtarget = self.crosscompile_target
-        default_kABI = self.get_default_kernel_abi()
-        other_kABI = KernelABI.PURECAP if default_kABI != KernelABI.PURECAP else KernelABI.HYBRID
-        platforms = self.get_default_kernel_platform()
-        if self.build_fpga_kernels:
-            platforms |= ConfigPlatform.fpga_platforms()
-        configs = CheriBSDConfigTable.get_configs(xtarget, platforms, default_kABI,
-                                                  mfsroot=True)
-        configs += CheriBSDConfigTable.get_configs(xtarget, platforms, default_kABI,
-                                                   mfsroot=True, benchmark=True)
-        if self.build_alternate_abi_kernels:
-            configs += CheriBSDConfigTable.get_configs(xtarget, platforms, other_kABI, mfsroot=True)
-            configs += CheriBSDConfigTable.get_configs(xtarget, platforms, other_kABI, mfsroot=True,
-                                                       benchmark=True)
+        configs = self._get_all_kernel_configs()
         return [c.kernconf for c in filter_kernel_configs(configs, **filter_kwargs)]
 
     def get_kernel_install_path(self, kernconf: str) -> Path:
