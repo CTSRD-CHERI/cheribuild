@@ -133,13 +133,16 @@ class RISCV64Release(Release):
 
     def process(self):
         output_root = self.config.output_root
+        source_root = self.config.source_root
+
+        run_command("cp", "-a", source_root / "cheribuild", output_root)
+
         run_command("bsdtar", "-cavf", output_root / "release.tar.xz", "-C", output_root,
             "--options=xz:threads=" + str(default_make_jobs_count()),
             "--options=compression-level=9",  # reduce size a bit more
-            "morello-sdk/firmware",
-            "cheribsd-morello-purecap.img",
-            "sources/cheribuild",
-            "cheribuild.py",
+            "--exclude=*.git",
+            "cheribsd-riscv64-purecap.img",
+            "cheribuild",
             cwd="/")
 
         run_command("sha256sum", output_root / "release.tar.xz")
