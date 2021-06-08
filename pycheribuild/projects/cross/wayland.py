@@ -43,6 +43,8 @@ class BuildEPollShim(CrossCompileCMakeProject):
         if not self.compiling_for_host():
             # external/microatf/cmake/ATFTestAddTests.cmake breaks cross-compilation
             self.add_cmake_options(BUILD_TESTING=False)
+            # Set these variables to the CMake results from building natively:
+            self.add_cmake_options(ALLOWS_ONESHOT_TIMERS_WITH_TIMEOUT_ZERO=True)
         super().configure()
 
     def run_tests(self):
