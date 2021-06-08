@@ -1775,6 +1775,7 @@ class BuildCheriBSDFett(BuildCHERIBSD):
 class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     project_name = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-mfs-root"]
+    repository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD, do_update=True)
     _always_add_suffixed_targets = True
     supported_architectures = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
 

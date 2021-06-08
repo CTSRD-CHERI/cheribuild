@@ -858,6 +858,18 @@ def test_source_dir_option_when_reusing_git_repo(monkeypatch):
     # compiler-rt-riscv64 uses the default path, since we only changed llvm-native and compiler-rt-native:
     assert str(_get_target_instance("compiler-rt-riscv64", config).source_dir) == "/foo/llvm-project/compiler-rt"
 
+    # Check that cheribsd-mfs-root-kernel reused the cheribsd source dir
+    assert str(_get_target_instance("cheribsd-mfs-root-kernel-riscv64-purecap",
+                                    config).source_dir) == "/foo/cheribsd"
+    assert str(_get_target_instance("cheribsd-mfs-root-kernel-mips64-purecap",
+                                    config).source_dir) == "/foo/cheribsd"
+    config = _parse_config_file_and_args(b'{ "cheribsd-riscv64-purecap/source-directory": "/custom/cheribsd-riscv-dir",'
+                                         b'  "source-root": "/foo" }')
+    assert str(_get_target_instance("cheribsd-mfs-root-kernel-mips64-purecap",
+                                    config).source_dir) == "/foo/cheribsd"
+    assert str(_get_target_instance("cheribsd-mfs-root-kernel-riscv64-purecap",
+                                    config).source_dir) == "/custom/cheribsd-riscv-dir"
+
 
 def test_mfs_root_kernel_config_options():
     """ Check that the mfs-kernel class does not inherit unnecessary command line options from BuildCheriBSD """

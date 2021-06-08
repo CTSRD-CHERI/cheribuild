@@ -2215,9 +2215,8 @@ class Project(SimpleProject):
         super().__init__(config)
         # set up the install/build/source directories (allowing overrides from config file)
         assert isinstance(self.repository, SourceRepository), self.target + " repository member is wrong!"
-        if hasattr(self, "_repository_url"):
+        if hasattr(self, "_repository_url") and isinstance(self.repository, GitRepository):
             # TODO: remove this and use a custom argparse.Action subclass
-            assert isinstance(self.repository, GitRepository)
             self.repository.url = self._repository_url
         self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
 
