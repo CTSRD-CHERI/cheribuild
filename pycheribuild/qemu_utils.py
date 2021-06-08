@@ -54,7 +54,7 @@ class QemuOptions:
             self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "morello", "-bios", "edk2-aarch64-code.fd"]
         elif xtarget.is_mips(include_purecap=True):
             # Note: we always use the CHERI QEMU
-            self.qemu_arch_sufffix = "cheri128"
+            self.qemu_arch_sufffix = "mips64cheri128"
             self.machine_flags = ["-M", "malta"]
             self.virtio_disk = False  # broken for MIPS?
             self.can_boot_kernel_directly = True

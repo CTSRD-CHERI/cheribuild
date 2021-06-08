@@ -73,8 +73,7 @@ class LaunchQEMUBase(SimpleProject):
         cls.use_uboot = cls.add_bool_option("use-u-boot", default=False,
                                             help="Boot using U-Boot for UEFI if supported (only RISC-V)")
         cls.extra_qemu_options = cls.add_config_option("extra-options", default=[], kind=list, metavar="QEMU_OPTIONS",
-                                                       help="Additional command line flags to pass to "
-                                                            "qemu-system-cheri")
+                                                       help="Additional command line flags to pass to qemu-system")
         cls.logfile = cls.add_path_option("logfile", default=None, metavar="LOGFILE",
                                           help="The logfile that QEMU should use.")
         cls.log_directory = cls.add_path_option("log-directory", default=None, metavar="DIR",

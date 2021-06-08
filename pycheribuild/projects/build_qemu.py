@@ -238,7 +238,7 @@ class BuildUpstreamQEMU(BuildQEMUBase):
 
 class BuildQEMU(BuildQEMUBase):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri")
-    default_targets = "cheri128-softmmu,mips64-softmmu," \
+    default_targets = "mips64-softmmu,mips64cheri128-softmmu," \
                       "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu," \
                       "x86_64-softmmu,aarch64-softmmu"
 
@@ -259,8 +259,7 @@ class BuildQEMU(BuildQEMUBase):
             # Always use the CHERI qemu even for plain riscv:
             binary_name = "qemu-system-riscv64cheri"
         elif xtarget.is_mips(include_purecap=True):
-            binary_name = "qemu-system-cheri"
-            binary_name += caller.config.mips_cheri_bits_str
+            binary_name = "qemu-system-mips64cheri128"
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
         return caller.config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)

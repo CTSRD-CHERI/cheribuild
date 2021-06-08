@@ -82,7 +82,7 @@ class BuildCheriMipsTestQEMU(_BuildCheriMipsTestBase):
 
     def setup(self):
         super().setup()
-        self.make_args.set(QEMU_CHERI128=self.config.qemu_bindir / "qemu-system-cheri128")
+        self.make_args.set(QEMU_CHERI128=self.config.qemu_bindir / "qemu-system-mips64cheri128")
         self.make_args.set(QEMU_MIPS64=self.config.qemu_bindir / "qemu-system-mips64")
 
     def do_cheritest(self):
