@@ -11,11 +11,13 @@ import pytest
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
 from pycheribuild.config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
-from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
+from pycheribuild.config.loader import (ConfigLoaderBase, ConfigOptionBase, JsonAndCommandLineConfigLoader,
+                                        JsonAndCommandLineConfigOption)
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # noqa: F401, F403
 from pycheribuild.projects.cross import *  # noqa: F401, F403
-from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, FreeBSDToolchainKind
+from pycheribuild.projects.cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD,
+                                                  FreeBSDToolchainKind)
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 # noinspection PyProtectedMember
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase
@@ -30,7 +32,7 @@ SimpleProject._config_loader = _loader
 _targets_registered = False
 Target.instantiating_targets_should_warn = False
 
-T = typing.TypeVar('T', bound=SimpleProject)
+T = typing.TypeVar("T", bound=SimpleProject)
 
 
 def _get_target_instance(target_name: str, config, cls: typing.Type[T] = SimpleProject) -> T:
@@ -855,6 +857,22 @@ def test_source_dir_option_when_reusing_git_repo(monkeypatch):
     assert str(_get_target_instance("compiler-rt-native", config).source_dir) == "/custom/compiler-rt/dir3"
     # compiler-rt-riscv64 uses the default path, since we only changed llvm-native and compiler-rt-native:
     assert str(_get_target_instance("compiler-rt-riscv64", config).source_dir) == "/foo/llvm-project/compiler-rt"
+
+
+def test_mfs_root_kernel_config_options():
+    """ Check that the mfs-kernel class does not inherit unnecessary command line options from BuildCheriBSD """
+    project = _get_target_instance("cheribsd-mfs-root-kernel-riscv64-purecap", _parse_arguments([]),
+                                   BuildCheriBsdMfsKernel)
+    config_options = [attr for attr in project.__class__.__dict__ if
+                      isinstance(inspect.getattr_static(project, attr), ConfigOptionBase)]
+    config_options.sort()
+    assert config_options == ["_initial_source_dir", "_install_dir", "_linkage",
+                              "add_debug_info_flag", "auto_var_init", "build_alternate_abi_kernels",
+                              "build_bench_kernels", "build_dir", "build_fett_kernels", "build_fpga_kernels",
+                              "build_type", "caprevoke_kernel", "debug_kernel", "default_kernel_abi",
+                              "extra_make_args", "fast_rebuild", "kernel_config", "mfs_root_image",
+                              "skip_update", "use_ccache", "use_lto"]
+    print(config_options)
 
 
 def test_relative_paths_in_config():

@@ -34,13 +34,14 @@ import subprocess
 import sys
 import tempfile
 import typing
-from pathlib import Path
 from collections import OrderedDict
 from enum import Enum
+from pathlib import Path
 
 from .llvm import BuildLLVMMonoRepoBase
 from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
-                       MakeCommandKind, MakeOptions, Project, SimpleProject, TargetAliasWithDependencies)
+                       MakeCommandKind, MakeOptions, Project, ReuseOtherProjectRepository, SimpleProject,
+                       TargetAliasWithDependencies)
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CompilerType as FreeBSDToolchainKind, CrossCompileTarget
@@ -440,13 +441,19 @@ class BuildFreeBSDBase(Project):
         return not OSInfo.IS_FREEBSD
 
     @classmethod
-    def setup_config_options(cls, **kwargs):
+    def setup_config_options(cls, kernel_only_target=False, **kwargs):
         super().setup_config_options(**kwargs)
         cls.extra_make_args = cls.add_config_option("build-options", default=cls.default_extra_make_options, kind=list,
                                                     metavar="OPTIONS",
                                                     help="Additional make options to be passed to make when building "
                                                          "FreeBSD/CheriBSD. See `man src.conf` for more info.",
                                                     show_help=True)
+        cls.debug_kernel = cls.add_bool_option("debug-kernel", help="Build the kernel with -O0 and verbose boot output",
+                                               show_help=False)
+        if kernel_only_target:
+            cls.minimal = False
+            cls.build_tests = False
+            return  # The remaining options only affect the userspace build
 
         if "minimal" not in cls.__dict__:
             cls.minimal = cls.add_bool_option("minimal", show_help=False,
@@ -455,9 +462,6 @@ class BuildFreeBSDBase(Project):
         if "build_tests" not in cls.__dict__:
             cls.build_tests = cls.add_bool_option("build-tests", help="Build the tests (-DWITH_TESTS/-DWITHOUT_TESTS)",
                                                   show_help=True, default=True)
-
-        cls.debug_kernel = cls.add_bool_option("debug-kernel", help="Build the kernel with -O0 and verbose boot output",
-                                               show_help=False)
 
     def __init__(self, config):
         super().__init__(config)
@@ -560,30 +564,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     @classmethod
     def setup_config_options(cls, bootstrap_toolchain=False, use_upstream_llvm: bool = None, debug_info_by_default=True,
-                             **kwargs):
-        super().setup_config_options(**kwargs)
-        if "subdir_override" not in cls.__dict__:
-            cls.subdir_override = cls.add_config_option("subdir-with-deps", metavar="DIR",
-                                                        help="Only build subdir DIR instead of the full tree. This "
-                                                             "uses the SUBDIR_OVERRIDE mechanism so "
-                                                             "will build much more than just that directory")
-
-        subdir_default = ComputedDefaultValue(function=lambda config, proj: config.freebsd_subdir,
-                                              as_string="the value of the global --freebsd-subdir options")
-
-        cls.explicit_subdirs_only = cls.add_config_option("subdir", kind=list, metavar="SUBDIRS", show_help=True,
-                                                          default=subdir_default,
-                                                          help="Only build subdirs SUBDIRS instead of the full tree. "
-                                                               "Useful for quickly rebuilding an individual"
-                                                               " programs/libraries. If more than one dir is passed, "
-                                                               "they will be processed in order. Note: This"
-                                                               " will break if not all dependencies have been built.")
-
-        cls.keep_old_rootfs = cls.add_bool_option("keep-old-rootfs",
-                                                  help="Don't remove the whole old rootfs directory.  This can speed "
-                                                       "up installing but may cause strange"
-                                                       " errors so is off by default.")
-
+                             kernel_only_target=False, **kwargs):
+        super().setup_config_options(kernel_only_target=kernel_only_target, **kwargs)
         cls.kernel_config = cls.add_config_option(
             "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
             default=ComputedDefaultValue(function=lambda _, p: p.default_kernel_config(),
@@ -621,6 +603,33 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         cls.add_debug_info_flag = cls.add_bool_option("debug-info", default=debug_info_by_default, show_help=True,
                                                       help="pass make flags for building with debug info")
+        cls.fast_rebuild = cls.add_bool_option(
+            "fast", help="Skip some (usually) unnecessary build steps to speed up rebuilds")
+
+        if kernel_only_target:
+            cls.build_lib32 = False
+            cls.with_manpages = False
+            cls.with_manpages = False
+            return  # The remaining options only affect the userspace build
+
+        if "subdir_override" not in cls.__dict__:
+            cls.subdir_override = cls.add_config_option("subdir-with-deps", metavar="DIR",
+                                                        help="Only build subdir DIR instead of the full tree. This "
+                                                             "uses the SUBDIR_OVERRIDE mechanism so "
+                                                             "will build much more than just that directory")
+
+        subdir_default = ComputedDefaultValue(function=lambda config, proj: config.freebsd_subdir,
+                                              as_string="the value of the global --freebsd-subdir options")
+
+        cls.explicit_subdirs_only = cls.add_config_option(
+            "subdir", kind=list, metavar="SUBDIRS", show_help=True, default=subdir_default,
+            help="Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding individual"
+                 " programs/libraries. If more than one dir is passed, they will be processed in order. Note: This"
+                 " will break if not all dependencies have been built.")
+
+        cls.keep_old_rootfs = cls.add_bool_option(
+            "keep-old-rootfs", help="Don't remove the whole old rootfs directory.  This can speed up installing but"
+                                    " may cause strange errors so is off by default.")
         cls.with_manpages = cls.add_bool_option("with-manpages", help="Also install manpages. This is off by default"
                                                                       " since they can just be read from the host.")
         if cls._xtarget is None or not cls._xtarget.cpu_architecture.is_32bit():
@@ -631,8 +640,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # XXX: this is not correct if we were to support a CHERI-64 userspace
             assert not cls._xtarget.is_hybrid_or_purecap_cheri()
             cls.build_lib32 = False
-        cls.fast_rebuild = cls.add_bool_option(
-            "fast", help="Skip some (usually) unnecessary build steps to speed up rebuilds")
 
     def get_default_kernel_platform(self):
         if self.crosscompile_target.is_aarch64(include_purecap=True):
@@ -1566,16 +1573,13 @@ class BuildCHERIBSD(BuildFreeBSD):
     has_installsysroot_target = True
 
     @classmethod
-    def setup_config_options(cls, install_directory_help=None, **kwargs):
+    def setup_config_options(cls, kernel_only_target=False, install_directory_help=None, **kwargs):
         if install_directory_help is None:
             install_directory_help = "Install directory for CheriBSD root file system (default: " \
                                      "<OUTPUT>/rootfs-mips64-hybrid or <OUTPUT>/rootfs-riscv64-purecap, " \
                                      "etc. depending on target)"
-        super().setup_config_options(install_directory_help=install_directory_help, use_upstream_llvm=False)
-        cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=False,
-                                               help="Only build a sysroot instead of the full system. This will only "
-                                                    "build the libraries and skip all binaries")
-
+        super().setup_config_options(install_directory_help=install_directory_help, use_upstream_llvm=False,
+                                     kernel_only_target=kernel_only_target)
         fpga_targets = [CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_MIPS_HYBRID,
                         CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
                         CompilationTargets.CHERIBSD_RISCV_HYBRID, CompilationTargets.CHERIBSD_RISCV_PURECAP]
@@ -1585,9 +1589,8 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.build_fett_kernels = cls.add_bool_option("build-fett-kernels", show_help=False, _allow_unknown_targets=True,
                                                      only_add_for_targets=fpga_targets,
                                                      help="Also build kernels for FETT.")
-        cls.mfs_root_image = cls.add_path_option("mfs-root-image",
-                                                 help="Path to an MFS root image to be embedded in the kernel for "
-                                                      "booting")
+        cls.mfs_root_image = cls.add_path_option(
+            "mfs-root-image", help="Path to an MFS root image to be embedded in the kernel for booting")
 
         cls.default_kernel_abi = cls.add_config_option(
             "default-kernel-abi", show_help=True, _allow_unknown_targets=True,
@@ -1614,6 +1617,11 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                                          CompilationTargets.CHERIBSD_RISCV_PURECAP,
                                                                          CompilationTargets.CHERIBSD_RISCV_HYBRID],
                                                    help="Build kernel with caprevoke support (experimental)")
+        if kernel_only_target:
+            return  # The remaining options only affect the userspace build
+        cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=False,
+                                               help="Only build a sysroot instead of the full system. This will only "
+                                                    "build the libraries and skip all binaries")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -1777,6 +1785,10 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         # Re-use the same build directory as the CheriBSD target that was used for the disk image
         # This ensure that the kernel build tools can be found in the build directory
         self.image = self.mfs_root_image_instance.disk_image_path
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(kernel_only_target=True, **kwargs)
 
     def process(self):
         kernel_configs = self.get_kernel_configs()
