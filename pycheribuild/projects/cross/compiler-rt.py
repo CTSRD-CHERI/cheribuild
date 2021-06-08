@@ -56,12 +56,15 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             # Get default target (arch) from the triple
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH=self.target_info.target_triple.split('-')[0])
 
+        # When building in Jenkins, we use the installed path to LLVM tools, otherwise we use the tools from the
+        # local build dir
+        if is_jenkins_build():
+            llvm_tools_bindir = self.llvm_project.get_native_install_path(self.config) / "bin"
+        else:
+            llvm_tools_bindir = self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin"
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=self.sdk_bindir / "llvm-config" if is_jenkins_build() and not self.compiling_for_host()
-            else
-            self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
-            LLVM_EXTERNAL_LIT=self.sdk_bindir / "llvm-lit" if is_jenkins_build() and not self.compiling_for_host() else
-            self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
+            LLVM_CONFIG_PATH=llvm_tools_bindir / "llvm-config",
+            LLVM_EXTERNAL_LIT=llvm_tools_bindir / "llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=True,
             COMPILER_RT_BUILD_XRAY=False,
@@ -70,10 +73,9 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             COMPILER_RT_BUILD_PROFILE=False,
             COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN=False,
             COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal(),
-            # COMPILER_RT_DEFAULT_TARGET_ONLY=True,
-            # BUILTIN_SUPPORTED_ARCH="mips64",
-            TARGET_TRIPLE=self.target_info.target_triple,
-            # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=True,
+            # Needed after https://reviews.llvm.org/D99621
+            COMPILER_RT_DEFAULT_TARGET_ONLY=True,
+            LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=True,
             )
         if self.should_include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
