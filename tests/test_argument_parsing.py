@@ -648,6 +648,7 @@ def test_disk_image_path(target, expected_name):
                   "--cheribsd/default-kernel-abi", "purecap"],
                  "CHERI_PURECAP_MALTA64", ["CHERI_MALTA64"]),
     # Morello kernconf tests
+    pytest.param("cheribsd-aarch64", [], "GENERIC", []),
     pytest.param("cheribsd-morello-purecap", [], "GENERIC-MORELLO", []),
     pytest.param("cheribsd-morello-purecap", ["--cheribsd/build-alternate-abi-kernels"],
                  "GENERIC-MORELLO", ["GENERIC-MORELLO-PURECAP"]),
