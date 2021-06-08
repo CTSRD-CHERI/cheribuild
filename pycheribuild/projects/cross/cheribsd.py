@@ -295,7 +295,7 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
 
     def get_kabi_name(self, platform, kABI):
         if kABI == KernelABI.NOCHERI:
-            return ""
+            return None
         elif kABI == KernelABI.HYBRID:
             return "MORELLO"
         elif kABI == KernelABI.PURECAP:
