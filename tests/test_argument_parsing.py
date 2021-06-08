@@ -660,6 +660,40 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
     assert project.extra_kernels == extra_kernels
 
 
+@pytest.mark.parametrize("target,config_options,expected_kernels", [
+    # RISCV kernconf tests
+    pytest.param("cheribsd-mfs-root-kernel-riscv64", [], ["QEMU-MFS-ROOT"]),
+    pytest.param("cheribsd-mfs-root-kernel-riscv64",
+                 ["--cheribsd-mfs-root-kernel-riscv64/build-fpga-kernels"],
+                 ["QEMU-MFS-ROOT", "GFE"]),
+    pytest.param("cheribsd-mfs-root-kernel-riscv64-purecap",
+                 ["--cheribsd-mfs-root-kernel-riscv64-purecap/build-fpga-kernels"],
+                 ["CHERI-QEMU-MFS-ROOT", "CHERI-GFE"]),
+    pytest.param("cheribsd-mfs-root-kernel-riscv64-purecap",
+                 ["--cheribsd-mfs-root-kernel-riscv64-purecap/build-fpga-kernels",
+                  "--cheribsd-mfs-root-kernel-riscv64-purecap/build-alternate-abi-kernels"],
+                 ["CHERI-QEMU-MFS-ROOT", "CHERI-PURECAP-QEMU-MFS-ROOT",
+                  "CHERI-GFE", "CHERI-PURECAP-GFE"]),
+    # MIPS kernconf tests
+    pytest.param("cheribsd-mfs-root-kernel-mips64", [], ["MALTA64_MFS_ROOT"]),
+    pytest.param("cheribsd-mfs-root-kernel-mips64",
+                 ["--cheribsd-mfs-root-kernel-mips64/build-fpga-kernels"],
+                 ["MALTA64_MFS_ROOT", "BERI_DE4_MFS_ROOT"]),
+    pytest.param("cheribsd-mfs-root-kernel-mips64-purecap",
+                 ["--cheribsd-mfs-root-kernel-mips64-purecap/build-fpga-kernels"],
+                 ["CHERI_MALTA64_MFS_ROOT", "CHERI_DE4_MFS_ROOT"]),
+    pytest.param("cheribsd-mfs-root-kernel-mips64-purecap",
+                 ["--cheribsd-mfs-root-kernel-mips64-purecap/build-fpga-kernels",
+                  "--cheribsd-mfs-root-kernel-mips64-purecap/build-alternate-abi-kernels"],
+                 ["CHERI_MALTA64_MFS_ROOT", "CHERI_PURECAP_MALTA64_MFS_ROOT",
+                  "CHERI_DE4_MFS_ROOT", "CHERI_PURECAP_DE4_MFS_ROOT"]),
+])
+def test_mfsroot_kernel_configs(target, config_options: "list[str]", expected_kernels):
+    config = _parse_arguments(config_options)
+    project = _get_target_instance(target, config, BuildCheriBsdMfsKernel)
+    assert project.get_kernel_configs() == expected_kernels
+
+
 # noinspection PyTypeChecker
 def test_freebsd_toolchains_cheribsd_purecap():
     # Targets that need CHERI don't have the --toolchain option:

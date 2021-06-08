@@ -142,7 +142,7 @@ class KernelConfigFactory:
             assert False, "Should not be reached..."
         return self.platform_name_map[platform]
 
-    def get_flag_names(self, mfsroot=False, fuzzing=False):
+    def get_flag_names(self, platform, kABI, mfsroot=False, fuzzing=False):
         flags = []
         if mfsroot:
             flags.append("MFS{sep}ROOT".format(sep=self.separator))
@@ -159,7 +159,7 @@ class KernelConfigFactory:
         if "platform_name" in ctx:
             ctx["platform_name"] = self.get_platform_name(platform)
         if "flags" in ctx:
-            flag_list = self.get_flag_names(**kwargs)
+            flag_list = self.get_flag_names(platform, kABI, **kwargs)
             if flag_list:
                 ctx["flags"] = self.separator.join(flag_list)
         return ctx
@@ -182,14 +182,14 @@ class MIPSKernelConfigFactory(KernelConfigFactory):
             return "BERI"
         return super().get_kabi_name(platform, kABI)
 
-    def get_flag_names(self, usbroot=False, nfsroot=False, default=False, caprevoke=False,
+    def get_flag_names(self, platform, kABI, usbroot=False, nfsroot=False, default=False, caprevoke=False,
                        mfsroot=False, debug=False, benchmark=False, fuzzing=False, fett=False):
         flags = []
         if usbroot:
             flags.append("USBROOT")
         if nfsroot:
             flags.append("NFSROOT")
-        flags += super().get_flag_names(mfsroot=mfsroot, fuzzing=fuzzing)
+        flags += super().get_flag_names(platform, kABI, mfsroot=mfsroot, fuzzing=fuzzing)
         if benchmark:
             flags.append("BENCHMARK")
         return flags
@@ -241,12 +241,15 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         self.fett_gfe_kernconf_components = OrderedDict(self.kernconf_components)
         del self.fett_gfe_kernconf_components["platform_name"]
 
-    def get_flag_names(self, default=False, caprevoke=False, mfsroot=False, debug=False,
+    def get_flag_names(self, platform, kABI, default=False, caprevoke=False, mfsroot=False, debug=False,
                        benchmark=False, fuzzing=False, fett=False):
+        if platform == ConfigPlatform.GFE:
+            # Suppress mfsroot flag as it is implied for GFE configurations
+            mfsroot = False
         flags = []
         if fett:
             flags.append("FETT")
-        flags += super().get_flag_names(mfsroot=mfsroot, fuzzing=fuzzing)
+        flags += super().get_flag_names(platform, kABI, mfsroot=mfsroot, fuzzing=fuzzing)
         if benchmark:
             flags.append("NODEBUG")
         return flags
