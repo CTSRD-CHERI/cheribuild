@@ -623,8 +623,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
                                                       help="pass make flags for building with debug info")
         cls.with_manpages = cls.add_bool_option("with-manpages", help="Also install manpages. This is off by default"
                                                                       " since they can just be read from the host.")
-        cls.build_googletest = cls.add_bool_option("build-googletest", default=True,
-                                                   help="Build the googletest test framework.")
         if cls._xtarget is None or not cls._xtarget.cpu_architecture.is_32bit():
             cls.build_lib32 = cls.add_bool_option(
                 "build-lib32", default=False,
@@ -729,9 +727,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.make_args.set_with_options(OFED=False)
             # Don't build manpages by default
             self.make_args.set_with_options(MAN=self.with_manpages)
-            # GOOGLETEST takes many minutes to compile and link with an assertions-enabled clang
-            # Since the only user of GOOGLETEST is capsicum-test, disable it by default.
-            self.make_args.set_with_options(GOOGLETEST=self.build_googletest)
             # we want to build makefs for the disk image (makefs depends on libnetbsd which will not be
             # bootstrapped on FreeBSD)
             # TODO: upstream a patch to bootstrap them by default
