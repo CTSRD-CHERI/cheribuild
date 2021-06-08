@@ -80,16 +80,16 @@ class Release(SimpleProject):
     project_name = "release"
     do_not_add_to_targets = True
 
-#    dependencies = ["cheribsd-mfs-root-kernel-mips64-hybrid"]
-#    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
-
-#    @classmethod
-#    def setup_config_options(cls, **kwargs):
-#        super().setup_config_options()
-#        print("SETUP")
-        
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+
+    def process(self):
+        output_root = self.config.output_root
+        source_root = self.config.source_root
+
+        run_command("rm", "-rf", output_root / "cheribuild")
+        run_command("cp", "-a", source_root / "cheribuild", output_root)
+
 
 class MorelloRelease(Release):
     target = "morello-release"
@@ -103,25 +103,29 @@ class MorelloRelease(Release):
                     "disk-image-morello-purecap"]
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+
+
+    def process(self):
+        super().process()
+
+        output_root = self.config.output_root
+
         install_script = Path(output_root, "install_and_run_fvp.sh")
         install_script.write_text("""#!/bin/sh
         dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
         exec "${dir}/cheribuild.py" install-morello-fvp run-fvp-morello-purecap "$@""")
         install_script.chmod(0o755)
 
-
-    def process(self):
-        output_root = self.config.output_root
-        run_command("bsdtar", "-cavf", output_root / "release.tar.xz", "-C", output_root,
+        run_command("bsdtar", "-cavf", output_root / "release-morello.tar.xz", "-C", output_root,
             "--options=xz:threads=" + str(default_make_jobs_count()),
             "--options=compression-level=9",  # reduce size a bit more
+            "--exclude=*.git",
             "morello-sdk/firmware",
             "cheribsd-morello-purecap.img",
-            "sources/cheribuild",
-            "cheribuild.py",
+            "cheribuild",
             cwd="/")
 
-        run_command("sha256sum", output_root / "release.tar.xz")
+        run_command("sha256sum", output_root / "release-morello.tar.xz")
 
 class RISCV64Release(Release):
     target = "riscv64-release"
@@ -132,12 +136,10 @@ class RISCV64Release(Release):
         super().__init__(config)
 
     def process(self):
+        super().process()
         output_root = self.config.output_root
-        source_root = self.config.source_root
 
-        run_command("cp", "-a", source_root / "cheribuild", output_root)
-
-        run_command("bsdtar", "-cavf", output_root / "release.tar.xz", "-C", output_root,
+        run_command("bsdtar", "-cavf", output_root / "release-riscv64.tar.xz", "-C", output_root,
             "--options=xz:threads=" + str(default_make_jobs_count()),
             "--options=compression-level=9",  # reduce size a bit more
             "--exclude=*.git",
@@ -145,4 +147,4 @@ class RISCV64Release(Release):
             "cheribuild",
             cwd="/")
 
-        run_command("sha256sum", output_root / "release.tar.xz")
+        run_command("sha256sum", output_root / "release-risc64.tar.xz")
