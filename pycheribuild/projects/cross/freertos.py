@@ -96,7 +96,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        super().setup_config_options(add_common_cross_options=False, **kwargs)
+        super().setup_config_options(**kwargs)
 
         cls.demo = cls.add_config_option(
             "demo", metavar="DEMO", show_help=True,

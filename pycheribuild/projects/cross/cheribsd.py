@@ -561,7 +561,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     @classmethod
     def setup_config_options(cls, bootstrap_toolchain=False, use_upstream_llvm: bool = None, debug_info_by_default=True,
                              **kwargs):
-        super().setup_config_options(add_common_cross_options=False, **kwargs)
+        super().setup_config_options(**kwargs)
         if "subdir_override" not in cls.__dict__:
             cls.subdir_override = cls.add_config_option("subdir-with-deps", metavar="DIR",
                                                         help="Only build subdir DIR instead of the full tree. This "
@@ -1491,7 +1491,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        super().setup_config_options(add_common_cross_options=False, **kwargs)
+        super().setup_config_options(**kwargs)
         cls.tinderbox = cls.add_bool_option("tinderbox", help="Use `make tinderbox` instead of `make universe`")
         cls.worlds_only = cls.add_bool_option("worlds-only", help="Only build worlds (skip building kernels)")
         cls.kernels_only = cls.add_bool_option("kernels-only", help="Only build kernels (skip building worlds)",
