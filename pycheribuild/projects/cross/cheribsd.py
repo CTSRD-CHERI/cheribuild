@@ -64,6 +64,11 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     return config.output_root / ("rootfs" + project.build_configuration_suffix(xtarget))
 
 
+def cheribsd_mfsroot_build_dir(config: CheriConfig, project: "SimpleProject"):
+    build_cheribsd = BuildCHERIBSD.get_instance(project, config)
+    return build_cheribsd.default_build_dir(config, build_cheribsd)
+
+
 def _clear_dangerous_make_env_vars():
     # remove any environment variables that could interfere with bmake running
     for k, v in os.environ.copy().items():
@@ -1778,6 +1783,8 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     repository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD, do_update=True)
     _always_add_suffixed_targets = True
     supported_architectures = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
+    default_build_dir = ComputedDefaultValue(function=cheribsd_mfsroot_build_dir,
+                                             as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
