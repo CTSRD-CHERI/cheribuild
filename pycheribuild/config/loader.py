@@ -832,19 +832,28 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         if fullname == "#include":
             return True
 
-        if fullname in self.options:
-            return True
+        found_option = self.options.get(fullname)
         # see if it is one of the alternate names is valid
-        for option in self.options.values():
-            # only handle alternate names that aren't one character long
-            if option.shortname and len(option.shortname) > 1:
-                alternate_name = option.shortname.lstrip("-")
-                if fullname == alternate_name:
-                    return True  # fine
-            if option.alias_names:
-                if fullname in option.alias_names:
-                    return True
+        if found_option is None:
+            for option in self.options.values():
+                # only handle alternate names that aren't one character long
+                if option.shortname and len(option.shortname) > 1:
+                    alternate_name = option.shortname.lstrip("-")
+                    if fullname == alternate_name:
+                        found_option = option  # fine
+                        break
+                if option.alias_names:
+                    if fullname in option.alias_names:
+                        found_option = option  # fine
+                        break
 
+        if found_option is not None:
+            # Found an option, now verify that it's not a command-line only option
+            if not isinstance(found_option, JsonAndCommandLineConfigOption):
+                errmsg = "Option '" + fullname + "' cannot be used in the config file"
+                error_message(errmsg)
+                raise ValueError(errmsg)
+            return True
         error_message("Unknown config option '", fullname, "' in ", self._config_path, sep="")
         if self.unknown_config_option_is_error:
             raise ValueError("Unknown config option '" + fullname + "'")

@@ -409,6 +409,15 @@ def test_kernconf():
     assert freebsd_mips.kernel_config == "GENERIC"
     assert freebsd_native.kernel_config == "GENERIC"
 
+    # kernel-config/--kernconf should only be valid on the command line:
+    with pytest.raises(ValueError, match="^Unknown config option 'freebsd/kernel-config'$"):
+        _parse_config_file_and_args(b'{ "freebsd/kernel-config": "GENERIC" }')
+    # kernel-config/--kernconf should only be valid on the command line:
+    with pytest.raises(ValueError, match="^Option 'kernel-config' cannot be used in the config file$"):
+        _parse_config_file_and_args(b'{ "kernel-config": "GENERIC" }')
+    with pytest.raises(ValueError, match="^Option 'kernconf' cannot be used in the config file$"):
+        _parse_config_file_and_args(b'{ "kernconf": "GENERIC" }')
+
     # There should not be any unsuffixed kernel-config options:
     for tgt in ("cheribsd", "freebsd", "cheribsd-mfs-root-kernel"):
         with pytest.raises(KeyError, match=r"error: unknown argument '--[\w-]+/kernel-config'"):
