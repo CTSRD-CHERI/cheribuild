@@ -1788,6 +1788,8 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     supported_architectures = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
     default_build_dir = ComputedDefaultValue(function=cheribsd_mfsroot_build_dir,
                                              as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
+    # We want the CheriBSD config options as well, so that defaults (e.g. build-alternate-abi-kernels) are inherited.
+    _config_inherits_from = BuildCHERIBSD
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

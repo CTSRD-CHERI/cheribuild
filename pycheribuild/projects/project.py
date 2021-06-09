@@ -634,13 +634,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             # has to be a single underscore otherwise the name gets mangled to _Foo__commandlineOptionGroup
             cls._commandline_option_group = cls._config_loader._parser.add_argument_group(
                 "Options for target '" + cls.target + "'")
-        # For targets such as qtbase-mips we want to fall back to checking the value of the option for qtbase
-        fallback_name_base = getattr(cls, "_config_inherits_from", None)
-        synthetic_base = getattr(cls, "synthetic_base", None)
         if cls.hide_options_from_help:
             help_hidden = True
+        synthetic_base = getattr(cls, "synthetic_base", None)
+        fallback_name_base = None
         if synthetic_base is not None:
-            # Don't show the help options for qtbase-mips/qtbase-native/qtbase-cheri in default --help output, the
+            # Don't show the help options for qtbase-mips64/qtbase-native/qtbase-riscv64 in default --help output, the
             # base version is enough. They will still be included in --help-all
             help_hidden = True
             fallback_name_base = synthetic_base.target
@@ -662,9 +661,20 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # break the build in most cases.
         # Important: Only look in the current class, not in parent classes to avoid duplicate names!
         fallback_config_names = []
-        if not _no_fallback_config_name and fallback_name_base:
+        # For targets such as cheribsd-mfs-root-kernel to fall back to checking the value of the option for cheribsd
+        extra_fallback_class = getattr(cls, "_config_inherits_from", None)
+        if not _no_fallback_config_name and (fallback_name_base or extra_fallback_class is not None):
             if name not in ["build-directory"]:
-                fallback_config_names.append(fallback_name_base + "/" + name)
+                if fallback_name_base:
+                    fallback_config_names.append(fallback_name_base + "/" + name)
+                if extra_fallback_class is not None:
+                    # Next add both cheribsd-<suffix> and cheribsd (in that order) so that cheribsd-mfs-root-kernel/...
+                    # overrides the cheribsd defaults.
+                    assert issubclass(extra_fallback_class, SimpleProject), extra_fallback_class
+                    if cls._xtarget is not None:
+                        suffixed_target_class = extra_fallback_class.get_class_for_target(cls._xtarget)
+                        fallback_config_names.append(suffixed_target_class.target + "/" + name)
+                    fallback_config_names.append(extra_fallback_class.target + "/" + name)
             elif synthetic_base is not None:
                 assert name == "build-directory"
                 assert issubclass(cls, SimpleProject), cls
@@ -672,7 +682,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 if cls.default_architecture is not None and cls.default_architecture is cls._xtarget:
                     # Don't allow cheribsd-purecap/build-directory to fall back to cheribsd/build-directory
                     # but if the project_name is the same we can assume it's the same class:
-                    if cls.project_name == synthetic_base.project_name:
+                    if cls.project_name == synthetic_base.project_name and fallback_name_base:
                         fallback_config_names.append(fallback_name_base + "/" + name)
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
