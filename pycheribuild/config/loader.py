@@ -180,15 +180,14 @@ class ConfigLoaderBase(object):
 
     show_all_help = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or is_completing_arguments
 
-    def __init__(self, option_cls):
+    def __init__(self, option_cls, argparser_class: "typing.Type[argparse.ArgumentParser]" = argparse.ArgumentParser):
         self.__option_cls = option_cls
         if self.is_completing_arguments:
-            # noinspection PyTypeChecker
-            self._parser = argparse.ArgumentParser(formatter_class=NoOpHelpFormatter)
+            self._parser = argparser_class(formatter_class=NoOpHelpFormatter)
         else:
             terminal_width = shutil.get_terminal_size(fallback=(120, 24))[0]
             # noinspection PyTypeChecker
-            self._parser = argparse.ArgumentParser(
+            self._parser = argparser_class(
                 formatter_class=lambda prog: argparse.HelpFormatter(prog, width=terminal_width))
 
         self.action_group = self._parser.add_argument_group("Actions to be performed")
@@ -224,7 +223,7 @@ class ConfigLoaderBase(object):
                     always_complete_options=None,  # don't print -/-- by default
                     exclude=self.completion_excludes,  # hide these options from the output
                     print_suppressed=True,  # also include target-specific options
-                    )
+                )
         # Handle cases such as cheribuild.py target1 --arg target2
         # Ideally we would use parse_intermixed_args() but that requires python3.7
         # so we work around it using parse_known_args().
@@ -245,7 +244,7 @@ class ConfigLoaderBase(object):
                 suggestions = difflib.get_close_matches(x, all_options)
                 errmsg = "unknown argument '" + x + "'"
                 if suggestions:
-                    errmsg += " Did you mean " + " or ".join(suggestions) + "?"
+                    errmsg += ". Did you mean " + " or ".join(suggestions) + "?"
                 self._parser.error(errmsg)
         self._parsed_args.targets += trailing
 
@@ -684,8 +683,8 @@ class ArgparseSetGivenAction(argparse.Action):
 
 
 class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
-    def __init__(self):
-        super().__init__(JsonAndCommandLineConfigOption)
+    def __init__(self, argparser_class: "typing.Type[argparse.ArgumentParser]" = argparse.ArgumentParser):
+        super().__init__(JsonAndCommandLineConfigOption, argparser_class)
         self._config_path = None  # type: typing.Optional[Path]
         # Choose the default config file based on argv[0]
         # This allows me to have symlinks for e.g. stable-cheribuild.py release-cheribuild.py debug-cheribuild.py

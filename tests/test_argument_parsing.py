@@ -1,3 +1,4 @@
+import argparse
 import inspect
 import sys
 import tempfile
@@ -27,7 +28,17 @@ from pycheribuild.projects.project import SimpleProject
 from pycheribuild.projects.run_qemu import LaunchCheriBSD
 from pycheribuild.targets import MultiArchTargetAlias, Target, target_manager
 
-_loader = JsonAndCommandLineConfigLoader()
+
+class TestArgumentParser(argparse.ArgumentParser):
+    # Don't use sys.exit(), raise an exception instead
+    def exit(self, status=0, message=None):
+        if status == 2:
+            raise KeyError(message)
+        else:
+            raise RuntimeError(status, message)
+
+
+_loader = JsonAndCommandLineConfigLoader(argparser_class=TestArgumentParser)
 SimpleProject._config_loader = _loader
 
 _targets_registered = False
@@ -235,7 +246,7 @@ def test_build_dir_not_inherited():
     assert cheribsd_riscv64_purecap.build_dir == Path("/foo/bar")
     assert mfs_riscv64_purecap.build_dir.name == "cheribsd-riscv64-purecap-build"
     # An unsuffixed build-directory argument should not be allowed
-    with pytest.raises(SystemExit, match="^2$"):
+    with pytest.raises(KeyError, match="error: unknown argument '--cheribsd/build-directory=/foo/bar'"):
         _parse_arguments(["--cheribsd/build-directory=/foo/bar"])
     with pytest.raises(ValueError, match="^Unknown config option 'cheribsd/build-directory'$"):
         _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar"}')
@@ -671,7 +682,7 @@ def test_mfsroot_kernel_configs(target, config_options: "list[str]", expected_ke
 def test_freebsd_toolchains_cheribsd_purecap():
     # Targets that need CHERI don't have the --toolchain option:
     # Argparse should exit with exit code 2
-    with pytest.raises(SystemExit, match=r'^2$'):
+    with pytest.raises(KeyError, match=r"error: unknown argument '--[\w-]+/toolchain'"):
         for i in FreeBSDToolchainKind:
             test_freebsd_toolchains("cheribsd-purecap", "/wrong/path", i, [])
             test_freebsd_toolchains("cheribsd-mips64-hybrid", "/wrong/path", i, [])
@@ -820,7 +831,7 @@ def test_backwards_compat_old_suffixes_freebsd_mips():
                       b'{"cheribsd-mips-purecap/source-directory": "/from/json"}', [])
 
     # Finally, using the old name on the command line should be an error:
-    with pytest.raises(SystemExit, match="^2$"):
+    with pytest.raises(KeyError, match=r"error: unknown argument '--freebsd-mips/source-directory=/cmdline'"):
         _ = _parse_config_file_and_args(b'{}', "--freebsd-mips/source-directory=/cmdline")
 
 
