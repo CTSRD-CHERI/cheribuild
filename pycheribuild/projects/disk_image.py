@@ -1072,7 +1072,6 @@ class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
 class BuildCheriBSDDiskImage(BuildDiskImageBase):
     project_name = "disk-image"
     _source_class = BuildCHERIBSD
-    _always_add_suffixed_targets = True  # preparation for future multi-target support
     disk_image_prefix = "cheribsd"
 
     @classmethod

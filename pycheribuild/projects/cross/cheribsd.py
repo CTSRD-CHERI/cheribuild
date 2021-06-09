@@ -1784,7 +1784,6 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     project_name = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-mfs-root"]
     repository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD, do_update=True)
-    _always_add_suffixed_targets = True
     supported_architectures = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
     default_build_dir = ComputedDefaultValue(function=cheribsd_mfsroot_build_dir,
                                              as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
