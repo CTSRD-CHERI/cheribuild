@@ -664,26 +664,17 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # For targets such as cheribsd-mfs-root-kernel to fall back to checking the value of the option for cheribsd
         extra_fallback_class = getattr(cls, "_config_inherits_from", None)
         if not _no_fallback_config_name and (fallback_name_base or extra_fallback_class is not None):
-            if name not in ["build-directory"]:
-                if fallback_name_base:
-                    fallback_config_names.append(fallback_name_base + "/" + name)
-                if extra_fallback_class is not None:
-                    # Next add both cheribsd-<suffix> and cheribsd (in that order) so that cheribsd-mfs-root-kernel/...
-                    # overrides the cheribsd defaults.
-                    assert issubclass(extra_fallback_class, SimpleProject), extra_fallback_class
-                    if cls._xtarget is not None:
-                        suffixed_target_class = extra_fallback_class.get_class_for_target(cls._xtarget)
-                        fallback_config_names.append(suffixed_target_class.target + "/" + name)
-                    fallback_config_names.append(extra_fallback_class.target + "/" + name)
-            elif synthetic_base is not None:
-                assert name == "build-directory"
-                assert issubclass(cls, SimpleProject), cls
-                # build-directory should only be inherited for the default target (e.g. cheribsd-cheri -> cheribsd):
-                if cls.default_architecture is not None and cls.default_architecture is cls._xtarget:
-                    # Don't allow cheribsd-purecap/build-directory to fall back to cheribsd/build-directory
-                    # but if the project_name is the same we can assume it's the same class:
-                    if cls.project_name == synthetic_base.project_name and fallback_name_base:
-                        fallback_config_names.append(fallback_name_base + "/" + name)
+            if fallback_name_base:
+                fallback_config_names.append(fallback_name_base + "/" + name)
+            if extra_fallback_class is not None:
+                assert name not in ["build-directory"]
+                # Next add both cheribsd-<suffix> and cheribsd (in that order) so that cheribsd-mfs-root-kernel/...
+                # overrides the cheribsd defaults.
+                assert issubclass(extra_fallback_class, SimpleProject), extra_fallback_class
+                if cls._xtarget is not None:
+                    suffixed_target_class = extra_fallback_class.get_class_for_target(cls._xtarget)
+                    fallback_config_names.append(suffixed_target_class.target + "/" + name)
+                fallback_config_names.append(extra_fallback_class.target + "/" + name)
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
         alias_target_names = [prefix + "/" + name for prefix in cls.__dict__.get("_config_file_aliases", tuple())]
@@ -2018,8 +2009,13 @@ class Project(SimpleProject):
         super().setup_config_options(**kwargs)
         cls._initial_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.default_source_dir,
                                                       help="Override default source directory for " + cls.project_name)
-        cls.build_dir = cls.add_path_option("build-directory", metavar="DIR", default=cls.default_build_dir,
-                                            help="Override default source directory for " + cls.project_name)
+        # --<target>-<suffix>/build-directory is not inherited from the unsuffixed target (unless there is only one
+        # supported target).
+        default_xtarget = cls.default_architecture
+        if cls._xtarget is not None or default_xtarget is not None:
+            cls.build_dir = cls.add_path_option("build-directory", metavar="DIR", default=cls.default_build_dir,
+                                                help="Override default source directory for " + cls.project_name,
+                                                _no_fallback_config_name=cls._xtarget != default_xtarget)
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
                 function=lambda config, proj: False if proj.get_crosscompile_target(
