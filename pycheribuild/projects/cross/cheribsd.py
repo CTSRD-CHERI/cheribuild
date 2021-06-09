@@ -574,11 +574,15 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def setup_config_options(cls, bootstrap_toolchain=False, use_upstream_llvm: bool = None, debug_info_by_default=True,
                              kernel_only_target=False, **kwargs):
         super().setup_config_options(kernel_only_target=kernel_only_target, **kwargs)
-        cls.kernel_config = cls.add_config_option(
-            "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
-            default=ComputedDefaultValue(function=lambda _, p: p.default_kernel_config(),
-                                         as_string="target-dependent, usually GENERIC"),
-            help="The kernel configuration to use for `make buildkernel`")  # type: str
+        if cls._xtarget:
+            # KERNCONF always depends on the target, so we don't inherit this config option. The only exception is
+            # the global --kernel-config option that is provided for convenience and backwards compat.
+            cls.kernel_config = cls.add_config_option(
+                "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
+                default=ComputedDefaultValue(function=lambda _, p: p.default_kernel_config(),
+                                             as_string="target-dependent, usually GENERIC"),
+                use_default_fallback_config_names=False,  #
+                help="The kernel configuration to use for `make buildkernel`")  # type: str
 
         if cls._xtarget is not None and cls._xtarget.is_hybrid_or_purecap_cheri():
             # When targeting CHERI we have to use CHERI LLVM

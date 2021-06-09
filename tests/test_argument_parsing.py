@@ -374,8 +374,8 @@ def test_legacy_cheri_suffix_target_alias():
 
 
 def test_kernconf():
-    # Parse args once to ensure target_manager is initialized
-    # check default values
+    # The kernel-config command line option is special: There is a global (command-line-only) flag that is used
+    # as the default, but otherwise there should be no inheritance
     config = _parse_arguments([])
     cheribsd_cheri = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
     cheribsd_mips = _get_cheribsd_instance("cheribsd-mips64", config)
@@ -402,12 +402,17 @@ def test_kernconf():
     assert cheribsd_cheri.kernel_config == "SOMETHING"
     assert freebsd_native.kernel_config == "LINT"
 
-    config = _parse_arguments(["--kernconf=GENERIC", "--cheribsd/kernel-config=SOMETHING_ELSE"])
+    config = _parse_config_file_and_args(b'{ "cheribsd-mips64/kernel-config": "MIPS64_CONFIG" }', "--kernconf=GENERIC")
     assert config.freebsd_kernconf == "GENERIC"
-    assert cheribsd_cheri.kernel_config == "SOMETHING_ELSE"
-    assert cheribsd_mips.kernel_config == "SOMETHING_ELSE"
+    assert cheribsd_cheri.kernel_config == "GENERIC"
+    assert cheribsd_mips.kernel_config == "MIPS64_CONFIG"
     assert freebsd_mips.kernel_config == "GENERIC"
     assert freebsd_native.kernel_config == "GENERIC"
+
+    # There should not be any unsuffixed kernel-config options:
+    for tgt in ("cheribsd", "freebsd", "cheribsd-mfs-root-kernel"):
+        with pytest.raises(KeyError, match=r"error: unknown argument '--[\w-]+/kernel-config'"):
+            _parse_arguments(["--" + tgt + "/source-directory=/foo", "--" + tgt + "/kernel-config", "ABC"])
 
 
 def test_duplicate_key():
@@ -936,14 +941,18 @@ def test_mfs_root_kernel_inherits_defaults_from_cheribsd():
     assert str(mfs_riscv64._initial_source_dir) == "/generic-mfs-target-dir"
     assert str(mfs_mips64._initial_source_dir) == "/mfs-target-dir-mips64"
 
-    # FIXME: kernel-config should not be inherited
-    _parse_arguments(["--cheribsd/kernel-config=BASE_CONFIG_DEFAULT",
-                      "--cheribsd-riscv64-purecap/kernel-config=BASE_CONFIG_RISCV64",
-                      "--cheribsd-mfs-root-kernel/kernel-config=MFS_CONFIG_DEFAULT",
+    _parse_arguments(["--cheribsd-riscv64-purecap/kernel-config=BASE_CONFIG_RISCV64",
                       "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=MFS_CONFIG_MIPS64"])
     assert cheribsd_riscv64.kernel_config == "BASE_CONFIG_RISCV64"
-    assert cheribsd_mips64.kernel_config == "BASE_CONFIG_DEFAULT"
-    assert mfs_riscv64.kernel_config == "MFS_CONFIG_DEFAULT"
+    assert cheribsd_mips64.kernel_config == "CHERI_MALTA64"
+    assert mfs_riscv64.kernel_config == "CHERI-QEMU-MFS-ROOT"
+    assert mfs_mips64.kernel_config == "MFS_CONFIG_MIPS64"
+    _parse_arguments(["--kernel-config=CONFIG_DEFAULT",
+                      "--cheribsd-riscv64-purecap/kernel-config=BASE_CONFIG_RISCV64",
+                      "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=MFS_CONFIG_MIPS64"])
+    assert cheribsd_riscv64.kernel_config == "BASE_CONFIG_RISCV64"
+    assert cheribsd_mips64.kernel_config == "CONFIG_DEFAULT"
+    assert mfs_riscv64.kernel_config == "CONFIG_DEFAULT"
     assert mfs_mips64.kernel_config == "MFS_CONFIG_MIPS64"
 
 

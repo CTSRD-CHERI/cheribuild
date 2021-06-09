@@ -159,8 +159,9 @@ class CheriConfig(ConfigBase):
         self.skip_kernel = loader.add_bool_option(
             "skip-kernel", "-skip-buildkernel", group=loader.freebsd_group,
             help="Skip the buildkernel step when building FreeBSD or CheriBSD")
-        self.freebsd_kernconf = loader.add_option("kernel-config", "-kernconf", group=loader.freebsd_group,
-                                                  help_hidden=True, help="Override default kernel config to use.")
+        self.freebsd_kernconf = loader.add_commandline_only_option(
+            "kernel-config", "-kernconf", group=loader.freebsd_group, help_hidden=True,
+            help="Override the default FreeBSD/CheriBSD kernel config.")
         self.freebsd_subdir = loader.add_commandline_only_option(
             "freebsd-subdir", "-subdir", group=loader.freebsd_group, type=list, metavar="SUBDIRS",
             help="Only build subdirs SUBDIRS of FreeBSD/CheriBSD instead of the full tree. Useful for quickly "

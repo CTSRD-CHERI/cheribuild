@@ -613,12 +613,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return option.full_option_name
 
     @classmethod
-    def add_config_option(cls, name: str, *, show_help=False, shortname=None, _no_fallback_config_name: bool = False,
+    def add_config_option(cls, name: str, *, show_help=False, shortname: str = None,
                           kind: "Union[typing.Type[Type_T], Callable[[str], Type_T]]" = str,
                           default: "Union[ComputedDefaultValue[Type_T], Type_T, Callable[[], Type_T]]" = None,
                           only_add_for_targets: "typing.List[CrossCompileTarget]" = None,
                           extra_fallback_config_names: "typing.List[str]" = None,
-                          _allow_unknown_targets=False, **kwargs) -> Type_T:
+                          use_default_fallback_config_names=True, _allow_unknown_targets=False, **kwargs) -> Type_T:
         # Need a string annotation for kind to avoid https://github.com/python/typing/issues/266 which seems to affect
         # the version of python in Ubuntu 16.04
         config_option_key = cls.target
@@ -663,7 +663,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         fallback_config_names = []
         # For targets such as cheribsd-mfs-root-kernel to fall back to checking the value of the option for cheribsd
         extra_fallback_class = getattr(cls, "_config_inherits_from", None)
-        if not _no_fallback_config_name and (fallback_name_base or extra_fallback_class is not None):
+        if use_default_fallback_config_names and (fallback_name_base or extra_fallback_class is not None):
             if fallback_name_base:
                 fallback_config_names.append(fallback_name_base + "/" + name)
             if extra_fallback_class is not None:
@@ -2015,7 +2015,7 @@ class Project(SimpleProject):
         if cls._xtarget is not None or default_xtarget is not None:
             cls.build_dir = cls.add_path_option("build-directory", metavar="DIR", default=cls.default_build_dir,
                                                 help="Override default source directory for " + cls.project_name,
-                                                _no_fallback_config_name=cls._xtarget != default_xtarget)
+                                                use_default_fallback_config_names=cls._xtarget == default_xtarget)
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
                 function=lambda config, proj: False if proj.get_crosscompile_target(
