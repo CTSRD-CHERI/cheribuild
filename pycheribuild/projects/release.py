@@ -84,11 +84,15 @@ class Release(SimpleProject):
         super().__init__(config)
 
     def process(self):
-        output_root = self.config.output_root
         source_root = self.config.source_root
 
-        run_command("rm", "-rf", output_root / "cheribuild")
-        run_command("cp", "-a", source_root / "cheribuild", output_root)
+        Path(source_root, "cheribuild/cheribuild.json").write_text("""{
+            "source-root": "../../sources",
+            "build-root": "../../build",
+            "output-root": "../../output",
+            "skip-update": true
+} 
+            """)
 
 
 class MorelloRelease(Release):
@@ -108,6 +112,7 @@ class MorelloRelease(Release):
     def process(self):
         super().process()
 
+        root = self.config.output_root.parent
         output_root = self.config.output_root
 
         install_script = Path(output_root, "install_and_run_fvp.sh")
@@ -116,13 +121,15 @@ class MorelloRelease(Release):
         exec "${dir}/cheribuild.py" install-morello-fvp run-fvp-morello-purecap "$@""")
         install_script.chmod(0o755)
 
-        run_command("bsdtar", "-cavf", output_root / "release-morello.tar.xz", "-C", output_root,
+        run_command("bsdtar", "-cavf", output_root / "release-morello.tar.xz", 
+            "-C", root,
             "--options=xz:threads=" + str(default_make_jobs_count()),
             "--options=compression-level=9",  # reduce size a bit more
             "--exclude=*.git",
-            "morello-sdk/firmware",
-            "cheribsd-morello-purecap.img",
-            "cheribuild",
+            "output/morello-sdk/firmware",
+            "output/cheribsd-morello-purecap.img",
+            "output/sdk",
+            "sources/cheribuild",
             cwd="/")
 
         run_command("sha256sum", output_root / "release-morello.tar.xz")
@@ -130,6 +137,7 @@ class MorelloRelease(Release):
 class RISCV64Release(Release):
     target = "riscv64-release"
     dependencies = ["gdb-native", "qemu",
+                    "bbl-baremetal-riscv64-purecap",
                     "disk-image-riscv64-purecap"]
     
     def __init__(self, config: CheriConfig):
@@ -137,14 +145,18 @@ class RISCV64Release(Release):
 
     def process(self):
         super().process()
+        root = self.config.output_root.parent
         output_root = self.config.output_root
 
-        run_command("bsdtar", "-cavf", output_root / "release-riscv64.tar.xz", "-C", output_root,
+        run_command("bsdtar", "-cavf", output_root / "release-riscv64.tar.xz", 
+            "-C", root,
             "--options=xz:threads=" + str(default_make_jobs_count()),
-            "--options=compression-level=9",  # reduce size a bit more
+            #"--options=compression-level=9",  # reduce size a bit more
             "--exclude=*.git",
-            "cheribsd-riscv64-purecap.img",
-            "cheribuild",
+            "output/cheribsd-riscv64-purecap.img",
+            "output/rootfs-riscv64-purecap",
+            "output/sdk",
+            "sources/cheribuild",
             cwd="/")
 
-        run_command("sha256sum", output_root / "release-risc64.tar.xz")
+        run_command("sha256sum", output_root / "release-riscv64.tar.xz")
