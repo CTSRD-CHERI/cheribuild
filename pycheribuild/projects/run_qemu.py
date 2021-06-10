@@ -65,6 +65,7 @@ class LaunchQEMUBase(SimpleProject):
     forward_http_port = False
     forward_cli_port = False
     forward_can_port = False
+    forward_nbns_port = False
     forward_print_port = False
     _can_provide_src_via_smb = False
     ssh_forwarding_port = None  # type: int
@@ -311,6 +312,12 @@ class LaunchQEMUBase(SimpleProject):
             user_network_options += ",hostfwd=udp::" + str(self.tftp_forwarding_port) + "-:69"
             # bind the qemu tftp port to the hosts port
             print(coloured(AnsiColour.green, "\nListening for TFTP connections on localhost:", self.tftp_forwarding_port,
+                           sep=""))
+
+        if self.forward_nbns_port:
+            user_network_options += ",hostfwd=udp::" + str(self.nbns_forwarding_port) + "-:137"
+            # bind the qemu nbns port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for NBNS connections on localhost:", self.nbns_forwarding_port,
                            sep=""))
 
         if self.forward_can_port:
@@ -687,6 +694,7 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     forward_ssh_port = False
     forward_ftp_port = True
     forward_tftp_port = True
+    forward_nbns_port = True
     forward_can_port = True
     forward_http_port = True
     forward_cli_port = True
@@ -696,6 +704,7 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     _add_virtio_rng = False
     ftp_forwarding_port = 10021
     tftp_forwarding_port = 10069
+    nbns_forwarding_port = 10137
     cli_forwarding_port = 10023
     can_forwarding_port = 5002
     print_forwarding_port = 45000
