@@ -50,7 +50,7 @@ _false_unless_build_all_set = ComputedDefaultValue(function=lambda config, proje
 class BuildLLVMBase(CMakeProject):
     github_base_url = "https://github.com/CTSRD-CHERI/"
     repository = GitRepository(github_base_url + "llvm.git",
-                               force_branch=True, default_branch="cherifreertos-gprel")
+                               force_branch=True, default_branch="cherifreertos-gprel-dev")
     no_default_sysroot = None
     skip_cheri_symlinks = True
     do_not_add_to_targets = True
