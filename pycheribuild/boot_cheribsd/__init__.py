@@ -815,7 +815,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
             have_dhclient = True
             success("===> got DHCPACK")
             # we have a network, keep waiting for the login prompt
-            i = child.expect(boot_expect_strings + FATAL_ERROR_MESSAGES, timeout=5 * 60,
+            i = child.expect(boot_expect_strings + FATAL_ERROR_MESSAGES, timeout=15 * 60,
                              timeout_msg="timeout awaiting login prompt")
         if i == boot_expect_strings.index(LOGIN):
             success("===> got login prompt")
