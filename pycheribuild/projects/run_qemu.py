@@ -469,7 +469,9 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         self.current_kernel = self.source_project.get_kernel_install_path(self.kernel_config)
 
         if self.qemu_options.can_boot_kernel_directly:
-            self._project_specific_options += ["-append", "kern.module_path={}".format(self.current_kernel.parent)]
+            kern_module_path_arg = self.source_project.get_kern_module_path_arg(self.kernel_config)
+            if kern_module_path_arg:
+                self._project_specific_options += ["-append", kern_module_path_arg]
         self.rootfs_path = self.source_project.get_rootfs_dir(self, config=config)
         if needs_disk_image:
             self.disk_image = disk_image_class.get_instance(self).disk_image_path
