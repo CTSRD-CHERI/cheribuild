@@ -292,6 +292,7 @@ I would also suggest using `set autolist` to display all options.
 
 **NOTE:** Since there are so many per-project options that are identical between all projects they are not all shown when running `--help`. To see the full list of options that can be specified, run `cheribuild.py --help-all`. Since this will generate lots of output it probably makes more sense to run `cheribuild.py --help-all | grep <target_name>`.
 
+<!-- BEGIN HELP OUTPUT -->
 ```
 usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build] [--test] [--benchmark]
                      [--build-and-test] [--list-targets] [--print-chosen-targets] [--dump-configuration]
@@ -691,3 +692,4 @@ Options for target 'webkit':
                         Use offsets into the JS heap for object references instead of capabilities. This option only
                         affects the purecap backends. (default: 'False')
 ```
+<!-- END HELP OUTPUT -->
