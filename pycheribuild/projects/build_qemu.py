@@ -51,12 +51,19 @@ class BuildQEMUBase(AutotoolsProject):
     skip_git_submodules = True  # we don't need these
     can_build_with_asan = True
     default_targets = "some-invalid-target"
+    default_build_type = BuildType.RELEASE
     lto_by_default = True
     _initial_meson_commit = "a56650518f5ba84ed15b9415fa1041311eeeece0"
 
     @classmethod
     def is_toolchain_target(cls):
         return True
+
+    @property
+    def _build_type_basic_compiler_flags(self):
+        if self.build_type.is_release:
+            return ["-O3"]  # Build with -O3 instead of -O2, we want QEMU to be as fast as possible
+        return super()._build_type_basic_compiler_flags
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -94,8 +101,6 @@ class BuildQEMUBase(AutotoolsProject):
 
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")
-        else:
-            self.COMMON_FLAGS.append("-O3")
         if shutil.which("pkg-config"):
             glib_includes = self.run_cmd("pkg-config", "--cflags-only-I", "glib-2.0", capture_output=True,
                                          print_verbose_only=True, run_in_pretend_mode=True).stdout.decode(
