@@ -30,6 +30,9 @@ from pycheribuild.targets import MultiArchTargetAlias, Target, target_manager
 
 
 class TestArgumentParser(argparse.ArgumentParser):
+    # This is not a test, despite its name matching Test*
+    __test__ = False
+
     # Don't use sys.exit(), raise an exception instead
     def exit(self, status=0, message=None):
         if status == 2:
