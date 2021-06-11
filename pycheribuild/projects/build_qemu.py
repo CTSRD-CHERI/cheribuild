@@ -94,7 +94,6 @@ class BuildQEMUBase(AutotoolsProject):
 
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")
-            self.COMMON_FLAGS.append("-O0")
         else:
             self.COMMON_FLAGS.append("-O3")
         if shutil.which("pkg-config"):

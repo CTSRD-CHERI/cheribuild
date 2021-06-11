@@ -2128,7 +2128,7 @@ class Project(SimpleProject):
         if cbt == BuildType.DEFAULT:
             return []
         elif cbt == BuildType.DEBUG:
-            return ["-O0"]
+            return ["-O1" if self.use_asan else "-O0"]
         elif cbt in (BuildType.RELEASE, BuildType.RELWITHDEBINFO):
             return ["-O2"]
         elif cbt in (BuildType.MINSIZEREL, BuildType.MINSIZERELWITHDEBINFO):
