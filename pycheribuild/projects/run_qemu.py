@@ -42,8 +42,8 @@ from .cross.freertos import BuildFreeRTOS
 from .cross.gdb import BuildGDB
 from .cross.rtems import BuildRtems
 from .cross.u_boot import BuildUBoot
-from .disk_image import (BuildCheriBSDDiskImage, BuildFreeBSDImage, BuildFreeBSDWithDefaultOptionsDiskImage,
-                         BuildMinimalCheriBSDDiskImage)
+from .disk_image import (BuildCheriBSDDiskImage, BuildDiskImageBase, BuildFreeBSDImage,
+                         BuildFreeBSDWithDefaultOptionsDiskImage, BuildMinimalCheriBSDDiskImage)
 from .project import CheriConfig, CPUArchitecture, SimpleProject, TargetAliasWithDependencies
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
@@ -319,6 +319,7 @@ class LaunchQEMUBase(SimpleProject):
                 gdb_cmd = BuildGDB.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"
                 # Set the sysroot to ensure that the .debug file is loaded from <ROOTFS>/usr/lib/debug/boot/kernel
                 # It seems this does not always work as expected, so also set substitute-path and debug-file-directory.
+                assert self.rootfs_path is not None
                 result = [gdb_cmd, main_binary,
                           "--init-eval-command=set sysroot " + str(self.rootfs_path),
                           "--init-eval-command=set substitute-path " + str(self.rootfs_path) + " /",
@@ -443,14 +444,14 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             kind=KernelABI, enum_choices=[KernelABI.HYBRID, KernelABI.PURECAP],
             help="Select extra kernel variant with the given ABI to run.")
 
-    def __init__(self, config: CheriConfig, source_class: "typing.Type[BuildFreeBSD]" = None,
+    def __init__(self, config: CheriConfig, freebsd_class: "typing.Type[BuildFreeBSD]" = None,
                  disk_image_class: "typing.Type[BuildFreeBSDImage]" = None, needs_disk_image=True):
         super().__init__(config)
-        if source_class is None and disk_image_class is not None:
+        if freebsd_class is None and disk_image_class is not None:
             # noinspection PyProtectedMember
             self.source_project = disk_image_class.get_instance(self).source_project
         else:
-            self.source_project = source_class.get_instance(self)
+            self.source_project = freebsd_class.get_instance(self)
 
         if self.kernel_config:
             if self.kernel_config not in self._valid_kernel_configs():
@@ -469,9 +470,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
 
         if self.qemu_options.can_boot_kernel_directly:
             self._project_specific_options += ["-append", "kern.module_path={}".format(self.current_kernel.parent)]
-        if hasattr(source_class, "get_rootfs_dir"):
-            # noinspection PyCallingNonCallable
-            self.rootfs_path = source_class.get_rootfs_dir(self, config=config)
+        self.rootfs_path = self.source_project.get_rootfs_dir(self, config=config)
         if needs_disk_image:
             self.disk_image = disk_image_class.get_instance(self).disk_image_path
 
@@ -505,7 +504,8 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
 class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     do_not_add_to_targets = True
     include_os_in_target_suffix = False
-    _source_class = None
+    _freebsd_class = None  # type: typing.Type[BuildFreeBSD]
+    _source_class = None  # type: typing.Type[BuildDiskImageBase]
 
     @classproperty
     def supported_architectures(self):
@@ -533,8 +533,8 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         result = [qemu, cls._source_class.get_class_for_target(xtarget).target]
         return result
 
-    def __init__(self, config, *, source_class=None, needs_disk_image=True):
-        super().__init__(config, needs_disk_image=needs_disk_image, source_class=source_class,
+    def __init__(self, config, *, needs_disk_image=True):
+        super().__init__(config, needs_disk_image=needs_disk_image, freebsd_class=self._freebsd_class,
                          disk_image_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
 
 
@@ -723,11 +723,12 @@ class LaunchMinimalCheriBSD(LaunchCheriBSD):
 
 class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
     project_name = "run-mfs-root"
-    _source_class = BuildCheriBsdMfsKernel
+    _freebsd_class = BuildCheriBsdMfsKernel
+    _source_class = BuildCheriBsdMfsKernel   # no disk image, ignore type checker error
 
     def __init__(self, config):
         # noinspection PyTypeChecker
-        super().__init__(config, source_class=BuildCheriBsdMfsKernel, needs_disk_image=False)
+        super().__init__(config, needs_disk_image=False)
         if self.config.use_minimal_benchmark_kernel:
             kernel_config = self.source_project.default_kernel_config(ConfigPlatform.QEMU, benchmark=True)
             self.current_kernel = self.source_project.get_kernel_install_path(kernel_config)
