@@ -1811,6 +1811,9 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         # Re-use the same build directory as the CheriBSD target that was used for the disk image
         # This ensure that the kernel build tools can be found in the build directory
         self.image = self.mfs_root_image_instance.disk_image_path
+        # No need to rebuild kernel-toolchain, the full toolchain must have
+        # been present to build the image in the first place.
+        self.kernel_toolchain_exists = True
 
     @classmethod
     def setup_config_options(cls, **kwargs):
