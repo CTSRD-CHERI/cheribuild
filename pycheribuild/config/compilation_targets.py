@@ -828,6 +828,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
 class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
     shortname = "Morello-Baremetal"
+    os_prefix = "baremetal-"
 
     @property
     def cmake_system_name(self) -> str:
@@ -857,7 +858,7 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
         if target.cpu_architecture == CPUArchitecture.ARM32:
             return "arm-none-eabi"
         assert target.is_aarch64(include_purecap=True)
-        if target.is_cheri_hybrid():
+        if target.is_hybrid_or_purecap_cheri():
             return "aarch64-unknown-elf"
         assert False, "Other baremetal cases have not been tested yet!"
 
@@ -867,7 +868,8 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs) -> typing.List[str]:
-        if xtarget.cpu_architecture == CPUArchitecture.ARM32 or xtarget.is_cheri_hybrid([CPUArchitecture.AARCH64]):
+        if xtarget.cpu_architecture == CPUArchitecture.ARM32 or xtarget.is_hybrid_or_purecap_cheri(
+                [CPUArchitecture.AARCH64]):
             return super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs)
         raise ValueError("Other baremetal cases have not been tested yet!")
 
@@ -998,9 +1000,12 @@ class CompilationTargets(BasicCompilationTargets):
                                                           NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                           hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
 
-    MORELLO_BAREMETAL_HYBRID = CrossCompileTarget("morello-baremetal", CPUArchitecture.AARCH64,
+    MORELLO_BAREMETAL_HYBRID = CrossCompileTarget("morello-hybrid", CPUArchitecture.AARCH64,
                                                   MorelloBaremetalTargetInfo, is_cheri_hybrid=True,
                                                   is_cheri_purecap=False)
+    MORELLO_BAREMETAL_PURECAP = CrossCompileTarget("morello-purecap", CPUArchitecture.AARCH64,
+                                                   MorelloBaremetalTargetInfo, is_cheri_hybrid=False,
+                                                   is_cheri_purecap=True)
     ARM_NONE_EABI = CrossCompileTarget("arm-none-eabi", CPUArchitecture.ARM32, ArmNoneEabiGccTargetInfo,
                                        is_cheri_hybrid=False, is_cheri_purecap=False)  # For 32-bit firmrware
     # FreeBSD targets
