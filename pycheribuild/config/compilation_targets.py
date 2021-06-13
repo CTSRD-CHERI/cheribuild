@@ -349,25 +349,14 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
         assert self.is_cheribsd(), "Other cases not handled yet"
         from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel
-        xtarget = self._get_mfs_kernel_xtarget()
+        xtarget = self.target
         if xtarget not in BuildCheriBsdMfsKernel.supported_architectures:
             self.project.fatal("No MFS kernel for target", xtarget)
-            return None
+            raise ValueError()
         mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(
             xtarget, self.config, caller=self.project)
         kernconf = mfs_kernel.default_kernel_config(platform, benchmark=use_benchmark_kernel)
         return mfs_kernel.get_kernel_install_path(kernconf)
-
-    def _get_mfs_kernel_xtarget(self):
-        kernel_xtarget = self.target
-        if self.is_cheribsd():
-            # TODO: allow using non-CHERI kernels? Or the purecap kernel?
-            if kernel_xtarget.is_mips(include_purecap=True):
-                # Always use CHERI hybrid kernel
-                kernel_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
-            elif kernel_xtarget.is_riscv(include_purecap=True):
-                kernel_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
-        return kernel_xtarget
 
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
@@ -548,8 +537,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             # use a bitfile from jenkins. TODO: add option for overriding
             assert self.target.is_mips(include_purecap=True)
             basic_args.append("--jenkins-bitfile=cheri128")
-            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self._get_mfs_kernel_xtarget(),
-                                                                              self.config, caller=self.project)
+            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self.target, self.config,
+                                                                              caller=self.project)
             kernel_config = mfs_kernel.default_kernel_config(ConfigPlatform.BERI,
                                                              benchmark=not self.config.benchmark_with_debug_kernel)
             kernel_image = mfs_kernel.get_kernel_install_path(kernel_config)
