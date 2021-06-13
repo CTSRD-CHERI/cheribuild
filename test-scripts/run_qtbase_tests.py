@@ -123,7 +123,8 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     all_tests_starttime = datetime.datetime.utcnow()
     test_subset = Path(args.test_subset)
     tests_root = Path(build_dir, "tests/auto")
-    assert Path(tests_root, test_subset).is_relative_to(tests_root), "Invalid path " + str(tests_root / test_subset)
+    relpath = os.path.relpath(str(Path(tests_root, test_subset)), str(tests_root))
+    assert not relpath.startswith(os.path.pardir), "Invalid path " + str(tests_root / test_subset)
     boot_cheribsd.info("Running qtbase tests for ", test_subset)
 
     # Start with some basic smoketests:
