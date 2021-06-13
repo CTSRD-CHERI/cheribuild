@@ -53,6 +53,10 @@ def setup_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     # Disable stack traces for now since we can always run the crashing tests under gdb manually.
     qemu.run("export QTEST_DISABLE_STACK_DUMP=1")
 
+    # tst_QDate::startOfDay_endOfDay(epoch) is broken in BST, use Europe/Oslo to match the official CI
+    # Possibly similar to https://bugreports.qt.io/browse/QTBUG-87662
+    qemu.run("export TZ=Europe/London")
+
 
 def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitparser.JUnitXml,
                successful_tests: list, failed_tests: list, build_dir: Path):
