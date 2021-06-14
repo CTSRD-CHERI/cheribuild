@@ -34,8 +34,7 @@ import datetime
 import os
 from pathlib import Path
 
-import junitparser
-from run_tests_common import boot_cheribsd, run_tests_main
+from run_tests_common import boot_cheribsd, run_tests_main, junitparser
 
 
 def setup_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
