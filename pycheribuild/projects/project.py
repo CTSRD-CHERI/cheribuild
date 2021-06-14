@@ -3310,10 +3310,14 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                 self.run_cmd("ctest", "-VV")
             else:
                 from .cmake import BuildCrossCompiledCMake
-                cmake_target = BuildCrossCompiledCMake.get_instance(self)
-                if not (cmake_target.install_dir / "bin/ctest").is_file():
-                    self.dependency_error("cannot find cross-compiled a CTest binary which is required to run tests.",
-                                          cheribuild_target=cmake_target.target)
+                try:
+                    cmake_target = BuildCrossCompiledCMake.get_instance(self)
+                    if not (cmake_target.install_dir / "bin/ctest").is_file():
+                        self.dependency_error("cannot find cross-compiled CTest binary to run tests.",
+                                              cheribuild_target=cmake_target.target)
+                except LookupError:
+                    self.warning("Do not know how to cross-compile CTest for", self.target_info, "-> cannot run tests")
+                    return
                 args = ["--cmake-install-dir", cmake_target.install_dir]
                 self.target_info.run_cheribsd_test_script("run_ctest_tests.py", *args, mount_builddir=True,
                                                           mount_sysroot=True, mount_sourcedir=True)
