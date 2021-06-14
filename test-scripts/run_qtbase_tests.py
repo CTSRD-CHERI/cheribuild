@@ -59,7 +59,7 @@ def setup_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
         try:
             copy_qt_libs_to_tmpfs_and_set_libpath(qemu, args)
         except boot_cheribsd.CheriBSDCommandTimeout as e:
-            boot_cheribsd.failure("Timeout copying Qt libraries, will try to use smbfs instead", exit=False)
+            boot_cheribsd.failure("Timeout copying Qt libraries, will try to use smbfs instead: ", e, exit=False)
             # Send CTRL+C in case the process timed out.
             qemu.sendintr()
             qemu.sendintr()
