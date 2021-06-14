@@ -420,7 +420,7 @@ def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
     hybrid_install_prefix = "usr/local/" + qemu.xtarget.get_cheri_hybrid_target().generic_suffix
     nocheri_install_prefix = "usr/local/" + qemu.xtarget.get_non_cheri_target().generic_suffix
 
-    noncheri_ld_lib_path_var = "LD_LIBRARY_PATH" if not qemu.xtarget.is_cheri_purecap() else "LD64_LIBRARY_PATH"
+    noncheri_ld_lib_path_var = "LD_LIBRARY_PATH" if not qemu.xtarget.is_cheri_purecap() else "LD_64_LIBRARY_PATH"
     cheri_ld_lib_path_var = "LD_LIBRARY_PATH" if qemu.xtarget.is_cheri_purecap() else "LD_CHERI_LIBRARY_PATH"
     qemu.run("export {var}=/{lib}:/usr/{lib}:/usr/local/{lib}:/sysroot/{lib}:/sysroot/usr/{lib}:/sysroot/{hybrid}/lib:"
              "/sysroot/{noncheri}/lib".format(lib=non_cheri_libdir, hybrid=hybrid_install_prefix,
