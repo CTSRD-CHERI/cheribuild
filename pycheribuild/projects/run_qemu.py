@@ -468,8 +468,17 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
 
         self.current_kernel = self.source_project.get_kernel_install_path(self.kernel_config)
 
-        if self.qemu_options.can_boot_kernel_directly:
-            self._project_specific_options += ["-append", "kern.module_path={}".format(self.current_kernel.parent)]
+        if (self.qemu_options.can_boot_kernel_directly and
+                isinstance(self.source_project, BuildCHERIBSD) and
+                self.kernel_abi != self.source_project.get_default_kernel_abi()):
+            try:
+                module_path = self.current_kernel.parent.relative_to(self.source_project.destdir)
+                self._project_specific_options += ["-append", "kern.module_path={}".format(
+                    Path("/") / module_path)]
+            except ValueError:
+                # MFS root kernels have are not in the rootfs
+                self.info("Kernel path outside rootfs, not setting kernel modules path")
+
         self.rootfs_path = self.source_project.get_rootfs_dir(self, config=config)
         if needs_disk_image:
             self.disk_image = disk_image_class.get_instance(self).disk_image_path
