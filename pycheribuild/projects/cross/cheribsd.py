@@ -1440,7 +1440,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kerndir = "kernel." + kernconf
         return self.install_dir / "boot" / kerndir / "kernel"
 
-    def get_kern_module_path_arg(self, kernconf: str = None) -> Path:
+    def get_kern_module_path_arg(self, kernconf: str = None) -> "typing.Optional[str]":
         """
         Get the path to provide to kern.module_path for the given kernel
         configuration if needed (i.e. the kernel is not the default one).
@@ -1883,11 +1883,11 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         config = CheriBSDConfigTable.get_default(self.crosscompile_target, platform, kABI, **filter_kwargs)
         return config.kernconf
 
-    def get_kernel_configs(self, **filter_kwargs) -> "typing.Sequence[str]":
+    def get_kernel_configs(self, **filter_kwargs) -> "typing.List[str]":
         configs = self._get_all_kernel_configs()
         return [c.kernconf for c in filter_kernel_configs(configs, **filter_kwargs)]
 
-    def get_kernel_install_path(self, kernconf: str) -> Path:
+    def get_kernel_install_path(self, kernconf: str = None) -> Path:
         """ Get the installed kernel path for an MFS kernel config that has been built. """
         path = self.config.cheribsd_image_root / (
             "kernel" + self.crosscompile_target.build_suffix(self.config, include_os=False) +

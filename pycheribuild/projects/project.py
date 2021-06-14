@@ -360,15 +360,18 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @classmethod
     def _recursive_dependencies_impl(cls, config: CheriConfig, *, include_dependencies: bool,
                                      include_toolchain_dependencies: bool,
-                                     include_sdk_dependencies: bool,
-                                     dependency_chain: "typing.List[Target]" = []) -> "typing.List[Target]":
+                                     dependency_chain: "typing.List[typing.Type[SimpleProject]]" = None,
+                                     include_sdk_dependencies: bool) -> "typing.List[Target]":
         assert cls._xtarget is not None, cls
-        new_dependency_chain = dependency_chain + [cls]
-        if cls in dependency_chain:
-            cycle = new_dependency_chain[new_dependency_chain.index(cls):]
-            fatal_error("Cyclic dependency found:", " -> ".join(map(lambda c: c.target, cycle)), pretend=False)
         if not include_dependencies:
             return []
+        if dependency_chain:
+            new_dependency_chain = dependency_chain + [cls]
+            if cls in dependency_chain:
+                cycle = new_dependency_chain[new_dependency_chain.index(cls):]
+                fatal_error("Cyclic dependency found:", " -> ".join(map(lambda c: c.target, cycle)), pretend=False)
+        else:
+            new_dependency_chain = [cls]
         result = []
         for target in cls._direct_dependencies(config, include_dependencies=include_dependencies,
                                                include_toolchain_dependencies=include_toolchain_dependencies,
