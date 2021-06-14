@@ -153,6 +153,10 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         if self.assertions:
             self.configure_args.append("-force-asserts")
 
+        if self.build_type.should_include_debug_info:
+            # separate debug info should make it possible to copy the .so files to tmpfs before running tests
+            self.configure_args.append("-separate-debug-info")
+
         # self.configure_args.append("-no-pch")  # slows down build but gives useful crash testcases
 
         #  -reduce-exports ...... Reduce amount of exported symbols [auto]
