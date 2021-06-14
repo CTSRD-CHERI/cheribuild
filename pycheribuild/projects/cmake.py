@@ -55,13 +55,35 @@ class BuildCrossCompiledCMake(CMakeProject):
     @staticmethod
     def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
         assert not xtarget.is_native()
-        return replace_one(base_target, "-crosscompiled", "") + "-" + xtarget.generic_suffix
+        if xtarget.is_cheri_purecap():
+            # TODO: commit patches to build purecap
+            # Target is not actually purecap, just using the purecap sysroot
+            result = base_target + "-" + xtarget.get_non_cheri_target().generic_suffix + "-for-purecap-rootfs"
+        else:
+            result = base_target + "-" + xtarget.generic_suffix
+        return replace_one(result, "-crosscompiled", "")
 
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCMake, do_update=True)
     target = "cmake-crosscompiled"  # Can't use cmake here due to command line option conflict
     project_name = "cmake"
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS
+
+    @property
+    def essential_compiler_and_linker_flags(self):
+        # XXX: Ugly hack to build the -purecap targets as non-purecap. TODO: fix purecap ctest
+        if self.crosscompile_target.is_cheri_purecap():
+            return self.target_info.get_essential_compiler_and_linker_flags(
+                xtarget=self.crosscompile_target.get_non_cheri_target())
+        return super().essential_compiler_and_linker_flags
+
+    @property
+    def cmake_prefix_paths(self):
+        return []  # only the default search dirs
+
+    @property
+    def pkgconfig_dirs(self):
+        return []  # only the default search dirs
 
     def setup(self):
         super().setup()

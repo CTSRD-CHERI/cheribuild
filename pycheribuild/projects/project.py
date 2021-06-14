@@ -2320,6 +2320,10 @@ class Project(SimpleProject):
         self._lto_linker_flags = []  # type: typing.List[str]
         self._lto_compiler_flags = []  # type: typing.List[str]
 
+    @property
+    def pkgconfig_dirs(self):
+        return self.target_info.pkgconfig_dirs
+
     def setup(self):
         super().setup()
         if self.set_pkg_config_path:
@@ -2328,7 +2332,7 @@ class Project(SimpleProject):
                 # We have to add the boostrap tools pkgconfig directory to PKG_CONFIG_PATH so that it is searched in
                 # addition to the default paths. Note: We do not set PKG_CONFIG_LIBDIR since that overrides the default.
                 pkg_config_args = dict(
-                    PKG_CONFIG_PATH=":".join(self.target_info.pkgconfig_dirs + [os.getenv("PKG_CONFIG_PATH", "")]))
+                    PKG_CONFIG_PATH=":".join(self.pkgconfig_dirs + [os.getenv("PKG_CONFIG_PATH", "")]))
             elif self.needs_sysroot:
                 # We need to set the PKG_CONFIG variables both when configuring and when running make since some
                 # projects (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set
@@ -2336,7 +2340,7 @@ class Project(SimpleProject):
                 # PKG_CONFIG_PATH: list of directories to be searched for .pc files before the default locations.
                 # PKG_CONFIG_LIBDIR: list of directories to replace the default pkg-config search path.
                 # Since we only want libraries from our sysroots we set both.
-                pkgconfig_dirs = ":".join(self.target_info.pkgconfig_dirs)
+                pkgconfig_dirs = ":".join(self.pkgconfig_dirs)
                 pkg_config_args = dict(
                     PKG_CONFIG_PATH=pkgconfig_dirs,
                     PKG_CONFIG_LIBDIR=pkgconfig_dirs,
@@ -2987,6 +2991,10 @@ class _CMakeAndMesonSharedLogic(Project):
             raise ValueError(key + " not used in toolchain file")
         return result
 
+    @property
+    def cmake_prefix_paths(self):
+        return self.target_info.cmake_prefix_paths
+
     def _replace_values_in_toolchain_file(self, template: str, file: Path, **kwargs):
         result = template
         for key, value in kwargs.items():
@@ -3033,8 +3041,8 @@ class _CMakeAndMesonSharedLogic(Project):
             TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
             TOOLCHAIN_SYSTEM_NAME=system_name,
             TOOLCHAIN_SYSTEM_VERSION=self.target_info.toolchain_system_version or "",
-            TOOLCHAIN_CMAKE_PREFIX_PATH=self.target_info.cmake_prefix_paths,
-            TOOLCHAIN_PKGCONFIG_DIRS=_CMakeAndMesonSharedLogic.EnvVarPathList(self.target_info.pkgconfig_dirs),
+            TOOLCHAIN_CMAKE_PREFIX_PATH=self.cmake_prefix_paths,
+            TOOLCHAIN_PKGCONFIG_DIRS=_CMakeAndMesonSharedLogic.EnvVarPathList(self.pkgconfig_dirs),
             COMMENT_IF_NATIVE="#" if self.compiling_for_host() else "",
             **kwargs)
 
@@ -3180,7 +3188,11 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         if self.config.create_compilation_db:
             # TODO: always generate it?
             self.configure_args.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
-        if not self.compiling_for_host():
+        if self.compiling_for_host():
+            # When building natively, pass arguments on the command line instead of using the toolchain file.
+            # This makes it a lot easier to reproduce the builds outside of cheribuild.
+            self.add_cmake_options(CMAKE_PREFIX_PATH=self._toolchain_file_list_to_str(self.cmake_prefix_paths))
+        else:
             self._toolchain_template = include_local_file("files/CrossToolchain.cmake.in")
             self._toolchain_file = self.build_dir / "CrossToolchain.cmake"
             self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self._toolchain_file)
@@ -3219,16 +3231,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         # This means we may not need the toolchain file at all
         # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
         # TODO: avoid the toolchain file and set all flags on the command line
-        if self.crosscompile_target.is_cheri_purecap() and self.target_info.is_cheribsd():
-            add_lib_suffix = """
-# cheri libraries are found in /usr/libcheri:
-set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
-# set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
-"""
-        else:
-            add_lib_suffix = "# no lib suffix needed for non-purecap"
-        self._prepare_toolchain_file_common(file, ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
-                                            TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
+        self._prepare_toolchain_file_common(file, TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
                                             TOOLCHAIN_FILE_PATH=file.absolute())
 
     def configure(self, **kwargs):
