@@ -56,6 +56,30 @@ def setup_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     # tst_QDate::startOfDay_endOfDay(epoch) is broken in BST, use Europe/Oslo to match the official CI
     # Possibly similar to https://bugreports.qt.io/browse/QTBUG-87662
     qemu.run("export TZ=Europe/London")
+    qemu.checked_run("cd /tmp")
+    if args.copy_libraries_to_tmpfs:
+        copy_qt_libs_to_tmpfs(qemu, args)
+
+
+def copy_qt_libs_to_tmpfs(qemu, args):
+    # Copy the libraries to tmpfs to avoid long loading times over smbfs
+    qemu.checked_run("mkdir /tmp/qt-libs")
+    num_libs = 0
+    for lib in sorted(Path(args.build_dir, "lib").glob("*.so*")):
+        if lib.name.endswith(".debug"):
+            continue  # don't copy the debug info files, they are huge
+        if lib.is_symlink():
+            # don't use cp to copy a symlink from smbfs, this takes many seconds
+            linkpath = os.readlink(str(lib))
+            if os.path.pathsep in linkpath:
+                boot_cheribsd.failure("Unexpected link path for ", lib.absolute(), ": ", linkpath, exit=False)
+                continue
+            qemu.checked_run("ln -sfn {} /tmp/qt-libs/{}".format(linkpath, lib.name))
+        else:
+            qemu.checked_run("cp -fav /build/lib/{} /tmp/qt-libs/".format(lib.name))
+            num_libs += 1
+    boot_cheribsd.success("Copied ", num_libs, " files to tmpfs")
+    boot_cheribsd.prepend_ld_library_path(qemu, "/tmp/qt-libs")
 
 
 def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitparser.JUnitXml,
@@ -77,13 +101,14 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
             qemu.checked_run("rm -f /build/test.xml && "
                              "{} -o /build/test.xml,junitxml -o -,txt -v1 && "
                              "fsync /build/test.xml".format(f),
-                             timeout=5 * 60)
+                             timeout=10 * 60)
             successful_tests.append(f)
         except boot_cheribsd.CheriBSDCommandFailed as e:
             boot_cheribsd.failure("Failed to run ", f.name, ": ", str(e), exit=False)
             # Send CTRL+C in case the process timed out.
             qemu.sendintr()
-            qemu.expect_prompt(timeout=60)
+            qemu.sendintr()
+            qemu.expect_prompt(timeout=5*60)
         try:
             endtime = datetime.datetime.utcnow()
             qt_test = junitparser.JUnitXml.fromfile(str(test_xml))
@@ -98,16 +123,19 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
         except Exception as e:
             boot_cheribsd.failure("Error loading JUnit result for", f.name, ": ", str(e), exit=False)
             failed_tests.append(f)
-            add_junit_failure(xml, f, str(e), starttime)
+            add_junit_failure(xml, f, str(e), starttime, test_xml)
         finally:
             if test_xml.is_file():
                 test_xml.unlink()
 
 
-def add_junit_failure(xml: junitparser.JUnitXml, test: Path, message: str, starttime: datetime.datetime):
+def add_junit_failure(xml: junitparser.JUnitXml, test: Path, message: str, starttime: datetime.datetime,
+                      input_xml: Path):
     t = junitparser.TestCase(name=test.name)
     t.result = junitparser.Failure(message=str(message))
     t.time = (datetime.datetime.utcnow() - starttime).total_seconds()
+    if input_xml.exists():
+        t.system_err = input_xml.read_text("utf-8")
     suite = junitparser.TestSuite(name=test.name)
     suite.add_testcase(t)
     xml.add_testsuite(suite)
@@ -153,6 +181,9 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--test-subset", required=False, default="corelib/tools",
                         help="Subset of tests to run (set to '.' to run all tests)")
     parser.add_argument("--junit-xml", required=False, help="Output file name for the JUnit XML results")
+    # Note: copying libraries to tmpfs is not enabled by default since it currently hangs on purecap RISC-V
+    parser.add_argument("--copy-libraries-to-tmpfs", action="store_true",
+                        help="Copy the Qt libraries to tmpfs first instead of loading them from smbfs")
 
 
 if __name__ == '__main__':
