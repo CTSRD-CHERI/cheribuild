@@ -702,11 +702,12 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
 
     @staticmethod
     def get_config_prefix():
-        config_prefix = ""
         program = Path(sys.argv[0]).name
-        if program.endswith("cheribuild.py"):
-            config_prefix = program[0:-len("cheribuild.py")]
-        return config_prefix
+        suffixes = ["cheribuild", "cheribuild.py"]
+        for suffix in suffixes:
+            if program.endswith(suffix):
+                return program[0:-len(suffix)]
+        return ""
 
     def finalize_options(self, available_targets: list, **kwargs):
         target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
