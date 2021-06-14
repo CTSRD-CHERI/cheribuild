@@ -996,7 +996,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             install_instructions = install_instructions()
         if cheribuild_target:
             self.warning("Dependency for", self.target, "missing:", *args, fixit_hint=install_instructions)
-            if self.query_yes_no("Would you like to install the dependency using cheribuild?", force_result=True):
+            if self.query_yes_no("Would you like to install the dependency (" + cheribuild_target +
+                                 ") using cheribuild?", force_result=True):
                 dep_target = target_manager.get_target(cheribuild_target, None, config=self.config, caller=self)
                 dep_target.check_system_deps(self.config)
                 dep_target.execute(self.config)
@@ -3301,6 +3302,23 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         if _stdout_filter is _default_stdout_filter:
             _stdout_filter = self._cmake_install_stdout_filter
         super().install(_stdout_filter=_stdout_filter)
+
+    def run_tests(self):
+        if (self.build_dir / "CTestTestfile.cmake").exists():
+            # We can run tests using CTest
+            if self.compiling_for_host():
+                self.run_cmd("ctest", "-VV")
+            else:
+                from .cmake import BuildCrossCompiledCMake
+                cmake_target = BuildCrossCompiledCMake.get_instance(self)
+                if not (cmake_target.install_dir / "bin/ctest").is_file():
+                    self.dependency_error("cannot find cross-compiled a CTest binary which is required to run tests.",
+                                          cheribuild_target=cmake_target.target)
+                args = ["--cmake-install-dir", cmake_target.install_dir]
+                self.target_info.run_cheribsd_test_script("run_ctest_tests.py", *args, mount_builddir=True,
+                                                          mount_sysroot=True, mount_sourcedir=True)
+        else:
+            self.warning("Do not know how to run tests for", self.target)
 
     @staticmethod
     def find_package(name: str) -> bool:
