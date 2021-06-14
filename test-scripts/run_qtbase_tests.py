@@ -45,7 +45,6 @@ def setup_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
         args.junit_xml = Path(args.junit_xml)
     assert args.junit_xml.parent.exists(), args.junit_xml
     boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
-    boot_cheribsd.prepend_ld_library_path(qemu, "/build/lib")
     qemu.run("export QT_PLUGIN_PATH=/build/plugins")
     # Running GDB to get stack traces sometimes causes freezes when reading the debug info from smbfs (could also be
     # extremely long wait times, I killed the test after about 10 minutes).
@@ -57,10 +56,21 @@ def setup_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     qemu.run("export TZ=Europe/London")
     qemu.checked_run("cd /tmp")
     if args.copy_libraries_to_tmpfs:
-        copy_qt_libs_to_tmpfs(qemu, args)
+        try:
+            copy_qt_libs_to_tmpfs_and_set_libpath(qemu, args)
+        except boot_cheribsd.CheriBSDCommandTimeout as e:
+            boot_cheribsd.failure("Timeout copying Qt libraries, will try to use smbfs instead", exit=False)
+            # Send CTRL+C in case the process timed out.
+            qemu.sendintr()
+            qemu.sendintr()
+            qemu.expect_prompt(timeout=5*60)
+            boot_cheribsd.prepend_ld_library_path(qemu, "/build/lib")
+    else:
+        # otherwise load the libraries from smbfs
+        boot_cheribsd.prepend_ld_library_path(qemu, "/build/lib")
 
 
-def copy_qt_libs_to_tmpfs(qemu, args):
+def copy_qt_libs_to_tmpfs_and_set_libpath(qemu, args):
     # Copy the libraries to tmpfs to avoid long loading times over smbfs
     qemu.checked_run("mkdir /tmp/qt-libs")
     num_libs = 0
@@ -180,8 +190,10 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--test-subset", required=False, default="corelib/tools",
                         help="Subset of tests to run (set to '.' to run all tests)")
     parser.add_argument("--junit-xml", required=False, help="Output file name for the JUnit XML results")
-    # Note: copying libraries to tmpfs is not enabled by default since it currently hangs on purecap RISC-V
-    parser.add_argument("--copy-libraries-to-tmpfs", action="store_true",
+    # Note: Copying to tmpfs is not enabled by default since it currently hangs/is very slow on purecap RISC-V.
+    parser.add_argument("--copy-libraries-to-tmpfs", action="store_true", dest="copy_libraries_to_tmpfs", default=False,
+                        help="Copy the Qt libraries to tmpfs first instead of loading them from smbfs")
+    parser.add_argument("--no-copy-libraries-to-tmpfs", action="store_false", dest="copy_libraries_to_tmpfs",
                         help="Copy the Qt libraries to tmpfs first instead of loading them from smbfs")
 
 
