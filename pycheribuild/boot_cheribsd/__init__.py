@@ -371,7 +371,7 @@ def print_cmd(cmd: typing.List[str], **kwargs):
 
 
 # noinspection PyShadowingBuiltins
-def failure(*args, exit=True, **kwargs):
+def failure(*args, exit: bool, **kwargs):
     print("\n", MESSAGE_PREFIX, "\033[0;31m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
     if exit:
         # noinspection PyBroadException
@@ -616,7 +616,7 @@ def setup_ssh_for_root_login(qemu: QemuCheriBSDInstance):
     try:
         qemu.expect(["service: not found", "Starting sshd.", "Cannot 'restart' sshd."], timeout=120)
     except pexpect.TIMEOUT:
-        failure("Timed out setting up SSH keys")
+        failure("Timed out setting up SSH keys", exit=True)
     qemu.expect_prompt(timeout=60)
     time.sleep(2)  # sleep for two seconds to avoid a rejection
     success("===> SSH authorized_keys set up")
@@ -691,16 +691,16 @@ def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
     i = qemu.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running",
                      "interface ([\\w\\d]+) does not exist"], timeout=120)
     if i == 0:  # Timeout
-        failure("timeout awaiting dhclient ", str(qemu))
+        failure("timeout awaiting dhclient ", str(qemu), exit=True)
     if i == 1:
         i = qemu.expect([pexpect.TIMEOUT, "bound to"], timeout=120)
         if i == 0:  # Timeout
-            failure("timeout awaiting dhclient ", str(qemu))
+            failure("timeout awaiting dhclient ", str(qemu), exit=True)
     if i == 3:
         bad_iface = qemu.match.group(1)
         qemu.expect_prompt(timeout=30)
         qemu.run("ifconfig -a")
-        failure("Expected network interface ", bad_iface, " does not exist ", str(qemu))
+        failure("Expected network interface ", bad_iface, " does not exist ", str(qemu), exit=True)
 
     success("===> {} bound to QEMU networking".format(network_iface))
     qemu.expect_prompt(timeout=30)
@@ -717,14 +717,14 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
     if smb_dirs:
         for d in smb_dirs:
             if not Path(d.hostdir).exists():
-                failure("SMB share directory ", d.hostdir, " doesn't exist!")
+                failure("SMB share directory ", d.hostdir, " doesn't exist!", exit=True)
         user_network_args += ",smb=" + ":".join(d.qemu_arg for d in smb_dirs)
     if ssh_port is not None:
         user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
 
     if not qemu_options.can_boot_kernel_directly:
         if not disk_image:
-            failure("Cannot boot kernel directly and no disk image passed!")
+            failure("Cannot boot kernel directly and no disk image passed!", exit=True)
     if bios_path is not None:
         bios_args = ["-bios", str(bios_path)]
     elif qemu_options.xtarget.is_riscv(include_purecap=True):
@@ -782,7 +782,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         child.expect_exact(["Uptime: "], timeout=60)
         i = child.expect([pexpect.TIMEOUT, "Please press any key to reboot.", pexpect.EOF], timeout=240)
         if i == 0:
-            failure("QEMU didn't exit after shutdown!")
+            failure("QEMU didn't exit after shutdown!", exit=False)
         return
     try:
         # BOOTVERBOSE is off for the amd64 kernel, so we don't see the STARTING_INIT message
@@ -802,7 +802,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
             if bootverbose:
                 i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
                 if i != 0:  # start up scripts failed
-                    failure("failed to start init")
+                    failure("failed to start init", exit=True)
                 userspace_starttime = datetime.datetime.now()
                 success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
 
@@ -845,7 +845,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
             # If this was a CHEIR trap, wait up to 20 seconds to ensure the dump output has been printed
             child.expect(["THIS STRING SHOULD NOT MATCH, JUST WAITING FOR 20 secs", pexpect.TIMEOUT], timeout=20)
             # If this was a failure of init, we should get a debugger backtrace
-            failure("Error during boot login prompt: ", str(child), " match index=", i)
+            failure("Error during boot login prompt: ", str(child), " match index=", i, exit=True)
         # set up network in case dhclient wasn't started yet
         if not have_dhclient:
             if network_iface is None:
@@ -1119,7 +1119,7 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
         args.interact = True
     xtarget = SUPPORTED_ARCHITECTURES.get(args.architecture, None)
     if xtarget is None:
-        failure("Invalid architecture", args.architecture)
+        failure("Invalid architecture", args.architecture, exit=True)
     assert isinstance(xtarget, CrossCompileTarget)
     args.xtarget = xtarget
     if argparse_adjust_args_callback:
@@ -1149,12 +1149,12 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
     test_ld_preload_files = []  # type: list
     if not args.use_smb_instead_of_ssh and not args.skip_ssh_setup:
         if Path(args.ssh_key).suffix != ".pub":
-            failure("--ssh-key should point to the public key and not ", args.ssh_key)
+            failure("--ssh-key should point to the public key and not ", args.ssh_key, exit=True)
         if not Path(args.ssh_key).exists():
-            failure("SSH key missing: ", args.ssh_key)
+            failure("SSH key missing: ", args.ssh_key, exit=True)
     if args.test_archive or args.test_ld_preload:
         if args.use_smb_instead_of_ssh and not args.smb_mount_directories:
-            failure("--smb-mount-directory is required if ssh is disabled")
+            failure("--smb-mount-directory is required if ssh is disabled", exit=True)
 
         if args.test_archive:
             info("Using the following test archives: ", args.test_archive)
@@ -1162,20 +1162,20 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
                 if isinstance(test_archive, list):
                     test_archive = test_archive[0]
                 if not Path(test_archive).exists():
-                    failure("Test archive is missing: ", test_archive)
+                    failure("Test archive is missing: ", test_archive, exit=True)
                 if not test_archive.endswith(".tar.xz"):
-                    failure("Currently only .tar.xz archives are supported")
+                    failure("Currently only .tar.xz archives are supported", exit=True)
                 test_archives.append(test_archive)
         elif args.test_ld_preload:
             info("Preloading the following libraries: ", args.test_ld_preload)
             if not args.test_ld_preload_variable:
-                failure("--test-ld-preload-variable must be set of --test-ld-preload is set!")
+                failure("--test-ld-preload-variable must be set of --test-ld-preload is set!", exit=True)
 
             for lib in args.test_ld_preload:
                 if isinstance(lib, list):
                     lib = lib[0]
                 if not Path(lib).exists():
-                    failure("PRELOAD library is missing: ", lib)
+                    failure("PRELOAD library is missing: ", lib, exit=True)
                 test_ld_preload_files.append(Path(lib).resolve())
 
         if not args.test_command:

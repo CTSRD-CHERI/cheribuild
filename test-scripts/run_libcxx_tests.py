@@ -86,7 +86,7 @@ def libcxx_main(barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue:
             run_remote_lit_test.notify_main_process(args, run_remote_lit_test.MultiprocessStages.BOOTING_CHERIBSD,
                                                     mp_queue, barrier)
         if args.interact and (shard_num is not None or args.internal_num_shards or args.parallel_jobs):
-            boot_cheribsd.failure("Cannot use --interact with multiple shards")
+            boot_cheribsd.failure("Cannot use --interact with multiple shards", exit=True)
             sys.exit()
         run_remote_lit_test.adjust_common_cmdline_args(args)
 
@@ -356,7 +356,8 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[LitShard
 
     if not timed_out:
         if not_booted_processes:
-            boot_cheribsd.failure("FATAL: all processes exited but some still not booted? ", not_booted_processes)
+            boot_cheribsd.failure("FATAL: all processes exited but some still not booted? ", not_booted_processes,
+                                  exit=True)
         boot_cheribsd.success("All shards have terminated")
     # If we got an error we should not end up here -> all processes should be in stage exited
     dump_processes(processes)

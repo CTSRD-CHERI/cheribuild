@@ -254,12 +254,12 @@ def cheribsd_setup_args(args: argparse.Namespace):
         print(args.kyua_tests_files)
         for file in args.kyua_tests_files:
             if not Path(file).name == "Kyuafile":
-                boot_cheribsd.failure("Expected a path to a Kyuafile but got: ", file)
+                boot_cheribsd.failure("Expected a path to a Kyuafile but got: ", file, exit=True)
     # Make sure we mount the output directory if we are running kyua and/or cheribsdtest
     if args.kyua_tests_files or args.run_cheribsdtest:
         test_output_dir = Path(os.path.expandvars(os.path.expanduser(args.test_output_dir)))
         if not test_output_dir.is_dir():
-            boot_cheribsd.failure("Output directory does not exist: ", test_output_dir)
+            boot_cheribsd.failure("Output directory does not exist: ", test_output_dir, exit=True)
         # Create a timestamped directory:
         if args.no_timestamped_test_subdir:
             real_output_dir = test_output_dir.absolute()
