@@ -3354,6 +3354,12 @@ class AutotoolsProject(Project):
         super().__init__(config)
         self.configure_command = self.source_dir / configure_script
 
+    def setup(self):
+        super().setup()
+        if self.config.verbose:
+            # Most autotools-base projects enable verbose output by setting V=1
+            self.make_args.set_env(V=1)
+
     def configure(self, **kwargs):
         if self._configure_supports_prefix:
             if self.install_prefix != self.install_dir:
