@@ -202,9 +202,9 @@ class CheriConfig(ConfigBase):
         self.mips_float_abi = loader.add_option("mips-float-abi", default=MipsFloatAbi.SOFT, type=MipsFloatAbi,
                                                 group=loader.cross_compile_options_group,
                                                 help="The floating point ABI to use for building MIPS+CHERI programs")
-        self.crosscompile_linkage = loader.add_option("cross-compile-linkage", default=Linkage.DYNAMIC, type=Linkage,
+        self.crosscompile_linkage = loader.add_option("cross-compile-linkage", default=Linkage.DEFAULT, type=Linkage,
                                                       group=loader.cross_compile_options_group,
-                                                      enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
+                                                      enum_choices=(Linkage.DEFAULT, Linkage.DYNAMIC, Linkage.STATIC),
                                                       help="Whether to link cross-compile projects static or dynamic "
                                                            "by default")
         self.csetbounds_stats = loader.add_bool_option("collect-csetbounds-stats",
