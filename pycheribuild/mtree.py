@@ -37,7 +37,6 @@ import typing
 from collections import OrderedDict
 from pathlib import Path
 
-from .processutils import commandline_to_str
 from .utils import status_update, warning_message
 
 
@@ -90,7 +89,12 @@ class MtreeEntry(object):
             return result
 
     def __str__(self):
-        return self.path + " " + commandline_to_str(k + "=" + v for k, v in self.attributes.items())
+        def escape(s):
+            # mtree uses strsvis(3) (in VIS_CSTYLE format) to encode path names containing non-printable characters.
+            # Note: we only handle spaces here since we haven't seen any other special characters being use. If they do
+            # exist in practise we can just update this code to handle them too.
+            return s.replace(" ", "\\s")
+        return escape(self.path) + " " + " ".join(k + "=" + shlex.quote(v) for k, v in self.attributes.items())
 
     def __repr__(self):
         return "<MTREE entry: " + str(self) + ">"
