@@ -210,11 +210,6 @@ class BuildLibXKBCommon(CrossCompileMesonProject):
         newpath = os.getenv("PATH")
         if OSInfo.IS_MAC:
             # /usr/bin/bison on macOS is not compatible with this build system
-            try:
-                prefix = self.run_cmd("brew", "--prefix", "bison", capture_output=True, run_in_pretend_mode=True,
-                                      print_verbose_only=True).stdout.decode("utf-8").strip()
-                newpath = prefix + "/bin:" + newpath
-            except Exception as e:
-                self.fatal("Could not find a compatible bison version:", e, fixit_hint="brew install bison")
+            newpath = str(self.get_homebrew_prefix("bison")) + "/bin:" + newpath
         with set_env(PATH=newpath):
             super().process()

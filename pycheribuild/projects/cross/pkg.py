@@ -49,21 +49,14 @@ class BuildPkg(CrossCompileAutotoolsProject):
                     break  # avoid continuing iteration with a modified container
         self.common_warning_flags.append("-Werror=implicit-function-declaration")
         if self.target_info.is_macos():
-            try:
-                prefix = self.run_cmd("brew", "--prefix", "openssl", capture_output=True, run_in_pretend_mode=True,
-                                      print_verbose_only=True).stdout.decode("utf-8").strip()
-                self.COMMON_LDFLAGS.append("-L" + prefix + "/lib")
-                self.COMMON_FLAGS.append("-I" + prefix + "/include")
-                self.make_args.set_env(CPPFLAGS="-I" + prefix + "/include")
-            except Exception as e:
-                self.fatal("Could not find openssl:", e, fixit_hint="brew install openssl")
-            try:
-                prefix = self.run_cmd("brew", "--prefix", "libarchive", capture_output=True, run_in_pretend_mode=True,
-                                      print_verbose_only=True).stdout.decode("utf-8").strip()
-                self.COMMON_LDFLAGS.append("-L" + prefix + "/lib")
-                self.COMMON_FLAGS.append("-I" + prefix + "/include")
-            except Exception as e:
-                self.fatal("Could not find libarchive:", e, fixit_hint="brew install libarchive")
+            openssl_prefix = self.get_homebrew_prefix("openssl")
+            self.COMMON_LDFLAGS.append("-L" + str(openssl_prefix) + "/lib")
+            self.COMMON_FLAGS.append("-I" + str(openssl_prefix) + "/include")
+            self.make_args.set_env(CPPFLAGS="-I" + str(openssl_prefix) + "/include")
+            libarchive_prefix = self.get_homebrew_prefix("libarchive")
+            self.COMMON_LDFLAGS.append("-L" + str(libarchive_prefix) + "/lib")
+            self.COMMON_FLAGS.append("-I" + str(libarchive_prefix) + "/include")
+
         if self.build_type.should_include_debug_info:
             self.COMMON_FLAGS.append("-g")
         self.make_args.set_env(CPPFLAGS=self.commandline_to_str(

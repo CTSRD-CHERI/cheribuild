@@ -1035,6 +1035,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                       cheribuild_target=instructions.cheribuild_target)
         self._system_deps_checked = True
 
+    def get_homebrew_prefix(self, package: str) -> Path:
+        assert OSInfo.IS_MAC, "Should only be called on macos"
+        try:
+            prefix = self.run_cmd("brew", "--prefix", package, capture_output=True, run_in_pretend_mode=True,
+                                  print_verbose_only=True).stdout.decode("utf-8").strip()
+            return Path(prefix)
+        except subprocess.CalledProcessError as e:
+            self.dependency_error("Could not find homebrew package" + package + ":", e,
+                                  install_instructions="Try running `brew install " + package + "`")
+
     def process(self):
         raise NotImplementedError()
 
