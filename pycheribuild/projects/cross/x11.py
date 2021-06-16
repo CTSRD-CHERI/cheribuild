@@ -29,6 +29,7 @@ import os
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileMesonProject
 from ..project import DefaultInstallDir, GitRepository
+from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
 from ...processutils import set_env
 from ...utils import OSInfo
@@ -37,6 +38,7 @@ from ...utils import OSInfo
 class X11AutotoolsProjectBase(CrossCompileAutotoolsProject):
     do_not_add_to_targets = True
     path_in_rootfs = "/usr/local"  # Always install X11 programs in /usr/local/bin to make X11 forwarding work
+    default_build_type = BuildType.DEBUG  # Until we are confident things works
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
@@ -110,10 +112,13 @@ class BuildLibX11(X11AutotoolsProject):
     def setup(self):
         super().setup()
         self.configure_args.append("--with-keysymdefdir=" + str(self.install_dir / "include/X11"))
+        # TODO: disable locale support to speed things up?
+        # self.configure_args.extend(["--disable-xlocale", "--disable-xlocaledir"])
         if not self.compiling_for_host():
             # The build system gets confused when cross-compiling from macOS, tell it we don't want launchd support.
             self.configure_args.append("--without-launchd")
-            # Lots of CHERI warnings in xlibi18n (hopefully we don't need that code)
+            # A few warnings in xlibi18n that don't affect correct execution. Fixing them would require
+            # using uintptr_t and there currently isn't a typedef for that in libX11.
             self.cross_warning_flags += ["-Wno-error=cheri-capability-misuse"]
 
 
@@ -121,6 +126,18 @@ class BuildLibXext(X11AutotoolsProject):
     target = "libxext"
     dependencies = ["libx11"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxext.git")
+
+
+class BuildLibXfixes(X11AutotoolsProject):
+    target = "libxfixes"
+    dependencies = ["libx11"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxfixes.git")
+
+
+class BuildLibXi(X11AutotoolsProject):
+    target = "libxi"
+    dependencies = ["libxext", "libxfixes"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxi.git")
 
 
 class BuildLibXrender(X11AutotoolsProject):
@@ -191,6 +208,12 @@ class BuildXAuth(X11AutotoolsProject):
     target = "xauth"
     dependencies = ["libx11", "libxau", "libxext", "libxmu", "xorgproto"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xauth")
+
+
+class BuildXEyes(X11AutotoolsProject):
+    target = "xeyes"
+    dependencies = ["libxi", "libxmu", "libxrender"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xeyes.git")
 
 
 class BuildLibXKBCommon(CrossCompileMesonProject):
