@@ -181,11 +181,6 @@ class BuildLibXt(X11AutotoolsProject):
     dependencies = ["libice", "libsm"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxt.git")
 
-    def setup(self):
-        super().setup()
-        # TODO: fix the source code instead
-        self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
-
 
 class BuildLibXmu(X11AutotoolsProject):
     target = "libxmu"
