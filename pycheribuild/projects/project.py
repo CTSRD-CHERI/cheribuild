@@ -2250,7 +2250,7 @@ class Project(SimpleProject):
                 self.add_required_system_tool("compiledb", install_instructions="Run `pip install --user compiledb``")
                 self._compiledb_tool = "compiledb"
             else:
-                self.add_required_system_tool("bear", cheribuild_target="bear")
+                self.add_required_system_tool("bear", homebrew="bear", cheribuild_target="bear")
                 self._compiledb_tool = "bear"
         self._force_clean = False
         self._prevent_assign = True
@@ -2325,7 +2325,7 @@ class Project(SimpleProject):
         self._lto_compiler_flags = []  # type: typing.List[str]
 
     @property
-    def pkgconfig_dirs(self):
+    def pkgconfig_dirs(self) -> "list[str]":
         return self.target_info.pkgconfig_dirs
 
     def setup(self):
@@ -2449,13 +2449,17 @@ class Project(SimpleProject):
             assert self._compiledb_tool is not None
             compdb_extra_args = []
             if self._compiledb_tool == "bear":
-                compdb_extra_args = ["--cdb", self.build_dir / compilation_db_name, "--append", make_command]
+                compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "--", make_command]
             elif self._compiledb_tool == "compiledb":
                 compdb_extra_args = ["--output", self.build_dir / compilation_db_name, make_command]
             else:
                 self.fatal("Invalid tool")
-            options.set_command(shutil.which(self._compiledb_tool), can_pass_j_flag=options.can_pass_jflag,
-                                early_args=compdb_extra_args)
+            tool_path = shutil.which(self._compiledb_tool)
+            if not tool_path:
+                self.dependency_error(
+                    "Cannot find '" + self._compiledb_tool + "' which is needed to create a compilation DB")
+                tool_path = self._compiledb_tool
+            options.set_command(tool_path, can_pass_j_flag=options.can_pass_jflag, early_args=compdb_extra_args)
             # Ensure that recursive make invocations reuse the compilation DB tool
             options.set(MAKE=commandline_to_str([options.command] + compdb_extra_args))
             make_command = options.command
