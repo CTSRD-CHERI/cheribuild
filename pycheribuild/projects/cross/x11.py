@@ -63,7 +63,8 @@ class X11AutotoolsProject(X11AutotoolsProjectBase):
         super().setup()
         self.configure_environment["ACLOCAL_PATH"] = BuildXorgMacros.get_install_dir(self) / "share/aclocal"
         # Avoid building documentation
-        self.configure_args.append("--with-doxygen=no")
+        self.configure_args.extend(["--with-doxygen=no", "--enable-specs=no", "--enable-devel-docs=no"])
+
         if not self.compiling_for_host():
             self.configure_args.append("--with-sysroot=" + str(self.sdk_sysroot))
             # Needed for many of the projects but not all of them:
@@ -96,6 +97,48 @@ class BuildLibXCB(X11AutotoolsProject):
     target = "libxcb"
     dependencies = ["xcbproto", "libxau", "xorg-pthread-stubs"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb.git")
+
+
+class BuildLibXCBUtil(X11AutotoolsProject):
+    project_name = "libxcb-util"
+    dependencies = ["libxcb"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-util.git")
+
+
+class BuildLibXCBWM(X11AutotoolsProject):
+    project_name = "libxcb-wm"
+    dependencies = ["libxcb"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-wm.git")
+
+
+class BuildLibXCBImage(X11AutotoolsProject):
+    project_name = "libxcb-image"
+    dependencies = ["libxcb"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-image.git")
+
+
+class BuildLibXCBRenderUtil(X11AutotoolsProject):
+    project_name = "libxcb-render-util"
+    dependencies = ["libxcb"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-render-util.git")
+
+
+class BuildLibXCBCursor(X11AutotoolsProject):
+    project_name = "libxcb-cursor"
+    dependencies = ["libxcb-render-util", "libxcb-image"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-cursor.git")
+
+    def setup(self):
+        super().setup()
+        if not self.compiling_for_host():
+            # Various underaligned capabilities in packed structs, hopefully not a problem at runtime
+            self.cross_warning_flags += ["-Wno-error=cheri-capability-misuse"]
+
+
+class BuildLibXCBKeysyms(X11AutotoolsProject):
+    project_name = "libxcb-keysyms"
+    dependencies = ["xorgproto"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-keysyms.git")
 
 
 class BuildLibXTrans(X11AutotoolsProject):
@@ -213,6 +256,7 @@ class BuildXEyes(X11AutotoolsProject):
 
 class BuildLibXKBCommon(CrossCompileMesonProject):
     target = "libxkbcommon"
+    dependencies = ["libx11"]
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     repository = GitRepository("https://github.com/xkbcommon/libxkbcommon.git")
@@ -223,6 +267,8 @@ class BuildLibXKBCommon(CrossCompileMesonProject):
         self.configure_args.append("-Denable-wayland=false")
         # Don't build docs with Doxygen
         self.configure_args.append("-Denable-docs=false")
+        # Avoid libxml2 dep
+        self.configure_args.append("-Denable-xkbregistry=false")
 
     def process(self):
         newpath = os.getenv("PATH")
