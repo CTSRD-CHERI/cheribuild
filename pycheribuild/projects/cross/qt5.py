@@ -33,6 +33,7 @@ from pathlib import Path
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
                                   CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
                                   Linkage, MakeCommandKind)
+from .x11 import BuildLibXCB
 from ...config.loader import ComputedDefaultValue
 from ...processutils import set_env
 from ...utils import OSInfo
@@ -55,6 +56,16 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         self.configure_command = self.source_dir / "configure"
 
     @classmethod
+    def dependencies(cls, config: CheriConfig):
+        deps = super().dependencies(config)
+        if not cls.get_crosscompile_target(config).is_native():
+            # TODO: should only need these if minimal is not set
+            deps.extend(["libx11", "libxcb", "libxkbcommon",
+                         "libxcb-cursor", "libxcb-util", "libxcb-image",
+                         "libxcb-render-util", "libxcb-wm", "libxcb-keysyms"])
+        return deps
+
+    @classmethod
     def can_build_with_ccache(cls):
         return True
 
@@ -62,6 +73,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         super().setup()
         if self.compiling_for_mips(include_purecap=False) and self.force_static_linkage:
             assert "-mxgot" in self.default_compiler_flags
+        if self.config.verbose:
+            self.configure_args.append("-verbose")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -106,9 +119,12 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-prefix", "/usr/local/" + self._xtarget.generic_suffix
                 ])
 
+        if self.use_asan:
+            self.configure_args.extend(["-sanitize", "address,undefined"])
+
         self.configure_args.extend([
-            # To ensure the host and cross-compiled version is the same also disable opengl and dbus there
-            "-no-opengl", "-no-dbus",
+            # To ensure the host and cross-compiled version is the same also disable opengl
+            "-no-opengl",
             # Missing configure check for evdev means it will fail to compile for CHERI
             "-no-evdev",
             # Needed for webkit:
@@ -127,9 +143,11 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         else:
             self.configure_args.extend(["-nomake", "tests"])
 
-        if not self.build_examples:
+        if self.build_examples:
             # Seems to have changed
-            self.configure_args.extend(["-nomake", "examples", "-no-compile-examples"])
+            self.configure_args.extend(["-compile-examples"])
+        else:
+            self.configure_args.extend(["-no-compile-examples"])
         # currently causes build failures:
         # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
         self.configure_args.append("-qt-libpng")
@@ -176,6 +194,14 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-no-gui",
                 "-no-iconv"
                 ])
+        else:
+            self.configure_args.append("-dbus")  # we want to build QtDBus
+            # Enable X11 support when cross-compiling by default
+            if not self.compiling_for_host():
+                self.configure_args.extend(["-xcb", "-xkbcommon"])
+                # Note: all X11 libraries are installed into the same directory
+                self.configure_args.append("-L" + str(BuildLibXCB.get_install_dir(self) / "lib"))
+                self.configure_args.append("-I" + str(BuildLibXCB.get_install_dir(self) / "include"))
         if self.use_ccache:
             self.configure_args.append("-ccache")
         self.configure_args.extend(["-opensource", "-confirm-license"])
