@@ -813,8 +813,8 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             if self._config_path.exists():
                 self._json = self.__load_json_with_includes(self._config_path)
             else:
-                warning_message(coloured(AnsiColour.green, "Configuration file", self._config_path,
-                                         "does not exist, using only command line arguments."))
+                status_update(coloured(AnsiColour.green, "Note: Configuration file", self._config_path,
+                                       "does not exist, using only command line arguments."))
 
     def load(self):
         self._load_command_line_args()
