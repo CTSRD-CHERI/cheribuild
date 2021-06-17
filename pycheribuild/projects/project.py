@@ -1801,6 +1801,7 @@ class DefaultInstallDir(Enum):
     # Note: for ROOTFS_OPTBASE, the path_in_rootfs attribute can be used to override the default of /opt/...
     ROOTFS_OPTBASE = "The rootfs for this target (<rootfs>/opt/<arch>/<program> by default)"
     ROOTFS_LOCALBASE = "The sysroot for this target (<rootfs>/usr/local/<arch> by default)"
+    KDE_PREFIX = "The sysroot for this target (<rootfs>/opt/<arch>/kde by default)"
     COMPILER_RESOURCE_DIR = "The compiler resource directory"
     CHERI_SDK = "The CHERI SDK directory"
     MORELLO_SDK = "The Morello SDK directory"
@@ -1829,6 +1830,12 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         return Path(
             rootfs_target.install_dir / "opt" / project.target_info.install_prefix_dirname /
             project._rootfs_install_dir_name)
+    elif install_dir == DefaultInstallDir.KDE_PREFIX:
+        if project.compiling_for_host():
+            return config.output_root / "kde"
+        else:
+            rootfs_target = project.target_info.get_rootfs_project()
+            return Path(rootfs_target.install_dir, "opt", project.target_info.install_prefix_dirname, "kde")
     elif install_dir == DefaultInstallDir.COMPILER_RESOURCE_DIR:
         compiler_for_resource_dir = project.CC
         # For the NATIVE variant we want to install to CHERI clang:
@@ -2279,7 +2286,7 @@ class Project(SimpleProject):
                 else:
                     self._install_prefix = Path("/", self.target_info.sysroot_install_prefix_relative)
                     self.destdir = self._install_dir
-            elif install_dir_kind == DefaultInstallDir.ROOTFS_OPTBASE:
+            elif install_dir_kind in (DefaultInstallDir.ROOTFS_OPTBASE, DefaultInstallDir.KDE_PREFIX):
                 self.rootfs_path = self.target_info.get_rootfs_project().install_dir
                 relative_to_rootfs = os.path.relpath(str(self._install_dir), str(self.rootfs_path))
                 if relative_to_rootfs.startswith(os.path.pardir):
