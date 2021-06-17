@@ -28,8 +28,6 @@
 # SUCH DAMAGE.
 #
 import os
-import shlex
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -198,7 +196,7 @@ class BuildQEMUBase(AutotoolsProject):
             # Using /usr/bin/make on macOS breaks compilation DB creation with bear since SIP prevents it from
             # injecting shared libraries into any process that is installed as part of the system.
             "--make=" + self.make_args.command,
-            ])
+        ])
         if self.config.create_compilation_db:
             self.make_args.set(V=1)  # Otherwise bear can't parse the compiler output
         ldflags = self.default_ldflags + self.LDFLAGS
@@ -300,7 +298,7 @@ class BuildQEMU(BuildQEMUBase):
                 "--cross-cc-riscv64=" + str(tgt_info_riscv64.c_compiler),
                 "--cross-cc-cflags-riscv64=" + self.commandline_to_str(
                     tgt_info_riscv64.get_essential_compiler_and_linker_flags()).replace("=", " ")
-                ])
+            ])
 
 
 class BuildMorelloQEMU(BuildQEMU):
