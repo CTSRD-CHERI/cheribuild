@@ -101,11 +101,6 @@ class BuildQEMUBase(AutotoolsProject):
 
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")
-        if shutil.which("pkg-config"):
-            glib_includes = self.run_cmd("pkg-config", "--cflags-only-I", "glib-2.0", capture_output=True,
-                                         print_verbose_only=True, run_in_pretend_mode=True).stdout.decode(
-                "utf-8").strip()
-            self.COMMON_FLAGS.extend(shlex.split(glib_includes))
 
         # Disable some more unneeded things (we don't usually need the GUI frontends)
         if not self.gui:
