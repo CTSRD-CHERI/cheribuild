@@ -2461,7 +2461,7 @@ class Project(SimpleProject):
             if self._compiledb_tool == "bear":
                 compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "--", make_command]
             elif self._compiledb_tool == "compiledb":
-                compdb_extra_args = ["--output", self.build_dir / compilation_db_name, make_command]
+                compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "make", "--cmd", make_command]
             else:
                 self.fatal("Invalid tool")
             tool_path = shutil.which(self._compiledb_tool)
