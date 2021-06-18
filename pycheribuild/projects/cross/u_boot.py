@@ -29,6 +29,7 @@
 #
 
 from pathlib import Path
+
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompileTarget, DefaultInstallDir,
                        GitRepository, MakeCommandKind, Project)

@@ -28,8 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject
 from .cheribsd import ConfigPlatform
+from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompileTarget, DefaultInstallDir,
                        GitRepository, MakeCommandKind, Project)

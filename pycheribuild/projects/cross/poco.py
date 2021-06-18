@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import CheriConfig, CrossCompileCMakeProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import CheriConfig, CrossCompileCMakeProject, GitRepository
 
 
 class BuildPoco(CrossCompileCMakeProject):

@@ -33,9 +33,9 @@ import pprint
 import typing
 from pathlib import Path
 
-from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, CrossCompileTarget, DefaultInstallDir,
-                       GitRepository, Linkage, MakeCommandKind, MakefileProject, MesonProject, Project,
-                       commandline_to_str, SubversionRepository)
+from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, commandline_to_str, CrossCompileTarget,
+                       DefaultInstallDir, GitRepository, Linkage, MakeCommandKind, MakefileProject, MesonProject,
+                       Project, SubversionRepository)
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import AutoVarInit
 from ...utils import AnsiColour, coloured

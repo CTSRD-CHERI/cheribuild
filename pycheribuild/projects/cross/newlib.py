@@ -31,8 +31,8 @@
 import tempfile
 from pathlib import Path
 
-from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
-                                  GitRepository, MakeCommandKind)
+from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, GitRepository,
+                                  MakeCommandKind)
 
 
 class BuildNewlib(CrossCompileAutotoolsProject):

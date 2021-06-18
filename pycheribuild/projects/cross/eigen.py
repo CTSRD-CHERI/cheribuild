@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import CrossCompileCMakeProject, GitRepository
 
 
 class BuildEigen(CrossCompileCMakeProject):
