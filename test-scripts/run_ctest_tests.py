@@ -31,10 +31,13 @@ import argparse
 from run_tests_common import boot_cheribsd, run_tests_main
 
 
-def run_ctest_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
+def test_setup(qemu, _):
     boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
+
+
+def run_ctest_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running tests with ctest")
-    ctest_args = "--progress . --test-timeout " + str(args.test_timeout)
+    ctest_args = ". --output-on-failure --progress --test-timeout " + str(args.test_timeout)
     if args.verbose:
         ctest_args = "-VV " + ctest_args
     # First list all tests and then try running them.
@@ -63,5 +66,6 @@ def adjust_args(args: argparse.Namespace):
 
 if __name__ == '__main__':
     # we don't need ssh running to execute the tests
-    run_tests_main(test_function=run_ctest_tests, need_ssh=False, argparse_setup_callback=add_args,
-                   argparse_adjust_args_callback=adjust_args, should_mount_builddir=True, should_mount_sysroot=True)
+    run_tests_main(test_function=run_ctest_tests, test_setup_function=test_setup,
+                   need_ssh=False, argparse_setup_callback=add_args, argparse_adjust_args_callback=adjust_args,
+                   should_mount_builddir=True, should_mount_sysroot=True)
