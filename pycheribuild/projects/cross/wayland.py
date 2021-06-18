@@ -35,7 +35,6 @@ class BuildEPollShim(CrossCompileCMakeProject):
     target = "epoll-shim"
     project_name = "epoll-shim"
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     repository = GitRepository("https://github.com/jiixyj/epoll-shim")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
 
@@ -57,8 +56,6 @@ class BuildEPollShim(CrossCompileCMakeProject):
 class BuildLibFFI(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/libffi/libffi.git")
     project_name = "libffi"
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def configure(self, **kwargs):
@@ -81,7 +78,6 @@ class BuildWayland(CrossCompileMesonProject):
         return deps
 
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     # TODO: upstream patches and use https://gitlab.freedesktop.org/wayland/wayland.git
     repository = GitRepository("https://github.com/CTSRD-CHERI/wayland")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]

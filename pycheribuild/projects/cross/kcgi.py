@@ -38,8 +38,6 @@ class BuildKCGI(CrossCompileAutotoolsProject):
     build_in_source_dir = True
 
     repository = GitRepository("https://github.com/kristapsdz/kcgi.git")
-
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     make_kind = MakeCommandKind.BsdMake

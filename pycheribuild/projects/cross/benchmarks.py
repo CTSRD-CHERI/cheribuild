@@ -44,7 +44,6 @@ from ...utils import is_jenkins_build
 
 class BuildMibench(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/mibench")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     project_name = "mibench"
     # Needs bsd make to build
@@ -164,7 +163,6 @@ class BuildMiBenchNew(CrossCompileCMakeProject):
     target = "mibench-new"
     project_name = "mibench-new"
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
 
     def setup(self):
         super().setup()
@@ -192,7 +190,6 @@ class BuildMiBenchNew(CrossCompileCMakeProject):
 
 class BuildOlden(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/olden")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     project_name = "olden"
     # Needs bsd make to build
@@ -291,7 +288,6 @@ class BuildSpec2006(CrossCompileProject):
     project_name = "spec2006"
     # No repository to clone (just hack around this):
     repository = ExternallyManagedSourceRepository()
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     make_kind = MakeCommandKind.GnuMake
 
@@ -560,7 +556,6 @@ class BuildSpec2006New(CrossCompileCMakeProject):
     target = "spec2006-new"
     project_name = "spec2006-new"
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -642,7 +637,6 @@ class BuildSpec2006New(CrossCompileCMakeProject):
 
 class BuildLMBench(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-lmbench", default_branch="cheri-lmbench")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     project_name = "lmbench"
     # Needs bsd make to build
@@ -725,7 +719,6 @@ class BuildLMBench(CrossCompileProject):
 
 class BuildUnixBench(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-unixbench", default_branch="cheri-unixbench")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     project_name = "unixbench"
     # Needs bsd make to build
@@ -798,7 +791,6 @@ class BuildUnixBench(CrossCompileProject):
 
 class NetPerfBench(CrossCompileAutotoolsProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-netperf", default_branch="cheri-netperf")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     project_name = "netperf"
     # Needs bsd make to build

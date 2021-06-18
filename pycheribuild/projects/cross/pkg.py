@@ -34,7 +34,6 @@ class BuildPkg(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/freebsd/pkg.git")
     _default_architecture = CompilationTargets.NATIVE
     _configure_understands_enable_static = False
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     path_in_rootfs = "/usr/local"
     build_in_source_dir = True  # Seems to fail when using out-of-source builds

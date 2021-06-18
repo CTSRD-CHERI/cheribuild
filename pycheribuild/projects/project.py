@@ -1949,9 +1949,6 @@ class Project(SimpleProject):
     @classmethod
     def get_default_install_dir_kind(cls) -> DefaultInstallDir:
         if cls.default_install_dir is not None:
-            assert cls.native_install_dir is None, "default_install_dir and native_install_dir are mutually " \
-                                                   "exclusive"
-            assert cls.cross_install_dir is None, "default_install_dir and cross_install_dir are mutually exclusive"
             install_dir = cls.default_install_dir
         else:
             if cls._xtarget is not None and cls._xtarget.is_native():

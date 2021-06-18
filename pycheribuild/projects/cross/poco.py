@@ -34,8 +34,6 @@ from .crosscompileproject import CheriConfig, CrossCompileCMakeProject, DefaultI
 class BuildPoco(CrossCompileCMakeProject):
     project_name = "poco"
     repository = GitRepository("https://github.com/dodsonmg/poco.git", default_branch="cheri", force_branch=True)
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

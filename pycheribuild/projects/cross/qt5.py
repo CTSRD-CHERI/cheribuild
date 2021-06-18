@@ -42,7 +42,6 @@ from ...utils import OSInfo
 # This class is used to build qtbase and all of qt5
 class BuildQtWithConfigureScript(CrossCompileProject):
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     do_not_add_to_targets = True
     add_host_target_build_config_options = False
     # Should not be needed, but it seems like some of the tests are broken otherwise
@@ -224,8 +223,6 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
         as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
     # native_install_dir = DefaultInstallDir.CHERI_SDK
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     # default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
     default_build_type = BuildType.RELWITHDEBINFO
@@ -415,7 +412,6 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     target = "icu4c"
     build_dir_suffix = "4c"
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     make_kind = MakeCommandKind.GnuMake
 
     @classmethod
@@ -470,7 +466,6 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 class BuildLibXml2(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/libxml2")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def linkage(self):
@@ -495,7 +490,6 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     default_build_type = BuildType.RELWITHDEBINFO
 
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtwebkit",
         as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())

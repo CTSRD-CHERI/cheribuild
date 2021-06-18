@@ -40,7 +40,6 @@ class BuildPcre(CrossCompileAutotoolsProject):
                                       default_branch="code/trunk")
 
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def configure(self, **kwargs):
         self.run_cmd("autoreconf", "-i", cwd=self.source_dir)
@@ -57,7 +56,6 @@ class BuildApr(CrossCompileAutotoolsProject):
     dependencies = ["libexpat"]
 
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def setup(self):
         super().setup()
@@ -102,9 +100,6 @@ class BuildApache(CrossCompileAutotoolsProject):
                                default_branch="2.4.x-cheri")
 
     dependencies = ["apr", "pcre"]
-
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def setup(self):
         super().setup()

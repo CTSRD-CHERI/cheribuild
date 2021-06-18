@@ -257,7 +257,6 @@ class BuildXEyes(X11AutotoolsProject):
 class BuildLibXKBCommon(CrossCompileMesonProject):
     target = "libxkbcommon"
     dependencies = ["libx11"]
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     repository = GitRepository("https://github.com/xkbcommon/libxkbcommon.git")
 

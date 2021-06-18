@@ -171,7 +171,6 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
 
     dependencies = ["fett-kcgi", "fett-sqlbox", "fett-sqlite", "fett-zlib", "openradtool"]
 
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     make_kind = MakeCommandKind.GnuMake

@@ -31,7 +31,6 @@ from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir
 class BuildBash(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/bash",
                                default_branch="cheri")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     path_in_rootfs = "/usr/local"
 
