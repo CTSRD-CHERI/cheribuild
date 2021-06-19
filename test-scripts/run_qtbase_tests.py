@@ -34,7 +34,7 @@ import datetime
 import os
 from pathlib import Path
 
-from run_tests_common import boot_cheribsd, run_tests_main, junitparser
+from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 
 
 def setup_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
@@ -44,7 +44,6 @@ def setup_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     else:
         args.junit_xml = Path(args.junit_xml)
     assert args.junit_xml.parent.exists(), args.junit_xml
-    boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
     qemu.run("export QT_PLUGIN_PATH=/build/plugins")
     # Running GDB to get stack traces sometimes causes freezes when reading the debug info from smbfs (could also be
     # extremely long wait times, I killed the test after about 10 minutes).
@@ -70,7 +69,7 @@ def setup_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
         boot_cheribsd.prepend_ld_library_path(qemu, "/build/lib")
 
 
-def copy_qt_libs_to_tmpfs_and_set_libpath(qemu, args):
+def copy_qt_libs_to_tmpfs_and_set_libpath(qemu: boot_cheribsd.QemuCheriBSDInstance, args):
     # Copy the libraries to tmpfs to avoid long loading times over smbfs
     qemu.checked_run("mkdir /tmp/qt-libs")
     num_libs = 0
@@ -85,7 +84,10 @@ def copy_qt_libs_to_tmpfs_and_set_libpath(qemu, args):
                 continue
             qemu.checked_run("ln -sfn {} /tmp/qt-libs/{}".format(linkpath, lib.name))
         else:
-            qemu.checked_run("cp -fav /build/lib/{} /tmp/qt-libs/".format(lib.name))
+            if args.copy_libraries_to_tmpfs_using_scp:
+                qemu.scp_to_guest(lib, "/tmp/qt-libs/" + lib.name)
+            else:
+                qemu.checked_run("cp -fav /build/lib/{} /tmp/qt-libs/".format(lib.name))
             num_libs += 1
     boot_cheribsd.success("Copied ", num_libs, " files to tmpfs")
     boot_cheribsd.prepend_ld_library_path(qemu, "/tmp/qt-libs")
@@ -191,8 +193,15 @@ def add_args(parser: argparse.ArgumentParser):
                         help="Subset of tests to run (set to '.' to run all tests)")
     parser.add_argument("--junit-xml", required=False, help="Output file name for the JUnit XML results")
     # Note: Copying to tmpfs is not enabled by default since it currently hangs/is very slow on purecap RISC-V.
-    parser.add_argument("--copy-libraries-to-tmpfs", action="store_true", dest="copy_libraries_to_tmpfs", default=False,
+    parser.add_argument("--copy-libraries-to-tmpfs", action="store_true", dest="copy_libraries_to_tmpfs", default=True,
                         help="Copy the Qt libraries to tmpfs first instead of loading them from smbfs")
+    # For now use `scp` to copy the libraries instead of a `cp` from smbfs since the cp appears to hang.
+    parser.add_argument("--copy-libraries-to-tmpfs-using-scp", action="store_true",
+                        dest="copy_libraries_to_tmpfs_using_scp", default=True,
+                        help="Copy the Qt libraries to tmpfs using scp instead of smbfs")
+    parser.add_argument("--copy-libraries-to-tmpfs-from-smbfs", action="store_false",
+                        dest="copy_libraries_to_tmpfs_using_scp",
+                        help="Copy the Qt libraries to tmpfs using scp instead of smbfs")
     parser.add_argument("--no-copy-libraries-to-tmpfs", action="store_false", dest="copy_libraries_to_tmpfs",
                         help="Copy the Qt libraries to tmpfs first instead of loading them from smbfs")
 
@@ -200,5 +209,5 @@ def add_args(parser: argparse.ArgumentParser):
 if __name__ == '__main__':
     # we don't need ssh running to execute the tests, but we do need the sysroot for libexecinfo+libelf
     run_tests_main(test_function=run_qtbase_tests, test_setup_function=setup_qtbase_tests,
-                   argparse_setup_callback=add_args, need_ssh=False,
-                   should_mount_sysroot=True, should_mount_srcdir=True)
+                   argparse_setup_callback=add_args, need_ssh=True,
+                   should_mount_sysroot=False, should_mount_srcdir=True)

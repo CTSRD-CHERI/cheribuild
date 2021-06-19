@@ -349,6 +349,16 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         command.append(str(local_dir))
         run_host_command(command)
 
+    def scp_to_guest(self, local_path: Path, qemu_path: str):
+        assert self.ssh_port is not None
+        command = ["scp", "-P", str(self.ssh_port), "-i", str(self.ssh_private_key)]
+        command.extend(self._ssh_options(use_controlmaster=False))
+        command.append(str(local_path))
+        if not local_path.exists():
+            failure("Path does't exist: ", local_path, exit=False)
+        command.append("{user}@{host}:{remote_dir}".format(user=self.ssh_user, host="localhost", remote_dir=qemu_path))
+        run_host_command(command)
+
 
 def info(*args, **kwargs):
     print(MESSAGE_PREFIX, "\033[0;34m", *args, "\033[0m", file=sys.stderr, sep="", flush=True, **kwargs)
