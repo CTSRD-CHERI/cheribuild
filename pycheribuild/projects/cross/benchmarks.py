@@ -496,8 +496,6 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test \
         self.clean_directory(self.build_dir / "spec-test-dir")
         self.create_tests_dir(self.build_dir / "spec-test-dir")
         test_command = """
-export LD_LIBRARY_PATH=/sysroot/usr/lib:/sysroot/lib;
-export LD_CHERI_LIBRARY_PATH=/sysroot/usr/libcheri;
 cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_flags} \
     -b "{bench_list}" -t {config} -d0 -r1 {arch}""".format(
             config=self.config_name, bench_list=" ".join(self.benchmark_list),
