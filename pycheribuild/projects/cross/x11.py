@@ -113,7 +113,7 @@ class BuildLibXCBWM(X11AutotoolsProject):
 
 class BuildLibXCBImage(X11AutotoolsProject):
     project_name = "libxcb-image"
-    dependencies = ["libxcb"]
+    dependencies = ["libxcb-util"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-image.git")
 
 
