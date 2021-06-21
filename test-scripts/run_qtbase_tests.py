@@ -93,8 +93,7 @@ def copy_qt_libs_to_tmpfs_and_set_libpath(qemu: boot_cheribsd.QemuCheriBSDInstan
     boot_cheribsd.prepend_ld_library_path(qemu, "/tmp/qt-libs")
 
 
-def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitparser.JUnitXml,
-               successful_tests: list, failed_tests: list, build_dir: Path):
+def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitparser.JUnitXml, build_dir: Path):
     tests = []
     for root, dirs, files in os.walk(str(subdir), topdown=True):
         for name in files:
@@ -104,16 +103,14 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
         # Ignore .moc and .obj directories:
         dirs[:] = [d for d in dirs if not d.startswith(".")]
     # Ensure that we run the tests in a reproducible order
-    test_xml = build_dir / "test.xml"
     for f in sorted(tests):
+        test_xml = build_dir / (f.name + ".xml")
         starttime = datetime.datetime.utcnow()
         try:
             # Output textual results to stdout and write JUnit XML to /build/test.xml
-            qemu.checked_run("rm -f /build/test.xml && "
-                             "{} -o /build/test.xml,junitxml -o -,txt -v1 && "
-                             "fsync /build/test.xml".format(f),
+            qemu.checked_run("rm -f /build/{xml_name} && {test} -o /build/{xml_name},junitxml -o -,txt -v1 && "
+                             "fsync /build/{xml_name}".format(xml_name=test_xml.name, test=f),
                              timeout=10 * 60)
-            successful_tests.append(f)
         except boot_cheribsd.CheriBSDCommandFailed as e:
             boot_cheribsd.failure("Failed to run ", f.name, ": ", str(e), exit=False)
             # Send CTRL+C in case the process timed out.
@@ -130,14 +127,11 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
                 raise ValueError("No test found in: " + qt_test.tostring())
             if not qt_test.time:
                 qt_test.time = (endtime - starttime).total_seconds()
+            qt_test.add_property("test_executable", str(f))
             xml.add_testsuite(qt_test)
         except Exception as e:
-            boot_cheribsd.failure("Error loading JUnit result for", f.name, ": ", str(e), exit=False)
-            failed_tests.append(f)
+            boot_cheribsd.failure("Error loading JUnit result for ", f.name, ": ", str(e), exit=False)
             add_junit_failure(xml, f, str(e), starttime, test_xml)
-        finally:
-            if test_xml.is_file():
-                test_xml.unlink()
 
 
 def add_junit_failure(xml: junitparser.JUnitXml, test: Path, message: str, starttime: datetime.datetime,
@@ -148,16 +142,15 @@ def add_junit_failure(xml: junitparser.JUnitXml, test: Path, message: str, start
     if input_xml.exists():
         t.system_err = input_xml.read_text("utf-8")
     suite = junitparser.TestSuite(name=test.name)
+    suite.add_property("test_executable", str(test))
     suite.add_testcase(t)
+    suite.update_statistics()
     xml.add_testsuite(suite)
 
 
 def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     # TODO: also run the non-corelib tests
     xml = junitparser.JUnitXml()
-    failed_tests = []
-    successful_tests = []
-
     build_dir = Path(args.build_dir)
     all_tests_starttime = datetime.datetime.utcnow()
     test_subset = Path(args.test_subset)
@@ -166,26 +159,46 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     assert not relpath.startswith(os.path.pardir), "Invalid path " + str(tests_root / test_subset)
     boot_cheribsd.info("Running qtbase tests for ", test_subset)
 
-    # Start with some basic smoketests:
+    # Start with a basic smoketests:
     qemu.checked_run("/build/tests/auto/corelib/tools/qarraydata/tst_qarraydata")
-    qemu.checked_run("/build/tests/auto/corelib/global/qtendian/tst_qtendian")
 
-    run_subdir(qemu, Path(tests_root, test_subset), xml, build_dir=build_dir,
-               successful_tests=successful_tests, failed_tests=failed_tests)
+    run_subdir(qemu, Path(tests_root, test_subset), xml, build_dir=build_dir)
     xml.time = (datetime.datetime.utcnow() - all_tests_starttime).total_seconds()
     xml.update_statistics()
+    failed_test_suites = []
+    num_testsuites = 0
+    for suite in xml:
+        assert isinstance(suite, junitparser.TestSuite)
+        num_testsuites += 1
+        if suite.errors > 0 or suite.failures > 0:
+            failed_test_suites.append(suite)
     boot_cheribsd.info("JUnit results:", xml)
-    boot_cheribsd.info("Ran " + str(len(successful_tests) + len(failed_tests)), " tests in ",
+    boot_cheribsd.info("Ran " + str(num_testsuites), " test suites in ",
                        (datetime.datetime.utcnow() - all_tests_starttime))
-    if failed_tests:
-        boot_cheribsd.failure("The following ", len(failed_tests), " tests failed:\n\t",
-                              "\n\t".join(x.name for x in failed_tests), exit=False)
+    if failed_test_suites:
+        def failed_test_info(ts: junitparser.TestSuite):
+            result = ts.name
+
+            if ts.failures:
+                result += " " + str(ts.failures) + " failures"
+            if ts.errors:
+                result += " " + str(ts.errors) + " errors"
+            if ts.tests:
+                result += " in " + str(ts.tests) + " tests"
+            for p in ts.properties():
+                if p.name == "test_executable":
+                    result += ", executable=" + p.value
+                    break
+            return result
+
+        boot_cheribsd.failure("The following ", len(failed_test_suites), " tests failed:\n\t",
+                              "\n\t".join(failed_test_info(x) for x in failed_test_suites), exit=False)
 
     # Finally, write the Junit XML file:
     if not boot_cheribsd.PRETEND:
         xml.write(args.junit_xml, pretty=True)
     boot_cheribsd.info("Wrote Junit results to ", args.junit_xml)
-    return not failed_tests
+    return not failed_test_suites
 
 
 def add_args(parser: argparse.ArgumentParser):
