@@ -70,6 +70,38 @@ for a clean verbose build of LLVM `cheribuild.py -v --clean llvm`
 When selecting a target you can also build all the targets that it depends on by passing the `--include-dependencies` or `-d` option.
 However, some targets (e.g. `all`, `sdk-*`) will always build their dependencies because running them without building the dependencies does not make sense (see the list of targets for details).
 
+#### Overview
+
+There are many targets in cheribuild, and they fall into two categories: single
+targets and multiarch targets.
+Single targets, such as `qemu`, `sail` and `install-morello-fvp`, are for
+targets that only apply natively to the host machine.
+Most targets, however, are multiarch targets.
+These are always of the form `<name>-<architecture>`, where `<architecture>`
+indicates the architecture to compile/run code for, which will be
+cross-compiling/emulating for anything other than `native`.
+For example, `cheribsd-riscv64-purecap` will cross-compile CheriBSD for
+pure-capability CHERI-RISC-V, `disk-image-morello-purecap` will create a
+CheriBSD disk image for pure-capability Morello and `gdb-native` will build a
+version of CHERI-GDB that runs natively on the host machine and be used to
+remote debug CHERI-RISC-V and CHERI-MIPS.
+
+Note that the `<architecture>` in the target says nothing about what it can do,
+only where it can do it.
+For example, `llvm-native` and `llvm-riscv64` both exist; the former is a
+CHERI-LLVM that will run natively on the host and can be used to cross compile
+for both CHERI-MIPS and CHERI-RISC-V, whilst the latter is a CHERI-LLVM built
+as a set of RISC-V binaries that will run on CheriBSD itself.
+
+Where there are multiple variants of the source, there are multiple cheribuild
+targets with different names which, in the case of multiarch targets, means a
+different `<name>`.
+For example, `llvm` refers to CHERI-LLVM, whereas `morello-llvm` refers to
+Arm's fork of CHERI-LLVM adding Morello support, and `upstream-llvm` refers to
+upstream's LLVM.
+Thus, a target of `morello-llvm-riscv64` would be Arm's Morello-extended
+CHERI-LLVM fork built as a RISC-V binary to run on CheriBSD.
+
 #### The following main targets are available
 
 - `qemu` builds and installs [CTSRD-CHERI/qemu](https://github.com/CTSRD-CHERI/qemu)
