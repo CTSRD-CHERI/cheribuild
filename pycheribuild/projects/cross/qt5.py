@@ -34,9 +34,33 @@ from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, Cr
                                   CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
                                   Linkage, MakeCommandKind)
 from .x11 import BuildLibXCB
+from ..project import SimpleProject
 from ...config.loader import ComputedDefaultValue
 from ...processutils import set_env
 from ...utils import OSInfo
+
+
+class InstallDejaVuFonts(SimpleProject):
+    target = "dejavu-fonts"
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS
+
+    def process(self):
+        version = (2, 37)
+        subdir = "version_{}_{}".format(*version)
+        filename = "dejavu-fonts-ttf-{}.{}.tar.bz2".format(*version)
+        base_url = "https://github.com/dejavu-fonts/dejavu-fonts/releases/download"
+        self.download_file(self.config.build_root / filename,
+                           url=base_url + "/" + subdir + "/" + filename,
+                           sha256="fa9ca4d13871dd122f61258a80d01751d603b4d3ee14095d65453b4e846e17d7")
+        # The Qt platformsupport/fontdatabases/freetype/qfreetypefontdatabase.cpp code expects all .ttf files to be
+        # directly below QT_QPA_FONTDIR (by default <Qt install dir>/lib/fonts), so we need to remove all directories
+        # from the archive.
+        self.makedirs(self.target_info.sysroot_install_prefix_absolute / "lib/fonts")
+        # self.clean_directory(self.target_info.sysroot_install_prefix_absolute / "lib/fonts")
+        self.run_cmd("tar", "xvf", self.config.build_root / filename, "--strip-components=2",
+                     "-C", self.target_info.sysroot_install_prefix_absolute / "lib/fonts",
+                     "dejavu-fonts-ttf-{}.{}/ttf".format(*version))
+        self.run_cmd("find", self.target_info.sysroot_install_prefix_absolute / "lib/fonts")
 
 
 # This class is used to build qtbase and all of qt5
