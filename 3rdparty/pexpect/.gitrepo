@@ -6,7 +6,7 @@
 [subrepo]
 	remote = https://github.com/pexpect/pexpect.git
 	branch = master
-	commit = 02c38338b4ade8b0b0e85be613bc2b9dbfe68a7b
-	parent = e5917dd525e47aaecdc62fcff89fdab21fc46781
+	commit = 2be6c4d1aa2b9b522636342c2fd54b73c058060d
+	parent = b89d45af1907f1b356389d88848e1996930c8776
 	method = rebase
-	cmdver = 0.4.1
+	cmdver = 0.4.3
