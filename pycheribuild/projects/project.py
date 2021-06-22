@@ -2229,6 +2229,8 @@ class Project(SimpleProject):
         if self.should_include_debug_info and ".bfd" not in self.target_info.linker.name:
             # Add a gdb_index to massively speed up running GDB on CHERIBSD:
             result.append("-Wl,--gdb-index")
+            # Also reduce the size of debug info to make copying files over faster
+            result.append("-Wl,--compress-debug-sections=zlib")
         if self.target_info.is_cheribsd() and self.config.with_libstatcounters:
             # We need to include the constructor even if there is no reference to libstatcounters:
             # TODO: always include the .a file?
@@ -2325,6 +2327,7 @@ class Project(SimpleProject):
         if self.should_include_debug_info:
             if not self.target_info.is_macos():
                 self.COMMON_FLAGS.append("-ggdb")
+                self.COMMON_FLAGS.append("-gz")
         self.CFLAGS = []  # type: typing.List[str]
         self.CXXFLAGS = []  # type: typing.List[str]
         self.ASMFLAGS = []  # type: typing.List[str]
