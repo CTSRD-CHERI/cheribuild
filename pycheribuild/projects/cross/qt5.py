@@ -215,6 +215,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         if self.minimal:
             self.configure_args.extend([
                 "-no-widgets",
+                "-no-sql",
                 "-no-glib",
                 "-no-gtk",
                 "-no-opengl",
