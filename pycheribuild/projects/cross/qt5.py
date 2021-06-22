@@ -215,8 +215,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-no-cups",
                 "-no-syslog",
                 "-no-gui",
-                "-no-iconv"
-                ])
+                "-no-iconv",
+                "-no-headersclean",
+            ])
         else:
             self.configure_args.append("-dbus")  # we want to build QtDBus
             # Enable X11 support when cross-compiling by default
