@@ -302,8 +302,17 @@ class BuildQEMU(BuildQEMUBase):
 
 
 class BuildMorelloQEMU(BuildQEMU):
-    repository = GitRepository("https://github.com/LawrenceEsswood/qemu.git", default_branch="qemu-morello",
-                               force_branch=True)
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-morello-merged",
+                               force_branch=True,
+                               old_urls=[
+                                   b"https://github.com/LawrenceEsswood/qemu.git",
+                                   # None of these were provided by cheribuild, but try and handle common
+                                   # insteadOf/pushInsteadOf configs that will otherwise confuse cheribuild as they
+                                   # affect the output of git remote.
+                                   b"ssh://git@github.com/LawrenceEsswood/qemu.git",
+                                   b"ssh://github.com/LawrenceEsswood/qemu.git",
+                                   b"git@github.com:LawrenceEsswood/qemu.git"
+                                ])
     native_install_dir = DefaultInstallDir.MORELLO_SDK
     default_targets = "aarch64-softmmu,morello-softmmu"
     project_name = "morello-qemu"
