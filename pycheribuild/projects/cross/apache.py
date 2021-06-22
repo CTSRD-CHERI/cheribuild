@@ -28,7 +28,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository, SubversionRepository)
+from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, DefaultInstallDir
+from .crosscompileproject import GitRepository, SubversionRepository
+from ..project import ReuseOtherProjectRepository
 from .expat import BuildExpat
 
 
@@ -129,3 +131,31 @@ class BuildApache(CrossCompileAutotoolsProject):
                          cwd=self.build_dir / "server")
             self.run_cmd(str(self.host_CC), "gen_test_char.lo", "-o",
                          "gen_test_char", cwd=self.build_dir / "server")
+
+
+class BuildSSLProc(CrossCompileCMakeProject):
+    target = "sslproc"
+
+    repository = GitRepository("https://github.com/CTSRD-CHERI/sslproc.git")
+
+    has_optional_tests = True
+    default_build_tests = False
+    show_optional_tests_in_help = True
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(BUILD_TESTS=self.build_tests)
+
+
+class BuildSSLProcApache(BuildApache):
+    target = "apache-sslproc"
+
+    repository = ReuseOtherProjectRepository(BuildApache, do_update=True)
+
+    dependencies = BuildApache.dependencies + ["sslproc"]
+
+    def setup(self):
+        super().setup()
+        self.configure_args.append(
+            "--with-sslproc=" + str(BuildSSLProc.get_install_dir(self))
+            )
