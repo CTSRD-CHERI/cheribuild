@@ -140,7 +140,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-device-option", "LINKER_FLAGS=" + self.commandline_to_str(linker_flags),
                 "-sysroot", self.cross_sysroot_path,
                 "-prefix", "/usr/local/" + self._xtarget.generic_suffix
-                ])
+            ])
 
         if self.use_asan:
             self.configure_args.extend(["-sanitize", "address,undefined"])
@@ -155,7 +155,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             "-no-Werror",
             "-no-use-gold-linker",
             "-no-iconv"
-            ])
+        ])
         if self.build_tests:
             self.configure_args.append("-developer-build")
             if OSInfo.IS_MAC:
@@ -170,14 +170,13 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # Seems to have changed
             self.configure_args.extend(["-compile-examples"])
         else:
-            self.configure_args.extend(["-no-compile-examples"])
+            self.configure_args.extend(["-nomake", "examples"])
         # currently causes build failures:
         # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
         self.configure_args.append("-qt-libpng")
 
         print("TYPE:", self.build_type)
         # TODO: once we update to qt 5.12 add this:
-        # self.configure_args.append("-gdb-index")
         if self.build_type == BuildType.DEBUG:
             self.configure_args.append("-debug")
             # optimize-debug needs GCC
@@ -193,6 +192,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
         if self.assertions:
             self.configure_args.append("-force-asserts")
+            self.configure_args.append("-gdb-index")
 
         if self.build_type.should_include_debug_info:
             # separate debug info should make it possible to copy the .so files to tmpfs before running tests
