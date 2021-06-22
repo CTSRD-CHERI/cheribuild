@@ -107,6 +107,12 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         cls.assertions = cls.add_bool_option("assertions", default=False, show_help=True, help="Include assertions")
         cls.minimal = cls.add_bool_option("minimal", show_help=True, help="Don't build QtWidgets or QtGui, etc")
 
+    @property
+    def _build_type_basic_compiler_flags(self):
+        if self.build_type == BuildType.DEBUG:
+            return ["-O1"]  # -O0 is really slow and results in massive libraries.
+        return super()._build_type_basic_compiler_flags
+
     def configure(self, **kwargs):
         if self.force_static_linkage:
             self.configure_args.append("-static")
