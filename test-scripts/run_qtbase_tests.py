@@ -108,8 +108,9 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
         starttime = datetime.datetime.utcnow()
         try:
             # Output textual results to stdout and write JUnit XML to /build/test.xml
-            qemu.checked_run("rm -f /build/{xml_name} && {test} -o /build/{xml_name},junitxml -o -,txt -v1 && "
-                             "fsync /build/{xml_name}".format(xml_name=test_xml.name, test=f),
+            # Many of the test cases expect that the CWD == test binary dir
+            qemu.checked_run("cd {test_dir} && rm -f {xml_name} && {test} -o {xml_name},junitxml -o -,txt -v1 && "
+                             "fsync {xml_name}".format(xml_name=test_xml.name, test_dir=f.parent, test=f),
                              timeout=10 * 60)
         except boot_cheribsd.CheriBSDCommandFailed as e:
             boot_cheribsd.failure("Failed to run ", f.name, ": ", str(e), exit=False)
@@ -160,6 +161,7 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     boot_cheribsd.info("Running qtbase tests for ", test_subset)
 
     # Start with a basic smoketests:
+    qemu.checked_run("ldd /build/tests/auto/corelib/tools/qarraydata/tst_qarraydata")
     qemu.checked_run("/build/tests/auto/corelib/tools/qarraydata/tst_qarraydata")
 
     run_subdir(qemu, Path(tests_root, test_subset), xml, build_dir=build_dir)
