@@ -524,7 +524,7 @@ class spawn(SpawnBase):
         for s in sequence:
             self.write(s)
 
-    def send(self, s):
+    def _send(self, s):
         '''Sends string ``s`` to the child process, returning the number of
         bytes written. If a logfile is specified, a copy is written to that
         log.

@@ -129,7 +129,7 @@ class PopenSpawn(SpawnBase):
         for s in sequence:
             self.send(s)
 
-    def send(self, s):
+    def _send(self, s):
         '''Send data to the subprocess' stdin.
 
         Returns the number of bytes written.

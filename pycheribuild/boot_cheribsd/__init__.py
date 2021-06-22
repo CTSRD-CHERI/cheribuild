@@ -272,6 +272,7 @@ class CheriBSDInstance(CheriBSDSpawnMixin, pexpect.spawn):
     def __init__(self, xtarget: CrossCompileTarget, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.xtarget = xtarget
+        self.sendchunksize = 100  # sleep after 100 sent chars
 
 
 class QemuCheriBSDInstance(CheriBSDInstance):
