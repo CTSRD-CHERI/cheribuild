@@ -36,6 +36,7 @@ class KDECMakeProject(CrossCompileCMakeProject):
     do_not_add_to_targets = True
     default_install_dir = DefaultInstallDir.KDE_PREFIX
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+    dependencies = ["qtbase"]
 
     def setup(self):
         super().setup()
