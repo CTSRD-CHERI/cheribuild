@@ -78,6 +78,7 @@ BOOT_FAILURE2 = "wait for /bin/sh on /etc/rc failed'"
 BOOT_FAILURE3 = "Manual root filesystem specification:"  # rootfs mount failed
 SHELL_OPEN = "exec /bin/sh"
 LOGIN = "login:"
+LOGIN_AS_ROOT_MINIMAL = "Logging in as root..."
 INITIAL_PROMPT_CSH = re.compile(r"root@.+:.+# ")  # /bin/csh
 INITIAL_PROMPT_SH = "# "  # /bin/sh
 STOPPED = "Stopped at"
@@ -828,7 +829,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
                 success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
 
         userspace_starttime = datetime.datetime.now()
-        boot_expect_strings = [LOGIN, SHELL_OPEN, BOOT_FAILURE, BOOT_FAILURE2,
+        boot_expect_strings = [LOGIN, LOGIN_AS_ROOT_MINIMAL, SHELL_OPEN, BOOT_FAILURE, BOOT_FAILURE2,
                                BOOT_FAILURE3]  # type: typing.List[typing.Union[str, typing.Pattern]]
         i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=15 * 60,
                          timeout_msg="timeout awaiting login prompt")
@@ -860,6 +861,14 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
                 _set_pexpect_sh_prompt(child)
         elif i == boot_expect_strings.index(SHELL_OPEN):  # shell started from /etc/rc:
             child.expect_exact([INITIAL_PROMPT_SH], timeout=30)
+            success("===> /etc/rc completed, got command prompt")
+            _set_pexpect_sh_prompt(child)
+        elif i == boot_expect_strings.index(LOGIN_AS_ROOT_MINIMAL):  # login -f root from /etc/rc:
+            child.expect([INITIAL_PROMPT_SH], timeout=3 * 60, timeout_msg="timeout logging in")
+            # Note: the default shell in the minimal images is csh (but without the default prompt).
+            child.sendline("sh")
+            child.expect([INITIAL_PROMPT_SH], timeout=3 * 60,
+                         timeout_msg="timeout starting /bin/sh")
             success("===> /etc/rc completed, got command prompt")
             _set_pexpect_sh_prompt(child)
         else:  # BOOT_FAILURE or FATAL_ERROR_MESSAGES
