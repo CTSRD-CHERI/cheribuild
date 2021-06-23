@@ -49,9 +49,9 @@ class InstallMorelloFVP(SimpleProject):
     target = "install-morello-fvp"
     container_name = "morello-fvp"
     base_url = "https://developer.arm.com/-/media/Arm%20Developer%20Community/Downloads/OSS/FVP/Morello%20Platform/"
-    latest_known_fvp = (0, 11, 16)  # value reported by --version.
+    latest_known_fvp = (0, 11, 19)  # value reported by --version.
     installer_filename = "FVP_Morello_{}.{}_{}.tgz".format(*latest_known_fvp)
-    installer_sha256 = "518f7eca3319e54e84b42e74e93592091bbbdce7f822d928abfed1ab09c152a2"
+    installer_sha256 = "7a168f53b4ca7a80d6a4e0a1e3f18af3318dd134b478a73c6035e38e840be986"
     # Seems like docker containers don't get the full amount configured in the settings so subtract a bit from 5GB/8GB
     min_ram_mb = 4900
     warn_ram_mb = 7900
@@ -428,6 +428,7 @@ VOLUME /diskimg
             return 0
 
     def run_tests(self):
+        self.execute_fvp(["--version"], x11=False, interactive=False)
         self.execute_fvp(["--help"], x11=False, interactive=False)
         self.execute_fvp(["--cyclelimit", "1000"], x11=False, interactive=False)
 
@@ -435,6 +436,7 @@ VOLUME /diskimg
 class LaunchFVPBase(SimpleProject):
     do_not_add_to_targets = True
     _source_class = None  # type: BuildDiskImageBase
+    required_fvp_version = (0, 11, 19)
 
     @classmethod
     def dependencies(cls, _: CheriConfig):
@@ -567,8 +569,13 @@ class LaunchFVPBase(SimpleProject):
             ]
             if not self.smp:
                 model_params += ["num_clusters=1", "num_cores=1"]
-            if self.fvp_project.fvp_revision < (0, 10, 312):
-                self.fatal("FVP is too old, please update to latest version")
+            if self.fvp_project.fvp_revision < self.required_fvp_version:
+                self.dependency_error("FVP is too old, please update to latest version",
+                                      cheribuild_target="install-morello-fvp")
+                del self.fvp_project.fvp_revision  # reset cached value
+                if self.fvp_project.fvp_revision < self.required_fvp_version:
+                    self.fatal("FVP update failed, version is reported as", self.fvp_project.fvp_revision,
+                               "but needs to be at least", self.required_fvp_version)
             # virtio-rng supported in 0.10.312
             model_params += [
                 "board.virtio_rng.enabled=1",
@@ -659,10 +666,9 @@ class LaunchFVPBase(SimpleProject):
             # This should fix the extremely slow countdown in the loader (30 minutes instead of 10s) and might also
             # improve network reliability
             fvp_args += ["-C", "css.scp.CS_Counter.use_real_time=1"]
-            # With newer FVP version we hav to pass another flag to allow the bootloader countdown to roughly match
-            # real time since otherwise each second of countdown takes around 2 minutes:
-            if self.fvp_project.fvp_revision >= (0, 11, 13):
-                fvp_args += ["-C", "board.rtc_clk_frequency=300"]
+            # With newer FVP version (starting with 0.11.13) we hav to pass another flag to allow the bootloader
+            # countdown to roughly match real time since otherwise each second of countdown takes around 2 minutes:
+            fvp_args += ["-C", "board.rtc_clk_frequency=300"]
 
             tcp_ports = []
 
