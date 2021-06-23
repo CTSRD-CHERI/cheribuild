@@ -839,7 +839,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     #     self._line_not_important_stdout_filter(line)
 
     def run_with_logfile(self, args: "typing.Sequence[str]", logfile_name: str, *, stdout_filter=None, cwd: Path = None,
-                         env: dict = None, append_to_logfile=False) -> None:
+                         env: dict = None, append_to_logfile=False, stdin=subprocess.DEVNULL) -> None:
         """
         Runs make and logs the output
         config.quiet doesn't display anything, normal only status updates and config.verbose everything
@@ -893,11 +893,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             logfile.write(self.commandline_to_str(args).encode("utf-8") + b"\n\n")
             if self.config.quiet:
                 # a lot more efficient than filtering every line
-                check_call_handle_noexec(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=new_env)
+                check_call_handle_noexec(args, cwd=str(cwd), stdout=logfile, stderr=logfile, stdin=stdin, env=new_env)
                 return
             with keep_terminal_sane(command=args):
                 make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                           env=new_env)
+                                           stdin=stdin, env=new_env)
                 self.__run_process_with_filtered_output(make, logfile, stdout_filter, args)
 
     def __run_process_with_filtered_output(self, proc: subprocess.Popen, logfile: "typing.Optional[typing.IO]",
