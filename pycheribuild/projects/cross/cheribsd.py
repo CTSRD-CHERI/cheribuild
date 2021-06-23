@@ -902,18 +902,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.cross_toolchain_config.set(TARGET_CPUTYPE="i686")
 
         if self.linker_for_world == "bfd":
-            # self.cross_toolchain_config.set_env(XLDFLAGS="-fuse-ld=bfd")
-            target_flags += " -fuse-ld=bfd -Qunused-arguments"
             # If WITH_LD_IS_LLD is set (e.g. by reading src.conf) the symlink ld -> ld.bfd in $BUILD_DIR/tmp/ won't be
             # created and the build system will then fall back to using /usr/bin/ld which won't work!
             self.cross_toolchain_config.set_with_options(LLD_IS_LD=False)
             self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.bfd"),
         else:
             assert self.linker_for_world == "lld"
-            # TODO: we should have a better way of passing linker flags than adding them to XCFLAGS
-            linker_flags = "-fuse-ld=lld -Qunused-arguments"
-            # self.cross_toolchain_config.set_env(XLDFLAGS=linker_flags)
-            target_flags += " " + linker_flags
             # Don't set XLD when using bfd since it will pick up ld.bfd from the build directory
             self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld"),
 
@@ -972,17 +966,14 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
             kernel_options.update(self.cross_toolchain_config)
             linker = Path(self.target_info.sdk_root_dir, "bin", "ld." + self.linker_for_kernel)
-            fuse_ld_flag = "-fuse-ld=" + str(linker)
             kernel_options.remove_var("LDFLAGS")
-            kernel_options.set(LD=linker, XLD=linker, HACK_EXTRA_FLAGS="-shared " + fuse_ld_flag,
-                               TRAMP_LDFLAGS=fuse_ld_flag)
+            kernel_options.set(LD=linker, XLD=linker)
             # The kernel build using ${BINUTIL} directly and not X${BINUTIL}:
             for binutil_name in ("AS", "AR", "NM", "OBJCOPY", "RANLIB", "SIZE", "STRINGS", "STRIPBIN"):
                 xbinutil = kernel_options.get_var("X" + binutil_name)
                 if xbinutil:
                     kernel_options.set(**{binutil_name: xbinutil})
                     kernel_options.remove_var("X" + binutil_name)
-            kernel_options.set_env(LDFLAGS=fuse_ld_flag, XLDFLAGS=fuse_ld_flag)
         kernel_options.set(KERNCONF=kernconf)
         if self.add_debug_info_flag:
             self.make_args.set(DEBUG="-g")
