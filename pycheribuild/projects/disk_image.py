@@ -996,13 +996,13 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "libbsm.so.3",
             "libcrypto.so.111",
             "libssl.so.111",
-            # PAM libraries (we should only need pam_permit/pam_rootok)
             "libpam.so.6",
-            "pam_permit.so",
-            "pam_permit.so.6",
-            "pam_rootok.so",
-            "pam_rootok.so.6",
+            "libypclnt.so.4",  # needed by pam_unix.so.6
         ]
+        # Add the required PAM libraries for su(1)/login(1)
+        for i in ("permit", "rootok", "self", "unix", "nologin", "securetty", "lastlog"):
+            required_libs += ["pam_" + i + ".so", "pam_" + i + ".so.6"]
+
         # Libraries to include if they exist
         optional_libs = [
             # Needed for most benchmarks, but not supported on all architectures
@@ -1036,8 +1036,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
     def prepare_rootfs(self):
         super().prepare_rootfs()
         # Add the additional sysctl configs
-        self.create_file_for_image("/etc/pam.d/su", show_contents_non_verbose=False,
-                                   contents=include_local_file("files/minimal-image/pam.d/su"))
+        self.create_file_for_image("/etc/pam.d/system", show_contents_non_verbose=False,
+                                   contents=include_local_file("files/minimal-image/pam.d/system"))
         # disable coredumps (since there is almost no space on the image)
         self.create_file_for_image("/etc/sysctl.conf", show_contents_non_verbose=False,
                                    contents=include_local_file("files/minimal-image/etc/sysctl.conf"))

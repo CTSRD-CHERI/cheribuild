@@ -1,0 +1,10 @@
+# A copy of the pam.d/system file from FreeBSD with some modules removed
+# that we don't have on the minimal disk images
+
+auth		required	pam_unix.so		no_warn try_first_pass nullok
+
+account		required	pam_unix.so
+
+session		required	pam_lastlog.so		no_fail
+
+password	required	pam_unix.so		no_warn try_first_pass

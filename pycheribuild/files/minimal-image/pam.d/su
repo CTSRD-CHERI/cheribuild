@@ -1,5 +1,0 @@
-# Very simple su pam config that allows root to run code as user postgres
-auth		sufficient	pam_rootok.so	no_warn
-account		required	pam_permit.so
-session		required	pam_permit.so
-password	required	pam_permit.so
