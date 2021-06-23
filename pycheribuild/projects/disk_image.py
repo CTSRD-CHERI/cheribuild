@@ -198,13 +198,15 @@ class BuildDiskImageBase(SimpleProject):
         return self.get_crosscompile_target(config)
 
     def add_file_to_image(self, file: Path, *, base_directory: Path = None, user="root", group="wheel", mode=None,
-                          path_in_target=None):
+                          path_in_target=None, strip_binaries: bool = None):
         if path_in_target is None:
             assert base_directory is not None, "Either base_directory or path_in_target must be set!"
             path_in_target = os.path.relpath(str(file), str(base_directory))
         assert not str(path_in_target).startswith(".."), path_in_target
 
-        if self.strip_binaries:
+        if strip_binaries is None:
+            strip_binaries = self.strip_binaries
+        if strip_binaries:
             # Try to shrink the size by stripping all elf binaries
             stripped_path = self.tmpdir / path_in_target
             if self.maybe_strip_elf_file(file, output_path=stripped_path):
@@ -405,7 +407,7 @@ class BuildDiskImageBase(SimpleProject):
 
         loader_conf_contents = ""
         if self.is_x86:
-            loader_conf_contents += "console=\"comconsole\"\n"
+            loader_conf_contents += "console=\"comconsole\"\nautoboot_delay=0\n"
         self.create_file_for_image("/boot/loader.conf", contents=loader_conf_contents, mode=0o644)
 
         # Avoid long boot time on first start due to missing entropy:
@@ -951,6 +953,25 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         self.mtree.add_dir("var/db", print_status=self.config.verbose)
         self.mtree.add_dir("var/empty", print_status=self.config.verbose)
 
+        if self.is_x86:
+            # When booting minimal disk images, we need the files in /boot (kernel+loader), but we omit modules.
+            extra_files = []
+            for root, dirnames, filenames in os.walk(str(self.rootfs_dir / "boot")):
+                for filename in filenames:
+                    new_file = Path(root, filename)
+                    # Don't add kernel modules
+                    if new_file.suffix == ".ko":
+                        # Except for those needed to run tests
+                        if new_file.name not in ("tmpfs.ko", "smbfs.ko", "libiconv.ko", "libmchain.ko", "if_vtnet.ko"):
+                            continue
+                    # Also don't add the kernel with debug info
+                    if new_file.suffix == ".full" and new_file.name.startswith("kernel"):
+                        continue
+                    extra_files.append(new_file)
+                    # Stripping kernel modules makes them unloadable:
+                    # kldload: /boot/kernel/smbfs.ko: file must have exactly one symbol table
+                    self.add_file_to_image(new_file, base_directory=self.rootfs_dir, strip_binaries=False)
+            self.verbose_print("Boot files:\n\t", "\n\t".join(map(str, sorted(extra_files))))
         self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
 
     def add_required_libraries(self, libdirs: "typing.List[str]"):

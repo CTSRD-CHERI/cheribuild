@@ -427,6 +427,11 @@ def prepend_ld_library_path(qemu: CheriBSDInstance, path: str):
 def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
     non_cheri_libdir = "lib64"
     cheri_libdir = "libcheri"
+    if not qemu.xtarget.is_hybrid_or_purecap_cheri():
+        qemu.run("export {var}=/{l}:/usr/{l}:/usr/local/{l}:/sysroot/{l}:/sysroot/usr/{l}:/sysroot/{prefix}/lib".format(
+            prefix=qemu.xtarget.generic_suffix, l="lib", var="LD_LIBRARY_PATH"), timeout=3)
+        return
+
     purecap_install_prefix = "usr/local/" + qemu.xtarget.get_cheri_purecap_target().generic_suffix
     hybrid_install_prefix = "usr/local/" + qemu.xtarget.get_cheri_hybrid_target().generic_suffix
     nocheri_install_prefix = "usr/local/" + qemu.xtarget.get_non_cheri_target().generic_suffix
@@ -760,7 +765,7 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
             qemu_args.append("-append")
             qemu_args.append(" ".join(kernel_commandline))
         else:
-            warn("Cannot pass kernel command line when booting disk image: ", kernel_commandline, exit=False)
+            warn("Cannot pass kernel command line when booting disk image: ", kernel_commandline)
     success("Starting QEMU: ", " ".join(qemu_args))
     qemu_starttime = datetime.datetime.now()
     global _SSH_SOCKET_PLACEHOLDER
