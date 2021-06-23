@@ -974,6 +974,9 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
     if ld_preload_target_paths:
         checked_run_cheribsd_command(qemu, "export '{}={}'".format(args.test_ld_preload_variable,
                                                                    ":".join(ld_preload_target_paths)))
+
+    if args.extra_library_paths:
+        prepend_ld_library_path(qemu, ":".join(args.extra_library_paths))
     success("Preparing test enviroment took ", datetime.datetime.now() - setup_tests_starttime)
     if test_setup_function:
         setup_tests_starttime = datetime.datetime.now()
@@ -1078,11 +1081,12 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
     parser.add_argument("--test-command", "-c")
     parser.add_argument('--test-ld-preload', action="append", nargs=1, metavar='LIB',
-                        help="Copy LIB to the guest andLD_PRELOAD it before running tests")
+                        help="Copy LIB to the guest and LD_PRELOAD it before running tests")
+    parser.add_argument('--extra-library-path', action="append", dest="extra_library_paths", metavar="DIR",
+                        help="Add DIR as an additional LD_LIBRARY_PATH before running tests")
     parser.add_argument('--test-ld-preload-variable', type=str, default=None,
                         help="The environment variable to set to LD_PRELOAD a library. should be set to either "
-                             "LD_PRELOAD or "
-                             "LD_CHERI_PRELOAD")
+                             "LD_PRELOAD or LD_CHERI_PRELOAD")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60,
                         help="Timeout in seconds for running tests")
     # noinspection PyTypeChecker
