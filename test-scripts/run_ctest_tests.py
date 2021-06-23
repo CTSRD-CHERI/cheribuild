@@ -68,4 +68,4 @@ if __name__ == '__main__':
     # we don't need ssh running to execute the tests
     run_tests_main(test_function=run_ctest_tests, test_setup_function=test_setup,
                    need_ssh=False, argparse_setup_callback=add_args, argparse_adjust_args_callback=adjust_args,
-                   should_mount_builddir=True, should_mount_sysroot=True)
+                   should_mount_builddir=True, should_mount_srcdir=True, should_mount_sysroot=True)

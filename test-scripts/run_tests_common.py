@@ -103,17 +103,13 @@ def run_tests_main(test_function: Callable[[boot_cheribsd.QemuCheriBSDInstance, 
     def default_setup_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace):
         # Also link the build directory in the target under the host path. This should allow more tests to pass,
         # i.e. the libc++ filesystem tests, etc.
-        if should_mount_builddir:
+        if should_mount_builddir or args.build_dir:
             assert args.build_dir
-            # the host path might be too long and trigger the shell to emit a continuation line which really confuses
-            # the pexpect logic.
             qemu.run("mkdir -p '{}'".format(Path(args.build_dir).parent))
             qemu.checked_run("ln -sf /build '{}'".format(args.build_dir), timeout=60)
             boot_cheribsd.success("Mounted build directory using host path")
-        if should_mount_srcdir:
+        if should_mount_srcdir or args.source_dir:
             assert args.source_dir
-            # the host path might be too long and trigger the shell to emit a continuation line which really confuses
-            # the pexpect logic.
             qemu.run("mkdir -p '{}'".format(Path(args.source_dir).parent))
             qemu.checked_run("ln -sf /source '{}'".format(args.source_dir), timeout=60)
             boot_cheribsd.success("Mounted source directory using host path")
