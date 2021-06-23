@@ -147,15 +147,14 @@ class TtyState:
         new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         if new_flags == self.flags:
             return
-        warning_message(self.context, "FD flags for", self.fd.name, "changed, resetting them")
-        print("Previous flags", self.flags)
-        print("New flags", new_flags)
+        warning_message(self.context, "FD flags for", self.fd.name, "changed from", hex(self.flags),
+                        "to", hex(new_flags), "- resetting them.")
         fcntl.fcntl(self.fd, fcntl.F_SETFL, self.flags)
         new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         if new_flags != self.flags:
-            warning_message(self.context, "failed to restore TTY flags for", self.fd.name)
-            print("Previous flags", self.flags)
-            print("New flags", new_flags)
+            warning_message(self.context, "failed to restore FD flags for", self.fd.name)
+            print("Previous flags", hex(self.flags))
+            print("New flags", hex(new_flags))
 
     def restore(self):
         if self.attrs is not None:  # Not a TTY
