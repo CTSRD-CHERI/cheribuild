@@ -31,7 +31,7 @@
 # SUCH DAMAGE.
 #
 from .project import (AutotoolsProject, CheriConfig, CMakeProject, DefaultInstallDir, GitRepository,
-                      ReuseOtherProjectDefaultTargetRepository)
+                      MakeCommandKind, ReuseOtherProjectDefaultTargetRepository)
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..utils import replace_one
 
@@ -43,11 +43,12 @@ class BuildCMake(AutotoolsProject):
                                # track the stable release branch
                                default_branch="release")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
+    make_kind = MakeCommandKind.Ninja
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, configure_script="bootstrap")
         self.configure_args.append("--parallel=" + str(self.config.make_jobs))
-        # TODO: do we need to use gmake on FreeBSD?
+        self.configure_args.append("--generator=Ninja")
 
 
 # When cross-compiling CMake, we do so using the CMake files instead of the bootstrap script
