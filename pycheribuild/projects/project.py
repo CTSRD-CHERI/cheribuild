@@ -3139,6 +3139,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     default_build_type = BuildType.RELWITHDEBINFO
     # Some projects (e.g. LLVM) don't store the CMakeLists.txt in the project root directory.
     root_cmakelists_subdirectory = None  # type: Path
+    ctest_script_extra_args = tuple()  # type: typing.Iterable[str]
+    ctest_needs_full_disk_image = False
     # 3.13.4 is the minimum version for LLVM and that also allows us to use "cmake --build -j <N>" unconditionally.
     _minimum_cmake_or_meson_version = (3, 13, 4)
 
@@ -3340,8 +3342,10 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                     self.warning("Do not know how to cross-compile CTest for", self.target_info, "-> cannot run tests")
                     return
                 args = ["--cmake-install-dir", cmake_target.install_dir]
+                args.extend(self.ctest_script_extra_args)
                 self.target_info.run_cheribsd_test_script("run_ctest_tests.py", *args, mount_builddir=True,
-                                                          mount_sysroot=True, mount_sourcedir=True)
+                                                          mount_sysroot=True, mount_sourcedir=True,
+                                                          use_full_disk_image=self.ctest_needs_full_disk_image)
         else:
             self.warning("Do not know how to run tests for", self.target)
 
