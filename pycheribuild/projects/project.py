@@ -2223,9 +2223,8 @@ class Project(SimpleProject):
         #     emulation = "elf64btsmip_fbsd" if not self.target_info.is_baremetal() else "elf64btsmip"
         # result.append("-Wl,-m" + emulation)
         result += self.essential_compiler_and_linker_flags
-        if self.get_compiler_info(self.CC).is_clang:
-            result.append("-fuse-ld=" + str(self.target_info.linker))
-
+        ccinfo = self.get_compiler_info(self.CC)
+        result.extend(ccinfo.linker_override_flags(self.target_info.linker))
         if self.should_include_debug_info and ".bfd" not in self.target_info.linker.name:
             # Add a gdb_index to massively speed up running GDB on CHERIBSD:
             result.append("-Wl,--gdb-index")
@@ -2408,7 +2407,7 @@ class Project(SimpleProject):
             llvm_nm = ccinfo.get_matching_binutil("llvm-nm")
             lld = ccinfo.get_matching_binutil("ld.lld")
             # Find lld with the correct version (it must match the version of clang otherwise it breaks!)
-            self._lto_linker_flags.append("-fuse-ld=" + shlex.quote(str(lld)))
+            self._lto_linker_flags.extend(ccinfo.linker_override_flags(lld, linker_type="lld"))
             if not llvm_ar or not llvm_ranlib or not llvm_nm:
                 self.warning("Could not find llvm-{ar,ranlib,nm}" + version_suffix,
                              "-> disabling LTO (resulting binary will be a bit slower)")
@@ -3241,7 +3240,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         self._show_line_stdout_filter(line)
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
-        # LD is never invoked directly, so the -fuse-ld= flag is sufficient
+        # LD is never invoked directly, so the -fuse-ld=/--ld-path flag is sufficient
         self.add_cmake_options(CMAKE_AR=ar, CMAKE_RANLIB=ranlib)
 
     def needs_configure(self) -> bool:

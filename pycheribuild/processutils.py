@@ -484,6 +484,26 @@ class CompilerInfo(object):
             self._supported_warning_flags[flag] = result
         return result
 
+    def linker_override_flags(self, linker: Path, linker_type: str = None) -> "list[str]":
+        if not self.is_clang:
+            # GCC only allows you to set the linker type, and doesn't allow absolute paths.
+            warning_message("Cannot set absolute path to linker", linker, "when compiling with", self.path)
+            return []
+        # Clang 12.0 uses --ld-path for absolute paths instead of -fuse-ld (which determines the linker type)
+        if self.version < (12, 0, 0):
+            return ["-fuse-ld=" + str(linker)]
+        result = []
+        if linker_type:
+            result.append("-fuse-ld=" + linker_type)
+        if linker.suffix.startswith(".lld"):
+            result.append("-fuse-ld=lld")
+        elif linker.suffix.startswith(".bfd"):
+            result.append("-fuse-ld=bfd")
+        elif linker.suffix.startswith(".gold"):
+            result.append("-fuse-ld=gold")
+        result.append("--ld-path=" + str(linker))
+        return result
+
     def get_matching_binutil(self, binutil):
         assert self.is_clang
         name = self.path.name

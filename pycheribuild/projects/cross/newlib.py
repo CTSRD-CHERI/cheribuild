@@ -33,6 +33,7 @@ from pathlib import Path
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, GitRepository,
                                   MakeCommandKind)
+from ...processutils import commandline_to_str
 
 
 class BuildNewlib(CrossCompileAutotoolsProject):
@@ -121,7 +122,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             # long double is the same as double
             newlib_cv_ldbl_eq_dbl="yes",
             LD_FOR_TARGET=str(self.target_info.linker),
-            LDFLAGS_FOR_TARGET="-fuse-ld=" + str(self.target_info.linker),
+            LDFLAGS_FOR_TARGET=commandline_to_str(self.default_ldflags),
             )
 
         if self.target_info.target.is_riscv(include_purecap=True):
