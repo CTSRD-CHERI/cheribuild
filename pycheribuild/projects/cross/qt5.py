@@ -458,6 +458,11 @@ class BuildQtSVG(BuildQtModuleWithQMake):
     repository = GitRepository("https://code.qt.io/qt/qtsvg.git", default_branch="5.15", force_branch=True)
 
 
+class BuildQtDeclarative(BuildQtModuleWithQMake):
+    target = "qtdeclarative"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase.git", default_branch="5.15", force_branch=True)
+
+
 # Webkit needs ICU (and recommended for QtBase too):
 class BuildICU4C(CrossCompileAutotoolsProject):
     # noinspection PyUnreachableCode

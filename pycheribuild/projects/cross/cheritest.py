@@ -29,7 +29,7 @@
 #
 
 from ..cherisim import BuildCheriSim
-from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, Project, ReuseOtherProjectRepository
+from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..sail import BuildSailCheriMips
 
 

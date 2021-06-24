@@ -118,7 +118,7 @@ class ProjectSubclassDefinitionHook(type):
 
         if "project_name" in clsdict:
             die("project_name should no longer be used, change the definition of class " + name +
-                 " to include target and/or default_directory_basename")
+                " to include target and/or default_directory_basename")
 
         if cls.__dict__.get("dependencies_must_be_built"):
             if not cls.dependencies:
