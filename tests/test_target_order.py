@@ -193,7 +193,7 @@ def _check_deps_cached(classes):
 def _qtbase_x11_defs(suffix):
     return [x + suffix for x in ("xorg-macros-", "xorgproto-", "xcbproto-", "libxau-", "xorg-pthread-stubs-", "libxcb-",
                                  "libxtrans-", "libx11-", "libxkbcommon-", "libxcb-render-util-", "libxcb-util-",
-                                 "libxcb-image-", "libxcb-cursor-", "libxcb-wm-", "libxcb-keysyms-")]
+                                 "libxcb-image-", "libxcb-cursor-", "libxcb-wm-", "libxcb-keysyms-", "dejavu-fonts-")]
 
 
 def test_webkit_cached_deps():

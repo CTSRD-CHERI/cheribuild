@@ -85,7 +85,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # TODO: should only need these if minimal is not set
             deps.extend(["libx11", "libxcb", "libxkbcommon",
                          "libxcb-cursor", "libxcb-util", "libxcb-image",
-                         "libxcb-render-util", "libxcb-wm", "libxcb-keysyms"])
+                         "libxcb-render-util", "libxcb-wm", "libxcb-keysyms",
+                         "dejavu-fonts"])
         return deps
 
     @classmethod
