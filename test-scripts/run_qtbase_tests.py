@@ -210,7 +210,7 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
                               "\n\t".join(failed_test_info(x) for x in failed_test_suites), exit=False)
     else:
         boot_cheribsd.success("All ", xml.tests, " tests (", num_testsuites, " test suites) passed after ",
-                           (datetime.datetime.utcnow() - all_tests_starttime))
+                              (datetime.datetime.utcnow() - all_tests_starttime))
     # Finally, write the Junit XML file:
     if not boot_cheribsd.PRETEND:
         xml.write(args.junit_xml, pretty=True)
