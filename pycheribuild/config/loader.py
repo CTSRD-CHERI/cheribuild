@@ -180,15 +180,14 @@ class ConfigLoaderBase(object):
 
     show_all_help = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or is_completing_arguments
 
-    def __init__(self, option_cls):
+    def __init__(self, option_cls, argparser_class: "typing.Type[argparse.ArgumentParser]" = argparse.ArgumentParser):
         self.__option_cls = option_cls
         if self.is_completing_arguments:
-            # noinspection PyTypeChecker
-            self._parser = argparse.ArgumentParser(formatter_class=NoOpHelpFormatter)
+            self._parser = argparser_class(formatter_class=NoOpHelpFormatter)
         else:
             terminal_width = shutil.get_terminal_size(fallback=(120, 24))[0]
             # noinspection PyTypeChecker
-            self._parser = argparse.ArgumentParser(
+            self._parser = argparser_class(
                 formatter_class=lambda prog: argparse.HelpFormatter(prog, width=terminal_width))
 
         self.action_group = self._parser.add_argument_group("Actions to be performed")
@@ -224,7 +223,7 @@ class ConfigLoaderBase(object):
                     always_complete_options=None,  # don't print -/-- by default
                     exclude=self.completion_excludes,  # hide these options from the output
                     print_suppressed=True,  # also include target-specific options
-                    )
+                )
         # Handle cases such as cheribuild.py target1 --arg target2
         # Ideally we would use parse_intermixed_args() but that requires python3.7
         # so we work around it using parse_known_args().
@@ -245,7 +244,7 @@ class ConfigLoaderBase(object):
                 suggestions = difflib.get_close_matches(x, all_options)
                 errmsg = "unknown argument '" + x + "'"
                 if suggestions:
-                    errmsg += " Did you mean " + " or ".join(suggestions) + "?"
+                    errmsg += ". Did you mean " + " or ".join(suggestions) + "?"
                 self._parser.error(errmsg)
         self._parsed_args.targets += trailing
 
@@ -684,8 +683,8 @@ class ArgparseSetGivenAction(argparse.Action):
 
 
 class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
-    def __init__(self):
-        super().__init__(JsonAndCommandLineConfigOption)
+    def __init__(self, argparser_class: "typing.Type[argparse.ArgumentParser]" = argparse.ArgumentParser):
+        super().__init__(JsonAndCommandLineConfigOption, argparser_class)
         self._config_path = None  # type: typing.Optional[Path]
         # Choose the default config file based on argv[0]
         # This allows me to have symlinks for e.g. stable-cheribuild.py release-cheribuild.py debug-cheribuild.py
@@ -703,11 +702,12 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
 
     @staticmethod
     def get_config_prefix():
-        config_prefix = ""
         program = Path(sys.argv[0]).name
-        if program.endswith("cheribuild.py"):
-            config_prefix = program[0:-len("cheribuild.py")]
-        return config_prefix
+        suffixes = ["cheribuild", "cheribuild.py"]
+        for suffix in suffixes:
+            if program.endswith(suffix):
+                return program[0:-len(suffix)]
+        return ""
 
     def finalize_options(self, available_targets: list, **kwargs):
         target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
@@ -813,8 +813,8 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             if self._config_path.exists():
                 self._json = self.__load_json_with_includes(self._config_path)
             else:
-                warning_message(coloured(AnsiColour.green, "Configuration file", self._config_path,
-                                         "does not exist, using only command line arguments."))
+                status_update(coloured(AnsiColour.green, "Note: Configuration file", self._config_path,
+                                       "does not exist, using only command line arguments."))
 
     def load(self):
         self._load_command_line_args()
@@ -833,19 +833,28 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         if fullname == "#include":
             return True
 
-        if fullname in self.options:
-            return True
+        found_option = self.options.get(fullname)
         # see if it is one of the alternate names is valid
-        for option in self.options.values():
-            # only handle alternate names that aren't one character long
-            if option.shortname and len(option.shortname) > 1:
-                alternate_name = option.shortname.lstrip("-")
-                if fullname == alternate_name:
-                    return True  # fine
-            if option.alias_names:
-                if fullname in option.alias_names:
-                    return True
+        if found_option is None:
+            for option in self.options.values():
+                # only handle alternate names that aren't one character long
+                if option.shortname and len(option.shortname) > 1:
+                    alternate_name = option.shortname.lstrip("-")
+                    if fullname == alternate_name:
+                        found_option = option  # fine
+                        break
+                if option.alias_names:
+                    if fullname in option.alias_names:
+                        found_option = option  # fine
+                        break
 
+        if found_option is not None:
+            # Found an option, now verify that it's not a command-line only option
+            if not isinstance(found_option, JsonAndCommandLineConfigOption):
+                errmsg = "Option '" + fullname + "' cannot be used in the config file"
+                error_message(errmsg)
+                raise ValueError(errmsg)
+            return True
         error_message("Unknown config option '", fullname, "' in ", self._config_path, sep="")
         if self.unknown_config_option_is_error:
             raise ValueError("Unknown config option '" + fullname + "'")

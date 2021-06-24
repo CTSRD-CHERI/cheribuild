@@ -35,8 +35,6 @@ from .qt5 import BuildQtWebkit
 class BuildSQLite(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
                                default_branch="3.22.0-cheri", force_branch=True)
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def linkage(self):
         if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, self.config).force_static_linkage:
@@ -80,7 +78,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
 
 
 class BuildFettSQLite(FettProjectMixin, BuildSQLite):
-    project_name = "fett-sqlite"
+    target = "fett-sqlite"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git", default_branch="fett")
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 

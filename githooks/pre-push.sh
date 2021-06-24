@@ -111,7 +111,7 @@ do
 
 		# Run python tests before pushing
 		if [ -e pytest.ini ]; then
-			python3 -m pytest -q . >&2 || exit 1
+			try_run_verbose python3 -m pytest -q . >&2
 		fi
 	fi
 done

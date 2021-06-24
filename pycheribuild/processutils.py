@@ -147,15 +147,14 @@ class TtyState:
         new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         if new_flags == self.flags:
             return
-        warning_message(self.context, "FD flags for", self.fd.name, "changed, resetting them")
-        print("Previous flags", self.flags)
-        print("New flags", new_flags)
+        warning_message(self.context, "FD flags for", self.fd.name, "changed from", hex(self.flags),
+                        "to", hex(new_flags), "- resetting them.")
         fcntl.fcntl(self.fd, fcntl.F_SETFL, self.flags)
         new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         if new_flags != self.flags:
-            warning_message(self.context, "failed to restore TTY flags for", self.fd.name)
-            print("Previous flags", self.flags)
-            print("New flags", new_flags)
+            warning_message(self.context, "failed to restore FD flags for", self.fd.name)
+            print("Previous flags", hex(self.flags))
+            print("New flags", hex(new_flags))
 
     def restore(self):
         if self.attrs is not None:  # Not a TTY
@@ -483,6 +482,26 @@ class CompilerInfo(object):
         if result is None:
             result = self._supports_warning_flag(flag)
             self._supported_warning_flags[flag] = result
+        return result
+
+    def linker_override_flags(self, linker: Path, linker_type: str = None) -> "list[str]":
+        if not self.is_clang:
+            # GCC only allows you to set the linker type, and doesn't allow absolute paths.
+            warning_message("Cannot set absolute path to linker", linker, "when compiling with", self.path)
+            return []
+        # Clang 12.0 uses --ld-path for absolute paths instead of -fuse-ld (which determines the linker type)
+        if self.version < (12, 0, 0):
+            return ["-fuse-ld=" + str(linker)]
+        result = []
+        if linker_type:
+            result.append("-fuse-ld=" + linker_type)
+        if linker.suffix.startswith(".lld"):
+            result.append("-fuse-ld=lld")
+        elif linker.suffix.startswith(".bfd"):
+            result.append("-fuse-ld=bfd")
+        elif linker.suffix.startswith(".gold"):
+            result.append("-fuse-ld=gold")
+        result.append("--ld-path=" + str(linker))
         return result
 
     def get_matching_binutil(self, binutil):

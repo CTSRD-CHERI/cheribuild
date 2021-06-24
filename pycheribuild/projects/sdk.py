@@ -32,16 +32,23 @@ import os
 import subprocess
 
 from .cross.cheribsd import BuildCHERIBSD
-from .project import (CheriConfig, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject,
+from .project import (CheriConfig, CMakeProject, CPUArchitecture, DefaultInstallDir, GitRepository, SimpleProject,
                       TargetAliasWithDependencies)
 from ..targets import target_manager
-from ..utils import classproperty, include_local_file, OSInfo
+from ..utils import classproperty, include_local_file
 
 
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
     target = "cheribsd-sdk"
-    dependencies = ["freestanding-sdk", "cheribsd"]
     is_sdk_target = True
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig):
+        if cls.get_crosscompile_target(config).is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            deps = ["freestanding-morello-sdk"]
+        else:
+            deps = ["freestanding-cheri-sdk"]
+        return deps + ["cheribsd"]
 
     @classproperty
     def supported_architectures(self):
@@ -60,21 +67,15 @@ class BuildSdk(TargetAliasWithDependencies):
 
 class BuildCheriCompressedCaps(CMakeProject):
     target = "cheri-compressed-cap"
-    project_name = "cheri-compressed-cap"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-compressed-cap.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
 
 
 class BuildFreestandingSdk(SimpleProject):
-    target = "freestanding-sdk"
+    target = "freestanding-cheri-sdk"
     dependencies = ["llvm-native", "qemu", "gdb-native"]
     dependencies_must_be_built = True
     is_sdk_target = True
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        if OSInfo.IS_FREEBSD:
-            self.add_required_system_tool("ar")
 
     def install_cmake_config(self):
         date = datetime.datetime.now()
@@ -99,13 +100,22 @@ class BuildFreestandingSdk(SimpleProject):
         self.build_cheridis()
 
 
+class BuildFreestandingMorelloSdk(TargetAliasWithDependencies):
+    target = "freestanding-morello-sdk"
+    dependencies = ["morello-llvm-native", "morello-qemu"]  # "morello-gdb-native" does not exist
+    dependencies_must_be_built = True
+    is_sdk_target = True
+
+
+target_manager.add_target_alias("freestanding-sdk", "freestanding-cheri-sdk", deprecated=True)
+
 # Binutils now just builds LLVM since we don't need GNU binutils or Elftoolchain any more
 target_manager.add_target_alias("binutils", "llvm-native")
 
 
 class BuildBaremetalSdk(TargetAliasWithDependencies):
     target = "baremetal-sdk"  # FIXME: this should be a multi-arch target (or just build both probably)
-    dependencies = ["freestanding-sdk", "newlib-baremetal-mips64",
+    dependencies = ["freestanding-cheri-sdk", "newlib-baremetal-mips64",
                     "libcxx-baremetal-mips64"]  # TODO: add libcxx-baremetal-cheri
     is_sdk_target = True
 

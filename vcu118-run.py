@@ -290,7 +290,7 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     serial_conn = get_console(tty_info)
     success("Connected to TTY")
     if bios_image is None or not bios_image.exists():
-        failure("Missing bios image: ", bios_image)
+        failure("Missing bios image: ", bios_image, exit=True)
     # First start openocd
     gdb_start_time = datetime.datetime.utcnow()
     openocd, openocd_gdb_port = start_openocd(openocd_cmd, num_cores)

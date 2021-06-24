@@ -159,8 +159,9 @@ class CheriConfig(ConfigBase):
         self.skip_kernel = loader.add_bool_option(
             "skip-kernel", "-skip-buildkernel", group=loader.freebsd_group,
             help="Skip the buildkernel step when building FreeBSD or CheriBSD")
-        self.freebsd_kernconf = loader.add_option("kernel-config", "-kernconf", group=loader.freebsd_group,
-                                                  help_hidden=True, help="Override default kernel config to use.")
+        self.freebsd_kernconf = loader.add_commandline_only_option(
+            "kernel-config", "-kernconf", group=loader.freebsd_group, help_hidden=True,
+            help="Override the default FreeBSD/CheriBSD kernel config.")
         self.freebsd_subdir = loader.add_commandline_only_option(
             "freebsd-subdir", "-subdir", group=loader.freebsd_group, type=list, metavar="SUBDIRS",
             help="Only build subdirs SUBDIRS of FreeBSD/CheriBSD instead of the full tree. Useful for quickly "
@@ -201,9 +202,9 @@ class CheriConfig(ConfigBase):
         self.mips_float_abi = loader.add_option("mips-float-abi", default=MipsFloatAbi.SOFT, type=MipsFloatAbi,
                                                 group=loader.cross_compile_options_group,
                                                 help="The floating point ABI to use for building MIPS+CHERI programs")
-        self.crosscompile_linkage = loader.add_option("cross-compile-linkage", default=Linkage.DYNAMIC, type=Linkage,
+        self.crosscompile_linkage = loader.add_option("cross-compile-linkage", default=Linkage.DEFAULT, type=Linkage,
                                                       group=loader.cross_compile_options_group,
-                                                      enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
+                                                      enum_choices=(Linkage.DEFAULT, Linkage.DYNAMIC, Linkage.STATIC),
                                                       help="Whether to link cross-compile projects static or dynamic "
                                                            "by default")
         self.csetbounds_stats = loader.add_bool_option("collect-csetbounds-stats",
@@ -385,6 +386,9 @@ class CheriConfig(ConfigBase):
         self.build_morello_firmware_from_source = loader.add_bool_option(
             "build-morello-firmware-from-source", help_hidden=False,
             help="Build the firmware from source instead of downloading the latest release.")
+
+        self.list_kernels = loader.add_bool_option("list-kernels",
+                                                   help="List available kernel configs to run and exit")
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
         self.__optional_properties = ["preferred_xtarget", "internet_connection_last_checked_at"]

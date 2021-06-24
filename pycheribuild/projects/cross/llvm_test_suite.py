@@ -32,17 +32,14 @@ from pathlib import Path
 from .crosscompileproject import (BuildType, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
                                   GitRepository)
 from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
-from ...config.loader import ComputedDefaultValue
+from ..project import ReuseOtherProjectRepository
 
 
 class BuildLLVMTestSuite(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-test-suite.git")
     dependencies = ["llvm-native"]
-    default_build_type = BuildType.DEBUG
-    project_name = "llvm-test-suite"
-    default_source_dir = ComputedDefaultValue(
-        function=lambda config, project: Path(config.source_root / "llvm-test-suite"),
-        as_string="$SOURCE_ROOT/llvm-test-suite")
+    default_build_type = BuildType.RELWITHDEBINFO
+    target = "llvm-test-suite"
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     llvm_project = BuildCheriLLVM
 
@@ -69,8 +66,7 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
 
 class BuildLLVMTestSuiteCheriBSDUpstreamLLVM(BuildLLVMTestSuite):
     target = "llvm-test-suite-cheribsd-upstream-llvm"
-    project_name = "llvm-test-suite"
-    repository = GitRepository("https://github.com/llvm/llvm-test-suite.git")
+    repository = ReuseOtherProjectRepository(BuildLLVMTestSuite, do_update=True)
     llvm_project = BuildUpstreamLLVM
     supported_architectures = CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS + [CompilationTargets.NATIVE]
 

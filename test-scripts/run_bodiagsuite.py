@@ -192,7 +192,7 @@ def create_junit_xml(builddir, name, tools):
     _create_junit_xml(builddir, name, tools)
     test_output = Path(builddir, "test-results.xml")
     if not test_output.exists():
-        boot_cheribsd.failure("Failed to create the JUnit XML file")
+        boot_cheribsd.failure("Failed to create the JUnit XML file", exit=False)
         return False
     # boot_cheribsd.run_host_command(["head", "-n2", str(test_output)])
     boot_cheribsd.run_host_command(["grep", "<testsuite", str(test_output)])

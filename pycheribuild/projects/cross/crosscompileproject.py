@@ -33,9 +33,9 @@ import pprint
 import typing
 from pathlib import Path
 
-from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, CrossCompileTarget, DefaultInstallDir,
-                       GitRepository, Linkage, MakeCommandKind, MakefileProject, MesonProject, Project,
-                       commandline_to_str, SubversionRepository)
+from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, commandline_to_str, CrossCompileTarget,
+                       DefaultInstallDir, GitRepository, Linkage, MakeCommandKind, MakefileProject, MesonProject,
+                       Project, SubversionRepository)
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import AutoVarInit
 from ...utils import AnsiColour, coloured
@@ -55,6 +55,9 @@ class CrossCompileMixin(object):
     add_build_dir_suffix_for_native = True  # Add the suffix for the native build
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     _should_not_be_instantiated = True
+    # Add a (mostly) resonable default for installation directories:
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
 
 class CrossCompileProject(CrossCompileMixin, Project):

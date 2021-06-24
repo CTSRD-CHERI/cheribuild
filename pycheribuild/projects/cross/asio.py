@@ -27,13 +27,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import CrossCompileAutotoolsProject, GitRepository
 
 
 class BuildAsio(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/chriskohlhoff/asio/")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def setup(self):
         super().setup()

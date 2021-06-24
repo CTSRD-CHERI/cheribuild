@@ -99,8 +99,6 @@ endif()
 
 # where is the target environment
 set(CMAKE_FIND_ROOT_PATH ${CHERIBSD_SYSROOT})
-# search in /usr/libcheri for CHERI target
-@ADD_TOOLCHAIN_LIB_SUFFIX@
 # search for programs in the build host directories
 set(PKG_CONFIG_USE_CMAKE_PREFIX_PATH FALSE)
 # PKG_CONFIG_LIBDIR overrides PKG_CONFIG_PATH

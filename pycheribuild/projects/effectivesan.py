@@ -42,7 +42,8 @@ class BuildEffectiveSan(BuildLLVMMonoRepoBase):
     def get_native_install_path(cls, config: CheriConfig):
         return config.output_root / "effectivesan"
 
-    project_name = "EffectiveSan"
+    target = "effectivesan"
+    default_directory_basename = "EffectiveSan"
     repository = GitRepository("https://github.com/GJDuck/EffectiveSan")
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: project.get_native_install_path(config),

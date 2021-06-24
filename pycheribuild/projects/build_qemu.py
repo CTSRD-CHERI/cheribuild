@@ -28,8 +28,6 @@
 # SUCH DAMAGE.
 #
 import os
-import shlex
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -51,6 +49,7 @@ class BuildQEMUBase(AutotoolsProject):
     skip_git_submodules = True  # we don't need these
     can_build_with_asan = True
     default_targets = "some-invalid-target"
+    default_build_type = BuildType.RELEASE
     lto_by_default = True
     _initial_meson_commit = "a56650518f5ba84ed15b9415fa1041311eeeece0"
 
@@ -58,11 +57,15 @@ class BuildQEMUBase(AutotoolsProject):
     def is_toolchain_target(cls):
         return True
 
+    @property
+    def _build_type_basic_compiler_flags(self):
+        if self.build_type.is_release:
+            return ["-O3"]  # Build with -O3 instead of -O2, we want QEMU to be as fast as possible
+        return super()._build_type_basic_compiler_flags
+
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.with_sanitizers = cls.add_bool_option("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)",
-                                                  default=False)
         cls.use_smbd = cls.add_bool_option("use-smbd", show_help=False, default=True,
                                            help="Don't require SMB support when building QEMU (warning: most --test "
                                                 "targets will fail without smbd support)")
@@ -96,14 +99,6 @@ class BuildQEMUBase(AutotoolsProject):
 
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")
-            self.COMMON_FLAGS.append("-O0")
-        else:
-            self.COMMON_FLAGS.append("-O3")
-        if shutil.which("pkg-config"):
-            glib_includes = self.run_cmd("pkg-config", "--cflags-only-I", "glib-2.0", capture_output=True,
-                                         print_verbose_only=True, run_in_pretend_mode=True).stdout.decode(
-                "utf-8").strip()
-            self.COMMON_FLAGS.extend(shlex.split(glib_includes))
 
         # Disable some more unneeded things (we don't usually need the GUI frontends)
         if not self.gui:
@@ -119,9 +114,7 @@ class BuildQEMUBase(AutotoolsProject):
             # Try to optimize as much as possible:
             self.configure_args.extend(["--disable-stack-protector"])
 
-        if self.with_sanitizers:
-            self.warning("Option --qemu/sanitizers is deprecated, use --qemu/use-asan instead")
-        if self.with_sanitizers or self.use_asan:
+        if self.use_asan:
             self.configure_args.append("--enable-sanitizers")
             if self.use_lto:
                 self.info("Disabling LTO for ASAN instrumented builds")
@@ -183,7 +176,7 @@ class BuildQEMUBase(AutotoolsProject):
                 self.fatal("Could not find smbd -> QEMU SMB shares networking will not work",
                            fixit_hint="Either install samba using the system package manager or with cheribuild. "
                                       "If you really don't need QEMU host shares you can disable the samba dependency "
-                                      "by setting --qemu/no-use-smbd")
+                                      "by setting --" + self.target + "/no-use-smbd")
 
         self.configure_args.extend([
             "--target-list=" + self.qemu_targets,
@@ -203,7 +196,7 @@ class BuildQEMUBase(AutotoolsProject):
             # Using /usr/bin/make on macOS breaks compilation DB creation with bear since SIP prevents it from
             # injecting shared libraries into any process that is installed as part of the system.
             "--make=" + self.make_args.command,
-            ])
+        ])
         if self.config.create_compilation_db:
             self.make_args.set(V=1)  # Otherwise bear can't parse the compiler output
         ldflags = self.default_ldflags + self.LDFLAGS
@@ -230,7 +223,6 @@ class BuildQEMUBase(AutotoolsProject):
 # noinspection PyAbstractClass
 class BuildUpstreamQEMU(BuildQEMUBase):
     repository = GitRepository("https://github.com/qemu/qemu.git")
-    project_name = "upstream-qemu"
     target = "upstream-qemu"
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.output_root / "upstream-qemu",
@@ -241,9 +233,10 @@ class BuildUpstreamQEMU(BuildQEMUBase):
 
 
 class BuildQEMU(BuildQEMUBase):
+    target = "qemu"
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri")
-    default_targets = "cheri128-softmmu,mips64-softmmu," \
-                      "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu," \
+    default_targets = "mips64-softmmu,mips64cheri128-softmmu," \
+                      "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu," \
                       "x86_64-softmmu,aarch64-softmmu"
 
     @classmethod
@@ -263,8 +256,7 @@ class BuildQEMU(BuildQEMUBase):
             # Always use the CHERI qemu even for plain riscv:
             binary_name = "qemu-system-riscv64cheri"
         elif xtarget.is_mips(include_purecap=True):
-            binary_name = "qemu-system-cheri"
-            binary_name += caller.config.mips_cheri_bits_str
+            binary_name = "qemu-system-mips64cheri128"
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
         return caller.config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
@@ -306,15 +298,23 @@ class BuildQEMU(BuildQEMUBase):
                 "--cross-cc-riscv64=" + str(tgt_info_riscv64.c_compiler),
                 "--cross-cc-cflags-riscv64=" + self.commandline_to_str(
                     tgt_info_riscv64.get_essential_compiler_and_linker_flags()).replace("=", " ")
-                ])
+            ])
 
 
 class BuildMorelloQEMU(BuildQEMU):
-    repository = GitRepository("https://github.com/LawrenceEsswood/qemu.git", default_branch="qemu-morello",
-                               force_branch=True)
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-morello-merged",
+                               force_branch=True,
+                               old_urls=[
+                                   b"https://github.com/LawrenceEsswood/qemu.git",
+                                   # None of these were provided by cheribuild, but try and handle common
+                                   # insteadOf/pushInsteadOf configs that will otherwise confuse cheribuild as they
+                                   # affect the output of git remote.
+                                   b"ssh://git@github.com/LawrenceEsswood/qemu.git",
+                                   b"ssh://github.com/LawrenceEsswood/qemu.git",
+                                   b"git@github.com:LawrenceEsswood/qemu.git"
+                                ])
     native_install_dir = DefaultInstallDir.MORELLO_SDK
     default_targets = "aarch64-softmmu,morello-softmmu"
-    project_name = "morello-qemu"
     target = "morello-qemu"
     hide_options_from_help = True
 
@@ -333,7 +333,6 @@ class BuildMorelloQEMU(BuildQEMU):
 class BuildCheriOSQEMU(BuildQEMU):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="cherios", force_branch=True)
     default_targets = "cheri128-softmmu"
-    project_name = "cherios-qemu"
     target = "cherios-qemu"
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.output_root / "cherios-sdk",

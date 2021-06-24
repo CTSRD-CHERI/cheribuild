@@ -31,14 +31,14 @@
 import tempfile
 from pathlib import Path
 
-from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
-                                  GitRepository, MakeCommandKind)
+from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, GitRepository,
+                                  MakeCommandKind)
+from ...processutils import commandline_to_str
 
 
 class BuildNewlib(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/newlib")
     target = "newlib"
-    project_name = "newlib"
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
     needs_sysroot = False  # We are building newlib so we don't need a sysroot
@@ -47,8 +47,6 @@ class BuildNewlib(CrossCompileAutotoolsProject):
     _configure_supports_variables_on_cmdline = True
     # CC,CFLAGS, etc. are the compilers for the build host not the target -> don't set automatically
     _autotools_add_default_compiler_args = False
-
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     supported_architectures = \
         [CompilationTargets.BAREMETAL_NEWLIB_MIPS64,
          CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP,
@@ -123,7 +121,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             # long double is the same as double
             newlib_cv_ldbl_eq_dbl="yes",
             LD_FOR_TARGET=str(self.target_info.linker),
-            LDFLAGS_FOR_TARGET="-fuse-ld=" + str(self.target_info.linker),
+            LDFLAGS_FOR_TARGET=commandline_to_str(self.default_ldflags),
             )
 
         if self.target_info.target.is_riscv(include_purecap=True):

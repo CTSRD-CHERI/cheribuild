@@ -30,7 +30,7 @@
 import sys
 
 from .cross.bbl import BuildBBLNoPayload
-from .cross.cheribsd import BuildCheriBsdMfsKernel
+from .cross.cheribsd import BuildCheriBsdMfsKernel, ConfigPlatform
 from .project import (AutotoolsProject, BuildType, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind,
                       SimpleProject)
 from ..config.compilation_targets import CompilationTargets
@@ -38,7 +38,6 @@ from ..config.compilation_targets import CompilationTargets
 
 class BuildCheriSpike(AutotoolsProject):
     target = "spike"
-    project_name = "spike"
     repository = GitRepository("https://github.com/CTSRD-CHERI/riscv-isa-sim",
                                default_branch="cheri", force_branch=True)
     native_install_dir = DefaultInstallDir.CHERI_SDK
@@ -77,7 +76,9 @@ class RunCheriSpikeBase(SimpleProject):
         return [cls._source_class.target, cls._bbl_class.target, BuildCheriSpike.target]
 
     def process(self):
-        kernel = self._source_class.get_installed_kernel_path(self)
+        kernel_project = self._source_class.get_instance(self)
+        kernel_config = kernel_project.default_kernel_config(ConfigPlatform.QEMU)
+        kernel = kernel_project.get_kernel_install_path(kernel_config)
         # We always want output even with --quiet
         self.run_cmd([BuildCheriSpike.get_simulator_binary(self), "+payload=" + str(kernel),
                       self._bbl_class.get_installed_kernel_path(self, cross_target=self._bbl_xtarget)],

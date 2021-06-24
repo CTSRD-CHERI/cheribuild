@@ -58,7 +58,7 @@ class BuildSQLbox(CrossCompileAutotoolsProject):
 
 
 class BuildFettSQLbox(FettProjectMixin, BuildSQLbox):
-    project_name = "fett-sqlbox"
+    target = "fett-sqlbox"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlbox.git",
                                default_branch="fett")
 

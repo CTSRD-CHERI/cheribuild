@@ -70,6 +70,38 @@ for a clean verbose build of LLVM `cheribuild.py -v --clean llvm`
 When selecting a target you can also build all the targets that it depends on by passing the `--include-dependencies` or `-d` option.
 However, some targets (e.g. `all`, `sdk-*`) will always build their dependencies because running them without building the dependencies does not make sense (see the list of targets for details).
 
+#### Overview
+
+There are many targets in cheribuild, and they fall into two categories: single
+targets and multiarch targets.
+Single targets, such as `qemu`, `sail` and `install-morello-fvp`, are for
+targets that only apply natively to the host machine.
+Most targets, however, are multiarch targets.
+These are always of the form `<name>-<architecture>`, where `<architecture>`
+indicates the architecture to compile/run code for, which will be
+cross-compiling/emulating for anything other than `native`.
+For example, `cheribsd-riscv64-purecap` will cross-compile CheriBSD for
+pure-capability CHERI-RISC-V, `disk-image-morello-purecap` will create a
+CheriBSD disk image for pure-capability Morello and `gdb-native` will build a
+version of CHERI-GDB that runs natively on the host machine and be used to
+remote debug CHERI-RISC-V and CHERI-MIPS.
+
+Note that the `<architecture>` in the target says nothing about what it can do,
+only where it can do it.
+For example, `llvm-native` and `llvm-riscv64` both exist; the former is a
+CHERI-LLVM that will run natively on the host and can be used to cross compile
+for both CHERI-MIPS and CHERI-RISC-V, whilst the latter is a CHERI-LLVM built
+as a set of RISC-V binaries that will run on CheriBSD itself.
+
+Where there are multiple variants of the source, there are multiple cheribuild
+targets with different names which, in the case of multiarch targets, means a
+different `<name>`.
+For example, `llvm` refers to CHERI-LLVM, whereas `morello-llvm` refers to
+Arm's fork of CHERI-LLVM adding Morello support, and `upstream-llvm` refers to
+upstream's LLVM.
+Thus, a target of `morello-llvm-riscv64` would be Arm's Morello-extended
+CHERI-LLVM fork built as a RISC-V binary to run on CheriBSD.
+
 #### The following main targets are available
 
 - `qemu` builds and installs [CTSRD-CHERI/qemu](https://github.com/CTSRD-CHERI/qemu)
@@ -292,6 +324,7 @@ I would also suggest using `set autolist` to display all options.
 
 **NOTE:** Since there are so many per-project options that are identical between all projects they are not all shown when running `--help`. To see the full list of options that can be specified, run `cheribuild.py --help-all`. Since this will generate lots of output it probably makes more sense to run `cheribuild.py --help-all | grep <target_name>`.
 
+<!-- BEGIN HELP OUTPUT -->
 ```
 usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build] [--test] [--benchmark]
                      [--build-and-test] [--list-targets] [--print-chosen-targets] [--dump-configuration]
@@ -314,27 +347,40 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--benchmark-lazy-binding] [--benchmark-iterations BENCHMARK_ITERATIONS] [--benchmark-with-qemu]
                      [--no-shallow-clone] [--beri-fpga-env-setup-script BERI_FPGA_ENV_SETUP_SCRIPT]
                      [--arm-none-eabi-prefix ARM_NONE_EABI_PREFIX] [--build-morello-firmware-from-source]
-                     [--get-config-option KEY] [--quiet] [--verbose] [--clean] [--force] [--logfile] [--skip-update]
-                     [--confirm-clone] [--force-update  --skip-configure | --reconfigure] [--include-dependencies]
-                     [--no-include-toolchain-dependencies] [--compilation-db-in-source-dir] [--generate-cmakelists]
-                     [--make-without-nice] [--make-jobs MAKE_JOBS] [--source-root SOURCE_ROOT]
+                     [--list-kernels] [--get-config-option KEY] [--quiet] [--verbose] [--clean] [--force] [--logfile]
+                     [--skip-update] [--confirm-clone] [--force-update  --skip-configure | --reconfigure]
+                     [--include-dependencies] [--no-include-toolchain-dependencies] [--compilation-db-in-source-dir]
+                     [--generate-cmakelists] [--make-without-nice] [--make-jobs MAKE_JOBS] [--source-root SOURCE_ROOT]
                      [--output-root OUTPUT_ROOT] [--build-root BUILD_ROOT] [--tools-root TOOLS_ROOT]
                      [--morello-sdk-root MORELLO_SDK_ROOT] [--sysroot-install-root SYSROOT_INSTALL_ROOT]
-                     [--qemu/targets QEMU/TARGETS] [--qemu/statistics] [--cheri-syzkaller/run-sysgen]
+                     [--upstream-qemu/targets UPSTREAM_QEMU/TARGETS] [--qemu/targets QEMU/TARGETS] [--qemu/statistics]
+                     [--run-rtems/ephemeral] [--cheri-syzkaller/run-sysgen]
                      [--run-syzkaller/syz-config RUN_SYZKALLER/SYZ_CONFIG]
                      [--run-syzkaller/ssh-privkey syzkaller_id_rsa] [--run-syzkaller/workdir DIR]
-                     [--freebsd/build-options OPTIONS] [--freebsd/no-build-tests] [--freebsd/subdir SUBDIRS]
-                     [--freebsd/kernel-config CONFIG] [--freebsd/no-debug-info] [--cheribsd/build-options OPTIONS]
-                     [--cheribsd/no-build-tests] [--cheribsd/subdir SUBDIRS] [--cheribsd/kernel-config CONFIG]
-                     [--cheribsd/no-debug-info] [--cheribsd/build-fpga-kernels] [--cheribsd/pure-cap-kernel]
-                     [--cheribsd/caprevoke-kernel] [--cheribsd-mfs-root-kernel/no-build-fpga-kernels]
+                     [--freebsd/build-options OPTIONS] [--freebsd/no-build-tests] [--freebsd/no-debug-info]
+                     [--freebsd/subdir SUBDIRS] [--cheribsd/build-options OPTIONS] [--cheribsd/no-build-tests]
+                     [--cheribsd/no-debug-info] [--cheribsd/subdir SUBDIRS] [--cheribsd/build-fpga-kernels]
+                     [--cheribsd/default-kernel-abi {hybrid,purecap}] [--cheribsd/build-alternate-abi-kernels]
+                     [--cheribsd/build-bench-kernels] [--cheribsd/caprevoke-kernel]
+                     [--cheribsd-mfs-root-kernel/build-options OPTIONS] [--cheribsd-mfs-root-kernel/no-debug-info]
+                     [--cheribsd-mfs-root-kernel/build-fpga-kernels]
+                     [--cheribsd-mfs-root-kernel/default-kernel-abi {hybrid,purecap}]
+                     [--cheribsd-mfs-root-kernel/build-alternate-abi-kernels]
+                     [--cheribsd-mfs-root-kernel/build-bench-kernels] [--cheribsd-mfs-root-kernel/caprevoke-kernel]
                      [--cheribsd-sysroot/remote-sdk-path PATH] [--disk-image-minimal/extra-files DIR]
-                     [--disk-image-minimal/path IMGPATH] [--disk-image/extra-files DIR] [--disk-image/path IMGPATH]
+                     [--disk-image-minimal/path IMGPATH] [--disk-image-mfs-root/extra-files DIR]
+                     [--disk-image-mfs-root/path IMGPATH] [--disk-image/extra-files DIR] [--disk-image/path IMGPATH]
                      [--disk-image-freebsd/extra-files DIR] [--disk-image-freebsd/path IMGPATH] [--freertos/demo DEMO]
-                     [--freertos/prog PROG] [--freertos/bsp BSP] [--run/ssh-forwarding-port PORT]
-                     [--run/remote-kernel-path RUN/REMOTE_KERNEL_PATH] [--run-freertos/demo DEMO]
+                     [--freertos/prog PROG] [--freertos/bsp BSP] [--run/ssh-forwarding-port PORT] [--run/ephemeral]
+                     [--run/remote-kernel-path RUN/REMOTE_KERNEL_PATH] [--run/alternative-kernel RUN/ALTERNATIVE_KERNEL]
+                     [--run/kernel-abi {hybrid,purecap}] [--run-freertos/ephemeral] [--run-freertos/demo DEMO]
                      [--run-freertos/prog PROG] [--run-freertos/bsp BSP] [--run-minimal/ssh-forwarding-port PORT]
-                     [--run-minimal/remote-kernel-path RUN_MINIMAL/REMOTE_KERNEL_PATH] [--bash/set-as-root-shell]
+                     [--run-minimal/ephemeral] [--run-minimal/remote-kernel-path RUN_MINIMAL/REMOTE_KERNEL_PATH]
+                     [--run-minimal/alternative-kernel RUN_MINIMAL/ALTERNATIVE_KERNEL]
+                     [--run-minimal/kernel-abi {hybrid,purecap}] [--run-mfs-root/ssh-forwarding-port PORT]
+                     [--run-mfs-root/ephemeral] [--run-mfs-root/remote-kernel-path RUN_MFS_ROOT/REMOTE_KERNEL_PATH]
+                     [--run-mfs-root/alternative-kernel RUN_MFS_ROOT/ALTERNATIVE_KERNEL]
+                     [--run-mfs-root/kernel-abi {hybrid,purecap}] [--bash/set-as-root-shell]
                      [--qtbase-dev/no-build-tests] [--qtbase-dev/build-examples] [--qtbase-dev/no-assertions]
                      [--qtbase-dev/no-minimal] [--qtwebkit/build-jsc-only] [--webkit/backend {cloop,tier1asm,tier2asm}]
                      [--webkit/no-tier2ptrliterals] [--webkit/jsheapoffsets]
@@ -377,6 +423,7 @@ optional arguments:
                         Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh
   --build-morello-firmware-from-source
                         Build the firmware from source instead of downloading the latest release. (default: 'False')
+  --list-kernels        List available kernel configs to run and exit (default: 'False')
   --quiet, -q           Don't show stdout of the commands that are executed (default: 'False')
   --verbose, -v         Print all commmands that are executed (default: 'False')
   --clean, -c           Remove the build directory before build (default: 'False')
@@ -441,7 +488,7 @@ Configuration of default paths:
   --tools-root TOOLS_ROOT
                         The directory to find sdk and bootstrap tools (default: '<OUTPUT_ROOT>')
   --morello-sdk-root MORELLO_SDK_ROOT
-                        The directory to find/install the Morello SDK (default: ''<OUTPUT_ROOT>/morello-sdk'')
+                        The directory to find/install the Morello SDK (default: ''<TOOLS_ROOT>/morello-sdk'')
   --sysroot-install-root SYSROOT_INSTALL_ROOT, --sysroot-install-dir SYSROOT_INSTALL_ROOT
                         Sysroot prefix (default: '<TOOLS_ROOT>')
 
@@ -536,12 +583,21 @@ Options controlling the use of docker for building:
                         Attach to the same container again (note: docker-container option must be an id rather than a
                         container name (default: 'False')
 
+Options for target 'upstream-qemu':
+  --upstream-qemu/targets UPSTREAM_QEMU/TARGETS
+                        Build QEMU for the following targets (default:
+                        'mips64-softmmu,riscv64-softmmu,riscv32-softmmu,x86_64-softmmu,aarch64-softmmu')
+
 Options for target 'qemu':
   --qemu/targets QEMU/TARGETS
                         Build QEMU for the following targets (default:
-                        'cheri128-softmmu,mips64-softmmu,riscv64-softmmu,riscv64cheri-
+                        'mips64-softmmu,mips64cheri128-softmmu,riscv64-softmmu,riscv64cheri-
                         softmmu,riscv32-softmmu,x86_64-softmmu,aarch64-softmmu')
   --qemu/statistics     Collect statistics on out-of-bounds capability creation. (default: 'False')
+
+Options for target 'run-rtems':
+  --run-rtems/ephemeral
+                        Run qemu in 'snapshot' mode, changes to the disk image are non-persistent (default: 'False')
 
 Options for target 'cheri-syzkaller':
   --cheri-syzkaller/run-sysgen
@@ -563,16 +619,13 @@ Options for target 'freebsd':
                         for more info. (default: '[]')
   --freebsd/no-build-tests
                         Do not build the tests (-DWITH_TESTS/-DWITHOUT_TESTS)
+  --freebsd/no-debug-info
+                        Do not pass make flags for building with debug info
   --freebsd/subdir SUBDIRS
-                        Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding an individual
+                        Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding individual
                         programs/libraries. If more than one dir is passed, they will be processed in order. Note: This
                         will break if not all dependencies have been built. (default: 'the value of the global
                         --freebsd-subdir options')
-  --freebsd/kernel-config CONFIG
-                        The kernel configuration to use for `make buildkernel` (default: 'target-dependent, usually
-                        GENERIC')
-  --freebsd/no-debug-info
-                        Do not pass make flags for building with debug info
 
 Options for target 'cheribsd':
   --cheribsd/build-options OPTIONS
@@ -580,26 +633,40 @@ Options for target 'cheribsd':
                         for more info. (default: '[]')
   --cheribsd/no-build-tests
                         Do not build the tests (-DWITH_TESTS/-DWITHOUT_TESTS)
+  --cheribsd/no-debug-info
+                        Do not pass make flags for building with debug info
   --cheribsd/subdir SUBDIRS
-                        Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding an individual
+                        Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding individual
                         programs/libraries. If more than one dir is passed, they will be processed in order. Note: This
                         will break if not all dependencies have been built. (default: 'the value of the global
                         --freebsd-subdir options')
-  --cheribsd/kernel-config CONFIG
-                        The kernel configuration to use for `make buildkernel` (default: 'target-dependent, usually
-                        GENERIC')
-  --cheribsd/no-debug-info
-                        Do not pass make flags for building with debug info
   --cheribsd/build-fpga-kernels
                         Also build kernels for the FPGA. (default: 'False')
-  --cheribsd/pure-cap-kernel
-                        Build kernel with pure capability ABI (experimental) (default: 'False')
+  --cheribsd/default-kernel-abi {hybrid,purecap}
+                        Select default kernel to build (default: 'hybrid')
+  --cheribsd/build-alternate-abi-kernels
+                        Also build kernels with non-default ABI (purecap or hybrid) (default: 'False')
+  --cheribsd/build-bench-kernels
+                        Also build benchmark kernels (default: 'False')
   --cheribsd/caprevoke-kernel
                         Build kernel with caprevoke support (experimental) (default: 'False')
 
 Options for target 'cheribsd-mfs-root-kernel':
-  --cheribsd-mfs-root-kernel/no-build-fpga-kernels
-                        Do not also build kernels for the FPGA.
+  --cheribsd-mfs-root-kernel/build-options OPTIONS
+                        Additional make options to be passed to make when building FreeBSD/CheriBSD. See `man src.conf`
+                        for more info. (default: '[]')
+  --cheribsd-mfs-root-kernel/no-debug-info
+                        Do not pass make flags for building with debug info
+  --cheribsd-mfs-root-kernel/build-fpga-kernels
+                        Also build kernels for the FPGA. (default: 'False')
+  --cheribsd-mfs-root-kernel/default-kernel-abi {hybrid,purecap}
+                        Select default kernel to build (default: 'hybrid')
+  --cheribsd-mfs-root-kernel/build-alternate-abi-kernels
+                        Also build kernels with non-default ABI (purecap or hybrid) (default: 'False')
+  --cheribsd-mfs-root-kernel/build-bench-kernels
+                        Also build benchmark kernels (default: 'False')
+  --cheribsd-mfs-root-kernel/caprevoke-kernel
+                        Build kernel with caprevoke support (experimental) (default: 'False')
 
 Options for target 'cheribsd-sysroot':
   --cheribsd-sysroot/remote-sdk-path PATH
@@ -612,6 +679,14 @@ Options for target 'disk-image-minimal':
   --disk-image-minimal/path IMGPATH
                         The output path for the QEMU disk image (default: '$OUTPUT_ROOT/cheribsd-
                         minimal-<TARGET>-disk.img depending on architecture')
+
+Options for target 'disk-image-mfs-root':
+  --disk-image-mfs-root/extra-files DIR
+                        A directory with additional files that will be added to the image (default: '$SOURCE_ROOT/extra-
+                        files-minimal')
+  --disk-image-mfs-root/path IMGPATH
+                        The output path for the QEMU disk image (default: '$OUTPUT_ROOT/cheribsd-mfs-
+                        root-<TARGET>-disk.img depending on architecture')
 
 Options for target 'disk-image':
   --disk-image/extra-files DIR
@@ -639,12 +714,20 @@ Options for target 'freertos':
 Options for target 'run':
   --run/ssh-forwarding-port PORT
                         The port on localhost to forward to the QEMU ssh port. You can then use `ssh root@localhost -p
-                        $PORT` to connect to the VM (default: '19500')
+                        $PORT` to connect to the VM (default: '<UID-dependent>')
+  --run/ephemeral       Run qemu in 'snapshot' mode, changes to the disk image are non-persistent (default: 'False')
   --run/remote-kernel-path RUN/REMOTE_KERNEL_PATH
                         When set rsync will be used to update the kernel image from a remote host before launching QEMU.
                         Useful when building and running on separate machines.
+  --run/alternative-kernel RUN/ALTERNATIVE_KERNEL
+                        Select the kernel to run by specifying the kernel build configuration name.The list of available
+                        kernel configurations is given by --list-kernels
+  --run/kernel-abi {hybrid,purecap}
+                        Select extra kernel variant with the given ABI to run.
 
 Options for target 'run-freertos':
+  --run-freertos/ephemeral
+                        Run qemu in 'snapshot' mode, changes to the disk image are non-persistent (default: 'False')
   --run-freertos/demo DEMO
                         The FreeRTOS Demo to run. (default: 'RISC-V-Generic')
   --run-freertos/prog PROG
@@ -657,10 +740,32 @@ Options for target 'run-freertos':
 Options for target 'run-minimal':
   --run-minimal/ssh-forwarding-port PORT
                         The port on localhost to forward to the QEMU ssh port. You can then use `ssh root@localhost -p
-                        $PORT` to connect to the VM (default: '19519')
+                        $PORT` to connect to the VM (default: '<UID-dependent>')
+  --run-minimal/ephemeral
+                        Run qemu in 'snapshot' mode, changes to the disk image are non-persistent (default: 'False')
   --run-minimal/remote-kernel-path RUN_MINIMAL/REMOTE_KERNEL_PATH
                         When set rsync will be used to update the kernel image from a remote host before launching QEMU.
                         Useful when building and running on separate machines.
+  --run-minimal/alternative-kernel RUN_MINIMAL/ALTERNATIVE_KERNEL
+                        Select the kernel to run by specifying the kernel build configuration name.The list of available
+                        kernel configurations is given by --list-kernels
+  --run-minimal/kernel-abi {hybrid,purecap}
+                        Select extra kernel variant with the given ABI to run.
+
+Options for target 'run-mfs-root':
+  --run-mfs-root/ssh-forwarding-port PORT
+                        The port on localhost to forward to the QEMU ssh port. You can then use `ssh root@localhost -p
+                        $PORT` to connect to the VM (default: '<UID-dependent>')
+  --run-mfs-root/ephemeral
+                        Run qemu in 'snapshot' mode, changes to the disk image are non-persistent (default: 'False')
+  --run-mfs-root/remote-kernel-path RUN_MFS_ROOT/REMOTE_KERNEL_PATH
+                        When set rsync will be used to update the kernel image from a remote host before launching QEMU.
+                        Useful when building and running on separate machines.
+  --run-mfs-root/alternative-kernel RUN_MFS_ROOT/ALTERNATIVE_KERNEL
+                        Select the kernel to run by specifying the kernel build configuration name.The list of available
+                        kernel configurations is given by --list-kernels
+  --run-mfs-root/kernel-abi {hybrid,purecap}
+                        Select extra kernel variant with the given ABI to run.
 
 Options for target 'bash':
   --bash/set-as-root-shell
@@ -691,3 +796,4 @@ Options for target 'webkit':
                         Use offsets into the JS heap for object references instead of capabilities. This option only
                         affects the purecap backends. (default: 'False')
 ```
+<!-- END HELP OUTPUT -->

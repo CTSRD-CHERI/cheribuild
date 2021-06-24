@@ -29,7 +29,7 @@ from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, Gi
 
 
 class BuildRos2(CrossCompileCMakeProject):
-    project_name = "ros2"
+    target = "ros2"
     repository = GitRepository("https://github.com/dodsonmg/ros2_dashing_minimal.git", default_branch="master",
                                force_branch=True)
 
@@ -38,7 +38,6 @@ class BuildRos2(CrossCompileCMakeProject):
     # it may eventually be useful to install to rootfs or sysroot depending on whether we want to use ROS2
     # as a library for building other applications using cheribuild
     # therefore, the _install_dir doesn't do anything, but cheribuild requires them
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     dependencies = ["poco"]
     _extra_git_clean_excludes = ["--exclude=src"]  # don't delete src/ when running clean

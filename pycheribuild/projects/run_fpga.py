@@ -33,6 +33,7 @@ from typing import Optional
 
 from .cherisim import BuildBeriCtl, BuildCheriSim
 from .project import CheriConfig, SimpleProject
+from .cross.cheribsd import ConfigPlatform
 from ..config.compilation_targets import CompilationTargets
 
 
@@ -102,7 +103,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv {subcmd_and_arg
 
 
 class LaunchCheriBSDOnFGPA(LaunchFPGABase):
-    project_name = "run-fpga"
+    target = "run-fpga"
     dependencies = ["cheribsd-mfs-root-kernel-mips64-hybrid"]
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
 
@@ -113,6 +114,9 @@ class LaunchCheriBSDOnFGPA(LaunchFPGABase):
                                                    help="Use the benchmark kernel instead of one with assertions "
                                                         "enabled.")
         cls.kernel_image = cls.add_config_option("kernel-image", kind=Path, help="Override the kernel image to boot")
+        cls.kernel_config = cls.add_config_option("alternative-kernel",
+                                                  help="Override kernel configuration to boot by specifying the kernel "
+                                                       "configuration name")
 
     def process(self):
         from .cross.cheribsd import BuildCheriBsdMfsKernel
@@ -121,11 +125,13 @@ class LaunchCheriBSDOnFGPA(LaunchFPGABase):
         if self.kernel_image:
             self.current_kernel = self.kernel_image
         else:
-            if self.benchmark_kernel:
-                kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
+            if self.kernel_config:
+                kernconf = self.kernel_config
             else:
-                kernel_config = mfs_kernel.fpga_kernconf
-            self.current_kernel = mfs_kernel.installed_kernel_for_config(self, kernel_config)
+                kernconf = mfs_kernel.default_kernel_config(ConfigPlatform.BERI,
+                                                            benchmark=self.benchmark_kernel)
+            self.current_kernel = mfs_kernel.get_kernel_install_path(kernconf)
+
         with tempfile.TemporaryDirectory() as kernel_image_tmpdir:
             # Strip to kernel image to save some time when copying it to the FPGA booting
             # TODO: move into beri-fpga-bsd-boot?

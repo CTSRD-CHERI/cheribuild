@@ -54,7 +54,7 @@ class QemuOptions:
             self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "morello", "-bios", "edk2-aarch64-code.fd"]
         elif xtarget.is_mips(include_purecap=True):
             # Note: we always use the CHERI QEMU
-            self.qemu_arch_sufffix = "cheri128"
+            self.qemu_arch_sufffix = "mips64cheri128"
             self.machine_flags = ["-M", "malta"]
             self.virtio_disk = False  # broken for MIPS?
             self.can_boot_kernel_directly = True
@@ -132,7 +132,7 @@ class QemuOptions:
     def get_commandline(self, *, qemu_command=None, kernel_file: Path = None, disk_image: Path = None,
                         user_network_args: str = "", add_network_device=True, bios_args: "typing.List[str]" = None,
                         trap_on_unrepresentable=False, debugger_on_cheri_trap=False, add_virtio_rng=False,
-                        gui_options: "typing.List[str]" = None) -> "typing.List[str]":
+                        write_disk_image_changes=True, gui_options: "typing.List[str]" = None) -> "typing.List[str]":
         if qemu_command is None:
             qemu_command = self.get_qemu_binary()
         result = [str(qemu_command)]
@@ -154,6 +154,9 @@ class QemuOptions:
             result.append(str(kernel_file))
         if disk_image:
             result.extend(self.disk_image_args(disk_image))
+        if not write_disk_image_changes:
+            # All disk writes go to a tempfile: https://qemu.readthedocs.io/en/latest/system/images.html#snapshot-mode
+            result.append("-snapshot")
         if add_network_device:
             result.extend(self.user_network_args(user_network_args))
         if add_virtio_rng:

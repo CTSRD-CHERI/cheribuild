@@ -36,6 +36,12 @@ class BuildBear(CMakeProject):
                                default_branch="master")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
+    @property
+    def pkgconfig_dirs(self) -> "list[str]":
+        if self.target_info.is_macos():
+            return [str(self.get_homebrew_prefix("openssl") / "lib/pkgconfig")] + super().pkgconfig_dirs
+        return super().pkgconfig_dirs
+
     # For devel branch:
     # def __init__(self, config):
     #     super().__init__(config)

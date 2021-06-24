@@ -277,6 +277,23 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return target.cpu_architecture.value + common_suffix
 
     @property
+    def freebsd_target_cputype(self):
+        """
+        Return the name of the target CPU type, which is also the name of
+        the machine-dependent code directory in the source tree.
+        (e.g. <arch> in sys/<arch>)
+        """
+        mapping = {
+            CPUArchitecture.AARCH64: "arm64",
+            CPUArchitecture.ARM32: "arm",
+            CPUArchitecture.I386: "i386",
+            CPUArchitecture.MIPS64: "mips",
+            CPUArchitecture.RISCV64: "riscv",
+            CPUArchitecture.X86_64: "amd64",
+        }
+        return mapping[self.target.cpu_architecture]
+
+    @property
     def freebsd_target_arch(self):
         mapping = {
             CPUArchitecture.AARCH64: "aarch64",
@@ -296,7 +313,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
         return [str(self.sysroot_dir / "lib/pkgconfig"),
+                str(self.sysroot_dir / "usr/local/lib/pkgconfig"),
+                str(self.sysroot_dir / "usr/local/share/pkgconfig"),
                 str(self.sysroot_install_prefix_absolute / "lib/pkgconfig"),
+                str(self.sysroot_install_prefix_absolute / "share/pkgconfig"),
                 str(self.sysroot_install_prefix_absolute / "libdata/pkgconfig")]
 
     @property
@@ -329,24 +349,17 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def is_cheribsd(cls):
         return True
 
-    def _get_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
+    def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
         assert self.is_cheribsd(), "Other cases not handled yet"
         from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel
-        if use_benchmark_kernel:
-            return BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self.project)
-        else:
-            return BuildCheriBsdMfsKernel.get_installed_kernel_path(self.project)
-
-    def _get_mfs_kernel_xtarget(self):
-        kernel_xtarget = self.target
-        if self.is_cheribsd():
-            # TODO: allow using non-CHERI kernels? Or the purecap kernel?
-            if kernel_xtarget.is_mips(include_purecap=True):
-                # Always use CHERI hybrid kernel
-                kernel_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
-            elif kernel_xtarget.is_riscv(include_purecap=True):
-                kernel_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
-        return kernel_xtarget
+        xtarget = self.target
+        if xtarget not in BuildCheriBsdMfsKernel.supported_architectures:
+            self.project.fatal("No MFS kernel for target", xtarget)
+            raise ValueError()
+        mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(
+            xtarget, self.config, caller=self.project)
+        kernconf = mfs_kernel.default_kernel_config(platform, benchmark=use_benchmark_kernel)
+        return mfs_kernel.get_kernel_install_path(kernconf)
 
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
@@ -385,6 +398,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 from ..projects.disk_image import BuildMinimalCheriBSDDiskImage
                 disk_image_path = BuildMinimalCheriBSDDiskImage.get_instance(self.project).disk_image_path
         elif kernel_path is None and "--kernel" not in self.config.test_extra_args:
+            from ..projects.cross.cheribsd import ConfigPlatform
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
             # --no-use-minimal-benchmark-kernel on the command line or in the config JSON
             use_benchmark_kernel_value = self.config.use_minimal_benchmark_kernel  # Load the value first to ensure
@@ -393,8 +407,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             assert isinstance(use_benchmark_config_option, ConfigOptionBase)
             want_benchmark_kernel = use_benchmark_kernel_value or (
                     use_benchmark_kernel_by_default and use_benchmark_config_option.is_default_value)
-            kernel_path = self._get_mfs_root_kernel(use_benchmark_kernel=want_benchmark_kernel)
-            if not kernel_path.exists() and is_jenkins_build():
+            kernel_path = self._get_mfs_root_kernel(ConfigPlatform.QEMU, want_benchmark_kernel)
+            if (kernel_path is None or not kernel_path.exists()) and is_jenkins_build():
                 jenkins_kernel_path = self.config.cheribsd_image_root / "kernel.xz"
                 if jenkins_kernel_path.exists():
                     kernel_path = jenkins_kernel_path
@@ -517,23 +531,21 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if self.config.tests_interact:
             runbench_args.append("--interact")
 
-        from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel
+        from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel, ConfigPlatform
         if self.config.benchmark_with_qemu:
             # When benchmarking with QEMU we always spawn a new instance
-            kernel_image = self._get_mfs_root_kernel(use_benchmark_kernel=not self.config.benchmark_with_debug_kernel)
+            kernel_image = self._get_mfs_root_kernel(ConfigPlatform.QEMU, not self.config.benchmark_with_debug_kernel)
             basic_args.append("--kernel-img=" + str(kernel_image))
         elif self.config.benchmark_clean_boot:
             # use a bitfile from jenkins. TODO: add option for overriding
             assert self.target.is_mips(include_purecap=True)
             basic_args.append("--jenkins-bitfile=cheri128")
-            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self._get_mfs_kernel_xtarget(),
-                                                                              self.config, caller=self.project)
-            if self.config.benchmark_with_debug_kernel:
-                kernel_config = mfs_kernel.fpga_kernconf
-            else:
-                kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
-            basic_args.append(
-                "--kernel-img=" + str(mfs_kernel.installed_kernel_for_config(self.project, kernel_config)))
+            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self.target, self.config,
+                                                                              caller=self.project)
+            kernel_config = mfs_kernel.default_kernel_config(ConfigPlatform.BERI,
+                                                             benchmark=not self.config.benchmark_with_debug_kernel)
+            kernel_image = mfs_kernel.get_kernel_install_path(kernel_config)
+            basic_args.append("--kernel-img=" + str(kernel_image))
         else:
             runbench_args.append("--skip-boot")
         if benchmark_script:
@@ -601,7 +613,10 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
         return [str(self.sysroot_dir / "usr" / self._sysroot_libdir / "pkgconfig"),
                 str(self.sysroot_dir / self._sysroot_libdir / "pkgconfig"),
+                str(self.sysroot_dir / "usr/local/lib/pkgconfig"),
+                str(self.sysroot_dir / "usr/local/share/pkgconfig"),
                 str(self.sysroot_install_prefix_absolute / "lib/pkgconfig"),
+                str(self.sysroot_install_prefix_absolute / "share/pkgconfig"),
                 str(self.sysroot_install_prefix_absolute / "libdata/pkgconfig")]
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
@@ -819,6 +834,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
 class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
     shortname = "Morello-Baremetal"
+    os_prefix = "baremetal-"
 
     @property
     def cmake_system_name(self) -> str:
@@ -848,7 +864,7 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
         if target.cpu_architecture == CPUArchitecture.ARM32:
             return "arm-none-eabi"
         assert target.is_aarch64(include_purecap=True)
-        if target.is_cheri_hybrid():
+        if target.is_hybrid_or_purecap_cheri():
             return "aarch64-unknown-elf"
         assert False, "Other baremetal cases have not been tested yet!"
 
@@ -858,7 +874,8 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs) -> typing.List[str]:
-        if xtarget.cpu_architecture == CPUArchitecture.ARM32 or xtarget.is_cheri_hybrid([CPUArchitecture.AARCH64]):
+        if xtarget.cpu_architecture == CPUArchitecture.ARM32 or xtarget.is_hybrid_or_purecap_cheri(
+                [CPUArchitecture.AARCH64]):
             return super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs)
         raise ValueError("Other baremetal cases have not been tested yet!")
 
@@ -989,9 +1006,12 @@ class CompilationTargets(BasicCompilationTargets):
                                                           NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                           hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
 
-    MORELLO_BAREMETAL_HYBRID = CrossCompileTarget("morello-baremetal", CPUArchitecture.AARCH64,
+    MORELLO_BAREMETAL_HYBRID = CrossCompileTarget("morello-hybrid", CPUArchitecture.AARCH64,
                                                   MorelloBaremetalTargetInfo, is_cheri_hybrid=True,
                                                   is_cheri_purecap=False)
+    MORELLO_BAREMETAL_PURECAP = CrossCompileTarget("morello-purecap", CPUArchitecture.AARCH64,
+                                                   MorelloBaremetalTargetInfo, is_cheri_hybrid=False,
+                                                   is_cheri_purecap=True)
     ARM_NONE_EABI = CrossCompileTarget("arm-none-eabi", CPUArchitecture.ARM32, ArmNoneEabiGccTargetInfo,
                                        is_cheri_hybrid=False, is_cheri_purecap=False)  # For 32-bit firmrware
     # FreeBSD targets
@@ -1016,6 +1036,7 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_CHERIBSD_NON_CHERI_TARGETS = [CHERIBSD_MIPS_NO_CHERI, CHERIBSD_RISCV_NO_CHERI, CHERIBSD_AARCH64,
                                       CHERIBSD_X86_64]
     ALL_FREEBSD_AND_CHERIBSD_TARGETS = ALL_CHERIBSD_TARGETS + ALL_SUPPORTED_FREEBSD_TARGETS
+    ALL_CHERIBSD_CHERI_TARGETS = (set(ALL_CHERIBSD_TARGETS) - set(ALL_CHERIBSD_NON_CHERI_TARGETS))
 
     # Same as above, but the default is purecap RISC-V
     FETT_DEFAULT_ARCHITECTURE = CHERIBSD_RISCV_PURECAP

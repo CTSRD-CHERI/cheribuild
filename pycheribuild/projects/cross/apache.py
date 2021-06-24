@@ -34,13 +34,11 @@ from .expat import BuildExpat
 
 class BuildPcre(CrossCompileAutotoolsProject):
     target = "pcre"
-    project_name = "pcre"
 
     repository = SubversionRepository("svn://vcs.pcre.org/pcre",
                                       default_branch="code/trunk")
 
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def configure(self, **kwargs):
         self.run_cmd("autoreconf", "-i", cwd=self.source_dir)
@@ -49,15 +47,12 @@ class BuildPcre(CrossCompileAutotoolsProject):
 
 class BuildApr(CrossCompileAutotoolsProject):
     target = "apr"
-    project_name = "apr"
-
     repository = GitRepository("https://github.com/CTSRD-CHERI/apr.git",
                                default_branch="cheri")
 
     dependencies = ["libexpat"]
 
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def setup(self):
         super().setup()
@@ -96,15 +91,10 @@ class BuildApr(CrossCompileAutotoolsProject):
 
 class BuildApache(CrossCompileAutotoolsProject):
     target = "apache"
-    project_name = "apache"
-
     repository = GitRepository("https://github.com/CTSRD-CHERI/apache-httpd.git",
                                default_branch="2.4.x-cheri")
 
     dependencies = ["apr", "pcre"]
-
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def setup(self):
         super().setup()

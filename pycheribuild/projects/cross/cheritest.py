@@ -36,7 +36,6 @@ from ..sail import BuildSailCheriMips
 class _BuildCheriMipsTestBase(Project):
     do_not_add_to_targets = True
     target = "cheritest"
-    project_name = "cheritest"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheritest.git")
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     build_in_source_dir = True  # Cannot build out-of-source
@@ -77,12 +76,12 @@ class _BuildCheriMipsTestBase(Project):
 
 class BuildCheriMipsTestQEMU(_BuildCheriMipsTestBase):
     target = "cheritest-qemu"
-    project_name = "cheritest"
+    default_directory_basename = "cheritest"  # reuse source and build dirs
     dependencies = ["qemu"]
 
     def setup(self):
         super().setup()
-        self.make_args.set(QEMU_CHERI128=self.config.qemu_bindir / "qemu-system-cheri128")
+        self.make_args.set(QEMU_CHERI128=self.config.qemu_bindir / "qemu-system-mips64cheri128")
         self.make_args.set(QEMU_MIPS64=self.config.qemu_bindir / "qemu-system-mips64")
 
     def do_cheritest(self):
@@ -97,7 +96,7 @@ class BuildCheriMipsTestQEMU(_BuildCheriMipsTestBase):
 
 class BuildCheriMipsTestBluesim(_BuildCheriMipsTestBase):
     target = "cheritest-sim"
-    project_name = "cheritest"
+    default_directory_basename = "cheritest"  # reuse source and build dirs
     dependencies = ["cheri-sim"]
 
     def setup(self):
@@ -124,7 +123,7 @@ class BuildCheriMipsTestBluesim(_BuildCheriMipsTestBase):
 
 class BuildCheriMipsTestSail(_BuildCheriMipsTestBase):
     target = "cheritest-sail"
-    project_name = "cheritest"
+    default_directory_basename = "cheritest"  # reuse source and build dirs
     dependencies = ["sail-cheri-mips"]
 
     def setup(self):

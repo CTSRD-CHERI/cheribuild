@@ -198,13 +198,15 @@ class BuildDiskImageBase(SimpleProject):
         return self.get_crosscompile_target(config)
 
     def add_file_to_image(self, file: Path, *, base_directory: Path = None, user="root", group="wheel", mode=None,
-                          path_in_target=None):
+                          path_in_target=None, strip_binaries: bool = None):
         if path_in_target is None:
             assert base_directory is not None, "Either base_directory or path_in_target must be set!"
             path_in_target = os.path.relpath(str(file), str(base_directory))
         assert not str(path_in_target).startswith(".."), path_in_target
 
-        if self.strip_binaries:
+        if strip_binaries is None:
+            strip_binaries = self.strip_binaries
+        if strip_binaries:
             # Try to shrink the size by stripping all elf binaries
             stripped_path = self.tmpdir / path_in_target
             if self.maybe_strip_elf_file(file, output_path=stripped_path):
@@ -405,7 +407,7 @@ class BuildDiskImageBase(SimpleProject):
 
         loader_conf_contents = ""
         if self.is_x86:
-            loader_conf_contents += "console=\"comconsole\"\n"
+            loader_conf_contents += "console=\"comconsole\"\nautoboot_delay=0\n"
         self.create_file_for_image("/boot/loader.conf", contents=loader_conf_contents, mode=0o644)
 
         # Avoid long boot time on first start due to missing entropy:
@@ -837,7 +839,7 @@ class BuildDiskImageBase(SimpleProject):
 
 
 class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
-    project_name = "disk-image-minimal"
+    target = "disk-image-minimal"
     _source_class = BuildCHERIBSD
     disk_image_prefix = "cheribsd-minimal"
     include_boot = True
@@ -951,6 +953,25 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         self.mtree.add_dir("var/db", print_status=self.config.verbose)
         self.mtree.add_dir("var/empty", print_status=self.config.verbose)
 
+        if self.is_x86:
+            # When booting minimal disk images, we need the files in /boot (kernel+loader), but we omit modules.
+            extra_files = []
+            for root, dirnames, filenames in os.walk(str(self.rootfs_dir / "boot")):
+                for filename in filenames:
+                    new_file = Path(root, filename)
+                    # Don't add kernel modules
+                    if new_file.suffix == ".ko":
+                        # Except for those needed to run tests
+                        if new_file.name not in ("tmpfs.ko", "smbfs.ko", "libiconv.ko", "libmchain.ko", "if_vtnet.ko"):
+                            continue
+                    # Also don't add the kernel with debug info
+                    if new_file.suffix == ".full" and new_file.name.startswith("kernel"):
+                        continue
+                    extra_files.append(new_file)
+                    # Stripping kernel modules makes them unloadable:
+                    # kldload: /boot/kernel/smbfs.ko: file must have exactly one symbol table
+                    self.add_file_to_image(new_file, base_directory=self.rootfs_dir, strip_binaries=False)
+            self.verbose_print("Boot files:\n\t", "\n\t".join(map(str, sorted(extra_files))))
         self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
 
     def add_required_libraries(self, libdirs: "typing.List[str]"):
@@ -975,13 +996,13 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "libbsm.so.3",
             "libcrypto.so.111",
             "libssl.so.111",
-            # PAM libraries (we should only need pam_permit/pam_rootok)
             "libpam.so.6",
-            "pam_permit.so",
-            "pam_permit.so.6",
-            "pam_rootok.so",
-            "pam_rootok.so.6",
+            "libypclnt.so.4",  # needed by pam_unix.so.6
         ]
+        # Add the required PAM libraries for su(1)/login(1)
+        for i in ("permit", "rootok", "self", "unix", "nologin", "securetty", "lastlog"):
+            required_libs += ["pam_" + i + ".so", "pam_" + i + ".so.6"]
+
         # Libraries to include if they exist
         optional_libs = [
             # Needed for most benchmarks, but not supported on all architectures
@@ -1015,8 +1036,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
     def prepare_rootfs(self):
         super().prepare_rootfs()
         # Add the additional sysctl configs
-        self.create_file_for_image("/etc/pam.d/su", show_contents_non_verbose=False,
-                                   contents=include_local_file("files/minimal-image/pam.d/su"))
+        self.create_file_for_image("/etc/pam.d/system", show_contents_non_verbose=False,
+                                   contents=include_local_file("files/minimal-image/pam.d/system"))
         # disable coredumps (since there is almost no space on the image)
         self.create_file_for_image("/etc/sysctl.conf", show_contents_non_verbose=False,
                                    contents=include_local_file("files/minimal-image/etc/sysctl.conf"))
@@ -1056,7 +1077,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
 
 
 class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
-    project_name = "disk-image-mfs-root"
+    target = "disk-image-mfs-root"
     disk_image_prefix = "cheribsd-mfs-root"
     include_boot = False
 
@@ -1070,9 +1091,8 @@ class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
 
 
 class BuildCheriBSDDiskImage(BuildDiskImageBase):
-    project_name = "disk-image"
+    target = "disk-image"
     _source_class = BuildCHERIBSD
-    _always_add_suffixed_targets = True  # preparation for future multi-target support
     disk_image_prefix = "cheribsd"
 
     @classmethod
@@ -1128,19 +1148,19 @@ class BuildFreeBSDImage(BuildDiskImageBase):
 
 
 class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
-    project_name = "disk-image-freebsd-with-default-options"
+    target = "disk-image-freebsd-with-default-options"
     _source_class = BuildFreeBSDWithDefaultOptions
     hide_options_from_help = True
 
 
 class BuildFreeBSDDeviceModelDiskImage(BuildFreeBSDWithDefaultOptionsDiskImage):
-    project_name = "disk-image-freebsd-device-model"
+    target = "disk-image-freebsd-device-model"
     _source_class = BuildFreeBSDDeviceModel
     hide_options_from_help = True
 
 
 class BuildCheriBSDDeviceModelDiskImage(BuildCheriBSDDiskImage):
-    project_name = "disk-image-cheribsd-device-model"
+    target = "disk-image-cheribsd-device-model"
     _source_class = BuildCheriBsdDeviceModel
     hide_options_from_help = True
 

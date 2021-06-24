@@ -49,9 +49,9 @@ class InstallMorelloFVP(SimpleProject):
     target = "install-morello-fvp"
     container_name = "morello-fvp"
     base_url = "https://developer.arm.com/-/media/Arm%20Developer%20Community/Downloads/OSS/FVP/Morello%20Platform/"
-    latest_known_fvp = (0, 11, 16)  # value reported by --version.
+    latest_known_fvp = (0, 11, 19)  # value reported by --version.
     installer_filename = "FVP_Morello_{}.{}_{}.tgz".format(*latest_known_fvp)
-    installer_sha256 = "518f7eca3319e54e84b42e74e93592091bbbdce7f822d928abfed1ab09c152a2"
+    installer_sha256 = "7a168f53b4ca7a80d6a4e0a1e3f18af3318dd134b478a73c6035e38e840be986"
     # Seems like docker containers don't get the full amount configured in the settings so subtract a bit from 5GB/8GB
     min_ram_mb = 4900
     warn_ram_mb = 7900
@@ -177,7 +177,9 @@ VOLUME /diskimg
             return [], self.install_dir / model_relpath
 
     def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True,
-                    ssh_port=None, gdb_port=None, interactive=True, **kwargs) -> CompletedProcess:
+                    tcp_ports: "typing.List[int]" = None, interactive=True, **kwargs) -> CompletedProcess:
+        if tcp_ports is None:
+            tcp_ports = []
         display = os.getenv("DISPLAY", None)
         if not display or not interactive:
             x11 = False  # Don't bother with the GUI
@@ -195,10 +197,8 @@ VOLUME /diskimg
                 # and no way to recover otherwise anyway given we can't change
                 # port forwarding after running.
                 pre_cmd += ["-p", str(docker_host_ap_port) + ":" + str(default_ap_port)]
-            if ssh_port is not None:
-                pre_cmd += ["-p", str(ssh_port) + ":" + str(ssh_port)]
-            if gdb_port is not None:
-                pre_cmd += ["-p", str(gdb_port) + ":" + str(gdb_port)]
+            for p in tcp_ports:
+                pre_cmd += ["-p", str(p) + ":" + str(p)]
             if disk_image_path is not None:
                 pre_cmd += ["-v", str(disk_image_path) + ":" + str(disk_image_path)]
                 docker_settings_fixit = ""
@@ -325,9 +325,6 @@ VOLUME /diskimg
                         finally:
                             pass
 
-                if ssh_port is not None:
-                    print(coloured(AnsiColour.green, "Listening for SSH connections on localhost:", ssh_port, sep=""))
-
                 self.info("Connecting to the FVP using telnet. Press", coloured(AnsiColour.yellow, "CTRL+]"),
                           coloured(AnsiColour.cyan, "followed by"), coloured(AnsiColour.yellow, "q<ENTER>"),
                           coloured(AnsiColour.cyan, "to exit telnet and kill the FVP."))
@@ -431,6 +428,7 @@ VOLUME /diskimg
             return 0
 
     def run_tests(self):
+        self.execute_fvp(["--version"], x11=False, interactive=False)
         self.execute_fvp(["--help"], x11=False, interactive=False)
         self.execute_fvp(["--cyclelimit", "1000"], x11=False, interactive=False)
 
@@ -438,6 +436,7 @@ VOLUME /diskimg
 class LaunchFVPBase(SimpleProject):
     do_not_add_to_targets = True
     _source_class = None  # type: BuildDiskImageBase
+    required_fvp_version = (0, 11, 19)
 
     @classmethod
     def dependencies(cls, _: CheriConfig):
@@ -474,6 +473,9 @@ class LaunchFVPBase(SimpleProject):
                                                            help="When set rsync will be used to update the image from "
                                                                 "the remote server prior to running it.")
         cls.ssh_port = cls.add_config_option("ssh-port", default=cls.default_ssh_port(), kind=int)
+        cls.extra_tcp_forwarding = cls.add_config_option("extra-tcp-forwarding", kind=list, default=(),
+                                                         help="Additional TCP bridge ports beyond ssh/22; "
+                                                              "list of [hostip:]port=[guestip:]port")
         # Allow using the architectural FVP:
         cls.use_architectureal_fvp = cls.add_bool_option("use-architectural-fvp",
                                                          help="Use the architectural FVP that requires a license.")
@@ -521,7 +523,7 @@ class LaunchFVPBase(SimpleProject):
 
         add_hostbridge_params(
             "userNetworking=true",
-            "userNetPorts=" + str(self.ssh_port) + "=22")
+            "userNetPorts=" + ",".join([str(self.ssh_port) + "=22"] + self.extra_tcp_forwarding))
 
         # NB: Set transport even if virtio_net is disabled since it still shows
         # up and is detected, just doesn't have any queues.
@@ -567,8 +569,13 @@ class LaunchFVPBase(SimpleProject):
             ]
             if not self.smp:
                 model_params += ["num_clusters=1", "num_cores=1"]
-            if self.fvp_project.fvp_revision < (0, 10, 312):
-                self.fatal("FVP is too old, please update to latest version")
+            if self.fvp_project.fvp_revision < self.required_fvp_version:
+                self.dependency_error("FVP is too old, please update to latest version",
+                                      cheribuild_target="install-morello-fvp")
+                del self.fvp_project.fvp_revision  # reset cached value
+                if self.fvp_project.fvp_revision < self.required_fvp_version:
+                    self.fatal("FVP update failed, version is reported as", self.fvp_project.fvp_revision,
+                               "but needs to be at least", self.required_fvp_version)
             # virtio-rng supported in 0.10.312
             model_params += [
                 "board.virtio_rng.enabled=1",
@@ -659,12 +666,35 @@ class LaunchFVPBase(SimpleProject):
             # This should fix the extremely slow countdown in the loader (30 minutes instead of 10s) and might also
             # improve network reliability
             fvp_args += ["-C", "css.scp.CS_Counter.use_real_time=1"]
-            # With newer FVP version we hav to pass another flag to allow the bootloader countdown to roughly match
-            # real time since otherwise each second of countdown takes around 2 minutes:
-            if self.fvp_project.fvp_revision >= (0, 11, 13):
-                fvp_args += ["-C", "board.rtc_clk_frequency=300"]
+            # With newer FVP version (starting with 0.11.13) we hav to pass another flag to allow the bootloader
+            # countdown to roughly match real time since otherwise each second of countdown takes around 2 minutes:
+            fvp_args += ["-C", "board.rtc_clk_frequency=300"]
+
+            tcp_ports = []
+
+            # Expose to the real host all TCP ports exposed by the FVP
+            if self.ssh_port is not None:
+                tcp_ports += [self.ssh_port]
+                print(coloured(AnsiColour.green, "Listening for SSH connections on localhost:", self.ssh_port, sep=""))
+            if gdb_port is not None:
+                tcp_ports += [gdb_port]
+            # XXX this matches on any host address; that may not be quite right
+            for x in self.extra_tcp_forwarding:
+                if x == "":
+                    self.fatal("Bad extra-tcp-forwarding (empty forward?)")
+                    continue
+                hg = x.split("=")
+                if len(hg) != 2:
+                    self.fatal("Bad extra-tcp-forwarding (not just one '=' in '%s')" % x)
+                    continue
+                gaddrport = hg[1].split(":")
+                if len(gaddrport) > 2:
+                    self.fatal("Bad extra-tcp-forwarding (excess ':' in '%s')" % x)
+                    continue
+                tcp_ports += gaddrport[-1]  # either just port or last in "host:port".split(":")
+
             self.fvp_project.execute_fvp(fvp_args, disk_image_path=disk_image, firmware_path=uefi_bin.parent,
-                                         x11=not self.force_headless, ssh_port=self.ssh_port, gdb_port=gdb_port)
+                                         x11=not self.force_headless, tcp_ports=tcp_ports)
 
 
 class LaunchFVPCheriBSD(LaunchFVPBase):

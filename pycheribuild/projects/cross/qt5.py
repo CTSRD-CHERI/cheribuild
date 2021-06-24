@@ -33,15 +33,39 @@ from pathlib import Path
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
                                   CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
                                   Linkage, MakeCommandKind)
+from .x11 import BuildLibXCB
+from ..project import SimpleProject
 from ...config.loader import ComputedDefaultValue
 from ...processutils import set_env
 from ...utils import OSInfo
 
 
+class InstallDejaVuFonts(SimpleProject):
+    target = "dejavu-fonts"
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS
+
+    def process(self):
+        version = (2, 37)
+        subdir = "version_{}_{}".format(*version)
+        filename = "dejavu-fonts-ttf-{}.{}.tar.bz2".format(*version)
+        base_url = "https://github.com/dejavu-fonts/dejavu-fonts/releases/download"
+        self.download_file(self.config.build_root / filename,
+                           url=base_url + "/" + subdir + "/" + filename,
+                           sha256="fa9ca4d13871dd122f61258a80d01751d603b4d3ee14095d65453b4e846e17d7")
+        # The Qt platformsupport/fontdatabases/freetype/qfreetypefontdatabase.cpp code expects all .ttf files to be
+        # directly below QT_QPA_FONTDIR (by default <Qt install dir>/lib/fonts), so we need to remove all directories
+        # from the archive.
+        self.makedirs(self.target_info.sysroot_install_prefix_absolute / "lib/fonts")
+        # self.clean_directory(self.target_info.sysroot_install_prefix_absolute / "lib/fonts")
+        self.run_cmd("tar", "xvf", self.config.build_root / filename, "--strip-components=2",
+                     "-C", self.target_info.sysroot_install_prefix_absolute / "lib/fonts",
+                     "dejavu-fonts-ttf-{}.{}/ttf".format(*version))
+        self.run_cmd("find", self.target_info.sysroot_install_prefix_absolute / "lib/fonts")
+
+
 # This class is used to build qtbase and all of qt5
 class BuildQtWithConfigureScript(CrossCompileProject):
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     do_not_add_to_targets = True
     add_host_target_build_config_options = False
     # Should not be needed, but it seems like some of the tests are broken otherwise
@@ -55,6 +79,17 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         self.configure_command = self.source_dir / "configure"
 
     @classmethod
+    def dependencies(cls, config: CheriConfig):
+        deps = super().dependencies(config)
+        if not cls.get_crosscompile_target(config).is_native():
+            # TODO: should only need these if minimal is not set
+            deps.extend(["libx11", "libxcb", "libxkbcommon",
+                         "libxcb-cursor", "libxcb-util", "libxcb-image",
+                         "libxcb-render-util", "libxcb-wm", "libxcb-keysyms",
+                         "dejavu-fonts"])
+        return deps
+
+    @classmethod
     def can_build_with_ccache(cls):
         return True
 
@@ -62,6 +97,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         super().setup()
         if self.compiling_for_mips(include_purecap=False) and self.force_static_linkage:
             assert "-mxgot" in self.default_compiler_flags
+        if self.config.verbose:
+            self.configure_args.append("-verbose")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -104,19 +141,21 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-device-option", "LINKER_FLAGS=" + self.commandline_to_str(linker_flags),
                 "-sysroot", self.cross_sysroot_path,
                 "-prefix", "/usr/local/" + self._xtarget.generic_suffix
-                ])
+            ])
+
+        if self.use_asan:
+            self.configure_args.extend(["-sanitize", "address,undefined"])
 
         self.configure_args.extend([
-            # To ensure the host and cross-compiled version is the same also disable opengl and dbus there
-            "-no-opengl", "-no-dbus",
-            # Missing configure check for evdev means it will fail to compile for CHERI
-            "-no-evdev",
+            # To ensure the host and cross-compiled version is the same also disable opengl
+            "-no-opengl",
             # Needed for webkit:
             # "-icu",
-            "-no-Werror",
+            # "-no-Werror",
             "-no-use-gold-linker",
-            "-no-iconv"
-            ])
+            "-no-iconv",
+            "-no-headersclean",
+        ])
         if self.build_tests:
             self.configure_args.append("-developer-build")
             if OSInfo.IS_MAC:
@@ -127,16 +166,17 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         else:
             self.configure_args.extend(["-nomake", "tests"])
 
-        if not self.build_examples:
+        if self.build_examples:
             # Seems to have changed
-            self.configure_args.extend(["-nomake", "examples", "-no-compile-examples"])
+            self.configure_args.extend(["-compile-examples"])
+        else:
+            self.configure_args.extend(["-nomake", "examples"])
         # currently causes build failures:
         # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
         self.configure_args.append("-qt-libpng")
 
         print("TYPE:", self.build_type)
         # TODO: once we update to qt 5.12 add this:
-        # self.configure_args.append("-gdb-index")
         if self.build_type == BuildType.DEBUG:
             self.configure_args.append("-debug")
             # optimize-debug needs GCC
@@ -152,6 +192,11 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
         if self.assertions:
             self.configure_args.append("-force-asserts")
+            self.configure_args.append("-gdb-index")
+
+        if self.build_type.should_include_debug_info:
+            # separate debug info should make it possible to copy the .so files to tmpfs before running tests
+            self.configure_args.append("-separate-debug-info")
 
         # self.configure_args.append("-no-pch")  # slows down build but gives useful crash testcases
 
@@ -164,14 +209,23 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         if self.minimal:
             self.configure_args.extend([
                 "-no-widgets",
+                "-no-sql",
                 "-no-glib",
                 "-no-gtk",
                 "-no-opengl",
                 "-no-cups",
                 "-no-syslog",
                 "-no-gui",
-                "-no-iconv"
-                ])
+                "-no-iconv",
+            ])
+        else:
+            self.configure_args.append("-dbus")  # we want to build QtDBus
+            # Enable X11 support when cross-compiling by default
+            if not self.compiling_for_host():
+                self.configure_args.extend(["-xcb", "-xkbcommon"])
+                # Note: all X11 libraries are installed into the same directory
+                self.configure_args.append("-L" + str(BuildLibXCB.get_install_dir(self) / "lib"))
+                self.configure_args.append("-I" + str(BuildLibXCB.get_install_dir(self) / "include"))
         if self.use_ccache:
             self.configure_args.append("-ccache")
         self.configure_args.extend(["-opensource", "-confirm-license"])
@@ -186,16 +240,14 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
 
 class BuildQtBaseDev(CrossCompileCMakeProject):
-    project_name = "qtbase"
+    default_directory_basename = "qtbase"
     target = "qtbase-dev"
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="dev-cheri", force_branch=True)
     is_large_source_repository = True
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
-        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
+        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.default_directory_basename)
     # native_install_dir = DefaultInstallDir.CHERI_SDK
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     # default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
     default_build_type = BuildType.RELWITHDEBINFO
@@ -345,7 +397,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
     is_large_source_repository = True
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
-        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
+        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.default_directory_basename)
 
     def setup(self):
         super().setup()
@@ -371,9 +423,43 @@ class BuildQtBase(BuildQtWithConfigureScript):
                 self.run_cmd("make", "check", cwd=self.build_dir)
         else:
             # We run tests using the full disk image since we want e.g. locales to be available.
+            self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", "--test-subset=corelib",
+                                                      use_benchmark_kernel_by_default=True,
+                                                      mount_sysroot=False, mount_sourcedir=True,
+                                                      use_full_disk_image=True)
+
+
+# This class is used to build individual Qt Modules instead of using the qt5 project
+class BuildQtModuleWithQMake(CrossCompileProject):
+    do_not_add_to_targets = True
+    dependencies = ["qtbase"]
+    default_source_dir = ComputedDefaultValue(
+        function=lambda config, project: BuildQt5.get_source_dir(project, config) / project.default_directory_basename,
+        as_string=lambda cls: "$SOURCE_ROOT/qt5/" + cls.default_directory_basename)
+
+    def configure(self, **kwargs):
+        # Run QMake to generate a makefile
+        self.run_cmd(BuildQtBase.get_build_dir(self) / "bin/qmake", self.source_dir, cwd=self.build_dir)
+
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.run_cmd("make", "check", cwd=self.build_dir)
+        else:
+            # We run tests using the full disk image since we want e.g. locales to be available.
             self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True,
                                                       mount_sysroot=True, mount_sourcedir=True,
-                                                      use_full_disk_image=True)
+                                                      use_full_disk_image=False)
+
+
+class BuildQtSVG(BuildQtModuleWithQMake):
+    target = "qtsvg"
+    repository = GitRepository("https://code.qt.io/qt/qtsvg.git", default_branch="5.15", force_branch=True)
+
+
+class BuildQtDeclarative(BuildQtModuleWithQMake):
+    target = "qtdeclarative"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qtdeclarative.git", default_branch="5.15",
+                               force_branch=True)
 
 
 # Webkit needs ICU (and recommended for QtBase too):
@@ -381,11 +467,10 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     # noinspection PyUnreachableCode
     repository = GitRepository("https://github.com/CTSRD-CHERI/icu.git", default_branch="maint/maint-67",
                                force_branch=True, old_urls=[b"https://github.com/unicode-org/icu.git"])
-    project_name = "icu"
+    default_directory_basename = "icu"
     target = "icu4c"
     build_dir_suffix = "4c"
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     make_kind = MakeCommandKind.GnuMake
 
     @classmethod
@@ -440,7 +525,6 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 class BuildLibXml2(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/libxml2")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def linkage(self):
@@ -465,10 +549,9 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     default_build_type = BuildType.RELWITHDEBINFO
 
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtwebkit",
-        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
+        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.default_directory_basename)
     needs_mxcaptable_static = True  # Currently way over the limit
     needs_mxcaptable_dynamic = True  # Currently way over the limit
 

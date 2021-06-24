@@ -40,7 +40,6 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/FreeRTOS-mirror",
                                force_branch=True, default_branch="cheri")
     target = "freertos"
-    project_name = "freertos"
     dependencies = ["newlib", "compiler-rt-builtins"]
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot
@@ -96,7 +95,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        super().setup_config_options(add_common_cross_options=False, **kwargs)
+        super().setup_config_options(**kwargs)
 
         cls.demo = cls.add_config_option(
             "demo", metavar="DEMO", show_help=True,

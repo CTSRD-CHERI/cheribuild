@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 
+from .cheribsd import ConfigPlatform
 from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompileTarget, DefaultInstallDir,
@@ -96,7 +97,9 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         else:
             # Add the kernel as a payload:
             assert self.kernel_class is not None
-            kernel_path = self.kernel_class.get_installed_kernel_path(self, cross_target=self.crosscompile_target)
+            kernel_project = self.kernel_class.get_instance(self)
+            kernel_config = kernel_project.default_kernel_config(ConfigPlatform.QEMU)
+            kernel_path = kernel_project.get_kernel_install_path(kernel_config)
             self.configure_args.append("--with-payload=" + str(kernel_path))
 
     def compile(self, **kwargs):
@@ -118,7 +121,7 @@ def _bbl_install_dir(config: CheriConfig, project: Project):
 # Build BBL without an embedded payload
 class BuildBBLNoPayload(BuildBBLBase):
     target = "bbl"
-    project_name = "bbl"
+    default_directory_basename = "bbl"
     without_payload = True
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
@@ -141,7 +144,7 @@ class BuildBBLNoPayload(BuildBBLBase):
 class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
     mem_start = "0xc0000000"
     target = "bbl-gfe"
-    project_name = "bbl"  # reuse same source dir
+    default_directory_basename = "bbl"  # reuse same source dir
     build_dir_suffix = "-gfe"  # but not the build dir
 
     _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
@@ -150,7 +153,7 @@ class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
 
 class BuildBBLNoPayloadFETT(BuildBBLNoPayloadGFE):
     target = "bbl-fett"
-    project_name = "bbl"  # reuse same source dir
+    default_directory_basename = "bbl"  # reuse same source dir
     build_dir_suffix = "-fett"  # but not the build dir
 
     _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,

@@ -25,16 +25,42 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from pathlib import Path
-
 from .crosscompileproject import CrossCompileCMakeProject
+from ..cmake import BuildCrossCompiledCMake
 from ..project import DefaultInstallDir, GitRepository
 from ...config.compilation_targets import CompilationTargets
 
 
-class BuildExpat(CrossCompileCMakeProject):
-    target = "libexpat"
-    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    repository = GitRepository("https://github.com/libexpat/libexpat")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
-    root_cmakelists_subdirectory = Path("expat")
+class BuildRLBox(CrossCompileCMakeProject):
+    target = "rlbox-api"
+    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    repository = GitRepository("https://github.com/PLSysSec/rlbox_sandboxing_api")
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+
+    def setup(self):
+        super().setup()
+        # Documentation is built by default if Doxygen is installed. Skip it to reduce build time.
+        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_Doxygen=True)
+
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.run_make("test")
+        else:
+            args = ["--verbose"] if self.config.verbose else []
+            self.target_info.run_cheribsd_test_script("run_rlbox_tests.py", *args, mount_builddir=True,
+                                                      mount_sourcedir=True, mount_sysroot=True)
+
+
+class BuildCatch2(CrossCompileCMakeProject):
+    target = "catch2"
+    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    repository = GitRepository("https://github.com/catchorg/Catch2", default_branch="v2.x")
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.run_make("test")
+        else:
+            args = ["--cmake-install-dir", BuildCrossCompiledCMake.get_install_dir(self)]
+            self.target_info.run_cheribsd_test_script("run_ctest_tests.py", *args, mount_builddir=True,
+                                                      mount_sysroot=True, mount_sourcedir=True)
