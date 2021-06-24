@@ -43,7 +43,7 @@ repos = ["cheribuild", "cheribsd", "gdb",
          "morello-trusted-firmware-a", "qemu"]
 
 class Tag(SimpleProject):
-    project_name = "tag"
+    target = "tag"
     
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -60,8 +60,8 @@ class Tag(SimpleProject):
             run_command("git", "-C", repo, "tag", self.gittag, cwd=source_root)
 
 class UnTag(SimpleProject):
-    project_name = "untag"
-    
+    target = "untag" 
+
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
