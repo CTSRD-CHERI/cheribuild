@@ -149,11 +149,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         self.configure_args.extend([
             # To ensure the host and cross-compiled version is the same also disable opengl
             "-no-opengl",
-            # Missing configure check for evdev means it will fail to compile for CHERI
-            "-no-evdev",
             # Needed for webkit:
             # "-icu",
-            "-no-Werror",
+            # "-no-Werror",
             "-no-use-gold-linker",
             "-no-iconv",
             "-no-headersclean",
