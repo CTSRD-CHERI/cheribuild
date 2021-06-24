@@ -155,7 +155,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # "-icu",
             "-no-Werror",
             "-no-use-gold-linker",
-            "-no-iconv"
+            "-no-iconv",
+            "-no-headersclean",
         ])
         if self.build_tests:
             self.configure_args.append("-developer-build")
@@ -218,7 +219,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-no-syslog",
                 "-no-gui",
                 "-no-iconv",
-                "-no-headersclean",
             ])
         else:
             self.configure_args.append("-dbus")  # we want to build QtDBus
