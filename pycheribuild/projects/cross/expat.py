@@ -34,7 +34,6 @@ from ...config.compilation_targets import CompilationTargets
 
 class BuildExpat(CrossCompileCMakeProject):
     target = "libexpat"
-    project_name = "libexpat"
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     repository = GitRepository("https://github.com/libexpat/libexpat")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]

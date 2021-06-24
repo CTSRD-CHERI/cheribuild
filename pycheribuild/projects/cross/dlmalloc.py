@@ -33,7 +33,7 @@ from ...processutils import commandline_to_str
 
 
 class DLMalloc(CrossCompileProject):
-    project_name = "dlmalloc"
+    target = "dlmalloc"
     repository = GitRepository("https://github.com/CTSRD-CHERI/dlmalloc_nonreuse")
     make_kind = MakeCommandKind.GnuMake
     native_install_dir = DefaultInstallDir.CHERI_SDK

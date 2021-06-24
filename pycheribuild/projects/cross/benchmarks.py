@@ -45,7 +45,7 @@ from ...utils import is_jenkins_build
 class BuildMibench(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/mibench")
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    project_name = "mibench"
+    target = "mibench"
     # Needs bsd make to build
     make_kind = MakeCommandKind.BsdMake
     # and we have to build in the source directory
@@ -161,7 +161,6 @@ class BuildMiBenchNew(CrossCompileCMakeProject):
     repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
     default_build_type = BuildType.RELEASE
     target = "mibench-new"
-    project_name = "mibench-new"
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     def setup(self):
@@ -191,7 +190,7 @@ class BuildMiBenchNew(CrossCompileCMakeProject):
 class BuildOlden(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/olden")
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    project_name = "olden"
+    target = "olden"
     # Needs bsd make to build
     make_kind = MakeCommandKind.BsdMake
     # and we have to build in the source directory
@@ -285,7 +284,6 @@ class BuildOlden(CrossCompileProject):
 
 class BuildSpec2006(CrossCompileProject):
     target = "spec2006"
-    project_name = "spec2006"
     # No repository to clone (just hack around this):
     repository = ExternallyManagedSourceRepository()
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
@@ -552,7 +550,6 @@ class BuildSpec2006New(CrossCompileCMakeProject):
     repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
     default_build_type = BuildType.RELWITHDEBINFO
     target = "spec2006-new"
-    project_name = "spec2006-new"
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     @classmethod
@@ -636,7 +633,7 @@ class BuildSpec2006New(CrossCompileCMakeProject):
 class BuildLMBench(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-lmbench", default_branch="cheri-lmbench")
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    project_name = "lmbench"
+    target = "lmbench"
     # Needs bsd make to build
     make_kind = MakeCommandKind.GnuMake
     # and we have to build in the source directory
@@ -718,7 +715,7 @@ class BuildLMBench(CrossCompileProject):
 class BuildUnixBench(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-unixbench", default_branch="cheri-unixbench")
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    project_name = "unixbench"
+    target = "unixbench"
     # Needs bsd make to build
     make_kind = MakeCommandKind.GnuMake
     # and we have to build in the source directory
@@ -790,7 +787,7 @@ class BuildUnixBench(CrossCompileProject):
 class NetPerfBench(CrossCompileAutotoolsProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-netperf", default_branch="cheri-netperf")
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
-    project_name = "netperf"
+    target = "netperf"
     # Needs bsd make to build
     make_kind = MakeCommandKind.GnuMake
     # Keep the old bundles when cleaning

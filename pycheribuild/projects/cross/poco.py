@@ -32,7 +32,7 @@ from .crosscompileproject import CheriConfig, CrossCompileCMakeProject, GitRepos
 
 
 class BuildPoco(CrossCompileCMakeProject):
-    project_name = "poco"
+    target = "poco"
     repository = GitRepository("https://github.com/dodsonmg/poco.git", default_branch="cheri", force_branch=True)
 
     def __init__(self, config: CheriConfig):

@@ -43,7 +43,7 @@ from ..utils import ThreadJoiner
 
 class BuildSyzkaller(CrossCompileProject):
     dependencies = ["go", "cheribsd"]
-    project_name = "cheri-syzkaller"
+    target = "cheri-syzkaller"
     github_base_url = "https://github.com/CTSRD-CHERI/"
     repository = GitRepository(github_base_url + "cheri-syzkaller.git")
     # no_default_sysroot = None // probably useless??
@@ -147,7 +147,7 @@ class BuildSyzkaller(CrossCompileProject):
 
 
 class RunSyzkaller(SimpleProject):
-    project_name = "run-syzkaller"
+    target = "run-syzkaller"
 
     @classmethod
     def setup_config_options(cls, **kwargs):

@@ -33,7 +33,6 @@ from ...config.compilation_targets import CompilationTargets
 
 class BuildEPollShim(CrossCompileCMakeProject):
     target = "epoll-shim"
-    project_name = "epoll-shim"
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     repository = GitRepository("https://github.com/jiixyj/epoll-shim")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
@@ -55,7 +54,7 @@ class BuildEPollShim(CrossCompileCMakeProject):
 
 class BuildLibFFI(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/libffi/libffi.git")
-    project_name = "libffi"
+    target = "libffi"
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def configure(self, **kwargs):

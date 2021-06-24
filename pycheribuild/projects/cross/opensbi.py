@@ -32,7 +32,7 @@ from pathlib import Path
 
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CPUArchitecture, DefaultInstallDir, GitRepository,
-                       MakeCommandKind, Project)
+                       MakeCommandKind, Project, ReuseOtherProjectRepository)
 from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty, OSInfo
 
@@ -155,8 +155,7 @@ class BuildOpenSBI(Project):
 
 class BuildOpenSBIGFE(BuildOpenSBI):
     target = "opensbi-gfe"
-    project_name = "opensbi"
-    build_dir_suffix = "-gfe"
+    repository = ReuseOtherProjectRepository(BuildOpenSBI, do_update=True)
 
     def setup(self):
         super().setup()

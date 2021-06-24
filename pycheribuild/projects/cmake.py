@@ -66,7 +66,7 @@ class BuildCrossCompiledCMake(CMakeProject):
 
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCMake, do_update=True)
     target = "cmake-crosscompiled"  # Can't use cmake here due to command line option conflict
-    project_name = "cmake"
+    default_directory_basename = "cmake"
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS
 

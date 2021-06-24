@@ -50,7 +50,6 @@ class X11AutotoolsProjectBase(CrossCompileAutotoolsProject):
 
 class BuildXorgMacros(X11AutotoolsProjectBase):
     target = "xorg-macros"
-    project_name = "xorg-macros"
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/util/macros.git")
 
 
@@ -89,7 +88,6 @@ class BuildLibXau(X11AutotoolsProject):
 
 class BuildLibXCBPthreadStubs(X11AutotoolsProject):
     target = "xorg-pthread-stubs"
-    project_name = "xorg-pthread-stubs"
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/pthread-stubs.git")
 
 
@@ -100,31 +98,31 @@ class BuildLibXCB(X11AutotoolsProject):
 
 
 class BuildLibXCBUtil(X11AutotoolsProject):
-    project_name = "libxcb-util"
+    target = "libxcb-util"
     dependencies = ["libxcb"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-util.git")
 
 
 class BuildLibXCBWM(X11AutotoolsProject):
-    project_name = "libxcb-wm"
+    target = "libxcb-wm"
     dependencies = ["libxcb"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-wm.git")
 
 
 class BuildLibXCBImage(X11AutotoolsProject):
-    project_name = "libxcb-image"
+    target = "libxcb-image"
     dependencies = ["libxcb-util"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-image.git")
 
 
 class BuildLibXCBRenderUtil(X11AutotoolsProject):
-    project_name = "libxcb-render-util"
+    target = "libxcb-render-util"
     dependencies = ["libxcb"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-render-util.git")
 
 
 class BuildLibXCBCursor(X11AutotoolsProject):
-    project_name = "libxcb-cursor"
+    target = "libxcb-cursor"
     dependencies = ["libxcb-render-util", "libxcb-image"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-cursor.git")
 
@@ -136,7 +134,7 @@ class BuildLibXCBCursor(X11AutotoolsProject):
 
 
 class BuildLibXCBKeysyms(X11AutotoolsProject):
-    project_name = "libxcb-keysyms"
+    target = "libxcb-keysyms"
     dependencies = ["xorgproto"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-keysyms.git")
 

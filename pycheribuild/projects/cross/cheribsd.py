@@ -1456,9 +1456,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
 # Build FreeBSD with the default options (build the bundled clang instead of using the SDK one)
 # also don't add any of the default -DWITHOUT/DWITH_FOO options
 class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
-    project_name = "freebsd"
     target = "freebsd-with-default-options"
-    repository = GitRepository("https://github.com/freebsd/freebsd.git")
+    repository = ReuseOtherProjectRepository(BuildFreeBSD, do_update=True)
     build_dir_suffix = "-default-options"
     add_custom_make_options = False
     hide_options_from_help = True  # hide this from --help for now
@@ -1502,7 +1501,8 @@ def jflag_for_universe(config: CheriConfig, proj):
 
 # Build all targets (to test my changes)
 class BuildFreeBSDUniverse(BuildFreeBSDBase):
-    project_name = "freebsd-universe"
+    # Note: this is a seperate repository checkout, should probably just reuse the same source dir?
+    default_directory_basename = "freebsd-universe"
     target = "freebsd-universe"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
@@ -1569,7 +1569,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
 
 
 class BuildCHERIBSD(BuildFreeBSD):
-    project_name = "cheribsd"
+    default_directory_basename = "cheribsd"
     target = "cheribsd"
     can_build_with_system_clang = False  # We need CHERI LLVM for most architectures
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git")
@@ -1766,8 +1766,8 @@ class BuildCHERIBSD(BuildFreeBSD):
 
 
 class BuildCheriBSDFett(BuildCHERIBSD):
-    project_name = "cheribsd"  # reuse working directory
     target = "cheribsd-fett"
+    repository = ReuseOtherProjectRepository(BuildCHERIBSD, do_update=True)
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
     hide_options_from_help = True  # hide this from --help for now
@@ -1786,7 +1786,7 @@ class BuildCheriBSDFett(BuildCHERIBSD):
 
 
 class BuildCheriBsdMfsKernel(BuildCHERIBSD):
-    project_name = "cheribsd-mfs-root-kernel"
+    target = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-mfs-root"]
     repository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD, do_update=True)
     supported_architectures = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
@@ -1914,7 +1914,7 @@ class BuildCheriBsdMfsImageAndKernels(TargetAliasWithDependencies):
 #
 #
 # class BuildCHERIBSDMinimal(BuildCHERIBSD):
-#     project_name = "cheribsd"  # reuse the same source dir
+#     repository = ReuseOtherProjectRepository(BuildCHERIBSD, do_update=True)  # reuse the same source dir
 #     target = "cheribsd-minimal"
 #     _config_inherits_from = "cheribsd"  # we want the CheriBSD config options as well
 #
@@ -1980,7 +1980,7 @@ class BuildCheriBsdMfsImageAndKernels(TargetAliasWithDependencies):
 
 
 class BuildCheriBsdSysrootArchive(SimpleProject):
-    project_name = "cheribsd-sysroot"
+    target = "cheribsd-sysroot"
     is_sdk_target = True
     rootfs_source_class = BuildCHERIBSD  # type: typing.Type[BuildCHERIBSD]
 

@@ -32,7 +32,7 @@ from ..project import DefaultInstallDir
 
 # Prefer the CMake build over autotools since autotools does not work out-of-the-box
 class BuildFreeType2(CrossCompileCMakeProject):
-    project_name = "freetype2"
+    target = "freetype2"
     repository = GitRepository("https://github.com/freetype/freetype2.git")
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     path_in_rootfs = "/usr/local"

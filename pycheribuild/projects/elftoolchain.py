@@ -37,7 +37,6 @@ from ..processutils import get_program_version
 
 class BuildElftoolchain(Project):
     target = "elftoolchain"
-    project_name = "elftoolchain"
     repository = GitRepository("https://github.com/emaste/elftoolchain.git", default_branch="master")
     native_install_dir = DefaultInstallDir.CHERI_SDK
     make_kind = MakeCommandKind.BsdMake

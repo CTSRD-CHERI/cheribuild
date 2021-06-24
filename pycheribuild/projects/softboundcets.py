@@ -41,7 +41,8 @@ from ..config.compilation_targets import CompilationTargets
 
 
 class BuildSoftBoundCETS(BuildLLVMMonoRepoBase):
-    project_name = "SoftBoundCETS"
+    target = "softbound-cets"
+    default_directory_basename = "SoftBoundCETS"
     repository = GitRepository("https://github.com/santoshn/SoftBoundCETS-3.9")
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     skip_cheri_symlinks = True

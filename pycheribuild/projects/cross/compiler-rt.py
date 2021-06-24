@@ -40,7 +40,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     llvm_project = BuildCheriLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
-    project_name = "compiler-rt"
+    target = "compiler-rt"
     default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
     supported_architectures = \
@@ -109,7 +109,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
 class BuildUpstreamCompilerRt(BuildCompilerRt):
     llvm_project = BuildUpstreamLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
-    project_name = "upstream-compiler-rt"
+    target = "upstream-compiler-rt"
     # TODO: default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
     default_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     supported_architectures = [CompilationTargets.NATIVE]
@@ -119,7 +119,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     llvm_project = BuildCheriLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
-    project_name = "compiler-rt-builtins"
+    target = "compiler-rt-builtins"
     _check_install_dir_conflict = False
     is_sdk_target = True
     dependencies = ["newlib"]

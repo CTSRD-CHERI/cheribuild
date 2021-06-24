@@ -32,5 +32,5 @@ from .crosscompileproject import CrossCompileCMakeProject, GitRepository
 
 
 class BuildEigen(CrossCompileCMakeProject):
-    project_name = "eigen"
+    target = "eigen"
     repository = GitRepository("https://gitlab.com/libeigen/eigen.git")

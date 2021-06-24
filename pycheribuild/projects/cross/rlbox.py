@@ -33,7 +33,6 @@ from ...config.compilation_targets import CompilationTargets
 
 class BuildRLBox(CrossCompileCMakeProject):
     target = "rlbox-api"
-    project_name = "rlbox-api"
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     repository = GitRepository("https://github.com/PLSysSec/rlbox_sandboxing_api")
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
@@ -53,7 +52,7 @@ class BuildRLBox(CrossCompileCMakeProject):
 
 
 class BuildCatch2(CrossCompileCMakeProject):
-    project_name = "catch2"
+    target = "catch2"
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     repository = GitRepository("https://github.com/catchorg/Catch2", default_branch="v2.x")
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS

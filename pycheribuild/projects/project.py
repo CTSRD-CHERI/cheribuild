@@ -99,28 +99,27 @@ class ProjectSubclassDefinitionHook(type):
             fatal_error("Found class name ending in Base (", name, ") but do_not_add_to_targets was not defined",
                         sep="")
 
-        project_name = None
-        if "project_name" in clsdict:
-            project_name = clsdict["project_name"]
-        else:
-            # fall back to name of target then infer from class name
-            # if target_name:
-            #     project_name = target_name
-            if name.startswith("Build"):
-                project_name = name[len("Build"):].replace("_", "-")
-            cls.project_name = project_name
-
-        # load "target" field first then check project name (as that might default to target)
+        def die(msg):
+            sys.exit(inspect.getfile(cls) + ":" + str(inspect.findsource(cls)[1] + 1) + ": error: " + msg)
+        # load "target" field first then use that to infer the default source/build/install dir names
         target_name = None
         if "target" in clsdict:
             target_name = clsdict["target"]
-        elif project_name:
-            target_name = project_name.lower()
+        elif name.startswith("Build"):
+            target_name = name[len("Build"):].replace("_", "-").lower()
             cls.target = target_name
-
         if not target_name:
-            sys.exit("target name is not set and cannot infer from class " + name +
-                     " -- set project_name=, target= or do_not_add_to_targets=True")
+            die("target name is not set and cannot infer from class " + name +
+                " -- set target= or do_not_add_to_targets=True")
+
+        # The default source/build/install directory name defaults to the target unless explicitly overwritten.
+        if "default_directory_basename" not in clsdict:
+            cls.default_directory_basename = target_name
+
+        if "project_name" in clsdict:
+            die("project_name should no longer be used, change the definition of class " + name +
+                 " to include target and/or default_directory_basename")
+
         if cls.__dict__.get("dependencies_must_be_built"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
@@ -195,7 +194,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
-    project_name = None  # type: str
+    # The source dir/build dir names will be inferred from the target name unless default_directory_basename is set.
+    default_directory_basename = None  # type: str
     # Old names in the config file (per-architecture) for backwards compat
     _config_file_aliases = tuple()  # type: typing.Tuple[str, ...]
     dependencies = []  # type: typing.List[str]
@@ -560,9 +560,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @property
     def display_name(self):
         if self._xtarget is None:
-            return self.project_name + " (target alias)"
-        return self.project_name + " (" + self._xtarget.build_suffix(self.config,
-                                                                     include_os=self.include_os_in_target_suffix) + ")"
+            return self.target + " (target alias)"
+        return self.target + " (" + self._xtarget.build_suffix(self.config,
+                                                               include_os=self.include_os_in_target_suffix) + ")"
 
     @classmethod
     def get_class_for_target(cls: "typing.Type[Type_T]", arch: CrossCompileTarget) -> "typing.Type[Type_T]":
@@ -625,9 +625,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # Need a string annotation for kind to avoid https://github.com/python/typing/issues/266 which seems to affect
         # the version of python in Ubuntu 16.04
         config_option_key = cls.target
-        # if cls.target != cls.project_name.lower():
-        #    self.fatal("Target name does not match project name:", cls.target, "vs", cls.project_name.lower())
-
         # Hide stuff like --foo/install-directory from --help
         help_hidden = not show_help
 
@@ -849,6 +846,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         :param cwd the directory to run make in (defaults to self.build_dir)
         :param stdout_filter a filter to use for standard output (a function that takes a single bytes argument)
         :param env the environment to pass to make
+        :param stdin defaults to /dev/null, set to None to pass the current stdin.
         """
         print_command(args, cwd=cwd, env=env)
         # make sure that env is either None or a os.environ with the updated entries entries
@@ -1662,7 +1660,7 @@ class GitRepository(SourceRepository):
             for old_url in self.old_urls:
                 assert isinstance(old_url, bytes)
                 if remote_url == old_url:
-                    current_project.warning(current_project.project_name, "still points to old repository", remote_url)
+                    current_project.warning(current_project.target, "still points to old repository", remote_url)
                     if current_project.query_yes_no("Update to correct URL?"):
                         run_command("git", "remote", "set-url", remote_name, self.url,
                                     run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, cwd=src_dir)
@@ -1860,20 +1858,22 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         return config.other_tools_dir
     elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
         return _INVALID_INSTALL_DIR
-    project.fatal("Unknown install dir for", project.project_name)
+    project.fatal("Unknown install dir for", project.target)
 
 
 def _default_install_dir_str(project: "Project") -> str:
     install_dir = project.get_default_install_dir_kind()
     return str(install_dir.value)
-    # fatal_error("Unknown install dir for", project.project_name)
+    # fatal_error("Unknown install dir for", project.target)
 
 
-def _default_source_dir(config: CheriConfig, project: "Project"):
+def _default_source_dir(config: CheriConfig, project: "Project") -> Path:
     if project.repository is not None and isinstance(project.repository, ReuseOtherProjectRepository):
         # For projects that reuse other source directories, we have to return the default for the source project.
         return project.repository.get_real_source_dir(project, None)
-    return Path(config.source_root / project.project_name.lower())
+    if project.default_directory_basename:
+        return Path(config.source_root / project.default_directory_basename)
+    return Path(config.source_root / project.target)
 
 
 class Project(SimpleProject):
@@ -1888,8 +1888,8 @@ class Project(SimpleProject):
     compile_db_requires_bear = True
     do_not_add_to_targets = True
     set_pkg_config_path = True  # set the PKG_CONFIG_* environment variables when building
-    default_source_dir = ComputedDefaultValue(function=_default_source_dir,
-                                              as_string=lambda cls: "$SOURCE_ROOT/" + cls.project_name.lower())
+    default_source_dir = ComputedDefaultValue(
+        function=_default_source_dir, as_string=lambda cls: "$SOURCE_ROOT/" + cls.default_directory_basename)
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
@@ -1897,7 +1897,7 @@ class Project(SimpleProject):
 
     @classmethod
     def project_build_dir_help(cls):
-        result = "$BUILD_ROOT/" + cls.project_name.lower()
+        result = "$BUILD_ROOT/" + cls.default_directory_basename
         if cls._xtarget is not BasicCompilationTargets.NATIVE or cls.add_build_dir_suffix_for_native:
             result += "-$TARGET"
         result += "-build"
@@ -1934,7 +1934,8 @@ class Project(SimpleProject):
         return cls.get_instance(caller, config, cross_target).real_install_root_dir
 
     def build_dir_for_target(self, target: CrossCompileTarget):
-        return self.config.build_root / (self.project_name.lower() + self.build_configuration_suffix(target) + "-build")
+        return self.config.build_root / (
+                    self.default_directory_basename + self.build_configuration_suffix(target) + "-build")
 
     default_use_asan = False
 
@@ -1974,10 +1975,9 @@ class Project(SimpleProject):
     _default_install_dir_fn = ComputedDefaultValue(function=_default_install_dir_handler,
                                                    as_string=_default_install_dir_str)
     """ The default installation directory """
-
     @property
     def _rootfs_install_dir_name(self):
-        return self.project_name.lower()
+        return self.default_directory_basename
 
     # useful for cross compile projects that use a prefix and DESTDIR
     _install_prefix = None
@@ -2026,13 +2026,13 @@ class Project(SimpleProject):
     def setup_config_options(cls, install_directory_help="", **kwargs):
         super().setup_config_options(**kwargs)
         cls._initial_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.default_source_dir,
-                                                      help="Override default source directory for " + cls.project_name)
+                                                      help="Override default source directory for " + cls.target)
         # --<target>-<suffix>/build-directory is not inherited from the unsuffixed target (unless there is only one
         # supported target).
         default_xtarget = cls.default_architecture
         if cls._xtarget is not None or default_xtarget is not None:
             cls.build_dir = cls.add_path_option("build-directory", metavar="DIR", default=cls.default_build_dir,
-                                                help="Override default source directory for " + cls.project_name,
+                                                help="Override default source directory for " + cls.target,
                                                 use_default_fallback_config_names=cls._xtarget == default_xtarget)
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
@@ -2064,7 +2064,7 @@ class Project(SimpleProject):
                                               help="Override --skip-update/--no-skip-update for this target only ")
 
         if not install_directory_help:
-            install_directory_help = "Override default install directory for " + cls.project_name
+            install_directory_help = "Override default install directory for " + cls.target
         cls._install_dir = cls.add_path_option("install-directory", metavar="DIR", help=install_directory_help,
                                                default=cls._default_install_dir_fn)
         if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository) and \
@@ -2246,8 +2246,7 @@ class Project(SimpleProject):
         self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
 
         if self.build_in_source_dir:
-            self.verbose_print("Cannot build", self.project_name, "in a separate build dir, will build in",
-                               self.source_dir)
+            self.verbose_print("Cannot build", self.target, "in a separate build dir, will build in", self.source_dir)
             self.build_dir = self.source_dir
 
         self.configure_command = None
@@ -2389,7 +2388,7 @@ class Project(SimpleProject):
             self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
-        self.fatal("Building", self.project_name, "with LTO is not supported (yet).")
+        self.fatal("Building", self.target, "with LTO is not supported (yet).")
         # raise NotImplementedError()
 
     def add_lto_build_options(self, ccinfo: CompilerInfo) -> bool:
@@ -2534,7 +2533,7 @@ class Project(SimpleProject):
 
     def update(self):
         if not self.repository and not self.skip_update:
-            self.fatal("Cannot update", self.project_name, "as it is missing a repository source",
+            self.fatal("Cannot update", self.target, "as it is missing a repository source",
                        fatal_when_pretending=True)
         self.repository.update(self, src_dir=self.source_dir, base_project_source_dir=self._initial_source_dir,
                                revision=self.git_revision, skip_submodules=self.skip_git_submodules)
@@ -2550,8 +2549,7 @@ class Project(SimpleProject):
         if git_dir is None:
             git_dir = self.source_dir
         # just use git clean for cleanup
-        self.warning(self.project_name, "does not support out-of-source builds, using git clean to remove "
-                                        "build artifacts.")
+        self.warning(self.target, "does not support out-of-source builds, using git clean to remove build artifacts.")
         git_clean_cmd = ["git", "clean", "-dfx", "--exclude=.*"] + self._extra_git_clean_excludes
         # Try to keep project files for IDEs and other dotfiles:
         self.run_cmd(git_clean_cmd, cwd=git_dir)
@@ -2684,7 +2682,7 @@ add_custom_target(cheribuild-verbose-j1 VERBATIM USES_TERMINAL COMMAND {command}
 
 add_custom_target(cheribuild-with-install VERBATIM USES_TERMINAL COMMAND {command} --skip-update {target})
 add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {target})
-""".format(command="${CLEAR_MAKEENV} " + sys.argv[0], project=self.project_name, target=self.target)
+""".format(command="${CLEAR_MAKEENV} " + sys.argv[0], project=self.target, target=self.target)
         target_file = self.source_dir / "CMakeLists.txt"
         create = True
         if target_file.exists():
@@ -2793,7 +2791,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.generate_cmakelists:
             self._do_generate_cmakelists()
         if self.config.verbose:
-            print(self.project_name, "directories: source=%s, build=%s, install=%s" %
+            print(self.target, "directories: source=%s, build=%s, install=%s" %
                   (self.source_dir, self.build_dir, self.install_dir))
 
         if self.use_asan and self.compiling_for_mips(include_purecap=False):
@@ -2905,10 +2903,10 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             # TODO: remove this code after a few weeks
             old_suffixes = []
             if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-                if self.project_name != "cheribsd":  # cheribsd used different build dirs
+                if self.default_directory_basename != "cheribsd":  # cheribsd used different build dirs
                     old_suffixes = ("128-build", "-128-build", "256-build", "-256-build")
             elif self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.MIPS64]):
-                if self.project_name != "cheribsd":  # cheribsd used different build dirs
+                if self.default_directory_basename != "cheribsd":  # cheribsd used different build dirs
                     old_suffixes = ("-mips-hybrid128-build", "-mips-hybrid256-build")
             elif self.crosscompile_target.is_mips(include_purecap=False):
                 old_suffixes = ["-mips-build", "-mips-nocheri-build"]

@@ -32,7 +32,7 @@ from pathlib import Path
 
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompileTarget, DefaultInstallDir,
-                       GitRepository, MakeCommandKind, Project)
+                       GitRepository, MakeCommandKind, Project, ReuseOtherProjectRepository)
 from ...config.compilation_targets import CompilationTargets
 
 
@@ -42,7 +42,6 @@ def uboot_install_dir(config: CheriConfig, project: "BuildUBoot") -> Path:
 
 class BuildUBoot(Project):
     target = "u-boot"
-    project_name = "u-boot"
     repository = GitRepository("https://github.com/CTSRD-CHERI/u-boot",
                                default_branch="cheri")
     dependencies = ["compiler-rt-builtins"]
@@ -152,9 +151,7 @@ class BuildUBoot(Project):
 
 class BuildUBootFETT(BuildUBoot):
     target = "u-boot-fett"
-    project_name = "u-boot"  # reuse same source dir
-    build_dir_suffix = "-fett"  # but not the build dir
-
+    repository = ReuseOtherProjectRepository(BuildUBoot, do_update=True)  # reuse same source dir
     _default_install_dir_fn = ComputedDefaultValue(function=uboot_install_dir,
                                                    as_string="$SDK_ROOT/u-boot-fett/riscv{32,64}{,-hybrid,-purecap}")
 

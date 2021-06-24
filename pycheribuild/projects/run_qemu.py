@@ -541,7 +541,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
 
 
 class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
-    project_name = "run"
+    target = "run"
     _source_class = BuildCheriBSDDiskImage
 
     @classmethod
@@ -572,7 +572,6 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
-    project_name = "run-cherios"
     dependencies = ["cherios-qemu", "cherios"]
     supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP]
     forward_ssh_port = False
@@ -618,7 +617,6 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
 
 class LaunchRtemsQEMU(LaunchQEMUBase):
     target = "run-rtems"
-    project_name = "run-rtems"
     dependencies = ["rtems"]
     supported_architectures = [CompilationTargets.RTEMS_RISCV64_PURECAP]
     forward_ssh_port = False
@@ -640,7 +638,6 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
 
 class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     target = "run-freertos"
-    project_name = "run-freertos"
     dependencies = ["freertos"]
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
                                CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
@@ -689,7 +686,7 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
 
 
 class LaunchFreeBSD(_RunMultiArchFreeBSDImage):
-    project_name = "run-freebsd"
+    target = "run-freebsd"
     hide_options_from_help = True
     _source_class = BuildFreeBSDImage
 
@@ -700,7 +697,7 @@ class LaunchFreeBSD(_RunMultiArchFreeBSDImage):
 
 
 class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
-    project_name = "run-freebsd-with-default-options"
+    target = "run-freebsd-with-default-options"
     hide_options_from_help = True
     _source_class = BuildFreeBSDWithDefaultOptionsDiskImage
 
@@ -711,7 +708,7 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
 
 
 class LaunchMinimalCheriBSD(LaunchCheriBSD):
-    project_name = "run-minimal"
+    target = "run-minimal"
     _source_class = BuildMinimalCheriBSDDiskImage
 
     @classmethod
@@ -724,7 +721,7 @@ class LaunchMinimalCheriBSD(LaunchCheriBSD):
 
 
 class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
-    project_name = "run-mfs-root"
+    target = "run-mfs-root"
     _freebsd_class = BuildCheriBsdMfsKernel
     _source_class = BuildCheriBsdMfsKernel   # no disk image, ignore type checker error
 

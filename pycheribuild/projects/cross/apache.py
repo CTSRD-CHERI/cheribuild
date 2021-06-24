@@ -34,7 +34,6 @@ from .expat import BuildExpat
 
 class BuildPcre(CrossCompileAutotoolsProject):
     target = "pcre"
-    project_name = "pcre"
 
     repository = SubversionRepository("svn://vcs.pcre.org/pcre",
                                       default_branch="code/trunk")
@@ -48,8 +47,6 @@ class BuildPcre(CrossCompileAutotoolsProject):
 
 class BuildApr(CrossCompileAutotoolsProject):
     target = "apr"
-    project_name = "apr"
-
     repository = GitRepository("https://github.com/CTSRD-CHERI/apr.git",
                                default_branch="cheri")
 
@@ -94,8 +91,6 @@ class BuildApr(CrossCompileAutotoolsProject):
 
 class BuildApache(CrossCompileAutotoolsProject):
     target = "apache"
-    project_name = "apache"
-
     repository = GitRepository("https://github.com/CTSRD-CHERI/apache-httpd.git",
                                default_branch="2.4.x-cheri")
 

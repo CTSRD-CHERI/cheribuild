@@ -56,5 +56,5 @@ class BuildKCGI(CrossCompileAutotoolsProject):
 
 
 class BuildFettKCGI(FettProjectMixin, BuildKCGI):
-    project_name = "fett-kcgi"
+    target = "fett-kcgi"
     repository = GitRepository("https://github.com/CTSRD-CHERI/kcgi.git", default_branch="fett")

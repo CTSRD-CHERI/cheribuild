@@ -839,7 +839,7 @@ class BuildDiskImageBase(SimpleProject):
 
 
 class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
-    project_name = "disk-image-minimal"
+    target = "disk-image-minimal"
     _source_class = BuildCHERIBSD
     disk_image_prefix = "cheribsd-minimal"
     include_boot = True
@@ -1077,7 +1077,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
 
 
 class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
-    project_name = "disk-image-mfs-root"
+    target = "disk-image-mfs-root"
     disk_image_prefix = "cheribsd-mfs-root"
     include_boot = False
 
@@ -1091,7 +1091,7 @@ class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
 
 
 class BuildCheriBSDDiskImage(BuildDiskImageBase):
-    project_name = "disk-image"
+    target = "disk-image"
     _source_class = BuildCHERIBSD
     disk_image_prefix = "cheribsd"
 
@@ -1148,19 +1148,19 @@ class BuildFreeBSDImage(BuildDiskImageBase):
 
 
 class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
-    project_name = "disk-image-freebsd-with-default-options"
+    target = "disk-image-freebsd-with-default-options"
     _source_class = BuildFreeBSDWithDefaultOptions
     hide_options_from_help = True
 
 
 class BuildFreeBSDDeviceModelDiskImage(BuildFreeBSDWithDefaultOptionsDiskImage):
-    project_name = "disk-image-freebsd-device-model"
+    target = "disk-image-freebsd-device-model"
     _source_class = BuildFreeBSDDeviceModel
     hide_options_from_help = True
 
 
 class BuildCheriBSDDeviceModelDiskImage(BuildCheriBSDDiskImage):
-    project_name = "disk-image-cheribsd-device-model"
+    target = "disk-image-cheribsd-device-model"
     _source_class = BuildCheriBsdDeviceModel
     hide_options_from_help = True
 

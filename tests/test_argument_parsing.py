@@ -192,7 +192,7 @@ def test_cross_compile_project_inherits():
     qtbase_mips = _get_target_instance("qtbase-mips64-hybrid", config, BuildQtBase)
 
     # Check that project name is the same:
-    assert qtbase_mips.project_name == qtbase_native.project_name
+    assert qtbase_mips.default_directory_basename == qtbase_native.default_directory_basename
     # These classes were generated:
     # noinspection PyUnresolvedReferences
     assert qtbase_native.synthetic_base == qtbase_class
@@ -279,8 +279,8 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     cheribsd_mips_purecap = _get_cheribsd_instance("cheribsd-mips64-purecap", config)
 
     # Check that project name is the same:
-    assert cheribsd_mips.project_name == cheribsd_mips_hybrid.project_name
-    assert cheribsd_mips_hybrid.project_name == cheribsd_mips_purecap.project_name
+    assert cheribsd_mips.default_directory_basename == cheribsd_mips_hybrid.default_directory_basename
+    assert cheribsd_mips_hybrid.default_directory_basename == cheribsd_mips_purecap.default_directory_basename
 
     # noinspection PyUnresolvedReferences
     assert cheribsd_mips_hybrid.synthetic_base == cheribsd_class

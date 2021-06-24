@@ -117,12 +117,12 @@ class BuildNginx(CrossCompileAutotoolsProject):
 
 
 class BuildNginxColoc(BuildNginx):
-    project_name = "nginx-coloc"
+    target = "nginx-coloc"
     repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git", default_branch="master")  # TODO: New branch
 
 
 class BuildFettNginx(FettProjectMixin, BuildNginx):
-    project_name = "fett-nginx"
+    target = "fett-nginx"
     path_in_rootfs = "/fett/nginx"
     repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git", default_branch="fett")
     dependencies = ["fett-openssl"]

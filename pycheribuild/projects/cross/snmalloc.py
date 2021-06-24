@@ -32,7 +32,7 @@ from .crosscompileproject import BuildType, CheriConfig, CrossCompileCMakeProjec
 
 
 class SNMalloc(CrossCompileCMakeProject):
-    project_name = "snmalloc"
+    target = "snmalloc"
     repository = GitRepository("https://github.com/nwf/snmalloc")
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE

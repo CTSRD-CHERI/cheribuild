@@ -363,7 +363,6 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
 
 class BuildLlvmLibs(CMakeProject):
     target = "llvm-libs"
-    project_name = "llvm-libs"
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="llvm")
     llvm_project = BuildCheriLLVM
     # TODO: support cross-compilation
@@ -439,14 +438,12 @@ class BuildLlvmLibs(CMakeProject):
 
 class BuildUpstreamLlvmLibs(BuildLlvmLibs):
     target = "upstream-llvm-libs"
-    project_name = "upstream-llvm-libs"
     repository = ReuseOtherProjectDefaultTargetRepository(BuildUpstreamLLVM, subdirectory="llvm")
     llvm_project = BuildUpstreamLLVM
 
 
 class BuildUpstreamLlvmLibsWithHostCompiler(BuildLlvmLibs):
     target = "upstream-llvm-libs-with-host-compiler"
-    project_name = "upstream-llvm-libs-with-host-compiler"
     repository = ReuseOtherProjectDefaultTargetRepository(BuildUpstreamLLVM, subdirectory="llvm")
     llvm_project = BuildUpstreamLLVM
 

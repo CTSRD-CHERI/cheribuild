@@ -97,7 +97,8 @@ class MorelloFirmwareBase(CrossCompileMakefileProject):
 
 class BuildMorelloScpFirmware(MorelloFirmwareBase):
     repository = GitRepository("https://git.morello-project.org/morello/scp-firmware.git")
-    project_name = "morello-scp-firmware"
+    target = "morello-scp-firmware"
+    default_directory_basename = "morello-scp-firmware"
     dependencies = ["arm-none-eabi-toolchain"]
     supported_architectures = [CompilationTargets.ARM_NONE_EABI]
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
@@ -148,7 +149,7 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
 
 class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
     target = "morello-trusted-firmware"
-    project_name = "morello-trusted-firmware-a"
+    default_directory_basename = "morello-trusted-firmware-a"
     repository = GitRepository(
         "https://git.morello-project.org/morello/trusted-firmware-a.git",
         force_branch=True, default_branch="morello/master",
@@ -201,7 +202,7 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
 
 class BuildMorelloACPICA(MakefileProject):
     target = "morello-acpica"
-    project_name = "morello-acpica"
+    default_directory_basename = "morello-acpica"
     repository = GitRepository("https://github.com/acpica/acpica.git")
     git_revision = "ba04ee3db1042c88cf4189a26a4ad506f856dd9a"
     needs_full_history = True
@@ -228,7 +229,7 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
                   b"https://git.morello-project.org/university-of-cambridge/edk2-platforms.git"])
     dependencies = ["gdb-native", "morello-acpica"]  # To get ld.bfd
     target = "morello-uefi"
-    project_name = "morello-edk2"
+    default_directory_basename = "morello-edk2"
     _extra_git_clean_excludes = ["--exclude=edk2-platforms"]  # Don't delete edk2-platforms, we do it manually
 
     @classmethod

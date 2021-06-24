@@ -223,7 +223,6 @@ class BuildQEMUBase(AutotoolsProject):
 # noinspection PyAbstractClass
 class BuildUpstreamQEMU(BuildQEMUBase):
     repository = GitRepository("https://github.com/qemu/qemu.git")
-    project_name = "upstream-qemu"
     target = "upstream-qemu"
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.output_root / "upstream-qemu",
@@ -234,6 +233,7 @@ class BuildUpstreamQEMU(BuildQEMUBase):
 
 
 class BuildQEMU(BuildQEMUBase):
+    target = "qemu"
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri")
     default_targets = "mips64-softmmu,mips64cheri128-softmmu," \
                       "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu," \
@@ -315,7 +315,6 @@ class BuildMorelloQEMU(BuildQEMU):
                                 ])
     native_install_dir = DefaultInstallDir.MORELLO_SDK
     default_targets = "aarch64-softmmu,morello-softmmu"
-    project_name = "morello-qemu"
     target = "morello-qemu"
     hide_options_from_help = True
 
@@ -334,7 +333,6 @@ class BuildMorelloQEMU(BuildQEMU):
 class BuildCheriOSQEMU(BuildQEMU):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="cherios", force_branch=True)
     default_targets = "cheri128-softmmu"
-    project_name = "cherios-qemu"
     target = "cherios-qemu"
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.output_root / "cherios-sdk",

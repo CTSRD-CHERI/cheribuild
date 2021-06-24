@@ -39,7 +39,6 @@ from ...processutils import commandline_to_str
 class BuildNewlib(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/newlib")
     target = "newlib"
-    project_name = "newlib"
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
     needs_sysroot = False  # We are building newlib so we don't need a sysroot

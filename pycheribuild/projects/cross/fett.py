@@ -44,7 +44,7 @@ from ...utils import classproperty
 
 
 class BuildFettConfig(FettProjectMixin, CrossCompileProject):
-    project_name = "fett-config"
+    target = "fett-config"
     repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Target.git", default_branch="cheri")
     skip_git_submodules = True
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
@@ -58,7 +58,7 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
         self.METALOG = self.destdir / "METALOG.world"
 
     def compile(self, **kwargs):
-        print("Nothing to build for " + self.project_name)
+        print("Nothing to build for " + self.target)
 
     def install(self, **kwargs):
         if os.getenv("_TEST_SKIP_METALOG"):
@@ -165,7 +165,7 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
 
 
 class BuildFettVoting(FettProjectMixin, CrossCompileProject):
-    project_name = "fett-voting"
+    target = "fett-voting"
     repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Voting.git", default_branch="cheri")
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES + [CompilationTargets.NATIVE]
 
@@ -207,7 +207,7 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
 
 
 class BuildFettDiskImage(BuildCheriBSDDiskImage):
-    project_name = "disk-image-fett"
+    target = "disk-image-fett"
     dependencies = ["bash", "fett-config"]
     disk_image_prefix = "fett-cheribsd"
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
@@ -234,7 +234,7 @@ class BuildFettDiskImage(BuildCheriBSDDiskImage):
 
 
 class LaunchFett(LaunchCheriBSD):
-    project_name = "run-fett"
+    target = "run-fett"
     _source_class = BuildFettDiskImage
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     hide_options_from_help = True

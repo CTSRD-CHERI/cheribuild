@@ -242,13 +242,13 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
 
 class BuildQtBaseDev(CrossCompileCMakeProject):
-    project_name = "qtbase"
+    default_directory_basename = "qtbase"
     target = "qtbase-dev"
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="dev-cheri", force_branch=True)
     is_large_source_repository = True
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
-        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
+        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.default_directory_basename)
     # native_install_dir = DefaultInstallDir.CHERI_SDK
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     # default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
@@ -399,7 +399,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
     is_large_source_repository = True
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
-        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
+        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.default_directory_basename)
 
     def setup(self):
         super().setup()
@@ -436,8 +436,8 @@ class BuildQtModuleWithQMake(CrossCompileProject):
     do_not_add_to_targets = True
     dependencies = ["qtbase"]
     default_source_dir = ComputedDefaultValue(
-        function=lambda config, project: BuildQt5.get_source_dir(project, config) / project.project_name.lower(),
-        as_string=lambda cls: "$SOURCE_ROOT/qt5/" + cls.project_name.lower())
+        function=lambda config, project: BuildQt5.get_source_dir(project, config) / project.default_directory_basename,
+        as_string=lambda cls: "$SOURCE_ROOT/qt5/" + cls.default_directory_basename)
 
     def configure(self, **kwargs):
         # Run QMake to generate a makefile
@@ -454,6 +454,7 @@ class BuildQtModuleWithQMake(CrossCompileProject):
 
 
 class BuildQtSVG(BuildQtModuleWithQMake):
+    target = "qtsvg"
     repository = GitRepository("https://code.qt.io/qt/qtsvg.git", default_branch="5.15", force_branch=True)
 
 
@@ -462,7 +463,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     # noinspection PyUnreachableCode
     repository = GitRepository("https://github.com/CTSRD-CHERI/icu.git", default_branch="maint/maint-67",
                                force_branch=True, old_urls=[b"https://github.com/unicode-org/icu.git"])
-    project_name = "icu"
+    default_directory_basename = "icu"
     target = "icu4c"
     build_dir_suffix = "4c"
     native_install_dir = DefaultInstallDir.CHERI_SDK
@@ -546,7 +547,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtwebkit",
-        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
+        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.default_directory_basename)
     needs_mxcaptable_static = True  # Currently way over the limit
     needs_mxcaptable_dynamic = True  # Currently way over the limit
 
