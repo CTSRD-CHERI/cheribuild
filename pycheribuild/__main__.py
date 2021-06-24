@@ -199,10 +199,9 @@ def real_main():
                 docker_run_cmd = ["docker", "exec", cheri_config.docker_container] + cheribuild_args
             else:
                 docker_run_cmd = ["docker", "run", "--user", str(os.getuid()) + ":" + str(os.getgid()),
-                                  "--rm"] + docker_dir_mappings
+                                  "--rm", "--interactive", "--tty"] + docker_dir_mappings
                 docker_run_cmd += [cheri_config.docker_container] + cheribuild_args
-            print_command(docker_run_cmd)
-            subprocess.check_call(docker_run_cmd)
+            run_command(docker_run_cmd, config=cheri_config, give_tty_control=True)
         except subprocess.CalledProcessError as e:
             # if the image is missing print a helpful error message:
             if e.returncode == 125:
