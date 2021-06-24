@@ -458,7 +458,8 @@ class BuildQtSVG(BuildQtModuleWithQMake):
 
 class BuildQtDeclarative(BuildQtModuleWithQMake):
     target = "qtdeclarative"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase.git", default_branch="5.15", force_branch=True)
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qtdeclarative.git", default_branch="5.15",
+                               force_branch=True)
 
 
 # Webkit needs ICU (and recommended for QtBase too):
