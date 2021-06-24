@@ -37,7 +37,7 @@ from pathlib import Path
 from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 
 
-def setup_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+def setup_qtbase_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace):
     if args.junit_xml is None:
         args.junit_xml = Path(args.build_dir,
                               ("junit-results-" + datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S") + ".xml"))
@@ -54,6 +54,9 @@ def setup_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     # Possibly similar to https://bugreports.qt.io/browse/QTBUG-87662
     qemu.run("export TZ=Europe/London")
     qemu.checked_run("cd /tmp")
+    if not Path(args.build_dir, "tests/auto/corelib").is_dir():
+        # Not running qtbase tests, set LD_LIBRARY_PATH to include QtBase libraries
+        boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
     if args.copy_libraries_to_tmpfs:
         try:
             copy_qt_libs_to_tmpfs_and_set_libpath(qemu, args)
@@ -97,14 +100,14 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
     tests = []
     for root, dirs, files in os.walk(str(subdir), topdown=True):
         for name in files:
-            if not name.startswith("tst_") or name.endswith(".core"):
+            if not name.startswith("tst_") or "." in name:  # should not have a file extension
                 continue
             tests.append(Path(root, name))
         # Ignore .moc and .obj directories:
         dirs[:] = [d for d in dirs if not d.startswith(".")]
     # Ensure that we run the tests in a reproducible order
     for f in sorted(tests):
-        test_xml = build_dir / (f.name + ".xml")
+        test_xml = f.parent / (f.name + ".xml")
         starttime = datetime.datetime.utcnow()
         try:
             # Output textual results to stdout and write JUnit XML to /build/test.xml
@@ -161,8 +164,18 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     boot_cheribsd.info("Running qtbase tests for ", test_subset)
 
     # Start with a basic smoketests:
-    qemu.checked_run("ldd /build/tests/auto/corelib/tools/qarraydata/tst_qarraydata")
-    qemu.checked_run("/build/tests/auto/corelib/tools/qarraydata/tst_qarraydata")
+    if (tests_root / "corelib").is_dir():
+        # For QtBase:
+        qemu.checked_run("ldd /build/tests/auto/corelib/tools/qarraydata/tst_qarraydata")
+        qemu.checked_run("/build/tests/auto/corelib/tools/qarraydata/tst_qarraydata")
+    else:
+        # Run ldd on the first test binary
+        for i in tests_root.rglob("tst_*"):
+            if i.suffix:
+                continue  # don't try running .core/.xml files
+            qemu.checked_run("ldd " + str(i))
+            qemu.checked_run(str(i) + " --help")
+            break
 
     run_subdir(qemu, Path(tests_root, test_subset), xml, build_dir=build_dir)
     xml.time = (datetime.datetime.utcnow() - all_tests_starttime).total_seconds()
@@ -195,7 +208,9 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
 
         boot_cheribsd.failure("The following ", len(failed_test_suites), " tests failed:\n\t",
                               "\n\t".join(failed_test_info(x) for x in failed_test_suites), exit=False)
-
+    else:
+        boot_cheribsd.success("All ", xml.tests, " tests (", num_testsuites, " test suites) passed after ",
+                           (datetime.datetime.utcnow() - all_tests_starttime))
     # Finally, write the Junit XML file:
     if not boot_cheribsd.PRETEND:
         xml.write(args.junit_xml, pretty=True)
@@ -204,7 +219,7 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
 
 
 def add_args(parser: argparse.ArgumentParser):
-    parser.add_argument("--test-subset", required=False, default="corelib/tools",
+    parser.add_argument("--test-subset", required=False, default=".",
                         help="Subset of tests to run (set to '.' to run all tests)")
     parser.add_argument("--junit-xml", required=False, help="Output file name for the JUnit XML results")
     # Note: Copying to tmpfs is not enabled by default since it currently hangs/is very slow on purecap RISC-V.

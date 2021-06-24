@@ -425,9 +425,36 @@ class BuildQtBase(BuildQtWithConfigureScript):
                 self.run_cmd("make", "check", cwd=self.build_dir)
         else:
             # We run tests using the full disk image since we want e.g. locales to be available.
+            self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", "--test-subset=corelib",
+                                                      use_benchmark_kernel_by_default=True,
+                                                      mount_sysroot=False, mount_sourcedir=True,
+                                                      use_full_disk_image=True)
+
+
+# This class is used to build individual Qt Modules instead of using the qt5 project
+class BuildQtModuleWithQMake(CrossCompileProject):
+    do_not_add_to_targets = True
+    dependencies = ["qtbase"]
+    default_source_dir = ComputedDefaultValue(
+        function=lambda config, project: BuildQt5.get_source_dir(project, config) / project.project_name.lower(),
+        as_string=lambda cls: "$SOURCE_ROOT/qt5/" + cls.project_name.lower())
+
+    def configure(self, **kwargs):
+        # Run QMake to generate a makefile
+        self.run_cmd(BuildQtBase.get_build_dir(self) / "bin/qmake", self.source_dir, cwd=self.build_dir)
+
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.run_cmd("make", "check", cwd=self.build_dir)
+        else:
+            # We run tests using the full disk image since we want e.g. locales to be available.
             self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True,
                                                       mount_sysroot=True, mount_sourcedir=True,
-                                                      use_full_disk_image=True)
+                                                      use_full_disk_image=False)
+
+
+class BuildQtSVG(BuildQtModuleWithQMake):
+    repository = GitRepository("https://code.qt.io/qt/qtsvg.git", default_branch="5.15", force_branch=True)
 
 
 # Webkit needs ICU (and recommended for QtBase too):
