@@ -69,7 +69,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
     repository = GitRepository(
         "https://github.com/CTSRD-CHERI/gdb.git",
         # Branch name is changed for every major GDB release:
-        default_branch="mips_cheri-8.3", force_branch=True,
+        default_branch="hmka2", force_branch=True,
         per_target_branches={
             CompilationTargets.CHERIBSD_AARCH64: TargetBranchInfo(branch="morello-8.3",
                                                                   directory_name="morello-gdb"),
