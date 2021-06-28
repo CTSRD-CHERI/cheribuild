@@ -403,16 +403,16 @@ class BuildQtBase(BuildQtWithConfigureScript):
         super().setup()
 
     def compile(self, **kwargs):
-        if self.minimal and False:
-            self.run_make("sub-src")
-            if self.build_tests:
-                # only build the tests for corelib:
-                if not (self.build_dir / "tests/auto/corelib").exists():
-                    # generate the makefiles
-                    self.run_make("sub-tests-make_first")
-                self.run_make("sub-corelib", cwd=self.build_dir / "tests/auto")
+        if not self.compiling_for_host():
+            self.run_make("sub-src-all")
         else:
-            self.run_make()  # QtBase ignores -nomake if you run "gmake all"
+            self.run_make("all")
+
+    def _compile_relevant_tests(self):
+        # generate the makefiles
+        self.run_make("sub-tests-qmake_all")
+        self.run_make("sub-corelib", cwd=self.build_dir / "tests/auto")
+        self.run_make("sub-testlib", cwd=self.build_dir / "tests/auto")
 
     def run_tests(self):
         if self.compiling_for_host():
@@ -422,11 +422,12 @@ class BuildQtBase(BuildQtWithConfigureScript):
             with set_env(TZ="Europe/Oslo"):
                 self.run_cmd("make", "check", cwd=self.build_dir)
         else:
+            self._compile_relevant_tests()
             # We run tests using the full disk image since we want e.g. locales to be available.
-            self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", "--test-subset=corelib",
-                                                      use_benchmark_kernel_by_default=True,
-                                                      mount_sysroot=False, mount_sourcedir=True,
-                                                      use_full_disk_image=True)
+            self.target_info.run_cheribsd_test_script(
+                "run_qtbase_tests.py", "--test-subset=corelib", "--test-subset=testlib",
+                use_benchmark_kernel_by_default=True, mount_sysroot=False, mount_sourcedir=True,
+                use_full_disk_image=True)
 
 
 # This class is used to build individual Qt Modules instead of using the qt5 project
@@ -439,12 +440,17 @@ class BuildQtModuleWithQMake(CrossCompileProject):
 
     def configure(self, **kwargs):
         # Run QMake to generate a makefile
-        self.run_cmd(BuildQtBase.get_build_dir(self) / "bin/qmake", self.source_dir, cwd=self.build_dir)
+        self.run_cmd(BuildQtBase.get_build_dir(self) / "bin/qmake", self.source_dir, "--", *self.configure_args,
+                     cwd=self.build_dir)
+
+    def compile(self, **kwargs):
+        self.run_make("sub-src")
 
     def run_tests(self):
         if self.compiling_for_host():
-            self.run_cmd("make", "check", cwd=self.build_dir)
+            self.run_make("check", cwd=self.build_dir)
         else:
+            self.run_make("sub-tests-all")
             # We run tests using the full disk image since we want e.g. locales to be available.
             self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True,
                                                       mount_sysroot=True, mount_sourcedir=True,
@@ -460,6 +466,13 @@ class BuildQtDeclarative(BuildQtModuleWithQMake):
     target = "qtdeclarative"
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtdeclarative.git", default_branch="5.15",
                                force_branch=True)
+
+    def setup(self):
+        super().setup()
+        self.configure_args.extend([
+            "-no-qml-debug",  # debugger not compatibale with CHERI purecap
+            "-no-quick-designer",  # unnecessary, saves a bit of build time
+        ])
 
 
 # Webkit needs ICU (and recommended for QtBase too):
