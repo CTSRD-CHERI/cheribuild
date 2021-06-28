@@ -238,8 +238,10 @@ class CheriBSDSpawnMixin(MixinBase):
                                                   **kwargs)
 
     def expect_prompt(self, timeout=-1, timeout_msg="timeout waiting for prompt", ignore_timeout=False, **kwargs):
-        return self.expect_exact([PEXPECT_PROMPT], timeout=timeout, timeout_msg=timeout_msg,
-                                 ignore_timeout=ignore_timeout, **kwargs)
+        result = self.expect_exact([PEXPECT_PROMPT], timeout=timeout, timeout_msg=timeout_msg,
+                                   ignore_timeout=ignore_timeout, **kwargs)
+        time.sleep(0.05)  # give QEMU a bit of time after printing the prompt (otherwise we might lose some input)
+        return result
 
     def _expect_and_handle_panic_impl(self, options: list, timeout_msg, *, ignore_timeout=True, expect_fn, **kwargs):
         assert PANIC not in options
