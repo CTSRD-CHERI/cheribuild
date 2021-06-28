@@ -291,7 +291,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
-        self.run_make("install")
+        self.run_make_install()
 
 
 class RunSailShell(OpamMixin, SimpleProject):
@@ -333,7 +333,7 @@ class BuildSailRISCV(ProjectUsingOpam):
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
-        # self.run_make("install")
+        # self.run_make_install()
         self.info("NO INSTALL TARGET YET")
 
 
@@ -355,7 +355,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
-        # self.run_make("install")
+        # self.run_make_install()
         self.info("NO INSTALL TARGET YET")
 
 
