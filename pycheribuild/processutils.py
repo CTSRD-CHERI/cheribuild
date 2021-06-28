@@ -484,6 +484,15 @@ class CompilerInfo(object):
             self._supported_warning_flags[flag] = result
         return result
 
+    def supports_Og_flag(self):
+        if self.compiler == "gcc" and self.version > (4, 8, 0):
+            return True
+        if self.compiler == "clang" and self.version > (4, 0, 0):
+            return True
+        if self.is_apple_clang:
+            return True  # assume version is new enough to be based on clang 4
+        return False
+
     def linker_override_flags(self, linker: Path, linker_type: str = None) -> "list[str]":
         if not self.is_clang:
             # GCC only allows you to set the linker type, and doesn't allow absolute paths.
