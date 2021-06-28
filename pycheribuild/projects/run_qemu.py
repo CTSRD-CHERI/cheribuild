@@ -466,9 +466,8 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
                     self.warning("Can not select kernel ABI to run for non-CHERI target, ignoring --kernel-abi")
             self.kernel_config = self.source_project.default_kernel_config(ConfigPlatform.QEMU, **config_filters)
 
-        self.current_kernel = self.source_project.get_kernel_install_path(self.kernel_config)
-
         if self.qemu_options.can_boot_kernel_directly:
+            self.current_kernel = self.source_project.get_kernel_install_path(self.kernel_config)
             kern_module_path_arg = self.source_project.get_kern_module_path_arg(self.kernel_config)
             if kern_module_path_arg:
                 self._project_specific_options += ["-append", kern_module_path_arg]
