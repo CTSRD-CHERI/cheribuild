@@ -40,13 +40,14 @@ from ...utils import OSInfo
 class KDECMakeProject(CrossCompileCMakeProject):
     do_not_add_to_targets = True
     default_install_dir = DefaultInstallDir.KDE_PREFIX
+    default_build_type = BuildType.RELWITHDEBINFO
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     ctest_needs_full_disk_image = False  # default to running with the full disk image
     # Prefer the libraries in the build directory over the installed ones. This is needed when RPATH is not set
     # correctly, i.e. when built with CMake+Ninja on macOS with a version where
     # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 is not included.
     ctest_script_extra_args = ("--extra-library-path", "/build/bin", "--extra-library-path", "/build/lib")
-    dependencies = ["qtbase"]
+    dependencies = ["qtbase", "extra-cmake-modules"]
 
     def setup(self):
         super().setup()
