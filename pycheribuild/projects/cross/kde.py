@@ -65,8 +65,11 @@ class BuildExtraCMakeModules(KDECMakeProject):
 
 
 class BuildKCoreAddons(KDECMakeProject):
-    target = "kcoreaddons"
     repository = GitRepository("https://invent.kde.org/frameworks/kcoreaddons.git")
+
+
+class BuildKArchive(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/karchive.git")
 
 
 class BuildGettext(CrossCompileAutotoolsProject):
@@ -113,6 +116,11 @@ class BuildGettext(CrossCompileAutotoolsProject):
                                         os.getenv("PATH")])
         with set_env(**new_env):
             super().process()
+
+
+class BuildKI18N(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/ki18n.git")
+    dependencies = KDECMakeProject.dependencies + ["gettext"]
 
 
 class BuildDoplhin(KDECMakeProject):
