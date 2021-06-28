@@ -26,10 +26,15 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from .crosscompileproject import CrossCompileCMakeProject
+import os
+
+from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
 from .qt5 import BuildQtBase
-from ..project import DefaultInstallDir, GitRepository
+from ..project import DefaultInstallDir, GitRepository, MakeCommandKind
+from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
+from ...processutils import set_env
+from ...utils import OSInfo
 
 
 class KDECMakeProject(CrossCompileCMakeProject):
@@ -61,6 +66,52 @@ class BuildExtraCMakeModules(KDECMakeProject):
 class BuildKCoreAddons(KDECMakeProject):
     target = "kcoreaddons"
     repository = GitRepository("https://invent.kde.org/frameworks/kcoreaddons.git")
+
+
+class BuildGettext(CrossCompileAutotoolsProject):
+    target = "gettext"
+    repository = GitRepository("https://git.savannah.gnu.org/git/gettext.git")
+    make_kind = MakeCommandKind.GnuMake
+
+    def setup(self):
+        super().setup()
+        self.configure_args.extend([
+            "--enable-relocatable",
+            "--disable-csharp",
+            "--disable-java",
+            "--disable-libasprintf",
+            "--disable-openmp",
+            "--without-emacs",
+            "--with-included-gettext",
+            "ac_cv_lib_rt_sched_yield=no"
+        ])
+
+    def configure(self, **kwargs):
+        # gettext-runtime/intl
+        if not (self.source_dir / "configure").exists():
+            self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
+        super().configure()
+
+    def clean(self):
+        if not (self.source_dir / "Makefile").exists():
+            return None
+        self.run_make("distclean", cwd=self.source_dir)
+
+    def compile(self, **kwargs):
+        self.run_make("all", cwd=self.build_dir / "gettext-runtime/intl")
+
+    def install(self, **kwargs):
+        self.run_make_install(cwd=self.build_dir / "gettext-runtime/intl")
+
+    def process(self):
+        new_env = dict()
+        if OSInfo.IS_MAC:
+            # /usr/bin/bison and /usr/bin/sed on macOS are not compatible with this build system
+            new_env["PATH"] = ":".join([str(self.get_homebrew_prefix("gnu-sed") / "libexec/gnubin"),
+                                        str(self.get_homebrew_prefix("bison") / "bin"),
+                                        os.getenv("PATH")])
+        with set_env(**new_env):
+            super().process()
 
 
 class BuildDoplhin(KDECMakeProject):
