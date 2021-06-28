@@ -112,8 +112,8 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
         try:
             # Output textual results to stdout and write JUnit XML to /build/test.xml
             # Many of the test cases expect that the CWD == test binary dir
-            qemu.checked_run("cd {test_dir} && rm -f {xml_name} && {test} -o {xml_name},junitxml -o -,txt -v1 && "
-                             "fsync {xml_name}".format(xml_name=test_xml.name, test_dir=f.parent, test=f),
+            qemu.checked_run("cd {test_dir} && rm -f {xml_name} && ./{test} -o {xml_name},junitxml -o -,txt -v1 && "
+                             "fsync {xml_name}".format(xml_name=test_xml.name, test_dir=f.parent, test=f.name),
                              timeout=10 * 60)
         except boot_cheribsd.CheriBSDCommandFailed as e:
             boot_cheribsd.failure("Failed to run ", f.name, ": ", str(e), exit=False)
@@ -157,12 +157,7 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     xml = junitparser.JUnitXml()
     build_dir = Path(args.build_dir)
     all_tests_starttime = datetime.datetime.utcnow()
-    test_subset = Path(args.test_subset)
     tests_root = Path(build_dir, "tests/auto")
-    relpath = os.path.relpath(str(Path(tests_root, test_subset)), str(tests_root))
-    assert not relpath.startswith(os.path.pardir), "Invalid path " + str(tests_root / test_subset)
-    boot_cheribsd.info("Running qtbase tests for ", test_subset)
-
     # Start with a basic smoketests:
     if (tests_root / "corelib").is_dir():
         # For QtBase:
@@ -177,7 +172,10 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
             qemu.checked_run(str(i) + " --help")
             break
 
-    run_subdir(qemu, Path(tests_root, test_subset), xml, build_dir=build_dir)
+    for test_subset in args.test_subset:
+        assert isinstance(test_subset, Path)
+        boot_cheribsd.info("Running qtbase tests for ", test_subset)
+        run_subdir(qemu, test_subset, xml, build_dir=build_dir)
     xml.time = (datetime.datetime.utcnow() - all_tests_starttime).total_seconds()
     xml.update_statistics()
     failed_test_suites = []
@@ -218,8 +216,25 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     return not failed_test_suites
 
 
+def adjust_args(args: argparse.Namespace):
+    print(args.test_subset)
+    tests_root = Path(args.build_dir, "tests/auto")
+    if args.test_subset:
+        test_dirs = []
+        for subdir in args.test_subset:
+            path = Path(tests_root, subdir)
+            if not path.is_dir():
+                boot_cheribsd.failure("Invalid --test-subset: ", path, exit=True)
+            relpath = os.path.relpath(str(path), str(tests_root))
+            assert not relpath.startswith(os.path.pardir), "Invalid --test-subset " + str(tests_root / subdir)
+            test_dirs.append(path)
+    else:
+        test_dirs = [tests_root]
+    args.test_subset = test_dirs
+
+
 def add_args(parser: argparse.ArgumentParser):
-    parser.add_argument("--test-subset", required=False, default=".",
+    parser.add_argument("--test-subset", action="append", default=[],
                         help="Subset of tests to run (set to '.' to run all tests)")
     parser.add_argument("--junit-xml", required=False, help="Output file name for the JUnit XML results")
     # Note: Copying to tmpfs is not enabled by default since it currently hangs/is very slow on purecap RISC-V.
@@ -239,5 +254,6 @@ def add_args(parser: argparse.ArgumentParser):
 if __name__ == '__main__':
     # we don't need ssh running to execute the tests, but we do need the sysroot for libexecinfo+libelf
     run_tests_main(test_function=run_qtbase_tests, test_setup_function=setup_qtbase_tests,
+                   argparse_adjust_args_callback=adjust_args,
                    argparse_setup_callback=add_args, need_ssh=True,
                    should_mount_sysroot=False, should_mount_srcdir=True)
