@@ -402,10 +402,8 @@ class BuildQtBase(BuildQtWithConfigureScript):
         super().setup()
 
     def compile(self, **kwargs):
-        if not self.compiling_for_host():
-            self.run_make("sub-src-all")
-        else:
-            self.run_make("all")
+        self.run_make("sub-src-all")
+        # Tests are build as part of --test
 
     def _compile_relevant_tests(self):
         # generate the makefiles
