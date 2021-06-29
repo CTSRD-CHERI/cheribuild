@@ -30,6 +30,7 @@ import os
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
 from .qt5 import BuildQtBase
+from .x11 import BuildLibXCB
 from ..project import DefaultInstallDir, GitRepository, MakeCommandKind
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
@@ -65,17 +66,12 @@ class KDECMakeProject(CrossCompileCMakeProject):
         return [self.install_dir, BuildQtBase.get_install_dir(self)] + super().cmake_prefix_paths
 
 
+# TODO: should generate the dependency graph from
+#  https://invent.kde.org/sysadmin/repo-metadata/-/blob/master/dependencies/dependency-data-kf5-qt5
 class BuildExtraCMakeModules(KDECMakeProject):
     target = "extra-cmake-modules"
+    dependencies = []
     repository = GitRepository("https://invent.kde.org/frameworks/extra-cmake-modules.git")
-
-
-class BuildKCoreAddons(KDECMakeProject):
-    repository = GitRepository("https://invent.kde.org/frameworks/kcoreaddons.git")
-
-
-class BuildKArchive(KDECMakeProject):
-    repository = GitRepository("https://invent.kde.org/frameworks/karchive.git")
 
 
 class BuildGettext(CrossCompileAutotoolsProject):
@@ -124,9 +120,75 @@ class BuildGettext(CrossCompileAutotoolsProject):
             super().process()
 
 
+# Frameworks, tier1
+# frameworks/syntax-highlighting: third-party/taglib
+# frameworks/kwayland: kdesupport/plasma-wayland-protocols
+# class BuildBreezeIcons(KDECMakeProject):
+#     target = "breeze-icons"
+#     repository = GitRepository("https://invent.kde.org/frameworks/breeze-icons.git")
+
+class BuildKArchive(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/karchive.git")
+
+
+class BuildKCodecs(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kcodecs.git")
+
+
+class BuildKCoreAddons(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kcoreaddons.git")
+
+
+class BuildKConfig(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kconfig.git")
+
+
+class BuildKDBusAddons(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kdbusaddons.git")
+
+    def setup(self):
+        super().setup()  # work around broken qx11extras
+        self.COMMON_FLAGS.append("-I" + str(BuildLibXCB.get_install_dir(self) / "include"))
+
+
+class BuildKGuiAddons(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kguiaddons.git")
+    dependencies = KDECMakeProject.dependencies + ["qtx11extras"]
+
+    def setup(self):
+        super().setup()
+        # TODO: wayland support
+        self.add_cmake_options(WITH_WAYLAND=False)
+
+
+class BuildKIconThemes(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kiconthemes.git")
+
+
+class BuildKItemViews(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kitemviews.git")
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
+
+
 class BuildKI18N(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/ki18n.git")
     dependencies = KDECMakeProject.dependencies + ["gettext"]
+
+
+class BuildKWidgetsAddons(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kwidgetsaddons.git")
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
+
+
+class BuildKWindowSystem(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kwindowsystem.git")
+    dependencies = KDECMakeProject.dependencies + ["qtx11extras", "libxfixes"]
 
 
 class BuildDoplhin(KDECMakeProject):
