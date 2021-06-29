@@ -163,6 +163,11 @@ class BuildKCodecs(KDECMakeProject):
 class BuildKCoreAddons(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kcoreaddons.git")
 
+    def setup(self):
+        super().setup()
+        # Install prefix.sh for KCoreAddons only (could do it for all projects but there is no point overwriting it)
+        self.add_cmake_options(KDE_INSTALL_PREFIX_SCRIPT=True)
+
 
 class BuildKConfig(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kconfig.git")
@@ -186,6 +191,10 @@ class BuildKGuiAddons(KDECMakeProject):
 class BuildKItemViews(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kitemviews.git")
     _has_qt_designer_plugin = True
+
+
+class BuildKItemModels(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kitemmodels.git")
 
 
 class BuildKI18N(KDECMakeProject):
@@ -271,6 +280,21 @@ class BuildKSyndication(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/syndication.git")
 
 
+# frameworks/kfilemetadata: frameworks/ki18n
+# frameworks/kfilemetadata: frameworks/karchive
+# frameworks/kfilemetadata: frameworks/kcoreaddons
+# frameworks/kfilemetadata: third-party/taglib
+# frameworks/kfilemetadata: third-party/poppler
+# frameworks/kimageformats: frameworks/karchive
+# frameworks/kpty: frameworks/kcoreaddons
+# frameworks/kpty: frameworks/ki18n
+# frameworks/kunitconversion: frameworks/ki18n
+# frameworks/kunitconversion: frameworks/kconfig
+
+# frameworks/qqc2-desktop-style: frameworks/kirigami
+# frameworks/qqc2-desktop-style: frameworks/kiconthemes
+# frameworks/qqc2-desktop-style: frameworks/kconfigwidgets
+
 
 #
 # Frameworks, tier3
@@ -292,6 +316,12 @@ class BuildKConfigWidgets(KDECMakeProject):
     _has_qt_designer_plugin = True
 
 
+# frameworks/kdav: frameworks/kio
+# frameworks/kdesignerplugin: frameworks/kcoreaddons
+# frameworks/kdesignerplugin: frameworks/kconfig
+# frameworks/kdesignerplugin: frameworks/kdoctools
+# frameworks/kemoticons: frameworks/karchive
+# frameworks/kemoticons: frameworks/kservice
 # frameworks/kjs: frameworks/kdoctools
 class BuildKNewStuff(KDECMakeProject):
     dependencies = ["attica", "kitemviews", "kiconthemes", "ktextwidgets", "kxmlgui",
@@ -313,6 +343,12 @@ class BuildKService(KDECMakeProject):
 class BuildKTextWidgets(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/ktextwidgets.git")
     dependencies = ["sonnet", "kcompletion", "kconfigwidgets", "kwidgetsaddons"]
+    _has_qt_designer_plugin = True
+
+
+class BuildKParts(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kparts.git")
+    dependencies = ["kio", "kxmlgui", "ktextwidgets", "knotifications"]
     _has_qt_designer_plugin = True
 
 
@@ -343,6 +379,30 @@ class BuildKDeclarative(KDECMakeProject):
     _has_qt_designer_plugin = True
 
 
+# frameworks/kinit: frameworks/kservice
+# frameworks/kinit: frameworks/kio
+# frameworks/kinit: frameworks/ki18n
+# frameworks/kinit: frameworks/kwindowsystem
+# frameworks/kinit: frameworks/kcrash
+# frameworks/kinit: frameworks/kdoctools
+# frameworks/kjsembed: frameworks/kjs
+# frameworks/kjsembed: frameworks/ki18n
+# frameworks/kjsembed: frameworks/kdoctools
+# frameworks/knotifyconfig: frameworks/kio
+# frameworks/knotifyconfig: frameworks/ki18n
+# frameworks/knotifyconfig: frameworks/knotifications #test dependency
+# frameworks/kded: frameworks/ki18n
+# frameworks/kded: frameworks/kcoreaddons
+# frameworks/kded: frameworks/kdbusaddons
+# frameworks/kded: frameworks/kservice
+# frameworks/kded: frameworks/kwindowsystem
+# frameworks/kded: frameworks/kcrash
+# frameworks/kded: frameworks/kinit
+# frameworks/kded: frameworks/kdoctools
+# frameworks/kross: frameworks/ki18n
+# frameworks/kross: frameworks/kiconthemes
+# frameworks/kross: frameworks/kio
+# frameworks/kross: frameworks/kparts
 class BuildKIO(KDECMakeProject):
     dependencies = ["kauth", "kdbusaddons", "ki18n", "kguiaddons", "kconfigwidgets", "kitemviews", "kcoreaddons",
                     "kwidgetsaddons", "kservice", "karchive", "qtx11extras", "solid",
@@ -354,12 +414,112 @@ class BuildKIO(KDECMakeProject):
     _has_qt_designer_plugin = True
 
 
+# frameworks/kmediaplayer: frameworks/ki18n
+# frameworks/kmediaplayer: frameworks/kparts
+# frameworks/kmediaplayer: frameworks/kxmlgui
+# frameworks/kdewebkit: frameworks/kcoreaddons
+# frameworks/kdewebkit: frameworks/kwallet
+# frameworks/kdewebkit: frameworks/kio
+# frameworks/kdewebkit: frameworks/knotifications
+# frameworks/kdewebkit: frameworks/kparts
+# frameworks/kdesu: frameworks/kcoreaddons
+# frameworks/kdesu: frameworks/kservice
+# frameworks/kdesu: frameworks/kpty
+# frameworks/ktexteditor: frameworks/karchive
+# frameworks/ktexteditor: frameworks/kconfig
+# frameworks/ktexteditor: frameworks/kguiaddons
+# frameworks/ktexteditor: frameworks/ki18n
+# frameworks/ktexteditor: frameworks/kjobwidgets
+# frameworks/ktexteditor: frameworks/kio
+# frameworks/ktexteditor: frameworks/kparts
+# frameworks/ktexteditor: frameworks/sonnet
+# frameworks/ktexteditor: frameworks/kxmlgui
+# frameworks/ktexteditor: frameworks/syntax-highlighting
+# frameworks/kwallet: frameworks/kconfig
+# frameworks/kwallet: frameworks/kcoreaddons
+# frameworks/kwallet: frameworks/kdbusaddons
+# frameworks/kwallet: frameworks/kiconthemes
+# frameworks/kwallet: frameworks/ki18n
+# frameworks/kwallet: frameworks/knotifications
+# frameworks/kwallet: frameworks/kservice
+# frameworks/kwallet: frameworks/kwindowsystem
+# frameworks/kwallet: frameworks/kwidgetsaddons
+# frameworks/kwallet: third-party/gpgme
+# frameworks/kactivities: frameworks/kconfig
+# frameworks/kactivities: frameworks/kwindowsystem
+# frameworks/kactivities: frameworks/kcoreaddons
+# frameworks/kactivities: frameworks/kio
+# frameworks/kactivities-stats: frameworks/kactivities
+# frameworks/plasma-framework: frameworks/kactivities
+# frameworks/plasma-framework: frameworks/karchive
+# frameworks/plasma-framework: frameworks/kauth
+# frameworks/plasma-framework: frameworks/kbookmarks
+# frameworks/plasma-framework: frameworks/kcodecs
+# frameworks/plasma-framework: frameworks/kcompletion
+# frameworks/plasma-framework: frameworks/kconfig
+# frameworks/plasma-framework: frameworks/kconfigwidgets
+# frameworks/plasma-framework: frameworks/kcoreaddons
+# frameworks/plasma-framework: frameworks/kcrash
+# frameworks/plasma-framework: frameworks/kdbusaddons
+# frameworks/plasma-framework: frameworks/kdeclarative
+# frameworks/plasma-framework: frameworks/kdnssd
+# frameworks/plasma-framework: frameworks/kglobalaccel
+# frameworks/plasma-framework: frameworks/kguiaddons
+# frameworks/plasma-framework: frameworks/ki18n
+# frameworks/plasma-framework: frameworks/kiconthemes
+# frameworks/plasma-framework: frameworks/kidletime
+# frameworks/plasma-framework: frameworks/kitemmodels
+# frameworks/plasma-framework: frameworks/kitemviews
+# frameworks/plasma-framework: frameworks/kjobwidgets
+# frameworks/plasma-framework: frameworks/kio
+# frameworks/plasma-framework: frameworks/kross
+# frameworks/plasma-framework: frameworks/knotifications
+# frameworks/plasma-framework: frameworks/kparts
+# frameworks/plasma-framework: frameworks/kpackage
+# frameworks/plasma-framework: frameworks/kservice
+# frameworks/plasma-framework: frameworks/solid
+# frameworks/plasma-framework: frameworks/sonnet
+# frameworks/plasma-framework: frameworks/ktextwidgets
+# frameworks/plasma-framework: frameworks/threadweaver
+# frameworks/plasma-framework: frameworks/kunitconversion
+# frameworks/plasma-framework: frameworks/kwallet
+# frameworks/plasma-framework: frameworks/kwayland
+# frameworks/plasma-framework: frameworks/kwidgetsaddons
+# frameworks/plasma-framework: frameworks/kwindowsystem
+# frameworks/plasma-framework: frameworks/kxmlgui
+# frameworks/plasma-framework: frameworks/ktexteditor
+# frameworks/plasma-framework: frameworks/oxygen-icons5
+# frameworks/plasma-framework: frameworks/kirigami
+# frameworks/purpose: frameworks/kcoreaddons
+# frameworks/purpose: frameworks/kconfig
+# frameworks/purpose: frameworks/ki18n
+# frameworks/purpose: frameworks/kio
+# frameworks/purpose: frameworks/kirigami
+# frameworks/kxmlrpcclient: frameworks/kio
+# frameworks/kpeople: frameworks/kcoreaddons
+# frameworks/kpeople: frameworks/kwidgetsaddons
+# frameworks/kpeople: frameworks/ki18n
+# frameworks/kpeople: frameworks/kitemviews
+# frameworks/kcontacts: frameworks/kcoreaddons
+# frameworks/kcontacts: frameworks/ki18n
+# frameworks/kcontacts: frameworks/kconfig
+# frameworks/kcontacts: frameworks/kcodecs
+# frameworks/baloo: frameworks/kfilemetadata
+# frameworks/baloo: frameworks/kcoreaddons
+# frameworks/baloo: frameworks/kconfig
+# frameworks/baloo: frameworks/kdbusaddons
+# frameworks/baloo: frameworks/ki18n
+# frameworks/baloo: frameworks/kidletime
+# frameworks/baloo: frameworks/solid
+# frameworks/baloo: frameworks/kcrash
+# frameworks/baloo: frameworks/kio
 
 class BuildDoplhin(KDECMakeProject):
     target = "dolphin"
     repository = GitRepository("https://invent.kde.org/system/dolphin.git")
 
-# Lots of deps (including QtSVG)
-# class BuildGwenview(KDECMakeProject):
-#     target = "gwenview"
-#     repository = GitRepository("https://invent.kde.org/graphics/gwenview.git")
+
+class BuildGwenview(KDECMakeProject):
+    target = "gwenview"
+    dependencies = ["qtsvg", "kitemmodels", "kio", "kparts"]
+    repository = GitRepository("https://invent.kde.org/graphics/gwenview.git")
