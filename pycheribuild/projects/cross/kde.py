@@ -320,16 +320,12 @@ class BuildKGlobalAccel(KDECMakeProject):
 
 class BuildKXMLGUI(KDECMakeProject):
     # frameworks/kxmlgui: frameworks/kglobalaccel
-    dependencies = ["kitemviews", "kconfig", "kconfig-native",
+    dependencies = ["kitemviews", "kconfig", "kconfig-native", "kglobalaccel",
                     "kconfigwidgets", "ki18n", "kiconthemes",
                     "ktextwidgets", "kwidgetsaddons", "kwindowsystem"]
     repository = GitRepository("https://invent.kde.org/frameworks/kxmlgui.git")
     _has_qt_designer_plugin = True
 
-    def setup(self):
-        super().setup()
-        # TODO: support kglobalaccel
-        self.add_cmake_options(FORCE_DISABLE_KGLOBALACCEL=True)
 
 
 class BuildKIO(KDECMakeProject):
