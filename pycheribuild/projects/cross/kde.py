@@ -60,6 +60,10 @@ class KDECMakeProject(CrossCompileCMakeProject):
         super().setup()
         if self.target_info.is_macos():
             self.add_cmake_options(APPLE_SUPPRESS_X11_WARNING=True)
+        if not self.compiling_for_host():
+            # We need native tools (e.g. desktoptojson/kconfig_compiler) for some projects
+            native_install_root = BuildKConfig.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
+            self.add_cmake_options(KF5_HOST_TOOLING=native_install_root / "lib/cmake")
 
     @property
     def cmake_prefix_paths(self):
@@ -190,6 +194,57 @@ class BuildKWindowSystem(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kwindowsystem.git")
     dependencies = KDECMakeProject.dependencies + ["qtx11extras", "libxfixes"]
 
+
+# Frameworks, tier2
+
+
+class BuildKAuth(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kauth.git")
+    dependencies = ["kcoreaddons"]  # optional: "polkit-qt-1"
+
+# frameworks/kcompletion: frameworks/kconfig
+# frameworks/kcompletion: frameworks/kwidgetsaddons
+
+
+class BuildKCrash(KDECMakeProject):
+    dependencies = ["kcoreaddons", "qtx11extras", "kwindowsystem"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kcrash.git")
+
+# Frameworks, tier3
+
+class BuildKConfigWidgets(KDECMakeProject):
+    dependencies = ["kauth", "kcoreaddons", "kcodecs", "kconfig", "kguiaddons", "ki18n", "kwidgetsaddons",
+                    "kconfig-native"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kconfigwidgets.git")
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
+
+
+class BuildKService(KDECMakeProject):
+    dependencies = ["kconfig", "kcoreaddons", "kcrash", "kdbusaddons", "ki18n",
+                    "kcoreaddons-native",  # desktoptojson
+                    "kconfig-native",  # kconfig_compiler
+                    ]
+    repository = GitRepository("https://invent.kde.org/frameworks/kservice.git")
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.add_required_system_tool("bison", apt="bison", homebrew="bison")
+        self.add_required_system_tool("flex", apt="flex")
+
+    def process(self):
+        # TODO: add this as a generic helper function
+        newpath = os.getenv("PATH")
+        if OSInfo.IS_MAC:
+            # FIXME: /Users/alex/cheri/output/rootfs-amd64/opt/amd64/kde/bin/desktoptojson
+            # /usr/bin/bison on macOS is not compatible with this build system
+            newpath = ":".join([str(self.get_homebrew_prefix("bison") / "bin"),
+                                str(self.get_homebrew_prefix("flex") / "bin"),
+                                newpath])
+        with set_env(PATH=newpath):
+            super().process()
 
 class BuildDoplhin(KDECMakeProject):
     target = "dolphin"
