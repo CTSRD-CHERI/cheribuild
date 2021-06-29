@@ -372,6 +372,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 fatal_error("Cyclic dependency found:", " -> ".join(map(lambda c: c.target, cycle)), pretend=False)
         else:
             new_dependency_chain = [cls]
+        # look only in __dict__ to avoid parent class lookup
+        cache_lookup_args = (config, include_dependencies, include_toolchain_dependencies, include_sdk_dependencies)
+        cached_result = cls.__dict__.get("_cached_deps", dict()).get(cache_lookup_args, None)
+        if cached_result is not None:
+            return cached_result
         result = []
         for target in cls._direct_dependencies(config, include_dependencies=include_dependencies,
                                                include_toolchain_dependencies=include_toolchain_dependencies,
@@ -390,6 +395,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             for r in recursive_deps:
                 if r not in result:
                     result.append(r)
+        # save the result to avoid recomputing it lots of times
+        if "_cached_deps" not in cls.__dict__:
+            setattr(cls, "_cached_deps", dict())
+        cls.__dict__["_cached_deps"][cache_lookup_args] = result
         return result
 
     @classmethod

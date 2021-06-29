@@ -14,19 +14,19 @@ from pycheribuild.projects.cross import *  # noqa: F401, F403
 from pycheribuild.targets import target_manager
 from .setup_mock_chericonfig import setup_mock_chericonfig
 
-global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
-
 
 # noinspection PyProtectedMember
 def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolchain=True,
                   skip_sdk=False, build_morello_from_source=False) -> "typing.List[str]":
     target_manager.reset()
     # print(real_targets)
-    real_targets = list(target_manager.get_target(t, None, global_config, caller="_sort_targets") for t in targets)
+    global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
     global_config.include_dependencies = add_dependencies
     global_config.include_toolchain_dependencies = add_toolchain
     global_config.skip_sdk = skip_sdk
     global_config.build_morello_firmware_from_source = build_morello_from_source
+    real_targets = list(target_manager.get_target(t, None, global_config, caller="_sort_targets") for t in targets)
+
     for t in real_targets:
         if t.project_class._xtarget is None:
             continue
@@ -198,7 +198,7 @@ def _qtbase_x11_defs(suffix):
 
 def test_webkit_cached_deps():
     # regression test for a bug in caching deps
-    config = copy.copy(global_config)
+    config = copy.copy(setup_mock_chericonfig(Path("/this/path/does/not/exist")))
     config.skip_sdk = True
     config.include_toolchain_dependencies = False
     config.include_dependencies = True
