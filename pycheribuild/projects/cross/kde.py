@@ -170,11 +170,6 @@ class BuildKGuiAddons(KDECMakeProject):
         self.add_cmake_options(WITH_WAYLAND=False)
 
 
-class BuildKIconThemes(KDECMakeProject):
-    repository = GitRepository("https://invent.kde.org/frameworks/kiconthemes.git")
-    _has_qt_designer_plugin = True
-
-
 class BuildKItemViews(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kitemviews.git")
     _has_qt_designer_plugin = True
@@ -268,6 +263,13 @@ class BuildKTextWidgets(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/ktextwidgets.git")
     dependencies = ["sonnet", "kcompletion", "kconfigwidgets", "kwidgetsaddons"]
     _has_qt_designer_plugin = True
+
+
+class BuildKIconThemes(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kiconthemes.git")
+    dependencies = ["kconfigwidgets", "kwidgetsaddons", "kitemviews", "karchive", "ki18n"]
+    _has_qt_designer_plugin = True
+
 
 class BuildDoplhin(KDECMakeProject):
     target = "dolphin"
