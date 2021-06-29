@@ -190,6 +190,16 @@ class BuildKWindowSystem(KDECMakeProject):
     dependencies = KDECMakeProject.dependencies + ["qtx11extras", "libxfixes"]
 
 
+class BuildSolid(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/solid.git")
+
+    def setup(self):
+        super().setup()
+        if OSInfo.IS_MAC:
+            # /usr/bin/bison on macOS is too old
+            self.add_cmake_options(BISON_EXECUTABLE=self.get_homebrew_prefix("bison") / "bin/bison")
+
+
 class BuildSonnet(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/sonnet.git")
     # TODO: should probably install a spell checker:
