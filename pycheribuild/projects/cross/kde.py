@@ -227,15 +227,32 @@ class BuildKCompletion(KDECMakeProject):
 
 
 class BuildKCrash(KDECMakeProject):
-    dependencies = ["kcoreaddons", "qtx11extras", "kwindowsystem"]
+    dependencies = ["kcoreaddons", "kcoreaddons-native", "qtx11extras", "kwindowsystem"]
     repository = GitRepository("https://invent.kde.org/frameworks/kcrash.git")
 
+
+class BuildKJobWidgets(KDECMakeProject):
+    dependencies = ["kcoreaddons", "kcoreaddons-native", "kwidgetsaddons", "qtx11extras"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kjobwidgets.git")
+
+    def setup(self):
+        super().setup()  # work around broken qx11extras
+        self.COMMON_FLAGS.append("-I" + str(BuildLibXCB.get_install_dir(self) / "include"))
 
 # class BuildKDocTools(KDECMakeProject):
 #     dependencies = ["karchive", "ki18n"]
 #     repository = GitRepository("https://invent.kde.org/frameworks/kdoctools.git")
 
+
+
+#
 # Frameworks, tier3
+#
+class BuildKBookmarks(KDECMakeProject):
+    dependencies = ["kconfigwidgets", "kcodecs", "kiconthemes", "kxmlgui"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kbookmarks.git")
+
+
 
 class BuildKConfigWidgets(KDECMakeProject):
     dependencies = ["kauth", "kcoreaddons", "kcodecs", "kconfig", "kguiaddons", "ki18n", "kwidgetsaddons",
@@ -279,6 +296,38 @@ class BuildKIconThemes(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kiconthemes.git")
     dependencies = ["kconfigwidgets", "kwidgetsaddons", "kitemviews", "karchive", "ki18n"]
     _has_qt_designer_plugin = True
+
+# frameworks/kglobalaccel: frameworks/kconfig
+# frameworks/kglobalaccel: frameworks/kcoreaddons
+# frameworks/kglobalaccel: frameworks/kcrash
+# frameworks/kglobalaccel: frameworks/kdbusaddons
+# frameworks/kglobalaccel: frameworks/kwindowsystem
+
+
+class BuildKXMLGUI(KDECMakeProject):
+    # frameworks/kxmlgui: frameworks/kglobalaccel
+    dependencies = ["kitemviews", "kconfig", "kconfig-native",
+                    "kconfigwidgets", "ki18n", "kiconthemes",
+                    "ktextwidgets", "kwidgetsaddons", "kwindowsystem"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kxmlgui.git")
+    _has_qt_designer_plugin = True
+
+    def setup(self):
+        super().setup()
+        # TODO: support kglobalaccel
+        self.add_cmake_options(FORCE_DISABLE_KGLOBALACCEL=True)
+
+
+class BuildKIO(KDECMakeProject):
+    dependencies = ["kauth", "kdbusaddons", "ki18n", "kguiaddons", "kconfigwidgets", "kitemviews", "kcoreaddons",
+                    "kwidgetsaddons", "kservice", "karchive", "qtx11extras", "solid",
+                    "kjobwidgets", "kiconthemes", "kwindowsystem", "kcrash", "kcompletion", "ktextwidgets",
+                    "kxmlgui", "kbookmarks", "kconfig", "kconfig-native",
+                    # optional: "kwallet", "knotifications", "kded"
+                    ]
+    repository = GitRepository("https://invent.kde.org/frameworks/kio.git")
+    _has_qt_designer_plugin = True
+
 
 
 class BuildDoplhin(KDECMakeProject):
