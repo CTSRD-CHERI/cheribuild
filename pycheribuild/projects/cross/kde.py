@@ -85,6 +85,11 @@ class BuildExtraCMakeModules(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/extra-cmake-modules.git")
 
 
+class BuildPhonon(KDECMakeProject):
+    target = "phonon"
+    repository = GitRepository("https://invent.kde.org/libraries/phonon.git")
+
+
 class BuildGettext(CrossCompileAutotoolsProject):
     target = "gettext"
     repository = GitRepository("https://git.savannah.gnu.org/git/gettext.git")
@@ -241,6 +246,18 @@ class BuildKJobWidgets(KDECMakeProject):
 #     repository = GitRepository("https://invent.kde.org/frameworks/kdoctools.git")
 
 
+class BuildKNotifications(KDECMakeProject):
+    # frameworks/knotifications: third-party/libdbusmenu-qt
+    dependencies = ["kwindowsystem", "kconfig", "kconfig-native", "kcoreaddons", "kcoreaddons-native", "qtx11extras",
+                    "phonon"]
+    repository = GitRepository("https://invent.kde.org/frameworks/knotifications.git")
+
+
+class BuildKPackage(KDECMakeProject):
+    dependencies = ["karchive", "ki18n", "kcoreaddons", "kcoreaddons-native"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kpackage.git")
+
+
 
 #
 # Frameworks, tier3
@@ -294,11 +311,11 @@ class BuildKIconThemes(KDECMakeProject):
     dependencies = ["kconfigwidgets", "kwidgetsaddons", "kitemviews", "karchive", "ki18n"]
     _has_qt_designer_plugin = True
 
-# frameworks/kglobalaccel: frameworks/kconfig
-# frameworks/kglobalaccel: frameworks/kcoreaddons
-# frameworks/kglobalaccel: frameworks/kcrash
-# frameworks/kglobalaccel: frameworks/kdbusaddons
-# frameworks/kglobalaccel: frameworks/kwindowsystem
+
+class BuildKGlobalAccel(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kglobalaccel.git")
+    dependencies = ["kconfig", "kconfig-native", "kcrash", "kdbusaddons", "kwindowsystem",
+                    "qtx11extras", "libxcb"]
 
 
 class BuildKXMLGUI(KDECMakeProject):
