@@ -190,7 +190,7 @@ class ProjectSubclassDefinitionHook(type):
         # print("Adding target", target_name, "with deps:", cls.dependencies)
 
 
-@functools.lru_cache
+@functools.lru_cache(maxsize=20)
 def _cached_get_homebrew_prefix(package: str, config: CheriConfig):
     assert OSInfo.IS_MAC, "Should only be called on macos"
     prefix = run_command("brew", "--prefix", package, capture_output=True, run_in_pretend_mode=True,
