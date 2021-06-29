@@ -56,6 +56,7 @@ class KDECMakeProject(CrossCompileCMakeProject):
     ctest_script_extra_args = ("--extra-library-path", "/build/bin", "--extra-library-path", "/build/lib")
     dependencies = ["qtbase", "extra-cmake-modules"]
     _has_qt_designer_plugin = False
+    _needs_newer_bison = False
 
     def setup(self):
         super().setup()
@@ -71,6 +72,9 @@ class KDECMakeProject(CrossCompileCMakeProject):
             if "qtx11extras" in self.dependencies:
                 self.warning("Adding include path as workaround for broken QtX11Extras")
                 self.COMMON_FLAGS.append("-I" + str(BuildLibXCB.get_install_dir(self) / "include"))
+        if OSInfo.IS_MAC and self._needs_newer_bison:
+            # /usr/bin/bison on macOS is too old
+            self.add_cmake_options(BISON_EXECUTABLE=self.get_homebrew_prefix("bison") / "bin/bison")
 
     @property
     def cmake_prefix_paths(self):
@@ -202,12 +206,7 @@ class BuildKWindowSystem(KDECMakeProject):
 
 class BuildSolid(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/solid.git")
-
-    def setup(self):
-        super().setup()
-        if OSInfo.IS_MAC:
-            # /usr/bin/bison on macOS is too old
-            self.add_cmake_options(BISON_EXECUTABLE=self.get_homebrew_prefix("bison") / "bin/bison")
+    _needs_newer_bison = True
 
 
 class BuildSonnet(KDECMakeProject):
@@ -290,23 +289,7 @@ class BuildKService(KDECMakeProject):
                     "kconfig-native",  # kconfig_compiler
                     ]
     repository = GitRepository("https://invent.kde.org/frameworks/kservice.git")
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.add_required_system_tool("bison", apt="bison", homebrew="bison")
-        self.add_required_system_tool("flex", apt="flex")
-
-    def process(self):
-        # TODO: add this as a generic helper function
-        newpath = os.getenv("PATH")
-        if OSInfo.IS_MAC:
-            # FIXME: /Users/alex/cheri/output/rootfs-amd64/opt/amd64/kde/bin/desktoptojson
-            # /usr/bin/bison on macOS is not compatible with this build system
-            newpath = ":".join([str(self.get_homebrew_prefix("bison") / "bin"),
-                                str(self.get_homebrew_prefix("flex") / "bin"),
-                                newpath])
-        with set_env(PATH=newpath):
-            super().process()
+    _needs_newer_bison = True
 
 
 class BuildKTextWidgets(KDECMakeProject):
