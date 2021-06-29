@@ -145,9 +145,11 @@ class BuildGettext(CrossCompileAutotoolsProject):
 #
 # frameworks/syntax-highlighting: third-party/taglib
 # frameworks/kwayland: kdesupport/plasma-wayland-protocols
-# class BuildBreezeIcons(KDECMakeProject):
-#     target = "breeze-icons"
-#     repository = GitRepository("https://invent.kde.org/frameworks/breeze-icons.git")
+class BuildBreezeIcons(KDECMakeProject):
+    target = "breeze-icons"
+    repository = GitRepository("https://invent.kde.org/frameworks/breeze-icons.git")
+
+
 class BuildAttica(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/attica.git")
 
@@ -354,7 +356,7 @@ class BuildKParts(KDECMakeProject):
 
 class BuildKIconThemes(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kiconthemes.git")
-    dependencies = ["kconfigwidgets", "kwidgetsaddons", "kitemviews", "karchive", "ki18n"]
+    dependencies = ["kconfigwidgets", "kwidgetsaddons", "kitemviews", "karchive", "ki18n", "breeze-icons"]
     _has_qt_designer_plugin = True
 
 
@@ -516,6 +518,7 @@ class BuildKIO(KDECMakeProject):
 
 class BuildDoplhin(KDECMakeProject):
     target = "dolphin"
+    dependencies = ["kparts", "kxmlgui", "knewstuff", "kio"]
     repository = GitRepository("https://invent.kde.org/system/dolphin.git")
 
 
