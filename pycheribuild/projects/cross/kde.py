@@ -168,6 +168,10 @@ class BuildKGuiAddons(KDECMakeProject):
 class BuildKIconThemes(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kiconthemes.git")
 
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
+
 
 class BuildKItemViews(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kitemviews.git")
@@ -195,20 +199,46 @@ class BuildKWindowSystem(KDECMakeProject):
     dependencies = KDECMakeProject.dependencies + ["qtx11extras", "libxfixes"]
 
 
+class BuildSonnet(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/sonnet.git")
+    # TODO: should probably install a spell checker:
+    # -- The following OPTIONAL packages have not been found:
+    # * ASPELL, Spell checking support via Aspell, <http://aspell.net/>
+    # * HSPELL, Spell checking support for Hebrew, <http://ivrix.org.il/projects/spell-checker/>
+    # * HUNSPELL, Spell checking support via Hunspell, <http://hunspell.sourceforge.net/>
+    # * VOIKKO, Spell checking support via Voikko, <http://voikko.puimula.org/>
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
+
+#
 # Frameworks, tier2
+#
 
 
 class BuildKAuth(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kauth.git")
     dependencies = ["kcoreaddons"]  # optional: "polkit-qt-1"
 
-# frameworks/kcompletion: frameworks/kconfig
-# frameworks/kcompletion: frameworks/kwidgetsaddons
+
+class BuildKCompletion(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kcompletion.git")
+    dependencies = ["kconfig", "kconfig-native", "kwidgetsaddons"]
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
 
 
 class BuildKCrash(KDECMakeProject):
     dependencies = ["kcoreaddons", "qtx11extras", "kwindowsystem"]
     repository = GitRepository("https://invent.kde.org/frameworks/kcrash.git")
+
+
+# class BuildKDocTools(KDECMakeProject):
+#     dependencies = ["karchive", "ki18n"]
+#     repository = GitRepository("https://invent.kde.org/frameworks/kdoctools.git")
 
 # Frameworks, tier3
 
@@ -246,6 +276,14 @@ class BuildKService(KDECMakeProject):
         with set_env(PATH=newpath):
             super().process()
 
+
+class BuildKTextWidgets(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/ktextwidgets.git")
+    dependencies = ["sonnet", "kcompletion", "kconfigwidgets", "kwidgetsaddons"]
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
 class BuildDoplhin(KDECMakeProject):
     target = "dolphin"
     repository = GitRepository("https://invent.kde.org/system/dolphin.git")
