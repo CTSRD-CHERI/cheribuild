@@ -184,6 +184,11 @@ class BuildKI18N(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/ki18n.git")
     dependencies = KDECMakeProject.dependencies + ["gettext"]
 
+    def setup(self):
+        super().setup()
+        # Avoid QtQml dependency since we don't really care about translations right now
+        self.add_cmake_options(BUILD_WITH_QML=False)
+
 
 class BuildKWidgetsAddons(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kwidgetsaddons.git")
@@ -267,6 +272,10 @@ class BuildKBookmarks(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kbookmarks.git")
 
 
+class BuildKCMUtils(KDECMakeProject):
+    dependencies = ["kitemviews", "kconfigwidgets", "kservice", "kxmlgui", "kdeclarative", "kauth"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kcmutils.git")
+
 
 class BuildKConfigWidgets(KDECMakeProject):
     dependencies = ["kauth", "kcoreaddons", "kcodecs", "kconfig", "kguiaddons", "ki18n", "kwidgetsaddons",
@@ -326,6 +335,11 @@ class BuildKXMLGUI(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kxmlgui.git")
     _has_qt_designer_plugin = True
 
+
+class BuildKDeclarative(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/kdeclarative.git")
+    dependencies = ["kpackage", "kpackage-native", "kio", "kiconthemes", "knotifications", "qtdeclarative"]
+    _has_qt_designer_plugin = True
 
 
 class BuildKIO(KDECMakeProject):
