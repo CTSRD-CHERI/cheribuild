@@ -33,6 +33,7 @@ from .qt5 import BuildQtBase
 from ..project import DefaultInstallDir, GitRepository, MakeCommandKind
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
+from ...config.loader import ComputedDefaultValue
 from ...processutils import set_env
 from ...utils import OSInfo
 
@@ -42,6 +43,11 @@ class KDECMakeProject(CrossCompileCMakeProject):
     default_install_dir = DefaultInstallDir.KDE_PREFIX
     default_build_type = BuildType.RELWITHDEBINFO
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+    # Group all the frameworks source directories together
+    default_source_dir = ComputedDefaultValue(
+        function=lambda config, project: config.source_root / "kde-frameworks" / project.default_directory_basename,
+        as_string=lambda cls: "$SOURCE_ROOT/kde-frameworks" + cls.default_directory_basename)
+
     ctest_needs_full_disk_image = False  # default to running with the full disk image
     # Prefer the libraries in the build directory over the installed ones. This is needed when RPATH is not set
     # correctly, i.e. when built with CMake+Ninja on macOS with a version where
