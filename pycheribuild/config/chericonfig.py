@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import collections
 import getpass
 import grp
 import json
@@ -105,6 +106,7 @@ class CheriConfig(ConfigBase):
         from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage
         # noinspection PyTypeChecker
         super().__init__(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt())
+        self._cached_deps = collections.defaultdict(dict)
 
         assert isinstance(loader, ConfigLoaderBase)
         loader._cheri_config = self

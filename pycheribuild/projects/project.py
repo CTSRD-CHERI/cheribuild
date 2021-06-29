@@ -373,8 +373,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         else:
             new_dependency_chain = [cls]
         # look only in __dict__ to avoid parent class lookup
-        cache_lookup_args = (config, include_dependencies, include_toolchain_dependencies, include_sdk_dependencies)
-        cached_result = cls.__dict__.get("_cached_deps", dict()).get(cache_lookup_args, None)
+        cache_lookup_args = (include_dependencies, include_toolchain_dependencies, include_sdk_dependencies)
+        # noinspection PyProtectedMember
+        cached_result = config._cached_deps.get(cls.target, dict()).get(cache_lookup_args, None)
         if cached_result is not None:
             return cached_result
         result = []
@@ -396,9 +397,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 if r not in result:
                     result.append(r)
         # save the result to avoid recomputing it lots of times
-        if "_cached_deps" not in cls.__dict__:
-            setattr(cls, "_cached_deps", dict())
-        cls.__dict__["_cached_deps"][cache_lookup_args] = result
+        # noinspection PyProtectedMember
+        config._cached_deps[cls.target][cache_lookup_args] = result
         return result
 
     @classmethod
