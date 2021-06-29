@@ -55,11 +55,15 @@ class KDECMakeProject(CrossCompileCMakeProject):
     # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 is not included.
     ctest_script_extra_args = ("--extra-library-path", "/build/bin", "--extra-library-path", "/build/lib")
     dependencies = ["qtbase", "extra-cmake-modules"]
+    _has_qt_designer_plugin = False
 
     def setup(self):
         super().setup()
         if self.target_info.is_macos():
             self.add_cmake_options(APPLE_SUPPRESS_X11_WARNING=True)
+        # Skip the QtDesigner plugin for now, it won't be particularly useful
+        if self._has_qt_designer_plugin:
+            self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
         if not self.compiling_for_host():
             # We need native tools (e.g. desktoptojson/kconfig_compiler) for some projects
             native_install_root = BuildKConfig.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
@@ -123,8 +127,9 @@ class BuildGettext(CrossCompileAutotoolsProject):
         with set_env(**new_env):
             super().process()
 
-
+#
 # Frameworks, tier1
+#
 # frameworks/syntax-highlighting: third-party/taglib
 # frameworks/kwayland: kdesupport/plasma-wayland-protocols
 # class BuildBreezeIcons(KDECMakeProject):
@@ -167,18 +172,12 @@ class BuildKGuiAddons(KDECMakeProject):
 
 class BuildKIconThemes(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kiconthemes.git")
-
-    def setup(self):
-        super().setup()
-        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
+    _has_qt_designer_plugin = True
 
 
 class BuildKItemViews(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kitemviews.git")
-
-    def setup(self):
-        super().setup()
-        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
+    _has_qt_designer_plugin = True
 
 
 class BuildKI18N(KDECMakeProject):
@@ -188,10 +187,7 @@ class BuildKI18N(KDECMakeProject):
 
 class BuildKWidgetsAddons(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kwidgetsaddons.git")
-
-    def setup(self):
-        super().setup()
-        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
+    _has_qt_designer_plugin = True
 
 
 class BuildKWindowSystem(KDECMakeProject):
@@ -207,10 +203,7 @@ class BuildSonnet(KDECMakeProject):
     # * HSPELL, Spell checking support for Hebrew, <http://ivrix.org.il/projects/spell-checker/>
     # * HUNSPELL, Spell checking support via Hunspell, <http://hunspell.sourceforge.net/>
     # * VOIKKO, Spell checking support via Voikko, <http://voikko.puimula.org/>
-
-    def setup(self):
-        super().setup()
-        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
+    _has_qt_designer_plugin = True
 
 #
 # Frameworks, tier2
@@ -225,10 +218,7 @@ class BuildKAuth(KDECMakeProject):
 class BuildKCompletion(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kcompletion.git")
     dependencies = ["kconfig", "kconfig-native", "kwidgetsaddons"]
-
-    def setup(self):
-        super().setup()
-        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
+    _has_qt_designer_plugin = True
 
 
 class BuildKCrash(KDECMakeProject):
@@ -246,10 +236,7 @@ class BuildKConfigWidgets(KDECMakeProject):
     dependencies = ["kauth", "kcoreaddons", "kcodecs", "kconfig", "kguiaddons", "ki18n", "kwidgetsaddons",
                     "kconfig-native"]
     repository = GitRepository("https://invent.kde.org/frameworks/kconfigwidgets.git")
-
-    def setup(self):
-        super().setup()
-        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
+    _has_qt_designer_plugin = True
 
 
 class BuildKService(KDECMakeProject):
@@ -280,14 +267,11 @@ class BuildKService(KDECMakeProject):
 class BuildKTextWidgets(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/ktextwidgets.git")
     dependencies = ["sonnet", "kcompletion", "kconfigwidgets", "kwidgetsaddons"]
+    _has_qt_designer_plugin = True
 
-    def setup(self):
-        super().setup()
-        self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
 class BuildDoplhin(KDECMakeProject):
     target = "dolphin"
     repository = GitRepository("https://invent.kde.org/system/dolphin.git")
-
 
 # Lots of deps (including QtSVG)
 # class BuildGwenview(KDECMakeProject):
