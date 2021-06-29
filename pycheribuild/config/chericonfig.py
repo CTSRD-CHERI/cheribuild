@@ -241,17 +241,16 @@ class CheriConfig(ConfigBase):
             help="When building with --include-dependencies ignore the SDK dependencies. Saves a lot of time "
                  "when building libc++, etc. with dependencies but the sdk is already up-to-date. "
                  "This is like --no-include-toolchain-depedencies but also skips the target that builds the sysroot.")
-        self.trap_on_unrepresentable = loader.add_bool_option("trap-on-unrepresentable", default=False,
-                                                              help="Raise a CHERI exception when capabilities become "
-                                                                   "unreprestable instead of detagging. Useful for "
-                                                                   "debugging, but deviates from the spec, "
-                                                                   "and therefore off by default.")
-        self.debugger_on_cheri_trap = loader.add_bool_option("qemu-gdb-break-on-cheri-trap", default=False,
-                                                             help="Drop into GDB attached to QEMU when a CHERI "
-                                                                  "exception is triggered (QEMU only).")
-        self.qemu_debug_program = loader.add_option("qemu-gdb-debug-userspace-program",
-                                                    help="Print the command to debug the following userspace program "
-                                                         "in GDB attaced to QEMU")
+        self.trap_on_unrepresentable = loader.add_bool_option(
+            "trap-on-unrepresentable", default=False, group=loader.run_group,
+            help="Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for "
+                 "debugging, but deviates from the spec, and therefore off by default.")
+        self.debugger_on_cheri_trap = loader.add_bool_option(
+            "qemu-gdb-break-on-cheri-trap", default=False, group=loader.run_group,
+            help="Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only).")
+        self.qemu_debug_program = loader.add_option(
+            "qemu-gdb-debug-userspace-program", group=loader.run_group,
+            help="Print the command to debug the following userspace program in GDB attaced to QEMU")
         self.include_dependencies = None  # type: Optional[bool]
         self.include_toolchain_dependencies = True
         self.preferred_xtarget = None  # type: Optional[CrossCompileTarget]
@@ -373,7 +372,7 @@ class CheriConfig(ConfigBase):
                  "repositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-shallow clone")
 
         self.fpga_custom_env_setup_script = loader.add_path_option(
-            "beri-fpga-env-setup-script",
+            "beri-fpga-env-setup-script", group=loader.path_group,
             help="Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh")
 
         self.local_arm_none_eabi_toolchain_relpath = Path("arm-none-eabi-sdk")
@@ -388,7 +387,7 @@ class CheriConfig(ConfigBase):
             "build-morello-firmware-from-source", help_hidden=False,
             help="Build the firmware from source instead of downloading the latest release.")
 
-        self.list_kernels = loader.add_bool_option("list-kernels",
+        self.list_kernels = loader.add_bool_option("list-kernels", group=loader.action_group,
                                                    help="List available kernel configs to run and exit")
 
         self.targets = None  # type: typing.Optional[typing.List[str]]

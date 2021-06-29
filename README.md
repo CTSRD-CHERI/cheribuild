@@ -402,25 +402,14 @@ optional arguments:
   --configure-only      Only run the configure step (skip build and install) (default: 'False')
   --skip-install        Skip the install step (only do the build) (default: 'False')
   --skip-build          Skip the build step (only do the install) (default: 'False')
-  --trap-on-unrepresentable
-                        Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for
-                        debugging, but deviates from the spec, and therefore off by default. (default: 'False')
-  --qemu-gdb-break-on-cheri-trap
-                        Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only). (default:
-                        'False')
-  --qemu-gdb-debug-userspace-program QEMU_GDB_DEBUG_USERSPACE_PROGRAM
-                        Print the command to debug the following userspace program in GDB attaced to QEMU
   --compilation-db, --cdb
                         Create a compile_commands.json file in the build dir (requires Bear for non-CMake projects)
                         (default: 'False')
   --no-shallow-clone    Do not perform a shallow `git clone` when cloning new projects. This can save a lot of time for
                         largerepositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-
                         shallow clone
-  --beri-fpga-env-setup-script BERI_FPGA_ENV_SETUP_SCRIPT
-                        Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh
   --build-morello-firmware-from-source
                         Build the firmware from source instead of downloading the latest release. (default: 'False')
-  --list-kernels        List available kernel configs to run and exit (default: 'False')
   --quiet, -q           Don't show stdout of the commands that are executed (default: 'False')
   --verbose, -v         Print all commmands that are executed (default: 'False')
   --clean, -c           Remove the build directory before build (default: 'False')
@@ -452,6 +441,7 @@ Actions to be performed:
   --dump-configuration  Print the current configuration as JSON. This can be saved to ~/.config/cheribuild.json to make
                         it persistent
   --print-targets-only  Don't run the build but instead only print the targets that would be executed (default: 'False')
+  --list-kernels        List available kernel configs to run and exit (default: 'False')
   --get-config-option KEY
                         Print the value of config option KEY and exit
 
@@ -478,6 +468,8 @@ Configuration of default paths:
                         The C++ compiler to use for host binaries (must be compatible with Clang >= 3.7)
   --clang-cpp-path CLANG_CPP_PATH, --cpp-path CLANG_CPP_PATH
                         The C preprocessor to use for host binaries (must be compatible with Clang >= 3.7)
+  --beri-fpga-env-setup-script BERI_FPGA_ENV_SETUP_SCRIPT
+                        Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh
   --arm-none-eabi-prefix ARM_NONE_EABI_PREFIX
                         Prefix for arm-none-eabi-gcc binaries (e.g. /usr/bin/arm-none-eabi-). Available
                         athttps://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-
@@ -556,6 +548,14 @@ Configuration for running benchmarks:
                         test the benchmarks) (default: 'False')
 
 Configuration for launching QEMU (and other simulators):
+  --trap-on-unrepresentable
+                        Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for
+                        debugging, but deviates from the spec, and therefore off by default. (default: 'False')
+  --qemu-gdb-break-on-cheri-trap
+                        Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only). (default:
+                        'False')
+  --qemu-gdb-debug-userspace-program QEMU_GDB_DEBUG_USERSPACE_PROGRAM
+                        Print the command to debug the following userspace program in GDB attaced to QEMU
   --wait-for-debugger   Start QEMU in the 'wait for a debugger' state whenlaunching CheriBSD,FreeBSD, etc. (default:
                         'False')
   --debugger-in-tmux-pane
