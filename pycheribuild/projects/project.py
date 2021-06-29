@@ -3303,8 +3303,9 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                 CMAKE_EXTRA_SHARED_LIBRARY_SUFFIXES=".a")
         if not self.compiling_for_host() and self.make_args.subkind == MakeCommandKind.Ninja:
             # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
-            # TODO: remove once it has been fixed
-            self.add_cmake_options(CMAKE_BUILD_WITH_INSTALL_RPATH=True)
+            # Fixed in https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 (3.21.20210625)
+            self.add_cmake_options(
+                CMAKE_BUILD_WITH_INSTALL_RPATH=self._get_configure_tool_version() < (3, 21, 20210625))
         # TODO: BUILD_SHARED_LIBS=OFF?
 
         # Add the options from the config file:
