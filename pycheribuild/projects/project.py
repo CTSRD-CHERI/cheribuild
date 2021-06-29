@@ -30,6 +30,7 @@
 import copy
 import datetime
 import errno
+import functools
 import inspect
 import os
 import re
@@ -187,6 +188,14 @@ class ProjectSubclassDefinitionHook(type):
             cls._should_not_be_instantiated = False  # can be instantiated
             target_manager.add_target(Target(target_name, cls))
         # print("Adding target", target_name, "with deps:", cls.dependencies)
+
+
+@functools.lru_cache
+def _cached_get_homebrew_prefix(package: str, config: CheriConfig):
+    assert OSInfo.IS_MAC, "Should only be called on macos"
+    prefix = run_command("brew", "--prefix", package, capture_output=True, run_in_pretend_mode=True,
+                         print_verbose_only=False, config=config).stdout.decode("utf-8").strip()
+    return Path(prefix)
 
 
 class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
@@ -1043,11 +1052,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self._system_deps_checked = True
 
     def get_homebrew_prefix(self, package: str) -> Path:
-        assert OSInfo.IS_MAC, "Should only be called on macos"
         try:
-            prefix = self.run_cmd("brew", "--prefix", package, capture_output=True, run_in_pretend_mode=True,
-                                  print_verbose_only=True).stdout.decode("utf-8").strip()
-            return Path(prefix)
+            return _cached_get_homebrew_prefix(package, self.config)
         except subprocess.CalledProcessError as e:
             self.dependency_error("Could not find homebrew package" + package + ":", e,
                                   install_instructions="Try running `brew install " + package + "`")
