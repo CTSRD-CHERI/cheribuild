@@ -148,6 +148,10 @@ class BuildGettext(CrossCompileAutotoolsProject):
 # class BuildBreezeIcons(KDECMakeProject):
 #     target = "breeze-icons"
 #     repository = GitRepository("https://invent.kde.org/frameworks/breeze-icons.git")
+class BuildAttica(KDECMakeProject):
+    repository = GitRepository("https://invent.kde.org/frameworks/attica.git")
+
+
 class BuildKArchive(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/karchive.git")
 
@@ -262,6 +266,11 @@ class BuildKPackage(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kpackage.git")
 
 
+class BuildKSyndication(KDECMakeProject):
+    dependencies = ["kcodecs"]
+    repository = GitRepository("https://invent.kde.org/frameworks/syndication.git")
+
+
 
 #
 # Frameworks, tier3
@@ -281,6 +290,15 @@ class BuildKConfigWidgets(KDECMakeProject):
                     "kconfig-native"]
     repository = GitRepository("https://invent.kde.org/frameworks/kconfigwidgets.git")
     _has_qt_designer_plugin = True
+
+
+# frameworks/kjs: frameworks/kdoctools
+class BuildKNewStuff(KDECMakeProject):
+    dependencies = ["attica", "kitemviews", "kiconthemes", "ktextwidgets", "kxmlgui",
+                    "solid", "kio", "kbookmarks", "kpackage", "kpackage-native", "ksyndication"
+                    ]  # TODO: kirigami
+    repository = GitRepository("https://invent.kde.org/frameworks/knewstuff.git")
+    _needs_newer_bison = True
 
 
 class BuildKService(KDECMakeProject):
