@@ -68,6 +68,9 @@ class KDECMakeProject(CrossCompileCMakeProject):
             # We need native tools (e.g. desktoptojson/kconfig_compiler) for some projects
             native_install_root = BuildKConfig.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
             self.add_cmake_options(KF5_HOST_TOOLING=native_install_root / "lib/cmake")
+            if "qtx11extras" in self.dependencies:
+                self.warning("Adding include path as workaround for broken QtX11Extras")
+                self.COMMON_FLAGS.append("-I" + str(BuildLibXCB.get_install_dir(self) / "include"))
 
     @property
     def cmake_prefix_paths(self):
@@ -127,6 +130,7 @@ class BuildGettext(CrossCompileAutotoolsProject):
         with set_env(**new_env):
             super().process()
 
+
 #
 # Frameworks, tier1
 #
@@ -135,7 +139,6 @@ class BuildGettext(CrossCompileAutotoolsProject):
 # class BuildBreezeIcons(KDECMakeProject):
 #     target = "breeze-icons"
 #     repository = GitRepository("https://invent.kde.org/frameworks/breeze-icons.git")
-
 class BuildKArchive(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/karchive.git")
 
@@ -154,10 +157,7 @@ class BuildKConfig(KDECMakeProject):
 
 class BuildKDBusAddons(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kdbusaddons.git")
-
-    def setup(self):
-        super().setup()  # work around broken qx11extras
-        self.COMMON_FLAGS.append("-I" + str(BuildLibXCB.get_install_dir(self) / "include"))
+    dependencies = KDECMakeProject.dependencies + ["qtx11extras"]
 
 
 class BuildKGuiAddons(KDECMakeProject):
@@ -235,9 +235,6 @@ class BuildKJobWidgets(KDECMakeProject):
     dependencies = ["kcoreaddons", "kcoreaddons-native", "kwidgetsaddons", "qtx11extras"]
     repository = GitRepository("https://invent.kde.org/frameworks/kjobwidgets.git")
 
-    def setup(self):
-        super().setup()  # work around broken qx11extras
-        self.COMMON_FLAGS.append("-I" + str(BuildLibXCB.get_install_dir(self) / "include"))
 
 # class BuildKDocTools(KDECMakeProject):
 #     dependencies = ["karchive", "ki18n"]
