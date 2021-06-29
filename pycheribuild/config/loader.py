@@ -191,6 +191,7 @@ class ConfigLoaderBase(object):
                 formatter_class=lambda prog: argparse.HelpFormatter(prog, width=terminal_width))
 
         self.action_group = self._parser.add_argument_group("Actions to be performed")
+        self.dependencies_group = self._parser.add_argument_group("Selecting which dependencies are built")
         self.path_group = self._parser.add_argument_group("Configuration of default paths")
         self.cross_compile_options_group = self._parser.add_argument_group(
             "Adjust flags used when compiling MIPS/CHERI projects")

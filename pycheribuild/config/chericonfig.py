@@ -126,10 +126,9 @@ class CheriConfig(ConfigBase):
             else:
                 loader.action_group.add_argument(action.option_name, help=action.help_message, dest="action",
                                                  action="append_const", const=action.actions)
-        self.print_targets_only = loader.add_bool_option("print-targets-only", help_hidden=False,
-                                                         group=loader.action_group,
-                                                         help="Don't run the build but instead only print the targets "
-                                                              "that would be executed")
+        self.print_targets_only = loader.add_commandline_only_bool_option(
+            "print-targets-only", help_hidden=False, group=loader.action_group,
+            help="Don't run the build but instead only print the targets that would be executed")
 
         self.clang_path = loader.add_path_option("clang-path", shortname="-cc-path",
                                                  default=lambda c, _: latest_system_clang_tool(c, "clang", "cc"),
@@ -238,7 +237,7 @@ class CheriConfig(ConfigBase):
         self.skip_install = loader.add_bool_option("skip-install", help="Skip the install step (only do the build)")
         self.skip_build = loader.add_bool_option("skip-build", help="Skip the build step (only do the install)")
         self.skip_sdk = loader.add_bool_option(
-            "skip-sdk",
+            "skip-sdk", group=loader.dependencies_group,
             help="When building with --include-dependencies ignore the SDK dependencies. Saves a lot of time "
                  "when building libc++, etc. with dependencies but the sdk is already up-to-date. "
                  "This is like --no-include-toolchain-depedencies but also skips the target that builds the sysroot.")

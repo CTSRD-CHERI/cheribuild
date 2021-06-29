@@ -86,14 +86,14 @@ class DefaultCheriConfig(CheriConfig):
                                                       group=loader.configure_group,
                                                       help="Always run the configure step, even for CMake projects "
                                                            "with a valid cache.")
-        self.include_dependencies = loader.add_bool_option(
-            "include-dependencies", "d",
+        self.include_dependencies = loader.add_commandline_only_bool_option(
+            "include-dependencies", "d", group=loader.dependencies_group,
             help="Also build the dependencies of targets passed on the command line. Targets passed on the command "
                  "line will be reordered and processed in an order that ensures dependencies are built before the "
                  "real target. (run --list-targets for more information). By default this does not build toolchain "
                  "targets such as LLVM. Pass --include-toolchain-dependencies to also build those.")
         self.include_toolchain_dependencies = loader.add_bool_option(
-            "include-toolchain-dependencies", default=True,
+            "include-toolchain-dependencies", default=True, group=loader.dependencies_group,
             help="Include toolchain targets such as LLVM and QEMU when --include-dependencies is set.")
 
         self.copy_compilation_db_to_source_dir = loader.add_commandline_only_bool_option(
