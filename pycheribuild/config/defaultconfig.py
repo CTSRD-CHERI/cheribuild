@@ -96,6 +96,15 @@ class DefaultCheriConfig(CheriConfig):
             "include-toolchain-dependencies", default=True, group=loader.dependencies_group,
             help="Include toolchain targets such as LLVM and QEMU when --include-dependencies is set.")
 
+        start_after_group = loader.dependencies_group.add_mutually_exclusive_group()
+
+        self.start_with = loader.add_commandline_only_option(
+            "start-with", metavar="TARGET", group=start_after_group,
+            help="Start building at TARGET (useful when resuming an interrupted --include-depedencies build)")
+        self.start_after = loader.add_commandline_only_option(
+            "start-after", metavar="TARGET", group=start_after_group,
+            help="Start building after TARGET (useful when resuming an interrupted --include-depedencies build)")
+
         self.copy_compilation_db_to_source_dir = loader.add_commandline_only_bool_option(
             "compilation-db-in-source-dir",
             help="Generate a compile_commands.json and also copy it to the source directory")

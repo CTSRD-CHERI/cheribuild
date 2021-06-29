@@ -116,6 +116,43 @@ def test_skip_update():
         assert not _parse_arguments(["--no-skip-update"], config_file=config).skip_update
 
 
+@pytest.mark.parametrize("args,expected", [
+    pytest.param(["--include-dependencies", "run-riscv64-purecap"],
+                 ["qemu", "llvm-native", "cheribsd-riscv64-purecap", "gdb-riscv64-hybrid-for-purecap-rootfs",
+                  "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"],
+                 id="run-include-deps"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "run-riscv64-purecap"],
+                 ["bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"],
+                 id="run-include-deps-skip-sdk"),
+    pytest.param(["--include-dependencies", "--start-with=bbl-baremetal-riscv64-purecap", "run-riscv64-purecap"],
+                 ["bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"],
+                 id="run-start-with"),
+    pytest.param(["--include-dependencies", "--start-after=bbl-baremetal-riscv64-purecap", "run-riscv64-purecap"],
+                 ["disk-image-riscv64-purecap", "run-riscv64-purecap"],
+                 id="run-start-after"),
+])
+def test_target_subsets(args, expected):
+    config = _parse_arguments(args)
+    selected = list(x.name for x in target_manager.get_all_chosen_targets(config))
+    assert selected == expected
+
+
+@pytest.mark.parametrize("args,exception_type,errmessage", [
+    pytest.param(["--include-dependencies", "--skip-sdk", "--start-after=llvm-project", "run-riscv64-purecap"],
+                 ValueError, "--start-after/--start-with target 'llvm-project' is not being built",
+                 id="run-start-after-skip-sdk"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--start-with=llvm-project", "run-riscv64-purecap"],
+                 ValueError, "--start-after/--start-with target 'llvm-project' is not being built",
+                 id="run-start-with-skip-sdk"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--start-after=run-riscv64-purecap", "run-riscv64-purecap"],
+                 ValueError, "selected target list is empty after --start-after/--start-with filtering",
+                 id="run-start-after-empty"),
+])
+def test_target_subsets_bad(args, exception_type, errmessage):
+    with pytest.raises(exception_type, match=errmessage):
+        target_manager.get_all_chosen_targets(_parse_arguments(args))
+
+
 def test_per_project_override():
     config = _parse_arguments(["--skip-configure"])
     source_root = config.source_root

@@ -253,6 +253,8 @@ class CheriConfig(ConfigBase):
             help="Print the command to debug the following userspace program in GDB attaced to QEMU")
         self.include_dependencies = None  # type: Optional[bool]
         self.include_toolchain_dependencies = True
+        self.start_with = None  # type: Optional[str]
+        self.start_after = None  # type: Optional[str]
         self.preferred_xtarget = None  # type: Optional[CrossCompileTarget]
         self.make_without_nice = None  # type: Optional[bool]
 
@@ -391,7 +393,8 @@ class CheriConfig(ConfigBase):
                                                    help="List available kernel configs to run and exit")
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
-        self.__optional_properties = ["preferred_xtarget", "internet_connection_last_checked_at"]
+        self.__optional_properties = ["preferred_xtarget", "internet_connection_last_checked_at",
+                                      "start_after", "start_with"]
 
     def load(self):
         self.loader.load()

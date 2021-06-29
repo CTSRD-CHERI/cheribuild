@@ -403,6 +403,22 @@ class TargetManager(object):
             # Initialize the full dependency cache so that sort() works (otherwise we'd have to pass config to __lt__).
             t.cache_dependencies(config)
         sort = self.sort_in_dependency_order(chosen_targets)
+        if config.start_with is not None or config.start_after is not None:
+            assert config.start_with is None or config.start_after is None, "Can't have both set"
+            to_find = config.start_with if config.start_with is not None else config.start_after
+            found_index = None
+            for i, tgt in enumerate(sort):
+                if tgt.name == to_find:
+                    found_index = i
+                    break
+            if found_index is None:
+                raise ValueError("--start-after/--start-with target '" + to_find + "' is not being built")
+            if config.start_with:
+                sort = sort[found_index:]
+            elif config.start_after:
+                sort = sort[found_index + 1:]
+            if not sort:
+                raise ValueError("selected target list is empty after --start-after/--start-with filtering")
         return sort
 
     def run(self, config: CheriConfig):
