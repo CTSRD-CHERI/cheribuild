@@ -456,7 +456,9 @@ class BuildQtModuleWithQMake(CrossCompileProject):
 
 class BuildQtSVG(BuildQtModuleWithQMake):
     target = "qtsvg"
-    repository = GitRepository("https://code.qt.io/qt/qtsvg.git", default_branch="5.15", force_branch=True)
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qtsvg.git",
+                               old_urls=[b"https://code.qt.io/qt/qtsvg.git"],
+                               default_branch="5.15", force_branch=True)
 
 
 class BuildQtX11Extras(BuildQtModuleWithQMake):
