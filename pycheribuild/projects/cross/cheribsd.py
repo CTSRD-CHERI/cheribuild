@@ -562,6 +562,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
     build_toolchain = FreeBSDToolchainKind.DEFAULT_COMPILER
     can_build_with_system_clang = True  # Not true for CheriBSD
 
+    # cheribsd-mfs-root-kernel doesn't have a default kernel-config, instead
+    # building a set, but kernel-config should still override that.
+    has_default_buildkernel_kernel_config = True
+
     @property
     def use_bootstrapped_toolchain(self):
         return self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAPPED
@@ -579,8 +583,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # the global --kernel-config option that is provided for convenience and backwards compat.
             cls.kernel_config = cls.add_config_option(
                 "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
-                default=ComputedDefaultValue(function=lambda _, p: p.default_kernel_config(),
-                                             as_string="target-dependent, usually GENERIC"),
+                default=ComputedDefaultValue(
+                    function=lambda _, p:
+                        p.default_kernel_config() if p.has_default_buildkernel_kernel_config else None,
+                    as_string="target-dependent, usually GENERIC"),
                 use_default_fallback_config_names=False,  #
                 help="The kernel configuration to use for `make buildkernel`")  # type: str
 
@@ -804,7 +810,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self._install_prefix = Path("/")
         self.kernel_toolchain_exists = False
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
-        assert self.kernel_config is not None
+        if self.has_default_buildkernel_kernel_config:
+            assert self.kernel_config is not None
         self.make_args.set(**self.arch_build_flags)
 
         if self.subdir_override:
@@ -1792,6 +1799,8 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     supported_architectures = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
     default_build_dir = ComputedDefaultValue(function=cheribsd_mfsroot_build_dir,
                                              as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
+    # This exists specifically for this target
+    has_default_buildkernel_kernel_config = False
     # We want the CheriBSD config options as well, so that defaults (e.g. build-alternate-abi-kernels) are inherited.
     _config_inherits_from = BuildCHERIBSD
 
@@ -1875,6 +1884,8 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         return config.kernconf
 
     def get_kernel_configs(self, **filter_kwargs) -> "typing.List[str]":
+        if self.kernel_config is not None:
+            return [self.kernel_config]
         configs = self._get_all_kernel_configs()
         return [c.kernconf for c in filter_kernel_configs(configs, **filter_kwargs)]
 

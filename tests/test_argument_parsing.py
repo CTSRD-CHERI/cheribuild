@@ -712,6 +712,11 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
                   "--cheribsd-mfs-root-kernel-riscv64-purecap/build-alternate-abi-kernels"],
                  ["CHERI-QEMU-MFS-ROOT", "CHERI-PURECAP-QEMU-MFS-ROOT",
                   "CHERI-GFE", "CHERI-PURECAP-GFE"]),
+    pytest.param("cheribsd-mfs-root-kernel-riscv64-purecap",
+                 ["--cheribsd-mfs-root-kernel-riscv64-purecap/build-fpga-kernels",
+                  "--cheribsd-mfs-root-kernel-riscv64-purecap/build-alternate-abi-kernels",
+                  "--cheribsd-mfs-root-kernel-riscv64-purecap/kernel-config=CHERI-QEMU-MFS-ROOT"],
+                 ["CHERI-QEMU-MFS-ROOT"]),
     # MIPS kernconf tests
     pytest.param("cheribsd-mfs-root-kernel-mips64", [], ["MALTA64_MFS_ROOT"]),
     pytest.param("cheribsd-mfs-root-kernel-mips64",
@@ -725,6 +730,11 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
                   "--cheribsd-mfs-root-kernel-mips64-purecap/build-alternate-abi-kernels"],
                  ["CHERI_MALTA64_MFS_ROOT", "CHERI_PURECAP_MALTA64_MFS_ROOT",
                   "CHERI_DE4_MFS_ROOT", "CHERI_PURECAP_DE4_MFS_ROOT"]),
+    pytest.param("cheribsd-mfs-root-kernel-mips64-purecap",
+                 ["--cheribsd-mfs-root-kernel-mips64-purecap/build-fpga-kernels",
+                  "--cheribsd-mfs-root-kernel-mips64-purecap/build-alternate-abi-kernels",
+                  "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=CHERI_MALTA64_MFS_ROOT"],
+                 ["CHERI_MALTA64_MFS_ROOT"]),
 ])
 def test_mfsroot_kernel_configs(target, config_options: "list[str]", expected_kernels):
     config = _parse_arguments(config_options)
@@ -994,7 +1004,7 @@ def test_mfs_root_kernel_inherits_defaults_from_cheribsd():
                       "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=MFS_CONFIG_MIPS64"])
     assert cheribsd_riscv64.kernel_config == "BASE_CONFIG_RISCV64"
     assert cheribsd_mips64.kernel_config == "CHERI_MALTA64"
-    assert mfs_riscv64.kernel_config == "CHERI-QEMU-MFS-ROOT"
+    assert mfs_riscv64.kernel_config is None
     assert mfs_mips64.kernel_config == "MFS_CONFIG_MIPS64"
     _parse_arguments(["--kernel-config=CONFIG_DEFAULT",
                       "--cheribsd-riscv64-purecap/kernel-config=BASE_CONFIG_RISCV64",
