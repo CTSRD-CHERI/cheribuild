@@ -998,6 +998,12 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "libssl.so.111",
             "libpam.so.6",
             "libypclnt.so.4",  # needed by pam_unix.so.6
+            # cheribsdbox links these three dynamically since they are needed by other programs too
+            "libprocstat.so.1",
+            "libkvm.so.7",
+            "libelf.so.2",
+            # Needed for backtrace() (required by CTest)
+            "libexecinfo.so.1",  # depends on libelf.so
         ]
         # Add the required PAM libraries for su(1)/login(1)
         for i in ("permit", "rootok", "self", "unix", "nologin", "securetty", "lastlog"):
