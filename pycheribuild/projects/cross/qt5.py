@@ -252,20 +252,12 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     # default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
     default_build_type = BuildType.RELWITHDEBINFO
+    needs_native_build_for_crosscompile = True
 
     @property
     def needs_mxcaptable_dynamic(self):
         # Debug build: 35927 entries to .captable but current maximum is 32768
         return self.build_type == BuildType.DEBUG
-
-    @classmethod
-    def dependencies(cls, config: CheriConfig):
-        deps = super().dependencies(config)
-        target = cls.get_crosscompile_target(config)
-        # QtBase needs a native buid to cross-compile:
-        if not target.is_native():
-            deps.append("qtbase-dev-native")
-        return deps
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -496,15 +488,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     build_dir_suffix = "4c"
     native_install_dir = DefaultInstallDir.CHERI_SDK
     make_kind = MakeCommandKind.GnuMake
-
-    @classmethod
-    def dependencies(cls, config: CheriConfig):
-        deps = super().dependencies(config)
-        target = cls.get_crosscompile_target(config)
-        # ICU4C needs a native buid to cross-compile:
-        if not target.is_native():
-            deps.append("icu4c-native")
-        return deps
+    needs_native_build_for_crosscompile = True
 
     def linkage(self):
         if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, self.config).force_static_linkage:

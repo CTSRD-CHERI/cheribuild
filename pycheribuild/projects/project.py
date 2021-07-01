@@ -595,7 +595,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if isinstance(target, MultiArchTargetAlias):
             for t in target.derived_targets:
                 if t.target_arch is arch:
-                    assert issubclass(t.project_class, cls)
+                    assert issubclass(t.project_class, target.project_class)
                     return t.project_class
         elif isinstance(target, Target):
             # single architecture target
@@ -1905,9 +1905,12 @@ class Project(SimpleProject):
     set_pkg_config_path = True  # set the PKG_CONFIG_* environment variables when building
     default_source_dir = ComputedDefaultValue(
         function=_default_source_dir, as_string=lambda cls: "$SOURCE_ROOT/" + cls.default_directory_basename)
+    needs_native_build_for_crosscompile = False  # Some projects (e.g. python) need a native build for build tools, etc.
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
+        if cls.needs_native_build_for_crosscompile and not cls.get_crosscompile_target(config).is_native():
+            return [cls.get_class_for_target(BasicCompilationTargets.NATIVE).target]
         return []
 
     @classmethod
