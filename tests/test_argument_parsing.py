@@ -674,6 +674,11 @@ def test_disk_image_path(target, expected_name):
                  "CHERI-QEMU-FETT", ["CHERI-QEMU", "CHERI-PURECAP-QEMU"]),
     pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-bench-kernels"],
                  "CHERI-QEMU", ["CHERI-QEMU-NODEBUG"]),
+    pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-fett-kernels", "--cheribsd/build-fpga-kernels"],
+                 "CHERI-QEMU-FETT", ["CHERI-QEMU", "CHERI-FETT"]),
+    pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-fett-kernels", "--cheribsd/build-fpga-kernels",
+                                              "--cheribsd/build-alternate-abi-kernels"],
+                 "CHERI-QEMU-FETT", ["CHERI-QEMU", "CHERI-PURECAP-QEMU", "CHERI-FETT", "CHERI-PURECAP-FETT"]),
     # MIPS kernconf tests
     pytest.param("cheribsd-mips64-purecap", ["--cheribsd/build-fpga-kernels"],
                  "CHERI_MALTA64", ["CHERI_DE4_USBROOT", "CHERI_DE4_NFSROOT"]),
