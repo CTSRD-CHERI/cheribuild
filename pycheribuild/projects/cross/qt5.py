@@ -194,8 +194,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configure_args.append("-force-asserts")
             self.configure_args.append("-gdb-index")
 
-        if self.build_type.should_include_debug_info:
-            # separate debug info should make it possible to copy the .so files to tmpfs before running tests
+        if self.build_type.should_include_debug_info and False:
+            # separate debug info reduces the size of the shared libraries, but GDB doesn't seem to pick it up
+            # automatically (probably not installed to the right directory?) so disable it for now.
             self.configure_args.append("-separate-debug-info")
 
         # self.configure_args.append("-no-pch")  # slows down build but gives useful crash testcases
