@@ -191,9 +191,12 @@ class ProjectSubclassDefinitionHook(type):
 
 
 @functools.lru_cache(maxsize=20)
-def _cached_get_homebrew_prefix(package: str, config: CheriConfig):
+def _cached_get_homebrew_prefix(package: "typing.Optional[str]", config: CheriConfig):
     assert OSInfo.IS_MAC, "Should only be called on macos"
-    prefix = run_command("brew", "--prefix", package, capture_output=True, run_in_pretend_mode=True,
+    command = ["brew", "--prefix"]
+    if package:
+        args.append(package)
+    prefix = run_command(command, capture_output=True, run_in_pretend_mode=True,
                          print_verbose_only=False, config=config).stdout.decode("utf-8").strip()
     return Path(prefix)
 
@@ -1051,7 +1054,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                       cheribuild_target=instructions.cheribuild_target)
         self._system_deps_checked = True
 
-    def get_homebrew_prefix(self, package: str) -> Path:
+    def get_homebrew_prefix(self, package: "typing.Optional[str]" = None) -> Path:
         try:
             return _cached_get_homebrew_prefix(package, self.config)
         except subprocess.CalledProcessError as e:

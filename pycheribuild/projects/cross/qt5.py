@@ -27,11 +27,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import os
 import tempfile
 from pathlib import Path
 
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
-                                  CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
+                                  CrossCompileCMakeProject, CrossCompileMesonProject, CrossCompileProject,
+                                  DefaultInstallDir, GitRepository,
                                   Linkage, MakeCommandKind)
 from .x11 import BuildLibXCB
 from ..project import SimpleProject
@@ -61,6 +63,43 @@ class InstallDejaVuFonts(SimpleProject):
                      "-C", self.target_info.sysroot_install_prefix_absolute / "lib/fonts",
                      "dejavu-fonts-ttf-{}.{}/ttf".format(*version))
         self.run_cmd("find", self.target_info.sysroot_install_prefix_absolute / "lib/fonts")
+
+
+class BuildSharedMimeInfo(CrossCompileMesonProject):
+    target = "shared-mime-info"
+    # repository = GitRepository("https://gitlab.freedesktop.org/xdg/shared-mime-info.git")
+    # Currently needs a patch to avoid glib2 dependency
+    repository = GitRepository("https://gitlab.freedesktop.org/arichardson/shared-mime-info.git")
+    # We don't actually want to install the mime info, we just want the update-mime-info tool for native builds
+    native_install_dir = DefaultInstallDir.KDE_PREFIX
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    path_in_rootfs = "/usr/local"  # Always install to /usr/local/share so that it's in the default search path
+    needs_native_build_for_crosscompile = True
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.add_required_system_tool("itstool", homebrew="itstool")
+        self.add_required_system_tool("xmlto", homebrew="xmlto")
+        self.add_required_system_tool("xmllint", homebrew="libxml2", cheribuild_target="libxml2")
+
+    def setup(self):
+        super().setup()
+        self.configure_args.append("-Dupdate-mimedb=True")
+        if not self.compiling_for_host():
+            self.configure_args.append("-Dbuild-tools=False")
+        if OSInfo.IS_MAC:
+            catalog = self.get_homebrew_prefix() / "etc/xml/catalog"
+            if not catalog.exists():
+                self.dependency_error(OSInfo.install_instructions("docbook-xsl", False, homebrew="docbook-xsl"))
+            # Without XML_CATALOG_FILES we get the following error: "I/O error : Attempt to load network entity"
+            self.configure_environment["XML_CATALOG_FILES"] = str(catalog)
+            self.make_args.set_env(XML_CATALOG_FILES=catalog)
+
+    def configure(self, **kwargs):
+        if not self.compiling_for_host():
+            native_bin = self.get_instance(self, cross_target=CompilationTargets.NATIVE).install_dir / "bin"
+            self.configure_environment["PATH"] = str(native_bin) + ":" + os.getenv("PATH")
+        super().configure()
 
 
 # This class is used to build qtbase and all of qt5
@@ -387,6 +426,7 @@ class BuildQt5(BuildQtWithConfigureScript):
 class BuildQtBase(BuildQtWithConfigureScript):
     do_not_add_to_targets = False  # Even though it ends in Base this is not a Base class
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="5.15", force_branch=True)
+    dependencies = ["shared-mime-info"]
     is_large_source_repository = True
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
@@ -571,7 +611,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.add_required_system_tool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info")
+        self.add_required_system_tool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info",
+                                      cheribuild_target="shared-mime-info")
         self.add_required_system_tool("ruby", apt="ruby")
 
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations",
