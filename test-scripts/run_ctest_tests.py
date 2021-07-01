@@ -31,8 +31,14 @@ import argparse
 from run_tests_common import boot_cheribsd, run_tests_main
 
 
-def test_setup(qemu, _):
-    boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
+def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+    if args.test_setup_commands:
+        # If the user supplied test setup steps, run them now.
+        for command in args.test_setup_commands:
+            qemu.checked_run(command)
+    else:
+        # Otherwise, we just set up the default LD_LIBRARY_PATH.
+        boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
 
 
 def run_ctest_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
@@ -57,6 +63,8 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--verbose", action="store_true", help="Enable verbose ctest output")
     parser.add_argument("--ignore-cheri-trap", action="store_true", required=False, default=True,
                         help="Don't fail the tests when a CHERI trap happens")
+    parser.add_argument("--test-setup-command", action="append", dest="test_setup_commands", metavar="COMMAND",
+                        help="Run COMMAND as an additional test setup step before running the tests")
 
 
 def adjust_args(args: argparse.Namespace):

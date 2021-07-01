@@ -50,13 +50,24 @@ class KDECMakeProject(CrossCompileCMakeProject):
         as_string=lambda cls: "$SOURCE_ROOT/kde-frameworks" + cls.default_directory_basename)
 
     ctest_needs_full_disk_image = False  # default to running with the full disk image
-    # Prefer the libraries in the build directory over the installed ones. This is needed when RPATH is not set
-    # correctly, i.e. when built with CMake+Ninja on macOS with a version where
-    # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 is not included.
-    ctest_script_extra_args = ("--extra-library-path", "/build/bin", "--extra-library-path", "/build/lib")
     dependencies = ["qtbase", "extra-cmake-modules"]
     _has_qt_designer_plugin = False
     _needs_newer_bison = False
+
+    @property
+    def ctest_script_extra_args(self):
+        # Prefer the libraries in the build directory over the installed ones. This is needed when RPATH is not set
+        # correctly, i.e. when built with CMake+Ninja on macOS with a version where
+        # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 is not included.
+        kde_prefix = self.install_prefix
+        return ("--extra-library-path", "/build/bin", "--extra-library-path", "/build/lib",
+                # Add the libraries from other frameworks
+                "--extra-library-path", "/sysroot" + str(self.install_prefix) + "/lib",
+                # Also need the X11 libraries for most tests
+                "--extra-library-path", "/sysroot" + str(BuildLibXCB.get_instance(self).install_prefix) + "/lib",
+                "--test-setup-command",
+                "mkdir -p {} && ln -sn /sysroot{} {}".format(kde_prefix.parent, kde_prefix, kde_prefix),
+                "--test-setup-command", ". /build/prefix.sh && env | sort")
 
     def setup(self):
         super().setup()
