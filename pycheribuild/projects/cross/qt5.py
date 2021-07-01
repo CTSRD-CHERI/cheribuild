@@ -466,6 +466,11 @@ class BuildQtX11Extras(BuildQtModuleWithQMake):
     repository = GitRepository("https://code.qt.io/qt/qtx11extras.git", default_branch="5.15", force_branch=True)
 
 
+class BuildQtMacExtras(BuildQtModuleWithQMake):
+    target = "qtmacextras"
+    repository = GitRepository("https://code.qt.io/qt/qtmacextras.git", default_branch="5.15", force_branch=True)
+
+
 class BuildQtDeclarative(BuildQtModuleWithQMake):
     target = "qtdeclarative"
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtdeclarative.git", default_branch="5.15",
