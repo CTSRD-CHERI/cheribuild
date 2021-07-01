@@ -60,14 +60,18 @@ class KDECMakeProject(CrossCompileCMakeProject):
         # correctly, i.e. when built with CMake+Ninja on macOS with a version where
         # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 is not included.
         kde_prefix = self.install_prefix
-        return ("--extra-library-path", "/build/bin", "--extra-library-path", "/build/lib",
+        if self.ctest_needs_full_disk_image:
+            return ["--test-setup-command", ". /build/prefix.sh && env | sort"]
+        return ["--extra-library-path", "/build/bin", "--extra-library-path", "/build/lib",
                 # Add the libraries from other frameworks
-                "--extra-library-path", "/sysroot" + str(self.install_prefix) + "/lib",
+                "--extra-library-path", "/sysroot" + str(self.install_prefix) + "/lib:/sysroot/usr/lib:/sysroot/lib",
                 # Also need the X11 libraries for most tests
                 "--extra-library-path", "/sysroot" + str(BuildLibXCB.get_instance(self).install_prefix) + "/lib",
+                # And of course QtCore/QtTest
+                "--extra-library-path", "/sysroot" + str(BuildQtBase.get_instance(self).install_prefix) + "/lib",
                 "--test-setup-command",
                 "mkdir -p {} && ln -sn /sysroot{} {}".format(kde_prefix.parent, kde_prefix, kde_prefix),
-                "--test-setup-command", ". /build/prefix.sh && env | sort")
+                "--test-setup-command", ". /build/prefix.sh && env | sort"]
 
     def setup(self):
         super().setup()
