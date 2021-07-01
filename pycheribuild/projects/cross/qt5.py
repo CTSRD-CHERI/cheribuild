@@ -199,7 +199,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # automatically (probably not installed to the right directory?) so disable it for now.
             self.configure_args.append("-separate-debug-info")
 
-        # self.configure_args.append("-no-pch")  # slows down build but gives useful crash testcases
+        if self.build_type == BuildType.DEBUG:
+            self.configure_args.append("-no-pch")   # slows down build but gives useful crash testcases
 
         #  -reduce-exports ...... Reduce amount of exported symbols [auto]
         self.configure_args.append("-reduce-exports")
