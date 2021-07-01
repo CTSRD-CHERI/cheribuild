@@ -446,6 +446,21 @@ class BuildQtBase(BuildQtWithConfigureScript):
         self.run_make("sub-testlib", cwd=self.build_dir / "tests/auto")
 
     def run_tests(self):
+        # Download the input files for the QMimeDatabase tests
+        mimedb_tests_dir = self.build_dir / "tests/auto/corelib/mimetypes/qmimedatabase"
+        # Only download the file once if possible:
+        self.download_file(self.config.build_root / "shared-mime-info-2.1.zip",
+                           "https://gitlab.freedesktop.org/xdg/shared-mime-info/-/archive/2.1/shared-mime-info-2.1.zip",
+                           sha256="ce16a44d70b683deb8a82b7203970b6f474f794c91fc4b103c6d8cf6c3c796fc")
+        self.makedirs(mimedb_tests_dir)
+        if not (mimedb_tests_dir / "s-m-i/data").exists():
+            # Delete any old files
+            self.clean_directory(mimedb_tests_dir / "shared-mime-info-2.1")
+            self.run_cmd("unzip", self.config.build_root / "shared-mime-info-2.1.zip", cwd=mimedb_tests_dir,
+                         print_verbose_only=False)
+            self.create_symlink(mimedb_tests_dir / "shared-mime-info-2.1", mimedb_tests_dir / "s-m-i",
+                                print_verbose_only=False)
+        self._compile_relevant_tests()
         if self.compiling_for_host():
             # tst_QDate::startOfDay_endOfDay(epoch) is broken in BST (at least on macOS), use Europe/Oslo to match the
             # official CI.
@@ -453,7 +468,6 @@ class BuildQtBase(BuildQtWithConfigureScript):
             with set_env(TZ="Europe/Oslo"):
                 self.run_cmd("make", "check", cwd=self.build_dir)
         else:
-            self._compile_relevant_tests()
             # We run tests using the full disk image since we want e.g. locales to be available.
             self.target_info.run_cheribsd_test_script(
                 "run_qtbase_tests.py", "--test-subset=corelib", "--test-subset=testlib",
