@@ -194,6 +194,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             "-no-use-gold-linker",
             "-no-iconv",
             "-no-headersclean",
+            # Don't embed the mimetype DB in libQt5Core.so. It's huge and results in lots XML parsing. Instead, we just
+            # ensure that the binary cache exists in the disk image.
+            "-no-mimetype-database"
         ])
         if self.build_tests:
             self.configure_args.append("-developer-build")
