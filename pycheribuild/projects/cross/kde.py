@@ -216,11 +216,17 @@ class BuildKWidgetsAddons(KDECMakeProject):
 
 class BuildKWindowSystem(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kwindowsystem.git")
-    dependencies = KDECMakeProject.dependencies + ["qtx11extras", "libxfixes"]
+
+    @classmethod
+    def dependencies(cls, config):
+        if cls.get_crosscompile_target(config).target_info_cls.is_macos():
+            return super().dependencies
+        return super().dependencies + ["qtx11extras", "libxfixes"]
 
 
 class BuildSolid(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/solid.git")
+    # XXX: https://foss.heptapod.net/bsdutils/bsdisks for the DBus API
     _needs_newer_bison = True
 
 
@@ -267,9 +273,15 @@ class BuildKJobWidgets(KDECMakeProject):
 
 class BuildKNotifications(KDECMakeProject):
     # frameworks/knotifications: third-party/libdbusmenu-qt
-    dependencies = ["kwindowsystem", "kconfig", "kconfig-native", "kcoreaddons", "kcoreaddons-native", "qtx11extras",
-                    "phonon"]
     repository = GitRepository("https://invent.kde.org/frameworks/knotifications.git")
+
+    @classmethod
+    def dependencies(cls, config):
+        result = ["qtdeclarative", "kwindowsystem", "kconfig", "kconfig-native", "kcoreaddons", "kcoreaddons-native",
+                  "phonon"]
+        if cls.get_crosscompile_target(config).target_info_cls.is_macos():
+            return result + ["qtmacextras"]
+        return result + ["qtx11extras"]
 
 
 class BuildKPackage(KDECMakeProject):
@@ -356,18 +368,22 @@ class BuildKParts(KDECMakeProject):
 
 class BuildKIconThemes(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kiconthemes.git")
-    dependencies = ["kconfigwidgets", "kwidgetsaddons", "kitemviews", "karchive", "ki18n", "breeze-icons"]
+    dependencies = ["kconfigwidgets", "kwidgetsaddons", "kitemviews", "karchive", "ki18n", "breeze-icons", "qtsvg"]
     _has_qt_designer_plugin = True
 
 
 class BuildKGlobalAccel(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kglobalaccel.git")
-    dependencies = ["kconfig", "kconfig-native", "kcrash", "kdbusaddons", "kwindowsystem",
-                    "qtx11extras", "libxcb"]
+
+    @classmethod
+    def dependencies(cls, config):
+        result = ["kconfig", "kconfig-native", "kcrash", "kdbusaddons", "kwindowsystem"]
+        if not cls.get_crosscompile_target(config).target_info_cls.is_macos():
+            result += ["qtx11extras", "libxcb"]
+        return result
 
 
 class BuildKXMLGUI(KDECMakeProject):
-    # frameworks/kxmlgui: frameworks/kglobalaccel
     dependencies = ["kitemviews", "kconfig", "kconfig-native", "kglobalaccel",
                     "kconfigwidgets", "ki18n", "kiconthemes",
                     "ktextwidgets", "kwidgetsaddons", "kwindowsystem"]
@@ -379,6 +395,11 @@ class BuildKDeclarative(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kdeclarative.git")
     dependencies = ["kpackage", "kpackage-native", "kio", "kiconthemes", "knotifications", "qtdeclarative"]
     _has_qt_designer_plugin = True
+
+    def setup(self):
+        super().setup()
+        # We build Qt wihtout OpenGL support, so we shouldn't build the OpenGL code.
+        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_epoxy=True)
 
 
 # frameworks/kinit: frameworks/kservice
@@ -409,8 +430,8 @@ class BuildKIO(KDECMakeProject):
     dependencies = ["kauth", "kdbusaddons", "ki18n", "kguiaddons", "kconfigwidgets", "kitemviews", "kcoreaddons",
                     "kwidgetsaddons", "kservice", "karchive", "qtx11extras", "solid",
                     "kjobwidgets", "kiconthemes", "kwindowsystem", "kcrash", "kcompletion", "ktextwidgets",
-                    "kxmlgui", "kbookmarks", "kconfig", "kconfig-native",
-                    # optional: "kwallet", "knotifications", "kded"
+                    "kxmlgui", "kbookmarks", "kconfig", "kconfig-native", "knotifications",
+                    # optional: "kwallet", "kded"
                     ]
     repository = GitRepository("https://invent.kde.org/frameworks/kio.git")
     _has_qt_designer_plugin = True
@@ -518,7 +539,7 @@ class BuildKIO(KDECMakeProject):
 
 class BuildDoplhin(KDECMakeProject):
     target = "dolphin"
-    dependencies = ["kparts", "kxmlgui", "knewstuff", "kio"]
+    dependencies = ["kparts", "kxmlgui", "knewstuff", "kio", "kcmutils"]
     repository = GitRepository("https://invent.kde.org/system/dolphin.git")
 
 
