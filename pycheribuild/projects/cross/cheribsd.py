@@ -88,10 +88,11 @@ class ConfigPlatform(Enum):
     FVP = "fvp"
     GFE = "gfe"
     BERI = "cheri-beri"
+    AWS = "aws-f1"
 
     @classmethod
     def fpga_platforms(cls) -> set:
-        return {cls.BERI, cls.GFE}
+        return {cls.BERI, cls.GFE, cls.AWS}
 
 
 class CheriBSDConfig:
@@ -232,14 +233,9 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
     separator = "-"
     platform_name_map = {
         ConfigPlatform.QEMU: "QEMU",
-        ConfigPlatform.GFE: "GFE"
+        ConfigPlatform.GFE: "GFE",
+        ConfigPlatform.AWS: None
     }
-
-    def __init__(self):
-        # Note: the FETT FPGA kernels do not have the platform name in
-        # the name, so we drop the platform from the kerconf components
-        self.fett_gfe_kernconf_components = OrderedDict(self.kernconf_components)
-        del self.fett_gfe_kernconf_components["platform_name"]
 
     def get_flag_names(self, platform, kABI, default=False, caprevoke=False, mfsroot=False, debug=False,
                        benchmark=False, fuzzing=False, fett=False):
@@ -268,10 +264,12 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
             configs.append(self.make_config(ConfigPlatform.QEMU, kABI, benchmark=True, default=True))
             configs.append(self.make_config(ConfigPlatform.QEMU, kABI, mfsroot=True, default=True))
             configs.append(self.make_config(ConfigPlatform.QEMU, kABI, mfsroot=True, benchmark=True, default=True))
-        # Generate GFE-FPGA kernels
+        # Generate FPGA kernels
         for kABI in KernelABI:
             configs.append(self.make_config(ConfigPlatform.GFE, kABI, mfsroot=True, default=True))
             configs.append(self.make_config(ConfigPlatform.GFE, kABI, mfsroot=True, benchmark=True, default=True))
+            configs.append(self.make_config(ConfigPlatform.AWS, kABI, fett=True))
+            configs.append(self.make_config(ConfigPlatform.AWS, kABI, fett=True, benchmark=True))
 
         # Generate default FETT and caprevoke kernels
         configs.append(self.make_config(ConfigPlatform.QEMU, KernelABI.HYBRID,
@@ -281,12 +279,8 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         configs.append(self.make_config(ConfigPlatform.GFE, KernelABI.HYBRID,
                                         caprevoke=True, mfsroot=True, default=True))
 
-        # Generate extra FETT kernels
-        for kABI in [KernelABI.NOCHERI, KernelABI.HYBRID]:
-            configs.append(self.make_config(ConfigPlatform.GFE, kABI,
-                                            base_context=self.fett_gfe_kernconf_components, fett=True))
-        configs.append(self.make_config(ConfigPlatform.GFE, KernelABI.HYBRID,
-                                        base_context=self.fett_gfe_kernconf_components, fett=True, caprevoke=True))
+        # Generate extra caprevoke kernels
+        configs.append(self.make_config(ConfigPlatform.AWS, KernelABI.HYBRID, fett=True, caprevoke=True))
         configs.append(self.make_config(ConfigPlatform.QEMU, KernelABI.HYBRID, fett=True, caprevoke=True))
 
         return configs
