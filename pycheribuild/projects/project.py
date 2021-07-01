@@ -195,7 +195,7 @@ def _cached_get_homebrew_prefix(package: "typing.Optional[str]", config: CheriCo
     assert OSInfo.IS_MAC, "Should only be called on macos"
     command = ["brew", "--prefix"]
     if package:
-        args.append(package)
+        command.append(package)
     prefix = run_command(command, capture_output=True, run_in_pretend_mode=True,
                          print_verbose_only=False, config=config).stdout.decode("utf-8").strip()
     return Path(prefix)

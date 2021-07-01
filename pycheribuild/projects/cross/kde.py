@@ -29,7 +29,7 @@
 import os
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
-from .qt5 import BuildQtBase
+from .qt5 import BuildQtBase, BuildSharedMimeInfo
 from .x11 import BuildLibXCB
 from ..project import DefaultInstallDir, GitRepository, MakeCommandKind
 from ...config.chericonfig import BuildType
@@ -180,6 +180,16 @@ class BuildKCoreAddons(KDECMakeProject):
         super().setup()
         # Install prefix.sh for KCoreAddons only (could do it for all projects but there is no point overwriting it)
         self.add_cmake_options(KDE_INSTALL_PREFIX_SCRIPT=True)
+        shared_mime_install_dir = BuildSharedMimeInfo.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
+        self.add_cmake_options(UPDATE_MIME_DATABASE_EXECUTABLE=shared_mime_install_dir / "bin/update-mime-database")
+        self.make_args.set_env(UPDATE_MIME_DATABASE_EXECUTABLE=shared_mime_install_dir / "bin/update-mime-database")
+
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        # update_xdg_mimetypes() is not run if DESTDIR is set.
+        # See https://invent.kde.org/frameworks/extra-cmake-modules/-/merge_requests/151
+        shared_mime_install_dir = BuildSharedMimeInfo.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
+        self.run_cmd(shared_mime_install_dir / "bin/update-mime-database", "-V", self.install_dir / "share/mime")
 
 
 class BuildKConfig(KDECMakeProject):
@@ -250,6 +260,7 @@ class BuildSonnet(KDECMakeProject):
     # * HUNSPELL, Spell checking support via Hunspell, <http://hunspell.sourceforge.net/>
     # * VOIKKO, Spell checking support via Voikko, <http://voikko.puimula.org/>
     _has_qt_designer_plugin = True
+
 
 #
 # Frameworks, tier2
