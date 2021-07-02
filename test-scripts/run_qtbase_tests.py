@@ -54,6 +54,7 @@ def setup_qtbase_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.
     # Possibly similar to https://bugreports.qt.io/browse/QTBUG-87662
     qemu.run("export TZ=Europe/Oslo")
     qemu.checked_run("cd /tmp")
+    qemu.checked_run("mount -t procfs procfs /proc")  # needed for tst_QFile::virtualFile()
     if not Path(args.build_dir, "tests/auto/corelib").is_dir():
         # Not running qtbase tests, set LD_LIBRARY_PATH to include QtBase libraries
         boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
