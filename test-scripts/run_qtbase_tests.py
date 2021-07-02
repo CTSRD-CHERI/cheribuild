@@ -161,6 +161,7 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     all_tests_starttime = datetime.datetime.utcnow()
     tests_root = Path(build_dir, "tests/auto")
     # Start with a basic smoketests:
+    qemu.checked_run("echo \"Checking for MIME database\" && stat /usr/local/share/mime/mime.cache")
     if (tests_root / "corelib").is_dir():
         # For QtBase:
         qemu.checked_run("ldd /build/tests/auto/corelib/tools/qarraydata/tst_qarraydata")
