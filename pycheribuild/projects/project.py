@@ -746,6 +746,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def has_required_system_tool(self, executable: str):
         return executable in self.__required_system_tools
 
+    def _validate_cheribuild_target_for_system_deps(self, cheribuild_target: "typing.Optional[str]"):
+        if not cheribuild_target:
+            return
+        # Check that the target actually exists
+        tgt = target_manager.get_target(cheribuild_target, None, config=self.config, caller=self)
+        # And check that it's a native target:
+        if not tgt.project_class.get_crosscompile_target(self.config).is_native():
+            self.fatal("add_required_*() should use a native cheribuild target and not ", cheribuild_target,
+                       "- found while processing", self.target, fatal_when_pretending=True)
+
     def add_required_system_tool(self, executable: str, install_instructions: str = None, default: str = None,
                                  freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
                                  cheribuild_target: str = None, alternative_instructions: str = None):
@@ -1027,12 +1037,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         """
         for (tool, instructions) in self.__required_system_tools.items():
             assert isinstance(instructions, InstallInstructions)
+            self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
             if not shutil.which(str(tool)):
                 self.dependency_error("Required program", tool, "is missing!",
                                       install_instructions=instructions.fixit_hint(),
                                       cheribuild_target=instructions.cheribuild_target)
         for (package, instructions) in self.__required_pkg_config.items():
             assert isinstance(instructions, InstallInstructions)
+            self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
             if not shutil.which("pkg-config"):
                 # error should already have printed above
                 break
@@ -1045,6 +1057,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                       cheribuild_target=instructions.cheribuild_target)
         for (header, instructions) in self.__required_system_headers.items():
             assert isinstance(instructions, InstallInstructions)
+            self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
             if not Path("/usr/include", header).exists() and not Path("/usr/local/include", header).exists():
                 self.dependency_error("Required C header", header, "is missing!",
                                       install_instructions=instructions.fixit_hint(),

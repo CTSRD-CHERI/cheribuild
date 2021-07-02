@@ -81,7 +81,7 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
         super().__init__(config)
         self.add_required_system_tool("itstool", homebrew="itstool")
         self.add_required_system_tool("xmlto", homebrew="xmlto")
-        self.add_required_system_tool("xmllint", homebrew="libxml2", cheribuild_target="libxml2")
+        self.add_required_system_tool("xmllint", homebrew="libxml2", cheribuild_target="libxml2-native")
 
     def setup(self):
         super().setup()
