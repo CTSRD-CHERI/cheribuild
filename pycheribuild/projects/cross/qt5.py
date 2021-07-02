@@ -471,7 +471,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
         else:
             # We run tests using the full disk image since we want e.g. locales to be available.
             self.target_info.run_cheribsd_test_script(
-                "run_qtbase_tests.py", "--test-subset=corelib", "--test-subset=testlib",
+                "run_qtbase_tests.py", "--test-subset=corelib",
                 use_benchmark_kernel_by_default=True, mount_sysroot=False, mount_sourcedir=True,
                 use_full_disk_image=True)
 
