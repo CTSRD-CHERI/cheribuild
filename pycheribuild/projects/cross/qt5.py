@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import os
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -629,7 +630,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.add_required_system_tool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info",
-                                      cheribuild_target="shared-mime-info")
+                                      cheribuild_target="shared-mime-info-native")
         self.add_required_system_tool("ruby", apt="ruby")
 
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations",
@@ -694,10 +695,12 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     def compile(self, **kwargs):
         # Generate the shared mime info cache to MASSIVELY speed up tests
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
+            smi_install = BuildSharedMimeInfo.get_instance(self, cross_target=CompilationTargets.NATIVE).install_dir
+            update_mime = shutil.which("update-mime-database") or smi_install / "bin/update-mime-database"
             mime_info_src = BuildQtBase.get_source_dir(self) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
             self.install_file(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True,
                               print_verbose_only=False)
-            self.run_cmd("update-mime-database", "-V", Path(td, "mime"), cwd="/")
+            self.run_cmd(update_mime, "-V", Path(td, "mime"), cwd="/")
 
             if not Path(td, "mime/mime.cache").exists():
                 self.fatal("Could not generated shared-mime-info cache!")
