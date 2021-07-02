@@ -52,7 +52,7 @@ def setup_qtbase_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.
 
     # tst_QDate::startOfDay_endOfDay(epoch) is broken in BST, use Europe/Oslo to match the official CI
     # Possibly similar to https://bugreports.qt.io/browse/QTBUG-87662
-    qemu.run("export TZ=Europe/London")
+    qemu.run("export TZ=Europe/Oslo")
     qemu.checked_run("cd /tmp")
     if not Path(args.build_dir, "tests/auto/corelib").is_dir():
         # Not running qtbase tests, set LD_LIBRARY_PATH to include QtBase libraries
