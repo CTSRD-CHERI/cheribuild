@@ -123,10 +123,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         deps = super().dependencies(config)
         if not cls.get_crosscompile_target(config).is_native():
             # TODO: should only need these if minimal is not set
-            deps.extend(["libx11", "libxcb", "libxkbcommon",
-                         "libxcb-cursor", "libxcb-util", "libxcb-image",
-                         "libxcb-render-util", "libxcb-wm", "libxcb-keysyms",
-                         "dejavu-fonts"])
+            deps.extend(["libx11", "libxcb", "libxkbcommon", "libxcb-cursor", "libxcb-util", "libxcb-image",
+                         "libxcb-render-util", "libxcb-wm", "libxcb-keysyms", "shared-mime-info", "dejavu-fonts"])
         return deps
 
     @classmethod
@@ -430,7 +428,6 @@ class BuildQt5(BuildQtWithConfigureScript):
 class BuildQtBase(BuildQtWithConfigureScript):
     do_not_add_to_targets = False  # Even though it ends in Base this is not a Base class
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="5.15", force_branch=True)
-    dependencies = ["shared-mime-info"]
     is_large_source_repository = True
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
