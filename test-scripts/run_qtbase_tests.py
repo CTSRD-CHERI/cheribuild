@@ -55,6 +55,7 @@ def setup_qtbase_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.
     qemu.run("export TZ=Europe/Oslo")
     qemu.checked_run("cd /tmp")
     qemu.checked_run("mount -t procfs procfs /proc")  # needed for tst_QFile::virtualFile()
+    qemu.checked_run("mkdir -p ~/.local/share")  # needed for tst_QFile::moveToTrash()
     if not Path(args.build_dir, "tests/auto/corelib").is_dir():
         # Not running qtbase tests, set LD_LIBRARY_PATH to include QtBase libraries
         boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
