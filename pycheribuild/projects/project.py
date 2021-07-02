@@ -276,14 +276,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     # noinspection PyCallingNonCallable
     @classmethod
-    def _direct_dependencies(cls, config: CheriConfig, *, include_dependencies: bool,
-                             include_toolchain_dependencies: bool,
+    def _direct_dependencies(cls, config: CheriConfig, *, include_toolchain_dependencies: bool,
                              include_sdk_dependencies: bool,
                              explicit_dependencies_only: bool) -> "typing.Iterator[Target]":
         if not include_sdk_dependencies:
             include_toolchain_dependencies = False  # --skip-sdk means skip toolchain and skip sysroot
         assert cls._xtarget is not None
-        assert include_dependencies, "Should not be called with include_dependencies=False"
         dependencies = cls.dependencies
         expected_build_arch = cls.get_crosscompile_target(config)
         assert expected_build_arch is not None
@@ -391,8 +389,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if cached_result is not None:
             return cached_result
         result = []
-        for target in cls._direct_dependencies(config, include_dependencies=include_dependencies,
-                                               include_toolchain_dependencies=include_toolchain_dependencies,
+        for target in cls._direct_dependencies(config, include_toolchain_dependencies=include_toolchain_dependencies,
                                                include_sdk_dependencies=include_sdk_dependencies,
                                                explicit_dependencies_only=cls.direct_dependencies_only):
             if target not in result:
