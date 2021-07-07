@@ -84,9 +84,10 @@ class KDECMakeProject(CrossCompileCMakeProject):
             # We need native tools (e.g. desktoptojson/kconfig_compiler) for some projects
             native_install_root = BuildKConfig.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
             self.add_cmake_options(KF5_HOST_TOOLING=native_install_root / "lib/cmake")
-            if "qtx11extras" in self._direct_dependencies(self.config, include_sdk_dependencies=False,
-                                                          include_toolchain_dependencies=False,
-                                                          explicit_dependencies_only=True):
+            dep_names = " ".join(x.name for x in self._direct_dependencies(self.config, include_sdk_dependencies=False,
+                                                                           include_toolchain_dependencies=False,
+                                                                           explicit_dependencies_only=True))
+            if "qtx11extras" in dep_names:
                 self.warning("Adding include path as workaround for broken QtX11Extras")
                 self.COMMON_FLAGS.append("-I" + str(BuildLibXCB.get_install_dir(self) / "include"))
         if OSInfo.IS_MAC and self._needs_newer_bison:
