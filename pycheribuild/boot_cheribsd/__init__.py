@@ -70,6 +70,8 @@ SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHER
                                                          CompilationTargets.CHERIBSD_RISCV_PURECAP,
                                                          CompilationTargets.CHERIBSD_X86_64,
                                                          CompilationTargets.CHERIBSD_AARCH64,
+                                                         CompilationTargets.CHERIBSD_MORELLO_HYBRID,
+                                                         CompilationTargets.CHERIBSD_MORELLO_PURECAP,
                                                          )}
 
 STARTING_INIT = "start_init: trying /sbin/init"
