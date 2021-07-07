@@ -208,6 +208,23 @@ class JenkinsConfig(CheriConfig):
             os_suffix = "unknown-os"
         return self.workspace / ("qemu-" + os_suffix) / "bin"
 
+    @property
+    def morello_qemu_bindir(self):
+        for i in self.morello_sdk_bindir.glob("qemu-system-*"):
+            if self.verbose:
+                print("Found QEMU binary", i, "in Morello SDK dir -> using that for Morello QEMU binaries")
+            # If one qemu-system-foo exists in the morello_sdk_bindir use that instead of $WORKSPACE/qemu-<OS>
+            return self.morello_sdk_bindir
+        if OSInfo.IS_LINUX:
+            os_suffix = "linux"
+        elif OSInfo.IS_FREEBSD:
+            os_suffix = "freebsd"
+        elif OSInfo.IS_MAC:
+            os_suffix = "mac"
+        else:
+            os_suffix = "unknown-os"
+        return self.workspace / ("qemu-" + os_suffix) / "bin"
+
     def load(self):
         super().load()
 
