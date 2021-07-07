@@ -32,6 +32,7 @@ from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMake
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
 from .x11 import BuildLibXCB
 from ..project import DefaultInstallDir, GitRepository, MakeCommandKind
+from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
 from ...config.loader import ComputedDefaultValue
@@ -97,6 +98,11 @@ class KDECMakeProject(CrossCompileCMakeProject):
     @property
     def cmake_prefix_paths(self):
         return [self.install_dir, BuildQtBase.get_install_dir(self)] + super().cmake_prefix_paths
+
+    def run_tests(self):
+        self.info("To debug failing tests, you can increase verbosity by setting",
+                  coloured(AnsiColour.yellow, 'export QT_LOGGING_RULES="*.debug=true"'))
+        super().run_tests()
 
 
 # TODO: should generate the dependency graph from
