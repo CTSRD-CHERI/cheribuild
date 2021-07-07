@@ -953,7 +953,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         self.mtree.add_dir("var/db", print_status=self.config.verbose)
         self.mtree.add_dir("var/empty", print_status=self.config.verbose)
 
-        if self.is_x86:
+        if self.is_x86 or self.compiling_for_aarch64(include_purecap=True):
             # When booting minimal disk images, we need the files in /boot (kernel+loader), but we omit modules.
             extra_files = []
             for root, dirnames, filenames in os.walk(str(self.rootfs_dir / "boot")):
