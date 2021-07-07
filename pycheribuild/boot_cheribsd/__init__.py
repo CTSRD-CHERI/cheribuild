@@ -88,7 +88,7 @@ PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
 PANIC_PAGE_FAULT = "panic: Fatal page fault at 0x"
 CHERI_TRAP_MIPS = re.compile(r"USER_CHERI_EXCEPTION: pid \d+ tid \d+ \(.+\)")
-CHERI_TRAP_RISCV = re.compile(r"pid \d+ tid \d+ \(.+\), uid \d+: CHERI fault \(type")
+CHERI_TRAP_RISCV = re.compile(r"pid \d+ tid \d+ \(.+\), uid \d+: CHERI fault \(type 0x")
 # SHELL_LINE_CONTINUATION = "\r\r\n> "
 
 # Similar approach to pexpect.replwrap:
@@ -898,6 +898,8 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
                    test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None):
     smb_dirs = qemu.smb_dirs  # type: typing.List[SmbMount]
     setup_tests_starttime = datetime.datetime.now()
+    # Enable userspace CHERI exception logging to aid debugging
+    qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
     if args.enable_coredumps:
         for smb_dir in smb_dirs:
             # If we are mounting /build or /test-results then set kern.corefile to point there:
