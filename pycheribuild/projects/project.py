@@ -2014,29 +2014,29 @@ class Project(SimpleProject):
     _install_prefix = None
     destdir = None
 
-    __can_use_lld_map = dict()  # type: typing.Dict[Path, bool]
+    __can_use_lld_map = dict()  # type: typing.Dict[str, bool]
 
-    @classmethod
-    def can_use_lld(cls, compiler: Path):
-        if OSInfo.IS_MAC:
-            return False  # lld does not work on MacOS
-        if compiler not in cls.__can_use_lld_map:
+    def can_use_lld(self, compiler: Path):
+        if compiler not in Project.__can_use_lld_map:
+            command = [str(compiler)] + self.essential_compiler_and_linker_flags + ["-fuse-ld=lld", "-xc", "-o",
+                                                                                    "/dev/null", "-"]
+            command_str = commandline_to_str(command)
             try:
-                run_command([compiler, "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"], run_in_pretend_mode=True,
+                run_command(command, run_in_pretend_mode=True,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raise_in_pretend_mode=True,
                             input="int main() { return 0; }\n", print_verbose_only=True)
                 status_update(compiler, "supports -fuse-ld=lld, linking should be much faster!")
-                cls.__can_use_lld_map[compiler] = True
+                Project.__can_use_lld_map[command_str] = True
             except subprocess.CalledProcessError:
                 status_update(compiler, "does not support -fuse-ld=lld, using slower bfd instead")
-                cls.__can_use_lld_map[compiler] = False
-        return cls.__can_use_lld_map[compiler]
+                Project.__can_use_lld_map[command_str] = False
+        return Project.__can_use_lld_map[command_str]
 
-    @classmethod
-    def can_use_lto(cls, ccinfo: CompilerInfo):
+    def can_use_lto(self, ccinfo: CompilerInfo):
         if ccinfo.compiler == "apple-clang":
             return True
-        elif ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0) and cls.can_use_lld(ccinfo.path):
+        elif ccinfo.compiler == "clang" and (
+                not self.compiling_for_host() or (ccinfo.version >= (4, 0, 0) and self.can_use_lld(ccinfo.path))):
             return True
         else:
             return False
