@@ -116,6 +116,43 @@ def test_skip_update():
         assert not _parse_arguments(["--no-skip-update"], config_file=config).skip_update
 
 
+@pytest.mark.parametrize("args,expected", [
+    pytest.param(["--include-dependencies", "run-riscv64-purecap"],
+                 ["qemu", "llvm-native", "cheribsd-riscv64-purecap", "gdb-riscv64-hybrid-for-purecap-rootfs",
+                  "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"],
+                 id="run-include-deps"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "run-riscv64-purecap"],
+                 ["bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"],
+                 id="run-include-deps-skip-sdk"),
+    pytest.param(["--include-dependencies", "--start-with=bbl-baremetal-riscv64-purecap", "run-riscv64-purecap"],
+                 ["bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"],
+                 id="run-start-with"),
+    pytest.param(["--include-dependencies", "--start-after=bbl-baremetal-riscv64-purecap", "run-riscv64-purecap"],
+                 ["disk-image-riscv64-purecap", "run-riscv64-purecap"],
+                 id="run-start-after"),
+])
+def test_target_subsets(args, expected):
+    config = _parse_arguments(args)
+    selected = list(x.name for x in target_manager.get_all_chosen_targets(config))
+    assert selected == expected
+
+
+@pytest.mark.parametrize("args,exception_type,errmessage", [
+    pytest.param(["--include-dependencies", "--skip-sdk", "--start-after=llvm-project", "run-riscv64-purecap"],
+                 ValueError, "--start-after/--start-with target 'llvm-project' is not being built",
+                 id="run-start-after-skip-sdk"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--start-with=llvm-project", "run-riscv64-purecap"],
+                 ValueError, "--start-after/--start-with target 'llvm-project' is not being built",
+                 id="run-start-with-skip-sdk"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--start-after=run-riscv64-purecap", "run-riscv64-purecap"],
+                 ValueError, "selected target list is empty after --start-after/--start-with filtering",
+                 id="run-start-after-empty"),
+])
+def test_target_subsets_bad(args, exception_type, errmessage):
+    with pytest.raises(exception_type, match=errmessage):
+        target_manager.get_all_chosen_targets(_parse_arguments(args))
+
+
 def test_per_project_override():
     config = _parse_arguments(["--skip-configure"])
     source_root = config.source_root
@@ -637,6 +674,11 @@ def test_disk_image_path(target, expected_name):
                  "CHERI-QEMU-FETT", ["CHERI-QEMU", "CHERI-PURECAP-QEMU"]),
     pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-bench-kernels"],
                  "CHERI-QEMU", ["CHERI-QEMU-NODEBUG"]),
+    pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-fett-kernels", "--cheribsd/build-fpga-kernels"],
+                 "CHERI-QEMU-FETT", ["CHERI-QEMU", "CHERI-FETT"]),
+    pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-fett-kernels", "--cheribsd/build-fpga-kernels",
+                                              "--cheribsd/build-alternate-abi-kernels"],
+                 "CHERI-QEMU-FETT", ["CHERI-QEMU", "CHERI-PURECAP-QEMU", "CHERI-FETT", "CHERI-PURECAP-FETT"]),
     # MIPS kernconf tests
     pytest.param("cheribsd-mips64-purecap", ["--cheribsd/build-fpga-kernels"],
                  "CHERI_MALTA64", ["CHERI_DE4_USBROOT", "CHERI_DE4_NFSROOT"]),
@@ -675,6 +717,11 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
                   "--cheribsd-mfs-root-kernel-riscv64-purecap/build-alternate-abi-kernels"],
                  ["CHERI-QEMU-MFS-ROOT", "CHERI-PURECAP-QEMU-MFS-ROOT",
                   "CHERI-GFE", "CHERI-PURECAP-GFE"]),
+    pytest.param("cheribsd-mfs-root-kernel-riscv64-purecap",
+                 ["--cheribsd-mfs-root-kernel-riscv64-purecap/build-fpga-kernels",
+                  "--cheribsd-mfs-root-kernel-riscv64-purecap/build-alternate-abi-kernels",
+                  "--cheribsd-mfs-root-kernel-riscv64-purecap/kernel-config=CHERI-QEMU-MFS-ROOT"],
+                 ["CHERI-QEMU-MFS-ROOT"]),
     # MIPS kernconf tests
     pytest.param("cheribsd-mfs-root-kernel-mips64", [], ["MALTA64_MFS_ROOT"]),
     pytest.param("cheribsd-mfs-root-kernel-mips64",
@@ -688,6 +735,11 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
                   "--cheribsd-mfs-root-kernel-mips64-purecap/build-alternate-abi-kernels"],
                  ["CHERI_MALTA64_MFS_ROOT", "CHERI_PURECAP_MALTA64_MFS_ROOT",
                   "CHERI_DE4_MFS_ROOT", "CHERI_PURECAP_DE4_MFS_ROOT"]),
+    pytest.param("cheribsd-mfs-root-kernel-mips64-purecap",
+                 ["--cheribsd-mfs-root-kernel-mips64-purecap/build-fpga-kernels",
+                  "--cheribsd-mfs-root-kernel-mips64-purecap/build-alternate-abi-kernels",
+                  "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=CHERI_MALTA64_MFS_ROOT"],
+                 ["CHERI_MALTA64_MFS_ROOT"]),
 ])
 def test_mfsroot_kernel_configs(target, config_options: "list[str]", expected_kernels):
     config = _parse_arguments(config_options)
@@ -957,7 +1009,7 @@ def test_mfs_root_kernel_inherits_defaults_from_cheribsd():
                       "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=MFS_CONFIG_MIPS64"])
     assert cheribsd_riscv64.kernel_config == "BASE_CONFIG_RISCV64"
     assert cheribsd_mips64.kernel_config == "CHERI_MALTA64"
-    assert mfs_riscv64.kernel_config == "CHERI-QEMU-MFS-ROOT"
+    assert mfs_riscv64.kernel_config is None
     assert mfs_mips64.kernel_config == "MFS_CONFIG_MIPS64"
     _parse_arguments(["--kernel-config=CONFIG_DEFAULT",
                       "--cheribsd-riscv64-purecap/kernel-config=BASE_CONFIG_RISCV64",

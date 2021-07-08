@@ -63,6 +63,9 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
 
 
 class BuildWayland(CrossCompileMesonProject):
+    # We need a native wayland-scanner during the build
+    needs_native_build_for_crosscompile = True
+
     @classmethod
     def dependencies(cls, config: CheriConfig):
         deps = super().dependencies(config)
@@ -70,8 +73,6 @@ class BuildWayland(CrossCompileMesonProject):
         if not target.is_native():
             # For native builds we use the host libraries
             deps.extend(["libexpat", "libffi", "libxml2"])
-            # We need a native wayland-scanner during the build
-            deps.append("wayland-native")
         if target.target_info_cls.is_freebsd():
             deps += ["epoll-shim"]
         return deps

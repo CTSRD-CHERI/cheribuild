@@ -30,6 +30,7 @@
 import copy
 import datetime
 import errno
+import functools
 import inspect
 import os
 import re
@@ -189,6 +190,17 @@ class ProjectSubclassDefinitionHook(type):
         # print("Adding target", target_name, "with deps:", cls.dependencies)
 
 
+@functools.lru_cache(maxsize=20)
+def _cached_get_homebrew_prefix(package: "typing.Optional[str]", config: CheriConfig):
+    assert OSInfo.IS_MAC, "Should only be called on macos"
+    command = ["brew", "--prefix"]
+    if package:
+        command.append(package)
+    prefix = run_command(command, capture_output=True, run_in_pretend_mode=True,
+                         print_verbose_only=False, config=config).stdout.decode("utf-8").strip()
+    return Path(prefix)
+
+
 class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     _config_loader = None  # type: ConfigLoaderBase
 
@@ -264,14 +276,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     # noinspection PyCallingNonCallable
     @classmethod
-    def _direct_dependencies(cls, config: CheriConfig, *, include_dependencies: bool,
-                             include_toolchain_dependencies: bool,
+    def _direct_dependencies(cls, config: CheriConfig, *, include_toolchain_dependencies: bool,
                              include_sdk_dependencies: bool,
                              explicit_dependencies_only: bool) -> "typing.Iterator[Target]":
         if not include_sdk_dependencies:
             include_toolchain_dependencies = False  # --skip-sdk means skip toolchain and skip sysroot
         assert cls._xtarget is not None
-        assert include_dependencies, "Should not be called with include_dependencies=False"
         dependencies = cls.dependencies
         expected_build_arch = cls.get_crosscompile_target(config)
         assert expected_build_arch is not None
@@ -372,9 +382,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 fatal_error("Cyclic dependency found:", " -> ".join(map(lambda c: c.target, cycle)), pretend=False)
         else:
             new_dependency_chain = [cls]
+        # look only in __dict__ to avoid parent class lookup
+        cache_lookup_args = (include_dependencies, include_toolchain_dependencies, include_sdk_dependencies)
+        # noinspection PyProtectedMember
+        cached_result = config._cached_deps.get(cls.target, dict()).get(cache_lookup_args, None)
+        if cached_result is not None:
+            return cached_result
         result = []
-        for target in cls._direct_dependencies(config, include_dependencies=include_dependencies,
-                                               include_toolchain_dependencies=include_toolchain_dependencies,
+        for target in cls._direct_dependencies(config, include_toolchain_dependencies=include_toolchain_dependencies,
                                                include_sdk_dependencies=include_sdk_dependencies,
                                                explicit_dependencies_only=cls.direct_dependencies_only):
             if target not in result:
@@ -390,6 +405,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             for r in recursive_deps:
                 if r not in result:
                     result.append(r)
+        # save the result to avoid recomputing it lots of times
+        # noinspection PyProtectedMember
+        config._cached_deps[cls.target][cache_lookup_args] = result
         return result
 
     @classmethod
@@ -577,7 +595,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if isinstance(target, MultiArchTargetAlias):
             for t in target.derived_targets:
                 if t.target_arch is arch:
-                    assert issubclass(t.project_class, cls)
+                    assert issubclass(t.project_class, target.project_class)
                     return t.project_class
         elif isinstance(target, Target):
             # single architecture target
@@ -727,6 +745,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def has_required_system_tool(self, executable: str):
         return executable in self.__required_system_tools
+
+    def _validate_cheribuild_target_for_system_deps(self, cheribuild_target: "typing.Optional[str]"):
+        if not cheribuild_target:
+            return
+        # Check that the target actually exists
+        tgt = target_manager.get_target(cheribuild_target, None, config=self.config, caller=self)
+        # And check that it's a native target:
+        if not tgt.project_class.get_crosscompile_target(self.config).is_native():
+            self.fatal("add_required_*() should use a native cheribuild target and not ", cheribuild_target,
+                       "- found while processing", self.target, fatal_when_pretending=True)
 
     def add_required_system_tool(self, executable: str, install_instructions: str = None, default: str = None,
                                  freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
@@ -1009,12 +1037,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         """
         for (tool, instructions) in self.__required_system_tools.items():
             assert isinstance(instructions, InstallInstructions)
+            self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
             if not shutil.which(str(tool)):
                 self.dependency_error("Required program", tool, "is missing!",
                                       install_instructions=instructions.fixit_hint(),
                                       cheribuild_target=instructions.cheribuild_target)
         for (package, instructions) in self.__required_pkg_config.items():
             assert isinstance(instructions, InstallInstructions)
+            self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
             if not shutil.which("pkg-config"):
                 # error should already have printed above
                 break
@@ -1027,18 +1057,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                       cheribuild_target=instructions.cheribuild_target)
         for (header, instructions) in self.__required_system_headers.items():
             assert isinstance(instructions, InstallInstructions)
+            self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
             if not Path("/usr/include", header).exists() and not Path("/usr/local/include", header).exists():
                 self.dependency_error("Required C header", header, "is missing!",
                                       install_instructions=instructions.fixit_hint(),
                                       cheribuild_target=instructions.cheribuild_target)
         self._system_deps_checked = True
 
-    def get_homebrew_prefix(self, package: str) -> Path:
-        assert OSInfo.IS_MAC, "Should only be called on macos"
+    def get_homebrew_prefix(self, package: "typing.Optional[str]" = None) -> Path:
         try:
-            prefix = self.run_cmd("brew", "--prefix", package, capture_output=True, run_in_pretend_mode=True,
-                                  print_verbose_only=True).stdout.decode("utf-8").strip()
-            return Path(prefix)
+            return _cached_get_homebrew_prefix(package, self.config)
         except subprocess.CalledProcessError as e:
             self.dependency_error("Could not find homebrew package" + package + ":", e,
                                   install_instructions="Try running `brew install " + package + "`")
@@ -1890,9 +1918,12 @@ class Project(SimpleProject):
     set_pkg_config_path = True  # set the PKG_CONFIG_* environment variables when building
     default_source_dir = ComputedDefaultValue(
         function=_default_source_dir, as_string=lambda cls: "$SOURCE_ROOT/" + cls.default_directory_basename)
+    needs_native_build_for_crosscompile = False  # Some projects (e.g. python) need a native build for build tools, etc.
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
+        if cls.needs_native_build_for_crosscompile and not cls.get_crosscompile_target(config).is_native():
+            return [cls.get_class_for_target(BasicCompilationTargets.NATIVE).target]
         return []
 
     @classmethod
@@ -1983,29 +2014,29 @@ class Project(SimpleProject):
     _install_prefix = None
     destdir = None
 
-    __can_use_lld_map = dict()  # type: typing.Dict[Path, bool]
+    __can_use_lld_map = dict()  # type: typing.Dict[str, bool]
 
-    @classmethod
-    def can_use_lld(cls, compiler: Path):
-        if OSInfo.IS_MAC:
-            return False  # lld does not work on MacOS
-        if compiler not in cls.__can_use_lld_map:
+    def can_use_lld(self, compiler: Path):
+        if compiler not in Project.__can_use_lld_map:
+            command = [str(compiler)] + self.essential_compiler_and_linker_flags + ["-fuse-ld=lld", "-xc", "-o",
+                                                                                    "/dev/null", "-"]
+            command_str = commandline_to_str(command)
             try:
-                run_command([compiler, "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"], run_in_pretend_mode=True,
+                run_command(command, run_in_pretend_mode=True,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raise_in_pretend_mode=True,
                             input="int main() { return 0; }\n", print_verbose_only=True)
                 status_update(compiler, "supports -fuse-ld=lld, linking should be much faster!")
-                cls.__can_use_lld_map[compiler] = True
+                Project.__can_use_lld_map[command_str] = True
             except subprocess.CalledProcessError:
                 status_update(compiler, "does not support -fuse-ld=lld, using slower bfd instead")
-                cls.__can_use_lld_map[compiler] = False
-        return cls.__can_use_lld_map[compiler]
+                Project.__can_use_lld_map[command_str] = False
+        return Project.__can_use_lld_map[command_str]
 
-    @classmethod
-    def can_use_lto(cls, ccinfo: CompilerInfo):
+    def can_use_lto(self, ccinfo: CompilerInfo):
         if ccinfo.compiler == "apple-clang":
             return True
-        elif ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0) and cls.can_use_lld(ccinfo.path):
+        elif ccinfo.compiler == "clang" and (
+                not self.compiling_for_host() or (ccinfo.version >= (4, 0, 0) and self.can_use_lld(ccinfo.path))):
             return True
         else:
             return False
@@ -3303,8 +3334,9 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                 CMAKE_EXTRA_SHARED_LIBRARY_SUFFIXES=".a")
         if not self.compiling_for_host() and self.make_args.subkind == MakeCommandKind.Ninja:
             # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
-            # TODO: remove once it has been fixed
-            self.add_cmake_options(CMAKE_BUILD_WITH_INSTALL_RPATH=True)
+            # Fixed in https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 (3.21.20210625)
+            self.add_cmake_options(
+                CMAKE_BUILD_WITH_INSTALL_RPATH=self._get_configure_tool_version() < (3, 21, 20210625))
         # TODO: BUILD_SHARED_LIBS=OFF?
 
         # Add the options from the config file:
@@ -3327,13 +3359,19 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         if (self.build_dir / "CTestTestfile.cmake").exists():
             # We can run tests using CTest
             if self.compiling_for_host():
-                self.run_cmd("ctest", "-VV")
+                self.run_cmd("ctest", "-V", "--output-on-failure", cwd=self.build_dir)
             else:
                 from .cmake import BuildCrossCompiledCMake
                 try:
                     cmake_target = BuildCrossCompiledCMake.get_instance(self)
                     if not (cmake_target.install_dir / "bin/ctest").is_file():
                         self.dependency_error("cannot find cross-compiled CTest binary to run tests.",
+                                              cheribuild_target=cmake_target.target)
+                    # --output-junit needs version 3.21
+                    min_version = "3.21"
+                    if not list(cmake_target.install_dir.glob("share/*/Help/release/" + min_version + ".rst")):
+                        self.dependency_error("cannot find release notes for CMake", min_version,
+                                              "- installed CMake version is too old",
                                               cheribuild_target=cmake_target.target)
                 except LookupError:
                     self.warning("Do not know how to cross-compile CTest for", self.target_info, "-> cannot run tests")

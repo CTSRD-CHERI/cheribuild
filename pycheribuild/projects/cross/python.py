@@ -30,7 +30,7 @@
 
 import os
 
-from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
+from .crosscompileproject import (BuildType, CompilationTargets, CrossCompileAutotoolsProject,
                                   DefaultInstallDir, GitRepository)
 from ...utils import is_case_sensitive_dir
 
@@ -39,15 +39,7 @@ class BuildPython(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/cpython.git", default_branch="3.8", force_branch=True)
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     default_build_type = BuildType.RELWITHDEBINFO
-
-    @classmethod
-    def dependencies(cls, config: CheriConfig):
-        deps = super().dependencies(config)
-        target = cls.get_crosscompile_target(config)
-        # python needs a native buid to cross-compile:
-        if not target.is_native():
-            deps.append("python-native")
-        return deps
+    needs_native_build_for_crosscompile = True
 
     # build_in_source_dir = True  # Cannot build out-of-source
 
@@ -84,7 +76,7 @@ class BuildPython(CrossCompileAutotoolsProject):
                 AR=str(self.sdk_bindir / "llvm-ar"),
                 ac_cv_file__dev_ptmx="no",  # no /dev/ptmx file on cheribsd
                 ac_cv_file__dev_ptc="no",  # no /dev/ptc file on cheribsd
-                )
+            )
             # self.configure_environment["ac_cv_file__dev_ptmx+set"] = "set"
             # self.configure_environment["ac_cv_file__dev_ptc+set"] = "set"
             # TODO: do I need to set? ac_sys_release=13.0

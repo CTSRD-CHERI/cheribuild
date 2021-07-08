@@ -375,11 +375,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         qemu_options = QemuOptions(xtarget)
         if xtarget.cpu_architecture not in (CPUArchitecture.MIPS64, CPUArchitecture.RISCV64,
                                             CPUArchitecture.X86_64, CPUArchitecture.AARCH64):
-            self.project.warning("CheriBSD test scripts currently only work for MIPS, RISC-V, AArch64 and x86-64")
-            return
-        if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-            self.project.warning("CheriBSD test scripts currently don't support the Morello FVP - "
-                                 "remove when Morello QEMU support done")
+            self.project.warning("CheriBSD test scripts currently only work for MIPS, RISC-V, AArch64, and x86-64")
             return
         if use_full_disk_image:
             assert self.is_cheribsd(), "Not supported for FreeBSD yet"
@@ -392,7 +388,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 disk_image_path = instance.disk_image
         elif not qemu_options.can_boot_kernel_directly:
             # We need to boot the disk image instead of running the kernel directly (amd64)
-            assert xtarget.is_any_x86() or xtarget.is_aarch64(), "All other architectures can boot directly"
+            assert xtarget.is_any_x86() or xtarget.is_aarch64(
+                include_purecap=True), "All other architectures can boot directly"
             assert self.is_cheribsd(), "Not supported for FreeBSD yet"
             if disk_image_path is None and "--disk-image" not in self.config.test_extra_args:
                 from ..projects.disk_image import BuildMinimalCheriBSDDiskImage
@@ -426,17 +423,17 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             cmd.extend(["--kernel", kernel_path])
         if "--qemu-cmd" not in self.config.test_extra_args:
             qemu_path = None
-            if xtarget.is_hybrid_or_purecap_cheri():
-                from ..projects.build_qemu import BuildQEMU
-                qemu_path = BuildQEMU.qemu_cheri_binary(self.project)
-                if not qemu_path.exists():
-                    self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
-            elif xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
                 # Only use Morello QEMU for Morello for now, not AArch64 too,
                 # as we don't want to force everyone to build Morello QEMU
                 # while it's in a separate branch.
                 from ..projects.build_qemu import BuildMorelloQEMU
                 qemu_path = BuildMorelloQEMU.qemu_cheri_binary(self.project)
+                if not qemu_path.exists():
+                    self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
+            elif xtarget.is_hybrid_or_purecap_cheri():
+                from ..projects.build_qemu import BuildQEMU
+                qemu_path = BuildQEMU.qemu_cheri_binary(self.project)
                 if not qemu_path.exists():
                     self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
             else:

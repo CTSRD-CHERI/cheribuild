@@ -88,10 +88,11 @@ class ConfigPlatform(Enum):
     FVP = "fvp"
     GFE = "gfe"
     BERI = "cheri-beri"
+    AWS = "aws-f1"
 
     @classmethod
     def fpga_platforms(cls) -> set:
-        return {cls.BERI, cls.GFE}
+        return {cls.BERI, cls.GFE, cls.AWS}
 
 
 class CheriBSDConfig:
@@ -232,14 +233,9 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
     separator = "-"
     platform_name_map = {
         ConfigPlatform.QEMU: "QEMU",
-        ConfigPlatform.GFE: "GFE"
+        ConfigPlatform.GFE: "GFE",
+        ConfigPlatform.AWS: None
     }
-
-    def __init__(self):
-        # Note: the FETT FPGA kernels do not have the platform name in
-        # the name, so we drop the platform from the kerconf components
-        self.fett_gfe_kernconf_components = OrderedDict(self.kernconf_components)
-        del self.fett_gfe_kernconf_components["platform_name"]
 
     def get_flag_names(self, platform, kABI, default=False, caprevoke=False, mfsroot=False, debug=False,
                        benchmark=False, fuzzing=False, fett=False):
@@ -268,10 +264,12 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
             configs.append(self.make_config(ConfigPlatform.QEMU, kABI, benchmark=True, default=True))
             configs.append(self.make_config(ConfigPlatform.QEMU, kABI, mfsroot=True, default=True))
             configs.append(self.make_config(ConfigPlatform.QEMU, kABI, mfsroot=True, benchmark=True, default=True))
-        # Generate GFE-FPGA kernels
+        # Generate FPGA kernels
         for kABI in KernelABI:
             configs.append(self.make_config(ConfigPlatform.GFE, kABI, mfsroot=True, default=True))
             configs.append(self.make_config(ConfigPlatform.GFE, kABI, mfsroot=True, benchmark=True, default=True))
+            configs.append(self.make_config(ConfigPlatform.AWS, kABI, fett=True))
+            configs.append(self.make_config(ConfigPlatform.AWS, kABI, fett=True, benchmark=True))
 
         # Generate default FETT and caprevoke kernels
         configs.append(self.make_config(ConfigPlatform.QEMU, KernelABI.HYBRID,
@@ -281,12 +279,8 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         configs.append(self.make_config(ConfigPlatform.GFE, KernelABI.HYBRID,
                                         caprevoke=True, mfsroot=True, default=True))
 
-        # Generate extra FETT kernels
-        for kABI in [KernelABI.NOCHERI, KernelABI.HYBRID]:
-            configs.append(self.make_config(ConfigPlatform.GFE, kABI,
-                                            base_context=self.fett_gfe_kernconf_components, fett=True))
-        configs.append(self.make_config(ConfigPlatform.GFE, KernelABI.HYBRID,
-                                        base_context=self.fett_gfe_kernconf_components, fett=True, caprevoke=True))
+        # Generate extra caprevoke kernels
+        configs.append(self.make_config(ConfigPlatform.AWS, KernelABI.HYBRID, fett=True, caprevoke=True))
         configs.append(self.make_config(ConfigPlatform.QEMU, KernelABI.HYBRID, fett=True, caprevoke=True))
 
         return configs
@@ -562,6 +556,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
     build_toolchain = FreeBSDToolchainKind.DEFAULT_COMPILER
     can_build_with_system_clang = True  # Not true for CheriBSD
 
+    # cheribsd-mfs-root-kernel doesn't have a default kernel-config, instead
+    # building a set, but kernel-config should still override that.
+    has_default_buildkernel_kernel_config = True
+
     @property
     def use_bootstrapped_toolchain(self):
         return self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAPPED
@@ -579,8 +577,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # the global --kernel-config option that is provided for convenience and backwards compat.
             cls.kernel_config = cls.add_config_option(
                 "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
-                default=ComputedDefaultValue(function=lambda _, p: p.default_kernel_config(),
-                                             as_string="target-dependent, usually GENERIC"),
+                default=ComputedDefaultValue(
+                    function=lambda _, p:
+                        p.default_kernel_config() if p.has_default_buildkernel_kernel_config else None,
+                    as_string="target-dependent, usually GENERIC"),
                 use_default_fallback_config_names=False,  #
                 help="The kernel configuration to use for `make buildkernel`")  # type: str
 
@@ -804,7 +804,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self._install_prefix = Path("/")
         self.kernel_toolchain_exists = False
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
-        assert self.kernel_config is not None
+        if self.has_default_buildkernel_kernel_config:
+            assert self.kernel_config is not None
         self.make_args.set(**self.arch_build_flags)
 
         if self.subdir_override:
@@ -954,8 +955,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.compiling_for_mips(include_purecap=True):
             # Don't build kernel modules for MIPS
             kernel_options.set(NO_MODULES="yes")
-        elif self.compiling_for_riscv(include_purecap=True):
-            kernel_options.set_with_options(CTF=False)  # FIXME: restore once debugged
         elif self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             # Disable CTF for now to avoid the following errors:
             # ERROR: cam_periph.c: die 25130: unknown base type encoding 0xffffffffffffffa1
@@ -1792,6 +1791,8 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     supported_architectures = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
     default_build_dir = ComputedDefaultValue(function=cheribsd_mfsroot_build_dir,
                                              as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
+    # This exists specifically for this target
+    has_default_buildkernel_kernel_config = False
     # We want the CheriBSD config options as well, so that defaults (e.g. build-alternate-abi-kernels) are inherited.
     _config_inherits_from = BuildCHERIBSD
 
@@ -1875,6 +1876,8 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         return config.kernconf
 
     def get_kernel_configs(self, **filter_kwargs) -> "typing.List[str]":
+        if self.kernel_config is not None:
+            return [self.kernel_config]
         configs = self._get_all_kernel_configs()
         return [c.kernconf for c in filter_kernel_configs(configs, **filter_kwargs)]
 

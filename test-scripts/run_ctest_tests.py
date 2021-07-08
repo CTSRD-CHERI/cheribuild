@@ -27,19 +27,32 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import argparse
+import datetime
+from pathlib import Path
 
 from run_tests_common import boot_cheribsd, run_tests_main
 
 
-def test_setup(qemu, _):
-    boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
+def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+    if args.test_setup_commands:
+        # If the user supplied test setup steps, run them now.
+        for command in args.test_setup_commands:
+            qemu.checked_run(command)
+    else:
+        # Otherwise, we just set up the default LD_LIBRARY_PATH.
+        boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
 
 
 def run_ctest_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running tests with ctest")
-    ctest_args = ". --output-on-failure --progress --test-timeout " + str(args.test_timeout)
+    ctest_args = ". --output-on-failure --test-timeout " + str(args.test_timeout)
+    # Also write a junit XML result
+    ctest_args += " --output-junit " + str(args.junit_xml)
     if args.verbose:
         ctest_args = "-VV " + ctest_args
+    else:
+        # XXX: --progress clears the current line to update tests status, -V is probably more useful
+        ctest_args = "-V " + ctest_args
     # First list all tests and then try running them.
     qemu.checked_run("cd {} && /cmake/bin/ctest --show-only -V".format(args.build_dir), timeout=5 * 60)
     try:
@@ -54,14 +67,24 @@ def run_ctest_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
 
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--cmake-install-dir", help="Installation root for the CMake/CTest commands", required=True)
+    parser.add_argument("--junit-xml", required=False, help="Output file name for the JUnit XML results")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose ctest output")
     parser.add_argument("--ignore-cheri-trap", action="store_true", required=False, default=True,
                         help="Don't fail the tests when a CHERI trap happens")
+    parser.add_argument("--test-setup-command", action="append", dest="test_setup_commands", metavar="COMMAND",
+                        help="Run COMMAND as an additional test setup step before running the tests")
 
 
 def adjust_args(args: argparse.Namespace):
     args.smb_mount_directories.append(
         boot_cheribsd.SmbMount(args.cmake_install_dir, readonly=True, in_target="/cmake"))
+    if args.junit_xml is None:
+        time_suffix = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        args.junit_xml = Path("/build", ("test-results-" + time_suffix + ".xml"))
+    else:
+        args.junit_xml = Path(args.junit_xml)
+    if not args.junit_xml.is_absolute():
+        args.junit_xml = Path("/build", args.junit_xml)
 
 
 if __name__ == '__main__':

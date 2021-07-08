@@ -72,6 +72,8 @@ class BuildQEMUBase(AutotoolsProject):
 
         cls.gui = cls.add_bool_option("gui", show_help=False, default=False,
                                       help="Build a the graphical UI bits for QEMU (SDL,VNC)")
+        cls.build_profiler = cls.add_bool_option("build-profiler", show_help=False, default=False,
+                                                 help="Enable QEMU internal profiling")
         cls.qemu_targets = cls.add_config_option("targets",
                                                  show_help=True, help="Build QEMU for the following targets",
                                                  default=cls.default_targets)
@@ -105,6 +107,9 @@ class BuildQEMUBase(AutotoolsProject):
             self.configure_args.extend(["--disable-sdl", "--disable-gtk", "--disable-opengl"])
             if self.target_info.is_macos():
                 self.configure_args.append("--disable-cocoa")
+
+        if self.build_profiler:
+            self.configure_args.extend(["--enable-profiler"])
 
         # QEMU now builds with python3
         self.configure_args.append("--python=" + sys.executable)

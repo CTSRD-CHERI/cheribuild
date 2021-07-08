@@ -27,11 +27,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import os
+import shutil
 import tempfile
 from pathlib import Path
 
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
-                                  CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
+                                  CrossCompileCMakeProject, CrossCompileMesonProject, CrossCompileProject,
+                                  DefaultInstallDir, GitRepository,
                                   Linkage, MakeCommandKind)
 from .x11 import BuildLibXCB
 from ..project import SimpleProject
@@ -63,6 +66,43 @@ class InstallDejaVuFonts(SimpleProject):
         self.run_cmd("find", self.target_info.sysroot_install_prefix_absolute / "lib/fonts")
 
 
+class BuildSharedMimeInfo(CrossCompileMesonProject):
+    target = "shared-mime-info"
+    # repository = GitRepository("https://gitlab.freedesktop.org/xdg/shared-mime-info.git")
+    # Currently needs a patch to avoid glib2 dependency
+    repository = GitRepository("https://gitlab.freedesktop.org/arichardson/shared-mime-info.git")
+    # We don't actually want to install the mime info, we just want the update-mime-info tool for native builds
+    native_install_dir = DefaultInstallDir.KDE_PREFIX
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    path_in_rootfs = "/usr/local"  # Always install to /usr/local/share so that it's in the default search path
+    needs_native_build_for_crosscompile = True
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.add_required_system_tool("itstool", homebrew="itstool")
+        self.add_required_system_tool("xmlto", homebrew="xmlto")
+        self.add_required_system_tool("xmllint", homebrew="libxml2", cheribuild_target="libxml2-native")
+
+    def setup(self):
+        super().setup()
+        self.configure_args.append("-Dupdate-mimedb=True")
+        if not self.compiling_for_host():
+            self.configure_args.append("-Dbuild-tools=False")
+        if OSInfo.IS_MAC:
+            catalog = self.get_homebrew_prefix() / "etc/xml/catalog"
+            if not catalog.exists():
+                self.dependency_error(OSInfo.install_instructions("docbook-xsl", False, homebrew="docbook-xsl"))
+            # Without XML_CATALOG_FILES we get the following error: "I/O error : Attempt to load network entity"
+            self.configure_environment["XML_CATALOG_FILES"] = str(catalog)
+            self.make_args.set_env(XML_CATALOG_FILES=catalog)
+
+    def configure(self, **kwargs):
+        if not self.compiling_for_host():
+            native_bin = self.get_instance(self, cross_target=CompilationTargets.NATIVE).install_dir / "bin"
+            self.configure_environment["PATH"] = str(native_bin) + ":" + os.getenv("PATH")
+        super().configure()
+
+
 # This class is used to build qtbase and all of qt5
 class BuildQtWithConfigureScript(CrossCompileProject):
     native_install_dir = DefaultInstallDir.CHERI_SDK
@@ -83,10 +123,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         deps = super().dependencies(config)
         if not cls.get_crosscompile_target(config).is_native():
             # TODO: should only need these if minimal is not set
-            deps.extend(["libx11", "libxcb", "libxkbcommon",
-                         "libxcb-cursor", "libxcb-util", "libxcb-image",
-                         "libxcb-render-util", "libxcb-wm", "libxcb-keysyms",
-                         "dejavu-fonts"])
+            deps.extend(["libx11", "libxcb", "libxkbcommon", "libxcb-cursor", "libxcb-util", "libxcb-image",
+                         "libxcb-render-util", "libxcb-wm", "libxcb-keysyms", "shared-mime-info", "dejavu-fonts"])
         return deps
 
     @classmethod
@@ -155,6 +193,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             "-no-use-gold-linker",
             "-no-iconv",
             "-no-headersclean",
+            # Don't embed the mimetype DB in libQt5Core.so. It's huge and results in lots XML parsing. Instead, we just
+            # ensure that the binary cache exists in the disk image.
+            "-no-mimetype-database"
         ])
         if self.build_tests:
             self.configure_args.append("-developer-build")
@@ -194,11 +235,13 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configure_args.append("-force-asserts")
             self.configure_args.append("-gdb-index")
 
-        if self.build_type.should_include_debug_info:
-            # separate debug info should make it possible to copy the .so files to tmpfs before running tests
+        if self.build_type.should_include_debug_info and False:
+            # separate debug info reduces the size of the shared libraries, but GDB doesn't seem to pick it up
+            # automatically (probably not installed to the right directory?) so disable it for now.
             self.configure_args.append("-separate-debug-info")
 
-        # self.configure_args.append("-no-pch")  # slows down build but gives useful crash testcases
+        if self.build_type == BuildType.DEBUG:
+            self.configure_args.append("-no-pch")   # slows down build but gives useful crash testcases
 
         #  -reduce-exports ...... Reduce amount of exported symbols [auto]
         self.configure_args.append("-reduce-exports")
@@ -209,7 +252,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         if self.minimal:
             self.configure_args.extend([
                 "-no-widgets",
-                "-no-sql",
                 "-no-glib",
                 "-no-gtk",
                 "-no-opengl",
@@ -251,20 +293,12 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     # default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
     default_build_type = BuildType.RELWITHDEBINFO
+    needs_native_build_for_crosscompile = True
 
     @property
     def needs_mxcaptable_dynamic(self):
         # Debug build: 35927 entries to .captable but current maximum is 32768
         return self.build_type == BuildType.DEBUG
-
-    @classmethod
-    def dependencies(cls, config: CheriConfig):
-        deps = super().dependencies(config)
-        target = cls.get_crosscompile_target(config)
-        # QtBase needs a native buid to cross-compile:
-        if not target.is_native():
-            deps.append("qtbase-dev-native")
-        return deps
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -403,18 +437,31 @@ class BuildQtBase(BuildQtWithConfigureScript):
         super().setup()
 
     def compile(self, **kwargs):
-        if self.minimal and False:
-            self.run_make("sub-src")
-            if self.build_tests:
-                # only build the tests for corelib:
-                if not (self.build_dir / "tests/auto/corelib").exists():
-                    # generate the makefiles
-                    self.run_make("sub-tests-make_first")
-                self.run_make("sub-corelib", cwd=self.build_dir / "tests/auto")
-        else:
-            self.run_make()  # QtBase ignores -nomake if you run "gmake all"
+        self.run_make("sub-src-all")
+        # Tests are build as part of --test
+
+    def _compile_relevant_tests(self):
+        # generate the makefiles
+        self.run_make("sub-tests-qmake_all")
+        self.run_make("sub-corelib", cwd=self.build_dir / "tests/auto")
+        self.run_make("sub-testlib", cwd=self.build_dir / "tests/auto")
 
     def run_tests(self):
+        # Download the input files for the QMimeDatabase tests
+        mimedb_tests_dir = self.build_dir / "tests/auto/corelib/mimetypes/qmimedatabase"
+        # Only download the file once if possible:
+        self.download_file(self.config.build_root / "shared-mime-info-2.1.zip",
+                           "https://gitlab.freedesktop.org/xdg/shared-mime-info/-/archive/2.1/shared-mime-info-2.1.zip",
+                           sha256="ce16a44d70b683deb8a82b7203970b6f474f794c91fc4b103c6d8cf6c3c796fc")
+        self.makedirs(mimedb_tests_dir)
+        if not (mimedb_tests_dir / "s-m-i/data").exists():
+            # Delete any old files
+            self.clean_directory(mimedb_tests_dir / "shared-mime-info-2.1")
+            self.run_cmd("unzip", self.config.build_root / "shared-mime-info-2.1.zip", cwd=mimedb_tests_dir,
+                         print_verbose_only=False)
+            self.create_symlink(mimedb_tests_dir / "shared-mime-info-2.1", mimedb_tests_dir / "s-m-i",
+                                print_verbose_only=False)
+        self._compile_relevant_tests()
         if self.compiling_for_host():
             # tst_QDate::startOfDay_endOfDay(epoch) is broken in BST (at least on macOS), use Europe/Oslo to match the
             # official CI.
@@ -423,10 +470,12 @@ class BuildQtBase(BuildQtWithConfigureScript):
                 self.run_cmd("make", "check", cwd=self.build_dir)
         else:
             # We run tests using the full disk image since we want e.g. locales to be available.
-            self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", "--test-subset=corelib",
-                                                      use_benchmark_kernel_by_default=True,
-                                                      mount_sysroot=False, mount_sourcedir=True,
-                                                      use_full_disk_image=True)
+            command = ["run_qtbase_tests.py"]
+            if "--test-subset" not in " ".join(self.config.test_extra_args):
+                command.append("--test-subset=corelib")
+            self.target_info.run_cheribsd_test_script(
+                *command, use_benchmark_kernel_by_default=True, mount_sysroot=False, mount_sourcedir=True,
+                use_full_disk_image=True)
 
 
 # This class is used to build individual Qt Modules instead of using the qt5 project
@@ -439,12 +488,17 @@ class BuildQtModuleWithQMake(CrossCompileProject):
 
     def configure(self, **kwargs):
         # Run QMake to generate a makefile
-        self.run_cmd(BuildQtBase.get_build_dir(self) / "bin/qmake", self.source_dir, cwd=self.build_dir)
+        self.run_cmd(BuildQtBase.get_build_dir(self) / "bin/qmake", self.source_dir, "--", *self.configure_args,
+                     cwd=self.build_dir)
+
+    def compile(self, **kwargs):
+        self.run_make("sub-src")
 
     def run_tests(self):
         if self.compiling_for_host():
-            self.run_cmd("make", "check", cwd=self.build_dir)
+            self.run_make("check", cwd=self.build_dir)
         else:
+            self.run_make("sub-tests-all")
             # We run tests using the full disk image since we want e.g. locales to be available.
             self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True,
                                                       mount_sysroot=True, mount_sourcedir=True,
@@ -453,13 +507,32 @@ class BuildQtModuleWithQMake(CrossCompileProject):
 
 class BuildQtSVG(BuildQtModuleWithQMake):
     target = "qtsvg"
-    repository = GitRepository("https://code.qt.io/qt/qtsvg.git", default_branch="5.15", force_branch=True)
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qtsvg.git",
+                               old_urls=[b"https://code.qt.io/qt/qtsvg.git"],
+                               default_branch="5.15", force_branch=True)
+
+
+class BuildQtX11Extras(BuildQtModuleWithQMake):
+    target = "qtx11extras"
+    repository = GitRepository("https://code.qt.io/qt/qtx11extras.git", default_branch="5.15", force_branch=True)
+
+
+class BuildQtMacExtras(BuildQtModuleWithQMake):
+    target = "qtmacextras"
+    repository = GitRepository("https://code.qt.io/qt/qtmacextras.git", default_branch="5.15", force_branch=True)
 
 
 class BuildQtDeclarative(BuildQtModuleWithQMake):
     target = "qtdeclarative"
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtdeclarative.git", default_branch="5.15",
                                force_branch=True)
+
+    def setup(self):
+        super().setup()
+        self.configure_args.extend([
+            "-no-qml-debug",  # debugger not compatibale with CHERI purecap
+            "-no-quick-designer",  # unnecessary, saves a bit of build time
+        ])
 
 
 # Webkit needs ICU (and recommended for QtBase too):
@@ -472,15 +545,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     build_dir_suffix = "4c"
     native_install_dir = DefaultInstallDir.CHERI_SDK
     make_kind = MakeCommandKind.GnuMake
-
-    @classmethod
-    def dependencies(cls, config: CheriConfig):
-        deps = super().dependencies(config)
-        target = cls.get_crosscompile_target(config)
-        # ICU4C needs a native buid to cross-compile:
-        if not target.is_native():
-            deps.append("icu4c-native")
-        return deps
+    needs_native_build_for_crosscompile = True
 
     def linkage(self):
         if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, self.config).force_static_linkage:
@@ -563,7 +628,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.add_required_system_tool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info")
+        self.add_required_system_tool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info",
+                                      cheribuild_target="shared-mime-info-native")
         self.add_required_system_tool("ruby", apt="ruby")
 
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations",
@@ -628,10 +694,12 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     def compile(self, **kwargs):
         # Generate the shared mime info cache to MASSIVELY speed up tests
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
+            smi_install = BuildSharedMimeInfo.get_instance(self, cross_target=CompilationTargets.NATIVE).install_dir
+            update_mime = shutil.which("update-mime-database") or smi_install / "bin/update-mime-database"
             mime_info_src = BuildQtBase.get_source_dir(self) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
             self.install_file(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True,
                               print_verbose_only=False)
-            self.run_cmd("update-mime-database", "-V", Path(td, "mime"), cwd="/")
+            self.run_cmd(update_mime, "-V", Path(td, "mime"), cwd="/")
 
             if not Path(td, "mime/mime.cache").exists():
                 self.fatal("Could not generated shared-mime-info cache!")

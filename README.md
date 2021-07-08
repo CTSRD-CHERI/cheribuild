@@ -331,7 +331,7 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--print-targets-only] [--clang-path CLANG_PATH] [--clang++-path CLANG++_PATH]
                      [--clang-cpp-path CLANG_CPP_PATH] [--pass-k-to-make] [--with-libstatcounters] [--skip-world]
                      [--skip-kernel] [--freebsd-subdir SUBDIRS] [--buildenv] [--libcompat-buildenv] [--debug-output]
-                     [--mips-float-abi {soft,hard}] [--cross-compile-linkage {dynamic,static}]
+                     [--mips-float-abi {soft,hard}] [--cross-compile-linkage {default,dynamic,static}]
                      [--subobject-bounds {conservative,subobject-safe,aggressive,very-aggressive,everywhere-unsafe}]
                      [--no-subobject-debug] [--no-clang-colour-diags] [--use-sdk-clang-for-native-xbuild]
                      [--configure-only] [--skip-install] [--skip-build] [--skip-sdk] [--trap-on-unrepresentable]
@@ -382,8 +382,9 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--run-mfs-root/alternative-kernel RUN_MFS_ROOT/ALTERNATIVE_KERNEL]
                      [--run-mfs-root/kernel-abi {hybrid,purecap}] [--bash/set-as-root-shell]
                      [--qtbase-dev/no-build-tests] [--qtbase-dev/build-examples] [--qtbase-dev/no-assertions]
-                     [--qtbase-dev/no-minimal] [--qtwebkit/build-jsc-only] [--webkit/backend {cloop,tier1asm,tier2asm}]
-                     [--webkit/no-tier2ptrliterals] [--webkit/jsheapoffsets]
+                     [--qtbase-dev/no-minimal] [--qtwebkit/build-jsc-only]
+                     [--morello-webkit/backend {cloop,tier1asm,tier2asm}] [--morello-webkit/no-tier2ptrliterals]
+                     [--morello-webkit/jsheapoffsets]
                      [TARGET ...]
 
 positional arguments:
@@ -401,29 +402,14 @@ optional arguments:
   --configure-only      Only run the configure step (skip build and install) (default: 'False')
   --skip-install        Skip the install step (only do the build) (default: 'False')
   --skip-build          Skip the build step (only do the install) (default: 'False')
-  --skip-sdk            When building with --include-dependencies ignore the SDK dependencies. Saves a lot of time when
-                        building libc++, etc. with dependencies but the sdk is already up-to-date. This is like --no-
-                        include-toolchain-depedencies but also skips the target that builds the sysroot. (default:
-                        'False')
-  --trap-on-unrepresentable
-                        Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for
-                        debugging, but deviates from the spec, and therefore off by default. (default: 'False')
-  --qemu-gdb-break-on-cheri-trap
-                        Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only). (default:
-                        'False')
-  --qemu-gdb-debug-userspace-program QEMU_GDB_DEBUG_USERSPACE_PROGRAM
-                        Print the command to debug the following userspace program in GDB attaced to QEMU
   --compilation-db, --cdb
                         Create a compile_commands.json file in the build dir (requires Bear for non-CMake projects)
                         (default: 'False')
   --no-shallow-clone    Do not perform a shallow `git clone` when cloning new projects. This can save a lot of time for
                         largerepositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-
                         shallow clone
-  --beri-fpga-env-setup-script BERI_FPGA_ENV_SETUP_SCRIPT
-                        Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh
   --build-morello-firmware-from-source
                         Build the firmware from source instead of downloading the latest release. (default: 'False')
-  --list-kernels        List available kernel configs to run and exit (default: 'False')
   --quiet, -q           Don't show stdout of the commands that are executed (default: 'False')
   --verbose, -v         Print all commmands that are executed (default: 'False')
   --clean, -c           Remove the build directory before build (default: 'False')
@@ -435,14 +421,6 @@ optional arguments:
   --skip-configure      Skip the configure step (default: 'False')
   --reconfigure, --force-configure
                         Always run the configure step, even for CMake projects with a valid cache. (default: 'False')
-  --include-dependencies, -d
-                        Also build the dependencies of targets passed on the command line. Targets passed on the command
-                        line will be reordered and processed in an order that ensures dependencies are built before the
-                        real target. (run --list-targets for more information). By default this does not build toolchain
-                        targets such as LLVM. Pass --include-toolchain-dependencies to also build those. (default:
-                        'False')
-  --no-include-toolchain-dependencies
-                        Do not include toolchain targets such as LLVM and QEMU when --include-dependencies is set.
   --compilation-db-in-source-dir
                         Generate a compile_commands.json and also copy it to the source directory (default: 'False')
   --generate-cmakelists
@@ -463,8 +441,23 @@ Actions to be performed:
   --dump-configuration  Print the current configuration as JSON. This can be saved to ~/.config/cheribuild.json to make
                         it persistent
   --print-targets-only  Don't run the build but instead only print the targets that would be executed (default: 'False')
+  --list-kernels        List available kernel configs to run and exit (default: 'False')
   --get-config-option KEY
                         Print the value of config option KEY and exit
+
+Selecting which dependencies are built:
+  --skip-sdk            When building with --include-dependencies ignore the SDK dependencies. Saves a lot of time when
+                        building libc++, etc. with dependencies but the sdk is already up-to-date. This is like --no-
+                        include-toolchain-depedencies but also skips the target that builds the sysroot. (default:
+                        'False')
+  --include-dependencies, -d
+                        Also build the dependencies of targets passed on the command line. Targets passed on the command
+                        line will be reordered and processed in an order that ensures dependencies are built before the
+                        real target. (run --list-targets for more information). By default this does not build toolchain
+                        targets such as LLVM. Pass --include-toolchain-dependencies to also build those. (default:
+                        'False')
+  --no-include-toolchain-dependencies
+                        Do not include toolchain targets such as LLVM and QEMU when --include-dependencies is set.
 
 Configuration of default paths:
   --config-file FILE    The config file that is used to load the default settings (default:
@@ -475,6 +468,8 @@ Configuration of default paths:
                         The C++ compiler to use for host binaries (must be compatible with Clang >= 3.7)
   --clang-cpp-path CLANG_CPP_PATH, --cpp-path CLANG_CPP_PATH
                         The C preprocessor to use for host binaries (must be compatible with Clang >= 3.7)
+  --beri-fpga-env-setup-script BERI_FPGA_ENV_SETUP_SCRIPT
+                        Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh
   --arm-none-eabi-prefix ARM_NONE_EABI_PREFIX
                         Prefix for arm-none-eabi-gcc binaries (e.g. /usr/bin/arm-none-eabi-). Available
                         athttps://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-
@@ -497,8 +492,8 @@ Adjust flags used when compiling MIPS/CHERI projects:
                         Link cross compiled CHERI project with libstatcounters. (default: 'False')
   --mips-float-abi {soft,hard}
                         The floating point ABI to use for building MIPS+CHERI programs (default: 'soft')
-  --cross-compile-linkage {dynamic,static}
-                        Whether to link cross-compile projects static or dynamic by default (default: 'dynamic')
+  --cross-compile-linkage {default,dynamic,static}
+                        Whether to link cross-compile projects static or dynamic by default (default: 'default')
   --subobject-bounds {conservative,subobject-safe,aggressive,very-aggressive,everywhere-unsafe}
                         Whether to add additional CSetBounds to subobject references/&-operator
   --no-subobject-debug  Do not clear software permission bit 2 when subobject bounds reduced size (Note: this should be
@@ -553,6 +548,14 @@ Configuration for running benchmarks:
                         test the benchmarks) (default: 'False')
 
 Configuration for launching QEMU (and other simulators):
+  --trap-on-unrepresentable
+                        Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for
+                        debugging, but deviates from the spec, and therefore off by default. (default: 'False')
+  --qemu-gdb-break-on-cheri-trap
+                        Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only). (default:
+                        'False')
+  --qemu-gdb-debug-userspace-program QEMU_GDB_DEBUG_USERSPACE_PROGRAM
+                        Print the command to debug the following userspace program in GDB attaced to QEMU
   --wait-for-debugger   Start QEMU in the 'wait for a debugger' state whenlaunching CheriBSD,FreeBSD, etc. (default:
                         'False')
   --debugger-in-tmux-pane
@@ -592,7 +595,7 @@ Options for target 'qemu':
   --qemu/targets QEMU/TARGETS
                         Build QEMU for the following targets (default:
                         'mips64-softmmu,mips64cheri128-softmmu,riscv64-softmmu,riscv64cheri-
-                        softmmu,riscv32-softmmu,x86_64-softmmu,aarch64-softmmu')
+                        softmmu,riscv32-softmmu,riscv32cheri-softmmu,x86_64-softmmu,aarch64-softmmu')
   --qemu/statistics     Collect statistics on out-of-bounds capability creation. (default: 'False')
 
 Options for target 'run-rtems':
@@ -785,14 +788,14 @@ Options for target 'qtwebkit':
   --qtwebkit/build-jsc-only
                         only build the JavaScript interpreter executable (default: 'False')
 
-Options for target 'webkit':
-  --webkit/backend {cloop,tier1asm,tier2asm}
+Options for target 'morello-webkit':
+  --morello-webkit/backend {cloop,tier1asm,tier2asm}
                         The JavaScript backend to use for building WebKit (default: 'cloop')
-  --webkit/no-tier2ptrliterals
+  --morello-webkit/no-tier2ptrliterals
                         Do not when true pointers are represented as atomic literals and loaded as data and when false
                         pointers are represented as numeric values which can be splitted and are encoded into
                         instructions. This option only affects the non-purecap tier2 backend.
-  --webkit/jsheapoffsets
+  --morello-webkit/jsheapoffsets
                         Use offsets into the JS heap for object references instead of capabilities. This option only
                         affects the purecap backends. (default: 'False')
 ```
