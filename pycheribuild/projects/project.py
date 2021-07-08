@@ -3367,6 +3367,12 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                     if not (cmake_target.install_dir / "bin/ctest").is_file():
                         self.dependency_error("cannot find cross-compiled CTest binary to run tests.",
                                               cheribuild_target=cmake_target.target)
+                    # --output-junit needs version 3.21
+                    min_version = "3.21"
+                    if not list(cmake_target.install_dir.glob("share/*/Help/release/" + min_version + ".rst")):
+                        self.dependency_error("cannot find release notes for CMake", min_version,
+                                              "- installed CMake version is too old",
+                                              cheribuild_target=cmake_target.target)
                 except LookupError:
                     self.warning("Do not know how to cross-compile CTest for", self.target_info, "-> cannot run tests")
                     return

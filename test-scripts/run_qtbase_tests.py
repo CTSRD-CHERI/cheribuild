@@ -39,8 +39,8 @@ from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 
 def setup_qtbase_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace):
     if args.junit_xml is None:
-        args.junit_xml = Path(args.build_dir,
-                              ("junit-results-" + datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S") + ".xml"))
+        time_suffix = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        args.junit_xml = Path(args.build_dir, ("test-results-" + time_suffix + ".xml"))
     else:
         args.junit_xml = Path(args.junit_xml)
     assert args.junit_xml.parent.exists(), args.junit_xml
