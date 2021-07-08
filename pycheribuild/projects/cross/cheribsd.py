@@ -955,8 +955,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.compiling_for_mips(include_purecap=True):
             # Don't build kernel modules for MIPS
             kernel_options.set(NO_MODULES="yes")
-        elif self.compiling_for_riscv(include_purecap=True):
-            kernel_options.set_with_options(CTF=False)  # FIXME: restore once debugged
         elif self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             # Disable CTF for now to avoid the following errors:
             # ERROR: cam_periph.c: die 25130: unknown base type encoding 0xffffffffffffffa1
