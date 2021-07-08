@@ -578,6 +578,21 @@ class BuildDoplhin(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/system/dolphin.git")
 
 
+class BuildLibPng(CrossCompileCMakeProject):
+    # Only one minor change needed:
+    # repository = GitRepository("https://git.code.sf.net/p/libpng/code", default_branch="libpng16", force_branch=True)
+    repository = GitRepository("https://github.com/CTSRD-CHERI/libpng", default_branch="libpng16", force_branch=True)
+    target = "libpng"
+    # The tests take a really long time to run (~2.5 hours on purecap RISC-V)
+    ctest_script_extra_args = ("--test-timeout", 5 * 60 * 60)
+
+    def setup(self):
+        super().setup()
+        if not self.compiling_for_host():
+            # The CTest test script mounts the cmake install dir under /cmake
+            self.add_cmake_options(TEST_CMAKE_COMMAND="/cmake/bin/cmake")
+
+
 class BuildGwenview(KDECMakeProject):
     target = "gwenview"
     dependencies = ["qtsvg", "kitemmodels", "kio", "kparts"]
