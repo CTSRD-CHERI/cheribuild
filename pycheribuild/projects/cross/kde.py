@@ -574,9 +574,29 @@ class BuildKIO(KDECMakeProject):
 # frameworks/baloo: frameworks/kcrash
 # frameworks/baloo: frameworks/kio
 
+class BuildKSyntaxHighlighting(KDECMakeProject):
+    # This includes e.g. the thumbnail provider for dolphin
+    target = "ksyntaxhighlighting"
+    needs_native_build_for_crosscompile = True
+    repository = GitRepository("https://invent.kde.org/frameworks/syntax-highlighting.git")
+
+    def setup(self):
+        super().setup()
+        if not self.compiling_for_host():
+            native_build = self.get_instance(self, cross_target=CompilationTargets.NATIVE).build_dir
+            self.add_cmake_options(KATEHIGHLIGHTINGINDEXER_EXECUTABLE=native_build / "bin/katehighlightingindexer")
+
+
+class BuildKioExtras(KDECMakeProject):
+    # This includes e.g. the thumbnail provider for dolphin
+    target = "kio-extras"
+    dependencies = ["kio", "ksyntaxhighlighting"]
+    repository = GitRepository("https://invent.kde.org/network/kio-extras.git")
+
+
 class BuildDoplhin(KDECMakeProject):
     target = "dolphin"
-    dependencies = ["kparts", "kxmlgui", "knewstuff", "kio", "kcmutils"]
+    dependencies = ["kparts", "kxmlgui", "knewstuff", "kio", "kcmutils", "kio-extras"]
     repository = GitRepository("https://invent.kde.org/system/dolphin.git")
 
 
