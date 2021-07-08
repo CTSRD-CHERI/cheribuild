@@ -3359,7 +3359,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         if (self.build_dir / "CTestTestfile.cmake").exists():
             # We can run tests using CTest
             if self.compiling_for_host():
-                self.run_cmd("ctest", "-VV")
+                self.run_cmd("ctest", "-VV", cwd=self.build_dir)
             else:
                 from .cmake import BuildCrossCompiledCMake
                 try:
