@@ -27,6 +27,8 @@
 #
 
 import os
+import tempfile
+from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
@@ -593,7 +595,34 @@ class BuildLibPng(CrossCompileCMakeProject):
             self.add_cmake_options(TEST_CMAKE_COMMAND="/cmake/bin/cmake")
 
 
+class BuildLCMS2(CrossCompileAutotoolsProject):
+    repository = GitRepository("https://github.com/mm2/Little-CMS")
+    target = "lcms2"
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.configure_command = self.source_dir / "autogen.sh"
+
+    def process(self):
+        if OSInfo.IS_MAC:
+            with tempfile.TemporaryDirectory() as td:
+                # Work around awful autotools build system
+                libtool_prefix = self.get_homebrew_prefix("libtool")
+                self.create_symlink(libtool_prefix / "bin/glibtool", Path(td) / "libtool", relative=False)
+                self.create_symlink(libtool_prefix / "bin/glibtoolize", Path(td) / "libtoolize", relative=False)
+                with set_env(PATH=td + ":" + os.getenv("PATH", "")):
+                    super().process()
+        else:
+            super().process()
+
+
+class BuildExiv2(CrossCompileCMakeProject):
+    repository = GitRepository("https://github.com/Exiv2/exiv2")
+    target = "exiv2"
+    dependencies = ["libexpat"]
+
+
 class BuildGwenview(KDECMakeProject):
     target = "gwenview"
-    dependencies = ["qtsvg", "kitemmodels", "kio", "kparts"]
+    dependencies = ["qtsvg", "kitemmodels", "kio", "kparts", "lcms2", "libpng", "exiv2"]
     repository = GitRepository("https://invent.kde.org/graphics/gwenview.git")
