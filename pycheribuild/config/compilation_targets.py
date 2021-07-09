@@ -596,14 +596,6 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         return Path("usr/local", self.install_prefix_dirname)
 
     @property
-    def _sysroot_libdir(self):
-        # For purecap we can unconditionally use libcheri since it is either a real directory (hybrid sysroot) or
-        # a symlink to lib (since https://github.com/CTSRD-CHERI/cheribsd/pull/548).
-        if self.target.is_cheri_purecap():
-            return "libcheri"
-        return "lib"
-
-    @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
         # For CheriBSD we install most packages to /usr/local/<arch>/, but some packages (e.g. the x11 libs
