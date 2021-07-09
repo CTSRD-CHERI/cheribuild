@@ -312,9 +312,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
-        return [str(self.sysroot_dir / "lib/pkgconfig"),
-                str(self.sysroot_dir / "usr/local/lib/pkgconfig"),
-                str(self.sysroot_dir / "usr/local/share/pkgconfig"),
+        return [str(self.sysroot_dir / "usr/libdata/pkgconfig"),
                 str(self.sysroot_install_prefix_absolute / "lib/pkgconfig"),
                 str(self.sysroot_install_prefix_absolute / "share/pkgconfig"),
                 str(self.sysroot_install_prefix_absolute / "libdata/pkgconfig")]
@@ -608,13 +606,13 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
     @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
-        return [str(self.sysroot_dir / "usr" / self._sysroot_libdir / "pkgconfig"),
-                str(self.sysroot_dir / self._sysroot_libdir / "pkgconfig"),
-                str(self.sysroot_dir / "usr/local/lib/pkgconfig"),
-                str(self.sysroot_dir / "usr/local/share/pkgconfig"),
-                str(self.sysroot_install_prefix_absolute / "lib/pkgconfig"),
-                str(self.sysroot_install_prefix_absolute / "share/pkgconfig"),
-                str(self.sysroot_install_prefix_absolute / "libdata/pkgconfig")]
+        # For CheriBSD we install most packages to /usr/local/<arch>/, but some packages (e.g. the x11 libs
+        # need to be in the default search path under /usr/local
+        return super().pkgconfig_dirs + [
+            str(self.sysroot_dir / "usr/local/lib/pkgconfig"),
+            str(self.sysroot_dir / "usr/local/share/pkgconfig"),
+            str(self.sysroot_dir / "usr/local/libdata/pkgconfig"),
+        ]
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         from ..projects.cross.cheribsd import BuildCHERIBSD
