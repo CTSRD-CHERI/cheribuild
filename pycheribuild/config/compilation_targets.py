@@ -181,6 +181,11 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             if cls.is_baremetal() or cls.is_rtems():
                 # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
                 result.append("-mcmodel=medium")
+
+            # Enable generating CHERI-RISC-V compressed instructions
+            if config.riscv_cheri_rvc:
+                result.append("-mxcheri-rvc")
+
         elif xtarget.is_aarch64(include_purecap=True):
             if xtarget.is_cheri_hybrid():
                 result += ["-march=morello", "-mabi=aapcs"]
