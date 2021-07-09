@@ -183,8 +183,9 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 result.append("-mcmodel=medium")
 
             # Enable generating CHERI-RISC-V compressed instructions
-            if config.riscv_cheri_rvc and xtarget.is_cheri_purecap():
-                result.append("-mxcheri-rvc")
+            if config.riscv_cheri_rvc:
+                if xtarget.is_cheri_hybrid() or xtarget.is_cheri_purecap():
+                    result.append("-mxcheri-rvc")
 
         elif xtarget.is_aarch64(include_purecap=True):
             if xtarget.is_cheri_hybrid():
