@@ -163,6 +163,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN=False,
             COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal(),
             COMPILER_RT_DEFAULT_TARGET_ONLY=True,
+            COMPILER_RT_BUILTINS_HIDE_SYMBOLS=False,
             # BUILTIN_SUPPORTED_ARCH="mips64",
             TARGET_TRIPLE=self.target_info.target_triple,
             )
