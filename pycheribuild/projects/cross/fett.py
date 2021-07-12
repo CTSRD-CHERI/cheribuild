@@ -213,6 +213,7 @@ class BuildFettDiskImage(FettProjectMixin, BuildCheriBSDDiskImage):
     dependencies = ["fett-bash", "fett-config"]
     disk_image_prefix = "fett-cheribsd"
     _source_class = BuildCheriBSDFett
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     hide_options_from_help = True
 
     @classproperty
@@ -247,6 +248,7 @@ class BuildFettDiskImage(FettProjectMixin, BuildCheriBSDDiskImage):
 class LaunchFett(FettProjectMixin, LaunchCheriBSD):
     target = "run-fett"
     _source_class = BuildFettDiskImage
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     hide_options_from_help = True
 
     @classmethod
