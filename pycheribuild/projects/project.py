@@ -3557,6 +3557,12 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         if self.use_asan:
             self.add_meson_options(b_sanitize="address,undefined")
 
+        # Unlike CMake, Meson does not set the DT_RUNPATH entry automatically:
+        # See https://github.com/mesonbuild/meson/issues/6220, https://github.com/mesonbuild/meson/issues/6541, etc.
+        rpath_dirs = self.target_info.additional_rpath_directories
+        if rpath_dirs:
+            self.COMMON_LDFLAGS.append("-Wl,-rpath," + ":".join(rpath_dirs))
+
     def needs_configure(self) -> bool:
         return not (self.build_dir / "build.ninja").exists()
 

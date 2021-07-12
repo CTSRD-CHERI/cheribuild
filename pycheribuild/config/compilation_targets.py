@@ -596,6 +596,12 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         return Path("usr/local", self.install_prefix_dirname)
 
     @property
+    def additional_rpath_directories(self) -> "list[str]":
+        # /usr/local/<arch>/lib is not part of the default linker search path, add it here for build systems that
+        # don't infer it automatically.
+        return [str(Path("/", self.sysroot_install_prefix_relative, "lib"))]
+
+    @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
         # For CheriBSD we install most packages to /usr/local/<arch>/, but some packages (e.g. the x11 libs

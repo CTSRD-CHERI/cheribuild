@@ -143,6 +143,10 @@ class TargetInfo(ABC):
         """
         return Path()
 
+    @property
+    def additional_rpath_directories(self) -> "list[str]":
+        return []
+
     @cached_property
     def target_triple(self) -> str:
         return self.get_target_triple(include_version=True)
