@@ -611,6 +611,17 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
 
 
+# Custom target info for FETT projects to ensure
+class CheriBSDFettTargetInfo(CheriBSDTargetInfo):
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
+        from ..projects.cross.cheribsd import BuildCheriBSDFett
+        return BuildCheriBSDFett.get_instance(self.project, cross_target=xtarget)
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        return ["cheribsd-fett"]  # Pick the matching sysroot (-purecap for purecap, -hybrid for hybrid etc.)
+
+
 class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     shortname = "CheriBSD-Morello"
 
@@ -1026,9 +1037,20 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_CHERIBSD_CHERI_TARGETS = (set(ALL_CHERIBSD_TARGETS) - set(ALL_CHERIBSD_NON_CHERI_TARGETS))
 
     # Same as above, but the default is purecap RISC-V
-    FETT_DEFAULT_ARCHITECTURE = CHERIBSD_RISCV_PURECAP
-    FETT_SUPPORTED_ARCHITECTURES = [CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI,
-                                    CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI, CHERIBSD_MIPS_PURECAP]
+    FETT_MIPS_NO_CHERI = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, CheriBSDFettTargetInfo)
+    FETT_MIPS_HYBRID = CrossCompileTarget("mips64-hybrid", CPUArchitecture.MIPS64, CheriBSDFettTargetInfo,
+                                          is_cheri_hybrid=True, non_cheri_target=FETT_MIPS_NO_CHERI)
+    FETT_MIPS_PURECAP = CrossCompileTarget("mips64-purecap", CPUArchitecture.MIPS64, CheriBSDFettTargetInfo,
+                                           is_cheri_purecap=True, hybrid_target=FETT_MIPS_HYBRID)
+
+    FETT_RISCV_NO_CHERI = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo)
+    FETT_RISCV_HYBRID = CrossCompileTarget("riscv64-hybrid", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo,
+                                           is_cheri_hybrid=True, non_cheri_target=FETT_RISCV_NO_CHERI)
+    FETT_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo,
+                                            is_cheri_purecap=True, hybrid_target=FETT_RISCV_HYBRID)
+    FETT_DEFAULT_ARCHITECTURE = FETT_RISCV_PURECAP
+    FETT_SUPPORTED_ARCHITECTURES = [FETT_RISCV_PURECAP, FETT_RISCV_HYBRID, FETT_RISCV_NO_CHERI,
+                                    FETT_MIPS_PURECAP, FETT_MIPS_HYBRID, FETT_MIPS_NO_CHERI]
 
     ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64,
                                        BAREMETAL_NEWLIB_MIPS64_PURECAP,

@@ -207,12 +207,11 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
             self.install_file(self.build_dir / "source/src/bvrs.sql", self.real_install_root_dir / "share/bvrs.sql")
 
 
-class BuildFettDiskImage(BuildCheriBSDDiskImage):
+class BuildFettDiskImage(FettProjectMixin, BuildCheriBSDDiskImage):
     target = "disk-image-fett"
-    dependencies = ["bash", "fett-config"]
+    dependencies = ["fett-bash", "fett-config"]
     disk_image_prefix = "fett-cheribsd"
     _source_class = BuildCheriBSDFett
-    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     hide_options_from_help = True
 
     @classproperty
@@ -235,12 +234,11 @@ class BuildFettDiskImage(BuildCheriBSDDiskImage):
         cls.include_kgdb = True
 
 
-class LaunchFett(LaunchCheriBSD):
+class LaunchFett(FettProjectMixin, LaunchCheriBSD):
     target = "run-fett"
     _source_class = BuildFettDiskImage
-    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     hide_options_from_help = True
 
     @classmethod
     def get_cross_target_index(cls):
-        return LaunchCheriBSD.get_cross_target_index(xtarget=cls._xtarget)
+        return super().get_cross_target_index(xtarget=cls._xtarget)

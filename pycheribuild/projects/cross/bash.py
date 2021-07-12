@@ -25,7 +25,7 @@
 
 from pathlib import Path
 
-from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, FettProjectMixin, GitRepository
 
 
 class BuildBash(CrossCompileAutotoolsProject):
@@ -46,7 +46,7 @@ class BuildBash(CrossCompileAutotoolsProject):
         self.add_configure_vars(INTLBISON=":")
         self.add_configure_vars(YACC=":")
 
-        # Bash is horrible K&R C in many places and deliberately uses uses
+        # Bash is horrible K&R C in many places and deliberately uses
         # declarations with no protoype. Hopefully it gets everything right.
         self.cross_warning_flags.append("-Wno-error=cheri-prototypes")
 
@@ -78,3 +78,7 @@ class BuildBash(CrossCompileAutotoolsProject):
                 pwd_mkdb_cmd = freebsd_builddir / "tmp/legacy/usr/sbin/pwd_mkdb"
                 self.rewrite_file(self.destdir / "etc/master.passwd", rewrite)
                 self.run_cmd([pwd_mkdb_cmd, "-p", "-d", self.destdir / "etc", self.destdir / "etc/master.passwd"])
+
+
+class BuildFettBash(FettProjectMixin, BuildBash):
+    target = "fett-bash"
