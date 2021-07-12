@@ -26,7 +26,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from .crosscompileproject import CrossCompileCMakeProject, CrossCompileMesonProject, GitRepository
+from .crosscompileproject import CrossCompileMesonProject, GitRepository
 from ..project import DefaultInstallDir
 
 

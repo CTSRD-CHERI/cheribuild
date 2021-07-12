@@ -81,7 +81,7 @@ class BuildOpenSBI(Project):
             LD=self.target_info.linker,
             AR=self.sdk_bindir / "llvm-ar",
             OBJCOPY=self.sdk_bindir / "llvm-objcopy",
-            FW_PIC="n", # does not appear to work correctly
+            FW_PIC="n",  # does not appear to work correctly
             FW_OPTIONS="0x2",  # Debug output enabled for now
             # FW_JUMP_ADDR= ## cheribsd start addr
             # FW_JUMP_FDT_ADDR= ## cheribsd fdt addr
