@@ -173,7 +173,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
 class FettProjectMixin:
     path_in_rootfs = "/fett"
     default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
-    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES + [CompilationTargets.NATIVE]
     # We default to zero-initializing all stack variables for FETT projects
     default_auto_var_init = AutoVarInit.ZERO
     hide_options_from_help = True
