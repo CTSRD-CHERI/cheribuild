@@ -2017,10 +2017,10 @@ class Project(SimpleProject):
     __can_use_lld_map = dict()  # type: typing.Dict[str, bool]
 
     def can_use_lld(self, compiler: Path):
-        if compiler not in Project.__can_use_lld_map:
-            command = [str(compiler)] + self.essential_compiler_and_linker_flags + ["-fuse-ld=lld", "-xc", "-o",
-                                                                                    "/dev/null", "-"]
-            command_str = commandline_to_str(command)
+        command = [str(compiler)] + self.essential_compiler_and_linker_flags + ["-fuse-ld=lld", "-xc", "-o",
+                                                                                "/dev/null", "-"]
+        command_str = commandline_to_str(command)
+        if command_str not in Project.__can_use_lld_map:
             try:
                 run_command(command, run_in_pretend_mode=True,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raise_in_pretend_mode=True,
