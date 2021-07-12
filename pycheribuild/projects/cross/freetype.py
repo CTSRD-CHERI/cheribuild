@@ -26,20 +26,19 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from .crosscompileproject import CrossCompileCMakeProject, GitRepository
+from .crosscompileproject import CrossCompileCMakeProject, CrossCompileMesonProject, GitRepository
 from ..project import DefaultInstallDir
 
 
 # Prefer the CMake build over autotools since autotools does not work out-of-the-box
-class BuildFreeType2(CrossCompileCMakeProject):
+class BuildFreeType2(CrossCompileMesonProject):
     target = "freetype2"
-    repository = GitRepository("https://github.com/freetype/freetype2.git")
+    repository = GitRepository("https://gitlab.freedesktop.org/freetype/freetype",
+                               old_urls=[b"https://github.com/freetype/freetype2.git"])
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     path_in_rootfs = "/usr/local"
 
     def setup(self):
         super().setup()
-        # FIXME: FT_UINT_TO_POINTER should use uintptr_t
+        # TODO: remove once https://gitlab.freedesktop.org/freetype/freetype/-/merge_requests/52 is merged
         self.cross_warning_flags += ["-Wno-error=cheri-capability-misuse"]
-        # TODO: build static instead?
-        self.add_cmake_options(BUILD_SHARED_LIBS=True)
