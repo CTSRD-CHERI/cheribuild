@@ -31,6 +31,7 @@
 import os
 from pathlib import Path
 
+from .cheribsd import BuildCheriBSDFett
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileProject, DefaultInstallDir,
                                   FettProjectMixin, GitRepository, MakeCommandKind)
 from .kcgi import BuildFettKCGI
@@ -210,6 +211,7 @@ class BuildFettDiskImage(BuildCheriBSDDiskImage):
     target = "disk-image-fett"
     dependencies = ["bash", "fett-config"]
     disk_image_prefix = "fett-cheribsd"
+    _source_class = BuildCheriBSDFett
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     hide_options_from_help = True
 
