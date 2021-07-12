@@ -904,6 +904,19 @@ def test_backwards_compat_old_suffixes_freebsd_mips():
         _ = _parse_config_file_and_args(b'{}', "--freebsd-mips/source-directory=/cmdline")
 
 
+def test_fett_install_dirs(monkeypatch):
+    config = _parse_arguments(["--source-root=/home/foo"])
+    cheribsd = _get_cheribsd_instance("cheribsd-riscv64-purecap", config)
+    cheribsd_fett = _get_cheribsd_instance("cheribsd-fett-riscv64-purecap", config)
+    assert cheribsd_fett.source_dir == Path("/home/foo/cheribsd"), "should reuse the same source dir"
+    assert cheribsd_fett.source_dir == cheribsd.source_dir, "should reuse the same source dir"
+    # Build and install dir should be different though
+    assert cheribsd_fett.install_dir == Path("/home/foo/output/rootfs-fett-init-zero-riscv64-purecap")
+    assert cheribsd.install_dir == Path("/home/foo/output/rootfs-riscv64-purecap")
+    assert cheribsd_fett.build_dir == Path("/home/foo/build/cheribsd-fett-init-zero-riscv64-purecap-build")
+    assert cheribsd.build_dir == Path("/home/foo/build/cheribsd-riscv64-purecap-build")
+
+
 def test_expand_tilde_and_env_vars(monkeypatch):
     monkeypatch.setenv("HOME", "/home/foo")
     monkeypatch.setenv("MYHOME", "/home/foo")
