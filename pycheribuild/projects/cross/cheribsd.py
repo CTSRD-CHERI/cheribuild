@@ -1144,6 +1144,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             make_cmd = Path(shutil.which(self.make_args.command) or self.make_args.command)
         if not make_cmd.exists():
             raise FileNotFoundError(make_cmd)
+        # FIXME: ./bmake-install/bin/bmake -v MAKE_VERSION -f /dev/null -- bootstrap if older than the
+        # contents of contrib/bmake/VERSION
         return make_cmd
 
     def _query_make_var(self, args, var):
@@ -1770,7 +1772,9 @@ def cheribsd_fett_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
 
 class BuildCheriBSDFett(BuildCHERIBSD):
     target = "cheribsd-fett"
-    repository = ReuseOtherProjectRepository(BuildCHERIBSD, do_update=True)
+    # Note: we have to set repo_for_target since we use different CompilationTargets here (with CheriBSDFettTargetInfo)
+    repository = ReuseOtherProjectRepository(BuildCHERIBSD, do_update=True,
+                                             repo_for_target=CompilationTargets.CHERIBSD_RISCV_PURECAP)
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
     _default_install_dir_fn = cheribsd_fett_install_dir
