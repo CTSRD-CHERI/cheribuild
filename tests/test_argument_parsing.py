@@ -19,6 +19,7 @@ from pycheribuild.projects import *  # noqa: F401, F403
 from pycheribuild.projects.cross import *  # noqa: F401, F403
 from pycheribuild.projects.cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD,
                                                   FreeBSDToolchainKind)
+from pycheribuild.projects.cross.fett import BuildFettDiskImage
 from pycheribuild.projects.cross.llvm import BuildCheriLLVM
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 # noinspection PyProtectedMember
@@ -915,6 +916,13 @@ def test_fett_install_dirs(monkeypatch):
     assert cheribsd.install_dir == Path("/home/foo/output/rootfs-riscv64-purecap")
     assert cheribsd_fett.build_dir == Path("/home/foo/build/cheribsd-fett-init-zero-riscv64-purecap-build")
     assert cheribsd.build_dir == Path("/home/foo/build/cheribsd-riscv64-purecap-build")
+
+    fett_disk_image = _get_target_instance("disk-image-fett-riscv64-purecap", config, BuildFettDiskImage)
+    disk_image = _get_target_instance("disk-image-riscv64-purecap", config, BuildCheriBSDDiskImage)
+    assert fett_disk_image.disk_image_path == Path("/home/foo/output/fett-cheribsd-riscv64-purecap.img")
+    assert disk_image.disk_image_path == Path("/home/foo/output/cheribsd-riscv64-purecap.img")
+    assert fett_disk_image.rootfs_dir == cheribsd_fett.install_dir
+    assert disk_image.rootfs_dir == cheribsd.install_dir
 
 
 def test_expand_tilde_and_env_vars(monkeypatch):
