@@ -424,11 +424,16 @@ class BuildDiskImageBase(SimpleProject):
                     f.write(random_data)
             self.add_file_to_image(entropy_file, base_directory=self.tmpdir)
 
+    @property
+    def _gdb_xtarget(self):
+        # Workaround for FETT (we use the normal GDB target to avoid duplicating yet another project)
+        return self.source_project.get_crosscompile_target(self.config)
+
     def add_gdb(self):
         if not self.include_gdb and not self.include_kgdb:
             return
         # FIXME: if /usr/local/bin/gdb is in the image make /usr/bin/gdb a symlink
-        cross_target = self.source_project.get_crosscompile_target(self.config)
+        cross_target = self._gdb_xtarget
         if cross_target not in BuildGDB.supported_architectures:
             self.warning("GDB cannot be built for architecture ", cross_target, " -> not addding it")
             return

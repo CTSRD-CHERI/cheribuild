@@ -40,6 +40,7 @@ from .openssh import BuildFettOpenSSH
 from .sqlbox import BuildFettSQLbox
 from ..disk_image import BuildCheriBSDDiskImage
 from ..run_qemu import LaunchCheriBSD
+from ...config.target_info import CrossCompileTarget
 from ...mtree import MtreeFile
 from ...utils import classproperty
 
@@ -100,7 +101,7 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
             "stanford.png",
             "static.html",
             "test.txt",
-            ]
+        ]
         for file in html_files:
             mtree.add_file(src / "build/webserver/common/html" / file,
                            nginx_prefix / "html" / file)
@@ -145,7 +146,7 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
             "voter_registration_confirmation.html",
             "voter_registration_update_login.html",
             "voter_registration_verification.html",
-            ]
+        ]
         for file in html_files:
             mtree.add_file(voting_src / "common/static/bvrs" / file,
                            voting_prefix / "bvrs/bvrs" / file)
@@ -193,7 +194,7 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
             LDFLAGS=self.commandline_to_str(self.default_ldflags),
             CFLAGS=self.commandline_to_str(self.default_compiler_flags),
             BVRS_OS="freebsd"
-            )
+        )
         # Note: We must set these variables on the command line since the Makefile assigns to them with =
         self.make_args.set(PREFIX=self.real_install_root_dir, ORT_PREFIX=self.config.cheri_sdk_bindir / "ort")
 
@@ -217,6 +218,15 @@ class BuildFettDiskImage(FettProjectMixin, BuildCheriBSDDiskImage):
     @classproperty
     def default_architecture(self):
         return CompilationTargets.FETT_DEFAULT_ARCHITECTURE
+
+    @property
+    def _gdb_xtarget(self):
+        # Workaround for FETT (we use the normal GDB target to avoid duplicating yet another project)
+        for xtarget in BuildCheriBSDDiskImage.supported_architectures:
+            assert isinstance(xtarget, CrossCompileTarget)
+            if xtarget.generic_suffix == self.crosscompile_target.generic_suffix:
+                return xtarget
+        raise ValueError("Can't find GDB arch")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

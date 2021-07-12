@@ -941,6 +941,9 @@ def test_fett_install_dirs(monkeypatch):
                                                             'fett-sqlbox-riscv64-purecap',
                                                             'openradtool']
 
+    assert disk_image._gdb_xtarget == CompilationTargets.CHERIBSD_RISCV_PURECAP
+    assert fett_disk_image._gdb_xtarget == CompilationTargets.CHERIBSD_RISCV_PURECAP
+
     fett_voting = _get_target_instance("fett-voting-riscv64-purecap", config)
     assert fett_voting.install_dir == cheribsd_fett.install_dir / "fett"
     assert fett_voting.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
