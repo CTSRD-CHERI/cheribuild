@@ -30,7 +30,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
+from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
 from .x11 import BuildLibXCB
 from ..project import DefaultInstallDir, GitRepository, MakeCommandKind
@@ -649,3 +649,15 @@ class BuildGwenview(KDECMakeProject):
     target = "gwenview"
     dependencies = ["qtsvg", "kitemmodels", "kio", "kparts", "lcms2", "libpng", "exiv2"]
     repository = GitRepository("https://invent.kde.org/graphics/gwenview.git")
+
+
+class BuildFontConfig(CrossCompileMesonProject):
+    target = "fontconfig"
+    dependencies = ["freetype2", "libexpat"]
+    repository = GitRepository("https://gitlab.freedesktop.org/fontconfig/fontconfig")
+
+
+class BuildOpenJPEG(CrossCompileCMakeProject):
+    target = "openjpeg"
+    dependencies = ["lcms2", "libpng"]
+    repository = GitRepository("https://github.com/uclouvain/openjpeg.git")
