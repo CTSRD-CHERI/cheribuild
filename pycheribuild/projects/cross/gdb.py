@@ -86,6 +86,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
                                CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS +
                                CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS + [CompilationTargets.NATIVE])
     default_architecture = CompilationTargets.NATIVE
+    prefer_full_lto_over_thin_lto = True
 
     @classmethod
     def is_toolchain_target(cls):
@@ -129,7 +130,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configure_args.extend([
             "--disable-nls",
             "--enable-tui",
-            "--enable-ld=yes" if self.compiling_for_host() else "--disable-ld",
+            "--disable-ld",
             "--disable-gold",
             "--enable-64-bit-bfd",
             "--without-gnu-as",
@@ -143,9 +144,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "--with-guile=no",
             ])
 
-        if self.compiling_for_host() and self.target_info.is_macos():
-            # Allow building ld.bfd by building for FreeBSD
-            self.configure_args.append("--target=x86_64-unknown-freebsd13")
+        if self.use_lto:
+            self.configure_args.append("--enable-lto")
 
         # BUILD the gui:
         if False and self.compiling_for_host():
@@ -241,8 +241,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.install_file(self.build_dir / "binutils/cxxfilt", bindir / "gc++filt")
             self.install_file(self.build_dir / "binutils/nm-new", bindir / "gnm")
             self.install_file(self.build_dir / "binutils/strip-new", bindir / "gstrip")
-            self.install_file(self.build_dir / "ld/ld-new", bindir / "ld.bfd")
-            self.install_file(self.build_dir / "ld/ld-new", bindir / "gld.bfd")
 
 
 class BuildKGDB(BuildGDB):
