@@ -331,11 +331,6 @@ class BuildKSyndication(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/syndication.git")
 
 
-# frameworks/kfilemetadata: frameworks/ki18n
-# frameworks/kfilemetadata: frameworks/karchive
-# frameworks/kfilemetadata: frameworks/kcoreaddons
-# frameworks/kfilemetadata: third-party/taglib
-# frameworks/kfilemetadata: third-party/poppler
 # frameworks/kimageformats: frameworks/karchive
 # frameworks/kpty: frameworks/kcoreaddons
 # frameworks/kpty: frameworks/ki18n
@@ -594,9 +589,17 @@ class BuildKioExtras(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/network/kio-extras.git")
 
 
+class BuildKFileMetadata(KDECMakeProject):
+    # This includes e.g. the thumbnail provider for dolphin
+    target = "kfilemetadata"
+    # TODO: depend on poppler for PDF medatadata
+    dependencies = ["karchive", "kconfig", "ki18n", "karchive"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kfilemetadata.git")
+
+
 class BuildDoplhin(KDECMakeProject):
     target = "dolphin"
-    dependencies = ["kparts", "kxmlgui", "knewstuff", "kio", "kcmutils", "kio-extras"]
+    dependencies = ["kparts", "kxmlgui", "knewstuff", "kio", "kcmutils", "kio-extras", "kfilemetadata"]
     repository = GitRepository("https://invent.kde.org/system/dolphin.git")
 
 
