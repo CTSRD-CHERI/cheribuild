@@ -1764,11 +1764,17 @@ class BuildCHERIBSD(BuildFreeBSD):
         super().install(all_kernel_configs=" ".join(available_kernconfs), sysroot_only=self.sysroot_only, **kwargs)
 
 
+def cheribsd_fett_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
+    return config.output_root / ("rootfs-fett" + project.build_configuration_suffix())
+
+
 class BuildCheriBSDFett(BuildCHERIBSD):
     target = "cheribsd-fett"
     repository = ReuseOtherProjectRepository(BuildCHERIBSD, do_update=True)
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
+    _default_install_dir_fn = cheribsd_fett_install_dir
+
     hide_options_from_help = True  # hide this from --help for now
 
     def __init__(self, config):
