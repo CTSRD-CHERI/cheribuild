@@ -677,3 +677,20 @@ class BuildPoppler(CrossCompileCMakeProject):
 class BuildThreadWeaver(KDECMakeProject):
     target = "threadweaver"
     repository = GitRepository("https://invent.kde.org/frameworks/threadweaver.git")
+
+
+# Doesn't build on FreeBSD properly:
+# /Users/alex/cheri/kde-frameworks/kpty/src/kpty.cpp:72:10: fatal error: 'utmp.h' file not found
+# class BuildKPty(KDECMakeProject):
+#     target = "kpty"
+#     repository = GitRepository("https://invent.kde.org/frameworks/kpty")
+
+
+class BuildOkular(KDECMakeProject):
+    target = "okular"
+    dependencies = ["poppler", "threadweaver", "kparts", "kio", "kiconthemes"]  # ktpy
+    repository = GitRepository("https://invent.kde.org/graphics/okular.git")
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(ALLOW_OPTIONAL_DEPENDENCIES=True)
