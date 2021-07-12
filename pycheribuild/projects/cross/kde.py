@@ -661,3 +661,19 @@ class BuildOpenJPEG(CrossCompileCMakeProject):
     target = "openjpeg"
     dependencies = ["lcms2", "libpng"]
     repository = GitRepository("https://github.com/uclouvain/openjpeg.git")
+
+
+class BuildPoppler(CrossCompileCMakeProject):
+    target = "poppler"
+    dependencies = ["freetype2", "fontconfig", "openjpeg", "qtbase"]
+    repository = GitRepository("https://gitlab.freedesktop.org/poppler/poppler.git")
+
+    def setup(self):
+        super().setup()
+        # Avoid boost dependency:
+        self.add_cmake_options(ENABLE_BOOST=False)
+
+
+class BuildThreadWeaver(KDECMakeProject):
+    target = "threadweaver"
+    repository = GitRepository("https://invent.kde.org/frameworks/threadweaver.git")
