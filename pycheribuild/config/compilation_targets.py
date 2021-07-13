@@ -187,6 +187,10 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 if xtarget.is_cheri_hybrid() or xtarget.is_cheri_purecap():
                     result.append("-mxcheri-rvc")
 
+            if config.riscv_cheri_gprel:
+                if xtarget.is_cheri_purecap():
+                    result.append("-cheri-cap-table-abi=gprel")
+
         elif xtarget.is_aarch64(include_purecap=True):
             if xtarget.is_cheri_hybrid():
                 result += ["-march=morello", "-mabi=aapcs"]

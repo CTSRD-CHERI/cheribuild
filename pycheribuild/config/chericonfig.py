@@ -207,6 +207,9 @@ class CheriConfig(ConfigBase):
         self.riscv_cheri_rvc = loader.add_bool_option("riscv-cheri-rvc", default=False,
                                                 group=loader.cross_compile_options_group,
                                                 help="Build CHERI-RISC-V projects with compressed CHERI instructions support")
+        self.riscv_cheri_gprel = loader.add_bool_option("riscv-cheri-gprel", default=False,
+                                                group=loader.cross_compile_options_group,
+                                                help="Build CHERI-RISC-V libs with gprel ABI for CheriFreeRTOS compartmentalization")
         self.crosscompile_linkage = loader.add_option("cross-compile-linkage", default=Linkage.DYNAMIC, type=Linkage,
                                                       group=loader.cross_compile_options_group,
                                                       enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
