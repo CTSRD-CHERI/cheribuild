@@ -178,7 +178,12 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if self.target_info.is_rtems():
             self.move_file(self.install_dir / "lib/rtems5" / libname, self.install_dir / "lib" / libname)
         else:
-            self.move_file(self.install_dir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
+
+            if self.config.riscv_cheri_gprel:
+                gprel_libname = "libclang_rt.builtins-" + self.triple_arch + "-gprel.a"
+                self.move_file(self.install_dir / "lib/generic" / libname, self.real_install_root_dir / "lib" / gprel_libname)
+            else:
+                self.move_file(self.install_dir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
 
             if self.compiling_for_cheri():
                 # compatibility with older compilers
