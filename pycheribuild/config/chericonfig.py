@@ -67,7 +67,7 @@ class BuildType(Enum):
     def to_meson_args(self) -> dict:
         if self is BuildType.DEFAULT:
             return dict()  # Note: Meson default value is debug
-        if self in BuildType.DEBUG:
+        if self is BuildType.DEBUG:
             return {"buildtype": "debug"}  # -O0 -g
         elif self is BuildType.RELEASE:
             return {"buildtype": "release"}  # -O3 no debug
