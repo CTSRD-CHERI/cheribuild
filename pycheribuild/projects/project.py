@@ -3609,9 +3609,6 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             self.add_meson_options(prefix=self.install_dir)
         self.configure_args.append(str(self.source_dir))
         self.configure_args.append(str(self.build_dir))
-        if self.config.force_configure:
-            self.clean_directory(self.build_dir / "meson-info", ensure_dir_exists=False)
-            self.clean_directory(self.build_dir / "meson-private", ensure_dir_exists=False)
         super().configure(**kwargs)
         if self.config.copy_compilation_db_to_source_dir and (self.build_dir / "compile_commands.json").exists():
             self.install_file(self.build_dir / "compile_commands.json", self.source_dir / "compile_commands.json",
