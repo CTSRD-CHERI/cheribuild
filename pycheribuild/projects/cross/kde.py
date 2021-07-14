@@ -672,6 +672,20 @@ class BuildPoppler(CrossCompileCMakeProject):
         super().setup()
         # Avoid boost dependency:
         self.add_cmake_options(ENABLE_BOOST=False)
+        self.add_cmake_options(TESTDATADIR=self.source_dir / "testdata")
+
+    def update(self):
+        super().update()
+        # Also clone the test data for unit tests
+        test_repo = GitRepository("https://gitlab.freedesktop.org/poppler/test.git")
+        test_repo.update(self, src_dir=self.source_dir / "testdata")
+
+    @property
+    def ctest_script_extra_args(self):
+        return ["--extra-library-path", "/build/bin",
+                "--extra-library-path", "/build/lib",
+                "--extra-library-path", "/sysroot" + str(self.install_prefix) + "/lib:/sysroot/usr/lib:/sysroot/lib",
+                "--extra-library-path", "/sysroot" + str(BuildQtBase.get_instance(self).install_prefix) + "/lib"]
 
 
 class BuildThreadWeaver(KDECMakeProject):
