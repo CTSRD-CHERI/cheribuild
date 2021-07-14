@@ -49,6 +49,9 @@ class BuildNginx(CrossCompileAutotoolsProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.configure_command = self.source_dir / "auto/configure"
+
+    def setup(self):
+        super().setup()
         if not self.compiling_for_host():
             self.COMMON_FLAGS.extend(["-pedantic",
                                       "-Wno-gnu-statement-expression",
