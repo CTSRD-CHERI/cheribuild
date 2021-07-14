@@ -26,8 +26,10 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 import os
+from pathlib import Path
 
-from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileMesonProject
+from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
+from .freetype import BuildFreeType2
 from ..project import DefaultInstallDir, GitRepository
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
@@ -35,17 +37,25 @@ from ...processutils import set_env
 from ...utils import OSInfo
 
 
-class X11AutotoolsProjectBase(CrossCompileAutotoolsProject):
+class X11Mixin:
     do_not_add_to_targets = True
     path_in_rootfs = "/usr/local"  # Always install X11 programs in /usr/local/bin to make X11 forwarding work
     default_build_type = BuildType.DEBUG  # Until we are confident things works
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL  # Don't override the native installation
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+
+
+class X11AutotoolsProjectBase(X11Mixin, CrossCompileAutotoolsProject):
+    do_not_add_to_targets = True
 
     def __init__(self, config):
         super().__init__(config)
         self.configure_command = self.source_dir / "autogen.sh"
+
+
+class X11MesonProject(X11Mixin, CrossCompileMesonProject):
+    do_not_add_to_targets = True
 
 
 class BuildXorgMacros(X11AutotoolsProjectBase):
@@ -149,7 +159,7 @@ class BuildLibX11(X11AutotoolsProject):
     dependencies = ["xorgproto", "libxcb", "libxtrans"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libx11.git")
 
-    # pkg-config doesn't handle --sysroot very well, specify the path explicitly
+    # pkg-config doesn't handle" "--sysroot very well, specify the path explicitly
     def setup(self):
         super().setup()
         self.configure_args.append("--with-keysymdefdir=" + str(self.install_dir / "include/X11"))
@@ -223,6 +233,12 @@ class BuildLibXt(X11AutotoolsProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxt.git")
 
 
+class BuildLibXDamage(X11AutotoolsProject):
+    target = "libxdamage"
+    dependencies = ["libx11", "libxfixes"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxdamage.git")
+
+
 class BuildLibXmu(X11AutotoolsProject):
     target = "libxmu"
     dependencies = ["libxext", "libxrender", "libxt"]
@@ -252,10 +268,9 @@ class BuildXEyes(X11AutotoolsProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xeyes.git")
 
 
-class BuildLibXKBCommon(CrossCompileMesonProject):
+class BuildLibXKBCommon(X11MesonProject):
     target = "libxkbcommon"
     dependencies = ["libx11"]
-    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     repository = GitRepository("https://github.com/xkbcommon/libxkbcommon.git")
 
     def setup(self):
@@ -274,3 +289,114 @@ class BuildLibXKBCommon(CrossCompileMesonProject):
             newpath = str(self.get_homebrew_prefix("bison")) + "/bin:" + newpath
         with set_env(PATH=newpath):
             super().process()
+
+
+class BuildXorgFontUtil(X11AutotoolsProject):
+    target = "xorg-font-util"
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/font/util.git")
+
+
+class BuildPixman(X11MesonProject):
+    target = "pixman"
+    dependencies = ["libpng"]
+    repository = GitRepository("https://gitlab.freedesktop.org/pixman/pixman.git")
+
+
+class BuildLibFontenc(X11AutotoolsProject):
+    target = "libfontenc"
+    dependencies = ["xorg-font-util"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libfontenc.git")
+
+
+class BuildLibXFont(X11AutotoolsProject):
+    target = "libxfont"
+    dependencies = ["libfontenc"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxfont.git")
+
+    def setup(self):
+        super().setup()
+        if self.compiling_for_cheri():
+            self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+
+
+class BuildLibXKBFile(X11AutotoolsProject):
+    target = "libxkbfile"
+    dependencies = ["libx11"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxkbfile.git")
+
+
+class BuildTigerVNC(CrossCompileCMakeProject):
+    target = "tigervnc"
+    # Still needs a few patches:
+    repository = GitRepository("https://github.com/arichardson/tigervnc")
+    # repository = GitRepository("https://github.com/TigerVNC/tigervnc")
+    dependencies = ["pixman"]
+
+    def setup(self):
+        super().setup()
+        if not self.compiling_for_host():
+            self.add_cmake_options(INSTALL_SYSTEMD_UNITS=False, ENABLE_NLS=False, BUILD_VIEWER=False)
+
+
+class BuildXKeyboardConfig(X11MesonProject):
+    target = "xkeyboard-config"
+    dependencies = ["libx11"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config.git")
+
+
+class BuildXKkbcomp(X11AutotoolsProject):
+    target = "xkbcomp"
+    dependencies = ["libx11"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xkbcomp.git")
+
+
+class BuildXVncServer(X11AutotoolsProject):
+    target = "xvnc-server"
+    # The actual XVnc source code is part of TigerVNC and not included in the xserver repository.
+    # It also depends on build artifacts from an existing tigervnc build
+    dependencies = ["libx11", "xorg-font-util", "libxrender", "libxfont", "libxkbfile", "tigervnc", "xkeyboard-config",
+                    "xkbcomp"]
+    # The tigervnc code requires the 1.20 release
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/xserver.git", default_branch="server-1.20-branch",
+                               force_branch=True)
+
+    """
+    cheribuild.py run-<arch> --run-<arch>/extra-tcp-forwarding=5900=5900
+    <qemu>: Xvnc -geometry 1024x768 -SecurityTypes=None
+    <qemu>: DISPLAY=:0 xeyes
+
+    <host> tigervnc localhost:5900
+    """
+
+    def update(self):
+        super().update()
+        tigervnc_source = BuildTigerVNC.get_instance(self).source_dir
+        if (self.source_dir / "hw").is_dir():
+            self.create_symlink(tigervnc_source / "unix/xserver/hw/vnc", self.source_dir / "hw/vnc")
+        if not (self.source_dir / ".tigervnc-patch-applied").exists():
+            self.run_cmd("patch", "-p1", "-i", tigervnc_source / "unix/xserver120.patch", cwd=self.source_dir)
+            self.write_file(self.source_dir / ".tigervnc-patch-applied", "applied", overwrite=True)
+
+    def setup(self):
+        super().setup()
+        fonts_dir = Path("/", self.target_info.sysroot_install_prefix_relative, "share/fonts")
+        self.configure_args.extend([
+            "--without-dtrace", "--enable-static", "--disable-dri", "--disable-unit-tests",
+            "--disable-xinerama", "--disable-xvfb", "--disable-xnest", "--disable-xorg",
+            "--disable-dmx", "--disable-xwin", "--disable-xephyr", "--disable-kdrive",
+            "--disable-config-dbus", "--disable-config-hal",
+            "--disable-dri2", "--enable-install-libxf86config",
+            "--disable-glx",  # "--enable-glx",
+            "-with-default-font-path=catalogue:" + str(fonts_dir) + ",built-ins",
+            "--with-serverconfig-path=" + str(self.install_prefix / "lib/X11"),
+            "--disable-selective-werror",
+            "--disable-xwayland",
+            "--with-fontrootdir=" + str(fonts_dir),
+            "--with-xkb-path=" + str(BuildXKeyboardConfig.get_instance(self).install_prefix / "share/X11/xkb"),
+            "--with-xkb-bin-directory=" + str(BuildXKkbcomp.get_instance(self).install_prefix / "bin"),
+        ])
+        tigervnc = BuildTigerVNC.get_instance(self)
+        self.make_args.set(TIGERVNC_SRCDIR=tigervnc.source_dir, TIGERVNC_BUILDDIR=tigervnc.build_dir)
+        self.COMMON_LDFLAGS.append("-Wl,-rpath," + str(BuildFreeType2.get_instance(self).install_prefix / "lib"))
+        if self.compiling_for_cheri():
+            self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
