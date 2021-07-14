@@ -32,6 +32,7 @@
 #
 from .project import (AutotoolsProject, CheriConfig, CMakeProject, DefaultInstallDir, GitRepository,
                       MakeCommandKind, ReuseOtherProjectDefaultTargetRepository)
+from ..config.chericonfig import BuildType
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..utils import replace_one
 
@@ -67,6 +68,7 @@ class BuildCrossCompiledCMake(CMakeProject):
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCMake, do_update=True)
     target = "cmake-crosscompiled"  # Can't use cmake here due to command line option conflict
     default_directory_basename = "cmake"
+    default_build_type = BuildType.RELEASE  # Don't include debug info by default
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS
 
