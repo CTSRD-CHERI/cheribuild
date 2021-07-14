@@ -400,3 +400,15 @@ class BuildXVncServer(X11AutotoolsProject):
         self.COMMON_LDFLAGS.append("-Wl,-rpath," + str(BuildFreeType2.get_instance(self).install_prefix / "lib"))
         if self.compiling_for_cheri():
             self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+
+
+class BuildTWM(X11AutotoolsProject):
+    # Simple window manager to use with XVnc (KWin has too many dependencies)
+    target = "twm"
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/twm.git")
+    dependencies = ["libx11", "libxt", "libsm", "libice", "libxext", "libxrandr"]
+
+    def setup(self):
+        super().setup()
+        if self.compiling_for_cheri():
+            self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
