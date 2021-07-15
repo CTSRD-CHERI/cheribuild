@@ -35,10 +35,15 @@ class BuildFreeType2(CrossCompileMesonProject):
     target = "freetype2"
     repository = GitRepository("https://gitlab.freedesktop.org/freetype/freetype",
                                old_urls=[b"https://github.com/freetype/freetype2.git"])
-    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     path_in_rootfs = "/usr/local"
 
     def setup(self):
         super().setup()
         # TODO: remove once https://gitlab.freedesktop.org/freetype/freetype/-/merge_requests/52 is merged
         self.cross_warning_flags += ["-Wno-error=cheri-capability-misuse"]
+        self.add_meson_options(tests="enabled")
+
+    def run_tests(self):
+        self.run_cmd(self.source_dir / "tests/scripts/download-test-fonts.py", cwd=self.source_dir / "tests")
+        super().run_tests()
