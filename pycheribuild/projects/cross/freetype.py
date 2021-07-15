@@ -40,8 +40,6 @@ class BuildFreeType2(CrossCompileMesonProject):
 
     def setup(self):
         super().setup()
-        # TODO: remove once https://gitlab.freedesktop.org/freetype/freetype/-/merge_requests/52 is merged
-        self.cross_warning_flags += ["-Wno-error=cheri-capability-misuse"]
         self.add_meson_options(tests="enabled")
 
     def run_tests(self):
