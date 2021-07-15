@@ -212,7 +212,7 @@ class BuildXEv(X11AutotoolsProject):
 
 class BuildLibSM(X11AutotoolsProject):
     target = "libsm"
-    dependencies = ["libx11"]
+    dependencies = ["libx11", "libice"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libsm.git")
 
 
@@ -310,7 +310,7 @@ class BuildLibFontenc(X11AutotoolsProject):
 
 class BuildLibXFont(X11AutotoolsProject):
     target = "libxfont"
-    dependencies = ["libfontenc"]
+    dependencies = ["libfontenc", "freetype2"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxfont.git")
 
     def setup(self):
@@ -330,7 +330,7 @@ class BuildTigerVNC(CrossCompileCMakeProject):
     # Still needs a few patches:
     repository = GitRepository("https://github.com/arichardson/tigervnc")
     # repository = GitRepository("https://github.com/TigerVNC/tigervnc")
-    dependencies = ["pixman"]
+    dependencies = ["pixman", "libxext", "libxfixes", "libxdamage"]
 
     def setup(self):
         super().setup()
@@ -406,7 +406,7 @@ class BuildTWM(X11AutotoolsProject):
     # Simple window manager to use with XVnc (KWin has too many dependencies)
     target = "twm"
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/twm.git")
-    dependencies = ["libx11", "libxt", "libsm", "libice", "libxext", "libxrandr"]
+    dependencies = ["libx11", "libxt", "libsm", "libice", "libxext", "libxrandr", "libxmu"]
 
     def setup(self):
         super().setup()
