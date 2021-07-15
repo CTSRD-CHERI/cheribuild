@@ -325,12 +325,24 @@ class BuildLibXKBFile(X11AutotoolsProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxkbfile.git")
 
 
+class BuildLibJpegTurbo(CrossCompileCMakeProject):
+    target = "libjpeg-turbo"
+    # repository = GitRepository("https://github.com/libjpeg-turbo/libjpeg-turbo.git")
+    # Needs https://github.com/libjpeg-turbo/libjpeg-turbo/pull/536
+    repository = GitRepository("https://github.com/arichardson/libjpeg-turbo.git")
+
+
 class BuildTigerVNC(CrossCompileCMakeProject):
     target = "tigervnc"
     # Still needs a few patches:
     repository = GitRepository("https://github.com/arichardson/tigervnc")
     # repository = GitRepository("https://github.com/TigerVNC/tigervnc")
-    dependencies = ["pixman", "libxext", "libxfixes", "libxdamage"]
+    dependencies = ["pixman", "libxext", "libxfixes", "libxdamage", "libjpeg-turbo"]
+
+    def __init__(self, config):
+        super().__init__(config)
+        if self.compiling_for_host():
+            self.add_required_system_tool("fltk-config", homebrew="ftlk")
 
     def setup(self):
         super().setup()
