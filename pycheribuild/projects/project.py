@@ -2177,7 +2177,10 @@ class Project(SimpleProject):
         if cbt == BuildType.DEFAULT:
             return []
         elif cbt == BuildType.DEBUG:
-            return ["-O1" if self.use_asan else "-O0"]
+            # TODO: once clang's -Og is useful: if self.get_compiler_info(self.CC).supports_Og_flag:
+            if self.get_compiler_info(self.CC).compiler == "gcc":
+                return ["-Og"]
+            return ["-O0"]
         elif cbt in (BuildType.RELEASE, BuildType.RELWITHDEBINFO):
             return ["-O2"]
         elif cbt in (BuildType.MINSIZEREL, BuildType.MINSIZERELWITHDEBINFO):
