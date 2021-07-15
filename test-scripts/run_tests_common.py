@@ -58,7 +58,7 @@ __all__ = ["run_tests_main", "boot_cheribsd", "junitparser", "pexpect", "command
 
 def run_tests_main(test_function: Callable[[boot_cheribsd.QemuCheriBSDInstance, argparse.Namespace], bool] = None,
                    need_ssh=False, should_mount_builddir=True, should_mount_srcdir=False, should_mount_sysroot=False,
-                   should_mount_installdir=False, build_dir_in_target="/build",
+                   should_mount_installdir=False, build_dir_in_target: str = None,
                    test_setup_function: Callable[[boot_cheribsd.QemuCheriBSDInstance, argparse.Namespace], None] = None,
                    argparse_setup_callback: Callable[[argparse.ArgumentParser], None] = None,
                    argparse_adjust_args_callback: Callable[[argparse.Namespace], None] = None):
@@ -81,8 +81,13 @@ def run_tests_main(test_function: Callable[[boot_cheribsd.QemuCheriBSDInstance, 
             args.skip_ssh_setup = not args.__foce_ssh_setup
         if should_mount_builddir or args.build_dir:
             args.build_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
+            # Default to mounting the build directory in the target under the host path.
+            # This should allow more tests to pass, i.e. the libc++ filesystem tests or the libjpeg-turbo ones etc.
+            # We previously mounted the build dir under /build and added a symlink but that breaks tests that try to
+            # get at the source directory using a relative path (../../my-srcdir ends up resolving to /my-srcdir).
+            path_in_target = build_dir_in_target if build_dir_in_target is not None else args.build_dir
             args.smb_mount_directories.append(
-                boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target=build_dir_in_target))
+                boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target=path_in_target))
         if should_mount_srcdir or args.source_dir:
             args.source_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.source_dir)))
             args.smb_mount_directories.append(
@@ -101,13 +106,8 @@ def run_tests_main(test_function: Callable[[boot_cheribsd.QemuCheriBSDInstance, 
             argparse_adjust_args_callback(args)
 
     def default_setup_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace):
-        # Also link the build directory in the target under the host path. This should allow more tests to pass,
-        # i.e. the libc++ filesystem tests, etc.
         if should_mount_builddir or args.build_dir:
-            assert args.build_dir
-            qemu.run("mkdir -p '{}'".format(Path(args.build_dir).parent))
-            qemu.checked_run("ln -sf /build '{}'".format(args.build_dir), timeout=60)
-            boot_cheribsd.success("Mounted build directory using host path")
+            qemu.checked_run("ln -sf '{}' /build".format(args.build_dir), timeout=60)
         if should_mount_srcdir or args.source_dir:
             assert args.source_dir
             qemu.run("mkdir -p '{}'".format(Path(args.source_dir).parent))
