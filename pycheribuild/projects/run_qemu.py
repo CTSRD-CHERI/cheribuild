@@ -102,6 +102,7 @@ class LaunchQEMUBase(SimpleProject):
                                             help="Run qemu in 'snapshot' mode, changes to the disk image "
                                                  "are non-persistent")
 
+        # TODO: add a shortcut for vnc?
         cls.extra_tcp_forwarding = cls.add_config_option("extra-tcp-forwarding", kind=list, default=(),
                                                          help="Additional TCP bridge ports beyond ssh/22; "
                                                               "list of [hostip:]port=[guestip:]port")
