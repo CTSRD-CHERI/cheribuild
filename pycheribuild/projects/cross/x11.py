@@ -424,3 +424,45 @@ class BuildTWM(X11AutotoolsProject):
         super().setup()
         if self.compiling_for_cheri():
             self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+
+
+class BuildLibXcomposite(X11AutotoolsProject):
+    target = "libxcomposite"
+    dependencies = ["libxfixes"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcomposite.git")
+
+    def setup(self):
+        super().setup()
+        if OSInfo.IS_MAC:
+            catalog = self.get_homebrew_prefix() / "etc/xml/catalog"
+            if not catalog.exists():
+                self.dependency_error(OSInfo.install_instructions("docbook-xsl", False, homebrew="docbook-xsl"))
+            # Without XML_CATALOG_FILES we get the following error: "I/O error : Attempt to load network entity"
+            self.configure_environment["XML_CATALOG_FILES"] = str(catalog)
+            self.make_args.set_env(XML_CATALOG_FILES=catalog)
+
+
+class BuildLibXpm(X11AutotoolsProject):
+    target = "libxpm"
+    dependencies = ["libx11", "libxt", "libxext"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxpm.git")
+
+    def setup(self):
+        super().setup()
+        if self.compiling_for_cheri():
+            self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+
+
+# Slightly more functional window manager than TWM
+class BuildIceWM(X11Mixin, CrossCompileCMakeProject):
+    target = "icewm"
+    dependencies = ["fontconfig", "libxcomposite", "libxdamage", "libpng", "libjpeg-turbo", "libxpm"]
+    # repository = GitRepository("https://github.com/bbidulock/icewm")
+    # Needs https://github.com/bbidulock/icewm/pull/603 and https://github.com/bbidulock/icewm/pull/601
+    repository = GitRepository("https://github.com/arichardson/icewm")
+
+    def setup(self):
+        super().setup()
+        # /usr/local/bin/icewmbg --scaled=1 --center=1 --image /root/cherries.jpeg
+        self.add_cmake_options(CONFIG_LIBPNG=True, CONFIG_LIBJPEG=True, CONFIG_IMLIB2=False, CONFIG_XPM=True)
+        self.add_cmake_options(ENABLE_NLS=False, CONFIG_I18N=False)
