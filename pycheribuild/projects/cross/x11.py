@@ -327,16 +327,16 @@ class BuildLibXKBFile(X11AutotoolsProject):
 
 class BuildLibJpegTurbo(CrossCompileCMakeProject):
     target = "libjpeg-turbo"
-    # repository = GitRepository("https://github.com/libjpeg-turbo/libjpeg-turbo.git")
-    # Needs https://github.com/libjpeg-turbo/libjpeg-turbo/pull/536
-    repository = GitRepository("https://github.com/arichardson/libjpeg-turbo.git")
+    repository = GitRepository("https://github.com/libjpeg-turbo/libjpeg-turbo.git",
+                               temporary_url_override="https://github.com/arichardson/libjpeg-turbo.git",
+                               url_override_reason="Needs https://github.com/libjpeg-turbo/libjpeg-turbo/pull/536")
 
 
 class BuildTigerVNC(CrossCompileCMakeProject):
     target = "tigervnc"
-    # Still needs a few patches:
-    repository = GitRepository("https://github.com/arichardson/tigervnc")
-    # repository = GitRepository("https://github.com/TigerVNC/tigervnc")
+    repository = GitRepository("https://github.com/TigerVNC/tigervnc",
+                               temporary_url_override="https://github.com/arichardson/tigervnc",
+                               url_override_reason="Needs PR 1289-1291 merged first.")
     dependencies = ["pixman", "libxext", "libxfixes", "libxdamage", "libjpeg-turbo"]
 
     def __init__(self, config):
@@ -457,9 +457,10 @@ class BuildLibXpm(X11AutotoolsProject):
 class BuildIceWM(X11Mixin, CrossCompileCMakeProject):
     target = "icewm"
     dependencies = ["fontconfig", "libxcomposite", "libxdamage", "libpng", "libjpeg-turbo", "libxpm"]
-    # repository = GitRepository("https://github.com/bbidulock/icewm")
-    # Needs https://github.com/bbidulock/icewm/pull/603 and https://github.com/bbidulock/icewm/pull/601
-    repository = GitRepository("https://github.com/arichardson/icewm")
+    repository = GitRepository("https://github.com/bbidulock/icewm",
+                               temporary_url_override="https://github.com/arichardson/icewm",
+                               url_override_reason="Needs https://github.com/bbidulock/icewm/pull/603 and "
+                                                   "https://github.com/bbidulock/icewm/pull/601")
 
     def setup(self):
         super().setup()

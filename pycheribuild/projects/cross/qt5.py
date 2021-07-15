@@ -68,9 +68,9 @@ class InstallDejaVuFonts(SimpleProject):
 
 class BuildSharedMimeInfo(CrossCompileMesonProject):
     target = "shared-mime-info"
-    # repository = GitRepository("https://gitlab.freedesktop.org/xdg/shared-mime-info.git")
-    # Currently needs a patch to avoid glib2 dependency
-    repository = GitRepository("https://gitlab.freedesktop.org/arichardson/shared-mime-info.git")
+    repository = GitRepository("https://gitlab.freedesktop.org/xdg/shared-mime-info.git",
+                               temporary_url_override="https://gitlab.freedesktop.org/arichardson/shared-mime-info.git",
+                               url_override_reason="Currently needs a patch to avoid glib2 dependency")
     # We don't actually want to install the mime info, we just want the update-mime-info tool for native builds
     native_install_dir = DefaultInstallDir.KDE_PREFIX
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE

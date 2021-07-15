@@ -39,8 +39,7 @@ from ..utils import replace_one
 
 # Not really autotools but same sequence of commands (other than the script being call bootstrap instead of configure)
 class BuildCMake(AutotoolsProject):
-    # repository = GitRepository("https://cmake.org/cmake.git")
-    repository = GitRepository("https://github.com/Kitware/CMake",  # a lot faster than the official repo
+    repository = GitRepository("https://github.com/Kitware/CMake",  # a lot faster than "https://cmake.org/cmake.git"
                                # track the stable release branch
                                default_branch="release")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS

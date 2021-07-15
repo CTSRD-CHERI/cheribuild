@@ -609,9 +609,10 @@ class BuildDoplhin(KDECMakeProject):
 
 
 class BuildLibPng(CrossCompileCMakeProject):
-    # Only one minor change needed:
-    # repository = GitRepository("https://git.code.sf.net/p/libpng/code", default_branch="libpng16", force_branch=True)
-    repository = GitRepository("https://github.com/CTSRD-CHERI/libpng", default_branch="libpng16", force_branch=True)
+    repository = GitRepository("https://github.com/glennrp/libpng",
+                               temporary_url_override="https://github.com/CTSRD-CHERI/libpng",
+                               url_override_reason="Needs https://github.com/glennrp/libpng/pull/386",
+                               default_branch="libpng16", force_branch=True)
     target = "libpng"
     # The tests take a really long time to run (~2.5 hours on purecap RISC-V)
     ctest_script_extra_args = ("--test-timeout", 5 * 60 * 60)
@@ -659,7 +660,11 @@ class BuildGwenview(KDECMakeProject):
 class BuildFontConfig(CrossCompileMesonProject):
     target = "fontconfig"
     dependencies = ["freetype2", "libexpat"]
-    repository = GitRepository("https://gitlab.freedesktop.org/fontconfig/fontconfig")
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/fontconfig/fontconfig",
+        temporary_url_override="https://gitlab.freedesktop.org/arichardson/fontconfig",
+        url_override_reason="https://gitlab.freedesktop.org/fontconfig/fontconfig/-/merge_requests/189 and"
+                            "https://gitlab.freedesktop.org/fontconfig/fontconfig/-/merge_requests/190")
 
 
 class BuildOpenJPEG(CrossCompileCMakeProject):

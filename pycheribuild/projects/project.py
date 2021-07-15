@@ -1500,11 +1500,20 @@ _PRETEND_RUN_GIT_COMMANDS = os.getenv("_TEST_SKIP_GIT_COMMANDS") is None
 
 
 class GitRepository(SourceRepository):
-    def __init__(self, url, *, old_urls: typing.List[bytes] = None, default_branch: str = None,
-                 force_branch: bool = False,
+    def __init__(self, url: str, *, old_urls: typing.List[bytes] = None, default_branch: str = None,
+                 force_branch: bool = False, temporary_url_override: str = None,
+                 url_override_reason: "typing.Any" = None,
                  per_target_branches: typing.Dict[CrossCompileTarget, TargetBranchInfo] = None):
-        self.url = url
         self.old_urls = old_urls
+        if temporary_url_override is not None:
+            self.url = temporary_url_override
+            _ = url_override_reason  # silence unused argument warning
+            if self.old_urls is None:
+                self.old_urls = [url.encode("utf-8")]
+            else:
+                self.old_urls.append(url.encode("utf-8"))
+        else:
+            self.url = url
         self._default_branch = default_branch
         self.force_branch = force_branch
         if per_target_branches is None:
