@@ -772,6 +772,7 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
         kernel_commandline.append("cheribuild.skip_entropy=1")
     if kernel_commandline:
         if kernel_image is not None and qemu_options.can_boot_kernel_directly:
+            kernel_commandline.append("autoboot_delay=0")  # Avoid the 10-second delay when booting
             qemu_args.append("-append")
             qemu_args.append(" ".join(kernel_commandline))
         else:
