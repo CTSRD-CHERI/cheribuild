@@ -31,6 +31,7 @@ import tempfile
 from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
+from .freetype import BuildFreeType2
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
 from .x11 import BuildLibXCB
 from ..project import DefaultInstallDir, GitRepository, MakeCommandKind
@@ -666,6 +667,14 @@ class BuildFontConfig(CrossCompileMesonProject):
         url_override_reason="https://gitlab.freedesktop.org/fontconfig/fontconfig/-/merge_requests/189 and"
                             "https://gitlab.freedesktop.org/fontconfig/fontconfig/-/merge_requests/190")
 
+    @property
+    def pkgconfig_dirs(self) -> "list[str]":
+        return BuildFreeType2.get_instance(self).installed_pkgconfig_dirs() + self.target_info.pkgconfig_dirs
+
+    def setup(self):
+        super().setup()
+        self.add_meson_options(doc="disabled")
+
 
 class BuildOpenJPEG(CrossCompileCMakeProject):
     target = "openjpeg"
@@ -677,6 +686,11 @@ class BuildPoppler(CrossCompileCMakeProject):
     target = "poppler"
     dependencies = ["freetype2", "fontconfig", "openjpeg", "qtbase"]
     repository = GitRepository("https://gitlab.freedesktop.org/poppler/poppler.git")
+
+    @property
+    def pkgconfig_dirs(self) -> "list[str]":
+        return BuildFreeType2.get_instance(self).installed_pkgconfig_dirs() + \
+               BuildFontConfig.get_instance(self).installed_pkgconfig_dirs() + self.target_info.pkgconfig_dirs
 
     def setup(self):
         super().setup()

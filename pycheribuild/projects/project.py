@@ -2386,6 +2386,10 @@ class Project(SimpleProject):
     def pkgconfig_dirs(self) -> "list[str]":
         return self.target_info.pkgconfig_dirs
 
+    def installed_pkgconfig_dirs(self) -> "list[str]":
+        """:return: a list of directories that might contain this projects installed .pc files"""
+        return self.target_info.pkgconfig_candidates(self.install_dir)
+
     def setup(self):
         super().setup()
         if self.set_pkg_config_path:
@@ -3568,7 +3572,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             self.add_meson_options(b_lto=True, b_lto_threads=self.config.make_jobs,
                                    b_lto_mode="thin" if self.get_compiler_info(self.CC).is_clang else "default")
         if self.use_asan:
-            self.add_meson_options(b_sanitize="address,undefined")
+            self.add_meson_options(b_sanitize="address,undefined", b_lundef=False)
 
         # Unlike CMake, Meson does not set the DT_RUNPATH entry automatically:
         # See https://github.com/mesonbuild/meson/issues/6220, https://github.com/mesonbuild/meson/issues/6541, etc.

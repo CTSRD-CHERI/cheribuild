@@ -356,12 +356,10 @@ class TargetInfo(ABC):
             return config.cheri_sdk_bindir / "clang-cpp"
         return config.clang_cpp_path
 
-    @staticmethod
-    def host_pkgconfig_dirs(config) -> "typing.List[str]":
-        # We need to add the bootstrap tools pkgconfig dirs to PKG_CONFIG_PATH to find e.g. libxml2, etc.
-        # Note: some packages also install to libdata/pkgconfig or share/pkgconfig
-        return [str(config.other_tools_dir / "lib/pkgconfig"), str(config.other_tools_dir / "share/pkgconfig"),
-                str(config.other_tools_dir / "libdata/pkgconfig")]
+    @classmethod
+    def pkgconfig_candidates(cls, prefix: Path) -> "list[str]":
+        """:return: a list of potential candidates for pkgconfig .pc files inside prefix"""
+        return [str(prefix / "lib/pkgconfig"), str(prefix / "share/pkgconfig"), str(prefix / "libdata/pkgconfig")]
 
 
 # https://reviews.llvm.org/rG14daa20be1ad89639ec209d969232d19cf698845
@@ -468,7 +466,9 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
-        return self.host_pkgconfig_dirs(self.config)
+        # We need to add the bootstrap tools pkgconfig dirs to PKG_CONFIG_PATH to find e.g. libxml2, etc.
+        # Note: some packages also install to libdata/pkgconfig or share/pkgconfig
+        return self.pkgconfig_candidates(self.config.other_tools_dir)
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
