@@ -240,8 +240,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # automatically (probably not installed to the right directory?) so disable it for now.
             self.configure_args.append("-separate-debug-info")
 
-        if self.build_type == BuildType.DEBUG:
-            self.configure_args.append("-no-pch")   # slows down build but gives useful crash testcases
+        # PCH often results in build failures if some of the sysroot headers changed since it appears to be missing
+        # some required depedencies. Also the build speedup is not that significant so just disable it.
+        self.configure_args.append("-no-pch")  # slows down build but gives useful crash testcases
 
         #  -reduce-exports ...... Reduce amount of exported symbols [auto]
         self.configure_args.append("-reduce-exports")
