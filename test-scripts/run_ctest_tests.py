@@ -42,6 +42,28 @@ def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
         # Otherwise, we just set up the default LD_LIBRARY_PATH.
         boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
 
+    # Update all references to CMAKE_COMMAND in the CTest file. Otherwise tests that use something like
+    # `${CMAKE} -E copy_if_different ...` will fail.
+    cmake_cache = Path(args.build_dir, "CMakeCache.txt")
+    host_cmake_path = None
+    if cmake_cache.is_file():
+        with cmake_cache.open("rb") as f:
+            for line in f.readlines():
+                if line.startswith(b"CMAKE_COMMAND:INTERNAL="):
+                    host_cmake_path = line[len(b"CMAKE_COMMAND:INTERNAL="):].strip()
+                    boot_cheribsd.info("Host CMake path is ", host_cmake_path)
+                    break
+    ctest_file = Path(args.build_dir, "CTestTestfile.cmake")
+    if host_cmake_path and ctest_file.exists():
+        boot_cheribsd.info("Updating references to ${CMAKE_COMMAND} in ", ctest_file)
+        ctest_contents = ctest_file.read_bytes()
+        num_host_paths = ctest_contents.count(host_cmake_path)
+        if num_host_paths > 0:
+            new_contents = ctest_contents.replace(host_cmake_path, b"/cmake/bin/cmake")
+            if not boot_cheribsd.PRETEND:
+                ctest_file.write_bytes(new_contents)
+            boot_cheribsd.info("Updated ", num_host_paths, " references to ${CMAKE_COMMAND} in ", ctest_file)
+
 
 def run_ctest_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running tests with ctest")
