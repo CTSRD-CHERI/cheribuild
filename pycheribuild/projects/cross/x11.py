@@ -40,7 +40,7 @@ from ...utils import OSInfo
 class X11Mixin:
     do_not_add_to_targets = True
     path_in_rootfs = "/usr/local"  # Always install X11 programs in /usr/local/bin to make X11 forwarding work
-    default_build_type = BuildType.DEBUG  # Until we are confident things works
+    default_build_type = BuildType.RELWITHDEBINFO
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL  # Don't override the native installation
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
