@@ -1442,15 +1442,24 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kerndir = "kernel." + kernconf
         return self.install_dir / "boot" / kerndir / "kernel"
 
-    def get_kern_module_path_arg(self, kernconf: str = None) -> "typing.Optional[str]":
+    def get_kern_module_path(self, kernconf: str = None) -> "typing.Optional[str]":
         """
         Get the path to provide to kern.module_path for the given kernel
         configuration if needed (i.e. the kernel is not the default one).
         """
         if kernconf is None or kernconf == self.kernel_config:
             return None
-        kerndir = Path("/boot") / ("kernel." + kernconf)
-        return "kern.module_path={}".format(kerndir)
+        return Path("/boot") / ("kernel." + kernconf)
+
+    def get_kern_module_path_arg(self, kernconf: str = None) -> "typing.Optional[str]":
+        """
+        Get the tunable env var to set kern.module_path for the given kernel
+        configuration if needed (i.e. the kernel is not the default one).
+        """
+        kerndir = self.get_kern_module_path(kernconf)
+        if kerndir:
+            return "kern.module_path={}".format(kerndir)
+        return None
 
     def get_kernel_configs(self, **filter_kwargs) -> "typing.Sequence[str]":
         """

@@ -164,6 +164,8 @@ class BuildDiskImageBase(SimpleProject):
                                                   help="The output path for the QEMU disk image", show_help=True)
         cls.force_overwrite = cls.add_bool_option("force-overwrite", default=True,
                                                   help="Overwrite an existing disk image without prompting")
+        cls.no_autoboot = cls.add_bool_option("no-autoboot", default=False,
+                                              help="Disable autoboot and boot menu for targets that use loader(8)")
 
     def __init__(self, config):
         # TODO: different extra-files directory
@@ -408,6 +410,11 @@ class BuildDiskImageBase(SimpleProject):
         loader_conf_contents = ""
         if self.is_x86:
             loader_conf_contents += "console=\"comconsole\"\nautoboot_delay=0\n"
+        if self.no_autoboot:
+            if self.crosscompile_target.is_aarch64(include_purecap=True) or self.is_x86:
+                loader_conf_contents += "autoboot_delay=\"NO\"\nbeastie_disable=\"YES\"\n"
+            else:
+                self.warning("--no-autoboot is not supported for this target, ignoring.")
         self.create_file_for_image("/boot/loader.conf", contents=loader_conf_contents, mode=0o644)
 
         # Avoid long boot time on first start due to missing entropy:

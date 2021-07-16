@@ -362,7 +362,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
                                  use_full_disk_image=False, mount_installdir=False,
-                                 use_benchmark_kernel_by_default=False):
+                                 use_benchmark_kernel_by_default=False,
+                                 rootfs_alternate_kernel_dir=None):
         assert self.is_cheribsd(), "Only CheriBSD targets supported right now"
         if typing.TYPE_CHECKING:
             assert isinstance(self.project, Project)
@@ -465,6 +466,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 cmd.append("--test-ld-preload-variable=LD_CHERI_PRELOAD")
             else:
                 cmd.append("--test-ld-preload-variable=LD_PRELOAD")
+        if rootfs_alternate_kernel_dir and not qemu_options.can_boot_kernel_directly:
+            cmd.extend(["--alternate-kernel-rootfs-path", rootfs_alternate_kernel_dir])
 
         cmd += list(script_args)
         if self.config.test_extra_args:

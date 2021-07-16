@@ -75,6 +75,8 @@ SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHER
                                                          )}
 
 STARTING_INIT = "start_init: trying /sbin/init"
+AUTOBOOT_PROMPT = "Hit \\[Enter\\] to boot "
+NO_AUTOBOOT_PROMPT = ""
 BOOT_FAILURE = "Enter full pathname of shell or RETURN for /bin/sh"
 BOOT_FAILURE2 = "wait for /bin/sh on /etc/rc failed'"
 BOOT_FAILURE3 = "Manual root filesystem specification:"  # rootfs mount failed
@@ -736,7 +738,8 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
                   disk_image: typing.Optional[Path], ssh_port: typing.Optional[int],
                   ssh_pubkey: typing.Optional[Path], *, write_disk_image_changes: bool,
                   smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False, trap_on_unrepresentable=False,
-                  skip_ssh_setup=False, bios_path: Path = None) -> QemuCheriBSDInstance:
+                  skip_ssh_setup=False, bios_path: Path = None,
+                  boot_alternate_kernel_dir: Path = None) -> QemuCheriBSDInstance:
     user_network_args = ""
     if smb_dirs is None:
         smb_dirs = []
@@ -751,6 +754,8 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
     if not qemu_options.can_boot_kernel_directly:
         if not disk_image:
             failure("Cannot boot kernel directly and no disk image passed!", exit=True)
+    else:
+        assert boot_alternate_kernel_dir is None, "Unexpected alternate kernel parameter for loader(8)"
     if bios_path is not None:
         bios_args = ["-bios", str(bios_path)]
     elif qemu_options.xtarget.is_riscv(include_purecap=True):
@@ -793,13 +798,16 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
         child.logfile = QEMU_LOGFILE.open("w")
     else:
         child.logfile_read = sys.stdout
+
     boot_and_login(child, starttime=qemu_starttime, kernel_init_only=kernel_init_only,
-                   network_iface=qemu_options.network_interface_name())
+                   network_iface=qemu_options.network_interface_name(),
+                   boot_alternate_kernel_dir=boot_alternate_kernel_dir)
     return child
 
 
 def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=False,
-                   network_iface: typing.Optional[str]) -> None:
+                   network_iface: typing.Optional[str],
+                   boot_alternate_kernel: Path = None) -> None:
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -815,14 +823,23 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         # BOOTVERBOSE is off for the amd64 kernel, so we don't see the STARTING_INIT message
         # TODO: it would be nice if we had a message to detect userspace startup without requiring bootverbose
         bootverbose = False
-        boot_messages = [STARTING_INIT, "Hit \\[Enter\\] to boot ",
+        boot_messages = [STARTING_INIT, AUTOBOOT_PROMPT,
                          re.compile(r"Trying to mount root from .+\.\.\."),
-                         BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3] + FATAL_ERROR_MESSAGES
+                         BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3,
+                         NO_AUTOBOOT_PROMPT] + FATAL_ERROR_MESSAGES
         i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
         # Skip 10s wait from x86 loader if we see the "Hit [Enter] to boot" message
-        if i == 1:  # Hit Enter
+        if i == boot_messages.index(AUTOBOOT_PROMPT):  # Hit Enter
+            if boot_alternate_kernel:
+                # Expected loader(8) to skip autoboot, fail
+                failure("expected autoboot disabled but got autoboot prompt")
             success("Got '", child.match.string, "' from loader")
             child.sendline("")
+            i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
+        if i == boot_messages.index(NO_AUTOBOOT_PROMPT):  # loader(8) prompt
+            success("===> loader(8) waiting boot commands")
+            # Just boot the default kernel if no alternate kernel directory is given
+            child.sendline("boot {}".format(boot_alternate_kernel or ""))
             i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
         if i == 2:
             success("===> mounting rootfs")
@@ -1117,6 +1134,9 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--test-kernel-init-only", action="store_true")
     parser.add_argument("--enable-coredumps", action="store_true", dest="enable_coredumps", default=False)
     parser.add_argument("--disable-coredumps", action="store_false", dest="enable_coredumps")
+    parser.add_argument("--alternate-kernel-rootfs-path", type=Path, default=None,
+                        help="Path relative to the disk image pointing to the directory " +
+                             "containing the alternate kernel to run and related kernel modules")
 
     # Ensure that we don't get a race when running multiple shards:
     # If we extract the disk image at the same time we might spawn QEMU just between when the
@@ -1251,7 +1271,8 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
                          ssh_port=args.ssh_port, ssh_pubkey=Path(args.ssh_key), smb_dirs=args.smb_mount_directories,
                          kernel_init_only=args.test_kernel_init_only,
                          trap_on_unrepresentable=args.trap_on_unrepresentable, skip_ssh_setup=args.skip_ssh_setup,
-                         bios_path=args.bios, write_disk_image_changes=args.write_disk_image_changes)
+                         bios_path=args.bios, write_disk_image_changes=args.write_disk_image_changes,
+                         boot_alternate_kernel_dir=args.alternate_kernel_rootfs_path)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
     tests_okay = True
