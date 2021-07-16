@@ -135,13 +135,15 @@ class KernelConfigFactory:
             return "CHERI{sep}PURECAP".format(sep=self.separator)
 
     def get_platform_name(self, platform):
-        if type(platform) == set:
-            # Only use the first matching platform in the set
+        try:
+            iter(platform)
+            # Only use the first matching platform in the iterable
             for key, name in self.platform_name_map.items():
-                if key in platform:
+                if type(key) == tuple and set(key) == set(platform):
                     return name
             assert False, "Should not be reached..."
-        return self.platform_name_map[platform]
+        except TypeError:
+            return self.platform_name_map[platform]
 
     def get_flag_names(self, platform, kABI, mfsroot=False, fuzzing=False):
         flags = []
@@ -169,7 +171,11 @@ class KernelConfigFactory:
         kernconf_ctx = self._prepare_kernconf_context(platform, kABI, base_context=base_context, **kwargs)
         valid_ctx_items = (v for v in kernconf_ctx.values() if v is not None)
         kernconf = self.separator.join(valid_ctx_items)
-        return CheriBSDConfig(kernconf, platform, kABI=kABI, **kwargs)
+        try:
+            platform_set = set(platform)
+        except TypeError:
+            platform_set = platform
+        return CheriBSDConfig(kernconf, platform_set, kABI=kABI, **kwargs)
 
 
 class MIPSKernelConfigFactory(KernelConfigFactory):
@@ -291,8 +297,9 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
         "platform_name", "kabi_name")])
     separator = "-"
     platform_name_map = {
-        ConfigPlatform.QEMU: "GENERIC",
-        ConfigPlatform.FVP: "GENERIC"
+        ConfigPlatform.FVP: "GENERIC",
+        ConfigPlatform.QEMU: "QEMU",
+        (ConfigPlatform.FVP, ConfigPlatform.QEMU): "GENERIC",
     }
 
     def get_kabi_name(self, platform, kABI):
@@ -306,8 +313,11 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
     def make_all(self):
         configs = []
         # Generate QEMU/FVP kernels
-        for kABI in KernelABI:
-            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True))
+        for kABI in [KernelABI.NOCHERI, KernelABI.HYBRID]:
+            # Note: the FVP platform must come first to pick the GENERIC platform name prefix
+            configs.append(self.make_config([ConfigPlatform.FVP, ConfigPlatform.QEMU], kABI, default=True))
+        configs.append(self.make_config(ConfigPlatform.QEMU, KernelABI.PURECAP, default=True))
+        configs.append(self.make_config(ConfigPlatform.FVP, KernelABI.PURECAP, default=True))
 
         return configs
 
@@ -1661,7 +1671,8 @@ class BuildCHERIBSD(BuildFreeBSD):
             combined_filter = {flag: v for flag, v in zip(combine_flags, flag_tuple)}
             filter_kwargs.update(combined_filter)
             configs += CheriBSDConfigTable.get_configs(self.crosscompile_target, platform, kernABI, **filter_kwargs)
-        return configs
+        # Make sure we do not return duplicates while maintaining ordering
+        return list(set(configs))
 
     def _get_kABIs_to_build(self):
         default_kABI = self.get_default_kernel_abi()
@@ -1673,7 +1684,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def _get_all_kernel_configs(self):
         kernABIs = self._get_kABIs_to_build()
-        platform = self.get_default_kernel_platform()
+        platforms = [self.get_default_kernel_platform()]
         combinations = []
         if self.build_bench_kernels:
             combinations.append("benchmark")
@@ -1683,7 +1694,10 @@ class BuildCHERIBSD(BuildFreeBSD):
             if not self.compiling_for_riscv(include_purecap=True):
                 self.warning("Unsupported architecture for FETT kernels")
             combinations.append("fett")
-        configs = self._get_config_variants([platform], kernABIs, combinations)
+        if self.compiling_for_aarch64(include_purecap=True):
+            # Also build the QEMU kernels
+            platforms.append(ConfigPlatform.QEMU)
+        configs = self._get_config_variants(platforms, kernABIs, combinations)
         if self.build_fpga_kernels:
             configs += self._get_config_variants([ConfigPlatform.fpga_platforms()], kernABIs,
                                                  combinations + ["mfsroot"])
