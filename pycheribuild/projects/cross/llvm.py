@@ -135,6 +135,7 @@ class BuildLLVMBase(CMakeProject):
         # libunwind/libcxx)
         # Note: Newer CMake uses Python3_EXECUTABLE instead of PYTHON_EXECUTABLE.
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable, Python3_EXECUTABLE=sys.executable)
+        self.add_cmake_options(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER=False)
 
         # Install the llvm binutils symlinks since they now seem to work fine.
         self.add_cmake_options(LLVM_INSTALL_BINUTILS_SYMLINKS=True)
