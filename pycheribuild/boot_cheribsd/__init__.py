@@ -74,9 +74,11 @@ SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHER
                                                          CompilationTargets.CHERIBSD_MORELLO_PURECAP,
                                                          )}
 
-STARTING_INIT = "start_init: trying /sbin/init"
 AUTOBOOT_PROMPT = "Hit \\[Enter\\] to boot "
 NO_AUTOBOOT_PROMPT = "OK "
+
+STARTING_INIT = "start_init: trying /sbin/init"
+TRYING_TO_MOUNT_ROOT = re.compile(r"Trying to mount root from .+\.\.\.")
 BOOT_FAILURE = "Enter full pathname of shell or RETURN for /bin/sh"
 BOOT_FAILURE2 = "wait for /bin/sh on /etc/rc failed'"
 BOOT_FAILURE3 = "Manual root filesystem specification:"  # rootfs mount failed
@@ -823,28 +825,27 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         # BOOTVERBOSE is off for the amd64 kernel, so we don't see the STARTING_INIT message
         # TODO: it would be nice if we had a message to detect userspace startup without requiring bootverbose
         bootverbose = False
-        boot_messages = [STARTING_INIT, AUTOBOOT_PROMPT,
-                         re.compile(r"Trying to mount root from .+\.\.\."),
-                         BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3,
-                         NO_AUTOBOOT_PROMPT] + FATAL_ERROR_MESSAGES
-        i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
-        # Skip 10s wait from x86 loader if we see the "Hit [Enter] to boot" message
-        if i == boot_messages.index(AUTOBOOT_PROMPT):  # Hit Enter
-            if boot_alternate_kernel_dir:
-                # Expected loader(8) to skip autoboot, fail
-                failure("expected autoboot disabled but got autoboot prompt")
-            success("Got '", child.match.string, "' from loader")
-            child.sendline("")
-            i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
-        if i == boot_messages.index(NO_AUTOBOOT_PROMPT):  # loader(8) prompt
-            success("===> loader(8) waiting boot commands")
-            # Just boot the default kernel if no alternate kernel directory is given
-            child.sendline("boot {}".format(boot_alternate_kernel_dir or ""))
-            i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
-        if i == 2:
+        init_messages = [STARTING_INIT, BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3] + FATAL_ERROR_MESSAGES
+        boot_messages = init_messages + [TRYING_TO_MOUNT_ROOT]
+        loader_boot_messages = boot_messages + [AUTOBOOT_PROMPT, NO_AUTOBOOT_PROMPT]
+        i = child.expect(loader_boot_messages, timeout=5 * 60, timeout_msg="timeout before loader or kernel")
+        if i >= len(boot_messages):
+            # Skip 10s wait from loader(8) if we see the "Hit [Enter] to boot" message
+            if i == loader_boot_messages.index(AUTOBOOT_PROMPT):  # Hit Enter
+                if boot_alternate_kernel_dir:
+                    # Expected loader(8) to skip autoboot, fail
+                    failure("expected autoboot disabled but got autoboot prompt")
+                success("Got '", child.match.string, "' from loader")
+                child.sendline("")
+            if i == loader_boot_messages.index(NO_AUTOBOOT_PROMPT):  # loader(8) prompt
+                success("===> loader(8) waiting boot commands")
+                # Just boot the default kernel if no alternate kernel directory is given
+                child.sendline("boot {}".format(boot_alternate_kernel_dir or ""))
+            i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before kernel")
+        if i == boot_messages.index(TRYING_TO_MOUNT_ROOT):
             success("===> mounting rootfs")
             if bootverbose:
-                i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
+                i = child.expect(init_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
                 if i != 0:  # start up scripts failed
                     failure("failed to start init", exit=True)
                 userspace_starttime = datetime.datetime.now()
