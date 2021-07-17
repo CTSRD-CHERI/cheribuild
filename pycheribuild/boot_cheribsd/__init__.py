@@ -807,7 +807,7 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
 
 def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=False,
                    network_iface: typing.Optional[str],
-                   boot_alternate_kernel: Path = None) -> None:
+                   boot_alternate_kernel_dir: Path = None) -> None:
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -830,7 +830,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
         # Skip 10s wait from x86 loader if we see the "Hit [Enter] to boot" message
         if i == boot_messages.index(AUTOBOOT_PROMPT):  # Hit Enter
-            if boot_alternate_kernel:
+            if boot_alternate_kernel_dir:
                 # Expected loader(8) to skip autoboot, fail
                 failure("expected autoboot disabled but got autoboot prompt")
             success("Got '", child.match.string, "' from loader")
@@ -839,7 +839,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         if i == boot_messages.index(NO_AUTOBOOT_PROMPT):  # loader(8) prompt
             success("===> loader(8) waiting boot commands")
             # Just boot the default kernel if no alternate kernel directory is given
-            child.sendline("boot {}".format(boot_alternate_kernel or ""))
+            child.sendline("boot {}".format(boot_alternate_kernel_dir or ""))
             i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
         if i == 2:
             success("===> mounting rootfs")
