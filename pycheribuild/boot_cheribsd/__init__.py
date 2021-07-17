@@ -76,7 +76,7 @@ SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHER
 
 STARTING_INIT = "start_init: trying /sbin/init"
 AUTOBOOT_PROMPT = "Hit \\[Enter\\] to boot "
-NO_AUTOBOOT_PROMPT = ""
+NO_AUTOBOOT_PROMPT = "OK "
 BOOT_FAILURE = "Enter full pathname of shell or RETURN for /bin/sh"
 BOOT_FAILURE2 = "wait for /bin/sh on /etc/rc failed'"
 BOOT_FAILURE3 = "Manual root filesystem specification:"  # rootfs mount failed
