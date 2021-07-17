@@ -74,7 +74,7 @@ SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHER
                                                          CompilationTargets.CHERIBSD_MORELLO_PURECAP,
                                                          )}
 
-AUTOBOOT_PROMPT = "Hit \\[Enter\\] to boot "
+AUTOBOOT_PROMPT = re.compile(r"(H|, h)it \[Enter\] to boot ")
 NO_AUTOBOOT_PROMPT = "OK "
 
 STARTING_INIT = "start_init: trying /sbin/init"
@@ -830,13 +830,13 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         loader_boot_messages = boot_messages + [AUTOBOOT_PROMPT, NO_AUTOBOOT_PROMPT]
         i = child.expect(loader_boot_messages, timeout=5 * 60, timeout_msg="timeout before loader or kernel")
         if i >= len(boot_messages):
-            # Skip 10s wait from loader(8) if we see the "Hit [Enter] to boot" message
+            # Skip 10s wait from loader(8) if we see the autoboot message
             if i == loader_boot_messages.index(AUTOBOOT_PROMPT):  # Hit Enter
                 if boot_alternate_kernel_dir:
                     # Expected loader(8) to skip autoboot, fail
                     failure("expected autoboot disabled but got autoboot prompt")
-                success("Got '", child.match.string, "' from loader")
-                child.sendline("")
+                success("===> loader(8) autoboot")
+                child.sendline("\r")
             if i == loader_boot_messages.index(NO_AUTOBOOT_PROMPT):  # loader(8) prompt
                 success("===> loader(8) waiting boot commands")
                 # Just boot the default kernel if no alternate kernel directory is given
