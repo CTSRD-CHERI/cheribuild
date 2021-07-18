@@ -269,6 +269,10 @@ def load_and_start_exe(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     # First start openocd
     gdb_start_time = datetime.datetime.utcnow()
     openocd, openocd_gdb_port = start_openocd(openocd_cmd, num_cores)
+
+    # Wait for 3 seconds to avoid Error: Target not examined yet
+    time.sleep(3)
+
     # openocd is running, now start GDB
     args = [str(Path(bios_image).absolute()),
             "-ex", "target extended-remote :" + str(openocd_gdb_port)]
