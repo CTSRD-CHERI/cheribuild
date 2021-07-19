@@ -695,13 +695,13 @@ def test_disk_image_path(target, expected_name):
     pytest.param("cheribsd-aarch64", [], "GENERIC", []),
     pytest.param("cheribsd-morello-purecap", [], "GENERIC-MORELLO", []),
     pytest.param("cheribsd-morello-purecap", ["--cheribsd/build-alternate-abi-kernels"],
-                 "GENERIC-MORELLO", ["GENERIC-MORELLO-PURECAP", "QEMU-MORELLO-PURECAP"]),
+                 "GENERIC-MORELLO", ["GENERIC-MORELLO-PURECAP"]),
 ])
 def test_kernel_configs(target, config_options: "list[str]", expected_name, extra_kernels):
     config = _parse_arguments(config_options)
     project = _get_target_instance(target, config, BuildCHERIBSD)
     assert project.kernel_config == expected_name
-    assert set(project.extra_kernels) == set(extra_kernels)
+    assert project.extra_kernels == extra_kernels
 
 
 @pytest.mark.parametrize("target,config_options,expected_kernels", [
@@ -745,7 +745,7 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
 def test_mfsroot_kernel_configs(target, config_options: "list[str]", expected_kernels):
     config = _parse_arguments(config_options)
     project = _get_target_instance(target, config, BuildCheriBsdMfsKernel)
-    assert set(project.get_kernel_configs()) == set(expected_kernels)
+    assert project.get_kernel_configs() == expected_kernels
 
 
 # noinspection PyTypeChecker
