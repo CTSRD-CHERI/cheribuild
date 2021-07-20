@@ -443,7 +443,8 @@ class CompilerInfo(object):
         self.default_target = default_target
         self.config = config
         self._resource_dir = None  # type: typing.Optional[Path]
-        self._supported_warning_flags = dict()  # type: typing.Dict[str, bool]
+        self._supported_warning_flags = dict()  # type: dict[str, bool]
+        self._supported_sanitizer_flags = dict()  # type: dict[tuple[str, tuple[str]], bool]
         assert compiler in ("unknown compiler", "clang", "apple-clang", "gcc"), "unknown type: " + compiler
 
     def get_resource_dir(self) -> Path:
@@ -476,6 +477,24 @@ class CompilerInfo(object):
             warning_message("Failed to check for", flag, "support:", e)
             return False
         return result.returncode == 0
+
+    def _supports_sanitizer_flag(self, sanitzer_flag: str, arch_flags: "list[str]"):
+        assert sanitzer_flag.startswith("-fsanitize")
+        try:
+            result = run_command(self.path, *arch_flags, sanitzer_flag, "-c", "-xc", "/dev/null", "-Werror",
+                                 "-o", "/dev/null", print_verbose_only=True, run_in_pretend_mode=True,
+                                 capture_error=True, allow_unexpected_returncode=True, config=self.config)
+        except (subprocess.CalledProcessError, OSError) as e:
+            warning_message("Failed to check for", sanitzer_flag, "support:", e)
+            return False
+        return result.returncode == 0
+
+    def supports_sanitizer_flag(self, sanitzer_flag: str, arch_flags: "list[str]"):
+        result = self._supported_sanitizer_flags.get((sanitzer_flag, tuple(arch_flags)))
+        if result is None:
+            result = self._supports_sanitizer_flag(sanitzer_flag, arch_flags)
+            self._supported_sanitizer_flags[(sanitzer_flag, tuple(arch_flags))] = result
+        return result
 
     def supports_warning_flag(self, flag: str):
         result = self._supported_warning_flags.get(flag)
