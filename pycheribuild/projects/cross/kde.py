@@ -617,7 +617,9 @@ class BuildKioExtras(KDECMakeProject):
     # This includes e.g. the thumbnail provider for dolphin
     target = "kio-extras"
     dependencies = ["kio", "ksyntaxhighlighting"]
-    repository = GitRepository("https://invent.kde.org/network/kio-extras.git")
+    repository = GitRepository("https://invent.kde.org/network/kio-extras.git",
+                               temporary_url_override="https://invent.kde.org/arichardson/kio-extras.git",
+                               url_override_reason="https://invent.kde.org/network/kio-extras/-/merge_requests/110")
 
 
 class BuildKFileMetadata(KDECMakeProject):
