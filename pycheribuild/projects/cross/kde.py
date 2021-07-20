@@ -127,7 +127,17 @@ class BuildPhonon(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/libraries/phonon.git")
 
 
-# TODO: use https://github.com/j-jorge/libintl-lite instead?
+class BuildLibIntlLite(CrossCompileCMakeProject):
+    target = "libintl-lite"
+    repository = GitRepository("https://github.com/j-jorge/libintl-lite")
+
+    def setup(self):
+        super().setup()
+        # We have to compile with -fPIC since this static library will be included in a shared library
+        self.add_cmake_options(CMAKE_POSITION_INDEPENDENT_CODE=True)
+
+
+# Full gettext should not be needed, libintl-lite should be sufficient
 class BuildGettext(CrossCompileAutotoolsProject):
     target = "gettext"
     repository = GitRepository("https://git.savannah.gnu.org/git/gettext.git")
