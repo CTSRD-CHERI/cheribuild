@@ -41,7 +41,8 @@ from typing import Optional
 
 from .loader import ComputedDefaultValue, MyJsonEncoder
 from ..processutils import latest_system_clang_tool
-from ..utils import (ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, status_update, warning_message)
+from ..utils import (cached_property, ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, status_update,
+                     warning_message)
 
 
 class BuildType(Enum):
@@ -443,9 +444,17 @@ class CheriConfig(ConfigBase):
         if "CLICOLOR" in os.environ:
             del os.environ["CLICOLOR"]
 
+    @cached_property
+    def _other_tools_path_prefix(self) -> str:
+        return str(self.other_tools_dir / "bin") + ":"
+
     @property
     def dollar_path_with_other_tools(self) -> str:
-        return str(self.other_tools_dir / "bin") + ":" + os.getenv("PATH", "")
+        old_path = os.getenv("PATH", "")
+        new_prefix = self._other_tools_path_prefix
+        if old_path.startswith(new_prefix):
+            return old_path  # $PATH already starts with other_tools, don't add it again
+        return new_prefix + old_path
 
     @property
     def make_j_flag(self):

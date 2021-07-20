@@ -35,6 +35,7 @@ from collections import OrderedDict
 
 from .config.chericonfig import CheriConfig
 from .config.target_info import CrossCompileTarget
+from .processutils import set_env
 from .utils import AnsiColour, coloured, fatal_error, status_update, warning_message
 
 if typing.TYPE_CHECKING:  # no-combine
@@ -423,12 +424,14 @@ class TargetManager(object):
 
     def run(self, config: CheriConfig):
         chosen_targets = self.get_all_chosen_targets(config)
-
-        for target in chosen_targets:
-            target.check_system_deps(config)
-        # all dependencies exist -> run the targets
-        for target in chosen_targets:
-            target.execute(config)
+        with set_env(PATH=config.dollar_path_with_other_tools,
+                     CLANG_FORCE_COLOR_DIAGNOSTICS="always" if config.clang_colour_diags else None,
+                     config=config):
+            for target in chosen_targets:
+                target.check_system_deps(config)
+            # all dependencies exist -> run the targets
+            for target in chosen_targets:
+                target.execute(config)
 
     def get_all_chosen_targets(self, config) -> "typing.Iterable[Target]":
         # check that all target dependencies are correct:
