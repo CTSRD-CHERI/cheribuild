@@ -126,6 +126,7 @@ class BuildPhonon(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/libraries/phonon.git")
 
 
+# TODO: use https://github.com/j-jorge/libintl-lite instead?
 class BuildGettext(CrossCompileAutotoolsProject):
     target = "gettext"
     repository = GitRepository("https://git.savannah.gnu.org/git/gettext.git")
@@ -290,7 +291,7 @@ class BuildSonnet(KDECMakeProject):
 
 class BuildKAuth(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kauth.git")
-    dependencies = ["kcoreaddons"]  # optional: "polkit-qt-1"
+    dependencies = ["kcoreaddons", "kcoreaddons-native"]  # optional: "polkit-qt-1"
 
 
 class BuildKCompletion(KDECMakeProject):
