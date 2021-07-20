@@ -1447,7 +1447,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         """
         if kernconf is None or kernconf == self.kernel_config:
             return None
-        return Path("/boot") / ("kernel." + kernconf)
+        return "/boot/kernel." + kernconf
 
     def get_kern_module_path_arg(self, kernconf: str = None) -> "typing.Optional[str]":
         """
@@ -1459,7 +1459,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return "kern.module_path={}".format(kerndir)
         return None
 
-    def get_kernel_configs(self, **filter_kwargs) -> "typing.Sequence[str]":
+    def get_kernel_configs(self, **filter_kwargs) -> "typing.List[str]":
         """
         Get all the kernel configurations to build. This can be used by external targets to
         fetch the set of kernel configurations that have been built and filter them to account
@@ -1729,7 +1729,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         default_kernconf = self.default_kernel_config()
         return [c for c in configs if c.kernconf != default_kernconf]
 
-    def get_kernel_configs(self, **filter_kwargs) -> "typing.Sequence[str]":
+    def get_kernel_configs(self, **filter_kwargs) -> "typing.List[str]":
         default = super().get_kernel_configs(**filter_kwargs)
         extra = filter_kernel_configs(self.extra_kernel_configs(), **filter_kwargs)
         return default + [c.kernconf for c in extra]
