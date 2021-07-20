@@ -506,10 +506,6 @@ class BuildKIO(KDECMakeProject):
 # frameworks/kwallet: frameworks/kwindowsystem
 # frameworks/kwallet: frameworks/kwidgetsaddons
 # frameworks/kwallet: third-party/gpgme
-# frameworks/kactivities: frameworks/kconfig
-# frameworks/kactivities: frameworks/kwindowsystem
-# frameworks/kactivities: frameworks/kcoreaddons
-# frameworks/kactivities: frameworks/kio
 # frameworks/kactivities-stats: frameworks/kactivities
 # frameworks/plasma-framework: frameworks/kactivities
 # frameworks/plasma-framework: frameworks/karchive
@@ -601,6 +597,16 @@ class BuildKFileMetadata(KDECMakeProject):
     # TODO: depend on poppler for PDF medatadata
     dependencies = ["karchive", "kconfig", "ki18n", "karchive"]
     repository = GitRepository("https://invent.kde.org/frameworks/kfilemetadata.git")
+
+
+class BuildKActivities(KDECMakeProject):
+    target = "kactivities"
+    dependencies = ["kio", "kwindowsystem", "kcoreaddons", "kconfig"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kactivities.git")
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(KACTIVITIES_LIBRARY_ONLY=True)  # avoid dependency on boost
 
 
 class BuildDoplhin(KDECMakeProject):
