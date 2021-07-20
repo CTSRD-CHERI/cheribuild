@@ -75,7 +75,7 @@ SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHER
                                                          )}
 
 AUTOBOOT_PROMPT = re.compile(r"(H|, h)it \[Enter\] to boot ")
-NO_AUTOBOOT_PROMPT = "OK "
+BOOT_LOADER_PROMPT = "OK "
 
 STARTING_INIT = "start_init: trying /sbin/init"
 TRYING_TO_MOUNT_ROOT = re.compile(r"Trying to mount root from .+\.\.\.")
@@ -827,17 +827,24 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         bootverbose = False
         init_messages = [STARTING_INIT, BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3] + FATAL_ERROR_MESSAGES
         boot_messages = init_messages + [TRYING_TO_MOUNT_ROOT]
-        loader_boot_messages = boot_messages + [AUTOBOOT_PROMPT, NO_AUTOBOOT_PROMPT]
+        loader_boot_prompt_messages = boot_messages + [BOOT_LOADER_PROMPT]
+        loader_boot_messages = loader_boot_prompt_messages + [AUTOBOOT_PROMPT]
         i = child.expect(loader_boot_messages, timeout=5 * 60, timeout_msg="timeout before loader or kernel")
         if i >= len(boot_messages):
             # Skip 10s wait from loader(8) if we see the autoboot message
             if i == loader_boot_messages.index(AUTOBOOT_PROMPT):  # Hit Enter
-                if boot_alternate_kernel_dir:
-                    # Expected loader(8) to skip autoboot, fail
-                    failure("expected autoboot disabled but got autoboot prompt")
                 success("===> loader(8) autoboot")
-                child.sendline("\r")
-            if i == loader_boot_messages.index(NO_AUTOBOOT_PROMPT):  # loader(8) prompt
+                if boot_alternate_kernel_dir:
+                    # Stop autoboot and enter console
+                    child.send("\x1b")
+                    i = child.expect(loader_boot_prompt_messages, timeout=60,
+                                     timeout_msg="timeout before loader prompt")
+                    if i != loader_boot_prompt_messages.index(BOOT_LOADER_PROMPT):
+                        failure("failed to enter boot loader prompt", exit=True)
+                        # Fall through to BOOT_LOADER_PROMPT
+                else:
+                    child.sendline("\r")
+            if i == loader_boot_messages.index(BOOT_LOADER_PROMPT):  # loader(8) prompt
                 success("===> loader(8) waiting boot commands")
                 # Just boot the default kernel if no alternate kernel directory is given
                 child.sendline("boot {}".format(boot_alternate_kernel_dir or ""))
