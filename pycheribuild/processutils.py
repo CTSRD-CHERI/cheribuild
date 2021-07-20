@@ -70,7 +70,7 @@ def set_env(*, print_verbose_only=True, config: ConfigBase = None, **environ):
     """
     Temporarily set the process environment variables.
 
-    >>> with set_env(PLUGINS_DIR=u'test/plugins'):
+    >>> with set_env(PLUGINS_DIR='test/plugins'):
     ...   "PLUGINS_DIR" in os.environ
     True
 
@@ -78,19 +78,28 @@ def set_env(*, print_verbose_only=True, config: ConfigBase = None, **environ):
     False
 
     """
-    if config is None:
-        config = get_global_config()  # TODO: remove
-    old_environ = dict(os.environ)
-    # make sure all environment variables are converted to string
-    str_environ = dict((str(k), str(v)) for k, v in environ.items())
-    for k, v in str_environ.items():
-        print_command("export", k + "=" + v, print_verbose_only=print_verbose_only, config=config)
-    os.environ.update(str_environ)
+    changed_values = dict()  # type: dict[str, str]
+    if environ:
+        if config is None:
+            config = get_global_config()  # TODO: remove
+        should_print_update = not print_verbose_only or config.verbose
+        for k, v in environ.items():
+            # make sure all environment variables are converted to string
+            new_value = str(v)
+            old_value = os.getenv(k, None)
+            if should_print_update:
+                print_command("export", k + "=" + new_value, print_verbose_only=print_verbose_only, config=config)
+            if new_value != old_value:
+                changed_values[k] = old_value
+                os.environ[k] = new_value
     try:
         yield
     finally:
-        os.environ.clear()
-        os.environ.update(old_environ)
+        for var, prev_value in changed_values.items():
+            if prev_value is None:
+                del os.environ[var]
+            else:
+                os.environ[var] = prev_value
 
 
 class TtyState:
