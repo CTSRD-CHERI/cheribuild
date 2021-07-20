@@ -111,6 +111,7 @@ PEXPECT_CONTINUATION_PROMPT_RE = re.escape(PEXPECT_CONTINUATION_PROMPT)
 FATAL_ERROR_MESSAGES = [CHERI_TRAP_MIPS, CHERI_TRAP_RISCV]
 
 PRETEND = False
+INTERACT_ON_KERNEL_PANIC = False
 MESSAGE_PREFIX = ""
 QEMU_LOGFILE = None  # type: typing.Optional[Path]
 # To keep the port available until we start QEMU
@@ -259,6 +260,9 @@ class CheriBSDSpawnMixin(MixinBase):
             i = expect_fn(options + panic_regexes, **kwargs)
             if i > len(options):
                 debug_kernel_panic(self)
+                if INTERACT_ON_KERNEL_PANIC:
+                    info("Interating with QEMU due to --interact-on-kernel-panic")
+                    self.interact()
                 failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
             return i
         except pexpect.TIMEOUT as e:
@@ -1141,6 +1145,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pretend", "-p", action="store_true",
                         help="Don't actually boot CheriBSD just print what would happen")
     parser.add_argument("--interact", "-i", action="store_true")
+    parser.add_argument("--interact-on-kernel-panic", action="store_true",
+                        help="Instead of exiting on kernel panic start interacting with QEMU")
     parser.add_argument("--test-kernel-init-only", action="store_true")
     parser.add_argument("--enable-coredumps", action="store_true", dest="enable_coredumps", default=False)
     parser.add_argument("--disable-coredumps", action="store_false", dest="enable_coredumps")
@@ -1206,9 +1212,11 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
         if args.qemu_cmd is None:
             failure("ERROR: Cannot find QEMU binary for target ", qemu_options.qemu_arch_sufffix, exit=True)
 
-    global PRETEND
+    global PRETEND, INTERACT_ON_KERNEL_PANIC
     if args.pretend:
         PRETEND = True
+    if args.interact_on_kernel_panic:
+        INTERACT_ON_KERNEL_PANIC = True
     global QEMU_LOGFILE
     if args.qemu_logfile:
         QEMU_LOGFILE = args.qemu_logfile
