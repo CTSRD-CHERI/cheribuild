@@ -458,12 +458,14 @@ class BuildIceWM(X11Mixin, CrossCompileCMakeProject):
     target = "icewm"
     dependencies = ["fontconfig", "libxcomposite", "libxdamage", "libpng", "libjpeg-turbo", "libxpm"]
     repository = GitRepository("https://github.com/bbidulock/icewm",
-                               temporary_url_override="https://github.com/arichardson/icewm",
-                               url_override_reason="Needs https://github.com/bbidulock/icewm/pull/603 and "
-                                                   "https://github.com/bbidulock/icewm/pull/601")
+                               old_urls=[b"https://github.com/arichardson/icewm"])
 
     def setup(self):
         super().setup()
         # /usr/local/bin/icewmbg --scaled=1 --center=1 --image /root/cherries.jpeg
         self.add_cmake_options(CONFIG_LIBPNG=True, CONFIG_LIBJPEG=True, CONFIG_IMLIB2=False, CONFIG_XPM=True)
         self.add_cmake_options(ENABLE_NLS=False, CONFIG_I18N=False)
+        # The CMake build does not seem to add the fontconfig dependency
+        rpath_dirs = self.target_info.additional_rpath_directories
+        if rpath_dirs:
+            self.COMMON_LDFLAGS.append("-Wl,-rpath," + ":".join(rpath_dirs))
