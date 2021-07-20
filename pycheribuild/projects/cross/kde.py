@@ -712,6 +712,11 @@ class BuildOpenJPEG(CrossCompileCMakeProject):
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     repository = GitRepository("https://github.com/uclouvain/openjpeg.git")
 
+    def setup(self):
+        super().setup()
+        # TODO: upstream a fix to use PC_STATIC_LCMS2_LIBRARY_DIRS
+        self.COMMON_LDFLAGS.append("-L" + str(BuildLCMS2.get_install_dir(self) / "lib"))
+
 
 class BuildPoppler(CrossCompileCMakeProject):
     target = "poppler"
