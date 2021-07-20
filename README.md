@@ -1,4 +1,4 @@
-# `cheribuild.py` - A script to build CHERI-related software (**requires Python 3.5.2+**)
+# `cheribuild.py` - A script to build CHERI-related software (**requires Python 3.6+**)
 
 This script automates all the steps required to build various [CHERI](http://www.chericpu.com)-related software.
 For example `cheribuild.py [options] sdk-riscv64-purecap` will create an SDK that can be
@@ -8,8 +8,8 @@ will start an instance of [CheriBSD](https://github.com/CTSRD-CHERI/cheribsd) bu
 `cheribuild.py` also allows building software for Arm's adaption of CHERI, [the Morello platform](https://developer.arm.com/architectures/cpu-architecture/a-profile/morello), however not all targets are supported yet.
 
 ## Supported operating systems
-`cheribuild.py` has been tested and should work on FreeBSD 11 and 12.
-On Linux, Ubuntu 16.04/18.04/20.04, Debian 10 and OpenSUSE Tumbleweed are supported. Ubuntu 14.04 may also work but is no longer tested.
+`cheribuild.py` has been tested and should work on FreeBSD 12 and 13.
+On Linux, Ubuntu 18.04/20.04, Debian 10 and OpenSUSE Tumbleweed are supported.
 macOS 10.14 and newer is also supported.
 
 # Pre-Build Setup

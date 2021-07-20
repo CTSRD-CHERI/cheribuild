@@ -1,5 +1,4 @@
-FROM python:3.5.2
-
+FROM python:3.9.0
 LABEL maintainer="Alexander.Richardson@cl.cam.ac.uk"
 
 RUN pip install pytest
