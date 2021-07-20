@@ -664,10 +664,6 @@ class BuildLCMS2(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/mm2/Little-CMS")
     target = "lcms2"
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.configure_command = self.source_dir / "autogen.sh"
-
     def process(self):
         if OSInfo.IS_MAC:
             with tempfile.TemporaryDirectory() as td:
