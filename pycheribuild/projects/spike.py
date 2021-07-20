@@ -72,7 +72,7 @@ class RunCheriSpikeBase(SimpleProject):
     _source_class = None
 
     @classmethod
-    def dependencies(cls, _: CheriConfig):
+    def dependencies(cls, _: CheriConfig) -> "list[str]":
         return [cls._source_class.target, cls._bbl_class.target, BuildCheriSpike.target]
 
     def process(self):

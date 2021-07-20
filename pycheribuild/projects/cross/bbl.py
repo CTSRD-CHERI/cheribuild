@@ -51,7 +51,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     mem_start = "0x80000000"
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         result = super().dependencies(config)
         if cls.kernel_class:
             xtarget = cls.get_crosscompile_target(config)

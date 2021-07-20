@@ -1930,7 +1930,7 @@ class Project(SimpleProject):
     needs_native_build_for_crosscompile = False  # Some projects (e.g. python) need a native build for build tools, etc.
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         if cls.needs_native_build_for_crosscompile and not cls.get_crosscompile_target(config).is_native():
             return [cls.get_class_for_target(BasicCompilationTargets.NATIVE).target]
         return []

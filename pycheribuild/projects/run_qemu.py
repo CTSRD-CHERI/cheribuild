@@ -527,7 +527,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         return self._source_class.default_architecture
 
     @classmethod
-    def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig):
+    def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "list[str]":
         xtarget = cls.get_crosscompile_target(config)
         qemu = "qemu"
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
@@ -556,7 +556,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
             super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(add_to_port), **kwargs)
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         result = super().dependencies(config)
         # RISCV needs OpenSBI/BBL to run:
         # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):

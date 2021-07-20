@@ -54,9 +54,13 @@ class KDECMakeProject(CrossCompileCMakeProject):
         as_string=lambda cls: "$SOURCE_ROOT/kde-frameworks" + cls.default_directory_basename)
 
     tests_need_full_disk_image = False  # default to running with the full disk image
-    dependencies = ["qtbase", "extra-cmake-modules"]
     _has_qt_designer_plugin = False
     _needs_newer_bison = False
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        result = super().dependencies(config)
+        return result + ["qtbase", "extra-cmake-modules"]
 
     @property
     def ctest_script_extra_args(self):
@@ -231,12 +235,22 @@ class BuildKConfig(KDECMakeProject):
 
 class BuildKDBusAddons(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kdbusaddons.git")
-    dependencies = KDECMakeProject.dependencies + ["qtx11extras"]
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        if cls.get_crosscompile_target(config).target_info_cls.is_macos():
+            return super().dependencies(config)
+        return super().dependencies(config) + ["qtx11extras"]
 
 
 class BuildKGuiAddons(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kguiaddons.git")
-    dependencies = KDECMakeProject.dependencies + ["qtx11extras"]
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        if cls.get_crosscompile_target(config).target_info_cls.is_macos():
+            return super().dependencies(config)
+        return super().dependencies(config) + ["qtx11extras"]
 
     def setup(self):
         super().setup()
@@ -255,7 +269,10 @@ class BuildKItemModels(KDECMakeProject):
 
 class BuildKI18N(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/ki18n.git")
-    dependencies = KDECMakeProject.dependencies + ["gettext"]
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        return super().dependencies(config) + ["libintl-lite"]
 
     def setup(self):
         super().setup()
@@ -272,10 +289,10 @@ class BuildKWindowSystem(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kwindowsystem.git")
 
     @classmethod
-    def dependencies(cls, config):
+    def dependencies(cls, config) -> "list[str]":
         if cls.get_crosscompile_target(config).target_info_cls.is_macos():
-            return super().dependencies
-        return super().dependencies + ["qtx11extras", "libxfixes"]
+            return super().dependencies(config)
+        return super().dependencies(config) + ["qtx11extras", "libxfixes", "libxrender"]
 
 
 class BuildSolid(KDECMakeProject):
@@ -331,7 +348,7 @@ class BuildKNotifications(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/knotifications.git")
 
     @classmethod
-    def dependencies(cls, config):
+    def dependencies(cls, config) -> "list[str]":
         result = ["qtdeclarative", "kwindowsystem", "kconfig", "kconfig-native", "kcoreaddons", "kcoreaddons-native",
                   "phonon"]
         if cls.get_crosscompile_target(config).target_info_cls.is_macos():
@@ -426,7 +443,7 @@ class BuildKGlobalAccel(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kglobalaccel.git")
 
     @classmethod
-    def dependencies(cls, config):
+    def dependencies(cls, config) -> "list[str]":
         result = ["kconfig", "kconfig-native", "kcrash", "kdbusaddons", "kwindowsystem"]
         if not cls.get_crosscompile_target(config).target_info_cls.is_macos():
             result += ["qtx11extras", "libxcb"]

@@ -119,7 +119,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         self.configure_command = self.source_dir / "configure"
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         deps = super().dependencies(config)
         if not cls.get_crosscompile_target(config).is_native():
             # TODO: should only need these if minimal is not set

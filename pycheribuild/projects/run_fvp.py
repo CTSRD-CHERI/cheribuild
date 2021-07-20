@@ -439,7 +439,7 @@ class LaunchFVPBase(SimpleProject):
     required_fvp_version = (0, 11, 19)
 
     @classmethod
-    def dependencies(cls, _: CheriConfig):
+    def dependencies(cls, _: CheriConfig) -> "list[str]":
         return ["install-morello-fvp", cls._source_class.target, "morello-firmware"]
 
     @classproperty

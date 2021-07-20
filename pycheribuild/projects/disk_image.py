@@ -131,7 +131,7 @@ class BuildDiskImageBase(SimpleProject):
         return self._source_class.supported_architectures
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         return [cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
 
     @classmethod
@@ -1114,7 +1114,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
     disk_image_prefix = "cheribsd"
 
     @classmethod
-    def dependencies(cls, config):
+    def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config)
         # GDB is not strictly a dependency, but having it in the disk image makes life a lot easier
         result.append("gdb")

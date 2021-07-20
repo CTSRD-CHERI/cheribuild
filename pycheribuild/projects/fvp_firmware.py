@@ -357,7 +357,7 @@ class BuildMorelloFirmware(SimpleProject):
     skip_toolchain_dependencies = True  # Don't rebuild morello-llvm unless it's also a depenency of another target
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         # Note: can't make this a per-target option (using setup_config_options) since dependencies() is called before
         # we have loaded the per-target config options.
         if config.build_morello_firmware_from_source:

@@ -136,7 +136,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         result = super().dependencies(config)
         return result + ["libunwind"]
 

@@ -201,6 +201,11 @@ def _qtbase_x11_deps(suffix):
     return result
 
 
+def test_ksyntaxhighlighting_includes_native_dependency():
+    ksyntaxhighlighting_deps = _sort_targets(["ksyntaxhighlighting-amd64"], add_dependencies=True, skip_sdk=True)
+    assert "ksyntaxhighlighting-native" in ksyntaxhighlighting_deps
+
+
 def test_webkit_cached_deps():
     # regression test for a bug in caching deps
     config = copy.copy(setup_mock_chericonfig(Path("/this/path/does/not/exist")))

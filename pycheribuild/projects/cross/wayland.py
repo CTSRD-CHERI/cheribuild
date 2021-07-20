@@ -67,7 +67,7 @@ class BuildWayland(CrossCompileMesonProject):
     needs_native_build_for_crosscompile = True
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         deps = super().dependencies(config)
         target = cls.get_crosscompile_target(config)
         if not target.is_native():

@@ -2022,7 +2022,7 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         return self.rootfs_source_class.supported_architectures
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         target = cls.get_crosscompile_target(config)  # type: CrossCompileTarget
         if target.is_cheri_purecap([CPUArchitecture.MIPS64]):
             # TODO: can't access this member here...
