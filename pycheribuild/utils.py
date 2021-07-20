@@ -51,8 +51,8 @@ __all__ = ["typing", "include_local_file", "Type_T", "init_global_config",  # no
            "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
            "is_case_sensitive_dir", "SocketAndPort", "replace_one", "cached_property", "remove_prefix"]  # no-combine
 
-if sys.version_info < (3, 5, 2):
-    sys.exit("This script requires at least Python 3.5.2")
+if sys.version_info < (3, 6, 0):
+    sys.exit("This script requires at least Python 3.6.0")
 
 Type_T = typing.TypeVar("Type_T")
 
