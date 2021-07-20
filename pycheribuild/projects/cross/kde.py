@@ -679,6 +679,7 @@ class BuildFontConfig(CrossCompileMesonProject):
 class BuildOpenJPEG(CrossCompileCMakeProject):
     target = "openjpeg"
     dependencies = ["lcms2", "libpng"]
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     repository = GitRepository("https://github.com/uclouvain/openjpeg.git")
 
 
