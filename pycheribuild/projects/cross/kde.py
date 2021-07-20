@@ -86,8 +86,9 @@ class KDECMakeProject(CrossCompileCMakeProject):
             self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
         if not self.compiling_for_host():
             # We need native tools (e.g. desktoptojson/kconfig_compiler) for some projects
-            native_install_root = BuildKConfig.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
-            self.add_cmake_options(KF5_HOST_TOOLING=native_install_root / "lib/cmake")
+            native_project = BuildKCoreAddons.get_instance(self, cross_target=CompilationTargets.NATIVE)
+            self.add_cmake_options(
+                KF5_HOST_TOOLING=native_project.install_dir / native_project.target_info.default_libdir / "cmake")
             dep_names = " ".join(x.name for x in self._direct_dependencies(self.config, include_sdk_dependencies=False,
                                                                            include_toolchain_dependencies=False,
                                                                            explicit_dependencies_only=True))

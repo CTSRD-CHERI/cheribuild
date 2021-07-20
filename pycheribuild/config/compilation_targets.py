@@ -322,8 +322,12 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return Path("usr/local")
 
     @property
-    def cmake_prefix_paths(self) -> list:
-        return [self.sysroot_install_prefix_absolute, self.sysroot_install_prefix_absolute / "lib/cmake"]
+    def cmake_prefix_paths(self) -> "list[Path]":
+        default_libdir = self.default_libdir
+        result = [self.sysroot_install_prefix_absolute, self.sysroot_install_prefix_absolute / default_libdir / "cmake"]
+        if default_libdir != "lib":
+            result.append(self.sysroot_install_prefix_absolute / "lib/cmake")
+        return result
 
     def _get_compiler_project(self) -> "typing.Type[Project]":
         from ..projects.cross.llvm import BuildUpstreamLLVM
