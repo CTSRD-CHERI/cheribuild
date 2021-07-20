@@ -34,7 +34,8 @@ import datetime
 import os
 from pathlib import Path
 
-from run_tests_common import boot_cheribsd, junitparser, run_tests_main
+from run_tests_common import (boot_cheribsd, finish_and_write_junit_xml_report, get_default_junit_xml_name, junitparser,
+                              run_tests_main)
 
 
 def setup_qtbase_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace):
@@ -67,7 +68,7 @@ def setup_qtbase_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.
             # Send CTRL+C in case the process timed out.
             qemu.sendintr()
             qemu.sendintr()
-            qemu.expect_prompt(timeout=5*60)
+            qemu.expect_prompt(timeout=5 * 60)
             boot_cheribsd.prepend_ld_library_path(qemu, "/build/lib")
     else:
         # otherwise load the libraries from smbfs
@@ -122,7 +123,7 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
             # Send CTRL+C in case the process timed out.
             qemu.sendintr()
             qemu.sendintr()
-            qemu.expect_prompt(timeout=5*60)
+            qemu.expect_prompt(timeout=5 * 60)
         try:
             endtime = datetime.datetime.utcnow()
             qt_test = junitparser.JUnitXml.fromfile(str(test_xml))
@@ -179,48 +180,12 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
         assert isinstance(test_subset, Path)
         boot_cheribsd.info("Running qtbase tests for ", test_subset)
         run_subdir(qemu, test_subset, xml, build_dir=build_dir)
-    xml.time = (datetime.datetime.utcnow() - all_tests_starttime).total_seconds()
-    xml.update_statistics()
-    failed_test_suites = []
-    num_testsuites = 0
-    for suite in xml:
-        assert isinstance(suite, junitparser.TestSuite)
-        num_testsuites += 1
-        if suite.errors > 0 or suite.failures > 0:
-            failed_test_suites.append(suite)
-    boot_cheribsd.info("JUnit results:", xml)
-    boot_cheribsd.info("Ran " + str(num_testsuites), " test suites in ",
-                       (datetime.datetime.utcnow() - all_tests_starttime))
-    if failed_test_suites:
-        def failed_test_info(ts: junitparser.TestSuite):
-            result = ts.name
-
-            if ts.failures:
-                result += " " + str(ts.failures) + " failures"
-            if ts.errors:
-                result += " " + str(ts.errors) + " errors"
-            if ts.tests:
-                result += " in " + str(ts.tests) + " tests"
-            for p in ts.properties():
-                if p.name == "test_executable":
-                    result += ", executable=" + p.value
-                    break
-            return result
-
-        boot_cheribsd.failure("The following ", len(failed_test_suites), " tests failed:\n\t",
-                              "\n\t".join(failed_test_info(x) for x in failed_test_suites), exit=False)
-    else:
-        boot_cheribsd.success("All ", xml.tests, " tests (", num_testsuites, " test suites) passed after ",
-                              (datetime.datetime.utcnow() - all_tests_starttime))
-    # Finally, write the Junit XML file:
-    if not boot_cheribsd.PRETEND:
-        xml.write(args.junit_xml, pretty=True)
-    boot_cheribsd.info("Wrote Junit results to ", args.junit_xml)
-    return not failed_test_suites
+    return finish_and_write_junit_xml_report(all_tests_starttime, xml, args.junit_xml)
 
 
 def adjust_args(args: argparse.Namespace):
     print(args.test_subset)
+    args.junit_xml = get_default_junit_xml_name(args.junit_xml, args.build_dir)
     tests_root = Path(args.build_dir, "tests/auto")
     if args.test_subset:
         test_dirs = []

@@ -30,10 +30,11 @@
 # SUCH DAMAGE.
 #
 import argparse
+import datetime
 import os
 import sys
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 _cheribuild_root = Path(__file__).parent.parent
 _junitparser_dir = _cheribuild_root / "3rdparty/junitparser"
@@ -47,13 +48,73 @@ _ptyprocess_dir = _cheribuild_root / "3rdparty/ptyprocess"
 assert (_ptyprocess_dir / "ptyprocess/ptyprocess.py").exists(), (_ptyprocess_dir / "ptyprocess/ptyprocess.py")
 sys.path.insert(1, str(_ptyprocess_dir))
 sys.path.insert(1, str(_cheribuild_root))
-import junitparser  # noqa: E402
+import junitparser
 import pexpect  # noqa: E402
 from pycheribuild import boot_cheribsd  # noqa: E402
 from pycheribuild.config.target_info import CrossCompileTarget  # noqa: E402
 from pycheribuild.processutils import commandline_to_str  # noqa: E402
 
-__all__ = ["run_tests_main", "boot_cheribsd", "junitparser", "pexpect", "commandline_to_str", "CrossCompileTarget"]
+__all__ = ["run_tests_main", "boot_cheribsd", "junitparser", "pexpect", "commandline_to_str", "CrossCompileTarget",
+           "finish_and_write_junit_xml_report", "get_default_junit_xml_name"]
+
+
+def get_default_junit_xml_name(from_cmdline: "Optional[str]", default_output_dir: Path):
+    if from_cmdline is None:
+        time_suffix = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        result = Path(default_output_dir, ("test-results-" + time_suffix + ".xml"))
+    else:
+        result = Path(from_cmdline)
+    if not result.is_absolute():
+        result = Path(default_output_dir, result)
+    return result
+
+
+def finish_and_write_junit_xml_report(all_tests_starttime: datetime.datetime, xml: junitparser.JUnitXml,
+                                      output_file: Path) -> bool:
+    """
+    :param output_file: the host path where to the JUnit XML should be written
+    :param all_tests_starttime: the time when the test run started
+    :param xml: the xml file
+    :return: True if no tests failed, False otherwise
+    """
+    xml.time = (datetime.datetime.utcnow() - all_tests_starttime).total_seconds()
+    xml.update_statistics()
+    failed_test_suites = []
+    num_testsuites = 0
+    for suite in xml:
+        assert isinstance(suite, junitparser.TestSuite)
+        num_testsuites += 1
+        if suite.errors > 0 or suite.failures > 0:
+            failed_test_suites.append(suite)
+    boot_cheribsd.info("JUnit results:", xml)
+    boot_cheribsd.info("Ran " + str(num_testsuites), " test suites in ",
+                       (datetime.datetime.utcnow() - all_tests_starttime))
+    if failed_test_suites:
+        def failed_test_info(ts: junitparser.TestSuite):
+            result = ts.name
+
+            if ts.failures:
+                result += " " + str(ts.failures) + " failures"
+            if ts.errors:
+                result += " " + str(ts.errors) + " errors"
+            if ts.tests:
+                result += " in " + str(ts.tests) + " tests"
+            for p in ts.properties():
+                if p.name == "test_executable":
+                    result += ", executable=" + p.value
+                    break
+            return result
+
+        boot_cheribsd.failure("The following ", len(failed_test_suites), " tests failed:\n\t",
+                              "\n\t".join(failed_test_info(x) for x in failed_test_suites), exit=False)
+    else:
+        boot_cheribsd.success("All ", xml.tests, " tests (", num_testsuites, " test suites) passed after ",
+                              (datetime.datetime.utcnow() - all_tests_starttime))
+    # Finally, write the Junit XML file:
+    if not boot_cheribsd.PRETEND:
+        xml.write(output_file, pretty=True)
+    boot_cheribsd.info("Wrote Junit results to ", output_file)
+    return not failed_test_suites
 
 
 def run_tests_main(test_function: Callable[[boot_cheribsd.QemuCheriBSDInstance, argparse.Namespace], bool] = None,

@@ -30,7 +30,7 @@ import argparse
 import datetime
 from pathlib import Path
 
-from run_tests_common import boot_cheribsd, run_tests_main
+from run_tests_common import boot_cheribsd, run_tests_main, get_default_junit_xml_name
 
 
 def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
@@ -100,13 +100,7 @@ def add_args(parser: argparse.ArgumentParser):
 def adjust_args(args: argparse.Namespace):
     args.smb_mount_directories.append(
         boot_cheribsd.SmbMount(args.cmake_install_dir, readonly=True, in_target="/cmake"))
-    if args.junit_xml is None:
-        time_suffix = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-        args.junit_xml = Path("/build", ("test-results-" + time_suffix + ".xml"))
-    else:
-        args.junit_xml = Path(args.junit_xml)
-    if not args.junit_xml.is_absolute():
-        args.junit_xml = Path("/build", args.junit_xml)
+    args.junit_xml = get_default_junit_xml_name(args.junit_xml, args.build_dir)
 
 
 if __name__ == '__main__':
