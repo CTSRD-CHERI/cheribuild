@@ -489,8 +489,8 @@ class BuildQtModuleWithQMake(CrossCompileProject):
         as_string=lambda cls: "$SOURCE_ROOT/qt5/" + cls.default_directory_basename)
 
     def configure(self, **kwargs):
-        # Run QMake to generate a makefile
-        self.run_cmd(BuildQtBase.get_build_dir(self) / "bin/qmake", self.source_dir, "--", *self.configure_args,
+        # Run QMake to generate a makefile (the installed qmake is actually a host binary!)
+        self.run_cmd(BuildQtBase.get_install_dir(self) / "bin/qmake", self.source_dir, "--", *self.configure_args,
                      cwd=self.build_dir)
 
     def compile(self, **kwargs):
@@ -535,6 +535,17 @@ class BuildQtDeclarative(BuildQtModuleWithQMake):
             "-no-qml-debug",  # debugger not compatibale with CHERI purecap
             "-no-quick-designer",  # unnecessary, saves a bit of build time
         ])
+
+
+class BuildQtQuickControls2(BuildQtModuleWithQMake):
+    target = "qtquickcontrols2"
+    dependencies = ["qtdeclarative"]
+    repository = GitRepository("https://code.qt.io/qt/qtquickcontrols2.git",
+                               # "https://invent.kde.org/qt/qt/qtquickcontrols2.git",
+                               default_branch="5.15", force_branch=True)
+
+    def compile(self, **kwargs):
+        self.run_make()
 
 
 # Webkit needs ICU (and recommended for QtBase too):
