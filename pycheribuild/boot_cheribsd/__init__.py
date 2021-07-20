@@ -739,8 +739,8 @@ def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
 def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path], kernel_image: Path,
                   disk_image: typing.Optional[Path], ssh_port: typing.Optional[int],
                   ssh_pubkey: typing.Optional[Path], *, write_disk_image_changes: bool,
-                  smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False, trap_on_unrepresentable=False,
-                  skip_ssh_setup=False, bios_path: Path = None,
+                  smp_args: "list[str]", smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False,
+                  trap_on_unrepresentable=False, skip_ssh_setup=False, bios_path: Path = None,
                   boot_alternate_kernel_dir: Path = None) -> QemuCheriBSDInstance:
     user_network_args = ""
     if smb_dirs is None:
@@ -771,6 +771,7 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
                                              trap_on_unrepresentable=trap_on_unrepresentable,  # For debugging
                                              add_virtio_rng=True  # faster entropy gathering
                                              )
+    qemu_args.extend(smp_args)
     kernel_commandline = []
     if kernel_init_only:
         kernel_commandline.append("init_path=/sbin/startup-benchmark.sh")
@@ -1087,6 +1088,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--architecture", help="CPU architecture to be used for this test", required=True,
                         choices=[x for x in SUPPORTED_ARCHITECTURES.keys()])
     parser.add_argument("--qemu-cmd", "--qemu", help="Path to QEMU (default: find matching on in $PATH)", default=None)
+    parser.add_argument("--qemu-smp", "--smp", type=int, help="Run QEMU with SMP", default=None)
     parser.add_argument("--kernel", default=None)
     parser.add_argument("--bios", default=None)
     parser.add_argument("--disk-image", default=None)
@@ -1271,6 +1273,7 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
     qemu = boot_cheribsd(qemu_options, qemu_command=args.qemu_cmd, kernel_image=kernel, disk_image=diskimg,
                          ssh_port=args.ssh_port, ssh_pubkey=Path(args.ssh_key), smb_dirs=args.smb_mount_directories,
                          kernel_init_only=args.test_kernel_init_only,
+                         smp_args=["-smp", str(args.qemu_smp)] if args.qemu_smp else [],
                          trap_on_unrepresentable=args.trap_on_unrepresentable, skip_ssh_setup=args.skip_ssh_setup,
                          bios_path=args.bios, write_disk_image_changes=args.write_disk_image_changes,
                          boot_alternate_kernel_dir=args.alternate_kernel_rootfs_path)
