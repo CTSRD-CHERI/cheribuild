@@ -664,8 +664,7 @@ class BuildFontConfig(CrossCompileMesonProject):
     repository = GitRepository(
         "https://gitlab.freedesktop.org/fontconfig/fontconfig",
         temporary_url_override="https://gitlab.freedesktop.org/arichardson/fontconfig",
-        url_override_reason="https://gitlab.freedesktop.org/fontconfig/fontconfig/-/merge_requests/189 and"
-                            "https://gitlab.freedesktop.org/fontconfig/fontconfig/-/merge_requests/190")
+        url_override_reason="Needs pointer provenance fixes (no PR posted yet)")
 
     @property
     def pkgconfig_dirs(self) -> "list[str]":
