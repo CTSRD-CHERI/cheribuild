@@ -356,8 +356,7 @@ class TargetInfo(ABC):
             return config.cheri_sdk_bindir / "clang-cpp"
         return config.clang_cpp_path
 
-    @classmethod
-    def pkgconfig_candidates(cls, prefix: Path) -> "list[str]":
+    def pkgconfig_candidates(self, prefix: Path) -> "list[str]":
         """:return: a list of potential candidates for pkgconfig .pc files inside prefix"""
         return [str(prefix / "lib/pkgconfig"), str(prefix / "share/pkgconfig"), str(prefix / "libdata/pkgconfig")]
 
@@ -469,6 +468,17 @@ class NativeTargetInfo(TargetInfo):
         # We need to add the bootstrap tools pkgconfig dirs to PKG_CONFIG_PATH to find e.g. libxml2, etc.
         # Note: some packages also install to libdata/pkgconfig or share/pkgconfig
         return self.pkgconfig_candidates(self.config.other_tools_dir)
+
+    def pkgconfig_candidates(self, prefix: Path) -> "list[str]":
+        result = super().pkgconfig_candidates(prefix)
+        if OSInfo.is_ubuntu() or OSInfo.is_debian():
+            if self.target.is_x86_64():
+                result.append(str(prefix / "lib/x86_64-linux-gnu/pkgconfig"))
+            else:
+                self.project.warning("Don't know pkgconfig dir for", self.target.cpu_architecture)
+        if OSInfo.is_suse() and self.target.is_x86_64():
+            result.append(str(prefix / "lib64/pkgconfig"))
+        return result
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
