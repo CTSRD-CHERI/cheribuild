@@ -30,7 +30,6 @@ import argparse
 import datetime
 import json
 import typing
-from dataclasses import dataclass
 from pathlib import Path
 
 from run_tests_common import (boot_cheribsd, commandline_to_str, finish_and_write_junit_xml_report,
@@ -58,7 +57,10 @@ def run_meson_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
         t = junitparser.TestCase(name=ti.name)
         starttime = datetime.datetime.utcnow()
         try:
-            qemu.checked_run("cd {cwd} && {cmd}".format(cwd=ti.cwd or "/build", cmd=commandline),
+            env_cmd = ""
+            if ti.env_vars:
+                env_cmd = " env " + commandline_to_str(k + "=" + str(v) for k, v in ti.env_vars.items())
+            qemu.checked_run("cd {cwd} &&{env} {cmd}".format(cwd=ti.cwd or "/build", cmd=commandline, env=env_cmd),
                              timeout=ti.timeout or 10 * 60)
         except boot_cheribsd.CheriBSDCommandFailed as e:
             boot_cheribsd.failure("Failed to run ", ti.name, ": ", str(e), exit=False)
@@ -82,8 +84,7 @@ def add_args(parser: argparse.ArgumentParser):
                         help="Run COMMAND as an additional test setup step before running the tests")
 
 
-@dataclass
-class MesonTestInfo:
+class MesonTestInfo(typing.NamedTuple):
     name: str
     command: typing.List[str]
     cwd: typing.Optional[str]
@@ -106,9 +107,6 @@ def adjust_args(args: argparse.Namespace):
             name = test["name"]
             if protocol != "exitcode":
                 boot_cheribsd.failure("Unknown/unsupported testing protocol '", protocol, "' for test", name, ":", test,
-                                      exit=True)
-            if test.get("env", dict()):
-                boot_cheribsd.failure("Can't handle tests with custom environment variables yet", name, ":", test,
                                       exit=True)
             args.test_info.append(MesonTestInfo(name=name, command=test["cmd"], cwd=test["workdir"],
                                                 env_vars=test["env"], timeout=test["timeout"]))
