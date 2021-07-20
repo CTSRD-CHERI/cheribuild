@@ -53,7 +53,7 @@ class KDECMakeProject(CrossCompileCMakeProject):
         function=lambda config, project: config.source_root / "kde-frameworks" / project.default_directory_basename,
         as_string=lambda cls: "$SOURCE_ROOT/kde-frameworks" + cls.default_directory_basename)
 
-    ctest_needs_full_disk_image = False  # default to running with the full disk image
+    tests_need_full_disk_image = False  # default to running with the full disk image
     dependencies = ["qtbase", "extra-cmake-modules"]
     _has_qt_designer_plugin = False
     _needs_newer_bison = False
@@ -64,7 +64,7 @@ class KDECMakeProject(CrossCompileCMakeProject):
         # correctly, i.e. when built with CMake+Ninja on macOS with a version where
         # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 is not included.
         kde_prefix = self.install_prefix
-        if self.ctest_needs_full_disk_image:
+        if self.tests_need_full_disk_image:
             return ["--test-setup-command", ". /build/prefix.sh && env | sort"]
         return ["--extra-library-path", "/build/bin", "--extra-library-path", "/build/lib",
                 # Add the libraries from other frameworks

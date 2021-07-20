@@ -3002,6 +3002,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 # Shared between meson and CMake
 class _CMakeAndMesonSharedLogic(Project):
     do_not_add_to_targets = True
+    tests_need_full_disk_image = False
     _minimum_cmake_or_meson_version = None  # type: Tuple[int, int, int]
     _configure_tool_name = None  # type: str
     _configure_tool_cheribuild_target = None
@@ -3184,7 +3185,6 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     # Some projects (e.g. LLVM) don't store the CMakeLists.txt in the project root directory.
     root_cmakelists_subdirectory = None  # type: Path
     ctest_script_extra_args = tuple()  # type: typing.Iterable[str]
-    ctest_needs_full_disk_image = False
     # 3.13.4 is the minimum version for LLVM and that also allows us to use "cmake --build -j <N>" unconditionally.
     _minimum_cmake_or_meson_version = (3, 13, 4)
 
@@ -3396,7 +3396,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                 args.extend(self.ctest_script_extra_args)
                 self.target_info.run_cheribsd_test_script("run_ctest_tests.py", *args, mount_builddir=True,
                                                           mount_sysroot=True, mount_sourcedir=True,
-                                                          use_full_disk_image=self.ctest_needs_full_disk_image)
+                                                          use_full_disk_image=self.tests_need_full_disk_image)
         else:
             self.warning("Do not know how to run tests for", self.target)
 
@@ -3511,6 +3511,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     # Meson already sets PKG_CONFIG_* variables internally based on the cross toolchain
     set_pkg_config_path = False
     _configure_tool_name = "Meson"
+    meson_test_script_extra_args = tuple()  # additional arguments to pass to run_meson_tests.py
 
     def set_minimum_meson_version(self, major: int, minor: int, patch: int = 0):
         new_version = (major, minor, patch)
@@ -3633,8 +3634,13 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     def run_tests(self):
         if self.compiling_for_host():
             self.run_cmd(self.configure_command, "test", "--print-errorlogs", cwd=self.build_dir)
+        elif self.target_info.is_cheribsd():
+            self.target_info.run_cheribsd_test_script("run_meson_tests.py", *self.meson_test_script_extra_args,
+                                                      mount_builddir=True, mount_sysroot=True, mount_sourcedir=True,
+                                                      use_full_disk_image=self.tests_need_full_disk_image)
         else:
-            self.info("Don't know how to run tests for", self.target, "when cross-compiling.")
+            self.info("Don't know how to run tests for", self.target, "when cross-compiling for",
+                      self.crosscompile_target)
 
 
 # A target that is just an alias for at least one other targets but does not force building of dependencies

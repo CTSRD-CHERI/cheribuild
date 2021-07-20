@@ -27,7 +27,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import argparse
-import datetime
 from pathlib import Path
 
 from run_tests_common import boot_cheribsd, run_tests_main, get_default_junit_xml_name
