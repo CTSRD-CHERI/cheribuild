@@ -465,7 +465,7 @@ class BuildFreeBSDBase(Project):
             cls.build_tests = cls.add_bool_option("build-tests", help="Build the tests (-DWITH_TESTS/-DWITHOUT_TESTS)",
                                                   show_help=True, default=True)
 
-    def __init__(self, config):
+    def __init__(self, config, *, use_bootstrap_toolchain: bool):
         super().__init__(config)
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.build_dir)}
         # TODO? Avoid lots of nested child directories by using MAKEOBJDIR instead of MAKEOBJDIRPREFIX
@@ -473,7 +473,8 @@ class BuildFreeBSDBase(Project):
 
         if self.crossbuild:
             # Use the script that I added for building on Linux/MacOS:
-            self.make_args.set_command(self.source_dir / "tools/build/make.py")
+            self.make_args.set_command(self.source_dir / "tools/build/make.py",
+                                       early_args=["--bootstrap-toolchain"] if use_bootstrap_toolchain else [])
 
         # The bootstrap tools need libarchive which is not always installed on Linux. macOS ships a libarchive.dylib
         # (without headers) so we use that with the contrib/ headers and don't need an additional package.
@@ -796,7 +797,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return clang_root, None, None
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config)
+        super().__init__(config, use_bootstrap_toolchain=self.use_bootstrapped_toolchain)
         self.install_as_root = os.getuid() == 0
         self.__objdir = None
         self._setup_make_args_called = False
@@ -1155,12 +1156,14 @@ class BuildFreeBSD(BuildFreeBSDBase):
             except FileNotFoundError:
                 self.verbose_print("Cannot query buildenv path if bmake hasn't been bootstrapped")
                 return None
-            bw_flags = args.all_commandline_args + ["BUILD_WITH_STRICT_TMPPATH=0",
-                                                    "-f", self.source_dir / "Makefile.inc1",
-                                                    "-m", self.source_dir / "share/mk",
-                                                    "showconfig",
-                                                    "-D_NO_INCLUDE_COMPILERMK",  # avoid calling ${CC} --version
-                                                    "-V", var]
+            query_args = args.copy()
+            query_args.set_command(bmake_binary)
+            bw_flags = query_args.all_commandline_args + ["BUILD_WITH_STRICT_TMPPATH=0",
+                                                          "-f", self.source_dir / "Makefile.inc1",
+                                                          "-m", self.source_dir / "share/mk",
+                                                          "showconfig",
+                                                          "-D_NO_INCLUDE_COMPILERMK",  # avoid calling ${CC} --version
+                                                          "-V", var]
             if not self.source_dir.exists():
                 assert self.config.pretend, "This should only happen when running in a test environment"
                 return None
@@ -1309,6 +1312,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def add_cross_build_options(self):
         self.make_args.set_env(CC=self.host_CC, CXX=self.host_CXX, CPP=self.host_CPP,
                                STRIPBIN=shutil.which("strip") or shutil.which("llvm-strip") or "strip")
+        if self.use_bootstrapped_toolchain:
+            assert "XCC" not in self.make_args.env_vars
+            # We have to provide the default X* values so that Makefile.inc1 does not disable MK_CLANG_BOOTSTRAP and
+            # doesn't try to cross-compile using the host compilers
+            self.make_args.set_env(XCC="cc", XCXX="c++", XCPP="cpp")
         # won't work on a case-insensitive file system and is also really slow (and missing tools on linux)
         self.make_args.set_with_options(MAN=False)
         # links from /usr/bin/mail to /usr/bin/Mail won't work on case-insensitve fs
@@ -1518,6 +1526,9 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     minimal = False
     hide_options_from_help = True  # hide this from --help for now
+
+    def __init__(self, config):
+        super().__init__(config, use_bootstrap_toolchain=True)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
