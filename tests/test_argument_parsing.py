@@ -613,8 +613,15 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     expected_path = expected_path.replace("$BUILD$", str(config.build_root))
     assert str(project.CC) == str(expected_path)
     if kind == FreeBSDToolchainKind.BOOTSTRAPPED:
-        assert "XCC" not in project.buildworld_args.env_vars
-        assert "XCC=" not in project.kernel_make_args_for_config("GENERIC", None).env_vars
+        kernel_make_args = project.kernel_make_args_for_config("GENERIC", None)
+        # If we override CC, we have to also override XCC
+        for (var, default) in (("CC", "cc"), ("CPP", "cpp"), ("CXX", "c++")):
+            if var in project.buildworld_args.env_vars:
+                assert project.buildworld_args.env_vars.get("X" + var, None) == default
+                assert kernel_make_args.env_vars.get("X" + var, None) == default
+            else:
+                assert "X" + var not in project.buildworld_args.env_vars
+                assert "X" + var not in kernel_make_args
     else:
         assert project.buildworld_args.env_vars.get("XCC", None) == expected_path
         assert project.kernel_make_args_for_config("GENERIC", None).env_vars.get("XCC", None) == expected_path
