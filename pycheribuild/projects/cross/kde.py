@@ -596,7 +596,7 @@ class BuildKFileMetadata(KDECMakeProject):
     # This includes e.g. the thumbnail provider for dolphin
     target = "kfilemetadata"
     # TODO: depend on poppler for PDF medatadata
-    dependencies = ["karchive", "kconfig", "ki18n", "karchive"]
+    dependencies = ["karchive", "kconfig", "ki18n", "karchive", "poppler"]
     repository = GitRepository("https://invent.kde.org/frameworks/kfilemetadata.git")
 
 
