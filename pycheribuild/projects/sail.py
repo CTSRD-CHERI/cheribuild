@@ -328,8 +328,10 @@ class BuildSailRISCV(ProjectUsingOpam):
         # self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     def compile(self, **kwargs):
-        cmd = [self.make_args.command, self.config.make_j_flag, "opam-build"] + self.make_args.all_commandline_args
-        self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
+        for arch in ("RV64", "RV32"):
+            cmd = [self.make_args.command, self.config.make_j_flag, "ARCH=" + arch,
+                   "csim", "osim", "rvfi"] + self.make_args.all_commandline_args
+            self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
@@ -350,8 +352,10 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
         # self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     def compile(self, **kwargs):
-        cmd = [self.make_args.command, self.config.make_j_flag, "opam-build"] + self.make_args.all_commandline_args
-        self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
+        for arch in ("RV64", "RV32"):
+            cmd = [self.make_args.command, self.config.make_j_flag, "ARCH=" + arch,
+                   "csim", "osim", "rvfi"] + self.make_args.all_commandline_args
+            self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
