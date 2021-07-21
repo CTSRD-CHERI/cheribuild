@@ -325,7 +325,7 @@ class BuildSailRISCV(ProjectUsingOpam):
 
     def __init__(self, config):
         super().__init__(config)
-        self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        # self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     def compile(self, **kwargs):
         cmd = [self.make_args.command, self.config.make_j_flag, "opam-build"] + self.make_args.all_commandline_args
