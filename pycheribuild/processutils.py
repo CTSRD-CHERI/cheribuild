@@ -454,6 +454,7 @@ class CompilerInfo(object):
         self._resource_dir = None  # type: typing.Optional[Path]
         self._supported_warning_flags = dict()  # type: dict[str, bool]
         self._supported_sanitizer_flags = dict()  # type: dict[tuple[str, tuple[str]], bool]
+        self._include_dirs = dict()  # type: dict[tuple[str], list[Path]]
         assert compiler in ("unknown compiler", "clang", "apple-clang", "gcc"), "unknown type: " + compiler
 
     def get_resource_dir(self) -> Path:
@@ -475,6 +476,31 @@ class CompilerInfo(object):
                 resource_dir_pat = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"')
                 self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
         return self._resource_dir
+
+    def get_include_dirs(self, basic_flags: "list[str]") -> "list[Path]":
+        include_dirs = self._include_dirs.get(tuple(basic_flags), None)
+        if include_dirs is None:
+            # pretend to compile an existing source file and capture the -resource-dir output
+            output = run_command(self.path, "-E", "-Wp,-v", "-xc", "/dev/null", config=self.config,
+                                 stdout=subprocess.DEVNULL, capture_error=True, print_verbose_only=True,
+                                 run_in_pretend_mode=True).stderr
+            found_start = False
+            include_dirs = []
+            for line in io.BytesIO(output).readlines():
+                if not found_start:
+                    if line.startswith(b"#include <...> search starts here:"):
+                        found_start = True
+                    continue  # keep going until we find the start
+                if line.startswith(b"End of search list."):
+                    break  # end of include list
+                if line.startswith(b" "):
+                    include_dirs.append(Path(line.strip().decode("utf-8")))
+            if not include_dirs:
+                warning_message("Could not determine include dirs for", self.path, basic_flags)
+            if self.config.verbose:
+                print("Include paths for", self.path, basic_flags, "are", include_dirs)
+            self._include_dirs[tuple(basic_flags)] = include_dirs
+        return list(include_dirs)
 
     def _supports_warning_flag(self, flag: str):
         assert flag.startswith("-W")

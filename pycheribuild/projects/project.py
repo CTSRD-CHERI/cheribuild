@@ -516,6 +516,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def host_CPP(self):
         return TargetInfo.host_c_preprocessor(self.config)
 
+    @property
+    def essential_compiler_and_linker_flags(self):
+        # This property exists so that gdb can override the target flags to build the -purecap targets as hybrid.
+        return self.target_info.get_essential_compiler_and_linker_flags()
+
     @classproperty
     def needs_sysroot(self):
         return not self._xtarget.is_native()  # Most projects need a sysroot (but not native)
@@ -1058,7 +1063,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         for (header, instructions) in self.__required_system_headers.items():
             assert isinstance(instructions, InstallInstructions)
             self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
-            if not Path("/usr/include", header).exists() and not Path("/usr/local/include", header).exists():
+            include_dirs = self.get_compiler_info(self.CC).get_include_dirs(self.essential_compiler_and_linker_flags)
+            if not any(Path(d, header).exists() for d in include_dirs):
                 self.dependency_error("Required C header", header, "is missing!",
                                       install_instructions=instructions.fixit_hint(),
                                       cheribuild_target=instructions.cheribuild_target)
@@ -2204,11 +2210,6 @@ class Project(SimpleProject):
             return self.common_warning_flags + self.host_warning_flags
         else:
             return self.common_warning_flags + self.cross_warning_flags
-
-    @property
-    def essential_compiler_and_linker_flags(self):
-        # This property exists so that gdb can override the target flags to build the -purecap targets as hybrid.
-        return self.target_info.get_essential_compiler_and_linker_flags()
 
     @property
     def default_compiler_flags(self):

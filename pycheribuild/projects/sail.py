@@ -273,8 +273,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
 
     def __init__(self, config):
         super().__init__(config)
-        # not always found in /usr/include
-        # self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -325,7 +324,7 @@ class BuildSailRISCV(ProjectUsingOpam):
 
     def __init__(self, config):
         super().__init__(config)
-        # self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     def compile(self, **kwargs):
         for arch in ("RV64", "RV32"):
@@ -349,7 +348,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
 
     def __init__(self, config):
         super().__init__(config)
-        # self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     def compile(self, **kwargs):
         for arch in ("RV64", "RV32"):
