@@ -533,7 +533,7 @@ class BuildQtDeclarative(BuildQtModuleWithQMake):
         super().setup()
         self.configure_args.extend([
             "-no-qml-debug",  # debugger not compatibale with CHERI purecap
-            "-no-quick-designer",  # unnecessary, saves a bit of build time
+            "-quick-designer",  # needed for quickcontrols2
         ])
 
 
