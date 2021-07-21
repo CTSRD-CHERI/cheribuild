@@ -36,6 +36,9 @@ class BuildCurl(CrossCompileAutotoolsProject):
     def setup(self):
         super().setup()
         self.configure_args.append("--with-openssl")
+        # Configure script disables auto-detection when cross-compiling
+        if not self._xtarget.is_native():
+            self.configure_args.append("--with-ca-path=/etc/ssl/certs")
 
     def configure(self, **kwargs):
         self.run_cmd("autoreconf", "-fi", cwd=self.source_dir)
