@@ -362,6 +362,29 @@ class BuildXKkbcomp(X11AutotoolsProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xkbcomp.git")
 
 
+class BuildXProp(X11AutotoolsProject):
+    target = "xprop"
+    dependencies = ["libx11"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xprop.git")
+
+
+class BuildLibXCursor(X11AutotoolsProject):
+    target = "libxcursor"
+    dependencies = ["libx11", "libxfixes", "libxrender"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcursor.git")
+
+
+class BuildXBitMaps(X11AutotoolsProject):
+    target = "xbitmaps"
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/data/bitmaps.git")
+
+
+class BuildXSetRoot(X11AutotoolsProject):
+    target = "xsetroot"
+    dependencies = ["libx11", "libxmu", "libxcursor", "xbitmaps"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xsetroot.git")
+
+
 class BuildXVncServer(X11AutotoolsProject):
     target = "xvnc-server"
     # The actual XVnc source code is part of TigerVNC and not included in the xserver repository.
