@@ -33,6 +33,7 @@ from pathlib import Path
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
 from .freetype import BuildFreeType2
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
+from .wayland import BuildLibInput
 from .x11 import BuildLibXCB
 from ..project import DefaultInstallDir, GitRepository, MakeCommandKind
 from ...colour import AnsiColour, coloured
@@ -211,7 +212,9 @@ class BuildKCodecs(KDECMakeProject):
 
 
 class BuildKCoreAddons(KDECMakeProject):
-    repository = GitRepository("https://invent.kde.org/frameworks/kcoreaddons.git")
+    repository = GitRepository("https://invent.kde.org/frameworks/kcoreaddons.git",
+                               temporary_url_override="https://invent.kde.org/arichardson/kcoreaddons.git",
+                               url_override_reason="A few minor fixes/speedups that haven't been merged yet")
 
     def setup(self):
         super().setup()
@@ -626,6 +629,32 @@ class BuildPlasmaFramework(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/plasma-framework.git",
                                temporary_url_override="https://invent.kde.org/arichardson/plasma-framework.git",
                                url_override_reason="Needs some compilation fixes for -no-opengl QtBase")
+
+
+class BuildKDecoration(KDECMakeProject):
+    target = "kdecoration"
+    repository = GitRepository("https://invent.kde.org/plasma/kdecoration.git")
+    dependencies = ["ki18n"]
+
+
+class BuildKWin(KDECMakeProject):
+    target = "kwin"
+    repository = GitRepository("https://invent.kde.org/plasma/kwin.git",
+                               temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
+                               url_override_reason="Needs lots of ifdefs for -no-opengl QtBase and no-wayland")
+    dependencies = ["kdecoration", "qtx11extras"]
+
+    def setup(self):
+        super().setup()
+        # TODO: build KIdleTime and wayland backend
+        self.add_cmake_options(KWIN_BUILD_IDLETIME=False,
+                               KWIN_BUILD_WAYLAND=False,
+                               CMAKE_DISABLE_FIND_PACKAGE_Libinput=True)
+        if self.target_info.is_freebsd():
+            # To get linux/input.h on FreeBSD
+            if not BuildLibInput.get_source_dir(self).exists():
+                self.fatal("Need to clone libinput first to get linux/input.h compat header.")
+            self.COMMON_FLAGS.append("-isystem" + str(BuildLibInput.get_source_dir(self) / "include"))
 
 
 class BuildDoplhin(KDECMakeProject):
