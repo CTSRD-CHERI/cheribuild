@@ -551,6 +551,24 @@ class BuildQtDeclarative(BuildQtModuleWithQMake):
         ])
 
 
+class BuildQtTools(BuildQtModuleWithQMake):
+    target = "qttools"
+    dependencies = ["qtbase"]
+    repository = GitRepository("https://code.qt.io/qt/qttools.git",
+                               # "https://invent.kde.org/qt/qt/qttools.git",
+                               default_branch="5.15", force_branch=True)
+
+    def setup(self):
+        super().setup()
+        # No need to build all the developer GUI tools, we only want programs that are
+        # useful inside the disk image.
+        self.configure_args.extend([
+            "-no-feature-assistant",
+            # "-no-feature-designer",  #
+            "-no-feature-linguist",
+        ])
+
+
 class BuildQtQuickControls2(BuildQtModuleWithQMake):
     target = "qtquickcontrols2"
     dependencies = ["qtdeclarative"]
