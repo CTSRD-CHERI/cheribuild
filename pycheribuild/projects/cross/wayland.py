@@ -97,7 +97,7 @@ class BuildLibInput(CrossCompileMesonProject):
     @classmethod
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config) + ["mtdev", "libevdev"]
-        if not cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
+        if cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
             result.extend(["libudev-devd", "epoll-shim"])
         return result
 
