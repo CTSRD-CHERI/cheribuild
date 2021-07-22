@@ -227,6 +227,17 @@ class BuildKCoreAddons(KDECMakeProject):
         # See https://invent.kde.org/frameworks/extra-cmake-modules/-/merge_requests/151
         shared_mime_install_dir = BuildSharedMimeInfo.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
         self.run_cmd(shared_mime_install_dir / "bin/update-mime-database", "-V", self.install_dir / "share/mime")
+        if not self.compiling_for_host():
+            # TODO: should probably just install Qt and KDE files in the same directory
+            self.write_file(self.rootfs_path / "usr/local/bin/kde-shell-x11", overwrite=True, mode=0o755,
+                            contents="""#!/bin/sh
+export DISPLAY=:0
+export QT_QPA_PLATFORM=xcb
+. {install_prefix}/prefix.sh
+env | sort
+echo "To get debug output from application you can run `export QT_LOGGING_RULES=\"*.debug=true\"`"
+exec sh
+""".format(install_prefix=self.install_prefix))
 
 
 class BuildKConfig(KDECMakeProject):
