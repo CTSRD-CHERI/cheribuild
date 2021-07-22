@@ -1931,6 +1931,7 @@ class Project(SimpleProject):
     compile_db_requires_bear = True
     do_not_add_to_targets = True
     set_pkg_config_path = True  # set the PKG_CONFIG_* environment variables when building
+    can_run_parallel_install = False  # Most projects don't work well with parallel installation
     default_source_dir = ComputedDefaultValue(
         function=_default_source_dir, as_string=lambda cls: "$SOURCE_ROOT/" + cls.default_directory_basename)
     needs_native_build_for_crosscompile = False  # Some projects (e.g. python) need a native build for build tools, etc.
@@ -2699,8 +2700,10 @@ class Project(SimpleProject):
         return self._install_dir
 
     def run_make_install(self, *, options: MakeOptions = None, _stdout_filter=_default_stdout_filter, cwd=None,
-                         parallel=False, target: "typing.Union[str, typing.List[str]]" = "install",
+                         parallel: bool=None, target: "typing.Union[str, typing.List[str]]" = "install",
                          make_install_env=None, **kwargs):
+        if parallel is None:
+            parallel = self.can_run_parallel_install
         if options is None:
             options = self.make_args.copy()
         else:
