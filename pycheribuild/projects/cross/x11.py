@@ -395,13 +395,18 @@ class BuildXVncServer(X11AutotoolsProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/xserver.git", default_branch="server-1.20-branch",
                                force_branch=True)
 
-    """
-    cheribuild.py run-<arch> --run-<arch>/extra-tcp-forwarding=5900=5900
-    <qemu>: Xvnc -geometry 1024x768 -SecurityTypes=None
-    <qemu>: DISPLAY=:0 xeyes
+    def install(self, **kwargs):
+        """
+        cheribuild.py run-<arch> --run-<arch>/extra-tcp-forwarding=5900=5900
+        <qemu>: Xvnc -geometry 1024x768 -SecurityTypes=None
+        <qemu>: DISPLAY=:0 xeyes
 
-    <host> tigervnc localhost:5900
-    """
+        <host> tigervnc localhost:5900
+        """
+        # Install a script to start the Xvnc so I don't have to remember the arguments
+        # TODO: should we install a service that we can start with `service xvnc start`?
+        self.write_file(self.install_dir / "bin/startxvnc", overwrite=True, mode=0o755,
+                        contents="#!/bin/sh\nXvnc -geometry 1024x768 -SecurityTypes=None\n")
 
     def update(self):
         super().update()
