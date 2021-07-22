@@ -2700,7 +2700,7 @@ class Project(SimpleProject):
         return self._install_dir
 
     def run_make_install(self, *, options: MakeOptions = None, _stdout_filter=_default_stdout_filter, cwd=None,
-                         parallel: bool=None, target: "typing.Union[str, typing.List[str]]" = "install",
+                         parallel: bool = None, target: "typing.Union[str, typing.List[str]]" = "install",
                          make_install_env=None, **kwargs):
         if parallel is None:
             parallel = self.can_run_parallel_install
