@@ -55,15 +55,20 @@ class InstallDejaVuFonts(SimpleProject):
         self.download_file(self.config.build_root / filename,
                            url=base_url + "/" + subdir + "/" + filename,
                            sha256="fa9ca4d13871dd122f61258a80d01751d603b4d3ee14095d65453b4e846e17d7")
-        # The Qt platformsupport/fontdatabases/freetype/qfreetypefontdatabase.cpp code expects all .ttf files to be
-        # directly below QT_QPA_FONTDIR (by default <Qt install dir>/lib/fonts), so we need to remove all directories
-        # from the archive.
-        self.makedirs(self.target_info.sysroot_install_prefix_absolute / "lib/fonts")
-        # self.clean_directory(self.target_info.sysroot_install_prefix_absolute / "lib/fonts")
+        # Install the fonts to /usr/local/share/fonts, so that fontconfig picks it up automatically.
+        fonts_dir = self.target_info.sysroot_dir / "usr/local/share/fonts"
+        self.makedirs(fonts_dir)
+        # self.clean_directory(fonts_dir)
         self.run_cmd("tar", "xvf", self.config.build_root / filename, "--strip-components=2",
-                     "-C", self.target_info.sysroot_install_prefix_absolute / "lib/fonts",
-                     "dejavu-fonts-ttf-{}.{}/ttf".format(*version))
-        self.run_cmd("find", self.target_info.sysroot_install_prefix_absolute / "lib/fonts")
+                     "-C", fonts_dir, "dejavu-fonts-ttf-{}.{}/ttf".format(*version))
+        self.run_cmd("find", fonts_dir)
+        # When not using fontconfig, the Qt platformsupport/fontdatabases/freetype/qfreetypefontdatabase.cpp code
+        # expects all .ttf files to be directly below QT_QPA_FONTDIR (by default <Qt install dir>/lib/fonts), so we
+        # need to add a symlink here (and ensure that the fonts are directly inside that dir).
+        qt_fonts_dir = BuildQtBase.get_install_dir(self) / "lib/fonts"
+        # remove old directories to replace them with a symlink
+        self.clean_directory(qt_fonts_dir, ensure_dir_exists=False)
+        self.create_symlink(fonts_dir, qt_fonts_dir, print_verbose_only=False)
 
 
 class BuildSharedMimeInfo(CrossCompileMesonProject):
