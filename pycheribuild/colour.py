@@ -45,8 +45,8 @@ def coloured(colour: AnsiColour, *args, sep=" ") -> str:
     start_colour = "\x1b[1;" + str(colour.value) + "m"
     end_colour = "\x1b[0m"  # reset
     if len(args) == 1:
-        if isinstance(args[0], str):
-            return start_colour + args[0] + end_colour
-        return start_colour + sep.join(map(str, args[0])) + end_colour
+        if isinstance(args[0], list) or isinstance(args[0], tuple):
+            return start_colour + sep.join(map(str, args[0])) + end_colour
+        return start_colour + str(args[0]) + end_colour
     else:
         return start_colour + sep.join(map(str, args)) + end_colour
