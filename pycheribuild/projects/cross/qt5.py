@@ -436,8 +436,20 @@ class BuildQtBase(BuildQtWithConfigureScript):
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
         as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.default_directory_basename)
 
+    @property
+    def qt_host_tools_path(self):
+        if self.compiling_for_host():
+            return self.install_dir
+        else:
+            return self.install_dir / "qt-host-tools"
+
     def setup(self):
         super().setup()
+        self.configure_args.extend([
+            "-hostprefix", str(self.qt_host_tools_path),
+            # "-external-hostbindir",
+            # str(self.get_instance(self, cross_target=CompilationTargets.NATIVE).install_dir / "bin"),
+        ])
 
     def compile(self, **kwargs):
         self.run_make("sub-src-all")
@@ -491,9 +503,9 @@ class BuildQtModuleWithQMake(CrossCompileProject):
         as_string=lambda cls: "$SOURCE_ROOT/qt5/" + cls.default_directory_basename)
 
     def configure(self, **kwargs):
-        # Run QMake to generate a makefile (the installed qmake is actually a host binary!)
-        self.run_cmd(BuildQtBase.get_install_dir(self) / "bin/qmake", self.source_dir, "--", *self.configure_args,
-                     cwd=self.build_dir)
+        # Run the QtBase QMake to generate a makefile
+        self.run_cmd(BuildQtBase.get_instance(self).qt_host_tools_path / "bin/qmake", self.source_dir,
+                     "--", *self.configure_args, cwd=self.build_dir)
 
     def compile(self, **kwargs):
         self.run_make("sub-src")
