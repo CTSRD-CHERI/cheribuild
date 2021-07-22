@@ -742,10 +742,14 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 stripped = line.strip()
                 if not stripped.startswith("#") and not stripped.startswith("//"):
                     json_lines.append(line)
-            result = json.loads("".join(json_lines),
-                                object_pairs_hook=lambda o: dict_raise_on_duplicates_and_store_src(o, config_path))
-            self.debug_msg("Parsed", config_path, "as", coloured(AnsiColour.cyan,
-                                                                 json.dumps(result, cls=MyJsonEncoder)))
+            if not json_lines:
+                result = dict()
+                status_update("JSON config file", config_path, "was empty.")
+            else:
+                result = json.loads("".join(json_lines),
+                                    object_pairs_hook=lambda o: dict_raise_on_duplicates_and_store_src(o, config_path))
+            self.debug_msg("Parsed", config_path, "as",
+                           coloured(AnsiColour.cyan, json.dumps(result, cls=MyJsonEncoder)))
             return result
 
     # Based on https://stackoverflow.com/a/7205107/894271

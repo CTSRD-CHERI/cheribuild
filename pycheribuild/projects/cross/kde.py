@@ -535,47 +535,6 @@ class BuildKIO(KDECMakeProject):
 # frameworks/kwallet: frameworks/kwindowsystem
 # frameworks/kwallet: frameworks/kwidgetsaddons
 # frameworks/kwallet: third-party/gpgme
-# frameworks/kactivities-stats: frameworks/kactivities
-# frameworks/plasma-framework: frameworks/kactivities
-# frameworks/plasma-framework: frameworks/karchive
-# frameworks/plasma-framework: frameworks/kauth
-# frameworks/plasma-framework: frameworks/kbookmarks
-# frameworks/plasma-framework: frameworks/kcodecs
-# frameworks/plasma-framework: frameworks/kcompletion
-# frameworks/plasma-framework: frameworks/kconfig
-# frameworks/plasma-framework: frameworks/kconfigwidgets
-# frameworks/plasma-framework: frameworks/kcoreaddons
-# frameworks/plasma-framework: frameworks/kcrash
-# frameworks/plasma-framework: frameworks/kdbusaddons
-# frameworks/plasma-framework: frameworks/kdeclarative
-# frameworks/plasma-framework: frameworks/kdnssd
-# frameworks/plasma-framework: frameworks/kglobalaccel
-# frameworks/plasma-framework: frameworks/kguiaddons
-# frameworks/plasma-framework: frameworks/ki18n
-# frameworks/plasma-framework: frameworks/kiconthemes
-# frameworks/plasma-framework: frameworks/kidletime
-# frameworks/plasma-framework: frameworks/kitemmodels
-# frameworks/plasma-framework: frameworks/kitemviews
-# frameworks/plasma-framework: frameworks/kjobwidgets
-# frameworks/plasma-framework: frameworks/kio
-# frameworks/plasma-framework: frameworks/kross
-# frameworks/plasma-framework: frameworks/knotifications
-# frameworks/plasma-framework: frameworks/kparts
-# frameworks/plasma-framework: frameworks/kpackage
-# frameworks/plasma-framework: frameworks/kservice
-# frameworks/plasma-framework: frameworks/solid
-# frameworks/plasma-framework: frameworks/sonnet
-# frameworks/plasma-framework: frameworks/ktextwidgets
-# frameworks/plasma-framework: frameworks/threadweaver
-# frameworks/plasma-framework: frameworks/kunitconversion
-# frameworks/plasma-framework: frameworks/kwallet
-# frameworks/plasma-framework: frameworks/kwayland
-# frameworks/plasma-framework: frameworks/kwidgetsaddons
-# frameworks/plasma-framework: frameworks/kwindowsystem
-# frameworks/plasma-framework: frameworks/kxmlgui
-# frameworks/plasma-framework: frameworks/ktexteditor
-# frameworks/plasma-framework: frameworks/oxygen-icons5
-# frameworks/plasma-framework: frameworks/kirigami
 # frameworks/purpose: frameworks/kcoreaddons
 # frameworks/purpose: frameworks/kconfig
 # frameworks/purpose: frameworks/ki18n
@@ -638,6 +597,24 @@ class BuildKActivities(KDECMakeProject):
     def setup(self):
         super().setup()
         self.add_cmake_options(KACTIVITIES_LIBRARY_ONLY=True)  # avoid dependency on boost
+
+
+class BuildKirigami(KDECMakeProject):
+    target = "kirigami"
+    dependencies = ["qtquickcontrols2", "extra-cmake-modules"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kirigami.git",
+                               temporary_url_override="https://invent.kde.org/arichardson/kirigami.git",
+                               url_override_reason="Needs some compilation fixes for -no-opengl QtBase")
+    # TODO: DISABLE_DBUS=True?
+
+
+class BuildPlasmaFramework(KDECMakeProject):
+    target = "plasma-framework"
+    dependencies = ["kio", "kconfigwidgets", "kactivities", "kdbusaddons", "kglobalaccel", "kpackage", "kdeclarative",
+                    "qtquickcontrols2", "kxmlgui", "threadweaver", "kirigami"]
+    repository = GitRepository("https://invent.kde.org/frameworks/plasma-framework.git",
+                               temporary_url_override="https://invent.kde.org/arichardson/plasma-framework.git",
+                               url_override_reason="Needs some compilation fixes for -no-opengl QtBase")
 
 
 class BuildDoplhin(KDECMakeProject):
@@ -757,9 +734,14 @@ class BuildThreadWeaver(KDECMakeProject):
 
 # Doesn't build on FreeBSD properly:
 # /Users/alex/cheri/kde-frameworks/kpty/src/kpty.cpp:72:10: fatal error: 'utmp.h' file not found
-# class BuildKPty(KDECMakeProject):
-#     target = "kpty"
-#     repository = GitRepository("https://invent.kde.org/frameworks/kpty")
+class BuildKPty(KDECMakeProject):
+    target = "kpty"
+    repository = GitRepository("https://invent.kde.org/frameworks/kpty")
+
+    def setup(self):
+        super().setup()
+        if not self.compiling_for_host():
+            self.add_cmake_options(UTEMPTER_EXECUTABLE="/usr/libexec/ulog-helper")
 
 
 class BuildOkular(KDECMakeProject):
