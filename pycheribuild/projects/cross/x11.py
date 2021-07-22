@@ -424,6 +424,7 @@ class BuildXVncServer(X11AutotoolsProject):
             "--without-dtrace", "--enable-static", "--disable-dri", "--disable-unit-tests",
             "--disable-xinerama", "--disable-xvfb", "--disable-xnest", "--disable-xorg",
             "--disable-dmx", "--disable-xwin", "--disable-xephyr", "--disable-kdrive",
+            "--disable-libdrm",
             "--disable-config-dbus", "--disable-config-hal",
             "--disable-dri2", "--enable-install-libxf86config",
             "--disable-glx",  # "--enable-glx",
