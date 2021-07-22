@@ -29,6 +29,7 @@ from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMake
 from ..project import DefaultInstallDir, GitRepository
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import CompilationTargets
+from ...config.target_info import Linkage
 
 
 class BuildEPollShim(CrossCompileCMakeProject):
@@ -50,6 +51,64 @@ class BuildEPollShim(CrossCompileCMakeProject):
             self.run_make("test")
         else:
             self.info("Don't know how to run tests for", self.target, "when cross-compiling.")
+
+
+class BuildLibUdevDevd(CrossCompileMesonProject):
+    target = "libudev-devd"
+    repository = GitRepository("https://github.com/FreeBSDDesktop/libudev-devd")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
+
+
+class BuildMtdev(CrossCompileAutotoolsProject):
+    target = "mtdev"
+    needs_full_history = True  # can't use --depth with http:// git repo
+    repository = GitRepository("http://bitmath.org/git/mtdev.git")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+
+    def linkage(self):
+        return Linkage.STATIC
+
+    def setup(self):
+        super().setup()
+        self.COMMON_FLAGS.append("-isystem" + str(BuildLibInput.get_source_dir(self) / "include"))
+        self.COMMON_FLAGS.append("-fPIC")  # need a pic archive since it's linked into a .so
+        self.cross_warning_flags.append("-Wno-error=format")
+
+    def configure(self, **kwargs):
+        self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
+        super().configure(**kwargs)
+
+
+class BuildLibEvdev(CrossCompileMesonProject):
+    target = "libevdev"
+    repository = GitRepository("https://gitlab.freedesktop.org/libevdev/libevdev.git")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+
+    def setup(self):
+        super().setup()
+        self.add_meson_options(tests="disabled")  # needs "check" library
+
+
+class BuildLibInput(CrossCompileMesonProject):
+    target = "libinput"
+    repository = GitRepository("https://gitlab.freedesktop.org/libinput/libinput.git")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        result = super().dependencies(config) + ["mtdev", "libevdev"]
+        if not cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
+            result.extend(["libudev-devd", "epoll-shim"])
+        return result
+
+    def setup(self):
+        super().setup()
+        self.add_meson_options(libwacom=False, documentation=False)  # Avoid dependency on libwacom and sphinx
+        self.add_meson_options(**{"debug-gui": False})  # Avoid dependency on gtk3
+        self.add_meson_options(tests=False)  # Avoid dependency on "check""
+        # Does not prepend sysroot to prefix:
+        if self.target_info.is_freebsd():
+            self.add_meson_options(**{"epoll-dir": BuildEPollShim.get_install_dir(self)})
 
 
 class BuildLibFFI(CrossCompileAutotoolsProject):
