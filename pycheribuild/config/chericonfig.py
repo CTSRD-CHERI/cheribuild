@@ -32,6 +32,7 @@ import getpass
 import grp
 import json
 import os
+import re
 import shutil
 import typing
 from collections import OrderedDict
@@ -98,6 +99,11 @@ def _default_arm_none_eabi_prefix(c: "CheriConfig", _):
             return str(Path(in_path).parent / "arm-none-eabi-")
         # Otherwise suggest the non-existent local installation
         return str(default_path / "bin/arm-none-eabi-")
+
+
+def _skip_dependency_filter_arg(values: "list[str]") -> "list[re.Pattern]":
+    result = [re.compile(item) for item in values]
+    return result
 
 
 class CheriConfig(ConfigBase):
@@ -242,6 +248,11 @@ class CheriConfig(ConfigBase):
             help="When building with --include-dependencies ignore the SDK dependencies. Saves a lot of time "
                  "when building libc++, etc. with dependencies but the sdk is already up-to-date. "
                  "This is like --no-include-toolchain-depedencies but also skips the target that builds the sysroot.")
+        self.skip_dependency_filters = loader.add_option(
+            "skip-dependency-filter", group=loader.dependencies_group, action="append", default=[],
+            type=_skip_dependency_filter_arg, metavar="REGEX",
+            help="A regular expression to match against to target names that should be skipped when using"
+                 "--include-dependency. Can be passed multiple times to add more patters.")  # type: list[re.Pattern]
         self.trap_on_unrepresentable = loader.add_bool_option(
             "trap-on-unrepresentable", default=False, group=loader.run_group,
             help="Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for "
@@ -444,6 +455,11 @@ class CheriConfig(ConfigBase):
         if "CLICOLOR" in os.environ:
             del os.environ["CLICOLOR"]
 
+        # Check that the skip_dependency_filters arguments are all valid regular expressions (do it now since otherwise
+        # the validation is delayed until the first time the object is used.
+        for pattern in self.skip_dependency_filters:
+            assert(isinstance(pattern, re.Pattern))
+
     @cached_property
     def _other_tools_path_prefix(self) -> str:
         return str(self.other_tools_dir / "bin") + ":"
@@ -502,6 +518,15 @@ class CheriConfig(ConfigBase):
         assert self.source_root.is_absolute(), self.source_root
         assert self.build_root.is_absolute(), self.build_root
         return True
+
+    def should_skip_dependency(self, target_name: str, requested_by: str):
+        filters = self.skip_dependency_filters
+        for regex in filters:
+            if regex.fullmatch(target_name):
+                if self.debug_output:
+                    print("Not adding", target_name, "dependency for", requested_by, "due to filter", regex)
+                return True
+        return False
 
     # FIXME: not sure why this is needed
     def __getattribute__(self, item):
