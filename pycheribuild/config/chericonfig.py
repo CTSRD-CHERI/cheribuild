@@ -457,8 +457,7 @@ class CheriConfig(ConfigBase):
 
         # Check that the skip_dependency_filters arguments are all valid regular expressions (do it now since otherwise
         # the validation is delayed until the first time the object is used.
-        for pattern in self.skip_dependency_filters:
-            assert(isinstance(pattern, re.Pattern))
+        assert isinstance(self.skip_dependency_filters, list)
 
     @cached_property
     def _other_tools_path_prefix(self) -> str:
