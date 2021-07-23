@@ -47,7 +47,7 @@ from ...utils import classproperty
 
 class BuildFettConfig(FettProjectMixin, CrossCompileProject):
     target = "fett-config"
-    repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Target.git", default_branch="cheri")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/BESSPIN-Tool-Suite.git", default_branch="cheri")
     skip_git_submodules = True
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     dependencies = ["fett-nginx", "fett-openssh", "fett-sqlite", "fett-voting"]
@@ -73,12 +73,12 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
         src = self.source_dir
 
         # general config
-        mtree.add_file(src / "build/freebsd/malloc.conf", "etc/malloc.conf")
-        mtree.add_file(src / "build/freebsd/motd.template", "etc/motd.template")
-        mtree.add_file(src / "build/freebsd/exports", "etc/exports")
+        mtree.add_file(src / "besspin/fett/freebsd/assets/malloc.conf", "etc/malloc.conf")
+        mtree.add_file(src / "besspin/fett/freebsd/assets/motd.template", "etc/motd.template")
+        mtree.add_file(src / "besspin/fett/freebsd/assets/exports", "etc/exports")
 
         # nginx bits
-        nginx_src = src / "build/webserver"
+        nginx_src = src / "besspin/fett/unix/assets/webserver"
         nginx_prefix = BuildFettNginx.get_instance(self)._install_prefix.relative_to('/')
         mtree.add_file(nginx_src / "common/conf/nginx.conf",
                        nginx_prefix / "conf/nginx.conf")
@@ -91,7 +91,7 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
                        nginx_prefix / "etc/ssl/private/fett-webserver.key", mode="0600")
         mtree.add_file(nginx_src / "common/certs/fett-webserver.crt",
                        nginx_prefix / "etc/ssl/certs/fett-webserver.crt")
-        mtree.add_file(src / "build/webserver/FreeBSD/nginx.sh",
+        mtree.add_file(nginx_src / "FreeBSD/nginx.sh",
                        "etc/rc.d/fett_nginx", mode="0555")
         mtree.add_dir(nginx_prefix / "post", uname="www", gname="www")
         html_files = [
@@ -103,7 +103,7 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
             "test.txt",
         ]
         for file in html_files:
-            mtree.add_file(src / "build/webserver/common/html" / file,
+            mtree.add_file(nginx_src / "common/html" / file,
                            nginx_prefix / "html" / file)
 
         # sshd bits
@@ -111,13 +111,13 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
         keyfiles = ["ssh_host_dsa_key", "ssh_host_ecdsa_key", "ssh_host_ed25519_key", "ssh_host_rsa_key"]
         for keyfile in keyfiles:
             mtree.add_symlink(path_in_image=ssh_prefix / "etc" / keyfile, symlink_dest=Path("/etc/ssh", keyfile))
-        mtree.add_file(src / "build/ssh/FreeBSD/fett_sshd", "etc/rc.d/fett_sshd", mode="0555")
+        mtree.add_file(src / "besspin/fett/unix/assets/ssh/fett_sshd", "etc/rc.d/fett_sshd", mode="0555")
 
         # sqlite bits
         # XXX-TODO: install a smoketest?
 
         # voting app
-        voting_src = src / "build/voting"
+        voting_src = src / "besspin/fett/unix/assets/voting"
         voting_prefix = Path("fett/var/www")
         mtree.add_file(voting_src / "common/conf/sites/voting-mime.types",
                        nginx_prefix / "conf/sites/voting-mime.types")
@@ -128,7 +128,7 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
         mtree.add_dir(voting_prefix / "bvrs/bvrs")
         mtree.add_file(voting_src / "common/static/index.html",
                        voting_prefix / "bvrs/index.html")
-        mtree.add_file(src / "build/webserver/common/html/favicon.ico",
+        mtree.add_file(nginx_src / "common/html/favicon.ico",
                        voting_prefix / "bvrs/favicon.ico")
         html_files = [
             "election_official_home.html",
