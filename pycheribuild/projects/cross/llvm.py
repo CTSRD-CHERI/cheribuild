@@ -182,7 +182,7 @@ class BuildLLVMBase(CMakeProject):
             # save some build time by skipping the static analyzer
             self.add_cmake_options(CLANG_ENABLE_STATIC_ANALYZER=False,
                                    CLANG_ENABLE_ARCMT=False,  # also need to disable ARCMT to disable static analyzer
-                                   CLANG_ANALYZER_ENABLE_Z3_SOLVER=False,  # and this also needs to be set
+                                   LLVM_ENABLE_Z3_SOLVER=False,  # and this also needs to be set
                                    )
         if self.skip_misc_llvm_tools:
             self.add_cmake_options(LLVM_TOOL_LLVM_MCA_BUILD=False,
