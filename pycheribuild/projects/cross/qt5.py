@@ -45,7 +45,7 @@ from ...utils import OSInfo
 
 class InstallDejaVuFonts(SimpleProject):
     target = "dejavu-fonts"
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS
 
     def process(self):
         version = (2, 37)

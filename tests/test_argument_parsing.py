@@ -227,7 +227,7 @@ def test_cross_compile_project_inherits():
     config = _parse_arguments(["--skip-configure"])
     qtbase_class = target_manager.get_target_raw("qtbase").project_class
     qtbase_native = _get_target_instance("qtbase-native", config, BuildQtBase)
-    qtbase_mips = _get_target_instance("qtbase-mips64-hybrid", config, BuildQtBase)
+    qtbase_mips = _get_target_instance("qtbase-mips64", config, BuildQtBase)
 
     # Check that project name is the same:
     assert qtbase_mips.default_directory_basename == qtbase_native.default_directory_basename
@@ -248,7 +248,7 @@ def test_cross_compile_project_inherits():
     assert qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
 
     # But target-specific ones should override
-    _parse_arguments(["--qtbase/build-tests", "--qtbase-mips64-hybrid/no-build-tests"])
+    _parse_arguments(["--qtbase/build-tests", "--qtbase-mips64/no-build-tests"])
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
 
@@ -262,16 +262,16 @@ def test_cross_compile_project_inherits():
     assert qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
 
     # But target-specific ones should override
-    _parse_config_file_and_args(b'{"qtbase/build-tests": true, "qtbase-mips-hybrid/build-tests": false }')
+    _parse_config_file_and_args(b'{"qtbase/build-tests": true, "qtbase-mips64/build-tests": false }')
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
 
     # And that cmdline still overrides JSON:
-    _parse_config_file_and_args(b'{"qtbase/build-tests": true }', "--qtbase-mips64-hybrid/no-build-tests")
+    _parse_config_file_and_args(b'{"qtbase/build-tests": true }', "--qtbase-mips64/no-build-tests")
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
     # But if a per-target option is set in the json that still overrides the default set on the cmdline
-    _parse_config_file_and_args(b'{"qtbase-mips-hybrid/build-tests": false }', "--qtbase/build-tests")
+    _parse_config_file_and_args(b'{"qtbase-mips64/build-tests": false }', "--qtbase/build-tests")
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a JSON false override for build-tests"
 
@@ -564,14 +564,14 @@ def test_libcxxrt_dependency_path():
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
     check_libunwind_path(config.output_root / "rootfs-mips64-purecap/opt/mips64-purecap/c++/lib",
                          "libcxxrt-mips64-purecap")
-    check_libunwind_path(config.output_root / "rootfs-mips64-hybrid/opt/mips64-hybrid/c++/lib",
-                         "libcxxrt-mips64-hybrid")
+    check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib",
+                         "libcxxrt-mips64")
     # Check the defaults:
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
     config = _parse_arguments(["--skip-configure"])
-    check_libunwind_path(config.output_root / "rootfs-mips64-hybrid/opt/mips64-hybrid/c++/lib",
-                         "libcxxrt-mips64-hybrid")
+    check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib",
+                         "libcxxrt-mips64")
     check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib", "libcxxrt-mips64")
 
 
@@ -790,7 +790,7 @@ def test_freebsd_toolchains_cheribsd_purecap():
                  ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
                  "cheribsd-mips64-purecap-plt-aggressive-hardfloat-build"),
     # plt should be encoded
-    pytest.param("sqlite-mips64-hybrid", [], "sqlite-mips64-hybrid-build"),
+    pytest.param("sqlite-mips64-purecap", [], "sqlite-mips64-purecap-build"),
     pytest.param("sqlite-native", [], "sqlite-native-build"),
 ])
 def test_default_build_dir(target: str, args: list, expected: str):

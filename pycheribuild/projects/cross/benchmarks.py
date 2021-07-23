@@ -42,7 +42,12 @@ from ...config.target_info import CPUArchitecture
 from ...utils import is_jenkins_build
 
 
-class BuildMibench(CrossCompileProject):
+class BenchmarkMixin:
+    # We also build benchmarks for hybrid to see whether those compilation flags change the results
+    supported_architecture = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
+
+
+class BuildMibench(BenchmarkMixin, CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/mibench")
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     target = "mibench"
@@ -157,7 +162,7 @@ class BuildMibench(CrossCompileProject):
                                                                        self.benchmark_version])
 
 
-class BuildMiBenchNew(CrossCompileCMakeProject):
+class BuildMiBenchNew(BenchmarkMixin, CrossCompileCMakeProject):
     repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
     default_build_type = BuildType.RELEASE
     target = "mibench-new"
@@ -187,7 +192,7 @@ class BuildMiBenchNew(CrossCompileCMakeProject):
                 self.install_file(new_file, self.install_dir / relpath / filename, print_verbose_only=True)
 
 
-class BuildOlden(CrossCompileProject):
+class BuildOlden(BenchmarkMixin, CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/olden")
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     target = "olden"
@@ -282,7 +287,7 @@ class BuildOlden(CrossCompileProject):
                                                                        self.test_arch_suffix])
 
 
-class BuildSpec2006(CrossCompileProject):
+class BuildSpec2006(BenchmarkMixin, CrossCompileProject):
     target = "spec2006"
     # No repository to clone (just hack around this):
     repository = ExternallyManagedSourceRepository()
@@ -546,7 +551,7 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
         super().process()
 
 
-class BuildSpec2006New(CrossCompileCMakeProject):
+class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
     repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
     default_build_type = BuildType.RELWITHDEBINFO
     target = "spec2006-new"
@@ -630,7 +635,7 @@ class BuildSpec2006New(CrossCompileCMakeProject):
                 self.install_file(new_file, self.install_dir / relpath / filename, print_verbose_only=True)
 
 
-class BuildLMBench(CrossCompileProject):
+class BuildLMBench(BenchmarkMixin, CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-lmbench", default_branch="cheri-lmbench")
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     target = "lmbench"
@@ -712,7 +717,7 @@ class BuildLMBench(CrossCompileProject):
                                                   "--test-timeout", str(120 * 60), mount_builddir=True)
 
 
-class BuildUnixBench(CrossCompileProject):
+class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-unixbench", default_branch="cheri-unixbench")
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     target = "unixbench"
@@ -784,7 +789,7 @@ class BuildUnixBench(CrossCompileProject):
         self._create_benchmark_dir(self.bundle_dir)
 
 
-class NetPerfBench(CrossCompileAutotoolsProject):
+class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-netperf", default_branch="cheri-netperf")
     target = "netperf"
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY

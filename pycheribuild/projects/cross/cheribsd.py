@@ -1628,7 +1628,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
         cls.default_kernel_abi = cls.add_config_option(
             "default-kernel-abi", show_help=True, _allow_unknown_targets=True,
-            only_add_for_targets=CompilationTargets.ALL_CHERIBSD_CHERI_TARGETS,
+            only_add_for_targets=CompilationTargets.ALL_CHERIBSD_CHERI_TARGETS_WITH_HYBRID,
             kind=KernelABI, default=KernelABI.HYBRID,
             enum_choices=[KernelABI.HYBRID, KernelABI.PURECAP],
             help="Select default kernel to build")
