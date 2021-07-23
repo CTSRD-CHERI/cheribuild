@@ -69,7 +69,8 @@ class BuildCrossCompiledCMake(CMakeProject):
     default_directory_basename = "cmake"
     default_build_type = BuildType.RELEASE  # Don't include debug info by default
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS
+    # Also build cmake hybrid so that -hybrid projects can use it with --test
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
 
     @property
     def essential_compiler_and_linker_flags(self):
