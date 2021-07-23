@@ -135,6 +135,7 @@ class BuildFettNginx(FettProjectMixin, BuildNginx):
         self.configure_environment["NGX_OPENSSL_fett_path"] = str(
             BuildFettOpenSSL.get_instance(self).destdir) + openssl_dir
         self.configure_environment["NGX_OPENSSL_fett_rpath"] = openssl_dir + "/lib"
+        self.configure_args.extend(["--without-http_geo_module"])
         super().configure()
 
     def install(self):
