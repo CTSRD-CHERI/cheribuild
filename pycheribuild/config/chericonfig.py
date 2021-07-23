@@ -225,6 +225,13 @@ class CheriConfig(ConfigBase):
                                                       "everywhere-unsafe"),
                                                   help="Whether to add additional CSetBounds to subobject "
                                                        "references/&-operator")
+        self.use_cheri_ubsan = loader.add_bool_option(
+            "use-cheri-ubsan", group=loader.cross_compile_options_group,
+            help="Add compiler flags to detect certain undefined CHERI behaviour at runtime")
+        self.use_cheri_ubsan_runtime = loader.add_bool_option(
+            "use-cheri-ubsan-runtime", group=loader.cross_compile_options_group, default=False,
+            help="Use the UBSan runtime to provide more detailed information on undefined CHERI behaviour."
+                 "If false (the default) the compiler will generate a trap instruction instead.")
         self.subobject_debug = loader.add_bool_option("subobject-debug", group=loader.cross_compile_options_group,
                                                       default=True, help_hidden=False,
                                                       help="Clear software permission bit 2 when subobject bounds "
