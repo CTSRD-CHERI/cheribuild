@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 
 # Make sure all projects are loaded so that target_manager gets populated
-from pycheribuild.config.compilation_targets import CheriBSDFettTargetInfo
 from pycheribuild.projects import *  # noqa: F401, F403
 from pycheribuild.projects.cmake import BuildCrossCompiledCMake
 from pycheribuild.projects.cross import *  # noqa: F401, F403
@@ -341,10 +340,6 @@ def test_hybrid_targets():
         # We allow hybrid for baremetal targets:
         xtarget = cls.get_crosscompile_target(config)
         if xtarget.target_info_cls.is_baremetal():
-            return False
-
-        # FETT targets can also be built hybrid (ignore those for now)
-        if issubclass(xtarget.target_info_cls, CheriBSDFettTargetInfo):
             return False
 
         # Benchmarks can also be built hybrid:
