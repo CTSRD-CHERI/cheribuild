@@ -407,7 +407,7 @@ class BuildXVncServer(X11AutotoolsProject):
         # Install a script to start the Xvnc so I don't have to remember the arguments
         # TODO: should we install a service that we can start with `service xvnc start`?
         self.write_file(self.install_dir / "bin/startxvnc", overwrite=True, mode=0o755,
-                        contents="#!/bin/sh\nXvnc -geometry 1024x768 -SecurityTypes=None\n")
+                        contents="#!/bin/sh\nXvnc -geometry 1024x768 -SecurityTypes=None \"$@\"\n")
 
     def update(self):
         super().update()
