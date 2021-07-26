@@ -359,6 +359,7 @@ class BuildKI18N(KDECMakeProject):
 
 
 class BuildKWidgetsAddons(KDECMakeProject):
+    target = "kwidgetsaddons"
     repository = GitRepository("https://invent.kde.org/frameworks/kwidgetsaddons.git")
     _has_qt_designer_plugin = True
 
@@ -444,15 +445,16 @@ class BuildKSyndication(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/syndication.git")
 
 
-# frameworks/kimageformats: frameworks/karchive
-# frameworks/kpty: frameworks/kcoreaddons
-# frameworks/kpty: frameworks/ki18n
-# frameworks/kunitconversion: frameworks/ki18n
-# frameworks/kunitconversion: frameworks/kconfig
+class BuildKImageFormats(KDECMakeProject):
+    target = "kimageformats"
+    repository = GitRepository("https://invent.kde.org/frameworks/kimageformats.git")
+    dependencies = ["karchive"]
 
-# frameworks/qqc2-desktop-style: frameworks/kirigami
-# frameworks/qqc2-desktop-style: frameworks/kiconthemes
-# frameworks/qqc2-desktop-style: frameworks/kconfigwidgets
+
+class BuildKUnitConversion(KDECMakeProject):
+    target = "kunitconversion"
+    dependencies = ["ki18n", "kconfig"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kunitconversion.git")
 
 
 #
