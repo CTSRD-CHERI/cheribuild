@@ -684,7 +684,7 @@ class BuildKActivitiesStats(KDECMakeProject):
 
 class BuildKirigami(KDECMakeProject):
     target = "kirigami"
-    dependencies = ["qtquickcontrols2", "extra-cmake-modules"]
+    dependencies = ["qtquickcontrols2", "extra-cmake-modules", "qtgraphicaleffects"]
     repository = GitRepository("https://invent.kde.org/frameworks/kirigami.git",
                                temporary_url_override="https://invent.kde.org/arichardson/kirigami.git",
                                url_override_reason="Needs some compilation fixes for -no-opengl QtBase")
@@ -694,7 +694,7 @@ class BuildKirigami(KDECMakeProject):
 class BuildPlasmaFramework(KDECMakeProject):
     target = "plasma-framework"
     dependencies = ["kio", "kconfigwidgets", "kactivities", "kdbusaddons", "kglobalaccel", "kpackage", "kdeclarative",
-                    "qtquickcontrols2", "kxmlgui", "threadweaver", "kirigami"]
+                    "qtquickcontrols", "qtquickcontrols2", "kxmlgui", "threadweaver", "kirigami"]
     repository = GitRepository("https://invent.kde.org/frameworks/plasma-framework.git",
                                temporary_url_override="https://invent.kde.org/arichardson/plasma-framework.git",
                                url_override_reason="Needs some compilation fixes for -no-opengl QtBase")
@@ -723,19 +723,36 @@ class BuildKWin(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/plasma/kwin.git",
                                temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
                                url_override_reason="Needs lots of ifdefs for -no-opengl QtBase and no-wayland")
-    dependencies = ["kdecoration", "qtx11extras"]
+    dependencies = ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker"]
 
     def setup(self):
         super().setup()
-        # TODO: build KIdleTime and wayland backend
-        self.add_cmake_options(KWIN_BUILD_IDLETIME=False,
-                               KWIN_BUILD_WAYLAND=False,
+        # TODO: build wayland backend
+        self.add_cmake_options(KWIN_BUILD_WAYLAND=False,
                                CMAKE_DISABLE_FIND_PACKAGE_Libinput=True)
         if self.target_info.is_freebsd():
             # To get linux/input.h on FreeBSD
             if not BuildLibInput.get_source_dir(self).exists():
                 self.fatal("Need to clone libinput first to get linux/input.h compat header.")
             self.COMMON_FLAGS.append("-isystem" + str(BuildLibInput.get_source_dir(self) / "include"))
+
+
+class BuildLibKScreen(KDECMakeProject):
+    target = "libkscreen"
+    repository = GitRepository("https://invent.kde.org/plasma/libkscreen.git",
+                               temporary_url_override="https://invent.kde.org/arichardson/libkscreen.git",
+                               url_override_reason="Support for no-wayland")
+    dependencies = ["qtx11extras"]
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(LIBKSCREEN_BUILD_WAYLAND=False)
+
+
+class BuildLibKSysguard(KDECMakeProject):
+    target = "libksysguard"
+    repository = GitRepository("https://invent.kde.org/plasma/libksysguard.git")
+    dependencies = ["kio"]
 
 
 class BuildDoplhin(KDECMakeProject):
