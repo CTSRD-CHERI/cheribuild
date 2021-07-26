@@ -374,6 +374,22 @@ class BuildKWindowSystem(KDECMakeProject):
         return super().dependencies(config) + ["qtx11extras", "libxfixes", "libxrender"]
 
 
+class BuildLibQREncode(KDECMakeProject):
+    target = "libqrencode"
+    repository = GitRepository("https://github.com/fukuchi/libqrencode")
+
+    def setup(self):
+        super().setup()
+        # We have to compile with -fPIC since this static library will be included in a shared library
+        self.add_cmake_options(CMAKE_POSITION_INDEPENDENT_CODE=True)
+
+
+class BuildPrison(KDECMakeProject):
+    target = "prison"
+    dependencies = ["libqrencode"]
+    repository = GitRepository("https://invent.kde.org/frameworks/prison.git")
+
+
 class BuildSolid(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/solid.git")
     # XXX: https://foss.heptapod.net/bsdutils/bsdisks for the DBus API
