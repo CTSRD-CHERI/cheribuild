@@ -700,6 +700,12 @@ class BuildPlasmaFramework(KDECMakeProject):
                                url_override_reason="Needs some compilation fixes for -no-opengl QtBase")
 
 
+class BuildKRunner(KDECMakeProject):
+    target = "krunner"
+    dependencies = ["kio", "solid", "kconfig", "kcompletion", "kservice", "threadweaver", "ki18n", "plasma-framework"]
+    repository = GitRepository("https://invent.kde.org/frameworks/krunner.git",)
+
+
 class BuildKDecoration(KDECMakeProject):
     target = "kdecoration"
     repository = GitRepository("https://invent.kde.org/plasma/kdecoration.git")
@@ -779,6 +785,25 @@ class BuildLibKSysguard(KDECMakeProject):
     target = "libksysguard"
     repository = GitRepository("https://invent.kde.org/plasma/libksysguard.git")
     dependencies = ["kio"]
+
+
+# class BuildKQuickCharts(KDECMakeProject):
+#     # Needs openGL!
+#     target = "kquickcharts"
+#     repository = GitRepository("https://invent.kde.org/frameworks/kquickcharts.git")
+#     dependencies = ["qtquickcontrols2"]
+
+
+class BuildQQC2DesktopStyle(KDECMakeProject):
+    target = "qqc2-desktop-style"
+    repository = GitRepository("https://invent.kde.org/frameworks/qqc2-desktop-style.git")
+    dependencies = ["kirigami", "kiconthemes", "kconfigwidgets", "qtx11extras"]
+
+
+class BuildQQC2BreezeStyle(KDECMakeProject):
+    target = "qqc2-breeze-style"
+    repository = GitRepository("https://invent.kde.org/plasma/qqc2-breeze-style.git")
+    dependencies = ["kirigami", "kiconthemes", "kconfigwidgets", "qtx11extras", "breeze"]
 
 
 class BuildDoplhin(KDECMakeProject):
