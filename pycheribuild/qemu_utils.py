@@ -35,6 +35,7 @@ from pathlib import Path
 
 from .config.target_info import CPUArchitecture, CrossCompileTarget
 from .processutils import run_command
+from .utils import OSInfo
 
 
 class QemuOptions:
@@ -70,9 +71,10 @@ class QemuOptions:
             self.can_boot_kernel_directly = False  # boot from disk
             # Try to use KVM instead of TCG if possible to speed up emulation
             if not want_debugger:
-                self.machine_flags = ["-M", "accel=kvm:xen:hax:tcg"]
+                accel_flag = "accel=hvf:hax:tcg" if OSInfo.IS_MAC else "accel=kvm:xen:hax:tcg"
             else:
-                self.machine_flags = ["-M", "accel=tcg"]  # Can't use KVM acceleration if we want to attach GDB
+                accel_flag = "accel=tcg"  # Have to use TCG if we want to attach GDB
+            self.machine_flags = ["-M", accel_flag]
             # Use a more modern CPU than the QEMU default:
             # TCG does not support AVX, so pick the newest pre-AVX Intel CPU (Nehalem)
             # self.machine_flags += ["-cpu", "Nehalem"]
