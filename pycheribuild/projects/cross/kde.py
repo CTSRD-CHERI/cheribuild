@@ -836,6 +836,15 @@ class BuildQQC2BreezeStyle(KDECMakeProject):
     dependencies = ["kirigami", "kiconthemes", "kconfigwidgets", "qtx11extras", "breeze"]
 
 
+class BuildPlasmaDesktop(KDECMakeProject):
+    target = "plasma-desktop"
+    repository = GitRepository(
+        "https://invent.kde.org/plasma/plasma-desktop.git",
+        temporary_url_override="https://invent.kde.org/arichardson/plasma-desktop.git",
+        url_override_reason="needs e.g. https://invent.kde.org/plasma/plasma-desktop/-/merge_requests/532")
+    dependencies = ["plasma-workspace", "qqc2-desktop-style"]
+
+
 class BuildDoplhin(KDECMakeProject):
     target = "dolphin"
     dependencies = ["kparts", "kxmlgui", "knewstuff", "kio", "kcmutils", "kio-extras", "kfilemetadata"]
