@@ -616,10 +616,6 @@ class BuildKIO(KDECMakeProject):
 # frameworks/purpose: frameworks/kio
 # frameworks/purpose: frameworks/kirigami
 # frameworks/kxmlrpcclient: frameworks/kio
-# frameworks/kpeople: frameworks/kcoreaddons
-# frameworks/kpeople: frameworks/kwidgetsaddons
-# frameworks/kpeople: frameworks/ki18n
-# frameworks/kpeople: frameworks/kitemviews
 # frameworks/kcontacts: frameworks/kcoreaddons
 # frameworks/kcontacts: frameworks/ki18n
 # frameworks/kcontacts: frameworks/kconfig
@@ -633,6 +629,11 @@ class BuildKIO(KDECMakeProject):
 # frameworks/baloo: frameworks/solid
 # frameworks/baloo: frameworks/kcrash
 # frameworks/baloo: frameworks/kio
+class BuildKPeople(KDECMakeProject):
+    target = "kpeople"
+    repository = GitRepository("https://invent.kde.org/frameworks/kpeople.git")
+    dependencies = ["kcoreaddons", "kcoreaddons-native", "kwidgetsaddons", "ki18n", "kitemviews"]
+
 
 class BuildKSyntaxHighlighting(KDECMakeProject):
     # This includes e.g. the thumbnail provider for dolphin
