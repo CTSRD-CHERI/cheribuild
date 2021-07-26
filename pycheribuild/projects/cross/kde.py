@@ -57,6 +57,9 @@ class KDECMakeProject(CrossCompileCMakeProject):
     tests_need_full_disk_image = False  # default to running with the full disk image
     _has_qt_designer_plugin = False
     _needs_newer_bison = False
+    # Default to not building the tests since it saves a lot of build time
+    has_optional_tests = True
+    default_build_tests = False
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
@@ -108,6 +111,8 @@ class KDECMakeProject(CrossCompileCMakeProject):
             # the actual .h to another lowercase one (<kio/authinfo.h>). However, on a case-insensitive FS this results
             # in: non-portable path to file '<KIO/authinfo.h>'; specified path differs in case from file name on disk
             self.common_warning_flags.append("-Wno-nonportable-include-path")
+
+        self.add_cmake_options(BUILD_TESTING=self.build_tests)
 
     @property
     def cmake_prefix_paths(self):
