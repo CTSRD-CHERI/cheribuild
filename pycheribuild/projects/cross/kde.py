@@ -453,7 +453,9 @@ class BuildKNotifications(KDECMakeProject):
 
 class BuildKPackage(KDECMakeProject):
     dependencies = ["karchive", "ki18n", "kcoreaddons", "kcoreaddons-native"]
-    repository = GitRepository("https://invent.kde.org/frameworks/kpackage.git")
+    repository = GitRepository("https://invent.kde.org/frameworks/kpackage.git",
+                               temporary_url_override="https://invent.kde.org/arichardson/kpackage.git",
+                               url_override_reason="Various cross-compilation fixes - TODO: clean&submit MR")
 
 
 class BuildKSyndication(KDECMakeProject):
