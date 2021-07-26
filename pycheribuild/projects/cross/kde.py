@@ -228,15 +228,22 @@ class BuildKCoreAddons(KDECMakeProject):
         super().install(**kwargs)
         # update_xdg_mimetypes() is not run if DESTDIR is set.
         # See https://invent.kde.org/frameworks/extra-cmake-modules/-/merge_requests/151
-        shared_mime_install_dir = BuildSharedMimeInfo.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
-        self.run_cmd(shared_mime_install_dir / "bin/update-mime-database", "-V", self.install_dir / "share/mime")
+        shared_mime_info = BuildSharedMimeInfo.get_instance(self)
+        native_smi_dir = BuildSharedMimeInfo.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
+        self.run_cmd(native_smi_dir / "bin/update-mime-database", "-V", self.install_dir / "share/mime")
         if not self.compiling_for_host():
             # TODO: should probably just install Qt and KDE files in the same directory
+            install_prefix = self.install_prefix
+            qt_dir = BuildQtBase.get_instance(self).install_prefix
             self.write_file(self.rootfs_path / "usr/local/bin/kde-shell-x11", overwrite=True, mode=0o755,
-                            contents="""#!/bin/sh
+                            contents=f"""#!/bin/sh
 set -xe
 export DISPLAY=:0
 export QT_QPA_PLATFORM=xcb
+if [ ! -f "{shared_mime_info.install_prefix / "share/mime/mime.cache"}" ]; then
+    echo "MIME database cache is missing, run cheribuild.py {shared_mime_info.target}!"
+    false;
+]
 # Add the Qt install directory to $PATH if it isn't yet:
 qtbindir="{qt_dir}/bin"
 if [ "${{PATH#*$qtbindir}}" = "$PATH" ]; then
@@ -251,7 +258,7 @@ if [ "${{XDG_DATA_DIRS#*$qtsharedir}}" = "$XDG_DATA_DIRS" ]; then
 fi
 qtconfigdir="{qt_dir}/etc/xdg"
 XDG_CONFIG_DIRS=${{XDG_CONFIG_DIRS:-/usr/local/share/:/usr/share/}}
-if [ -d "${qtconfigdir}" ] && [ "${{XDG_CONFIG_DIRS#*$qtconfigdir}}" = "$XDG_DATA_DIRS" ]; then
+if [ -d "${{qtconfigdir}}" ] && [ "${{XDG_CONFIG_DIRS#*$qtconfigdir}}" = "$XDG_DATA_DIRS" ]; then
   echo "Qt share/ dir is not in XDG_DATA_DIRS, adding it"
   export "XDG_DATA_DIRS=$qtsharedir:$XDG_DATA_DIRS"
 fi
@@ -273,12 +280,15 @@ set +xe
 # Provide a resonable logging rules default
 # TODO: should we write a QtProject/qtlogging.ini file?
 # To debug logging rules we can set QT_LOGGING_DEBUG=1
-printf "To get debug output from application you can run:\n\t export \\"QT_LOGGING_RULES=%s\\"\\n" \
-    "*.debug=true;qt.qpa.*.debug=false;qt.text.*.debug=false;qt.accessibility.*.debug=false;qt.gui.shortcutmap=false"
+printf "To get debug output from application you can run:\n\t export \\"QT_LOGGING_RULES=%s%s%s%s\\"\\n" \
+    "*.debug=true;qt.qpa.*.debug=false;qt.text.*.debug=false;qt.accessibility.*.debug=false;" \
+    "qt.gui.shortcutmap=false;qt.quick.*.debug=false;qt.scenegraph.*.debug=false;qt.v4.*.debug=false;" \
+    "qt.qml.gc.*.debug=false;" \
+    "kf.coreaddons.desktopparser.*.debug=false;"
 exec sh
-""".format(install_prefix=self.install_prefix, qt_dir=BuildQtBase.get_instance(self).install_prefix))
+""")
             self.write_file(self.rootfs_path / "usr/local/bin/kde-shell-x11-smbfs", overwrite=True, mode=0o755,
-                            contents="""#!/bin/sh
+                            contents=f"""#!/bin/sh
 set -xe
 if df -t smbfs,nfs "{install_prefix}" >/dev/null 2>/dev/null; then
     echo "{install_prefix} is already mounted from the host, skipping"
@@ -289,7 +299,7 @@ else
 fi
 set +xe
 exec /usr/local/bin/kde-shell-x11
-""".format(install_prefix=self.install_prefix))
+""")
 
 
 class BuildKConfig(KDECMakeProject):
