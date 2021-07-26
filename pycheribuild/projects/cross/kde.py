@@ -248,7 +248,7 @@ export QT_QPA_PLATFORM=xcb
 if [ ! -f "{shared_mime_info.install_prefix / "share/mime/mime.cache"}" ]; then
     echo "MIME database cache is missing, run cheribuild.py {shared_mime_info.target}!"
     false;
-]
+fi
 # Add the Qt install directory to $PATH if it isn't yet:
 qtbindir="{qt_dir}/bin"
 if [ "${{PATH#*$qtbindir}}" = "$PATH" ]; then
