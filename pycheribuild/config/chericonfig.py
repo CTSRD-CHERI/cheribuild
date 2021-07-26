@@ -259,7 +259,7 @@ class CheriConfig(ConfigBase):
             "skip-dependency-filter", group=loader.dependencies_group, action="append", default=[],
             type=_skip_dependency_filter_arg, metavar="REGEX",
             help="A regular expression to match against to target names that should be skipped when using"
-                 "--include-dependency. Can be passed multiple times to add more patters.")  # type: list[re.Pattern]
+                 "--include-dependency. Can be passed multiple times to add more patterns.")  # type: list[re.Pattern]
         self.trap_on_unrepresentable = loader.add_bool_option(
             "trap-on-unrepresentable", default=False, group=loader.run_group,
             help="Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for "
@@ -462,8 +462,8 @@ class CheriConfig(ConfigBase):
         if "CLICOLOR" in os.environ:
             del os.environ["CLICOLOR"]
 
-        # Check that the skip_dependency_filters arguments are all valid regular expressions (do it now since otherwise
-        # the validation is delayed until the first time the object is used.
+        # Check that the skip_dependency_filters arguments are all valid regular expressions. We do it now since
+        # otherwise the validation is delayed until the first time the object is used.
         assert isinstance(self.skip_dependency_filters, list)
 
     @cached_property
