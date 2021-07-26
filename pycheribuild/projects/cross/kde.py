@@ -810,6 +810,20 @@ class BuildLibKSysguard(KDECMakeProject):
 #     dependencies = ["qtquickcontrols2"]
 
 
+class BuildPlasmaWorkspace(KDECMakeProject):
+    target = "plasma-workspace"
+    repository = GitRepository("https://invent.kde.org/plasma/plasma-workspace.git",
+                               temporary_url_override="https://invent.kde.org/arichardson/plasma-workspace.git",
+                               url_override_reason="Lots of no-wayland changes etc.")
+    dependencies = ["xprop", "xsetroot", "plasma-framework", "kwin", "breeze", "kidletime", "kitemmodels", "kcmutils",
+                    "knotifyconfig", "kded", "kinit", "kscreenlocker", "libkscreen", "libxft", "libxtst", "kpeople",
+                    "kparts", "prison"]  # needs OpenGL: "kquickcharts"
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(CHERI_DEMO=True)  # TODO: build everything
+
+
 class BuildQQC2DesktopStyle(KDECMakeProject):
     target = "qqc2-desktop-style"
     repository = GitRepository("https://invent.kde.org/frameworks/qqc2-desktop-style.git")
