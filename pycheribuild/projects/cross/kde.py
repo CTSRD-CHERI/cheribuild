@@ -532,30 +532,24 @@ class BuildKDeclarative(KDECMakeProject):
         self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_epoxy=True)
 
 
-# frameworks/kinit: frameworks/kservice
-# frameworks/kinit: frameworks/kio
-# frameworks/kinit: frameworks/ki18n
-# frameworks/kinit: frameworks/kwindowsystem
-# frameworks/kinit: frameworks/kcrash
-# frameworks/kinit: frameworks/kdoctools
-# frameworks/kjsembed: frameworks/kjs
-# frameworks/kjsembed: frameworks/ki18n
-# frameworks/kjsembed: frameworks/kdoctools
-# frameworks/knotifyconfig: frameworks/kio
-# frameworks/knotifyconfig: frameworks/ki18n
-# frameworks/knotifyconfig: frameworks/knotifications #test dependency
-# frameworks/kded: frameworks/ki18n
-# frameworks/kded: frameworks/kcoreaddons
-# frameworks/kded: frameworks/kdbusaddons
-# frameworks/kded: frameworks/kservice
-# frameworks/kded: frameworks/kwindowsystem
-# frameworks/kded: frameworks/kcrash
-# frameworks/kded: frameworks/kinit
-# frameworks/kded: frameworks/kdoctools
-# frameworks/kross: frameworks/ki18n
-# frameworks/kross: frameworks/kiconthemes
-# frameworks/kross: frameworks/kio
-# frameworks/kross: frameworks/kparts
+class BuildKInit(KDECMakeProject):
+    target = "kinit"
+    dependencies = ["kio", "kservice", "kcrash", "kjobwidgets", "solid", "kdbusaddons", "kwindowsystem", "libx11", "libxcb"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kinit.git")
+
+
+class BuildKNotifyConfig(KDECMakeProject):
+    target = "knotifyconfig"
+    dependencies = ["kio", "ki18n", "knotifications"]
+    repository = GitRepository("https://invent.kde.org/frameworks/knotifyconfig.git")
+
+
+class BuildKDED(KDECMakeProject):
+    target = "kded"
+    dependencies = ["kservice", "kcrash", "kdbusaddons"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kded.git")
+
+
 class BuildKIO(KDECMakeProject):
     dependencies = ["kauth", "kdbusaddons", "ki18n", "kguiaddons", "kconfigwidgets", "kitemviews", "kcoreaddons",
                     "kwidgetsaddons", "kservice", "karchive", "qtx11extras", "solid",
@@ -662,6 +656,13 @@ class BuildKActivities(KDECMakeProject):
         self.add_cmake_options(KACTIVITIES_LIBRARY_ONLY=True)  # avoid dependency on boost
 
 
+class BuildKActivitiesStats(KDECMakeProject):
+    target = "kactivities-stats"
+    dependencies = ["kactivities"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kactivities-stats.git",
+                               force_branch=True, default_branch="work/adridg/reduce-boost")  # avoid boost dep
+
+
 class BuildKirigami(KDECMakeProject):
     target = "kirigami"
     dependencies = ["qtquickcontrols2", "extra-cmake-modules"]
@@ -684,6 +685,18 @@ class BuildKDecoration(KDECMakeProject):
     target = "kdecoration"
     repository = GitRepository("https://invent.kde.org/plasma/kdecoration.git")
     dependencies = ["ki18n"]
+
+
+class BuildKIdleTime(KDECMakeProject):
+    target = "kidletime"
+    repository = GitRepository("https://invent.kde.org/frameworks/kidletime.git")
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        result = super().dependencies(config)
+        if not cls.get_crosscompile_target(config).is_native():
+            result.extend(["libxext", "libxcb", "qtx11extras"])
+        return result
 
 
 class BuildKWin(KDECMakeProject):
