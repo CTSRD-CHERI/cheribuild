@@ -256,16 +256,16 @@ if [ "${{PATH#*$qtbindir}}" = "$PATH" ]; then
   export "PATH=$qtbindir:$PATH"
 fi
 qtsharedir="{qt_dir}/share"
-XDG_DATA_DIRS=${{XDG_DATA_DIRS:-/usr/local/etc/xdg:/etc/xdg}}
+XDG_DATA_DIRS=${{XDG_DATA_DIRS:-/usr/local/share/:/usr/share/}}
 if [ "${{XDG_DATA_DIRS#*$qtsharedir}}" = "$XDG_DATA_DIRS" ]; then
   echo "Qt share/ dir is not in XDG_DATA_DIRS, adding it"
   export "XDG_DATA_DIRS=$qtsharedir:$XDG_DATA_DIRS"
 fi
 qtconfigdir="{qt_dir}/etc/xdg"
-XDG_CONFIG_DIRS=${{XDG_CONFIG_DIRS:-/usr/local/share/:/usr/share/}}
-if [ -d "${{qtconfigdir}}" ] && [ "${{XDG_CONFIG_DIRS#*$qtconfigdir}}" = "$XDG_DATA_DIRS" ]; then
-  echo "Qt share/ dir is not in XDG_DATA_DIRS, adding it"
-  export "XDG_DATA_DIRS=$qtsharedir:$XDG_DATA_DIRS"
+XDG_CONFIG_DIRS=${{XDG_CONFIG_DIRS:-/usr/local/etc/xdg:/etc/xdg}}
+if [ -d "${{qtconfigdir}}" ] && [ "${{XDG_CONFIG_DIRS#*$qtconfigdir}}" = "XDG_CONFIG_DIRS" ]; then
+  echo "Qt share/ dir is not in XDG_CONFIG_DIRS, adding it"
+  export "XDG_CONFIG_DIRS=$qtsharedir:$XDG_CONFIG_DIRS"
 fi
 . {install_prefix}/prefix.sh
 # Create all the XDG data directories if they don't exist
