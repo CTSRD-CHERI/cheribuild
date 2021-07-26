@@ -144,6 +144,8 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
             # Allow up to 24 hours to run the full testsuite
             # Not a checked run since it might return false if some tests fail
             test_start = datetime.datetime.now()
+            # Check that the file exists
+            qemu.checked_run("test -f {}".format(shlex.quote(tests_file)))
             qemu.run("kyua test --results-file=/tmp/results.db -k {}".format(shlex.quote(tests_file)),
                      ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=24 * 60 * 60)
             if i == 0:
