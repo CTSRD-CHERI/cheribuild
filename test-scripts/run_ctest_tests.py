@@ -71,9 +71,6 @@ def run_ctest_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
     ctest_args += " --output-junit " + str(args.junit_xml)
     if args.verbose:
         ctest_args = "-VV " + ctest_args
-    else:
-        # XXX: --progress clears the current line to update tests status, -V is probably more useful
-        ctest_args = "-V " + ctest_args
     # First list all tests and then try running them.
     qemu.checked_run("cd {} && /cmake/bin/ctest --show-only -V".format(args.build_dir), timeout=5 * 60)
     try:
