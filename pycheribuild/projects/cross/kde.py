@@ -234,12 +234,61 @@ class BuildKCoreAddons(KDECMakeProject):
             # TODO: should probably just install Qt and KDE files in the same directory
             self.write_file(self.rootfs_path / "usr/local/bin/kde-shell-x11", overwrite=True, mode=0o755,
                             contents="""#!/bin/sh
+set -xe
 export DISPLAY=:0
 export QT_QPA_PLATFORM=xcb
+# Add the Qt install directory to $PATH if it isn't yet:
+qtbindir="{qt_dir}/bin"
+if [ "${{PATH#*$qtbindir}}" = "$PATH" ]; then
+  echo "Qt bin dir is not in PATH, adding it"
+  export "PATH=$qtbindir:$PATH"
+fi
+qtsharedir="{qt_dir}/share"
+XDG_DATA_DIRS=${{XDG_DATA_DIRS:-/usr/local/etc/xdg:/etc/xdg}}
+if [ "${{XDG_DATA_DIRS#*$qtsharedir}}" = "$XDG_DATA_DIRS" ]; then
+  echo "Qt share/ dir is not in XDG_DATA_DIRS, adding it"
+  export "XDG_DATA_DIRS=$qtsharedir:$XDG_DATA_DIRS"
+fi
+qtconfigdir="{qt_dir}/etc/xdg"
+XDG_CONFIG_DIRS=${{XDG_CONFIG_DIRS:-/usr/local/share/:/usr/share/}}
+if [ -d "${qtconfigdir}" ] && [ "${{XDG_CONFIG_DIRS#*$qtconfigdir}}" = "$XDG_DATA_DIRS" ]; then
+  echo "Qt share/ dir is not in XDG_DATA_DIRS, adding it"
+  export "XDG_DATA_DIRS=$qtsharedir:$XDG_DATA_DIRS"
+fi
 . {install_prefix}/prefix.sh
+# Create all the XDG data directories if they don't exist
+# Silence "QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-root'"
+if [ -z "$XDG_RUNTIME_DIR" ]; then
+    XDG_RUNTIME_DIR=/tmp/$USER-runtime
+    test -d "$XDG_RUNTIME_DIR" || mkdir -m 0700 "$XDG_RUNTIME_DIR"
+fi
+# Create the default XDG_* directories if the env vars aren't set:
+# https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+test -z "$XDG_CONFIG_HOME" && mkdir -p $HOME/.config
+test -z "$XDG_DATA_HOME" && mkdir -p $HOME/.local/share
+test -z "$XDG_STATE_HOME" && mkdir -p $HOME/.local/state
+test -z "$XDG_CACHE_HOME" && mkdir -p $HOME/.cache
 env | sort
-echo "To get debug output from application you can run `export QT_LOGGING_RULES=\"*.debug=true\"`"
+set +xe
+# Provide a resonable logging rules default
+# TODO: should we write a QtProject/qtlogging.ini file?
+# To debug logging rules we can set QT_LOGGING_DEBUG=1
+printf "To get debug output from application you can run:\n\t export \\"QT_LOGGING_RULES=%s\\"\\n" \
+    "*.debug=true;qt.qpa.*.debug=false;qt.text.*.debug=false;qt.accessibility.*.debug=false;qt.gui.shortcutmap=false"
 exec sh
+""".format(install_prefix=self.install_prefix, qt_dir=BuildQtBase.get_instance(self).install_prefix))
+            self.write_file(self.rootfs_path / "usr/local/bin/kde-shell-x11-smbfs", overwrite=True, mode=0o755,
+                            contents="""#!/bin/sh
+set -xe
+if df -t smbfs,nfs "{install_prefix}" >/dev/null 2>/dev/null; then
+    echo "{install_prefix} is already mounted from the host, skipping"
+else
+    mv "{install_prefix}" "{install_prefix}-old"
+    qemu-mount-rootfs.sh
+    ln -sfn "/nfsroot/{install_prefix}" "{install_prefix}"
+fi
+set +xe
+exec /usr/local/bin/kde-shell-x11
 """.format(install_prefix=self.install_prefix))
 
 
