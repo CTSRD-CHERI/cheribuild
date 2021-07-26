@@ -3426,6 +3426,9 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                                                           mount_sysroot=True, mount_sourcedir=True,
                                                           use_full_disk_image=self.tests_need_full_disk_image)
         else:
+            if self.has_optional_tests:
+                self.fatal("Can't run tests for projects that were built with tests disabled. ",
+                           "Please re-run build the target with --", self.get_config_option_name("build_tests"), sep="")
             self.warning("Do not know how to run tests for", self.target)
 
     @staticmethod
