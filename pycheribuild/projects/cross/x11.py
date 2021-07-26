@@ -319,6 +319,19 @@ class BuildLibXFont(X11AutotoolsProject):
             self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
 
 
+class BuildLibXFt(X11AutotoolsProject):
+    target = "libxft"
+    dependencies = ["fontconfig", "freetype2", "libxrender"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxft.git")
+
+
+class BuildLibXTst(X11AutotoolsProject):
+    target = "libxtst"
+    dependencies = ["libxext", "libx11"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxtst.git")
+    builds_docbook_xml = True
+
+
 class BuildLibXKBFile(X11AutotoolsProject):
     target = "libxkbfile"
     dependencies = ["libx11"]
@@ -337,7 +350,7 @@ class BuildTigerVNC(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/TigerVNC/tigervnc",
                                temporary_url_override="https://github.com/arichardson/tigervnc",
                                url_override_reason="Needs PR 1289-1291 merged first.")
-    dependencies = ["pixman", "libxext", "libxfixes", "libxdamage", "libjpeg-turbo"]
+    dependencies = ["pixman", "libxext", "libxfixes", "libxdamage", "libxtst", "libjpeg-turbo"]
 
     def __init__(self, config):
         super().__init__(config)
