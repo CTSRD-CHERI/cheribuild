@@ -718,6 +718,19 @@ class BuildKIdleTime(KDECMakeProject):
         return result
 
 
+class BuildKScreenLocker(KDECMakeProject):
+    target = "kscreenlocker"
+    repository = GitRepository("https://invent.kde.org/plasma/kscreenlocker.git",
+                               temporary_url_override="https://invent.kde.org/arichardson/kscreenlocker.git",
+                               url_override_reason="https://invent.kde.org/plasma/kscreenlocker/-/merge_requests/41")
+    dependencies = ["kwindowsystem", "kxmlgui", "kwindowsystem", "libxcb"]
+
+    def setup(self):
+        super().setup()
+        # TODO: build wayland bits
+        self.add_cmake_options(KSCREENLOCKER_BUILD_WAYLAND=False)
+
+
 class BuildKWin(KDECMakeProject):
     target = "kwin"
     repository = GitRepository("https://invent.kde.org/plasma/kwin.git",
@@ -874,7 +887,9 @@ class BuildThreadWeaver(KDECMakeProject):
 # /Users/alex/cheri/kde-frameworks/kpty/src/kpty.cpp:72:10: fatal error: 'utmp.h' file not found
 class BuildKPty(KDECMakeProject):
     target = "kpty"
-    repository = GitRepository("https://invent.kde.org/frameworks/kpty")
+    repository = GitRepository("https://invent.kde.org/frameworks/kpty",
+                               temporary_url_override="https://invent.kde.org/arichardson/kpty",
+                               url_override_reason="https://invent.kde.org/frameworks/kpty/-/merge_requests/12")
 
     def setup(self):
         super().setup()
