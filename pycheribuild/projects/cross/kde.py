@@ -538,7 +538,7 @@ class BuildKXMLGUI(KDECMakeProject):
 
 class BuildKDeclarative(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kdeclarative.git")
-    dependencies = ["kpackage", "kpackage-native", "kio", "kiconthemes", "knotifications", "qtdeclarative"]
+    dependencies = ["kpackage", "kpackage-native", "kio", "kiconthemes", "knotifications", "qtdeclarative", "kio"]
     _has_qt_designer_plugin = True
 
     def setup(self):
@@ -549,7 +549,8 @@ class BuildKDeclarative(KDECMakeProject):
 
 class BuildKInit(KDECMakeProject):
     target = "kinit"
-    dependencies = ["kio", "kservice", "kcrash", "kjobwidgets", "solid", "kdbusaddons", "kwindowsystem", "libx11", "libxcb"]
+    dependencies = ["kio", "kservice", "kcrash", "kjobwidgets", "solid", "kdbusaddons", "kwindowsystem", "libx11",
+                    "libxcb"]
     repository = GitRepository("https://invent.kde.org/frameworks/kinit.git")
 
 
