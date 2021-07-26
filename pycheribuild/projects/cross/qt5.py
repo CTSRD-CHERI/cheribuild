@@ -81,6 +81,7 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     path_in_rootfs = "/usr/local"  # Always install to /usr/local/share so that it's in the default search path
     needs_native_build_for_crosscompile = True
+    builds_docbook_xml = True
 
     def __init__(self, config):
         super().__init__(config)
@@ -93,13 +94,6 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
         self.configure_args.append("-Dupdate-mimedb=True")
         if not self.compiling_for_host():
             self.configure_args.append("-Dbuild-tools=False")
-        if OSInfo.IS_MAC:
-            catalog = self.get_homebrew_prefix() / "etc/xml/catalog"
-            if not catalog.exists():
-                self.dependency_error(OSInfo.install_instructions("docbook-xsl", False, homebrew="docbook-xsl"))
-            # Without XML_CATALOG_FILES we get the following error: "I/O error : Attempt to load network entity"
-            self.configure_environment["XML_CATALOG_FILES"] = str(catalog)
-            self.make_args.set_env(XML_CATALOG_FILES=catalog)
 
     def configure(self, **kwargs):
         if not self.compiling_for_host():

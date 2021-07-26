@@ -1937,6 +1937,9 @@ class Project(SimpleProject):
     default_source_dir = ComputedDefaultValue(
         function=_default_source_dir, as_string=lambda cls: "$SOURCE_ROOT/" + cls.default_directory_basename)
     needs_native_build_for_crosscompile = False  # Some projects (e.g. python) need a native build for build tools, etc.
+    # Some projects build docbook xml files and in order to do so we need to set certain env vars to skip the
+    # DTD validation with newer XML processing tools.
+    builds_docbook_xml = False
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
@@ -2437,6 +2440,13 @@ class Project(SimpleProject):
         # We might be setting too many flags, ignore this (for now)
         if not self.compiling_for_host() and self.CC.exists() and self.get_compiler_info(self.CC).is_clang:
             self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
+        if self.builds_docbook_xml and OSInfo.IS_MAC:
+            catalog = self.get_homebrew_prefix() / "etc/xml/catalog"
+            if not catalog.exists():
+                self.dependency_error(OSInfo.install_instructions("docbook-xsl", False, homebrew="docbook-xsl"))
+            # Without XML_CATALOG_FILES we get the following error: "I/O error : Attempt to load network entity"
+            self.configure_environment["XML_CATALOG_FILES"] = str(catalog)
+            self.make_args.set_env(XML_CATALOG_FILES=catalog)
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
         self.fatal("Building", self.target, "with LTO is not supported (yet).")

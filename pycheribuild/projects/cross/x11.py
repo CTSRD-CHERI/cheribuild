@@ -460,16 +460,7 @@ class BuildLibXcomposite(X11AutotoolsProject):
     target = "libxcomposite"
     dependencies = ["libxfixes"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcomposite.git")
-
-    def setup(self):
-        super().setup()
-        if OSInfo.IS_MAC:
-            catalog = self.get_homebrew_prefix() / "etc/xml/catalog"
-            if not catalog.exists():
-                self.dependency_error(OSInfo.install_instructions("docbook-xsl", False, homebrew="docbook-xsl"))
-            # Without XML_CATALOG_FILES we get the following error: "I/O error : Attempt to load network entity"
-            self.configure_environment["XML_CATALOG_FILES"] = str(catalog)
-            self.make_args.set_env(XML_CATALOG_FILES=catalog)
+    builds_docbook_xml = True
 
 
 class BuildLibXpm(X11AutotoolsProject):
