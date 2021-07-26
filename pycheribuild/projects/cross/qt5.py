@@ -216,11 +216,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         else:
             self.configure_args.extend(["-nomake", "tests"])
 
-        if self.build_examples:
-            # Seems to have changed
+        if not self.compiling_for_host():
             self.configure_args.extend(["-compile-examples"])
-        else:
-            self.configure_args.extend(["-nomake", "examples"])
+        self.configure_args.extend(["-nomake", "examples"])
         # currently causes build failures:
         # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
         self.configure_args.append("-qt-libpng")
@@ -459,9 +457,22 @@ class BuildQtBase(BuildQtWithConfigureScript):
             # str(self.get_instance(self, cross_target=CompilationTargets.NATIVE).install_dir / "bin"),
         ])
 
+    _installed_examples = ("examples/corelib/mimetypes", "examples/widgets/widgets/tetrix")
+
     def compile(self, **kwargs):
         self.run_make("sub-src-all")
         # Tests are build as part of --test
+        # Build some examples (e.g. tetris demo and mimetype browser)
+        for example in self._installed_examples:
+            self.makedirs(self.build_dir / example)
+            self.run_cmd(self.build_dir / "bin/qmake", "-o", "Makefile",
+                         self.source_dir / example / Path(example + ".pro").name,
+                         cwd=self.build_dir / example)
+            self.run_make(cwd=self.build_dir / example)
+
+    def install(self, **kwargs):
+        for example in self._installed_examples:
+            self.run_make_install(cwd=self.build_dir / example)
 
     def _compile_relevant_tests(self):
         # generate the makefiles
