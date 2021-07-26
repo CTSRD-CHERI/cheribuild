@@ -1,5 +1,7 @@
 import argparse
+import collections
 import inspect
+import re
 import sys
 import tempfile
 import typing
@@ -74,6 +76,7 @@ def _parse_arguments(args: typing.List[str], *, config_file=Path("/this/does/not
         SimpleProject._config_loader = _loader
         target_manager.register_command_line_options()
         _targets_registered = True
+    ConfigLoaderBase._cheri_config._cached_deps = collections.defaultdict(dict)
     target_manager.reset()
     ConfigLoaderBase._cheri_config.loader._config_path = config_file
     sys.argv = ["cheribuild.py"] + args
@@ -136,6 +139,41 @@ def test_target_subsets(args, expected):
     config = _parse_arguments(args)
     selected = list(x.name for x in target_manager.get_all_chosen_targets(config))
     assert selected == expected
+
+
+@pytest.mark.parametrize("args,expected", [
+    pytest.param(["--include-dependencies", "--skip-sdk", "libx11-amd64"],
+                 ["xorg-macros-amd64", "xorgproto-amd64", "xcbproto-amd64", "libxau-amd64", "xorg-pthread-stubs-amd64",
+                  "libxcb-amd64", "libxtrans-amd64", "libx11-amd64"],
+                 id="libx11-amd64"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=libxau-amd64", "libx11-amd64"],
+                 ["xorg-macros-amd64", "xorgproto-amd64", "xcbproto-amd64", "xorg-pthread-stubs-amd64",
+                  "libxcb-amd64", "libxtrans-amd64", "libx11-amd64"],
+                 id="libx11-amd64-withtout-libxau"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=qtbase.*", "kcoreaddons-amd64"],
+                 ["extra-cmake-modules-amd64", "kcoreaddons-amd64"],
+                 id="kcoreaddons-amd64-without-qtbase"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=libx.*",
+                  "--skip-dependency-filter=xorg.*", "kauth-amd64"],  # includes native qtbase as well
+                 ["shared-mime-info-native", "shared-mime-info-amd64", "dejavu-fonts-amd64", "freetype2-amd64",
+                  "libexpat-amd64", "fontconfig-amd64", "qtbase-amd64", "extra-cmake-modules-amd64",
+                  "kcoreaddons-amd64", "qtbase-native", "extra-cmake-modules-native", "kcoreaddons-native",
+                  "kauth-amd64"], id="kauth-amd64-full-without-x11"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=libx.*",
+                  "--skip-dependency-filter=xorg.*", "--skip-dependency-filter=qt.*", "kauth-amd64"],
+                 ["extra-cmake-modules-amd64", "kcoreaddons-amd64", "extra-cmake-modules-native", "kcoreaddons-native",
+                  "kauth-amd64"],  # skips most dependencies but still includes kcoreaddons-native
+                 id="kauth-amd64-without-qt-without-x11"),
+])
+def test_skip_dependency_regex(args, expected):
+    config = _parse_arguments(args)
+    selected = list(x.name for x in target_manager.get_all_chosen_targets(config))
+    assert selected == expected
+
+
+def test_invalid_skip_dependency_regex():
+    with pytest.raises(re.error, match="missing \\), unterminated subpattern at position 3"):
+        _parse_arguments(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=abc("])
 
 
 @pytest.mark.parametrize("args,exception_type,errmessage", [

@@ -391,6 +391,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         for target in cls._direct_dependencies(config, include_toolchain_dependencies=include_toolchain_dependencies,
                                                include_sdk_dependencies=include_sdk_dependencies,
                                                explicit_dependencies_only=cls.direct_dependencies_only):
+            if config.should_skip_dependency(target.name, cls.target):
+                continue
+
             if target not in result:
                 result.append(target)
             if cls.direct_dependencies_only:
