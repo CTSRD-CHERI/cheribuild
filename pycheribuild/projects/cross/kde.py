@@ -106,7 +106,7 @@ class KDECMakeProject(CrossCompileCMakeProject):
         if OSInfo.IS_MAC and self._needs_newer_bison:
             # /usr/bin/bison on macOS is too old
             self.add_cmake_options(BISON_EXECUTABLE=self.get_homebrew_prefix("bison") / "bin/bison")
-        if is_case_sensitive_dir(self.build_dir):
+        if not is_case_sensitive_dir(self.build_dir):
             # Most KDE projects install CamelCase headers with the class name to one directory (e.g. <KIO/AuthInfo> and
             # the actual .h to another lowercase one (<kio/authinfo.h>). However, on a case-insensitive FS this results
             # in: non-portable path to file '<KIO/authinfo.h>'; specified path differs in case from file name on disk
