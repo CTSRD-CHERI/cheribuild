@@ -163,6 +163,15 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 self.configure_args.append("-platform")
                 self.configure_args.append("offscreen")
                 self.configure_args.extend(["-c++std", "c++14"])
+            if OSInfo.IS_MAC:
+                # Use my (rejected) patch to add additional data directories for macos
+                # (https://codereview.qt-project.org/c/qt/qtbase/+/238640), so that we can find shared data and run
+                # KDE unit tests/applications correctly
+                from .kde import BuildKCoreAddons
+                self.configure_args.extend(["-additional-datadir", self.install_dir / "share"])
+                kde_install_dir = BuildKCoreAddons.get_install_dir(self)
+                if kde_install_dir != self.install_dir:
+                    self.configure_args.extend(["-additional-datadir", kde_install_dir / "share"])
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = self.default_compiler_flags
