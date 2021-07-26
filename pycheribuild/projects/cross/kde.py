@@ -706,6 +706,19 @@ class BuildKDecoration(KDECMakeProject):
     dependencies = ["ki18n"]
 
 
+class BuildKFrameworkIntegration(KDECMakeProject):
+    target = "kframeworkintegration"
+    repository = GitRepository("https://invent.kde.org/frameworks/frameworkintegration")
+    dependencies = ["knewstuff"]
+
+
+class BuildBreezeStyle(KDECMakeProject):
+    target = "breeze"
+    repository = GitRepository("https://invent.kde.org/plasma/breeze.git")
+    dependencies = ["kdecoration", "kconfig", "kcoreaddons", "kguiaddons", "kiconthemes", "kconfigwidgets",
+                    "kwindowsystem", "kframeworkintegration"]
+
+
 class BuildKIdleTime(KDECMakeProject):
     target = "kidletime"
     repository = GitRepository("https://invent.kde.org/frameworks/kidletime.git")
