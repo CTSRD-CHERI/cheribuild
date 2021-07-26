@@ -433,6 +433,8 @@ class BuildFreeBSDBase(Project):
         # "-DWITH_DIRDEPS_BUILD", "-DWITH_DIRDEPS_CACHE",  # experimental fast build options
         # "-DWITH_LIBCHERI_JEMALLOC"  # use jemalloc instead of -lmalloc_simple
     ]
+    has_optional_tests = True
+    default_build_tests = True
 
     @classmethod
     def can_build_with_ccache(cls):
@@ -461,9 +463,6 @@ class BuildFreeBSDBase(Project):
             cls.minimal = cls.add_bool_option("minimal", show_help=False,
                                               help="Don't build all of FreeBSD, just what is needed for running most "
                                                    "CHERI tests/benchmarks")
-        if "build_tests" not in cls.__dict__:
-            cls.build_tests = cls.add_bool_option("build-tests", help="Build the tests (-DWITH_TESTS/-DWITHOUT_TESTS)",
-                                                  show_help=True, default=True)
 
     def __init__(self, config, *, use_bootstrap_toolchain: bool):
         super().__init__(config)

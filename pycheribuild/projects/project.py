@@ -1940,6 +1940,10 @@ class Project(SimpleProject):
     # Some projects build docbook xml files and in order to do so we need to set certain env vars to skip the
     # DTD validation with newer XML processing tools.
     builds_docbook_xml = False
+    # Some projects have build flags to enable/disable test building. For some projects skipping them can result in a
+    # significant build speedup as they should not be needed for most users.
+    has_optional_tests = False
+    default_build_tests = True  # whether to build tests by default
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
@@ -2149,6 +2153,10 @@ class Project(SimpleProject):
                                                     " does not pass any additional flags to the configure command).",
                                                default=cls.default_build_type, kind=BuildType,
                                                enum_choice_strings=supported_build_type_strings)  # type: BuildType
+
+        if cls.has_optional_tests and "build_tests" not in cls.__dict__:
+            cls.build_tests = cls.add_bool_option("build-tests", help="Build the tests",
+                                                  show_help=True, default=cls.default_build_tests)
 
     def linkage(self):
         if self.target_info.must_link_statically:
