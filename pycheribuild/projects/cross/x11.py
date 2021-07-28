@@ -405,8 +405,11 @@ class BuildXVncServer(X11AutotoolsProject):
     dependencies = ["libx11", "xorg-font-util", "libxrender", "libxfont", "libxkbfile", "tigervnc", "xkeyboard-config",
                     "xkbcomp"]
     # The tigervnc code requires the 1.20 release
-    repository = GitRepository("https://gitlab.freedesktop.org/xorg/xserver.git", default_branch="server-1.20-branch",
-                               force_branch=True)
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/xserver.git",
+                               default_branch="server-1.20-branch", force_branch=True,
+                               temporary_url_override="https://gitlab.freedesktop.org/arichardson/xserver.git",
+                               url_override_reason=["https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/721",
+                                                    "https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/720"])
 
     def install(self, **kwargs):
         """
