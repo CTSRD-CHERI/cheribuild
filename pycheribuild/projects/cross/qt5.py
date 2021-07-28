@@ -538,7 +538,7 @@ class BuildQtModuleWithQMake(CrossCompileProject):
             # We run tests using the full disk image since we want e.g. locales to be available.
             self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True,
                                                       mount_sysroot=True, mount_sourcedir=True,
-                                                      use_full_disk_image=False)
+                                                      use_full_disk_image=True)
 
 
 class BuildQtSVG(BuildQtModuleWithQMake):
