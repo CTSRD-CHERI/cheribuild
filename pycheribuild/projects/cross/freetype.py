@@ -36,6 +36,7 @@ class BuildFreeType2(CrossCompileMesonProject):
     repository = GitRepository("https://gitlab.freedesktop.org/freetype/freetype",
                                old_urls=[b"https://github.com/freetype/freetype2.git"])
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    dependencies = ["libpng"]
 
     def setup(self):
         super().setup()
