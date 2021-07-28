@@ -850,6 +850,14 @@ class BuildPlasmaDesktop(KDECMakeProject):
     dependencies = ["plasma-workspace", "qqc2-desktop-style"]
 
 
+class BuildSystemSettings(KDECMakeProject):
+    target = "systemsettings"
+    repository = GitRepository("https://invent.kde.org/plasma/systemsettings.git",
+                               default_branch="work/arichardson/optional-doctools", force_branch=True,
+                               url_override_reason="https://invent.kde.org/plasma/systemsettings/-/merge_requests/74")
+    dependencies = ["plasma-workspace"]
+
+
 class BuildDoplhin(KDECMakeProject):
     target = "dolphin"
     dependencies = ["kparts", "kxmlgui", "knewstuff", "kio", "kcmutils", "kio-extras", "kfilemetadata"]
