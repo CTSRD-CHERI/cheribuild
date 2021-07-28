@@ -201,6 +201,10 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 # The prefix for host tools such as qmake
                 "-hostprefix", str(self.qt_host_tools_path),
             ])
+            xcb = BuildLibXCB.get_instance(self)
+            if xcb.install_prefix != self.install_prefix:
+                self.configure_args.append(
+                    "QMAKE_RPATHDIR=" + str(xcb.install_prefix / self.target_info.default_libdir))
             # Use the libpng/libjpeg versions with CHERI fixes.
             self.configure_args.append("-system-libpng")
             self.configure_args.append("-system-libjpeg")
@@ -283,7 +287,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configure_args.append("-dbus")  # we want to build QtDBus
             # Enable X11 support when cross-compiling by default
             if not self.compiling_for_host():
-                self.configure_args.extend(["-xcb", "-xkbcommon"])
+                self.configure_args.extend(["-xcb", "-xkbcommon", "-xcb-xlib"])
                 # Note: all X11 libraries are installed into the same directory
                 self.configure_args.append("-L" + str(BuildLibXCB.get_install_dir(self) / "lib"))
                 self.configure_args.append("-I" + str(BuildLibXCB.get_install_dir(self) / "include"))
