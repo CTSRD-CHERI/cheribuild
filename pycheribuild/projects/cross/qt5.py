@@ -118,6 +118,13 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         super().__init__(config)
         self.configure_command = self.source_dir / "configure"
 
+    @property
+    def qt_host_tools_path(self):
+        if self.compiling_for_host():
+            return self.install_dir
+        else:
+            return self.install_dir / "qt-host-tools"
+
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         deps = super().dependencies(config)
@@ -190,7 +197,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-device-option", "COMPILER_FLAGS=" + self.commandline_to_str(compiler_flags),
                 "-device-option", "LINKER_FLAGS=" + self.commandline_to_str(linker_flags),
                 "-sysroot", self.cross_sysroot_path,
-                "-prefix", "/usr/local/" + self._xtarget.generic_suffix
+                "-prefix", self.install_prefix,
+                # The prefix for host tools such as qmake
+                "-hostprefix", str(self.qt_host_tools_path),
             ])
             # Use the libpng/libjpeg versions with CHERI fixes.
             self.configure_args.append("-system-libpng")
@@ -443,21 +452,6 @@ class BuildQtBase(BuildQtWithConfigureScript):
     default_source_dir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
         as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.default_directory_basename)
-
-    @property
-    def qt_host_tools_path(self):
-        if self.compiling_for_host():
-            return self.install_dir
-        else:
-            return self.install_dir / "qt-host-tools"
-
-    def setup(self):
-        super().setup()
-        self.configure_args.extend([
-            "-hostprefix", str(self.qt_host_tools_path),
-            # "-external-hostbindir",
-            # str(self.get_instance(self, cross_target=CompilationTargets.NATIVE).install_dir / "bin"),
-        ])
 
     _installed_examples = ("examples/corelib/mimetypes", "examples/widgets/widgets/tetrix")
 
