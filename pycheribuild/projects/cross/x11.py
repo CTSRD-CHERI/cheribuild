@@ -363,9 +363,7 @@ class BuildLibJpegTurbo(CrossCompileCMakeProject):
 
 class BuildTigerVNC(CrossCompileCMakeProject):
     target = "tigervnc"
-    repository = GitRepository("https://github.com/TigerVNC/tigervnc",
-                               temporary_url_override="https://github.com/arichardson/tigervnc",
-                               url_override_reason="Needs PR 1289-1291 merged first.")
+    repository = GitRepository("https://github.com/TigerVNC/tigervnc")
     dependencies = ["pixman", "libxext", "libxfixes", "libxdamage", "libxtst", "libjpeg-turbo"]
 
     def __init__(self, config):
