@@ -70,7 +70,13 @@ class BuildMtdev(CrossCompileAutotoolsProject):
 
     def setup(self):
         super().setup()
-        self.COMMON_FLAGS.append("-isystem" + str(BuildLibInput.get_source_dir(self) / "include"))
+        if self.target_info.is_freebsd():
+            # To get linux/input.h on FreeBSD
+            if not BuildLibInput.get_source_dir(self).exists():
+                self.warning("Need to clone libinput first to get linux/input.h compat header.")
+                self.ask_for_confirmation("Would you like to clone it now?")
+                BuildLibInput.get_instance(self).update()
+            self.COMMON_FLAGS.append("-isystem" + str(BuildLibInput.get_source_dir(self) / "include"))
         self.COMMON_FLAGS.append("-fPIC")  # need a pic archive since it's linked into a .so
         self.cross_warning_flags.append("-Wno-error=format")
 
