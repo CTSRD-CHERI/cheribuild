@@ -471,6 +471,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
             self.run_make(cwd=self.build_dir / example)
 
     def install(self, **kwargs):
+        super().install()
         for example in self._installed_examples:
             self.run_make_install(cwd=self.build_dir / example)
 
