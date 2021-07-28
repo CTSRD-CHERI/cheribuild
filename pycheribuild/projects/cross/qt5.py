@@ -68,6 +68,7 @@ class InstallDejaVuFonts(SimpleProject):
         qt_fonts_dir = BuildQtBase.get_install_dir(self) / "lib/fonts"
         # remove old directories to replace them with a symlink
         self.clean_directory(qt_fonts_dir, ensure_dir_exists=False)
+        self.makedirs(qt_fonts_dir.parent)
         self.create_symlink(fonts_dir, qt_fonts_dir, print_verbose_only=False)
 
 
