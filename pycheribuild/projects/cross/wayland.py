@@ -87,6 +87,7 @@ class BuildLibEvdev(CrossCompileMesonProject):
     def setup(self):
         super().setup()
         self.add_meson_options(tests="disabled")  # needs "check" library
+        self.add_meson_options(documentation="disabled")  # needs "doxygen" library
 
 
 class BuildLibInput(CrossCompileMesonProject):
