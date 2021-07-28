@@ -130,9 +130,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         deps = super().dependencies(config)
         if not cls.get_crosscompile_target(config).is_native():
             # TODO: should only need these if minimal is not set
-            deps.extend(["libx11", "libxcb", "libxkbcommon", "libxcb-cursor", "libxcb-util", "libxcb-image",
-                         "libxcb-render-util", "libxcb-wm", "libxcb-keysyms", "shared-mime-info", "dejavu-fonts",
-                         "fontconfig", "libpng"])
+            deps.extend(["libx11", "libxcb", "libxkbcommon", "libxcb-cursor", "libxcb-util", "libxcb-image", "libice",
+                         "libsm", "libxext", "libxtst", "libxcb-render-util", "libxcb-wm", "libxcb-keysyms",
+                         "shared-mime-info", "dejavu-fonts", "fontconfig", "libpng", "libjpeg-turbo"])
         return deps
 
     @classmethod
