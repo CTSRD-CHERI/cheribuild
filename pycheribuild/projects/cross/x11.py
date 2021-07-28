@@ -340,6 +340,11 @@ class BuildLibXTst(X11AutotoolsProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxtst.git")
     builds_docbook_xml = True
 
+    def setup(self):
+        super().setup()
+        if self.compiling_for_cheri():
+            self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+
 
 class BuildLibXKBFile(X11AutotoolsProject):
     target = "libxkbfile"
