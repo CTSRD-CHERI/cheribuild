@@ -941,7 +941,9 @@ class BuildOpenJPEG(CrossCompileCMakeProject):
 class BuildPoppler(CrossCompileCMakeProject):
     target = "poppler"
     dependencies = ["freetype2", "fontconfig", "openjpeg", "qtbase"]
-    repository = GitRepository("https://gitlab.freedesktop.org/poppler/poppler.git")
+    repository = GitRepository("https://gitlab.freedesktop.org/poppler/poppler.git",
+                               temporary_url_override="https://gitlab.freedesktop.org/arichardson/poppler.git",
+                               url_override_reason="cross-compilation fixes")
 
     @property
     def pkgconfig_dirs(self) -> "list[str]":
