@@ -155,8 +155,8 @@ def test_target_subsets(args, expected):
                  id="kcoreaddons-amd64-without-qtbase"),
     pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=libx.*",
                   "--skip-dependency-filter=xorg.*", "kauth-amd64"],  # includes native qtbase as well
-                 ["shared-mime-info-native", "shared-mime-info-amd64", "dejavu-fonts-amd64", "freetype2-amd64",
-                  "libexpat-amd64", "fontconfig-amd64", "qtbase-amd64", "extra-cmake-modules-amd64",
+                 ["shared-mime-info-native", "shared-mime-info-amd64", "dejavu-fonts-amd64", "libpng-amd64",
+                  "freetype2-amd64", "libexpat-amd64", "fontconfig-amd64", "qtbase-amd64", "extra-cmake-modules-amd64",
                   "kcoreaddons-amd64", "qtbase-native", "extra-cmake-modules-native", "kcoreaddons-native",
                   "kauth-amd64"], id="kauth-amd64-full-without-x11"),
     pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=libx.*",

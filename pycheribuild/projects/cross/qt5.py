@@ -124,7 +124,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # TODO: should only need these if minimal is not set
             deps.extend(["libx11", "libxcb", "libxkbcommon", "libxcb-cursor", "libxcb-util", "libxcb-image",
                          "libxcb-render-util", "libxcb-wm", "libxcb-keysyms", "shared-mime-info", "dejavu-fonts",
-                         "fontconfig"])
+                         "fontconfig", "libpng"])
         return deps
 
     @classmethod
@@ -191,6 +191,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-sysroot", self.cross_sysroot_path,
                 "-prefix", "/usr/local/" + self._xtarget.generic_suffix
             ])
+            # Use the libpng/libjpeg versions with CHERI fixes.
+            self.configure_args.append("-system-libpng")
+            self.configure_args.append("-system-libjpeg")
 
         if self.use_asan:
             self.configure_args.extend(["-sanitize", "address,undefined"])
@@ -221,11 +224,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         if not self.compiling_for_host():
             self.configure_args.extend(["-compile-examples"])
         self.configure_args.extend(["-nomake", "examples"])
-        # currently causes build failures:
-        # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
-        self.configure_args.append("-qt-libpng")
 
-        print("TYPE:", self.build_type)
         # TODO: once we update to qt 5.12 add this:
         if self.build_type == BuildType.DEBUG:
             self.configure_args.append("-debug")
