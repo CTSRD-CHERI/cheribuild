@@ -30,7 +30,7 @@ from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
 from .freetype import BuildFreeType2
-from ..project import DefaultInstallDir, GitRepository
+from ..project import DefaultInstallDir, GitRepository, Project
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
 from ...processutils import set_env
@@ -44,6 +44,15 @@ class X11Mixin:
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL  # Don't override the native installation
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+
+    def setup(self):
+        # noinspection PyUnresolvedReferences
+        super().setup()
+        assert isinstance(self, Project)
+        # The build systems does not seem to add the fontconfig dependency
+        rpath_dirs = self.target_info.additional_rpath_directories
+        if rpath_dirs:
+            self.COMMON_LDFLAGS.append("-Wl,-rpath," + ":".join(rpath_dirs))
 
 
 class X11AutotoolsProjectBase(X11Mixin, CrossCompileAutotoolsProject):
@@ -502,7 +511,3 @@ class BuildIceWM(X11Mixin, CrossCompileCMakeProject):
         # /usr/local/bin/icewmbg --scaled=1 --center=1 --image /root/cherries.jpeg
         self.add_cmake_options(CONFIG_LIBPNG=True, CONFIG_LIBJPEG=True, CONFIG_IMLIB2=False, CONFIG_XPM=True)
         self.add_cmake_options(ENABLE_NLS=False, CONFIG_I18N=False)
-        # The CMake build does not seem to add the fontconfig dependency
-        rpath_dirs = self.target_info.additional_rpath_directories
-        if rpath_dirs:
-            self.COMMON_LDFLAGS.append("-Wl,-rpath," + ":".join(rpath_dirs))
