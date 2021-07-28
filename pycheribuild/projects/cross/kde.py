@@ -970,7 +970,9 @@ class BuildPoppler(CrossCompileCMakeProject):
 
 class BuildThreadWeaver(KDECMakeProject):
     target = "threadweaver"
-    repository = GitRepository("https://invent.kde.org/frameworks/threadweaver.git")
+    repository = GitRepository("https://invent.kde.org/frameworks/threadweaver.git",
+                               force_branch=True, default_branch="work/arichardson/cheri",
+                               url_override_reason="https://invent.kde.org/frameworks/threadweaver/-/merge_requests/5")
 
 
 # Doesn't build on FreeBSD properly:
