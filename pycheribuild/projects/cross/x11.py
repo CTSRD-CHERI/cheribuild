@@ -327,7 +327,7 @@ class BuildLibXFt(X11AutotoolsProject):
 
 class BuildLibXTst(X11AutotoolsProject):
     target = "libxtst"
-    dependencies = ["libxext", "libx11"]
+    dependencies = ["libxext", "libx11", "libxi"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxtst.git")
     builds_docbook_xml = True
 
@@ -490,7 +490,7 @@ class BuildLibXpm(X11AutotoolsProject):
 # Slightly more functional window manager than TWM
 class BuildIceWM(X11Mixin, CrossCompileCMakeProject):
     target = "icewm"
-    dependencies = ["fontconfig", "libxcomposite", "libxdamage", "libpng", "libjpeg-turbo", "libxpm"]
+    dependencies = ["fontconfig", "libxcomposite", "libxdamage", "libpng", "libjpeg-turbo", "libxpm", "libxft"]
     repository = GitRepository("https://github.com/bbidulock/icewm",
                                old_urls=[b"https://github.com/arichardson/icewm"])
 

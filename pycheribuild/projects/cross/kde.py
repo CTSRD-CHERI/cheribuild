@@ -760,7 +760,7 @@ class BuildKScreenLocker(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/plasma/kscreenlocker.git",
                                temporary_url_override="https://invent.kde.org/arichardson/kscreenlocker.git",
                                url_override_reason="https://invent.kde.org/plasma/kscreenlocker/-/merge_requests/41")
-    dependencies = ["kwindowsystem", "kxmlgui", "kwindowsystem", "libxcb"]
+    dependencies = ["kwindowsystem", "kxmlgui", "kwindowsystem", "kidletime", "libxcb"]
 
     def setup(self):
         super().setup()
@@ -773,7 +773,7 @@ class BuildKWin(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/plasma/kwin.git",
                                temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
                                url_override_reason="Needs lots of ifdefs for -no-opengl QtBase and no-wayland")
-    dependencies = ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker"]
+    dependencies = ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker", "libinput", "qttools"]
 
     def setup(self):
         super().setup()
@@ -783,7 +783,9 @@ class BuildKWin(KDECMakeProject):
         if self.target_info.is_freebsd():
             # To get linux/input.h on FreeBSD
             if not BuildLibInput.get_source_dir(self).exists():
-                self.fatal("Need to clone libinput first to get linux/input.h compat header.")
+                self.warning("Need to clone libinput first to get linux/input.h compat header.")
+                self.ask_for_confirmation("Would you like to clone it now?")
+                BuildLibInput.get_instance(self).update()
             self.COMMON_FLAGS.append("-isystem" + str(BuildLibInput.get_source_dir(self) / "include"))
 
 
@@ -819,7 +821,8 @@ class BuildPlasmaWorkspace(KDECMakeProject):
                                url_override_reason="Lots of no-wayland changes etc.")
     dependencies = ["xprop", "xsetroot", "plasma-framework", "kwin", "breeze", "kidletime", "kitemmodels", "kcmutils",
                     "knotifyconfig", "kded", "kinit", "kscreenlocker", "libkscreen", "libxft", "libxtst", "kpeople",
-                    "kparts", "prison"]  # needs OpenGL: "kquickcharts"
+                    "kparts", "prison", "krunner", "kactivities-stats", "libksysguard", "kunitconversion"]
+    # needs OpenGL: "kquickcharts"
 
     def setup(self):
         super().setup()
