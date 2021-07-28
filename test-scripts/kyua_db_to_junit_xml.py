@@ -65,7 +65,7 @@ def fixup_kyua_generated_junit_xml(xml_file: Path, prefix: str = None):
                 xml.name = prefix if xml.name is None else prefix + "/" + xml.name
                 # Some projects produce a JUnit XML with a single <testsuite> root element
                 # Add a prefixed <testsuites> element improve jenkins visualization
-                new_xml = junitparser.JUnitXml()
+                new_xml = junitparser.JUnitXml(prefix)
                 new_xml.add_testsuite(xml)
                 new_xml.update_statistics()
                 xml = new_xml
