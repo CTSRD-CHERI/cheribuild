@@ -1842,6 +1842,7 @@ class DefaultInstallDir(Enum):
     # libraries that will be used by other programs, and the latter should be used for standalone programs (such as
     # PostgreSQL or WebKit).
     # Note: for ROOTFS_OPTBASE, the path_in_rootfs attribute can be used to override the default of /opt/...
+    # This also works for ROOTFS_LOCALBASE
     ROOTFS_OPTBASE = "The rootfs for this target (<rootfs>/opt/<arch>/<program> by default)"
     ROOTFS_LOCALBASE = "The sysroot for this target (<rootfs>/usr/local/<arch> by default)"
     KDE_PREFIX = "The sysroot for this target (<rootfs>/opt/<arch>/kde by default)"
@@ -1886,6 +1887,8 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
             compiler_for_resource_dir = config.cheri_sdk_bindir / "clang"
         return get_compiler_info(compiler_for_resource_dir, config=config).get_resource_dir()
     elif install_dir == DefaultInstallDir.ROOTFS_LOCALBASE:
+        assert getattr(project, "path_in_rootfs", None) is None, \
+            "path_in_rootfs only applies to ROOTFS_OPTBASE: " + str(project)
         assert not project.compiling_for_host(), "ROOTFS_LOCALBASE is only a valid install dir for cross-builds, " \
                                                  "use BOOTSTRAP_TOOLS/CUSTOM_INSTALL_DIR/IN_BUILD_DIRECTORY for native"
         return project.sdk_sysroot
