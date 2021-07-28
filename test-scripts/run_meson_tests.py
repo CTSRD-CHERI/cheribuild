@@ -44,6 +44,7 @@ def do_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     else:
         # Otherwise, we just set up the default LD_LIBRARY_PATH.
         boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
+    qemu.checked_run(f"cd {args.build_dir}")
 
 
 def run_meson_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
