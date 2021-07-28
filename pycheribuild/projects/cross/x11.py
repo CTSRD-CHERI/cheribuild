@@ -308,7 +308,9 @@ class BuildXorgFontUtil(X11AutotoolsProject):
 class BuildPixman(X11MesonProject):
     target = "pixman"
     dependencies = ["libpng"]
-    repository = GitRepository("https://gitlab.freedesktop.org/pixman/pixman.git")
+    repository = GitRepository("https://gitlab.freedesktop.org/pixman/pixman.git",
+                               temporary_url_override="https://gitlab.freedesktop.org/arichardson/pixman.git",
+                               url_override_reason="https://gitlab.freedesktop.org/pixman/pixman/-/merge_requests/48")
 
 
 class BuildLibFontenc(X11AutotoolsProject):
