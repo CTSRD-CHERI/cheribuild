@@ -30,8 +30,8 @@ import os
 import tempfile
 from pathlib import Path
 
-from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
-from .freetype import BuildFreeType2
+from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
+from .freetype import BuildFontConfig, BuildFreeType2
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
 from .wayland import BuildLibInput
 from .x11 import BuildLibXCB
@@ -907,23 +907,6 @@ class BuildGwenview(KDECMakeProject):
     target = "gwenview"
     dependencies = ["qtsvg", "kitemmodels", "kio", "kparts", "lcms2", "libpng", "exiv2"]
     repository = GitRepository("https://invent.kde.org/graphics/gwenview.git")
-
-
-class BuildFontConfig(CrossCompileMesonProject):
-    target = "fontconfig"
-    dependencies = ["freetype2", "libexpat"]
-    repository = GitRepository(
-        "https://gitlab.freedesktop.org/fontconfig/fontconfig",
-        temporary_url_override="https://gitlab.freedesktop.org/arichardson/fontconfig",
-        url_override_reason="Needs pointer provenance fixes (no PR posted yet)")
-
-    @property
-    def pkgconfig_dirs(self) -> "list[str]":
-        return BuildFreeType2.get_instance(self).installed_pkgconfig_dirs() + self.target_info.pkgconfig_dirs
-
-    def setup(self):
-        super().setup()
-        self.add_meson_options(doc="disabled")
 
 
 class BuildOpenJPEG(CrossCompileCMakeProject):
