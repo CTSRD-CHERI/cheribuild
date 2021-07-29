@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import contextlib
 import functools
 import os
 import shutil
@@ -46,7 +47,7 @@ from .colour import AnsiColour, coloured
 __all__ = ["typing", "include_local_file", "Type_T", "init_global_config",  # no-combine
            "status_update", "fatal_error", "coloured", "AnsiColour",  # no-combine
            "warning_message", "DoNotUseInIfStmt", "ThreadJoiner", "InstallInstructions",  # no-combine
-           "SafeDict", "error_message", "ConfigBase", "final",  # no-combine
+           "SafeDict", "error_message", "ConfigBase", "final", "add_error_context",  # no-combine
            "default_make_jobs_count", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
            "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
            "is_case_sensitive_dir", "SocketAndPort", "replace_one", "cached_property", "remove_prefix"]  # no-combine
@@ -213,9 +214,33 @@ def warning_message(*args, sep=" ", fixit_hint=None):
         fixit_message(fixit_hint)
 
 
+_ERROR_CONTEXT = []
+
+
+@contextlib.contextmanager
+def add_error_context(context: str):
+    _ERROR_CONTEXT.append(context)
+    try:
+        yield
+        # We don't pop the error context if there is an exception so that we can print the context in the
+        # except clause of main()
+        _ERROR_CONTEXT.pop()
+    except Exception as e:
+        # print("Got exception in error context", context, e)
+        raise e
+
+
+def _add_error_context(prefix, args, sep) -> "str":
+    if _ERROR_CONTEXT:
+        # _ERROR_CONTEXT might contain escape sequences so we have to reset to red afterwards
+        return coloured(AnsiColour.red, maybe_add_space(prefix + " " + _ERROR_CONTEXT[-1] +
+                                                        AnsiColour.red.escape_sequence() + ":", sep) + args, sep=sep)
+    return coloured(AnsiColour.red, maybe_add_space(prefix + ":", sep) + args, sep=sep)
+
+
 def error_message(*args, sep=" ", fixit_hint=None):
     # we ignore fatal errors when simulating a run
-    print(coloured(AnsiColour.red, maybe_add_space("Error:", sep) + args, sep=sep), file=sys.stderr, flush=True)
+    print(_add_error_context("Error", args, sep=sep), file=sys.stderr, flush=True)
     if fixit_hint:
         fixit_message(fixit_hint)
 
@@ -225,16 +250,14 @@ def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, ex
         pretend = GlobalConfig.pretend  # TODO: remove
     # we ignore fatal errors when simulating a run
     if pretend:
-        print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr,
-              flush=True)
+        print(_add_error_context("Potential fatal error", args, sep=sep), file=sys.stderr, flush=True)
         if fixit_hint:
             fixit_message(fixit_hint)
         if fatal_when_pretending:
             traceback.print_stack()
             sys.exit(exit_code)
     else:
-        print(coloured(AnsiColour.red, maybe_add_space("Fatal error:", sep) + args, sep=sep), file=sys.stderr,
-              flush=True)
+        print(_add_error_context("Fatal error", args, sep=sep), file=sys.stderr, flush=True)
         if fixit_hint:
             fixit_message(fixit_hint)
         sys.exit(exit_code)

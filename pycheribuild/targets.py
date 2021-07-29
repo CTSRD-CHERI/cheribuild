@@ -36,7 +36,7 @@ from collections import OrderedDict
 from .config.chericonfig import CheriConfig
 from .config.target_info import CrossCompileTarget
 from .processutils import set_env
-from .utils import AnsiColour, coloured, fatal_error, status_update, warning_message
+from .utils import add_error_context, AnsiColour, coloured, fatal_error, status_update, warning_message
 
 if typing.TYPE_CHECKING:  # no-combine
     from .projects.project import SimpleProject  # no-combine
@@ -100,18 +100,19 @@ class Target(object):
     def _do_run(self, config, msg: str, func: "typing.Callable[[SimpleProject], typing.Any]"):
         # instantiate the project and run it
         starttime = time.time()
-        project = self.get_or_create_project(self.project_class.get_crosscompile_target(config), config)
-        # noinspection PyProtectedMember
-        if not project._setup_called:
-            project.setup()
-        # noinspection PyProtectedMember
-        assert project._setup_called, str(self._project_class) + ": forgot to call super().setup()?"
-        new_env = {"PATH": project.config.dollar_path_with_other_tools}
-        if project.config.clang_colour_diags:
-            new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
-        with project.set_env(**new_env):
-            func(project)
-        status_update(msg, "for target '" + self.name + "' in", time.time() - starttime, "seconds")
+        with add_error_context(coloured(AnsiColour.yellow, "(in target ", self.name, ")", sep="")):
+            project = self.get_or_create_project(self.project_class.get_crosscompile_target(config), config)
+            # noinspection PyProtectedMember
+            if not project._setup_called:
+                project.setup()
+            # noinspection PyProtectedMember
+            assert project._setup_called, str(self._project_class) + ": forgot to call super().setup()?"
+            new_env = {"PATH": project.config.dollar_path_with_other_tools}
+            if project.config.clang_colour_diags:
+                new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
+            with project.set_env(**new_env):
+                func(project)
+            status_update(msg, "for target '" + self.name + "' in", time.time() - starttime, "seconds")
 
     def execute(self, config: CheriConfig):
         if self._completed:
