@@ -382,6 +382,11 @@ class BuildXKeyboardConfig(X11MesonProject):
     dependencies = ["libx11"]
     repository = GitRepository("https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config.git")
 
+    def install(self, **kwargs):
+        # work around `install script '/bin/sh -c ln -s base $DESTDIR/usr/local/share/X11/xkb/rules/xorg' exit code 1`
+        for symlink in ("xorg", "xorg.lst", "xorg.xml"):
+            self.delete_file(self.install_dir / "X11/xkb/rules" / symlink)
+
 
 class BuildXKkbcomp(X11AutotoolsProject):
     target = "xkbcomp"
