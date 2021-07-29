@@ -132,7 +132,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # TODO: should only need these if minimal is not set
             deps.extend(["libx11", "libxcb", "libxkbcommon", "libxcb-cursor", "libxcb-util", "libxcb-image", "libice",
                          "libsm", "libxext", "libxtst", "libxcb-render-util", "libxcb-wm", "libxcb-keysyms",
-                         "shared-mime-info", "dejavu-fonts", "fontconfig", "libpng", "libjpeg-turbo"])
+                         "shared-mime-info", "dejavu-fonts", "fontconfig", "libpng", "libjpeg-turbo", "sqlite"])
         return deps
 
     @classmethod
@@ -208,6 +208,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # Use the libpng/libjpeg versions with CHERI fixes.
             self.configure_args.append("-system-libpng")
             self.configure_args.append("-system-libjpeg")
+            # Same for SQLite (otherwise some of the tests end up crashing)
+            self.configure_args.append("-system-sqlite")
 
         if self.use_asan:
             self.configure_args.extend(["-sanitize", "address,undefined"])

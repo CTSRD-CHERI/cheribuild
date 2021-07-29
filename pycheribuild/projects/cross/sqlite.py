@@ -28,20 +28,13 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, FettProjectMixin,
-                                  GitRepository, Linkage)
-from .qt5 import BuildQtWebkit
+                                  GitRepository)
 
 
 class BuildSQLite(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
                                default_branch="3.22.0-cheri", force_branch=True)
     _needed_for_webkit = True
-
-    def linkage(self):
-        if not self.compiling_for_host() and (
-                self._needed_for_webkit and BuildQtWebkit.get_instance(self, self.config).force_static_linkage):
-            return Linkage.STATIC  # make sure it works with webkit
-        return super().linkage()
 
     def setup(self):
         super().setup()
@@ -51,7 +44,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
             self.configure_args.extend([
                 "--disable-amalgamation",  # don't concatenate sources
                 "--disable-load-extension",
-                ])
+            ])
         # always disable tcl, since it tries to install to /usr on Ubuntu
         self.configure_args.append("--disable-tcl")
         self.configure_args.append("--disable-amalgamation")
@@ -66,6 +59,9 @@ class BuildSQLite(CrossCompileAutotoolsProject):
             self.COMMON_FLAGS.append("-g")
         if self.build_type.is_debug:
             self.configure_args.append("--enable-debug")
+
+        # Enables the sqlite3_column_table_name16 API (needed by QtBase)
+        self.COMMON_FLAGS.append("-DSQLITE_ENABLE_COLUMN_METADATA=1")
 
     def compile(self, **kwargs):
         # create the required metadata

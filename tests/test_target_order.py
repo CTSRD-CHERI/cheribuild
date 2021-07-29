@@ -205,7 +205,7 @@ def _qtbase_x11_deps(suffix):
                                    "libxcb-util-", "libxcb-image-", "libxcb-cursor-", "libice-", "libsm-", "libxext-",
                                    "libxfixes-", "libxi-", "libxtst-", "libxcb-wm-", "libxcb-keysyms-",
                                    "shared-mime-info-", "dejavu-fonts-", "libpng-", "freetype2-", "libexpat-",
-                                   "fontconfig-", "libjpeg-turbo-")]
+                                   "fontconfig-", "libjpeg-turbo-", "sqlite-")]
     if suffix != "native":
         result.insert(result.index("shared-mime-info-" + suffix), "shared-mime-info-native")
     return result
@@ -233,15 +233,13 @@ def test_webkit_cached_deps():
 
     cheri_target_names = list(sorted(webkit_cheri.all_dependency_names(config)))
     expected_cheri_names = sorted(["llvm-native", "cheribsd-mips64-purecap"] + _qtbase_x11_deps("mips64-purecap") + [
-        "qtbase-mips64-purecap", "icu4c-native", "icu4c-mips64-purecap", "libxml2-mips64-purecap",
-        "sqlite-mips64-purecap"])
+        "qtbase-mips64-purecap", "icu4c-native", "icu4c-mips64-purecap", "libxml2-mips64-purecap"])
     assert cheri_target_names == expected_cheri_names
     _check_deps_not_cached([webkit_native, webkit_mips])
     _check_deps_cached([webkit_cheri])
     mips_target_names = list(sorted(webkit_mips.all_dependency_names(config)))
     expected_mips_names = sorted(["llvm-native", "cheribsd-mips64"] + _qtbase_x11_deps("mips64") + [
-        "qtbase-mips64", "icu4c-native", "icu4c-mips64", "libxml2-mips64",
-        "sqlite-mips64"])
+        "qtbase-mips64", "icu4c-native", "icu4c-mips64", "libxml2-mips64"])
     assert mips_target_names == expected_mips_names
     _check_deps_cached([webkit_cheri, webkit_mips])
     _check_deps_not_cached([webkit_native])
@@ -262,11 +260,10 @@ def test_webkit_deps_2():
         "qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
 
     assert _sort_targets(["qtwebkit-mips64"], add_dependencies=True, skip_sdk=True) == _qtbase_x11_deps(
-        "mips64") + ["qtbase-mips64", "icu4c-native", "icu4c-mips64", "libxml2-mips64", "sqlite-mips64",
-                     "qtwebkit-mips64"]
+        "mips64") + ["qtbase-mips64", "icu4c-native", "icu4c-mips64", "libxml2-mips64", "qtwebkit-mips64"]
     assert _sort_targets(["qtwebkit-mips64-purecap"], add_dependencies=True, skip_sdk=True) == _qtbase_x11_deps(
         "mips64-purecap") + ["qtbase-mips64-purecap", "icu4c-native", "icu4c-mips64-purecap", "libxml2-mips64-purecap",
-                             "sqlite-mips64-purecap", "qtwebkit-mips64-purecap"]
+                             "qtwebkit-mips64-purecap"]
 
 
 def test_riscv():
