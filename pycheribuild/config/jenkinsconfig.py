@@ -142,7 +142,7 @@ class JenkinsConfig(CheriConfig):
             "use-system-compiler-for-native", "-without-sdk",
             help="Don't use the CHERI SDK -> only /usr (for native builds)")
         self.strip_elf_files = loader.add_commandline_only_bool_option(
-            "strip-elf-files", help="Strip ELF files before creating the tarball", default=True)
+            "strip-elf-files", help="Strip ELF files before creating the tarball", default=True, negatable=True)
         self._cheri_sdk_dir_override = loader.add_commandline_only_option(
             "cheri-sdk-path", default=None, type=Path,
             help="Override the path to the CHERI SDK (default is $WORKSPACE/cherisdk)")  # type: Path
@@ -172,7 +172,7 @@ class JenkinsConfig(CheriConfig):
         self.confirm_clone = False
         self.verbose = True
         self.quiet = False
-        self.clean = loader.add_commandline_only_bool_option("clean", default=True,
+        self.clean = loader.add_commandline_only_bool_option("clean", default=True, negatable=True,
                                                              help="Clean build directory before building")
         self.force = True  # no user input in jenkins
         self.write_logfile = False  # jenkins stores the output anyway

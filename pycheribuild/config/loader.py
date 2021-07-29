@@ -258,8 +258,9 @@ class ConfigLoaderBase(object):
 
     def add_commandline_only_bool_option(self, *args, default=False, **kwargs) -> bool:
         # noinspection PyTypeChecker
-        return self.add_option(*args, option_cls=CommandLineConfigOption, default=default, negatable=False, type=bool,
-                               **kwargs)
+        assert default is False or kwargs.get("negatable") is True
+        return self.add_option(*args, option_cls=CommandLineConfigOption, default=default,
+                               negatable=kwargs.pop("negatable", False), type=bool, **kwargs)
 
     @staticmethod
     def __is_enum_type(value_type):
@@ -529,6 +530,7 @@ class BooleanNegatableAction(argparse.Action):
                         negated_opt = "--no-" + opt[2:]
                     else:
                         negated_opt = opt[:slash_index + 1] + "no-" + opt[slash_index + 1:]
+                    all_option_strings.append(negated_opt)
                     self._negated_option_strings.append(negated_opt)
         all_option_strings = []
         self._negated_option_strings = []
@@ -588,8 +590,7 @@ class CommandLineConfigOption(ConfigOptionBase):
         parser_obj = group if group else self._loader._parser
         kwargs["dest"] = name
         if self.value_type is bool:
-            if kwargs.get("negatable", None) is False:
-                kwargs.pop("negatable")
+            if kwargs.pop("negatable", None) is False:
                 kwargs["action"] = "store_true"
             else:
                 assert "action" not in kwargs
