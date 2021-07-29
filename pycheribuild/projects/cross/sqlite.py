@@ -45,6 +45,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
                 "--disable-amalgamation",  # don't concatenate sources
                 "--disable-load-extension",
             ])
+        self.configure_args.append("--with-pic")  # ensure that static lib can be embedded in qtbase
         # always disable tcl, since it tries to install to /usr on Ubuntu
         self.configure_args.append("--disable-tcl")
         self.configure_args.append("--disable-amalgamation")
