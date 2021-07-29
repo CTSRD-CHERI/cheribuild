@@ -443,6 +443,24 @@ class BuildXVncServer(X11AutotoolsProject):
         # TODO: should we install a service that we can start with `service xvnc start`?
         self.write_file(self.install_dir / "bin/startxvnc", overwrite=True, mode=0o755,
                         contents="#!/bin/sh\nXvnc -geometry 1024x768 -SecurityTypes=None \"$@\"\n")
+        self.write_file(self.install_dir / "etc/rc.d/xvnc", overwrite=True, mode=0o755, contents=f"""#!/bin/sh
+# PROVIDE: xvnc
+# REQUIRE: DAEMON
+# BEFORE:  LOGIN
+# KEYWORD: nojail shutdown
+. /etc/rc.subr
+
+name=xvnc
+rcvar=xvnc_enable
+: "${{xvnc_args="-geometry 1024x768 -SecurityTypes=None"}}"
+
+pidfile="/var/run/${{name}}.pid"
+command=/usr/sbin/daemon
+command_args="-p ${{pidfile}} -S -T ${{name}} {self.install_prefix / "bin/Xvnc"} ${{xvnc_args}}"
+
+load_rc_config $name
+run_rc_command "$1"
+""")
 
     def update(self):
         super().update()
