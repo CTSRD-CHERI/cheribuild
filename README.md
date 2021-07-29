@@ -326,17 +326,15 @@ I would also suggest using `set autolist` to display all options.
 
 <!-- BEGIN HELP OUTPUT -->
 ```
-usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend | --no-pretend | -p] [--build] [--test]
-                     [--benchmark] [--build-and-test] [--list-targets] [--print-chosen-targets] [--dump-configuration]
-                     [--print-targets-only | --no-print-targets-only] [--clang-path CLANG-PATH]
-                     [--clang++-path CLANG++-PATH] [--clang-cpp-path CLANG-CPP-PATH]
-                     [--pass-k-to-make | --no-pass-k-to-make | -k] [--with-libstatcounters | --no-with-libstatcounters]
+usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build] [--test] [--benchmark]
+                     [--build-and-test] [--list-targets] [--print-chosen-targets] [--dump-configuration]
+                     [--print-targets-only] [--clang-path CLANG-PATH] [--clang++-path CLANG++-PATH]
+                     [--clang-cpp-path CLANG-CPP-PATH] [--pass-k-to-make]
+                     [--with-libstatcounters | --no-with-libstatcounters]
                      [--skip-world | --no-skip-world | --skip-buildworld | --no-skip-buildworld]
                      [--skip-kernel | --no-skip-kernel | --skip-buildkernel | --no-skip-buildkernel]
-                     [--freebsd-subdir SUBDIRS] [--buildenv | --no-buildenv]
-                     [--libcompat-buildenv | --no-libcompat-buildenv | --libcheri-buildenv | --no-libcheri-buildenv]
-                     [--debug-output | --no-debug-output | -vv] [--mips-float-abi {soft,hard}]
-                     [--cross-compile-linkage {default,dynamic,static}]
+                     [--freebsd-subdir SUBDIRS] [--buildenv] [--libcompat-buildenv] [--debug-output]
+                     [--mips-float-abi {soft,hard}] [--cross-compile-linkage {default,dynamic,static}]
                      [--subobject-bounds {conservative,subobject-safe,aggressive,very-aggressive,everywhere-unsafe}]
                      [--use-cheri-ubsan | --no-use-cheri-ubsan]
                      [--use-cheri-ubsan-runtime | --no-use-cheri-ubsan-runtime]
@@ -349,13 +347,11 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend | --no-pr
                      [--qemu-gdb-break-on-cheri-trap | --no-qemu-gdb-break-on-cheri-trap]
                      [--qemu-gdb-debug-userspace-program QEMU-GDB-DEBUG-USERSPACE-PROGRAM] [--docker | --no-docker]
                      [--docker-container DOCKER-CONTAINER] [--docker-reuse-container | --no-docker-reuse-container]
-                     [--compilation-db | --no-compilation-db | --cdb | --no-cdb]
-                     [--wait-for-debugger | --no-wait-for-debugger]
+                     [--compilation-db] [--wait-for-debugger | --no-wait-for-debugger]
                      [--debugger-in-tmux-pane | --no-debugger-in-tmux-pane] [--gdb-random-port | --no-gdb-random-port]
                      [--run-under-gdb | --no-run-under-gdb] [--test-ssh-key TEST-SSH-KEY]
                      [--use-minimal-benchmark-kernel | --no-use-minimal-benchmark-kernel] [--test-extra-args ARGS]
-                     [--interact-after-tests | --no-interact-after-tests]
-                     [--test-environment-only | --no-test-environment-only] [--test-ld-preload TEST-LD-PRELOAD]
+                     [--interact-after-tests] [--test-environment-only] [--test-ld-preload TEST-LD-PRELOAD]
                      [--benchmark-fpga-extra-args ARGS] [--benchmark-clean-boot | --no-benchmark-clean-boot]
                      [--benchmark-extra-args ARGS] [--benchmark-ssh-host BENCHMARK-SSH-HOST]
                      [--benchmark-csv-suffix BENCHMARK-CSV-SUFFIX] [--benchmark-ld-preload BENCHMARK-LD-PRELOAD]
@@ -370,10 +366,8 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend | --no-pr
                      [--logfile | --no-logfile] [--skip-update | --no-skip-update]
                      [--confirm-clone | --no-confirm-clone] [--force-update | --no-force-update]
                      [--skip-configure | --no-skip-configure | --reconfigure | --no-reconfigure | --force-configure | --no-force-configure]
-                     [--include-dependencies | --no-include-dependencies | -d]
-                     [--include-toolchain-dependencies | --no-include-toolchain-dependencies]
-                     [--start-with TARGET | --start-after TARGET]
-                     [--compilation-db-in-source-dir | --no-compilation-db-in-source-dir]
+                     [--include-dependencies] [--include-toolchain-dependencies | --no-include-toolchain-dependencies]
+                     [--start-with TARGET | --start-after TARGET] [--compilation-db-in-source-dir]
                      [--generate-cmakelists | --no-generate-cmakelists] [--make-without-nice | --no-make-without-nice]
                      [--make-jobs MAKE-JOBS] [--source-root SOURCE-ROOT] [--output-root OUTPUT-ROOT]
                      [--build-root BUILD-ROOT] [--tools-root TOOLS-ROOT] [--morello-sdk-root MORELLO-SDK-ROOT]
@@ -435,12 +429,9 @@ optional arguments:
   -h, --help            show this help message and exit
   --help-all, --help-hidden
                         Show all help options, including the target-specific ones.
-  --pretend, --no-pretend, -p
-                        Only print the commands instead of running them (default: 'False')
-  --pass-k-to-make, --no-pass-k-to-make, -k
-                        Pass the -k flag to make to continue after the first error (default: 'False')
-  --debug-output, --no-debug-output, -vv
-                        Extremely verbose output (default: 'False')
+  --pretend, -p         Only print the commands instead of running them (default: 'False')
+  --pass-k-to-make, -k  Pass the -k flag to make to continue after the first error (default: 'False')
+  --debug-output, -vv   Extremely verbose output (default: 'False')
   --clang-colour-diags, --no-clang-colour-diags, --clang-color-diags, --no-clang-color-diags
                         Force CHERI clang to emit coloured diagnostics (default: 'True')
   --configure-only, --no-configure-only
@@ -449,7 +440,7 @@ optional arguments:
                         Skip the install step (only do the build) (default: 'False')
   --skip-build, --no-skip-build
                         Skip the build step (only do the install) (default: 'False')
-  --compilation-db, --no-compilation-db, --cdb, --no-cdb
+  --compilation-db, --cdb
                         Create a compile_commands.json file in the build dir (requires Bear for non-CMake projects)
                         (default: 'False')
   --shallow-clone, --no-shallow-clone
@@ -478,7 +469,7 @@ optional arguments:
                         Skip the configure step (default: 'False')
   --reconfigure, --no-reconfigure, --force-configure, --no-force-configure
                         Always run the configure step, even for CMake projects with a valid cache. (default: 'False')
-  --compilation-db-in-source-dir, --no-compilation-db-in-source-dir
+  --compilation-db-in-source-dir
                         Generate a compile_commands.json and also copy it to the source directory (default: 'False')
   --generate-cmakelists, --no-generate-cmakelists
                         Generate a CMakeLists.txt that just calls cheribuild. Useful for IDEs that only support CMake
@@ -498,8 +489,7 @@ Actions to be performed:
                         List all the targets that would be built
   --dump-configuration  Print the current configuration as JSON. This can be saved to ~/.config/cheribuild.json to make
                         it persistent
-  --print-targets-only, --no-print-targets-only
-                        Don't run the build but instead only print the targets that would be executed (default: 'False')
+  --print-targets-only  Don't run the build but instead only print the targets that would be executed (default: 'False')
   --list-kernels, --no-list-kernels
                         List available kernel configs to run and exit (default: 'False')
   --get-config-option KEY
@@ -514,7 +504,7 @@ Selecting which dependencies are built:
   --skip-dependency-filter REGEX
                         A regular expression to match against to target names that should be skipped when using--
                         include-dependency. Can be passed multiple times to add more patterns. (default: '[]')
-  --include-dependencies, --no-include-dependencies, -d
+  --include-dependencies, -d
                         Also build the dependencies of targets passed on the command line. Targets passed on the command
                         line will be reordered and processed in an order that ensures dependencies are built before the
                         real target. (run --list-targets for more information). By default this does not build toolchain
@@ -586,10 +576,10 @@ Configuration for running tests:
                         an INVARIANTS kernel). (default: 'False')
   --test-extra-args ARGS
                         Additional flags to pass to the test script in --test
-  --interact-after-tests, --no-interact-after-tests
+  --interact-after-tests
                         Interact with the CheriBSD instance after running the tests on QEMU (only for --test) (default:
                         'False')
-  --test-environment-only, --no-test-environment-only
+  --test-environment-only
                         Don't actually run the tests. Instead setup a QEMU instance with the right paths set up.
                         (default: 'False')
   --test-ld-preload TEST-LD-PRELOAD
@@ -649,10 +639,9 @@ FreeBSD and CheriBSD build configuration:
                         Only build subdirs SUBDIRS of FreeBSD/CheriBSD instead of the full tree. Useful for quickly
                         rebuilding individual programs/libraries. If more than one dir is passed they will be processed
                         in order. Note: This will break if not all dependencies have been built.
-  --buildenv, --no-buildenv
-                        Open a shell with the right environment for building the project. Currently only works for
+  --buildenv            Open a shell with the right environment for building the project. Currently only works for
                         FreeBSD/CheriBSD (default: 'False')
-  --libcompat-buildenv, --no-libcompat-buildenv, --libcheri-buildenv, --no-libcheri-buildenv
+  --libcompat-buildenv, --libcheri-buildenv
                         Open a shell with the right environment for building compat libraries. (default: 'False')
 
 Options controlling the use of docker for building:

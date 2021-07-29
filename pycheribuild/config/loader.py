@@ -258,7 +258,8 @@ class ConfigLoaderBase(object):
 
     def add_commandline_only_bool_option(self, *args, default=False, **kwargs) -> bool:
         # noinspection PyTypeChecker
-        return self.add_option(*args, option_cls=CommandLineConfigOption, default=default, type=bool, **kwargs)
+        return self.add_option(*args, option_cls=CommandLineConfigOption, default=default, negatable=False, type=bool,
+                               **kwargs)
 
     @staticmethod
     def __is_enum_type(value_type):
@@ -567,8 +568,12 @@ class CommandLineConfigOption(ConfigOptionBase):
         parser_obj = group if group else self._loader._parser
         kwargs["dest"] = name
         if self.value_type is bool:
-            assert "action" not in kwargs
-            kwargs["action"] = BooleanNegatableAction
+            if kwargs.get("negatable", None) is False:
+                kwargs.pop("negatable")
+                kwargs["action"] = "store_true"
+            else:
+                assert "action" not in kwargs
+                kwargs["action"] = BooleanNegatableAction
         if shortname:
             action = parser_obj.add_argument("--" + name, "-" + shortname, **kwargs)
         else:
@@ -576,9 +581,7 @@ class CommandLineConfigOption(ConfigOptionBase):
         if self.default is not None and action.help is not None and has_default_help_text:
             if action.help != argparse.SUPPRESS:
                 action.help = action.help + " (default: \'" + self.default_str + "\')"
-        assert action.default is None  # we don't want argparse default values!
-        assert isinstance(action, argparse.Action)
-        assert not action.default  # we handle the default value manually
+        action.default = None  # we don't want argparse default values!
         assert not action.type  # we handle the type of the value manually
         return action
 
