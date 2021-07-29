@@ -60,6 +60,7 @@ class KDECMakeProject(CrossCompileCMakeProject):
     # Default to not building the tests since it saves a lot of build time
     has_optional_tests = True
     default_build_tests = False
+    show_optional_tests_in_help = False
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":

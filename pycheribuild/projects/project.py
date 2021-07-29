@@ -1949,6 +1949,7 @@ class Project(SimpleProject):
     # significant build speedup as they should not be needed for most users.
     has_optional_tests = False
     default_build_tests = True  # whether to build tests by default
+    show_optional_tests_in_help = True  # whether to show the --foo/build-tests in --help
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
@@ -2161,7 +2162,8 @@ class Project(SimpleProject):
 
         if cls.has_optional_tests and "build_tests" not in cls.__dict__:
             cls.build_tests = cls.add_bool_option("build-tests", help="Build the tests",
-                                                  show_help=True, default=cls.default_build_tests)
+                                                  default=cls.default_build_tests,
+                                                  show_help=cls.show_optional_tests_in_help)
 
     def linkage(self):
         if self.target_info.must_link_statically:
