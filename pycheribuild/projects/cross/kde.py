@@ -111,8 +111,10 @@ class KDECMakeProject(CrossCompileCMakeProject):
             # the actual .h to another lowercase one (<kio/authinfo.h>). However, on a case-insensitive FS this results
             # in: non-portable path to file '<KIO/authinfo.h>'; specified path differs in case from file name on disk
             self.common_warning_flags.append("-Wno-nonportable-include-path")
-
         self.add_cmake_options(BUILD_TESTING=self.build_tests)
+        # Avoid building documentation:
+        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_Doxygen=True)
+        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_KF5DocTools=True)
 
     @property
     def cmake_prefix_paths(self):
