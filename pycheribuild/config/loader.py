@@ -258,8 +258,7 @@ class ConfigLoaderBase(object):
 
     def add_commandline_only_bool_option(self, *args, default=False, **kwargs) -> bool:
         # noinspection PyTypeChecker
-        return self.add_option(*args, option_cls=CommandLineConfigOption, default=default, action="store_true",
-                               type=bool, **kwargs)
+        return self.add_option(*args, option_cls=CommandLineConfigOption, default=default, type=bool, **kwargs)
 
     @staticmethod
     def __is_enum_type(value_type):
@@ -325,7 +324,7 @@ class ConfigLoaderBase(object):
 
     def add_bool_option(self, name: str, shortname=None, default=False, **kwargs) -> bool:
         # noinspection PyTypeChecker
-        return self.add_option(name, shortname, default=default, action="store_true", type=bool, **kwargs)
+        return self.add_option(name, shortname, default=default, type=bool, **kwargs)
 
     def add_path_option(self, name: str, shortname=None, **kwargs) -> Path:
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
@@ -516,6 +515,32 @@ class DefaultValueOnlyConfigOption(ConfigOptionBase):
         return None  # always use the default value
 
 
+# Based on Python 3.9 BooleanOptionalAction, but places the "no" after the first /
+class BooleanNegatableAction(argparse.Action):
+    def __init__(self, option_strings, dest, default=None, type=None, choices=None, required=False,
+                 help=None, metavar=None):
+        _option_strings = []
+        for name in option_strings:
+            _option_strings.append(name)
+            # Add the negated option, placing the "no" after the / instead of the start -> --cheribsd/no-build-tests
+            if name.startswith('--'):
+                slash_index = name.rfind("/")
+                if slash_index == -1:
+                    negated_name = "--no-" + name[2:]
+                else:
+                    negated_name = name[:slash_index + 1] + "no-" + name[slash_index + 1:]
+                _option_strings.append(negated_name)
+        super().__init__(option_strings=_option_strings, dest=dest, nargs=0, default=default, type=type,
+                         choices=choices, required=required, help=help, metavar=metavar)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if option_string in self.option_strings:
+            setattr(namespace, self.dest, not option_string.startswith('--no-'))
+
+    def format_usage(self):
+        return ' | '.join(self.option_strings)
+
+
 class CommandLineConfigOption(ConfigOptionBase):
     # noinspection PyProtectedMember,PyUnresolvedReferences
     def __init__(self, name: str, shortname: str, default, value_type: "typing.Type", _owning_class,
@@ -540,31 +565,14 @@ class CommandLineConfigOption(ConfigOptionBase):
         assert "default" not in kwargs  # Should be handled manually
         # noinspection PyProtectedMember
         parser_obj = group if group else self._loader._parser
-        if self.value_type == bool and group is None:
-            parser_obj = parser_obj.add_mutually_exclusive_group()
-            kwargs["default"] = None
-            assert kwargs["action"] == "store_true"
+        kwargs["dest"] = name
+        if self.value_type is bool:
+            assert "action" not in kwargs
+            kwargs["action"] = BooleanNegatableAction
         if shortname:
             action = parser_obj.add_argument("--" + name, "-" + shortname, **kwargs)
         else:
             action = parser_obj.add_argument("--" + name, **kwargs)
-        if self.value_type == bool:
-            slash_index = name.rfind("/")
-            negated_name = name[:slash_index + 1] + "no-" + name[slash_index + 1:]
-            negated_help = argparse.SUPPRESS
-            # if the default is true we want to show the negated option instead.
-            if default is True:
-                negated_help = kwargs["help"]
-                if negated_help != argparse.SUPPRESS:
-                    if negated_help[0].isupper():
-                        negated_help = negated_help[0].lower() + negated_help[1:]
-                    negated_help = "Do not " + negated_help
-                action.help = argparse.SUPPRESS
-            neg = parser_obj.add_argument("--" + negated_name, dest=action.dest, default=None, action="store_false",
-                                          help=negated_help)
-            # change the default action value
-            neg.default = None
-            action.default = None
         if self.default is not None and action.help is not None and has_default_help_text:
             if action.help != argparse.SUPPRESS:
                 action.help = action.help + " (default: \'" + self.default_str + "\')"

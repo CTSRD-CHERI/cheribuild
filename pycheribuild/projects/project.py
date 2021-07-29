@@ -714,7 +714,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def add_bool_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None,
                         default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
         # noinspection PyTypeChecker
-        return cls.add_config_option(name, default=default, kind=bool, shortname=shortname, action="store_true",
+        return cls.add_config_option(name, default=default, kind=bool, shortname=shortname,
                                      only_add_for_targets=only_add_for_targets, **kwargs)
 
     @classmethod
