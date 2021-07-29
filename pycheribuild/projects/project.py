@@ -704,11 +704,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 fallback_config_names.append(extra_fallback_class.target + "/" + name)
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
-        alias_target_names = [prefix + "/" + name for prefix in cls.__dict__.get("_config_file_aliases", tuple())]
+        legacy_alias_target_names = [tgt + "/" + name for tgt in cls.__dict__.get("_config_file_aliases", tuple())]
         return cls._config_loader.add_option(fullname, shortname, default=default, type=kind,
                                              _owning_class=cls, group=cls._commandline_option_group,
                                              help_hidden=help_hidden, _fallback_names=fallback_config_names,
-                                             _alias_names=alias_target_names, **kwargs)
+                                             _legacy_alias_names=legacy_alias_target_names, **kwargs)
 
     @classmethod
     def add_bool_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None,

@@ -359,9 +359,8 @@ class ConfigLoaderBase(object):
 
 class ConfigOptionBase(object):
     def __init__(self, name: str, shortname: typing.Optional[str], default, value_type: "typing.Type",
-                 _owning_class=None,
-                 _loader: ConfigLoaderBase = None, _fallback_names: "typing.List[str]" = None,
-                 _alias_names: "typing.List[str]" = None):
+                 _owning_class=None, _loader: ConfigLoaderBase = None, _fallback_names: "typing.List[str]" = None,
+                 _legacy_alias_names: "typing.List[str]" = None):
         self.name = name
         self.shortname = shortname
         self.default = default
@@ -392,7 +391,7 @@ class ConfigOptionBase(object):
         # if none it means the global CheriConfig is the class containing this option
         self._owning_class = _owning_class
         self._fallback_names = _fallback_names  # for targets such as gdb-mips, etc
-        self.alias_names = _alias_names  # for targets such as gdb-mips, etc
+        self.alias_names = _legacy_alias_names  # for targets such as gdb-mips, etc
         self._is_default_value = False
 
     # noinspection PyUnusedLocal
@@ -537,7 +536,6 @@ class BooleanNegatableAction(argparse.Action):
         # Don't show the alias options in --help output
         self.displayed_option_count = len(all_option_strings)
         if alias_names is not None:
-            self._alias_names = alias_names
             collect_option_strings(alias_names)
         super().__init__(option_strings=all_option_strings, dest=dest, nargs=0,
                          default=default, type=type, choices=choices, required=required, help=help, metavar=metavar)
@@ -556,9 +554,8 @@ class StoreActionWithPossibleAliases(argparse.Action):
                  required=False, help=None, metavar=None, alias_names=None):
         if nargs == 1:
             raise ValueError("nargs for store actions must be 1")
-        self._original_option_strings = option_strings
+        self.displayed_option_count = len(option_strings)
         if alias_names is not None:
-            self._alias_names = alias_names
             option_strings = option_strings + alias_names
         super().__init__(option_strings=option_strings, dest=dest, nargs=nargs, default=default, type=type,
                          choices=choices, required=required, help=help, metavar=metavar)
@@ -567,20 +564,20 @@ class StoreActionWithPossibleAliases(argparse.Action):
         setattr(namespace, self.dest, values)
 
     def format_usage(self):
-        return ' | '.join(self._original_option_strings)
+        return ' | '.join(self.option_strings[:self.displayed_option_count])
 
 
 class CommandLineConfigOption(ConfigOptionBase):
     # noinspection PyProtectedMember,PyUnresolvedReferences
     def __init__(self, name: str, shortname: str, default, value_type: "typing.Type", _owning_class,
                  _loader: ConfigLoaderBase, help_hidden: bool, group: "argparse._ArgumentGroup",
-                 _fallback_names: "typing.List[str]" = None, _alias_names: "typing.List[str]" = None, **kwargs):
-        super().__init__(name, shortname, default, value_type, _owning_class, _loader, _fallback_names, _alias_names)
+                 _fallback_names: "typing.List[str]" = None, _legacy_alias_names: "typing.List[str]" = None, **kwargs):
+        super().__init__(name, shortname, default, value_type, _owning_class, _loader, _fallback_names,
+                         _legacy_alias_names)
         # hide obscure options unless --help-hidden/--help/all is passed
         if help_hidden and not self._loader.show_all_help:
             kwargs["help"] = argparse.SUPPRESS
-        if _alias_names is not None:
-            kwargs["alias_names"] = _alias_names
+        # _legacy_alias_names are ignored for command line options (since they only exist for backwards compat)
         self.action = self._add_argparse_action(name, shortname, default, group, kwargs)
 
     def _add_argparse_action(self, name, shortname, default, group, kwargs):
@@ -635,8 +632,8 @@ class CommandLineConfigOption(ConfigOptionBase):
 # noinspection PyProtectedMember
 class JsonAndCommandLineConfigOption(CommandLineConfigOption):
     def __init__(self, *args, **kwargs):
-        # Note: we ignore _alias_names for command line options and only load them from the JSON
-        alias_names = kwargs.pop("_alias_names", tuple())
+        # Note: we ignore _legacy_alias_names for command line options and only load them from the JSON
+        alias_names = kwargs.pop("_legacy_alias_names", tuple())
         super().__init__(*args, **kwargs)
         self.alias_names = alias_names
 
