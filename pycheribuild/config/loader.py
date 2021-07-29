@@ -518,11 +518,10 @@ class DefaultValueOnlyConfigOption(ConfigOptionBase):
 
 # Based on Python 3.9 BooleanOptionalAction, but places the "no" after the first /
 class BooleanNegatableAction(argparse.Action):
-    def __init__(self, option_strings, dest, default=None, type=None, choices=None, required=False,
+    def __init__(self, option_strings: "list[str]", dest, default=None, type=None, choices=None, required=False,
                  help=None, metavar=None):
-        _option_strings = []
+        self._negated_option_strings = []
         for name in option_strings:
-            _option_strings.append(name)
             # Add the negated option, placing the "no" after the / instead of the start -> --cheribsd/no-build-tests
             if name.startswith('--'):
                 slash_index = name.rfind("/")
@@ -530,13 +529,13 @@ class BooleanNegatableAction(argparse.Action):
                     negated_name = "--no-" + name[2:]
                 else:
                     negated_name = name[:slash_index + 1] + "no-" + name[slash_index + 1:]
-                _option_strings.append(negated_name)
-        super().__init__(option_strings=_option_strings, dest=dest, nargs=0, default=default, type=type,
-                         choices=choices, required=required, help=help, metavar=metavar)
+                self._negated_option_strings.append(negated_name)
+        super().__init__(option_strings=option_strings + self._negated_option_strings, dest=dest, nargs=0,
+                         default=default, type=type, choices=choices, required=required, help=help, metavar=metavar)
 
     def __call__(self, parser, namespace, values, option_string=None):
         if option_string in self.option_strings:
-            setattr(namespace, self.dest, not option_string.startswith('--no-'))
+            setattr(namespace, self.dest, option_string not in self._negated_option_strings)
 
     def format_usage(self):
         return ' | '.join(self.option_strings)
