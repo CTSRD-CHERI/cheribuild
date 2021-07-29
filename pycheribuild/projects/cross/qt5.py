@@ -215,7 +215,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configure_args.append("-system-sqlite")
 
         if self.use_asan:
-            self.configure_args.extend(["-sanitize", "address,undefined"])
+            self.configure_args.extend(["-sanitize", "address", "-sanitize", "undefined"])
 
         self.configure_args.extend([
             # To ensure the host and cross-compiled version is the same also disable opengl
