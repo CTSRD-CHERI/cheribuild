@@ -156,7 +156,8 @@ def get_argcomplete_prefix():
     if "_ARGCOMPLETE_BENCHMARK" in os.environ:
         os.environ["_ARGCOMPLETE_IFS"] = "\n"
         # os.environ["COMP_LINE"] = "cheribuild.py " # return all targets
-        os.environ["COMP_LINE"] = "cheribuild.py foo --sq"  # return all options starting with --sq
+        if "COMP_LINE" not in os.environ:
+            os.environ["COMP_LINE"] = "cheribuild.py foo --sq"  # return all options starting with --sq
         # os.environ["COMP_LINE"] = "cheribuild.py foo --no-s"  # return all options
         os.environ["COMP_POINT"] = str(len(os.environ["COMP_LINE"]))
     comp_line = argcomplete.ensure_str(os.environ["COMP_LINE"])
@@ -208,7 +209,7 @@ class ConfigLoaderBase(object):
     def _load_command_line_args(self):
         if argcomplete and self.is_completing_arguments:
             if "_ARGCOMPLETE_BENCHMARK" in os.environ:
-                with open(os.devnull, "wb") as output:
+                with open(os.getenv("_ARGCOMPLETE_OUTPUT_PATH", os.devnull), "wb") as output:
                     # with open("/dev/stdout", "wb") as output:
                     # sys.stdout.buffer
                     argcomplete.autocomplete(
@@ -264,30 +265,36 @@ class ConfigLoaderBase(object):
     def __is_enum_type(value_type):
         return isinstance(value_type, type) and issubclass(value_type, Enum)
 
+    def is_needed_for_completion(self, name: str, shortname: str, option_type):
+        comp_prefix = self._argcomplete_prefix
+        while comp_prefix is not None:  # fake loop to allow early return
+            if comp_prefix.startswith("--") and name.startswith(comp_prefix[2:]):
+                # self.debug_msg("comp_prefix '", comp_prefix, "' matches name: ", name, sep="")
+                return True  # Okay, prefix matches long name
+            elif shortname is not None and comp_prefix.startswith("-") and shortname.startswith(comp_prefix[1:]):
+                # self.debug_msg("comp_prefix '", comp_prefix, "' matches shortname: ", shortname, sep="")
+                return True  # Okay, prefix matches shortname
+            elif option_type is bool and (comp_prefix.startswith("--no-") or self._argcomplete_prefix_includes_slash):
+                slash_index = name.rfind("/")
+                negated_name = name[:slash_index + 1] + "no-" + name[slash_index + 1:]
+                if negated_name.startswith(comp_prefix[2:]):
+                    # self.debug_msg("comp_prefix '", comp_prefix, "' matches negated option: ", negated_name, sep="")
+                    return True  # Okay, prefix matches negated long name
+            # We are autocompleting and there is a prefix that won't match this option, so we just return the
+            # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
+            # self.debug_msg("Skipping option", name)
+            return False
+        return True
+
     # noinspection PyShadowingBuiltins
     def add_option(self, name: str, shortname=None, default=None,
                    type: "typing.Union[typing.Type[T], typing.Callable[[str], T]]" = str, group=None, help_hidden=False,
                    _owning_class: "typing.Type" = None, _fallback_names: "typing.List[str]" = None,
                    option_cls: "typing.Type[ConfigOptionBase]" = None, **kwargs) -> T:
-        comp_prefix = self._argcomplete_prefix
-        while comp_prefix is not None:  # fake loop to allow early return
-            if comp_prefix.startswith("--") and name.startswith(comp_prefix[2:]):
-                # self.debug_msg("comp_prefix '", comp_prefix, "' matches name: ", name, sep="")
-                break  # Okay, prefix matches long name
-            elif shortname is not None and comp_prefix.startswith("-") and shortname.startswith(comp_prefix[1:]):
-                # self.debug_msg("comp_prefix '", comp_prefix, "' matches shortname: ", shortname, sep="")
-                break  # Okay, prefix matches shortname
-            elif type is bool and (comp_prefix.startswith("--no-") or self._argcomplete_prefix_includes_slash):
-                slash_index = name.rfind("/")
-                negated_name = name[:slash_index + 1] + "no-" + name[slash_index + 1:]
-                if negated_name.startswith(comp_prefix[2:]):
-                    # self.debug_msg("comp_prefix '", comp_prefix, "' matches negated option: ", negated_name, sep="")
-                    break  # Okay, prefix matches negated long name
+        if not self.is_needed_for_completion(name, shortname, type):
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
-            # self.debug_msg("Skipping option", name)
-            return kwargs.get("default", None)
-
+            return default
         if option_cls is None:
             option_cls = self.__option_cls
 

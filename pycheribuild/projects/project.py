@@ -647,9 +647,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                           only_add_for_targets: "typing.List[CrossCompileTarget]" = None,
                           extra_fallback_config_names: "typing.List[str]" = None,
                           use_default_fallback_config_names=True, _allow_unknown_targets=False, **kwargs) -> Type_T:
-        # Need a string annotation for kind to avoid https://github.com/python/typing/issues/266 which seems to affect
-        # the version of python in Ubuntu 16.04
-        config_option_key = cls.target
+        fullname = cls.target + "/" + name
+        if not cls._config_loader.is_needed_for_completion(fullname, shortname, kind):
+            # We are autocompleting and there is a prefix that won't match this option, so we just return the
+            # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
+            return default
         # Hide stuff like --foo/install-directory from --help
         help_hidden = not show_help
 
@@ -703,7 +705,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
         alias_target_names = [prefix + "/" + name for prefix in cls.__dict__.get("_config_file_aliases", tuple())]
-        return cls._config_loader.add_option(config_option_key + "/" + name, shortname, default=default, type=kind,
+        return cls._config_loader.add_option(fullname, shortname, default=default, type=kind,
                                              _owning_class=cls, group=cls._commandline_option_group,
                                              help_hidden=help_hidden, _fallback_names=fallback_config_names,
                                              _alias_names=alias_target_names, **kwargs)
