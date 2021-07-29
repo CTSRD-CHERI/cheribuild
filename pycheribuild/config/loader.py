@@ -519,18 +519,27 @@ class DefaultValueOnlyConfigOption(ConfigOptionBase):
 # Based on Python 3.9 BooleanOptionalAction, but places the "no" after the first /
 class BooleanNegatableAction(argparse.Action):
     def __init__(self, option_strings: "list[str]", dest, default=None, type=None, choices=None, required=False,
-                 help=None, metavar=None):
+                 help=None, metavar=None, alias_names=None):
+        # Add the negated option, placing the "no" after the / instead of the start -> --cheribsd/no-build-tests
+        def collect_option_strings(original_strings):
+            for opt in original_strings:
+                all_option_strings.append(opt)
+                if opt.startswith('--'):
+                    slash_index = opt.rfind("/")
+                    if slash_index == -1:
+                        negated_opt = "--no-" + opt[2:]
+                    else:
+                        negated_opt = opt[:slash_index + 1] + "no-" + opt[slash_index + 1:]
+                    self._negated_option_strings.append(negated_opt)
+        all_option_strings = []
         self._negated_option_strings = []
-        for name in option_strings:
-            # Add the negated option, placing the "no" after the / instead of the start -> --cheribsd/no-build-tests
-            if name.startswith('--'):
-                slash_index = name.rfind("/")
-                if slash_index == -1:
-                    negated_name = "--no-" + name[2:]
-                else:
-                    negated_name = name[:slash_index + 1] + "no-" + name[slash_index + 1:]
-                self._negated_option_strings.append(negated_name)
-        super().__init__(option_strings=option_strings + self._negated_option_strings, dest=dest, nargs=0,
+        collect_option_strings(option_strings)
+        # Don't show the alias options in --help output
+        self.displayed_option_count = len(all_option_strings)
+        if alias_names is not None:
+            self._alias_names = alias_names
+            collect_option_strings(alias_names)
+        super().__init__(option_strings=all_option_strings, dest=dest, nargs=0,
                          default=default, type=type, choices=choices, required=required, help=help, metavar=metavar)
 
     def __call__(self, parser, namespace, values, option_string=None):
@@ -538,7 +547,27 @@ class BooleanNegatableAction(argparse.Action):
             setattr(namespace, self.dest, option_string not in self._negated_option_strings)
 
     def format_usage(self):
-        return ' | '.join(self.option_strings)
+        return ' | '.join(self.option_strings[:self.displayed_option_count])
+
+
+# argparse._StoreAction but with a possible list of aliases
+class StoreActionWithPossibleAliases(argparse.Action):
+    def __init__(self, option_strings: "list[str]", dest, nargs=None, default=None, type=None, choices=None,
+                 required=False, help=None, metavar=None, alias_names=None):
+        if nargs == 1:
+            raise ValueError("nargs for store actions must be 1")
+        self._original_option_strings = option_strings
+        if alias_names is not None:
+            self._alias_names = alias_names
+            option_strings = option_strings + alias_names
+        super().__init__(option_strings=option_strings, dest=dest, nargs=nargs, default=default, type=type,
+                         choices=choices, required=required, help=help, metavar=metavar)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, values)
+
+    def format_usage(self):
+        return ' | '.join(self._original_option_strings)
 
 
 class CommandLineConfigOption(ConfigOptionBase):
@@ -550,14 +579,9 @@ class CommandLineConfigOption(ConfigOptionBase):
         # hide obscure options unless --help-hidden/--help/all is passed
         if help_hidden and not self._loader.show_all_help:
             kwargs["help"] = argparse.SUPPRESS
+        if _alias_names is not None:
+            kwargs["alias_names"] = _alias_names
         self.action = self._add_argparse_action(name, shortname, default, group, kwargs)
-        # Add the aliases (with argparse.SUPPRESS)
-        kwargs["help"] = argparse.SUPPRESS
-        self.alias_actions = []
-        if _alias_names:
-            assert len(set(_alias_names)) == len(_alias_names), "Found duplicates in" + str(_alias_names)
-            for alias in _alias_names:
-                self.alias_actions.append(self._add_argparse_action(alias, None, default, group, kwargs))
 
     def _add_argparse_action(self, name, shortname, default, group, kwargs):
         # add the default string to help if it is not lambda and help != argparse.SUPPRESS
@@ -573,6 +597,12 @@ class CommandLineConfigOption(ConfigOptionBase):
             else:
                 assert "action" not in kwargs
                 kwargs["action"] = BooleanNegatableAction
+        else:
+            action_kind = kwargs.get("action", None)
+            if action_kind is None:
+                kwargs["action"] = StoreActionWithPossibleAliases
+            else:
+                assert action_kind == "append", "Unhandled action " + action_kind
         if shortname:
             action = parser_obj.add_argument("--" + name, "-" + shortname, **kwargs)
         else:
@@ -596,11 +626,6 @@ class CommandLineConfigOption(ConfigOptionBase):
         assert hasattr(self._loader._parsed_args, self.action.dest)
         result = getattr(self._loader._parsed_args, self.action.dest)  # from command line
         if result is None:
-            for alias_action in self.alias_actions:
-                result = getattr(self._loader._parsed_args, alias_action.dest)  # alias from command line
-                if result is not None:
-                    break
-        if result is None:
             return None
         return _LoadedConfigValue(result, None)
 
@@ -611,7 +636,6 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
         # Note: we ignore _alias_names for command line options and only load them from the JSON
         alias_names = kwargs.pop("_alias_names", tuple())
         super().__init__(*args, **kwargs)
-        assert not self.alias_actions and not self.alias_names, "Should not have added command line aliases"
         self.alias_names = alias_names
 
     def _load_option_impl(self, config: "CheriConfig", target_option_name: str):
