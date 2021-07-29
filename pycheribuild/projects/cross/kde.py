@@ -504,8 +504,7 @@ class BuildKConfigWidgets(KDECMakeProject):
 # frameworks/kjs: frameworks/kdoctools
 class BuildKNewStuff(KDECMakeProject):
     dependencies = ["attica", "kitemviews", "kiconthemes", "ktextwidgets", "kxmlgui",
-                    "solid", "kio", "kbookmarks", "kpackage", "kpackage-native", "ksyndication"
-                    ]  # TODO: kirigami
+                    "solid", "kio", "kbookmarks", "kpackage", "kpackage-native", "ksyndication", "kirigami"]
     repository = GitRepository("https://invent.kde.org/frameworks/knewstuff.git")
     _needs_newer_bison = True
 
@@ -587,11 +586,12 @@ class BuildKDED(KDECMakeProject):
 
 
 class BuildKIO(KDECMakeProject):
+    target = "kio"
     dependencies = ["kauth", "kdbusaddons", "ki18n", "kguiaddons", "kconfigwidgets", "kitemviews", "kcoreaddons",
                     "kwidgetsaddons", "kservice", "karchive", "qtx11extras", "solid",
                     "kjobwidgets", "kiconthemes", "kwindowsystem", "kcrash", "kcompletion", "ktextwidgets",
-                    "kxmlgui", "kbookmarks", "kconfig", "kconfig-native", "knotifications",
-                    # optional: "kwallet", "kded"
+                    "kxmlgui", "kbookmarks", "kconfig", "kconfig-native", "knotifications", "kded",
+                    # optional: "kwallet"
                     ]
     repository = GitRepository("https://invent.kde.org/frameworks/kio.git")
     _has_qt_designer_plugin = True
@@ -778,8 +778,7 @@ class BuildKWin(KDECMakeProject):
     def setup(self):
         super().setup()
         # TODO: build wayland backend
-        self.add_cmake_options(KWIN_BUILD_WAYLAND=False,
-                               CMAKE_DISABLE_FIND_PACKAGE_Libinput=True)
+        self.add_cmake_options(KWIN_BUILD_WAYLAND=False)
         if self.target_info.is_freebsd():
             # To get linux/input.h on FreeBSD
             if not BuildLibInput.get_source_dir(self).exists():
@@ -847,14 +846,13 @@ class BuildPlasmaDesktop(KDECMakeProject):
         "https://invent.kde.org/plasma/plasma-desktop.git",
         temporary_url_override="https://invent.kde.org/arichardson/plasma-desktop.git",
         url_override_reason="needs e.g. https://invent.kde.org/plasma/plasma-desktop/-/merge_requests/532")
-    dependencies = ["plasma-workspace", "qqc2-desktop-style"]
+    dependencies = ["plasma-workspace", "qqc2-desktop-style", "libxkbfile", "xkeyboard-config"]
 
 
 class BuildSystemSettings(KDECMakeProject):
     target = "systemsettings"
     repository = GitRepository("https://invent.kde.org/plasma/systemsettings.git",
-                               default_branch="work/arichardson/optional-doctools", force_branch=True,
-                               url_override_reason="https://invent.kde.org/plasma/systemsettings/-/merge_requests/74")
+                               default_branch="master", force_branch=True)
     dependencies = ["plasma-workspace"]
 
 
