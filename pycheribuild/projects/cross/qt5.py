@@ -153,7 +153,10 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.build_examples = cls.add_bool_option("build-examples", show_help=True, help="build the Qt examples")
-        cls.assertions = cls.add_bool_option("assertions", default=False, show_help=True, help="Include assertions")
+        # Enable assertions by default for now
+        assertions_by_default = True
+        cls.assertions = cls.add_bool_option("assertions", default=assertions_by_default, show_help=True,
+                                             help="Include assertions (even in release builds)")
         cls.minimal = cls.add_bool_option("minimal", show_help=True, help="Don't build QtWidgets or QtGui, etc")
 
     def configure(self, **kwargs):
@@ -257,7 +260,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
         if self.assertions:
             self.configure_args.append("-force-asserts")
-            self.configure_args.append("-gdb-index")
+            # configure only accepts this for gcc: self.configure_args.append("-gdb-index")
 
         if self.build_type.should_include_debug_info and False:
             # separate debug info reduces the size of the shared libraries, but GDB doesn't seem to pick it up
