@@ -293,6 +293,9 @@ printf "To get debug output from application you can run:\n\t export \\"QT_LOGGI
     "qt.gui.shortcutmap=false;qt.quick.*.debug=false;qt.scenegraph.*.debug=false;qt.v4.*.debug=false;" \
     "qt.qml.gc.*.debug=false;" \
     "kf.coreaddons.desktopparser.*.debug=false;"
+# Running with the default SHELL=/bin/csh breaks gdb since GDB start all programs with $SHELL
+# by default and csh "helpfully" decides to reset $PATH to the default.
+export SHELL=/bin/sh
 exec sh
 """)
             self.write_file(self.rootfs_path / "usr/local/bin/kde-shell-x11-smbfs", overwrite=True, mode=0o755,
