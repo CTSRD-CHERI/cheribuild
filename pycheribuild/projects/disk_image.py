@@ -481,7 +481,9 @@ class BuildDiskImageBase(SimpleProject):
             for ignored_dirname in ('.svn', '.git', '.idea'):
                 if ignored_dirname in dirnames:
                     dirnames.remove(ignored_dirname)
-            for filename in filenames:
+            # Symlinks that point to directories are included in dirnames as a
+            # historical wart that can't be fixed without risking breakage...
+            for filename in filenames + [d for d in dirnames if os.path.islink(Path(root, d))]:
                 new_file = Path(root, filename)
                 if root_dir == self.extra_files_dir:
                     self.extra_files.append(new_file)
