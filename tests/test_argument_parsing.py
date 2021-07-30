@@ -661,7 +661,7 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
                 assert kernel_make_args.env_vars.get("X" + var, None) == default
             else:
                 assert "X" + var not in project.buildworld_args.env_vars
-                assert "X" + var not in kernel_make_args
+                assert "X" + var not in kernel_make_args.env_vars
     else:
         assert project.buildworld_args.env_vars.get("XCC", None) == expected_path
         assert project.kernel_make_args_for_config("GENERIC", None).env_vars.get("XCC", None) == expected_path
