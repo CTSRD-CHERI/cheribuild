@@ -2110,7 +2110,7 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         tar_cmd = [bsdtar_path, "cf", "-", "--include=./lib/", "--include=./usr/include/",
                    "--include=./usr/lib/", "--include=./usr/libdata/",
                    "--include=./usr/libcheri", "--include=./usr/lib32", "--include=./usr/lib64",
-                   "--include=./usr/libsoft",
+                   "--include=./usr/lib64c", "--include=./usr/libsoft",
                    # only pack those files that are mentioned in METALOG
                    "@METALOG.world"]
         if self.compiling_for_mips(include_purecap=False) and self.use_cheri_sysroot_for_mips:
