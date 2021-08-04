@@ -1331,7 +1331,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.crosscompile_target.is_cheri_purecap():
             return "lib64"
         elif self.crosscompile_target.is_cheri_hybrid():
-            return "libcheri"
+            return "lib64c"
         self.warning("Unknown libcompat for target", self.target)
         self.info("Will use default buildenv target")
         return ""
@@ -2153,9 +2153,9 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
             self.copy_sysroot_from_remote_machine()
         else:
             self.create_sysroot()
-        if (self.cross_sysroot_path / "usr/libcheri/").is_dir():
+        if (self.cross_sysroot_path / "usr/lib64c/").is_dir():
             # clang++ expects libgcc_eh to exist:
-            libgcc_eh = self.cross_sysroot_path / "usr/libcheri/libgcc_eh.a"
+            libgcc_eh = self.cross_sysroot_path / "usr/lib64c/libgcc_eh.a"
             if not libgcc_eh.is_file():
                 self.warning("CHERI libgcc_eh missing! You should probably update CheriBSD")
                 self.run_cmd("ar", "rc", libgcc_eh)

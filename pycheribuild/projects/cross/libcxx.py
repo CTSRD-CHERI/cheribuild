@@ -60,7 +60,7 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        # self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)  # Adding -ldl won't work: no libdl in /usr/libcheri
+        # self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)  # Adding -ldl won't work: no libdl in /usr/lib64c
 
     def configure(self, **kwargs):
         # TODO: should share some code with libcxx
@@ -168,7 +168,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
         self.install_file(self.build_dir / "lib/libcxxrt.a", self.install_dir / "lib" / "libcxxrt.a", force=True)
         self.install_file(self.build_dir / "lib/libcxxrt.so", self.install_dir / "lib" / "libcxxrt.soa", force=True)
         # self.install_file(self.build_dir / "lib/libcxxrt.a", libdir / "libcxxrt.so", force=True)
-        # self.install_file(self.build_dir / "lib/libcxxrt.so", self.install_dir / "usr/libcheri/libcxxrt.so",
+        # self.install_file(self.build_dir / "lib/libcxxrt.so", self.install_dir / "usr/lib64c/libcxxrt.so",
         # force=True)
 
     def run_tests(self):

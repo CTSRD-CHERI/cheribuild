@@ -440,7 +440,7 @@ def prepend_ld_library_path(qemu: CheriBSDInstance, path: str):
 
 def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
     non_cheri_libdir = "lib64"
-    cheri_libdir = "libcheri"
+    cheri_libdir = "lib64c"
     if not qemu.xtarget.is_hybrid_or_purecap_cheri():
         local_dir = "usr/local"
         if qemu.xtarget.target_info_cls.is_cheribsd():
