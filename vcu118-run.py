@@ -402,6 +402,8 @@ def main():
     parser.add_argument("--test-command", action='append',
                         help="Run a command non-interactively before possibly opening a console")
     parser.add_argument("--test-timeout", type=int, default=60 * 60, help="Timeout for the test command")
+    parser.add_argument("--benchmark-config", help="Configure for benchmarking before running commands",
+                        action="store_true")
     parser.add_argument("--pretend", help="Don't actually run the commands just show what would happen",
                         action="store_true")
     parser.add_argument("action", choices=["all", "bitfile", "boot", "console"],
@@ -436,6 +438,10 @@ def main():
         console = conn.serial
         if args.action == "boot":
             sys.exit(0)
+
+    if args.benchmark_config:
+        success("Disabling malloc abort-on-warning and junking")
+        console.cheribsd.checked_run("ln -fhs 'abort:false,junk:false' /etc/malloc.conf")
 
     if args.test_command is not None:
         success("Running test commands")
