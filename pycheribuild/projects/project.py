@@ -3086,6 +3086,8 @@ class _CMakeAndMesonSharedLogic(Project):
         elif isinstance(value, list):
             strval = self._toolchain_file_list_to_str(value)
         else:
+            if not isinstance(value, (str, Path, int)):
+                self.fatal(f"Unexpected value type {type(value)} for {key}: {value}")
             strval = str(value)
         result = template.replace("@" + key + "@", strval)
         if required and result == template:
@@ -3220,6 +3222,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     _minimum_cmake_or_meson_version = (3, 13, 4)
 
     def _toolchain_file_list_to_str(self, value: list) -> str:
+        assert isinstance(value, list), f"Expected a list and not {type(value)}: {value}"
         return ";".join(map(str, value))
 
     def _toolchain_file_command_args_to_str(self, value: _CMakeAndMesonSharedLogic.CommandLineArgs) -> str:
