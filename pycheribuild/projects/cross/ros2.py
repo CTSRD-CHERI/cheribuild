@@ -69,6 +69,7 @@ class BuildRos2(CrossCompileCMakeProject):
         if self.config.verbose:
             cmdline.append("--event-handlers")
             cmdline.append("console_cohesion+")
+        cmdline.extend(["--parallel-workers", str(self.config.make_jobs)])
         self.run_cmd(cmdline, cwd=self.source_dir, **kwargs)
 
 
