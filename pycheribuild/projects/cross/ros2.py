@@ -33,15 +33,11 @@ class BuildRos2(CrossCompileCMakeProject):
     target = "ros2"
     repository = GitRepository("https://github.com/dodsonmg/ros2_dashing_minimal.git", default_branch="master",
                                force_branch=True)
-
-    # atm, we build and install in the source_dir.
-    build_in_source_dir = True
     # it may eventually be useful to install to rootfs or sysroot depending on whether we want to use ROS2
     # as a library for building other applications using cheribuild
     # therefore, the _install_dir doesn't do anything, but cheribuild requires them
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     dependencies = ["poco"]
-    _extra_git_clean_excludes = ["--exclude=src"]  # don't delete src/ when running clean
 
     def _ignore_packages(self):
         packages = ["src/ros2/rcl_logging/rcl_logging_log4cxx"]  # relative to self.source_dir
@@ -60,7 +56,10 @@ class BuildRos2(CrossCompileCMakeProject):
         # colcon is the meta build system (on top of cmake) used by ros
         if not shutil.which("colcon"):
             self.dependency_error("Missing colcon command", install_instructions="pip3 install --user colcon-common-extensions")
-        colcon_cmd = ["colcon", "build"]
+        colcon_cmd = ["colcon", "build",
+                      "--install-base", self.install_dir,
+                      "--build-base", self.build_dir,
+                      "--merge-install"]
         colcon_args = ["--no-warn-unused-cli", "--packages-skip-build-finished"]
         cmake_args = ["--cmake-args", "-DBUILD_TESTING=NO"]
         if not self.compiling_for_host():
@@ -72,11 +71,14 @@ class BuildRos2(CrossCompileCMakeProject):
         cmdline.extend(["--parallel-workers", str(self.config.make_jobs)])
         self.run_cmd(cmdline, cwd=self.source_dir, **kwargs)
 
-
     def clean(self):
         self.clean_directory(self.source_dir / "install")
         self.clean_directory(self.source_dir / "build")
         return super().clean()
+
+    @property
+    def cmake_prefix_paths(self):
+        return super().cmake_prefix_paths + [self.install_dir]
 
     def _get_poco(self):
         # find and copy libPocoFoundation.so.71 from the sysroot into self.source_dir
