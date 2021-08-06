@@ -24,6 +24,7 @@
 # SUCH DAMAGE.
 #
 import shlex
+import shutil
 
 from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 
@@ -50,11 +51,15 @@ class BuildRos2(CrossCompileCMakeProject):
 
     def _run_vcs(self):
         # this is the meta version control system used by ros for downloading and unpacking repos
+        if not shutil.which("vcs"):
+            self.dependency_error("Missing vcs command", install_instructions="pip3 install --user vcstool")
         cmdline = ["vcs", "import", "--input", "ros2_minimal.repos", "src"]
         self.run_cmd(cmdline, cwd=self.source_dir)
 
     def _run_colcon(self, **kwargs):
         # colcon is the meta build system (on top of cmake) used by ros
+        if not shutil.which("colcon"):
+            self.dependency_error("Missing colcon command", install_instructions="pip3 install --user colcon-common-extensions")
         colcon_cmd = ["colcon", "build"]
         colcon_args = ["--no-warn-unused-cli", "--packages-skip-build-finished"]
         cmake_args = ["--cmake-args", "-DBUILD_TESTING=NO"]
