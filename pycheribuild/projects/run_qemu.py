@@ -181,7 +181,7 @@ class LaunchQEMUBase(SimpleProject):
 
         if self.forward_ssh_port and not self.is_port_available(self.ssh_forwarding_port):
             self.print_port_usage(self.ssh_forwarding_port)
-            self.fatal("SSH forwarding port", self.ssh_forwarding_port, "is already in use! Make sure you don't ",
+            self.fatal("SSH forwarding port", self.ssh_forwarding_port, "is already in use! Make sure you don't "
                        "already have a QEMU instance running or change the chosen port by setting the config option",
                        self.get_config_option_name("ssh_forwarding_port"))
 
