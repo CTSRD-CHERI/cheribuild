@@ -34,15 +34,15 @@ from pathlib import Path
 
 from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, commandline_to_str, CrossCompileTarget,
                        DefaultInstallDir, GitRepository, Linkage, MakeCommandKind, MakefileProject, MesonProject,
-                       Project, SubversionRepository)
+                       Project, SimpleProject, SubversionRepository)
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import AutoVarInit
 from ...utils import AnsiColour, coloured
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",  # no-combine
-           "CrossCompileTarget", "CrossCompileProject", "MakeCommandKind", "Linkage",  # no-combine
-           "DefaultInstallDir", "BuildType", "CompilationTargets", "GitRepository",  # no-combine
-           "CrossCompileMixin", "FettProjectMixin", "CrossCompileMakefileProject",  # no-combine
+           "CrossCompileTarget", "CrossCompileSimpleProject", "CrossCompileProject",  # no-combine
+           "MakeCommandKind", "Linkage", "DefaultInstallDir", "BuildType", "CompilationTargets",  # no-combine
+           "GitRepository", "CrossCompileMixin", "FettProjectMixin", "CrossCompileMakefileProject",  # no-combine
            "CrossCompileMesonProject", "commandline_to_str", "SubversionRepository"]  # no-combine
 
 
@@ -57,6 +57,10 @@ class CrossCompileMixin(object):
     # Add a (mostly) resonable default for installation directories:
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
+
+
+class CrossCompileSimpleProject(CrossCompileMixin, SimpleProject):
+    do_not_add_to_targets = True
 
 
 class CrossCompileProject(CrossCompileMixin, Project):

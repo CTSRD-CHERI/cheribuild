@@ -114,7 +114,7 @@ class ProjectSubclassDefinitionHook(type):
                 " -- set target= or do_not_add_to_targets=True")
 
         # The default source/build/install directory name defaults to the target unless explicitly overwritten.
-        if "default_directory_basename" not in clsdict:
+        if "default_directory_basename" not in clsdict and not cls.inherit_default_directory_basename:
             cls.default_directory_basename = target_name
 
         if "project_name" in clsdict:
@@ -207,7 +207,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
     # The source dir/build dir names will be inferred from the target name unless default_directory_basename is set.
+    # Note that this is not inherited by default unless you set inherit_default_directory_basename (which itself is
+    # inherited as normal, so can be set in a base class).
     default_directory_basename = None  # type: str
+    inherit_default_directory_basename = False  # type: bool
     # Old names in the config file (per-architecture) for backwards compat
     _config_file_aliases = tuple()  # type: typing.Tuple[str, ...]
     dependencies = []  # type: typing.List[str]
@@ -1959,7 +1962,11 @@ class Project(SimpleProject):
 
     @classmethod
     def project_build_dir_help(cls):
-        result = "$BUILD_ROOT/" + cls.default_directory_basename
+        result = "$BUILD_ROOT/"
+        if isinstance(cls.default_directory_basename, ComputedDefaultValue):
+            result += cls.default_directory_basename.as_string
+        else:
+            result += cls.default_directory_basename
         if cls._xtarget is not BasicCompilationTargets.NATIVE or cls.add_build_dir_suffix_for_native:
             result += "-$TARGET"
         result += "-build"
@@ -2087,8 +2094,10 @@ class Project(SimpleProject):
     @classmethod
     def setup_config_options(cls, install_directory_help="", **kwargs):
         super().setup_config_options(**kwargs)
-        cls._initial_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.default_source_dir,
-                                                      help="Override default source directory for " + cls.target)
+        if cls.source_dir is None:
+            cls._initial_source_dir = cls.add_path_option("source-directory", metavar="DIR",
+                                                          default=cls.default_source_dir,
+                                                          help="Override default source directory for " + cls.target)
         # --<target>-<suffix>/build-directory is not inherited from the unsuffixed target (unless there is only one
         # supported target).
         default_xtarget = cls.default_architecture
@@ -2308,7 +2317,16 @@ class Project(SimpleProject):
         if hasattr(self, "_repository_url") and isinstance(self.repository, GitRepository):
             # TODO: remove this and use a custom argparse.Action subclass
             self.repository.url = self._repository_url
-        self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
+
+        if isinstance(self.default_directory_basename, ComputedDefaultValue):
+            self.default_directory_basename = self.default_directory_basename(config, self)
+
+        if self.source_dir is None:
+            self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
+        else:
+            if isinstance(self.source_dir, ComputedDefaultValue):
+                self.source_dir = self.source_dir(config, self)
+            self._initial_source_dir = self.source_dir
 
         if self.build_in_source_dir:
             self.verbose_print("Cannot build", self.target, "in a separate build dir, will build in", self.source_dir)
