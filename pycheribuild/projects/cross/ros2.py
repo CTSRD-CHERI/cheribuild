@@ -71,6 +71,12 @@ class BuildRos2(CrossCompileCMakeProject):
             cmdline.append("console_cohesion+")
         self.run_cmd(cmdline, cwd=self.source_dir, **kwargs)
 
+
+    def clean(self):
+        self.clean_directory(self.source_dir / "install")
+        self.clean_directory(self.source_dir / "build")
+        return super().clean()
+
     def _get_poco(self):
         # find and copy libPocoFoundation.so.71 from the sysroot into self.source_dir
         # this is a bit ugly, but allows us to link the poco library whether we're running
