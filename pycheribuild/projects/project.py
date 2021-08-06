@@ -3087,7 +3087,7 @@ class _CMakeAndMesonSharedLogic(Project):
             strval = self._toolchain_file_list_to_str(value)
         else:
             if not isinstance(value, (str, Path, int)):
-                self.fatal(f"Unexpected value type {type(value)} for {key}: {value}")
+                self.fatal(f"Unexpected value type {type(value)} for {key}: {value}", fatal_when_pretending=True)
             strval = str(value)
         result = template.replace("@" + key + "@", strval)
         if required and result == template:
