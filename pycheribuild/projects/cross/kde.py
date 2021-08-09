@@ -916,9 +916,21 @@ class BuildGwenview(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/graphics/gwenview.git")
 
 
+class BuildOpenJPEG(CrossCompileCMakeProject):
+    target = "openjpeg"
+    dependencies = ["lcms2", "libpng"]
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
+    repository = GitRepository("https://github.com/uclouvain/openjpeg.git")
+
+    def setup(self):
+        super().setup()
+        # TODO: upstream a fix to use PC_STATIC_LCMS2_LIBRARY_DIRS
+        self.COMMON_LDFLAGS.append("-L" + str(BuildLCMS2.get_install_dir(self) / "lib"))
+
+
 class BuildPoppler(CrossCompileCMakeProject):
     target = "poppler"
-    dependencies = ["freetype2", "fontconfig", "libjpeg-turbo", "qtbase"]
+    dependencies = ["freetype2", "fontconfig", "openjpeg", "qtbase"]
     repository = GitRepository("https://gitlab.freedesktop.org/poppler/poppler.git",
                                temporary_url_override="https://gitlab.freedesktop.org/arichardson/poppler.git",
                                url_override_reason="cross-compilation fixes")
