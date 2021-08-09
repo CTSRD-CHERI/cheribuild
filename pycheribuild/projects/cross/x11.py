@@ -365,6 +365,12 @@ class BuildLibJpegTurbo(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/libjpeg-turbo/libjpeg-turbo.git",
                                old_urls=[b"https://github.com/arichardson/libjpeg-turbo.git"])
 
+    def setup(self):
+        super().setup()
+        if self.compiling_for_aarch64(include_purecap=True):
+            # self.add_cmake_options(NEON_INTRINSICS=True)
+            self.add_cmake_options(WITH_SIMD=False)  # Tries to compile files in non-existent arm/aarch128 directory
+
 
 class BuildTigerVNC(CrossCompileCMakeProject):
     target = "tigervnc"
