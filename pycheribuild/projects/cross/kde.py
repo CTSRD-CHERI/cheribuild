@@ -35,7 +35,7 @@ from .freetype import BuildFontConfig, BuildFreeType2
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
 from .wayland import BuildLibInput
 from .x11 import BuildLibXCB
-from ..project import DefaultInstallDir, GitRepository, MakeCommandKind
+from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, TargetAliasWithDependencies
 from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
@@ -974,3 +974,10 @@ class BuildOkular(KDECMakeProject):
     def setup(self):
         super().setup()
         self.add_cmake_options(ALLOW_OPTIONAL_DEPENDENCIES=True)
+
+
+class BuildKDEX11Desktop(TargetAliasWithDependencies):
+    target = "kde-x11-desktop"
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+    dependencies = ["plasma-desktop", "dolphin", "okular", "gwenview", "systemsettings", "xvnc-server",
+                    "xeyes", "twm", "xev"]  # Add some basic X11 things as a fallback
