@@ -524,7 +524,8 @@ class BuildLibXpm(X11AutotoolsProject):
 # Slightly more functional window manager than TWM
 class BuildIceWM(X11Mixin, CrossCompileCMakeProject):
     target = "icewm"
-    dependencies = ["fontconfig", "libxcomposite", "libxdamage", "libpng", "libjpeg-turbo", "libxpm", "libxft"]
+    dependencies = ["fontconfig", "libxcomposite", "libxdamage", "libpng", "libjpeg-turbo",
+                    "libxpm", "libxft", "libxrandr"]
     repository = GitRepository("https://github.com/bbidulock/icewm",
                                old_urls=[b"https://github.com/arichardson/icewm"])
 
