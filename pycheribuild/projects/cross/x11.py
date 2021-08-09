@@ -392,6 +392,7 @@ class BuildXKeyboardConfig(X11MesonProject):
         # work around `install script '/bin/sh -c ln -s base $DESTDIR/usr/local/share/X11/xkb/rules/xorg' exit code 1`
         for symlink in ("xorg", "xorg.lst", "xorg.xml"):
             self.delete_file(self.install_dir / "X11/xkb/rules" / symlink)
+        super().install(**kwargs)
 
 
 class BuildXKkbcomp(X11AutotoolsProject):
