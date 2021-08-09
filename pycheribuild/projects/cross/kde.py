@@ -882,6 +882,9 @@ class BuildLibPng(CrossCompileCMakeProject):
         if not self.compiling_for_host():
             # The CTest test script mounts the cmake install dir under /cmake
             self.add_cmake_options(TEST_CMAKE_COMMAND="/cmake/bin/cmake")
+        if self.compiling_for_aarch64(include_purecap=True):
+            # work around:  undefined reference to png_do_expand_palette_rgb8_neon [--no-allow-shlib-undefined]
+            self.COMMON_FLAGS.append("-DPNG_ARM_NEON_OPT=0")
 
 
 class BuildLCMS2(CrossCompileAutotoolsProject):
