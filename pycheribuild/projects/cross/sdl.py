@@ -30,7 +30,7 @@ from ..project import GitRepository
 
 class BuildSDL(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/libsdl-org/SDL.git")
-    dependencies = ["libx11", "libxext"]
+    dependencies = ["libx11", "libxext", "libxrandr", "libxrender", "libxcursor", "libxi", "libxscrnsaver"]
 
     def setup(self):
         super().setup()

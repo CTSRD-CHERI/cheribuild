@@ -354,6 +354,12 @@ class BuildLibXKBFile(X11AutotoolsProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxkbfile.git")
 
 
+class BuildLibXScrnSaver(X11AutotoolsProject):
+    target = "libxscrnsaver"
+    dependencies = ["libx11", "libxext"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxscrnsaver.git")
+
+
 class BuildLibJpegTurbo(CrossCompileCMakeProject):
     target = "libjpeg-turbo"
     repository = GitRepository("https://github.com/libjpeg-turbo/libjpeg-turbo.git",
