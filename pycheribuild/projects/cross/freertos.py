@@ -156,6 +156,10 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             default=False,
             help="Compartmentalize FreeRTOS")
 
+        cls.compartmentalize_stdlibs = cls.add_bool_option("compartmentalize_stdlibs", show_help=True,
+            default=False,
+            help="Compartmentalize libc, libm and builtins")
+
         cls.compartmentalization_mode = cls.add_config_option("compartmentalization_mode", show_help=True,
             default="objs",
             help="'Comparmentalization mode (either objs or libs)")
@@ -253,6 +257,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             if self.compartmentalize:
               config_options += ["--compartmentalize"]
               config_options += ["--compartmentalization_mode", self.compartmentalization_mode]
+              if self.compartmentalize_stdlibs:
+                  config_options += ["--compartmentalize_stdlibs"]
 
             if self.use_virtio_blk:
               config_options += ["--use-virtio-blk"]
