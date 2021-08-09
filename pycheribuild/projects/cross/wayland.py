@@ -36,7 +36,7 @@ class BuildEPollShim(CrossCompileCMakeProject):
     target = "epoll-shim"
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     repository = GitRepository("https://github.com/jiixyj/epoll-shim")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def configure(self, **kwargs):
         if not self.compiling_for_host():
@@ -45,6 +45,12 @@ class BuildEPollShim(CrossCompileCMakeProject):
             # Set these variables to the CMake results from building natively:
             self.add_cmake_options(ALLOWS_ONESHOT_TIMERS_WITH_TIMEOUT_ZERO=True)
         super().configure()
+
+    def install(self, **kwargs):
+        if self.target_info.is_linux():
+            self.info("Install not supported on linux, target only exists to run tests.")
+        else:
+            super().install(**kwargs)
 
     def run_tests(self):
         if self.compiling_for_host():
