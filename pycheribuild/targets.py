@@ -469,7 +469,8 @@ class TargetManager(object):
                 sys.exit(errmsg)
             explicitly_chosen_targets.append(self.get_target(target_name, None, config, caller="cmdline parsing"))
         chosen_targets = self.get_all_targets(explicitly_chosen_targets, config)
-        print("Will execute the following targets:\n  ", "\n   ".join(t.name for t in chosen_targets))
+        print("Will execute the following", len(chosen_targets), "targets:\n  ",
+              "\n   ".join(t.name for t in chosen_targets))
         # now that the chosen targets have been resolved run them
         Target.instantiating_targets_should_warn = False  # Fine to instantiate Project() now
         return chosen_targets
