@@ -34,7 +34,7 @@ class BuildChocolate_Doom(CrossCompileAutotoolsProject):
                                temporary_url_override="https://github.com/jrtc27/chocolate-doom.git",
                                url_override_reason="https://github.com/chocolate-doom/chocolate-doom/pull/1385",
                                default_branch="cheri", force_branch=True)
-    dependencies = ["sdl", "sdl-mixer", "sdl-net"]
+    dependencies = ["sdl", "sdl-mixer", "sdl-net", "libpng"]
 
     def configure(self, **kwargs):
         self.run_cmd("autoreconf", "-fi", cwd=self.source_dir)
