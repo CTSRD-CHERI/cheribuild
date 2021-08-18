@@ -198,8 +198,12 @@ def real_main():
                 subprocess.check_call(start_cmd)
                 docker_run_cmd = ["docker", "exec", cheri_config.docker_container] + cheribuild_args
             else:
-                docker_run_cmd = ["docker", "run", "--user", str(os.getuid()) + ":" + str(os.getgid()),
-                                  "--rm", "--interactive", "--tty"] + docker_dir_mappings
+                if cheri_config.docker_uid != "":
+                        docker_run_cmd = ["docker", "run", "--user", cheri_config.docker_uid + ":" + cheri_config.docker_gid,
+                                          "--rm", "--interactive", "--tty"] + docker_dir_mappings
+                else:
+                        docker_run_cmd = ["docker", "run", "--user", str(os.getuid()) + ":" + str(os.getgid()),
+                                         "--rm", "--interactive", "--tty"] + docker_dir_mappings
                 docker_run_cmd += [cheri_config.docker_container] + cheribuild_args
             run_command(docker_run_cmd, config=cheri_config, give_tty_control=True)
         except subprocess.CalledProcessError as e:

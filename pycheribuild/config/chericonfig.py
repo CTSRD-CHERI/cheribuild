@@ -297,6 +297,8 @@ class CheriConfig(ConfigBase):
                                                              help="Attach to the same container again (note: "
                                                                   "docker-container option must be an id rather than "
                                                                   "a container name")
+        self.docker_uid = loader.add_option("docker-uid", help="UID to under Docker", default="", group=loader.docker_group)
+        self.docker_gid = loader.add_option("docker-gid", help="GID to under Docker", default="", group=loader.docker_group)
 
         # compilation db options:
         self.create_compilation_db = loader.add_commandline_only_bool_option(
