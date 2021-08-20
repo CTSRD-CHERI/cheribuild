@@ -1,0 +1,7 @@
+# NOTE: Change the paths below to match the locations for your
+# sources, build and output directories.
+{
+  "source-root": "/home/USER/MYDIR/sources",
+  "build-root": "/home/USER/MYDIR/build",
+  "output-root": "/home/USER/MYDIR/output"
+}
