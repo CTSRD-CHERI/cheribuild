@@ -1,4 +1,4 @@
-FROM cheribuild-test
+FROM cheribuild-docker
 
 # NOTE: Change USER to your username, GROUPID and USERID to the output
 # of the id(1) command.

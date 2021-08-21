@@ -206,9 +206,9 @@ def real_main():
             # if the image is missing print a helpful error message:
             if e.returncode == 125:
                 status_update("It seems like the docker image", cheri_config.docker_container, "was not found.")
-                status_update("In order to build the default docker image for cheribuild (cheribuild-test) run:")
+                status_update("In order to build the default docker image for cheribuild (cheribuild-dockert) run:")
                 print(
-                    coloured(AnsiColour.blue, "cd", cheribuild_dir + "/docker && docker build --tag cheribuild-test ."))
+                    coloured(AnsiColour.blue, "cd", cheribuild_dir + "/docker && docker build --tag cheribuild--docke ."))
                 sys.exit(coloured(AnsiColour.red, "Failed to start docker!"))
             raise
         sys.exit()
