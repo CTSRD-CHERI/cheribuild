@@ -49,7 +49,10 @@ class AddUser(SimpleProject):
 
     def process(self):
         file = str(self.config.output_root.absolute()) + "/Dockerfile.adduser"
-        user = getpass.getuser()
+        try:
+            user = getpass.getuser()
+        except KeyError:
+            user = "nobody"
 
         # Create a Dockerfile that will contain this user's name, gid, uid
         try:
