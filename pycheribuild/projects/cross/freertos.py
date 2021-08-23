@@ -160,6 +160,14 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             default=False,
             help="Compartmentalize libc, libm and builtins")
 
+        cls.plot_compartments = cls.add_bool_option("plot_compartments", show_help=True,
+            default=False,
+            help="Plot compartments deps graph using graphviz")
+
+        cls.loc_stats = cls.add_bool_option("loc_stats", show_help=True,
+            default=False,
+            help="Calculate detailed LoC stats for the built system")
+
         cls.compartmentalization_mode = cls.add_config_option("compartmentalization_mode", show_help=True,
             default="objs",
             help="'Comparmentalization mode (either objs or libs)")
@@ -246,6 +254,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                           "--riscv-abi", self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True),
                           "--riscv-platform", self.platform,
                           "--program-path", program_root,
+                          "--plot_compartments", self.plot_compartments,
+                          "--loc_stats", self.loc_stats,
                           "--sysroot",  str(self.sdk_sysroot),
                           "--mem-start", self.mem_start,
                           "--ipaddr", self.ipaddr,
