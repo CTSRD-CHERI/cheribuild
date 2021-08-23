@@ -48,6 +48,9 @@ class AddUser(SimpleProject):
     def process(self):
         file = str(self.config.output_root.absolute()) + "/Dockerfile.adduser"
         user = getpass.getuser()
+        output = ""
+
+        # Create a Dockerfile that will contain this user's name, gid, uid
         try:
             fp = open(file, mode = "w")
             contents = "FROM cheribuild-docker\n\nRUN addgroup --gid " + \
@@ -59,25 +62,41 @@ class AddUser(SimpleProject):
 
             fp.close()
 
-            try:
-                docker_run_cmd = ["docker", "build", "-f", file, "."]
-            
-                run_command(docker_run_cmd, config=self.config, give_tty_control=True)
-                os.remove(file)
-                
-            except subprocess.CalledProcessError as e:
-                # if the image is missing print a helpful error message:
-                if e.returncode == 125:
-                    status_update("It seems like the docker image", config.docker_container, "was not found.")
-                    status_update("In order to build the default docker image for cheribuild (cheribuild-test) run:")
-                    print(
-                        coloured(AnsiColour.blue, "cd", cheribuild_dir + "/docker && docker build --tag cheribuild-docker ."))
-                    sys.exit(coloured(AnsiColour.red, "Failed to start docker!"))
-                    raise
-                sys.exit()
-
         except:
             status_update("Could not create ", file)
-            raise
+            sys.exit()
+
+        # Build a new image from our installed image with this user
+        try:
+            docker_run_cmd = ["docker", "build", "-f", file, "."]
+        
+            output = run_command(docker_run_cmd, config=self.config, give_tty_control=True, capture_output=True)
+
+            os.remove(file)
+            
+        except subprocess.CalledProcessError as e:
+            os.remove(file) # Clean up after ourselves
+
+            # if the image is missing print a helpful error message:
+            if e.returncode == 125:
+                status_update("It seems like the docker image", config.docker_container, "was not found.")
+                status_update("In order to build the default docker image for cheribuild (cheribuild-test) run:")
+                print(
+                    coloured(AnsiColour.blue, "cd", cheribuild_dir + "/docker && docker build --tag cheribuild-docker ."))
+                sys.exit(coloured(AnsiColour.red, "Failed to start docker!"))
+                raise
+            sys.exit()
+
+        # Take the new image and retag it to the original name
+        try:
+            result = str(output.stdout)
+            image = result[result.rfind(" ") + 1:-3] # -3 gets the \n off
+
+            docker_run_cmd = ["docker", "image", "tag", image, "cheribuild-docker"]
+            output = run_command(docker_run_cmd, config=self.config, give_tty_control=True, capture_output=True)
+
+        except:
+                sys.exit(coloured(AnsiColour.red, "Failed to retag docker!"))
+
         sys.exit()
 
