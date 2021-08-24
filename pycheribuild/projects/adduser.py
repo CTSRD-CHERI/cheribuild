@@ -78,4 +78,4 @@ class AddUser(SimpleProject):
                              self.config.docker_container + " .")
                 self.fatal(error, fixit_hint=hint)
             else:
-                raise
+                self.fatal("Docker build failed.", e)
