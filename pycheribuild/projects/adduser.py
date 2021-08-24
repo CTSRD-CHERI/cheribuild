@@ -31,12 +31,11 @@
 import os
 import getpass
 import subprocess
-import sys
 
 from pathlib import Path
 
 from .project import CheriConfig, SimpleProject, DefaultInstallDir
-from ..utils import (AnsiColour, coloured, status_update)
+from ..utils import (AnsiColour, coloured)
 from ..processutils import run_command
 
 
@@ -66,7 +65,6 @@ class AddUser(SimpleProject):
             docker_run_cmd = ["docker", "build", "--tag=cheribuild-docker",
                               "-f", target_file, "."]
             run_command(docker_run_cmd, config=self.config)
-            os.remove(file)
 
         except subprocess.CalledProcessError as e:
             # if the image is missing print a helpful error message:
