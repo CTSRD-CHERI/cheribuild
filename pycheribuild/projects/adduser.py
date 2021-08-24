@@ -48,44 +48,36 @@ class AddUser(SimpleProject):
         super().__init__(config)
 
     def process(self):
-        file = str(self.config.output_root.absolute()) + "/Dockerfile.adduser"
+        target_file = self.config.output_root.absolute() / "Dockerfile.adduser"
         try:
             user = getpass.getuser()
         except KeyError:
             user = "nobody"
 
         # Create a Dockerfile that will contain this user's name, gid, uid
-        try:
-            fp = open(file, mode="w")
-            contents = "FROM cheribuild-docker\n\nRUN addgroup --gid " + \
-                       str(os.getgid()) + " " + user + \
-                       " && adduser --uid " + str(os.getuid()) + " --ingroup " + \
-                       user + " " + user + " \n"
-
-            fp.write(contents)
-
-            fp.close()
-
-        except OSError:
-            status_update("Could not create ", file)
-            sys.exit()
+        contents = "FROM cheribuild-docker\n\nRUN addgroup --gid " + \
+                   str(os.getgid()) + " " + user + \
+                   " && adduser --uid " + str(os.getuid()) + " --ingroup " + \
+                   user + " " + user + " \n"
+        self.write_file(target_file, contents, overwrite=True)
 
         # Build a new image from our installed image with this user
         try:
             docker_run_cmd = ["docker", "build", "--tag=cheribuild-docker",
-                              "-f", file, "."]
+                              "-f", target_file, "."]
             run_command(docker_run_cmd, config=self.config)
-
             os.remove(file)
 
         except subprocess.CalledProcessError as e:
-            os.remove(file)
-
             # if the image is missing print a helpful error message:
-            if e.returncode == 125:
+            if e.returncode == 1:
                 cheribuild_dir = str(Path(__file__).absolute().parent.parent)
-                status_update("It seems like the docker image", self.config.docker_container, "was not found.")
-                status_update("In order to build the default docker image for cheribuild (cheribuild-docker) run:")
-                print(coloured(AnsiColour.blue, "cd", cheribuild_dir +
-                               "/docker && docker build --tag cheribuild-docker ."))
-                sys.exit(coloured(AnsiColour.red, "Failed to start docker!"))
+                error = "It seems like the docker image " + \
+                        self.config.docker_container + " was not found."
+                hint = "In order to build the default docker image for cheribuild run:" + \
+                    coloured(AnsiColour.blue, "cd", cheribuild_dir +
+                             "/docker && docker build --tag=" +
+                             self.config.docker_container + " .")
+                self.fatal(error, fixit_hint=hint)
+            else:
+                raise
