@@ -54,7 +54,6 @@ class AddUser(SimpleProject):
             user = "nobody"
 
         # Create a Dockerfile that will contain this user's name, gid, uid
-        contents = 
         self.write_file(target_file, overwrite=True, contents=f"""
 FROM cheribuild-docker
 RUN addgroup --gid {os.getgid()} {user} && \
