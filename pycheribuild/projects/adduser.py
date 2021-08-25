@@ -54,11 +54,12 @@ class AddUser(SimpleProject):
             user = "nobody"
 
         # Create a Dockerfile that will contain this user's name, gid, uid
-        contents = "FROM cheribuild-docker\n\nRUN addgroup --gid " + \
-                   str(os.getgid()) + " " + user + \
-                   " && adduser --uid " + str(os.getuid()) + " --ingroup " + \
-                   user + " " + user + " \n"
-        self.write_file(target_file, contents, overwrite=True)
+        contents = 
+        self.write_file(target_file, overwrite=True, contents=f"""
+FROM cheribuild-docker
+RUN addgroup --gid {os.getgid()} {user} && \
+    adduser --uid {os.getuid()} --ingroup {user} {user}
+""")
 
         # Build a new image from our installed image with this user
         try:
