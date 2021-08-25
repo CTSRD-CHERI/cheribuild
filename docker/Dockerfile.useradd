@@ -3,4 +3,4 @@ FROM cheribuild-docker
 # NOTE: Change USER to your username, GROUPID and USERID to the output
 # of the id(1) command.
  
-RUN addgroup --gid GROUPID  USER && adduser --uid USERID --ingroup USER USER
+RUN addgroup --gid GROUPID USER && adduser --uid USERID --ingroup USER USER
