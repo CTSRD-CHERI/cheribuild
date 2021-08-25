@@ -40,7 +40,7 @@ from ..processutils import run_command
 
 
 class AddUser(SimpleProject):
-    target = "adduser"
+    target = "docker-adduser"
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def __init__(self, config: CheriConfig):
