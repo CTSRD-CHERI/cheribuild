@@ -24,7 +24,7 @@ COPY cheribuild.json /root/.config/cheribuild.json
 
 # deps to build QEMU+elftoolchain:
 RUN apt-get update && apt-get install -y \
-  libtool pkg-config python2-minimal autotools-dev automake autoconf libglib2.0-dev libpixman-1-dev \
+  libtool pkg-config autotools-dev automake autoconf libglib2.0-dev libpixman-1-dev \
   bison groff-base libarchive-dev flex
 
 RUN apt-get update && apt-get install -y cmake
