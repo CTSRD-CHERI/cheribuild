@@ -29,6 +29,8 @@ RUN apt-get update && apt-get install -y \
 
 RUN apt-get update && apt-get install -y cmake
 
+RUN apt-get install -y clang-12 lld-12
+
 RUN addgroup --gid 12345 cheri && adduser --uid 12345 --ingroup cheri cheri
 
 VOLUME ["/cheribuild", "/source", "/build", "/output"]
