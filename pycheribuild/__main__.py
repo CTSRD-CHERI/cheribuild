@@ -209,7 +209,7 @@ def real_main():
                 status_update("In order to build the default docker image for cheribuild (cheribuild-docker) run:")
                 print(
                     coloured(AnsiColour.blue, "cd",
-                             cheribuild_dir + "/docker && docker build --tag cheribuild--docker ."))
+                             cheribuild_dir + "/docker && docker build --tag cheribuild-docker ."))
                 sys.exit(coloured(AnsiColour.red, "Failed to start docker!"))
             raise
         sys.exit()
