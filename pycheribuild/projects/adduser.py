@@ -51,6 +51,7 @@ class AddUser(SimpleProject):
         try:
             user = getpass.getuser()
         except KeyError:
+            self.fatal("Could not get current username")
             user = "nobody"
 
         # Create a Dockerfile that will contain this user's name, gid, uid
