@@ -65,7 +65,7 @@ RUN addgroup --gid {os.getgid()} {user} && \
             docker_run_cmd = ["docker", "build", "--tag=" + self.config.docker_container, "."]
             self.run_cmd(docker_run_cmd, cwd=self.build_dir)
 
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             # if the image is missing print a helpful error message:
             error = "Failed to add your user to the docker image " + \
                     self.config.docker_container
