@@ -39,6 +39,10 @@ from ..processutils import run_command
 
 class DockerAdduser(SimpleProject):
     target = "docker-adduser"
+    
+    def __init__(self, config):
+        super().__init__(config)
+        self.build_dir = self.config.build_root / (self.target + "-build")
 
     def process(self):
         if not self.build_dir.is_dir():
