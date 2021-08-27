@@ -33,7 +33,6 @@ import getpass
 import subprocess
 
 from .project import SimpleProject, DefaultInstallDir
-from ..utils import AnsiColour, coloured
 from ..processutils import run_command
 
 
