@@ -43,7 +43,6 @@ class DockerAdduser(SimpleProject):
     target = "docker-adduser"
 
     def process(self):
-        target_file = self.config.output_root.absolute() / "Dockerfile.adduser"
         try:
             user = getpass.getuser()
         except KeyError:
