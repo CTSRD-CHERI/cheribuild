@@ -57,7 +57,7 @@ RUN addgroup --gid {os.getgid()} {user} && \
         # Build a new image from our installed image with this user
         try:
             docker_run_cmd = ["docker", "build", "--tag=cheribuild-docker", "."]
-            self.run_cmd(docker_run_cmd)
+            self.run_cmd(docker_run_cmd, cwd=self.build_dir)
 
         except subprocess.CalledProcessError as e:
             # if the image is missing print a helpful error message:
