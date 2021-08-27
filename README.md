@@ -648,7 +648,7 @@ Options controlling the use of docker for building:
   --docker, --no-docker
                         Run the build inside a docker container (default: 'False')
   --docker-container DOCKER-CONTAINER
-                        Name of the docker container to use (default: 'cheribuild-test')
+                        Name of the docker container to use (default: 'cheribuild-docker')
   --docker-reuse-container, --no-docker-reuse-container
                         Attach to the same container again (note: docker-container option must be an id rather than a
                         container name (default: 'False')
