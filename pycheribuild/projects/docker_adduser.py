@@ -62,7 +62,7 @@ RUN addgroup --gid {os.getgid()} {user} && \
         try:
             docker_run_cmd = ["docker", "build", "--tag=cheribuild-docker",
                               "-f", target_file, "."]
-            run_command(docker_run_cmd, config=self.config)
+            self.run_cmd(docker_run_cmd)
 
         except subprocess.CalledProcessError as e:
             # if the image is missing print a helpful error message:
