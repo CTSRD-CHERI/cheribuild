@@ -34,7 +34,7 @@ import subprocess
 
 from pathlib import Path
 
-from .project import CheriConfig, SimpleProject, DefaultInstallDir
+from .project import SimpleProject, DefaultInstallDir
 from ..utils import (AnsiColour, coloured)
 from ..processutils import run_command
 
@@ -67,7 +67,7 @@ RUN addgroup --gid {os.getgid()} {user} && \
         except subprocess.CalledProcessError as e:
             # if the image is missing print a helpful error message:
             if e.returncode == 1:
-                cheribuild_dir = str(Path(__file__).absolute().parent.parent)
+                cheribuild_dir = str(Path(__file__).absolute().parent.parent.parent)
                 error = "It seems like the docker image " + \
                         self.config.docker_container + " was not found."
                 hint = "In order to build the default docker image for cheribuild run:" + \
