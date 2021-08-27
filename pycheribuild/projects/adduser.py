@@ -43,9 +43,6 @@ class DockerAdduser(SimpleProject):
     target = "docker-adduser"
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-
     def process(self):
         target_file = self.config.output_root.absolute() / "Dockerfile.adduser"
         try:
