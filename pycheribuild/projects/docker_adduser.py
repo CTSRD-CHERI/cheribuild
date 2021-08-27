@@ -63,11 +63,8 @@ RUN addgroup --gid {os.getgid()} {user} && \
 
         except subprocess.CalledProcessError as e:
             # if the image is missing print a helpful error message:
-            if e.returncode == 1:
-                error = "The docker image " + \
-                        self.config.docker_container + " was not found."
-                hint = "Ensure you have " + self.config.docker_container + \
-                        "loaded by using docker image ls"
-                self.fatal(error, fixit_hint=hint)
-            else:
-                self.fatal("Docker build failed.", e)
+            error = "Failed to add your user to the docker image " + \
+                    self.config.docker_container
+            hint = "Ensure you have " + self.config.docker_container + \
+                   "available (check using docker image ls)"
+            self.fatal(error, fixit_hint=hint)
