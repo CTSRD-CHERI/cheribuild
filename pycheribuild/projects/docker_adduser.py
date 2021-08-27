@@ -49,14 +49,14 @@ class DockerAdduser(SimpleProject):
 
         # Create a Dockerfile that will contain this user's name, gid, uid
         self.write_file(self.build_dir / "Dockerfile", overwrite=True, contents=f"""
-FROM cheribuild-docker
+FROM {self.config.docker_container}
 RUN addgroup --gid {os.getgid()} {user} && \
     adduser --uid {os.getuid()} --ingroup {user} {user}
 """)
 
         # Build a new image from our installed image with this user
         try:
-            docker_run_cmd = ["docker", "build", "--tag=cheribuild-docker", "."]
+            docker_run_cmd = ["docker", "build", "--tag=" + self.config.docker_container, "."]
             self.run_cmd(docker_run_cmd, cwd=self.build_dir)
 
         except subprocess.CalledProcessError as e:
