@@ -67,13 +67,10 @@ RUN addgroup --gid {os.getgid()} {user} && \
         except subprocess.CalledProcessError as e:
             # if the image is missing print a helpful error message:
             if e.returncode == 1:
-                cheribuild_dir = str(Path(__file__).absolute().parent.parent.parent)
-                error = "It seems like the docker image " + \
+                error = "The docker image " + \
                         self.config.docker_container + " was not found."
-                hint = "In order to build the default docker image for cheribuild run:" + \
-                    coloured(AnsiColour.blue, "cd", cheribuild_dir +
-                             "/docker && docker build --tag=" +
-                             self.config.docker_container + " .")
+                hint = "Ensure you have " + self.config.docker_container + \
+                        "loaded by using docker image ls"
                 self.fatal(error, fixit_hint=hint)
             else:
                 self.fatal("Docker build failed.", e)
