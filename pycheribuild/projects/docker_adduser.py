@@ -33,13 +33,12 @@ import os
 import getpass
 import subprocess
 
-from .project import SimpleProject, DefaultInstallDir
-from ..processutils import run_command
+from .project import SimpleProject
 
 
 class DockerAdduser(SimpleProject):
     target = "docker-adduser"
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.build_dir = self.config.build_root / (self.target + "-build")
