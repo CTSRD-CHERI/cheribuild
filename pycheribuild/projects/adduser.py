@@ -39,7 +39,7 @@ from ..utils import (AnsiColour, coloured)
 from ..processutils import run_command
 
 
-class AddUser(SimpleProject):
+class DockerAdduser(SimpleProject):
     target = "docker-adduser"
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
