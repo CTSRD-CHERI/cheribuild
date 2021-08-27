@@ -1,5 +1,0 @@
-# NOTE: Change the soure path  below to match the locations for your
-# sources.  By default the build and output directories resisde in source/
-{
-  "source-root": "/home/USER/MYDIR/sources"
-}
