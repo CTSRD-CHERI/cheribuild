@@ -41,7 +41,6 @@ from ..processutils import run_command
 
 class DockerAdduser(SimpleProject):
     target = "docker-adduser"
-    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def process(self):
         target_file = self.config.output_root.absolute() / "Dockerfile.adduser"
