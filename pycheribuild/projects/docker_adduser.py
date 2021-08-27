@@ -41,6 +41,9 @@ class DockerAdduser(SimpleProject):
     target = "docker-adduser"
 
     def process(self):
+        if not self.build_dir.is_dir():
+            self.makedirs(self.build_dir)
+
         try:
             user = getpass.getuser()
         except KeyError:
