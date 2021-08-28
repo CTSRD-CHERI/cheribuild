@@ -254,8 +254,6 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                           "--riscv-abi", self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True),
                           "--riscv-platform", self.platform,
                           "--program-path", program_root,
-                          "--plot_compartments", self.plot_compartments,
-                          "--loc_stats", self.loc_stats,
                           "--sysroot",  str(self.sdk_sysroot),
                           "--mem-start", self.mem_start,
                           "--ipaddr", self.ipaddr,
@@ -269,6 +267,11 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
               config_options += ["--compartmentalization_mode", self.compartmentalization_mode]
               if self.compartmentalize_stdlibs:
                   config_options += ["--compartmentalize_stdlibs"]
+              if self.plot_compartments:
+                  config_options += ["--plot_compartments"]
+
+            if self.loc_stats:
+              config_options += ["--loc_stats"]
 
             if self.use_virtio_blk:
               config_options += ["--use-virtio-blk"]
