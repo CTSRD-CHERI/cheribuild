@@ -62,7 +62,6 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                                               "aws_ota",
                                               "coremark",
                                               "main_blinky",
-                                              "main_compartment_test",
                                               "main_peekpoke",
                                               "main_servers",
                                               "mibench",
@@ -210,9 +209,6 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         if self.build_system == "waf":
             self._run_waf("install", self.config.make_j_flag)
             return
-
-        if self.demo_app == "main_compartment_test":
-          self.run_compartmentalize()
 
         # Galois only currently has make build system
         if self.demo == "RISC-V_Galois_demo":
