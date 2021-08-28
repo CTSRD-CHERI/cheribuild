@@ -208,7 +208,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     def compile(self, **kwargs):
 
         if self.build_system == "waf":
-            self._run_waf("build", self.config.make_j_flag)
+            self._run_waf("install", self.config.make_j_flag)
             return
 
         if self.demo_app == "main_compartment_test":
@@ -289,7 +289,6 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
     def install(self, **kwargs):
         if self.build_system == "waf":
-            self._run_waf("install")
             return
 
         self.install_file(
