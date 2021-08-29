@@ -16,7 +16,7 @@ macOS 10.14 and newer is also supported.
 #### macOS
 When building on macOS the following packages are required:
 ```shell
-brew install cmake ninja libarchive git glib gnu-sed automake autoconf coreutils llvm make wget pixman pkg-config xz
+brew install cmake ninja libarchive git glib gnu-sed automake autoconf coreutils llvm make wget pixman pkg-config xz zstd
 # Install samba for shared mounts between host and CheriBSD on QEMU
 brew install arichardson/cheri/samba
 # If you intend to run the morello FVP model you will also need the following:
@@ -28,7 +28,7 @@ brew install homebrew/cask/docker homebrew/cask/xquartz socat dtc
 If you are building CHERI on a Debian/Ubuntu-based machine, please install the following packages:
 
 ```shell
-apt install autoconf automake libtool pkg-config clang bison cmake ninja-build samba flex texinfo libglib2.0-dev libpixman-1-dev libarchive-dev libarchive-tools libbz2-dev libattr1-dev libcap-ng-dev
+apt install autoconf automake libtool pkg-config clang bison cmake ninja-build samba flex texinfo libglib2.0-dev libpixman-1-dev libarchive-dev libarchive-tools libbz2-dev libattr1-dev libcap-ng-dev libzstd-dev
 ```
 
 Older versions of Ubuntu may report errors when trying to install `libarchive-tools`. In this case try using `apt install bsdtar` instead.
@@ -36,7 +36,7 @@ Older versions of Ubuntu may report errors when trying to install `libarchive-to
 If you are building CHERI on a RHEL/Fedora-based machine, please install the following packages:
 
 ```shell
-dnf install libtool clang-devel bison cmake ninja-build samba flex texinfo glib2-devel pixman-devel libarchive-devel bsdtar bzip2-devel libattr-devel libcap-ng-devel expat-devel
+dnf install libtool clang-devel bison cmake ninja-build samba flex texinfo glib2-devel pixman-devel libarchive-devel bsdtar bzip2-devel libattr-devel libcap-ng-devel expat-devel libzstd-devel
 ```
 
 # Basic usage

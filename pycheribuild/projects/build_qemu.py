@@ -134,6 +134,11 @@ class BuildQEMUBase(AutotoolsProject):
         if self.config.verbose:
             self.make_args.set(V=1)
 
+        # Ensure zstd compression support inside qcow2 images
+        self.add_required_pkg_config("libzstd", homebrew="zstd", zypper="libzstd-devel", apt="libzstd-dev",
+                                     freebsd="zstd")
+        self.configure_args.append("--enable-zstd")
+
     def setup(self):
         super().setup()
         compiler = self.CC
