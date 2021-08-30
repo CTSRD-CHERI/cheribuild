@@ -100,8 +100,12 @@ class _AdditionalFileTemplates(object):
 
 def _default_disk_image_name(config: CheriConfig, directory: Path, project: "BuildDiskImageBase"):
     xtarget = project.get_crosscompile_target(config)
+    if project.use_qcow2:
+        suffix = "qcow2"
+    else:
+        suffix = "img"
     # Don't add the os_prefix to the disk image name since it should already be encoded in project.disk_image_prefix)
-    return directory / (project.disk_image_prefix + project.build_configuration_suffix(xtarget) + ".img")
+    return directory / (project.disk_image_prefix + project.build_configuration_suffix(xtarget) + "." + suffix)
 
 
 def _default_disk_image_hostname(prefix: str) -> "ComputedDefaultValue[str]":
@@ -523,9 +527,9 @@ class BuildDiskImageBase(SimpleProject):
             return True
         return False
 
-    def make_x86_disk_image(self):
+    def make_x86_disk_image(self, out_img: Path):
         assert self.is_x86
-        root_partition = self.disk_image_path.with_suffix(".root.img")
+        root_partition = out_img.with_suffix(".root.img")
         try:
             self.make_rootfs_image(root_partition)
             # See mk_nogeli_gpt_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
@@ -534,16 +538,16 @@ class BuildDiskImageBase(SimpleProject):
                             "-b", self.rootfs_dir / "boot/pmbr",  # bootload (MBR)
                             "-p", "freebsd-boot:=" + str(self.rootfs_dir / "boot/gptboot"),  # gpt boot partition
                             "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
-                            "-o", self.disk_image_path  # output file
+                            "-o", out_img  # output file
                             ], cwd=self.rootfs_dir)
         finally:
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
 
-    def make_gpt_disk_image(self):
-        root_partition = self.disk_image_path.with_suffix(".root.img")
+    def make_gpt_disk_image(self, out_img: Path):
+        root_partition = out_img.with_suffix(".root.img")
 
         if self.include_efi_partition:
-            efi_partition = self.disk_image_path.with_suffix(".efi.img")
+            efi_partition = out_img.with_suffix(".efi.img")
         else:
             efi_partition = None
 
@@ -567,7 +571,7 @@ class BuildDiskImageBase(SimpleProject):
                             *mkimg_efi_args,
                             "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
                             *mkimg_swap_args,
-                            "-o", self.disk_image_path  # output file
+                            "-o", out_img  # output file
                             ], cwd=self.rootfs_dir)
         finally:
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
@@ -676,24 +680,29 @@ class BuildDiskImageBase(SimpleProject):
             else:
                 self.info("qemu-img command was not found. Will not be able to create QCOW2 images")
 
+        if self.use_qcow2:
+            # If we're going to generate a qcow2 image, avoid clobbering the non-qcow2 image and don't generate a .qcow2
+            # file that isn't acqually qcow2.
+            raw_img = self.disk_image_path.with_suffix(".raw")
+        else:
+            raw_img = self.disk_image_path
+
         if self.rootfs_only:
-            self.make_rootfs_image(self.disk_image_path)
+            self.make_rootfs_image(raw_img)
         elif self.is_x86:
             # X86 currently requires special handling
             # TODO: Switch to normal UEFI booting
-            self.make_x86_disk_image()
+            self.make_x86_disk_image(raw_img)
         else:
-            self.make_gpt_disk_image()
+            self.make_gpt_disk_image(raw_img)
 
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if not self.config.quiet and qemu_img_command.exists():
-            self.run_cmd(qemu_img_command, "info", self.disk_image_path)
+            self.run_cmd(qemu_img_command, "info", raw_img)
         if self.use_qcow2:
             if not qemu_img_command.exists():
                 self.fatal("Cannot create QCOW2 image without qemu-img command!")
             # create a qcow2 version from the raw image:
-            raw_img = self.disk_image_path.with_suffix(".raw")
-            self.run_cmd("mv", "-f", self.disk_image_path, raw_img)
             self.run_cmd(qemu_img_command, "convert",
                          "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
                          "-O", "qcow2",  # convert to qcow2 format
