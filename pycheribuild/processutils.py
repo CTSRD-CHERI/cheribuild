@@ -438,8 +438,20 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
             return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
+class DoNoQuoteStr:
+    def __init__(self, s):
+        self.s = s
+
+    def __str__(self):
+        return self.s
+
+
+def _quote(s):
+    return str(s) if isinstance(s, DoNoQuoteStr) else shlex.quote(str(s))
+
+
 def commandline_to_str(args: "typing.Iterable[typing.Union[str,Path]]") -> str:
-    return " ".join((shlex.quote(str(s)) for s in args))
+    return " ".join((_quote(s) for s in args))
 
 
 class CompilerInfo(object):

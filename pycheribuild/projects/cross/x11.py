@@ -33,7 +33,7 @@ from .freetype import BuildFreeType2
 from ..project import DefaultInstallDir, GitRepository, Project
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
-from ...processutils import set_env
+from ...processutils import DoNoQuoteStr, set_env
 from ...utils import OSInfo
 
 
@@ -87,6 +87,13 @@ class X11AutotoolsProject(X11AutotoolsProjectBase):
             self.configure_args.append("--with-sysroot=" + str(self.sdk_sysroot))
             # Needed for many of the projects but not all of them:
             self.configure_args.append("--enable-malloc0returnsnull")
+
+    @property
+    def default_ldflags(self):
+        result = super().default_ldflags
+        if not self.compiling_for_host():
+            result.append(DoNoQuoteStr("-Wl,--enable-new-dtags,-rpath,'$$ORIGIN/../lib'"))
+        return result
 
 
 class BuildXCBProto(X11AutotoolsProject):
