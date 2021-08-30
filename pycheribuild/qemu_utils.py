@@ -35,7 +35,7 @@ from pathlib import Path
 
 from .config.target_info import CPUArchitecture, CrossCompileTarget
 from .processutils import run_command
-from .utils import OSInfo
+from .utils import OSInfo, warning_message
 
 
 class QemuOptions:
@@ -89,6 +89,23 @@ class QemuOptions:
             raise ValueError("Unknown target " + str(xtarget))
 
     def disk_image_args(self, image: Path, image_format: str) -> list:
+        # Probe the disk image format in case someone has overridden the default image path or format is unspecified
+        if not image.exists():
+            # Either we're pretending or we'll complain elsewhere.
+            if image_format is None:
+                image_format = "qcow2" if image.name.endswith(".qcow2") else "raw"
+        else:
+            with image.open('rb') as imgf:
+                magic = imgf.read(4)
+                is_qcow2 = magic == b'QFI\xfb'
+
+                if image_format is None:
+                    image_format = "qcow2" if is_qcow2 else "raw"
+                elif is_qcow2 and image_format != "qcow2":
+                    warning_message("Disk image looks like qcow2 but claimed image format is", image_format)
+                elif not is_qcow2 and image_format == "qcow2":
+                    warning_message("Disk image does not look like claimed image format of qcow2")
+
         if self.virtio_disk:
             # RISC-V doesn't support virtio-blk-pci, we have to use virtio-blk-device
             device_kind = "virtio-blk-device" if self.xtarget.is_riscv(include_purecap=True) else "virtio-blk-pci"
