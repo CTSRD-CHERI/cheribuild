@@ -112,6 +112,7 @@ class LaunchQEMUBase(SimpleProject):
         self.qemu_binary = None  # type: typing.Optional[Path]
         self.current_kernel = None  # type: typing.Optional[Path]
         self.disk_image = None  # type: typing.Optional[Path]
+        self.disk_image_format = "raw"
         self._project_specific_options = []
         self.bios_flags = []
         self.qemu_options = QemuOptions(self.crosscompile_target, want_debugger=self.config.wait_for_debugger)
@@ -300,6 +301,7 @@ class LaunchQEMUBase(SimpleProject):
         qemu_command = self.qemu_options.get_commandline(qemu_command=self.qemu_binary,
                                                          kernel_file=qemu_loader_or_kernel,
                                                          disk_image=self.disk_image,
+                                                         disk_image_format=self.disk_image_format,
                                                          add_network_device=self.qemu_user_networking,
                                                          bios_args=self.bios_flags,
                                                          user_network_args=user_network_options,
