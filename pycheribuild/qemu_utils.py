@@ -88,14 +88,14 @@ class QemuOptions:
         else:
             raise ValueError("Unknown target " + str(xtarget))
 
-    def disk_image_args(self, image) -> list:
+    def disk_image_args(self, image: Path, image_format: str) -> list:
         if self.virtio_disk:
             # RISC-V doesn't support virtio-blk-pci, we have to use virtio-blk-device
             device_kind = "virtio-blk-device" if self.xtarget.is_riscv(include_purecap=True) else "virtio-blk-pci"
-            return ["-drive", "if=none,file=" + str(image) + ",id=drv,format=raw",
+            return ["-drive", "if=none,file=" + str(image) + ",id=drv,format=" + image_format,
                     "-device", device_kind + ",drive=drv"]
         else:
-            return ["-drive", "file=" + str(image) + ",format=raw,index=0,media=disk"]
+            return ["-drive", "file=" + str(image) + ",format=" + image_format + ",index=0,media=disk"]
 
     def can_use_virtio_network(self):
         # We'd like to use virtio everwhere, but FreeBSD doesn't like it on BE mips.
@@ -132,9 +132,10 @@ class QemuOptions:
         return Path(found_in_path) if found_in_path is not None else None
 
     def get_commandline(self, *, qemu_command=None, kernel_file: Path = None, disk_image: Path = None,
-                        user_network_args: str = "", add_network_device=True, bios_args: "typing.List[str]" = None,
-                        trap_on_unrepresentable=False, debugger_on_cheri_trap=False, add_virtio_rng=False,
-                        write_disk_image_changes=True, gui_options: "typing.List[str]" = None) -> "typing.List[str]":
+                        disk_image_format: str = "raw", user_network_args: str = "", add_network_device=True,
+                        bios_args: "typing.List[str]" = None, trap_on_unrepresentable=False,
+                        debugger_on_cheri_trap=False, add_virtio_rng=False, write_disk_image_changes=True,
+                        gui_options: "typing.List[str]" = None) -> "typing.List[str]":
         if qemu_command is None:
             qemu_command = self.get_qemu_binary()
         result = [str(qemu_command)]
@@ -155,7 +156,7 @@ class QemuOptions:
             result.append("-kernel")
             result.append(str(kernel_file))
         if disk_image:
-            result.extend(self.disk_image_args(disk_image))
+            result.extend(self.disk_image_args(disk_image, disk_image_format))
         if not write_disk_image_changes:
             # All disk writes go to a tempfile: https://qemu.readthedocs.io/en/latest/system/images.html#snapshot-mode
             result.append("-snapshot")
