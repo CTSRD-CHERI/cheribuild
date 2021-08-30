@@ -89,13 +89,20 @@ class QemuOptions:
             raise ValueError("Unknown target " + str(xtarget))
 
     def disk_image_args(self, image) -> list:
+        # Probe to see if this is qcow2 or not.  If it isn't, we assume it's raw, which isn't exercising the full range
+        # of qemu's features but we haven't, as yet, generated anything else.  We don't let qemu probe because it warns
+        # loudly if probing detects a raw image.
+        with open(image, 'rb') as imgf:
+            magic = imgf.read(4)
+            img_fmt = "qcow2" if magic == b'QFI\xfb' else "raw"
+
         if self.virtio_disk:
             # RISC-V doesn't support virtio-blk-pci, we have to use virtio-blk-device
             device_kind = "virtio-blk-device" if self.xtarget.is_riscv(include_purecap=True) else "virtio-blk-pci"
-            return ["-drive", "if=none,file=" + str(image) + ",id=drv,format=raw",
+            return ["-drive", "if=none,file=" + str(image) + ",id=drv,format=" + img_fmt,
                     "-device", device_kind + ",drive=drv"]
         else:
-            return ["-drive", "file=" + str(image) + ",format=raw,index=0,media=disk"]
+            return ["-drive", "file=" + str(image) + ",format=" + img_fmt + ",index=0,media=disk"]
 
     def can_use_virtio_network(self):
         # We'd like to use virtio everwhere, but FreeBSD doesn't like it on BE mips.
