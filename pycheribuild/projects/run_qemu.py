@@ -452,7 +452,10 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         super().__init__(config)
         if freebsd_class is None and disk_image_class is not None:
             # noinspection PyProtectedMember
-            self.source_project = disk_image_class.get_instance(self).source_project
+            disk_image_instance = disk_image_class.get_instance(self)
+            self.source_project = disk_image_instance.source_project
+            if disk_image_instance.use_qcow2:
+                self.disk_image_format = "qcow2"
         else:
             self.source_project = freebsd_class.get_instance(self)
 
