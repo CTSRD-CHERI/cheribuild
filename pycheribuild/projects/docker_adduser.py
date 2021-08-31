@@ -34,6 +34,7 @@ import getpass
 import subprocess
 
 from .project import SimpleProject
+from ..utils import OSInfo
 
 
 class DockerAdduser(SimpleProject):
@@ -53,11 +54,21 @@ class DockerAdduser(SimpleProject):
             self.fatal("Could not get current username")
             user = "nobody"
 
+        uid = os.getuid()
+        gid = os.getgid()
+        if OSInfo.IS_MAC:
+            # macOS doesn't create per-user groups, so users are in system
+            # groups and thus we don't want to create them in the container
+            # lest they conflict with Ubuntu's sytem groups. Unlike Linux we
+            # don't actually need IDs to match, just that we have a proper
+            # non-root user, so use the UID as the GID.
+            gid = uid
+
         # Create a Dockerfile that will contain this user's name, gid, uid
         self.write_file(self.build_dir / "Dockerfile", overwrite=True, contents=f"""
 FROM {self.config.docker_container}
-RUN addgroup --gid {os.getgid()} {user} && \
-    adduser --uid {os.getuid()} --ingroup {user} {user}
+RUN addgroup --gid {gid} {user} && \
+    adduser --uid {uid} --ingroup {user} {user}
 """)
 
         # Build a new image from our installed image with this user
