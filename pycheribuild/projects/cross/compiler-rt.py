@@ -50,12 +50,8 @@ class BuildCompilerRt(CrossCompileCMakeProject):
 
     def setup(self):
         super().setup()
-
         if self.target_info.is_rtems() or self.target_info.is_baremetal():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")  # RTEMS only needs static libs
-            # Get default target (arch) from the triple
-            self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH=self.target_info.target_triple.split('-')[0])
-
         # When building in Jenkins, we use the installed path to LLVM tools, otherwise we use the tools from the
         # local build dir
         if is_jenkins_build():
@@ -75,7 +71,8 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal(),
             # Needed after https://reviews.llvm.org/D99621
             COMPILER_RT_DEFAULT_TARGET_ONLY=True,
-            LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=True,
+            # Per-target runtime directories don't add the purecap suffix so can't be used right now.
+            LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=False,
             )
         if self.should_include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
