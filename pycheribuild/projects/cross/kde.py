@@ -912,7 +912,7 @@ class BuildExiv2(CrossCompileCMakeProject):
 
 class BuildGwenview(KDECMakeProject):
     target = "gwenview"
-    dependencies = ["qtsvg", "kitemmodels", "kio", "kparts", "lcms2", "libpng", "exiv2"]
+    dependencies = ["qtsvg", "kitemmodels", "kimageformats", "kio", "kparts", "lcms2", "libpng", "exiv2"]
     repository = GitRepository("https://invent.kde.org/graphics/gwenview.git")
 
 
