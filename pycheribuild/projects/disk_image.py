@@ -706,7 +706,6 @@ class BuildDiskImageBase(SimpleProject):
             self.run_cmd(qemu_img_command, "convert",
                          "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
                          "-O", "qcow2",  # convert to qcow2 format
-                         "-c", "-o", "compression_type=zstd",  # compress data inside the image
                          raw_img,  # input file
                          self.disk_image_path)  # output file
             self.delete_file(raw_img, print_verbose_only=True)
