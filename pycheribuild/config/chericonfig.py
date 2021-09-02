@@ -292,7 +292,7 @@ class CheriConfig(ConfigBase):
         self.docker = loader.add_bool_option("docker", help="Run the build inside a docker container",
                                              group=loader.docker_group)
         self.docker_container = loader.add_option("docker-container", help="Name of the docker container to use",
-                                                  default="cheribuild-docker", group=loader.docker_group)
+                                                  default="ctsrd/cheribuild-docker", group=loader.docker_group)
         self.docker_reuse_container = loader.add_bool_option("docker-reuse-container", group=loader.docker_group,
                                                              help="Attach to the same container again (note: "
                                                                   "docker-container option must be an id rather than "
