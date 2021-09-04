@@ -302,6 +302,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         if self.toolchain == "llvm":
             with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
                          # Add compiler-rt location to the search path
+                         CFLAGS= ' '.join(self.target_info.get_essential_compiler_and_linker_flags()),
                          LDFLAGS="-L" + str(self.compiler_resource / "lib")):
                 super().process()
         else:
