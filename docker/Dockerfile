@@ -17,10 +17,17 @@ RUN apt-get update && apt-get install -y \
   libarchive-dev libglib2.0-dev libpixman-1-dev \
   bison groff-base flex \
   cmake \
-  clang-12 lld-12
+  clang-12 lld-12 \
+  gosu && \
+  apt-get clean
 
 COPY cheribuild.json /root/.config/cheribuild.json
+COPY entrypoint.sh /usr/bin/entrypoint.sh
 
 VOLUME ["/cheribuild", "/source", "/build", "/output"]
 ENV PATH /cheribuild:$PATH
-CMD bash
+# We use an ENTRYPOINT script to ensure that cheribuild is run as a non-root
+# user that has a UID/GID matching the host so that file ownership in the
+# volumes
+ENTRYPOINT ["/usr/bin/entrypoint.sh"]
+CMD ["/bin/bash"]
