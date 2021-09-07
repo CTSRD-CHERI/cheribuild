@@ -2,8 +2,5 @@
   "source-root": "/source",
   "output-root": "/output",
   "build-root": "/build",
-  "skip-update": true,
-  "freebsd-mips": { "crossbuild": true },
-  "freebsd-x86": { "crossbuild": true },
-  "cheribsd": { "crossbuild": true }
+  "skip-update": true
 }
