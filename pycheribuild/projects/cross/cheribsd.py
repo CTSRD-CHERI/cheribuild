@@ -1481,20 +1481,15 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
 
     def clean(self) -> ThreadJoiner:
         # Bootstrapping LLVM takes forever with FreeBSD makefiles
-        if not self.query_yes_no("You are about to do a clean FreeBSD build (without external toolchain). "
-                                 "This will rebuild all of LLVM and take a long time. Are you sure?",
-                                 default_result=True):
+        if self.use_bootstrapped_toolchain and not self.query_yes_no(
+                "You are about to do a clean FreeBSD build (without external toolchain). This will rebuild all of "
+                "LLVM and take a long time. Are you sure?", default_result=True):
             return ThreadJoiner(None)
         return super().clean()
 
     @classmethod
     def setup_config_options(cls, install_directory_help=None, **kwargs):
-        if OSInfo.IS_FREEBSD:
-            kwargs["bootstrap_toolchain"] = True
-        if not OSInfo.IS_FREEBSD:
-            kwargs["bootstrap_toolchain"] = False
-            kwargs["use_upstream_llvm"] = True
-        super().setup_config_options(**kwargs)
+        super().setup_config_options(bootstrap_toolchain=True)
         cls.include_llvm = cls.add_bool_option("build-target-llvm",
                                                help="Build LLVM for the target architecture. Note: this adds "
                                                     "significant time to the build")
