@@ -205,6 +205,7 @@ class BuildLibXi(X11AutotoolsProject):
     target = "libxi"
     dependencies = ["libxext", "libxfixes"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxi.git")
+    builds_docbook_xml = True
 
 
 class BuildLibXrender(X11AutotoolsProject):
