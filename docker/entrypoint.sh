@@ -10,7 +10,7 @@ fi
 : "${cheribuild_gid:=1234}"
 : "${cheribuild_user:=cheri}"
 addgroup --quiet --gid ${cheribuild_gid} "${cheribuild_user}"
-yes | adduser --quiet --uid ${cheribuild_uid} --disabled-password --ingroup "${cheribuild_user}" "${cheribuild_user}" > /dev/null
+useradd --uid "${cheribuild_uid}" --gid "${cheribuild_gid}" --create-home --no-user-group --password '*' "${cheribuild_user}"
 
 # Run the actual command:
 export HOME="/home/${cheribuild_user}"
