@@ -298,20 +298,11 @@ class BuildLibXKBCommon(X11MesonProject):
         # Avoid libxml2 dep
         self.configure_args.append("-Denable-xkbregistry=false")
 
-    def check_system_dependencies(self):
-        super().check_system_dependencies()
-        if OSInfo.IS_MAC:
-            # /usr/bin/bison on macOS is not compatible with this build system
-            bison_bindir = self.get_homebrew_prefix("bison") / "bin"
-            if not bison_bindir.exists():
-                self.dependency_error("Recent bison version is missing",
-                                      install_instructions="Run `brew install bison`")
-
     def process(self):
         newpath = os.getenv("PATH")
         if OSInfo.IS_MAC:
-            bison_bindir = self.get_homebrew_prefix("bison") / "bin"
-            newpath = str(bison_bindir) + ":" + newpath
+            # /usr/bin/bison on macOS is not compatible with this build system
+            newpath = str(self.get_homebrew_prefix("bison")) + "/bin:" + newpath
         with set_env(PATH=newpath):
             super().process()
 
