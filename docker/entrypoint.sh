@@ -1,7 +1,7 @@
 #!/bin/sh -e
 
 if [ "$(id -u)" != 0 ]; then
-    echo "Already running as non-root, can't change user."
+    # echo "Already running as non-root, can't change user."
     exec "$@"
 fi
 # Create a non-root user with UID/GID matching the host user to ensure that
