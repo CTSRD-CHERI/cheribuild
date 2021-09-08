@@ -12,6 +12,10 @@ fi
 addgroup --quiet --gid ${cheribuild_gid} "${cheribuild_user}"
 useradd --uid "${cheribuild_uid}" --gid "${cheribuild_gid}" --create-home --no-user-group --password '*' "${cheribuild_user}"
 
-# Run the actual command:
+# Copy the cheribuild configuration to the unprivileged user's home directory:
 export HOME="/home/${cheribuild_user}"
+mkdir "${HOME}/.config"
+cp -f /root/.config/cheribuild.json "${HOME}/.config/cheribuild.json"
+chown -R "${cheribuild_uid}:${cheribuild_gid}" "${HOME}/.config"
+# Run the actual command:
 exec gosu "${cheribuild_user}" "$@"
