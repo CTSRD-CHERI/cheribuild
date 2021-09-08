@@ -196,9 +196,16 @@ def _cached_get_homebrew_prefix(package: "typing.Optional[str]", config: CheriCo
     command = ["brew", "--prefix"]
     if package:
         command.append(package)
-    prefix = run_command(command, capture_output=True, run_in_pretend_mode=True,
-                         print_verbose_only=False, config=config).stdout.decode("utf-8").strip()
-    return Path(prefix)
+    prefix = None
+    try:
+        prefix_str = run_command(command, capture_output=True, run_in_pretend_mode=True,
+                                 print_verbose_only=False, config=config).stdout.decode("utf-8").strip()
+        prefix = Path(prefix_str)
+        if not prefix.exists():
+            prefix = None
+    except subprocess.CalledProcessError:
+        pass
+    return prefix
 
 
 class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
@@ -1078,11 +1085,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self._system_deps_checked = True
 
     def get_homebrew_prefix(self, package: "typing.Optional[str]" = None) -> Path:
-        try:
-            return _cached_get_homebrew_prefix(package, self.config)
-        except subprocess.CalledProcessError as e:
-            self.dependency_error("Could not find homebrew package" + package + ":", e,
+        prefix = _cached_get_homebrew_prefix(package, self.config)
+        if not prefix:
+            self.dependency_error("Could not find homebrew package", package,
                                   install_instructions="Try running `brew install " + package + "`")
+            prefix = Path("/fake/homebrew/prefix/when/pretending/opt") / package
+        return prefix
 
     def process(self):
         raise NotImplementedError()
