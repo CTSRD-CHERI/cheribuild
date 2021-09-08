@@ -349,6 +349,7 @@ class InstallInstructions:
         if self._alternative:
             assert result, "Can't have an alternative without a default option!"
             result += "\nAlternatively " + self._alternative
+        return result
 
 
 class OSInfo(object):
