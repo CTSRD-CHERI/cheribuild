@@ -91,8 +91,6 @@ def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_
 
 def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.success("Booted successfully")
-    # Enable userspace CHERI exception logging to aid debugging
-    qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
     qemu.checked_run("kenv")
     # unchecked since mount_smbfs returns non-zero for --help:
     qemu.run("mount_smbfs --help", cheri_trap_fatal=True)
@@ -146,6 +144,8 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
             # Allow up to 24 hours to run the full testsuite
             # Not a checked run since it might return false if some tests fail
             test_start = datetime.datetime.now()
+            # Check that the file exists
+            qemu.checked_run("test -f {}".format(shlex.quote(tests_file)))
             qemu.run("kyua test --results-file=/tmp/results.db -k {}".format(shlex.quote(tests_file)),
                      ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=24 * 60 * 60)
             if i == 0:
@@ -254,12 +254,12 @@ def cheribsd_setup_args(args: argparse.Namespace):
         print(args.kyua_tests_files)
         for file in args.kyua_tests_files:
             if not Path(file).name == "Kyuafile":
-                boot_cheribsd.failure("Expected a path to a Kyuafile but got: ", file)
+                boot_cheribsd.failure("Expected a path to a Kyuafile but got: ", file, exit=True)
     # Make sure we mount the output directory if we are running kyua and/or cheribsdtest
     if args.kyua_tests_files or args.run_cheribsdtest:
         test_output_dir = Path(os.path.expandvars(os.path.expanduser(args.test_output_dir)))
         if not test_output_dir.is_dir():
-            boot_cheribsd.failure("Output directory does not exist: ", test_output_dir)
+            boot_cheribsd.failure("Output directory does not exist: ", test_output_dir, exit=True)
         # Create a timestamped directory:
         if args.no_timestamped_test_subdir:
             real_output_dir = test_output_dir.absolute()

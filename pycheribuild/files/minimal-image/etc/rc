@@ -94,5 +94,8 @@ else
     /usr/sbin/sshd
 fi
 
+
+echo "Logging in as root..."
+/usr/bin/login -f root
 echo "exec /bin/sh"
 exec /bin/sh

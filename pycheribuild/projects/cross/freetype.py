@@ -26,21 +26,40 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from .crosscompileproject import CrossCompileCMakeProject, GitRepository
+from .crosscompileproject import CrossCompileMesonProject, GitRepository
 from ..project import DefaultInstallDir
 
 
 # Prefer the CMake build over autotools since autotools does not work out-of-the-box
-class BuildFreeType2(CrossCompileCMakeProject):
-    project_name = "freetype2"
-    repository = GitRepository("https://github.com/freetype/freetype2.git")
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
-    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
-    path_in_rootfs = "/usr/local"
+class BuildFreeType2(CrossCompileMesonProject):
+    target = "freetype2"
+    repository = GitRepository("https://gitlab.freedesktop.org/freetype/freetype",
+                               old_urls=[b"https://github.com/freetype/freetype2.git"])
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    dependencies = ["libpng"]
 
     def setup(self):
         super().setup()
-        # FIXME: FT_UINT_TO_POINTER should use uintptr_t
-        self.cross_warning_flags += ["-Wno-error=cheri-capability-misuse"]
-        # TODO: build static instead?
-        self.add_cmake_options(BUILD_SHARED_LIBS=True)
+        self.add_meson_options(tests="enabled")
+
+    def run_tests(self):
+        self.run_cmd(self.source_dir / "tests/scripts/download-test-fonts.py", cwd=self.source_dir / "tests")
+        super().run_tests()
+
+
+class BuildFontConfig(CrossCompileMesonProject):
+    target = "fontconfig"
+    dependencies = ["freetype2", "libexpat"]
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/fontconfig/fontconfig",
+        temporary_url_override="https://gitlab.freedesktop.org/arichardson/fontconfig",
+        url_override_reason="Needs pointer provenance fixes (no PR posted yet)")
+
+    @property
+    def pkgconfig_dirs(self) -> "list[str]":
+        return BuildFreeType2.get_instance(self).installed_pkgconfig_dirs() + self.target_info.pkgconfig_dirs
+
+    def setup(self):
+        super().setup()
+        self.add_meson_options(doc="disabled")
+        self.common_warning_flags.append("-Werror=int-conversion")

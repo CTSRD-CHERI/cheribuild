@@ -33,7 +33,7 @@ from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileC
 
 
 class MRS(CrossCompileCMakeProject):
-    project_name = "mrs"
+    target = "mrs"
     repository = GitRepository("https://github.com/CTSRD-CHERI/mrs")
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE

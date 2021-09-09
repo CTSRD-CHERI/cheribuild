@@ -268,7 +268,6 @@ def _jenkins_main():
                 else:
                     cls._install_dir = Path(str(cheri_config.output_root) + str(cheri_config.installation_prefix))
                     cls._check_install_dir_conflict = False
-                # print(project.project_class.project_name, project.project_class.install_dir)
 
         Target.instantiating_targets_should_warn = False
         for target in cheri_config.targets:

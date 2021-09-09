@@ -24,24 +24,20 @@
 # SUCH DAMAGE.
 #
 import shlex
+import shutil
 
 from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 
 
 class BuildRos2(CrossCompileCMakeProject):
-    project_name = "ros2"
+    target = "ros2"
     repository = GitRepository("https://github.com/dodsonmg/ros2_dashing_minimal.git", default_branch="master",
                                force_branch=True)
-
-    # atm, we build and install in the source_dir.
-    build_in_source_dir = True
     # it may eventually be useful to install to rootfs or sysroot depending on whether we want to use ROS2
     # as a library for building other applications using cheribuild
     # therefore, the _install_dir doesn't do anything, but cheribuild requires them
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     dependencies = ["poco"]
-    _extra_git_clean_excludes = ["--exclude=src"]  # don't delete src/ when running clean
 
     def _ignore_packages(self):
         packages = ["src/ros2/rcl_logging/rcl_logging_log4cxx"]  # relative to self.source_dir
@@ -51,12 +47,20 @@ class BuildRos2(CrossCompileCMakeProject):
 
     def _run_vcs(self):
         # this is the meta version control system used by ros for downloading and unpacking repos
+        if not shutil.which("vcs"):
+            self.dependency_error("Missing vcs command", install_instructions="pip3 install --user vcstool")
         cmdline = ["vcs", "import", "--input", "ros2_minimal.repos", "src"]
         self.run_cmd(cmdline, cwd=self.source_dir)
 
     def _run_colcon(self, **kwargs):
         # colcon is the meta build system (on top of cmake) used by ros
-        colcon_cmd = ["colcon", "build"]
+        if not shutil.which("colcon"):
+            self.dependency_error("Missing colcon command",
+                                  install_instructions="pip3 install --user colcon-common-extensions")
+        colcon_cmd = ["colcon", "build",
+                      "--install-base", self.install_dir,
+                      "--build-base", self.build_dir,
+                      "--merge-install"]
         colcon_args = ["--no-warn-unused-cli", "--packages-skip-build-finished"]
         cmake_args = ["--cmake-args", "-DBUILD_TESTING=NO"]
         if not self.compiling_for_host():
@@ -65,22 +69,17 @@ class BuildRos2(CrossCompileCMakeProject):
         if self.config.verbose:
             cmdline.append("--event-handlers")
             cmdline.append("console_cohesion+")
+        cmdline.extend(["--parallel-workers", str(self.config.make_jobs)])
         self.run_cmd(cmdline, cwd=self.source_dir, **kwargs)
 
-    def _get_poco(self):
-        # find and copy libPocoFoundation.so.71 from the sysroot into self.source_dir
-        # this is a bit ugly, but allows us to link the poco library whether we're running
-        # hybrid or purecap cheribsd.  this is helpful because if we're running hybrid cheribsd,
-        # the hybrid rootfs gets mounted, which doesn't include the purecap build of the poco library.
-        #
-        # one day, if we're only running the purecap kernel, we can just append the path
-        # of libPocoFoundation.so.71 to LD_CHERI_LIBRARY_PATH in _set_env() below.
-        poco_path = self.target_info.sysroot_install_prefix_absolute / "lib/libPocoUtil.so.71"
-        if poco_path.is_file():
-            self.info("Found pocofoundation:", poco_path)
-            self.install_file(poco_path, self.source_dir / poco_path.name, force=True, print_verbose_only=False)
-        else:
-            self.fatal("libPocoFoundation.so.71 cannot be found at expected path", poco_path)
+    def clean(self):
+        self.clean_directory(self.source_dir / "install")
+        self.clean_directory(self.source_dir / "build")
+        return super().clean()
+
+    @property
+    def cmake_prefix_paths(self):
+        return super().cmake_prefix_paths + [self.install_dir]
 
     def _set_env(self):
         # create cheri_setup.csh and cheri_setup.sh files in self.source_dir which can be source'ed
@@ -89,7 +88,7 @@ class BuildRos2(CrossCompileCMakeProject):
         # based off the install/setup.bash file sourced for ubuntu installs
 
         # source the setup script created by ROS to set LD_LIBRARY_PATH
-        setup_script = self.source_dir / "install" / "setup.bash"
+        setup_script = self.install_dir / "setup.bash"
         if not setup_script.is_file():
             self.warning("No setup.bash file to source.")
             return
@@ -102,9 +101,20 @@ class BuildRos2(CrossCompileCMakeProject):
             self.warning("LD_LIBRARY_PATH not set.")
             return
 
+        # add Poco libraries to LD_LIBRARY_PATH
+        poco_path = self.target_info.sysroot_install_prefix_absolute / "lib"
+        if (poco_path / "libPocoFoundation.so.71").is_file():
+            self.info("Found libPocoFoundation.so.71 in the expected path: ", poco_path)
+            ld_library_path = ld_library_path + ":" + str(poco_path)
+        else:
+            self.fatal("libPocoFoundation.so.71 was not found in the expected path: ", poco_path)
+
+        # remove the host prefix for the install directory from entries in the
+        # LD_LIBRARY_PATH
+        host_prefix = str(self.install_dir).split("/opt")[0]
+        ld_library_path = ld_library_path.replace(str(host_prefix), "")
+
         # convert LD_LIBRARY_PATH into LD_CHERI_LIBRARY_PATH for CheriBSD
-        ld_library_path = str(self.source_dir) + ":" + ld_library_path
-        ld_library_path = ld_library_path.replace(str(self.source_dir), "${rootdir}")
         ld_cheri_library_path = ld_library_path
         ld_cheri_library_path += ":${LD_CHERI_LIBRARY_PATH}"
         ld_library_path += ":${LD_LIBRARY_PATH}"
@@ -122,14 +132,14 @@ if (! $?LD_LIBRARY_PATH ) then
 endif
 setenv LD_LIBRARY_PATH {LD_LIBRARY_PATH}
 """.format(LD_CHERI_LIBRARY_PATH=ld_cheri_library_path, LD_LIBRARY_PATH=ld_library_path)
-        self.write_file(self.source_dir / 'cheri_setup.csh', csh_script, overwrite=True)
+        self.write_file(self.install_dir / 'cheri_setup.csh', csh_script, overwrite=True)
         posix_sh_script = """#!/bin/sh
 rootdir=`pwd`
 export LD_CHERI_LIBRARY_PATH={LD_CHERI_LIBRARY_PATH}
 export LD_LIBRARY_PATH={LD_LIBRARY_PATH}
 """.format(LD_CHERI_LIBRARY_PATH=ld_cheri_library_path, LD_LIBRARY_PATH=ld_library_path)
         # write LD_CHERI_LIBRARY_PATH to a text file to source from sh in CheriBSD
-        self.write_file(self.source_dir / 'cheri_setup.sh', posix_sh_script, overwrite=True)
+        self.write_file(self.install_dir / 'cheri_setup.sh', posix_sh_script, overwrite=True)
 
     def update(self):
         super().update()
@@ -153,10 +163,12 @@ export LD_LIBRARY_PATH={LD_LIBRARY_PATH}
 
         # call the functions to copy the poco library and create an env setup file
         if not self.compiling_for_host():
-            self._get_poco()
             self._set_env()
 
     def run_tests(self):
         # only test when not compiling for host
         if not self.compiling_for_host():
-            self.target_info.run_cheribsd_test_script("run_ros2_tests.py", mount_sourcedir=True, mount_sysroot=True)
+            self.target_info.run_cheribsd_test_script("run_ros2_tests.py",
+                                                      mount_sourcedir=True,
+                                                      mount_installdir=True,
+                                                      mount_sysroot=True)

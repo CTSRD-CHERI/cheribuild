@@ -19,8 +19,8 @@ etc/newsyslog.conf
 etc/pam.d/login
 etc/pam.d/passwd
 etc/pam.d/sshd
-#etc/pam.d/su
-etc/pam.d/system
+etc/pam.d/su
+#etc/pam.d/system # cheribuild overrides this
 etc/pccard_ether
 etc/protocols
 #etc/rc
@@ -52,3 +52,5 @@ etc/ssh
 etc/ssh/moduli
 etc/syslog.conf
 etc/termcap
+# Needed for pam_securetty:
+etc/ttys

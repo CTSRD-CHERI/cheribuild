@@ -93,7 +93,7 @@ class fdspawn(SpawnBase):
     # These four methods are left around for backwards compatibility, but not
     # documented as part of fdpexpect. You're encouraged to use os.write
     # directly.
-    def send(self, s):
+    def _send(self, s):
         "Write to fd, return number of bytes written"
         s = self._coerce_send_string(s)
         self._log(s, 'send')

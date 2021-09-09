@@ -29,15 +29,14 @@ from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMake
 from ..project import DefaultInstallDir, GitRepository
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import CompilationTargets
+from ...config.target_info import Linkage
 
 
 class BuildEPollShim(CrossCompileCMakeProject):
     target = "epoll-shim"
-    project_name = "epoll-shim"
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     repository = GitRepository("https://github.com/jiixyj/epoll-shim")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def configure(self, **kwargs):
         if not self.compiling_for_host():
@@ -47,6 +46,12 @@ class BuildEPollShim(CrossCompileCMakeProject):
             self.add_cmake_options(ALLOWS_ONESHOT_TIMERS_WITH_TIMEOUT_ZERO=True)
         super().configure()
 
+    def install(self, **kwargs):
+        if self.target_info.is_linux():
+            self.info("Install not supported on linux, target only exists to run tests.")
+        else:
+            super().install(**kwargs)
+
     def run_tests(self):
         if self.compiling_for_host():
             self.run_make("test")
@@ -54,11 +59,74 @@ class BuildEPollShim(CrossCompileCMakeProject):
             self.info("Don't know how to run tests for", self.target, "when cross-compiling.")
 
 
+class BuildLibUdevDevd(CrossCompileMesonProject):
+    target = "libudev-devd"
+    repository = GitRepository("https://github.com/FreeBSDDesktop/libudev-devd")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
+
+
+class BuildMtdev(CrossCompileAutotoolsProject):
+    target = "mtdev"
+    needs_full_history = True  # can't use --depth with http:// git repo
+    repository = GitRepository("http://bitmath.org/git/mtdev.git")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+
+    def linkage(self):
+        return Linkage.STATIC
+
+    def setup(self):
+        super().setup()
+        if self.target_info.is_freebsd():
+            # To get linux/input.h on FreeBSD
+            if not BuildLibInput.get_source_dir(self).exists():
+                self.warning("Need to clone libinput first to get linux/input.h compat header.")
+                self.ask_for_confirmation("Would you like to clone it now?")
+                BuildLibInput.get_instance(self).update()
+            self.COMMON_FLAGS.append("-isystem" + str(BuildLibInput.get_source_dir(self) / "include"))
+        self.COMMON_FLAGS.append("-fPIC")  # need a pic archive since it's linked into a .so
+        self.cross_warning_flags.append("-Wno-error=format")
+
+    def configure(self, **kwargs):
+        self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
+        super().configure(**kwargs)
+
+
+class BuildLibEvdev(CrossCompileMesonProject):
+    target = "libevdev"
+    repository = GitRepository("https://gitlab.freedesktop.org/libevdev/libevdev.git")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+
+    def setup(self):
+        super().setup()
+        self.add_meson_options(tests="disabled")  # needs "check" library
+        self.add_meson_options(documentation="disabled")  # needs "doxygen" library
+
+
+class BuildLibInput(CrossCompileMesonProject):
+    target = "libinput"
+    repository = GitRepository("https://gitlab.freedesktop.org/libinput/libinput.git")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        result = super().dependencies(config) + ["mtdev", "libevdev"]
+        if cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
+            result.extend(["libudev-devd", "epoll-shim"])
+        return result
+
+    def setup(self):
+        super().setup()
+        self.add_meson_options(libwacom=False, documentation=False)  # Avoid dependency on libwacom and sphinx
+        self.add_meson_options(**{"debug-gui": False})  # Avoid dependency on gtk3
+        self.add_meson_options(tests=False)  # Avoid dependency on "check""
+        # Does not prepend sysroot to prefix:
+        if self.target_info.is_freebsd():
+            self.add_meson_options(**{"epoll-dir": BuildEPollShim.get_install_dir(self)})
+
+
 class BuildLibFFI(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/libffi/libffi.git")
-    project_name = "libffi"
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
+    target = "libffi"
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def configure(self, **kwargs):
@@ -67,23 +135,24 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
 
 
 class BuildWayland(CrossCompileMesonProject):
+    # We need a native wayland-scanner during the build
+    needs_native_build_for_crosscompile = True
+
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         deps = super().dependencies(config)
         target = cls.get_crosscompile_target(config)
         if not target.is_native():
             # For native builds we use the host libraries
             deps.extend(["libexpat", "libffi", "libxml2"])
-            # We need a native wayland-scanner during the build
-            deps.append("wayland-native")
         if target.target_info_cls.is_freebsd():
             deps += ["epoll-shim"]
         return deps
 
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
-    # TODO: upstream patches and use https://gitlab.freedesktop.org/wayland/wayland.git
-    repository = GitRepository("https://github.com/CTSRD-CHERI/wayland")
+    repository = GitRepository("https://gitlab.freedesktop.org/wayland/wayland.git", default_branch="main",
+                               force_branch=True, temporary_url_override="https://github.com/CTSRD-CHERI/wayland",
+                               url_override_reason="FreeBSD patches not merged yet")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def setup(self):

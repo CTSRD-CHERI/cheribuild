@@ -32,7 +32,7 @@ from .project import AutotoolsProject, DefaultInstallDir, GitRepository, MakeCom
 
 
 class BuildOpenRADTool(AutotoolsProject):
-    project_name = "openradtool"
+    target = "openradtool"
     build_in_source_dir = True
 
     repository = GitRepository("https://github.com/kristapsdz/openradtool.git")
@@ -55,6 +55,6 @@ class BuildOpenRADTool(AutotoolsProject):
 
 
 class BuildFettOpenRADTool(BuildOpenRADTool):
-    project_name = "fett-openradtool"
+    target = "fett-openradtool"
     repository = GitRepository("https://github.com/CTSRD-CHERI/openradtool.git",
                                default_branch="fett")

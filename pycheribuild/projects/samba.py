@@ -110,7 +110,7 @@ class BuildSamba(Project):
 
     def install(self, **kwargs):
         if SMB_OUT_OF_SOURCE_BUILD_WORKS:
-            self.run_make("install", cwd=self.source_dir)
+            self.run_make_install(cwd=self.source_dir)
         else:
             super().install(**kwargs)
 

@@ -1,4 +1,7 @@
+import argparse
+import collections
 import inspect
+import re
 import sys
 import tempfile
 import typing
@@ -18,15 +21,30 @@ from pycheribuild.projects import *  # noqa: F401, F403
 from pycheribuild.projects.cross import *  # noqa: F401, F403
 from pycheribuild.projects.cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD,
                                                   FreeBSDToolchainKind)
+from pycheribuild.projects.cross.llvm import BuildCheriLLVM
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 # noinspection PyProtectedMember
+from pycheribuild.projects.cross.sqlite import BuildSQLite
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase
 # Override the default config loader:
 from pycheribuild.projects.project import SimpleProject
 from pycheribuild.projects.run_qemu import LaunchCheriBSD
 from pycheribuild.targets import MultiArchTargetAlias, Target, target_manager
 
-_loader = JsonAndCommandLineConfigLoader()
+
+class TestArgumentParser(argparse.ArgumentParser):
+    # This is not a test, despite its name matching Test*
+    __test__ = False
+
+    # Don't use sys.exit(), raise an exception instead
+    def exit(self, status=0, message=None):
+        if status == 2:
+            raise KeyError(message)
+        else:
+            raise RuntimeError(status, message)
+
+
+_loader = JsonAndCommandLineConfigLoader(argparser_class=TestArgumentParser)
 SimpleProject._config_loader = _loader
 
 _targets_registered = False
@@ -58,6 +76,7 @@ def _parse_arguments(args: typing.List[str], *, config_file=Path("/this/does/not
         SimpleProject._config_loader = _loader
         target_manager.register_command_line_options()
         _targets_registered = True
+    ConfigLoaderBase._cheri_config._cached_deps = collections.defaultdict(dict)
     target_manager.reset()
     ConfigLoaderBase._cheri_config.loader._config_path = config_file
     sys.argv = ["cheribuild.py"] + args
@@ -99,6 +118,80 @@ def test_skip_update():
         # command line overrides config file:
         assert _parse_arguments(["--skip-update"], config_file=config).skip_update
         assert not _parse_arguments(["--no-skip-update"], config_file=config).skip_update
+
+
+@pytest.mark.parametrize("args,expected", [
+    pytest.param(["--include-dependencies", "run-riscv64-purecap"],
+                 ["qemu", "llvm-native", "cheribsd-riscv64-purecap", "gdb-riscv64-hybrid-for-purecap-rootfs",
+                  "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"],
+                 id="run-include-deps"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "run-riscv64-purecap"],
+                 ["bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"],
+                 id="run-include-deps-skip-sdk"),
+    pytest.param(["--include-dependencies", "--start-with=bbl-baremetal-riscv64-purecap", "run-riscv64-purecap"],
+                 ["bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"],
+                 id="run-start-with"),
+    pytest.param(["--include-dependencies", "--start-after=bbl-baremetal-riscv64-purecap", "run-riscv64-purecap"],
+                 ["disk-image-riscv64-purecap", "run-riscv64-purecap"],
+                 id="run-start-after"),
+])
+def test_target_subsets(args, expected):
+    config = _parse_arguments(args)
+    selected = list(x.name for x in target_manager.get_all_chosen_targets(config))
+    assert selected == expected
+
+
+@pytest.mark.parametrize("args,expected", [
+    pytest.param(["--include-dependencies", "--skip-sdk", "libx11-amd64"],
+                 ["xorg-macros-amd64", "xorgproto-amd64", "xcbproto-amd64", "libxau-amd64", "xorg-pthread-stubs-amd64",
+                  "libxcb-amd64", "libxtrans-amd64", "libx11-amd64"],
+                 id="libx11-amd64"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=libxau-amd64", "libx11-amd64"],
+                 ["xorg-macros-amd64", "xorgproto-amd64", "xcbproto-amd64", "xorg-pthread-stubs-amd64",
+                  "libxcb-amd64", "libxtrans-amd64", "libx11-amd64"],
+                 id="libx11-amd64-withtout-libxau"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=qtbase.*", "kcoreaddons-amd64"],
+                 ["extra-cmake-modules-amd64", "kcoreaddons-amd64"],
+                 id="kcoreaddons-amd64-without-qtbase"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=libx.*",
+                  "--skip-dependency-filter=xorg.*", "kauth-amd64"],  # includes native qtbase as well
+                 ["libice-amd64", "libsm-amd64", "shared-mime-info-native", "shared-mime-info-amd64",
+                  "dejavu-fonts-amd64", "libpng-amd64", "freetype2-amd64", "libexpat-amd64", "fontconfig-amd64",
+                  "libjpeg-turbo-amd64", "sqlite-amd64", "qtbase-amd64", "extra-cmake-modules-amd64",
+                  "kcoreaddons-amd64", "qtbase-native", "extra-cmake-modules-native", "kcoreaddons-native",
+                  "kauth-amd64"],
+                 id="kauth-amd64-full-without-x11"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=libx.*",
+                  "--skip-dependency-filter=xorg.*", "--skip-dependency-filter=qt.*", "kauth-amd64"],
+                 ["extra-cmake-modules-amd64", "kcoreaddons-amd64", "extra-cmake-modules-native", "kcoreaddons-native",
+                  "kauth-amd64"],
+                 id="kauth-amd64-without-qt-without-x11"),  # skips most dependencies but includes kcoreaddons-native
+])
+def test_skip_dependency_regex(args, expected):
+    config = _parse_arguments(args)
+    selected = list(x.name for x in target_manager.get_all_chosen_targets(config))
+    assert selected == expected
+
+
+def test_invalid_skip_dependency_regex():
+    with pytest.raises(re.error, match="missing \\), unterminated subpattern at position 3"):
+        _parse_arguments(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=abc("])
+
+
+@pytest.mark.parametrize("args,exception_type,errmessage", [
+    pytest.param(["--include-dependencies", "--skip-sdk", "--start-after=llvm-project", "run-riscv64-purecap"],
+                 ValueError, "--start-after/--start-with target 'llvm-project' is not being built",
+                 id="run-start-after-skip-sdk"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--start-with=llvm-project", "run-riscv64-purecap"],
+                 ValueError, "--start-after/--start-with target 'llvm-project' is not being built",
+                 id="run-start-with-skip-sdk"),
+    pytest.param(["--include-dependencies", "--skip-sdk", "--start-after=run-riscv64-purecap", "run-riscv64-purecap"],
+                 ValueError, "selected target list is empty after --start-after/--start-with filtering",
+                 id="run-start-after-empty"),
+])
+def test_target_subsets_bad(args, exception_type, errmessage):
+    with pytest.raises(exception_type, match=errmessage):
+        target_manager.get_all_chosen_targets(_parse_arguments(args))
 
 
 def test_per_project_override():
@@ -174,10 +267,10 @@ def test_cross_compile_project_inherits():
     config = _parse_arguments(["--skip-configure"])
     qtbase_class = target_manager.get_target_raw("qtbase").project_class
     qtbase_native = _get_target_instance("qtbase-native", config, BuildQtBase)
-    qtbase_mips = _get_target_instance("qtbase-mips64-hybrid", config, BuildQtBase)
+    qtbase_mips = _get_target_instance("qtbase-mips64", config, BuildQtBase)
 
     # Check that project name is the same:
-    assert qtbase_mips.project_name == qtbase_native.project_name
+    assert qtbase_mips.default_directory_basename == qtbase_native.default_directory_basename
     # These classes were generated:
     # noinspection PyUnresolvedReferences
     assert qtbase_native.synthetic_base == qtbase_class
@@ -195,7 +288,7 @@ def test_cross_compile_project_inherits():
     assert qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
 
     # But target-specific ones should override
-    _parse_arguments(["--qtbase/build-tests", "--qtbase-mips64-hybrid/no-build-tests"])
+    _parse_arguments(["--qtbase/build-tests", "--qtbase-mips64/no-build-tests"])
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
 
@@ -209,47 +302,50 @@ def test_cross_compile_project_inherits():
     assert qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
 
     # But target-specific ones should override
-    _parse_config_file_and_args(b'{"qtbase/build-tests": true, "qtbase-mips-hybrid/build-tests": false }')
+    _parse_config_file_and_args(b'{"qtbase/build-tests": true, "qtbase-mips64/build-tests": false }')
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
 
     # And that cmdline still overrides JSON:
-    _parse_config_file_and_args(b'{"qtbase/build-tests": true }', "--qtbase-mips64-hybrid/no-build-tests")
+    _parse_config_file_and_args(b'{"qtbase/build-tests": true }', "--qtbase-mips64/no-build-tests")
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
     # But if a per-target option is set in the json that still overrides the default set on the cmdline
-    _parse_config_file_and_args(b'{"qtbase-mips-hybrid/build-tests": false }', "--qtbase/build-tests")
+    _parse_config_file_and_args(b'{"qtbase-mips64/build-tests": false }', "--qtbase/build-tests")
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a JSON false override for build-tests"
 
-    # However, don't inherit for build_dir since that doesn't make sense:
-    def assert_build_dirs_different():
-        # Default should be CHERI purecap
-        # print("Native build dir:", qtbase_native.build_dir)
-        # print("Mips build dir:", qtbase_mips.build_dir)
-        assert qtbase_mips.build_dir != qtbase_native.build_dir
 
-    assert_build_dirs_different()
-    # overriding native build dir is fine:
-    _parse_arguments(["--qtbase-native/build-directory=/foo/bar"])
-    assert_build_dirs_different()
-    _parse_config_file_and_args(b'{"qtbase-native/build-directory": "/foo/bar"}')
-    assert_build_dirs_different()
-    # Should not inherit from the default one:
-    _parse_arguments(["--qtbase/build-directory=/foo/bar"])
-    assert_build_dirs_different()
-    _parse_config_file_and_args(b'{"qtbase/build-directory": "/foo/bar"}')
-    assert_build_dirs_different()
+def test_build_dir_not_inherited():
+    # build-directory config option should only be added allowed for suffixed targets (and never inherited)
+    config = _parse_arguments([])
+    mfs_riscv64_purecap = _get_target_instance("cheribsd-mfs-root-kernel-riscv64-purecap", config,
+                                               BuildCheriBsdMfsKernel)
+    cheribsd_riscv64_purecap = _get_target_instance("cheribsd-riscv64-purecap", config, BuildCHERIBSD)
 
-    # Should not inherit from the default one:
-    _parse_arguments(["--qtbase/build-directory=/foo/bar", "--qtbase-mips64-hybrid/build-directory=/bar/foo"])
-    assert_build_dirs_different()
-    _parse_config_file_and_args(b'{"qtbase/build-directory": "/foo/bar",'
-                                b' "qtbase-mips-hybrid/build-directory": "/bar/foo"}')
-    assert_build_dirs_different()
+    _parse_arguments(["--cheribsd-riscv64-purecap/build-directory=/foo/bar"])
+    assert cheribsd_riscv64_purecap.build_dir == Path("/foo/bar")
+    assert mfs_riscv64_purecap.build_dir.name == "cheribsd-riscv64-purecap-build"
+    # An unsuffixed build-directory argument should not be allowed
+    with pytest.raises(KeyError, match="error: unknown argument '--cheribsd/build-directory=/foo/bar'"):
+        _parse_arguments(["--cheribsd/build-directory=/foo/bar"])
+    with pytest.raises(ValueError, match="^Unknown config option 'cheribsd/build-directory'$"):
+        _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar"}')
 
-
-# FIXME: cheribsd-mips64-hybrid/kernel-config should use the cheribsd/kernel-config value
+    # The only exception are targets that have a default architecture (in which case the unsuffixed version can be used)
+    llvm_native = _get_target_instance("llvm-native", config, BuildCheriLLVM)
+    llvm_riscv64 = _get_target_instance("llvm-riscv64", config, BuildCheriLLVM)
+    _parse_arguments(["--llvm-native/build-directory=/override1"])
+    assert llvm_native.build_dir == Path("/override1")
+    assert llvm_riscv64.build_dir.name == "llvm-project-riscv64-build"
+    # Unsuffixed config options should be accepted for targets with a default architecture:
+    _parse_arguments(["--llvm/build-directory=/override2"])
+    assert llvm_native.build_dir == Path("/override2")
+    assert llvm_riscv64.build_dir.name == "llvm-project-riscv64-build"
+    # If an unsuffixed config option exists, the suffixed version is preferred
+    _parse_arguments(["--llvm/build-directory=/generic", "--llvm/build-directory=/suffixed"])
+    assert llvm_native.build_dir == Path("/suffixed")
+    assert llvm_riscv64.build_dir.name == "llvm-project-riscv64-build"
 
 
 def test_cheribsd_purecap_inherits_config_from_cheribsd():
@@ -261,8 +357,8 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     cheribsd_mips_purecap = _get_cheribsd_instance("cheribsd-mips64-purecap", config)
 
     # Check that project name is the same:
-    assert cheribsd_mips.project_name == cheribsd_mips_hybrid.project_name
-    assert cheribsd_mips_hybrid.project_name == cheribsd_mips_purecap.project_name
+    assert cheribsd_mips.default_directory_basename == cheribsd_mips_hybrid.default_directory_basename
+    assert cheribsd_mips_hybrid.default_directory_basename == cheribsd_mips_purecap.default_directory_basename
 
     # noinspection PyUnresolvedReferences
     assert cheribsd_mips_hybrid.synthetic_base == cheribsd_class
@@ -320,37 +416,6 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assert cheribsd_mips.debug_kernel, "cheribsd-mips debug-kernel should be inherited from cheribsd(default)"
     assert not cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should have a JSON false override for debug-kernel"
 
-    # However, don't inherit for build_dir since that doesn't make sense:
-    def assert_build_dirs_different():
-        assert cheribsd_mips_hybrid.build_dir != cheribsd_mips_purecap.build_dir
-        assert cheribsd_mips_hybrid.build_dir != cheribsd_mips.build_dir
-
-    assert_build_dirs_different()
-    # overriding native build dir is fine:
-    _parse_arguments(["--cheribsd-mips64-purecap/build-directory=/foo/bar"])
-    assert cheribsd_mips_purecap.build_dir == Path("/foo/bar")
-    assert_build_dirs_different()
-    _parse_config_file_and_args(b'{"cheribsd-mips64-purecap/build-directory": "/foo/bar"}')
-    assert cheribsd_mips_purecap.build_dir == Path("/foo/bar")
-    assert_build_dirs_different()
-    _parse_arguments(["--cheribsd-mips64-hybrid/build-directory=/foo/bar"])
-    assert cheribsd_mips_hybrid.build_dir == Path("/foo/bar")
-    assert cheribsd_mips_purecap.build_dir != Path("/foo/bar")
-    assert_build_dirs_different()
-    _parse_config_file_and_args(b'{"cheribsd-mips-hybrid/build-directory": "/foo/bar"}')
-    assert cheribsd_mips_hybrid.build_dir == Path("/foo/bar")
-    assert cheribsd_mips_purecap.build_dir != Path("/foo/bar")
-    assert_build_dirs_different()
-
-    # cheribsd-mips64-hybrid/builddir should have higher prirority:
-    _parse_arguments(["--cheribsd/build-directory=/foo/bar", "--cheribsd-mips64-hybrid/build-directory=/bar/foo"])
-    assert cheribsd_mips_hybrid.build_dir == Path("/bar/foo")
-    assert_build_dirs_different()
-    _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar",'
-                                b' "cheribsd-mips64-hybrid/build-directory": "/bar/foo"}')
-    assert cheribsd_mips_hybrid.build_dir == Path("/bar/foo")
-    assert_build_dirs_different()
-
 
 def test_legacy_cheri_suffix_target_alias():
     config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/some/image"}')
@@ -390,8 +455,8 @@ def test_legacy_cheri_suffix_target_alias():
 
 
 def test_kernconf():
-    # Parse args once to ensure target_manager is initialized
-    # check default values
+    # The kernel-config command line option is special: There is a global (command-line-only) flag that is used
+    # as the default, but otherwise there should be no inheritance
     config = _parse_arguments([])
     cheribsd_cheri = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
     cheribsd_mips = _get_cheribsd_instance("cheribsd-mips64", config)
@@ -418,12 +483,26 @@ def test_kernconf():
     assert cheribsd_cheri.kernel_config == "SOMETHING"
     assert freebsd_native.kernel_config == "LINT"
 
-    config = _parse_arguments(["--kernconf=GENERIC", "--cheribsd/kernel-config=SOMETHING_ELSE"])
+    config = _parse_config_file_and_args(b'{ "cheribsd-mips64/kernel-config": "MIPS64_CONFIG" }', "--kernconf=GENERIC")
     assert config.freebsd_kernconf == "GENERIC"
-    assert cheribsd_cheri.kernel_config == "SOMETHING_ELSE"
-    assert cheribsd_mips.kernel_config == "SOMETHING_ELSE"
+    assert cheribsd_cheri.kernel_config == "GENERIC"
+    assert cheribsd_mips.kernel_config == "MIPS64_CONFIG"
     assert freebsd_mips.kernel_config == "GENERIC"
     assert freebsd_native.kernel_config == "GENERIC"
+
+    # kernel-config/--kernconf should only be valid on the command line:
+    with pytest.raises(ValueError, match="^Unknown config option 'freebsd/kernel-config'$"):
+        _parse_config_file_and_args(b'{ "freebsd/kernel-config": "GENERIC" }')
+    # kernel-config/--kernconf should only be valid on the command line:
+    with pytest.raises(ValueError, match="^Option 'kernel-config' cannot be used in the config file$"):
+        _parse_config_file_and_args(b'{ "kernel-config": "GENERIC" }')
+    with pytest.raises(ValueError, match="^Option 'kernconf' cannot be used in the config file$"):
+        _parse_config_file_and_args(b'{ "kernconf": "GENERIC" }')
+
+    # There should not be any unsuffixed kernel-config options:
+    for tgt in ("cheribsd", "freebsd", "cheribsd-mfs-root-kernel"):
+        with pytest.raises(KeyError, match=r"error: unknown argument '--[\w-]+/kernel-config'"):
+            _parse_arguments(["--" + tgt + "/source-directory=/foo", "--" + tgt + "/kernel-config", "ABC"])
 
 
 def test_duplicate_key():
@@ -525,14 +604,14 @@ def test_libcxxrt_dependency_path():
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
     check_libunwind_path(config.output_root / "rootfs-mips64-purecap/opt/mips64-purecap/c++/lib",
                          "libcxxrt-mips64-purecap")
-    check_libunwind_path(config.output_root / "rootfs-mips64-hybrid/opt/mips64-hybrid/c++/lib",
-                         "libcxxrt-mips64-hybrid")
+    check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib",
+                         "libcxxrt-mips64")
     # Check the defaults:
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
     config = _parse_arguments(["--skip-configure"])
-    check_libunwind_path(config.output_root / "rootfs-mips64-hybrid/opt/mips64-hybrid/c++/lib",
-                         "libcxxrt-mips64-hybrid")
+    check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib",
+                         "libcxxrt-mips64")
     check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib", "libcxxrt-mips64")
 
 
@@ -574,8 +653,15 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     expected_path = expected_path.replace("$BUILD$", str(config.build_root))
     assert str(project.CC) == str(expected_path)
     if kind == FreeBSDToolchainKind.BOOTSTRAPPED:
-        assert "XCC" not in project.buildworld_args.env_vars
-        assert "XCC=" not in project.kernel_make_args_for_config("GENERIC", None).env_vars
+        kernel_make_args = project.kernel_make_args_for_config("GENERIC", None)
+        # If we override CC, we have to also override XCC
+        for (var, default) in (("CC", "cc"), ("CPP", "cpp"), ("CXX", "c++")):
+            if var in project.buildworld_args.env_vars:
+                assert project.buildworld_args.env_vars.get("X" + var, None) == default
+                assert kernel_make_args.env_vars.get("X" + var, None) == default
+            else:
+                assert "X" + var not in project.buildworld_args.env_vars
+                assert "X" + var not in kernel_make_args.env_vars
     else:
         assert project.buildworld_args.env_vars.get("XCC", None) == expected_path
         assert project.kernel_make_args_for_config("GENERIC", None).env_vars.get("XCC", None) == expected_path
@@ -636,6 +722,11 @@ def test_disk_image_path(target, expected_name):
                  "CHERI-QEMU-FETT", ["CHERI-QEMU", "CHERI-PURECAP-QEMU"]),
     pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-bench-kernels"],
                  "CHERI-QEMU", ["CHERI-QEMU-NODEBUG"]),
+    pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-fett-kernels", "--cheribsd/build-fpga-kernels"],
+                 "CHERI-QEMU-FETT", ["CHERI-QEMU", "CHERI-FETT"]),
+    pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/build-fett-kernels", "--cheribsd/build-fpga-kernels",
+                                              "--cheribsd/build-alternate-abi-kernels"],
+                 "CHERI-QEMU-FETT", ["CHERI-QEMU", "CHERI-PURECAP-QEMU", "CHERI-FETT", "CHERI-PURECAP-FETT"]),
     # MIPS kernconf tests
     pytest.param("cheribsd-mips64-purecap", ["--cheribsd/build-fpga-kernels"],
                  "CHERI_MALTA64", ["CHERI_DE4_USBROOT", "CHERI_DE4_NFSROOT"]),
@@ -674,6 +765,11 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
                   "--cheribsd-mfs-root-kernel-riscv64-purecap/build-alternate-abi-kernels"],
                  ["CHERI-QEMU-MFS-ROOT", "CHERI-PURECAP-QEMU-MFS-ROOT",
                   "CHERI-GFE", "CHERI-PURECAP-GFE"]),
+    pytest.param("cheribsd-mfs-root-kernel-riscv64-purecap",
+                 ["--cheribsd-mfs-root-kernel-riscv64-purecap/build-fpga-kernels",
+                  "--cheribsd-mfs-root-kernel-riscv64-purecap/build-alternate-abi-kernels",
+                  "--cheribsd-mfs-root-kernel-riscv64-purecap/kernel-config=CHERI-QEMU-MFS-ROOT"],
+                 ["CHERI-QEMU-MFS-ROOT"]),
     # MIPS kernconf tests
     pytest.param("cheribsd-mfs-root-kernel-mips64", [], ["MALTA64_MFS_ROOT"]),
     pytest.param("cheribsd-mfs-root-kernel-mips64",
@@ -687,6 +783,11 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
                   "--cheribsd-mfs-root-kernel-mips64-purecap/build-alternate-abi-kernels"],
                  ["CHERI_MALTA64_MFS_ROOT", "CHERI_PURECAP_MALTA64_MFS_ROOT",
                   "CHERI_DE4_MFS_ROOT", "CHERI_PURECAP_DE4_MFS_ROOT"]),
+    pytest.param("cheribsd-mfs-root-kernel-mips64-purecap",
+                 ["--cheribsd-mfs-root-kernel-mips64-purecap/build-fpga-kernels",
+                  "--cheribsd-mfs-root-kernel-mips64-purecap/build-alternate-abi-kernels",
+                  "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=CHERI_MALTA64_MFS_ROOT"],
+                 ["CHERI_MALTA64_MFS_ROOT"]),
 ])
 def test_mfsroot_kernel_configs(target, config_options: "list[str]", expected_kernels):
     config = _parse_arguments(config_options)
@@ -698,7 +799,7 @@ def test_mfsroot_kernel_configs(target, config_options: "list[str]", expected_ke
 def test_freebsd_toolchains_cheribsd_purecap():
     # Targets that need CHERI don't have the --toolchain option:
     # Argparse should exit with exit code 2
-    with pytest.raises(SystemExit, match=r'^2$'):
+    with pytest.raises(KeyError, match=r"error: unknown argument '--[\w-]+/toolchain'"):
         for i in FreeBSDToolchainKind:
             test_freebsd_toolchains("cheribsd-purecap", "/wrong/path", i, [])
             test_freebsd_toolchains("cheribsd-mips64-hybrid", "/wrong/path", i, [])
@@ -729,7 +830,7 @@ def test_freebsd_toolchains_cheribsd_purecap():
                  ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
                  "cheribsd-mips64-purecap-plt-aggressive-hardfloat-build"),
     # plt should be encoded
-    pytest.param("sqlite-mips64-hybrid", [], "sqlite-mips64-hybrid-build"),
+    pytest.param("sqlite-mips64-purecap", [], "sqlite-mips64-purecap-build"),
     pytest.param("sqlite-native", [], "sqlite-native-build"),
 ])
 def test_default_build_dir(target: str, args: list, expected: str):
@@ -816,38 +917,103 @@ def test_backwards_compat_old_suffixes():
     assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
 
 
-def _check_build_dir(target: str, expected: str, config_file: bytes, cmdline: typing.List[str]):
+def _check_source_dir(target: str, expected: str, config_file: bytes, cmdline: typing.List[str]):
     config = _parse_config_file_and_args(config_file, *cmdline)
     project = _get_target_instance(target, config)
-    assert str(project.build_dir) == expected
+    # noinspection PyProtectedMember
+    assert str(project._initial_source_dir) == expected
 
 
 def test_backwards_compat_old_suffixes_freebsd_mips():
     # Check that we still load the value from the deprecated key name from the JSON config file
-    _check_build_dir("freebsd-mips64", "/from/json",
-                     b'{"freebsd-mips/build-directory": "/from/json"}', [])
+    _check_source_dir("freebsd-mips64", "/from/json",
+                      b'{"freebsd-mips/source-directory": "/from/json"}', [])
 
     # It should also override a command line value for the un-suffixed target
-    _check_build_dir("freebsd-mips64", "/from/json",
-                     b'{"freebsd-mips/build-directory": "/from/json"}',
-                     ["--freebsd/build-directory=/fallback/from/cmdline/"])
+    _check_source_dir("freebsd-mips64", "/from/json",
+                      b'{"freebsd-mips/source-directory": "/from/json"}',
+                      ["--freebsd/source-directory=/fallback/from/cmdline/"])
 
     # The new key name should have priority:
-    _check_build_dir("freebsd-mips64", "/new/dir",
-                     b'{"freebsd-mips/build-directory": "/old/dir",'
-                     b' "freebsd-mips64/build-directory": "/new/dir" }', [])
+    _check_source_dir("freebsd-mips64", "/new/dir",
+                      b'{"freebsd-mips/source-directory": "/old/dir",'
+                      b' "freebsd-mips64/source-directory": "/new/dir" }', [])
 
     # Also check the CheriBSD names:
-    _check_build_dir("cheribsd-mips64", "/from/json",
-                     b'{"cheribsd-mips-nocheri/build-directory": "/from/json"}', [])
-    _check_build_dir("cheribsd-mips64-hybrid", "/from/json",
-                     b'{"cheribsd-mips-hybrid/build-directory": "/from/json"}', [])
-    _check_build_dir("cheribsd-mips64-purecap", "/from/json",
-                     b'{"cheribsd-mips-purecap/build-directory": "/from/json"}', [])
+    _check_source_dir("cheribsd-mips64", "/from/json",
+                      b'{"cheribsd-mips-nocheri/source-directory": "/from/json"}', [])
+    _check_source_dir("cheribsd-mips64-hybrid", "/from/json",
+                      b'{"cheribsd-mips-hybrid/source-directory": "/from/json"}', [])
+    _check_source_dir("cheribsd-mips64-purecap", "/from/json",
+                      b'{"cheribsd-mips-purecap/source-directory": "/from/json"}', [])
 
     # Finally, using the old name on the command line should be an error:
-    with pytest.raises(SystemExit, match="^2$"):
-        _ = _parse_config_file_and_args(b'{}', "--freebsd-mips/build-directory=/cmdline")
+    with pytest.raises(KeyError, match=r"error: unknown argument '--freebsd-mips/source-directory=/cmdline'"):
+        _ = _parse_config_file_and_args(b'{}', "--freebsd-mips/source-directory=/cmdline")
+
+
+def test_fett_install_dirs(monkeypatch):
+    config = _parse_arguments(["--source-root=/home/foo"])
+    cheribsd = _get_cheribsd_instance("cheribsd-riscv64-purecap", config)
+    cheribsd_fett = _get_cheribsd_instance("cheribsd-fett-riscv64-purecap", config)
+    assert cheribsd_fett.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
+    assert cheribsd.crosscompile_target == CompilationTargets.CHERIBSD_RISCV_PURECAP
+    assert cheribsd_fett.source_dir == Path("/home/foo/cheribsd"), "should reuse the same source dir"
+    assert cheribsd_fett.source_dir == cheribsd.source_dir, "should reuse the same source dir"
+    # Build and install dir should be different though
+    assert cheribsd_fett.install_dir == Path("/home/foo/output/rootfs-fett-init-zero-riscv64-purecap")
+    assert cheribsd.install_dir == Path("/home/foo/output/rootfs-riscv64-purecap")
+    assert cheribsd_fett.build_dir == Path("/home/foo/build/cheribsd-fett-init-zero-riscv64-purecap-build")
+    assert cheribsd.build_dir == Path("/home/foo/build/cheribsd-riscv64-purecap-build")
+
+    fett_disk_image = _get_target_instance("disk-image-fett-riscv64-purecap", config, BuildCheriBSDDiskImage)
+    disk_image = _get_target_instance("disk-image-riscv64-purecap", config, BuildCheriBSDDiskImage)
+    assert fett_disk_image.disk_image_path == Path("/home/foo/output/fett-cheribsd-riscv64-purecap.img")
+    assert disk_image.disk_image_path == Path("/home/foo/output/cheribsd-riscv64-purecap.img")
+    assert fett_disk_image.rootfs_dir == cheribsd_fett.install_dir
+    assert disk_image.rootfs_dir == cheribsd.install_dir
+    assert fett_disk_image.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
+    assert disk_image.crosscompile_target == CompilationTargets.CHERIBSD_RISCV_PURECAP
+    assert fett_disk_image.all_dependency_names(config) == ['fett-bash-riscv64-purecap',
+                                                            'llvm-native',
+                                                            'cheribsd-fett-riscv64-purecap',
+                                                            'fett-config-riscv64-purecap',
+                                                            'fett-nginx-riscv64-purecap',
+                                                            'fett-openssl-riscv64-purecap',
+                                                            'fett-openssh-riscv64-purecap',
+                                                            'fett-zlib-riscv64-purecap',
+                                                            'fett-sqlite-riscv64-purecap',
+                                                            'fett-voting-riscv64-purecap',
+                                                            'fett-kcgi-riscv64-purecap',
+                                                            'fett-sqlbox-riscv64-purecap',
+                                                            'openradtool']
+
+    assert disk_image._gdb_xtarget == CompilationTargets.CHERIBSD_RISCV_PURECAP
+    assert fett_disk_image._gdb_xtarget == CompilationTargets.CHERIBSD_RISCV_PURECAP
+
+    fett_voting = _get_target_instance("fett-voting-riscv64-purecap", config)
+    assert fett_voting.install_dir == cheribsd_fett.install_dir / "fett"
+    assert fett_voting.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
+
+    fett_sqlite = _get_target_instance("fett-sqlite-riscv64-purecap", config)
+    sqlite = _get_target_instance("sqlite-riscv64-purecap", config, BuildSQLite)
+    assert fett_sqlite.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
+    assert sqlite.crosscompile_target == CompilationTargets.CHERIBSD_RISCV_PURECAP
+    assert fett_sqlite.install_dir == cheribsd_fett.install_dir / "fett"
+    assert sqlite.install_dir == cheribsd.install_dir / "usr/local/riscv64-purecap"
+
+    fett_openssh = _get_target_instance("fett-openssh-riscv64-purecap", config)
+    assert fett_openssh.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
+    assert fett_openssh.install_dir == cheribsd_fett.install_dir / "fett"
+
+    fett_openssl = _get_target_instance("fett-openssl-riscv64-purecap", config)
+    assert fett_openssl.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
+    assert fett_openssl.install_dir == cheribsd_fett.install_dir / "fett"
+
+    fett_bash = _get_target_instance("fett-bash-riscv64-purecap", config)
+    assert fett_bash.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
+    assert fett_bash.install_dir == cheribsd_fett.install_dir / "fett"
+    assert fett_bash.all_dependency_names(config) == ['llvm-native', 'cheribsd-fett-riscv64-purecap']
 
 
 def test_expand_tilde_and_env_vars(monkeypatch):
@@ -951,14 +1117,18 @@ def test_mfs_root_kernel_inherits_defaults_from_cheribsd():
     assert str(mfs_riscv64._initial_source_dir) == "/generic-mfs-target-dir"
     assert str(mfs_mips64._initial_source_dir) == "/mfs-target-dir-mips64"
 
-    # FIXME: kernel-config should not be inherited
-    _parse_arguments(["--cheribsd/kernel-config=BASE_CONFIG_DEFAULT",
-                      "--cheribsd-riscv64-purecap/kernel-config=BASE_CONFIG_RISCV64",
-                      "--cheribsd-mfs-root-kernel/kernel-config=MFS_CONFIG_DEFAULT",
+    _parse_arguments(["--cheribsd-riscv64-purecap/kernel-config=BASE_CONFIG_RISCV64",
                       "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=MFS_CONFIG_MIPS64"])
     assert cheribsd_riscv64.kernel_config == "BASE_CONFIG_RISCV64"
-    assert cheribsd_mips64.kernel_config == "BASE_CONFIG_DEFAULT"
-    assert mfs_riscv64.kernel_config == "MFS_CONFIG_DEFAULT"
+    assert cheribsd_mips64.kernel_config == "CHERI_MALTA64"
+    assert mfs_riscv64.kernel_config is None
+    assert mfs_mips64.kernel_config == "MFS_CONFIG_MIPS64"
+    _parse_arguments(["--kernel-config=CONFIG_DEFAULT",
+                      "--cheribsd-riscv64-purecap/kernel-config=BASE_CONFIG_RISCV64",
+                      "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=MFS_CONFIG_MIPS64"])
+    assert cheribsd_riscv64.kernel_config == "BASE_CONFIG_RISCV64"
+    assert cheribsd_mips64.kernel_config == "CONFIG_DEFAULT"
+    assert mfs_riscv64.kernel_config == "CONFIG_DEFAULT"
     assert mfs_mips64.kernel_config == "MFS_CONFIG_MIPS64"
 
 

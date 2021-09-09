@@ -103,7 +103,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv {subcmd_and_arg
 
 
 class LaunchCheriBSDOnFGPA(LaunchFPGABase):
-    project_name = "run-fpga"
+    target = "run-fpga"
     dependencies = ["cheribsd-mfs-root-kernel-mips64-hybrid"]
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
 

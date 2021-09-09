@@ -62,10 +62,16 @@ def fixup_kyua_generated_junit_xml(xml_file: Path, prefix: str = None):
         xml.update_statistics()
         if prefix is not None:
             if isinstance(xml, junitparser.TestSuite):
-                xml.name = prefix if xml.name is None else prefix + "-" + xml.name
+                xml.name = prefix if xml.name is None else prefix + "/" + xml.name
+                # Some projects produce a JUnit XML with a single <testsuite> root element
+                # Add a prefixed <testsuites> element improve jenkins visualization
+                new_xml = junitparser.JUnitXml(prefix)
+                new_xml.add_testsuite(xml)
+                new_xml.update_statistics()
+                xml = new_xml
             else:
                 for suite in xml:
-                    suite.name = prefix if suite.name is None else prefix + "-" + suite.name
+                    suite.name = prefix if suite.name is None else prefix + "/" + suite.name
         # Now we can overwrite the input file
         xml.write(str(xml_file))
         boot_cheribsd.run_host_command(["grep", "<testsuite", str(xml_file)])

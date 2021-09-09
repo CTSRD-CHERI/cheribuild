@@ -58,7 +58,7 @@ class BuildOpenSSH(CrossCompileAutotoolsProject):
 
 
 class BuildFettOpenSSH(FettProjectMixin, BuildOpenSSH):
-    project_name = "fett-openssh"
+    target = "fett-openssh"
     repository = GitRepository("https://github.com/CTSRD-CHERI/openssh-portable.git",
                                default_branch="fett")
 

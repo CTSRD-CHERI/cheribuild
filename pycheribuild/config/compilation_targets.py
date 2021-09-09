@@ -200,6 +200,16 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             pass  # No additional flags needed for x86_64.
         else:
             project.warning("Compiler flags might be wong, only native + MIPS checked so far")
+
+        # This needs to be checked last since we depend on the --target/-mabi flags for the -fsanitize= check.
+        if config.use_cheri_ubsan and xtarget.is_hybrid_or_purecap_cheri():
+            compiler = project.get_compiler_info(instance.c_compiler)
+            if compiler.supports_sanitizer_flag("-fsanitize=cheri", result):
+                result.append("-fsanitize=cheri")
+                if not config.use_cheri_ubsan_runtime:
+                    result.append("-fsanitize-trap=cheri")
+            else:
+                project.warning("Compiler", compiler.path, "does not support -fsanitize=cheri, please update your SDK")
         return result
 
     @classmethod
@@ -355,8 +365,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
-        return [str(self.sysroot_dir / "lib/pkgconfig"),
+        return [str(self.sysroot_dir / "usr/libdata/pkgconfig"),
                 str(self.sysroot_install_prefix_absolute / "lib/pkgconfig"),
+                str(self.sysroot_install_prefix_absolute / "share/pkgconfig"),
                 str(self.sysroot_install_prefix_absolute / "libdata/pkgconfig")]
 
     @property
@@ -364,8 +375,12 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return Path("usr/local")
 
     @property
-    def cmake_prefix_paths(self) -> list:
-        return [self.sysroot_install_prefix_absolute, self.sysroot_install_prefix_absolute / "lib/cmake"]
+    def cmake_prefix_paths(self) -> "list[Path]":
+        default_libdir = self.default_libdir
+        result = [self.sysroot_install_prefix_absolute, self.sysroot_install_prefix_absolute / default_libdir / "cmake"]
+        if default_libdir != "lib":
+            result.append(self.sysroot_install_prefix_absolute / "lib/cmake")
+        return result
 
     def _get_compiler_project(self) -> "typing.Type[Project]":
         from ..projects.cross.llvm import BuildUpstreamLLVM
@@ -392,30 +407,20 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
         assert self.is_cheribsd(), "Other cases not handled yet"
         from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel
-        xtarget = self._get_mfs_kernel_xtarget()
+        xtarget = self.target
         if xtarget not in BuildCheriBsdMfsKernel.supported_architectures:
             self.project.fatal("No MFS kernel for target", xtarget)
-            return None
+            raise ValueError()
         mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(
             xtarget, self.config, caller=self.project)
         kernconf = mfs_kernel.default_kernel_config(platform, benchmark=use_benchmark_kernel)
         return mfs_kernel.get_kernel_install_path(kernconf)
 
-    def _get_mfs_kernel_xtarget(self):
-        kernel_xtarget = self.target
-        if self.is_cheribsd():
-            # TODO: allow using non-CHERI kernels? Or the purecap kernel?
-            if kernel_xtarget.is_mips(include_purecap=True):
-                # Always use CHERI hybrid kernel
-                kernel_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
-            elif kernel_xtarget.is_riscv(include_purecap=True):
-                kernel_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
-        return kernel_xtarget
-
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
                                  use_full_disk_image=False, mount_installdir=False,
-                                 use_benchmark_kernel_by_default=False):
+                                 use_benchmark_kernel_by_default=False,
+                                 rootfs_alternate_kernel_dir=None):
         assert self.is_cheribsd(), "Only CheriBSD targets supported right now"
         if typing.TYPE_CHECKING:
             assert isinstance(self.project, Project)
@@ -426,11 +431,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         qemu_options = QemuOptions(xtarget)
         if xtarget.cpu_architecture not in (CPUArchitecture.MIPS64, CPUArchitecture.RISCV64,
                                             CPUArchitecture.X86_64, CPUArchitecture.AARCH64):
-            self.project.warning("CheriBSD test scripts currently only work for MIPS, RISC-V, AArch64 and x86-64")
-            return
-        if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-            self.project.warning("CheriBSD test scripts currently don't support the Morello FVP - "
-                                 "remove when Morello QEMU support done")
+            self.project.warning("CheriBSD test scripts currently only work for MIPS, RISC-V, AArch64, and x86-64")
             return
         if use_full_disk_image:
             assert self.is_cheribsd(), "Not supported for FreeBSD yet"
@@ -443,7 +444,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 disk_image_path = instance.disk_image
         elif not qemu_options.can_boot_kernel_directly:
             # We need to boot the disk image instead of running the kernel directly (amd64)
-            assert xtarget.is_any_x86() or xtarget.is_aarch64(), "All other architectures can boot directly"
+            assert xtarget.is_any_x86() or xtarget.is_aarch64(
+                include_purecap=True), "All other architectures can boot directly"
             assert self.is_cheribsd(), "Not supported for FreeBSD yet"
             if disk_image_path is None and "--disk-image" not in self.config.test_extra_args:
                 from ..projects.disk_image import BuildMinimalCheriBSDDiskImage
@@ -477,17 +479,17 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             cmd.extend(["--kernel", kernel_path])
         if "--qemu-cmd" not in self.config.test_extra_args:
             qemu_path = None
-            if xtarget.is_hybrid_or_purecap_cheri():
-                from ..projects.build_qemu import BuildQEMU
-                qemu_path = BuildQEMU.qemu_cheri_binary(self.project)
-                if not qemu_path.exists():
-                    self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
-            elif xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
                 # Only use Morello QEMU for Morello for now, not AArch64 too,
                 # as we don't want to force everyone to build Morello QEMU
                 # while it's in a separate branch.
                 from ..projects.build_qemu import BuildMorelloQEMU
                 qemu_path = BuildMorelloQEMU.qemu_cheri_binary(self.project)
+                if not qemu_path.exists():
+                    self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
+            elif xtarget.is_hybrid_or_purecap_cheri():
+                from ..projects.build_qemu import BuildQEMU
+                qemu_path = BuildQEMU.qemu_cheri_binary(self.project)
                 if not qemu_path.exists():
                     self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
             else:
@@ -521,6 +523,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 cmd.append("--test-ld-preload-variable=LD_CHERI_PRELOAD")
             else:
                 cmd.append("--test-ld-preload-variable=LD_PRELOAD")
+        if rootfs_alternate_kernel_dir and not qemu_options.can_boot_kernel_directly:
+            cmd.extend(["--alternate-kernel-rootfs-path", rootfs_alternate_kernel_dir])
 
         cmd += list(script_args)
         if self.config.test_extra_args:
@@ -591,8 +595,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             # use a bitfile from jenkins. TODO: add option for overriding
             assert self.target.is_mips(include_purecap=True)
             basic_args.append("--jenkins-bitfile=cheri128")
-            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self._get_mfs_kernel_xtarget(),
-                                                                              self.config, caller=self.project)
+            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self.target, self.config,
+                                                                              caller=self.project)
             kernel_config = mfs_kernel.default_kernel_config(ConfigPlatform.BERI,
                                                              benchmark=not self.config.benchmark_with_debug_kernel)
             kernel_image = mfs_kernel.get_kernel_install_path(kernel_config)
@@ -652,24 +656,36 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         return Path("usr/local", self.install_prefix_dirname)
 
     @property
-    def _sysroot_libdir(self):
-        # For purecap we can unconditionally use libcheri since it is either a real directory (hybrid sysroot) or
-        # a symlink to lib (since https://github.com/CTSRD-CHERI/cheribsd/pull/548).
-        if self.target.is_cheri_purecap():
-            return "libcheri"
-        return "lib"
+    def additional_rpath_directories(self) -> "list[str]":
+        # /usr/local/<arch>/lib is not part of the default linker search path, add it here for build systems that
+        # don't infer it automatically.
+        return [str(Path("/", self.sysroot_install_prefix_relative, "lib"))]
 
     @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
-        return [str(self.sysroot_dir / "usr" / self._sysroot_libdir / "pkgconfig"),
-                str(self.sysroot_dir / self._sysroot_libdir / "pkgconfig"),
-                str(self.sysroot_install_prefix_absolute / "lib/pkgconfig"),
-                str(self.sysroot_install_prefix_absolute / "libdata/pkgconfig")]
+        # For CheriBSD we install most packages to /usr/local/<arch>/, but some packages (e.g. the x11 libs
+        # need to be in the default search path under /usr/local
+        return super().pkgconfig_dirs + [
+            str(self.sysroot_dir / "usr/local/lib/pkgconfig"),
+            str(self.sysroot_dir / "usr/local/share/pkgconfig"),
+            str(self.sysroot_dir / "usr/local/libdata/pkgconfig"),
+        ]
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         from ..projects.cross.cheribsd import BuildCHERIBSD
         return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
+
+
+# Custom target info for FETT projects to ensure
+class CheriBSDFettTargetInfo(CheriBSDTargetInfo):
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
+        from ..projects.cross.cheribsd import BuildCheriBSDFett
+        return BuildCheriBSDFett.get_instance(self.project, cross_target=xtarget)
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        return ["cheribsd-fett"]  # Pick the matching sysroot (-purecap for purecap, -hybrid for hybrid etc.)
 
 
 class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
@@ -882,6 +898,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
 class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
     shortname = "Morello-Baremetal"
+    os_prefix = "baremetal-"
 
     @property
     def cmake_system_name(self) -> str:
@@ -911,7 +928,7 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
         if target.cpu_architecture == CPUArchitecture.ARM32:
             return "arm-none-eabi"
         assert target.is_aarch64(include_purecap=True)
-        if target.is_cheri_hybrid():
+        if target.is_hybrid_or_purecap_cheri():
             return "aarch64-unknown-elf"
         assert False, "Other baremetal cases have not been tested yet!"
 
@@ -921,7 +938,8 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs) -> typing.List[str]:
-        if xtarget.cpu_architecture == CPUArchitecture.ARM32 or xtarget.is_cheri_hybrid([CPUArchitecture.AARCH64]):
+        if xtarget.cpu_architecture == CPUArchitecture.ARM32 or xtarget.is_hybrid_or_purecap_cheri(
+                [CPUArchitecture.AARCH64]):
             return super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs)
         raise ValueError("Other baremetal cases have not been tested yet!")
 
@@ -1061,9 +1079,12 @@ class CompilationTargets(BasicCompilationTargets):
                                                           NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                           hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
 
-    MORELLO_BAREMETAL_HYBRID = CrossCompileTarget("morello-baremetal", CPUArchitecture.AARCH64,
+    MORELLO_BAREMETAL_HYBRID = CrossCompileTarget("morello-hybrid", CPUArchitecture.AARCH64,
                                                   MorelloBaremetalTargetInfo, is_cheri_hybrid=True,
                                                   is_cheri_purecap=False)
+    MORELLO_BAREMETAL_PURECAP = CrossCompileTarget("morello-purecap", CPUArchitecture.AARCH64,
+                                                   MorelloBaremetalTargetInfo, is_cheri_hybrid=False,
+                                                   is_cheri_purecap=True)
     ARM_NONE_EABI = CrossCompileTarget("arm-none-eabi", CPUArchitecture.ARM32, ArmNoneEabiGccTargetInfo,
                                        is_cheri_hybrid=False, is_cheri_purecap=False)  # For 32-bit firmrware
     # FreeBSD targets
@@ -1083,17 +1104,30 @@ class CompilationTargets(BasicCompilationTargets):
                                            CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI]
     ALL_CHERIBSD_NON_MORELLO_TARGETS = ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS + [CHERIBSD_AARCH64, CHERIBSD_X86_64]
     ALL_CHERIBSD_MORELLO_TARGETS = [CHERIBSD_MORELLO_PURECAP, CHERIBSD_MORELLO_HYBRID]
-    ALL_CHERIBSD_TARGETS = ALL_CHERIBSD_NON_MORELLO_TARGETS + ALL_CHERIBSD_MORELLO_TARGETS
-    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = ALL_CHERIBSD_TARGETS + [BasicCompilationTargets.NATIVE]
+    ALL_CHERIBSD_PURECAP_TARGETS = [CHERIBSD_RISCV_PURECAP, CHERIBSD_MIPS_PURECAP, CHERIBSD_MORELLO_PURECAP]
+    ALL_CHERIBSD_TARGETS_WITH_HYBRID = ALL_CHERIBSD_NON_MORELLO_TARGETS + ALL_CHERIBSD_MORELLO_TARGETS
     ALL_CHERIBSD_NON_CHERI_TARGETS = [CHERIBSD_MIPS_NO_CHERI, CHERIBSD_RISCV_NO_CHERI, CHERIBSD_AARCH64,
-                                      CHERIBSD_X86_64]
-    ALL_FREEBSD_AND_CHERIBSD_TARGETS = ALL_CHERIBSD_TARGETS + ALL_SUPPORTED_FREEBSD_TARGETS
-    ALL_CHERIBSD_CHERI_TARGETS = (set(ALL_CHERIBSD_TARGETS) - set(ALL_CHERIBSD_NON_CHERI_TARGETS))
+                                      CHERIBSD_X86_64]  # does not include i386
+    ALL_CHERIBSD_CHERI_TARGETS_WITH_HYBRID = list(
+                set(ALL_CHERIBSD_TARGETS_WITH_HYBRID) - set(ALL_CHERIBSD_NON_CHERI_TARGETS))
+    ALL_SUPPORTED_CHERIBSD_TARGETS = ALL_CHERIBSD_NON_CHERI_TARGETS + ALL_CHERIBSD_PURECAP_TARGETS
+    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + [BasicCompilationTargets.NATIVE]
+    ALL_FREEBSD_AND_CHERIBSD_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + ALL_SUPPORTED_FREEBSD_TARGETS
 
     # Same as above, but the default is purecap RISC-V
-    FETT_DEFAULT_ARCHITECTURE = CHERIBSD_RISCV_PURECAP
-    FETT_SUPPORTED_ARCHITECTURES = [CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI,
-                                    CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI, CHERIBSD_MIPS_PURECAP]
+    FETT_MIPS_NO_CHERI = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, CheriBSDFettTargetInfo)
+    FETT_MIPS_HYBRID = CrossCompileTarget("mips64-hybrid", CPUArchitecture.MIPS64, CheriBSDFettTargetInfo,
+                                          is_cheri_hybrid=True, non_cheri_target=FETT_MIPS_NO_CHERI)
+    FETT_MIPS_PURECAP = CrossCompileTarget("mips64-purecap", CPUArchitecture.MIPS64, CheriBSDFettTargetInfo,
+                                           is_cheri_purecap=True, hybrid_target=FETT_MIPS_HYBRID)
+
+    FETT_RISCV_NO_CHERI = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo)
+    FETT_RISCV_HYBRID = CrossCompileTarget("riscv64-hybrid", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo,
+                                           is_cheri_hybrid=True, non_cheri_target=FETT_RISCV_NO_CHERI)
+    FETT_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo,
+                                            is_cheri_purecap=True, hybrid_target=FETT_RISCV_HYBRID)
+    FETT_DEFAULT_ARCHITECTURE = FETT_RISCV_PURECAP
+    FETT_SUPPORTED_ARCHITECTURES = [FETT_RISCV_PURECAP, FETT_RISCV_NO_CHERI, FETT_MIPS_PURECAP, FETT_MIPS_NO_CHERI]
 
     ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64, BAREMETAL_NEWLIB_MIPS64_PURECAP,
                                        BAREMETAL_NEWLIB_RISCV64, BAREMETAL_NEWLIB_RISCV64_PURECAP,

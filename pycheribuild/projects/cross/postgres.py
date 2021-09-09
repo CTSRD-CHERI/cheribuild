@@ -45,7 +45,6 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     needs_mxcaptable_dynamic = True  # both are slightly over the limit
     # warning: added 31332 entries to .cap_table but current maximum is 16384; try recompiling non-performance
     # critical source files with -mxcaptable
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     def __init__(self, config: CheriConfig):

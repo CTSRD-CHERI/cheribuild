@@ -35,7 +35,8 @@ from collections import OrderedDict
 
 from .config.chericonfig import CheriConfig
 from .config.target_info import CrossCompileTarget
-from .utils import AnsiColour, coloured, fatal_error, status_update, warning_message
+from .processutils import set_env
+from .utils import add_error_context, AnsiColour, coloured, fatal_error, status_update, warning_message
 
 if typing.TYPE_CHECKING:  # no-combine
     from .projects.project import SimpleProject  # no-combine
@@ -99,18 +100,19 @@ class Target(object):
     def _do_run(self, config, msg: str, func: "typing.Callable[[SimpleProject], typing.Any]"):
         # instantiate the project and run it
         starttime = time.time()
-        project = self.get_or_create_project(self.project_class.get_crosscompile_target(config), config)
-        # noinspection PyProtectedMember
-        if not project._setup_called:
-            project.setup()
-        # noinspection PyProtectedMember
-        assert project._setup_called, str(self._project_class) + ": forgot to call super().setup()?"
-        new_env = {"PATH": project.config.dollar_path_with_other_tools}
-        if project.config.clang_colour_diags:
-            new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
-        with project.set_env(**new_env):
-            func(project)
-        status_update(msg, "for target '" + self.name + "' in", time.time() - starttime, "seconds")
+        with add_error_context(coloured(AnsiColour.yellow, "(in target ", self.name, ")", sep="")):
+            project = self.get_or_create_project(self.project_class.get_crosscompile_target(config), config)
+            # noinspection PyProtectedMember
+            if not project._setup_called:
+                project.setup()
+            # noinspection PyProtectedMember
+            assert project._setup_called, str(self._project_class) + ": forgot to call super().setup()?"
+            new_env = {"PATH": project.config.dollar_path_with_other_tools}
+            if project.config.clang_colour_diags:
+                new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
+            with project.set_env(**new_env):
+                func(project)
+            status_update(msg, "for target '" + self.name + "' in", time.time() - starttime, "seconds")
 
     def execute(self, config: CheriConfig):
         if self._completed:
@@ -403,16 +405,34 @@ class TargetManager(object):
             # Initialize the full dependency cache so that sort() works (otherwise we'd have to pass config to __lt__).
             t.cache_dependencies(config)
         sort = self.sort_in_dependency_order(chosen_targets)
+        if config.start_with is not None or config.start_after is not None:
+            assert config.start_with is None or config.start_after is None, "Can't have both set"
+            to_find = config.start_with if config.start_with is not None else config.start_after
+            found_index = None
+            for i, tgt in enumerate(sort):
+                if tgt.name == to_find:
+                    found_index = i
+                    break
+            if found_index is None:
+                raise ValueError("--start-after/--start-with target '" + to_find + "' is not being built")
+            if config.start_with:
+                sort = sort[found_index:]
+            elif config.start_after:
+                sort = sort[found_index + 1:]
+            if not sort:
+                raise ValueError("selected target list is empty after --start-after/--start-with filtering")
         return sort
 
     def run(self, config: CheriConfig):
         chosen_targets = self.get_all_chosen_targets(config)
-
-        for target in chosen_targets:
-            target.check_system_deps(config)
-        # all dependencies exist -> run the targets
-        for target in chosen_targets:
-            target.execute(config)
+        with set_env(PATH=config.dollar_path_with_other_tools,
+                     CLANG_FORCE_COLOR_DIAGNOSTICS="always" if config.clang_colour_diags else None,
+                     config=config):
+            for target in chosen_targets:
+                target.check_system_deps(config)
+            # all dependencies exist -> run the targets
+            for target in chosen_targets:
+                target.execute(config)
 
     def get_all_chosen_targets(self, config) -> "typing.Iterable[Target]":
         # check that all target dependencies are correct:
@@ -449,7 +469,8 @@ class TargetManager(object):
                 sys.exit(errmsg)
             explicitly_chosen_targets.append(self.get_target(target_name, None, config, caller="cmdline parsing"))
         chosen_targets = self.get_all_targets(explicitly_chosen_targets, config)
-        print("Will execute the following targets:\n  ", "\n   ".join(t.name for t in chosen_targets))
+        print("Will execute the following", len(chosen_targets), "targets:\n  ",
+              "\n   ".join(t.name for t in chosen_targets))
         # now that the chosen targets have been resolved run them
         Target.instantiating_targets_should_warn = False  # Fine to instantiate Project() now
         return chosen_targets

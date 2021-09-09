@@ -44,12 +44,14 @@ class BuildNginx(CrossCompileAutotoolsProject):
     _configure_supports_libdir = False
     _configure_supports_variables_on_cmdline = False
     _configure_understands_enable_static = False
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.configure_command = self.source_dir / "auto/configure"
+
+    def setup(self):
+        super().setup()
         if not self.compiling_for_host():
             self.COMMON_FLAGS.extend(["-pedantic",
                                       "-Wno-gnu-statement-expression",
@@ -118,12 +120,12 @@ class BuildNginx(CrossCompileAutotoolsProject):
 
 
 class BuildNginxColoc(BuildNginx):
-    project_name = "nginx-coloc"
+    target = "nginx-coloc"
     repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git", default_branch="master")  # TODO: New branch
 
 
 class BuildFettNginx(FettProjectMixin, BuildNginx):
-    project_name = "fett-nginx"
+    target = "fett-nginx"
     path_in_rootfs = "/fett/nginx"
     repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git", default_branch="fett")
     dependencies = ["fett-openssl"]

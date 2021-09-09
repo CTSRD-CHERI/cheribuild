@@ -8,13 +8,20 @@ import pytest
 
 # Make sure all projects are loaded so that target_manager gets populated
 from pycheribuild.projects import *  # noqa: F401, F403
+from pycheribuild.projects.cmake import BuildCrossCompiledCMake
 from pycheribuild.projects.cross import *  # noqa: F401, F403
-# First thing we need to do is set up the config loader (before importing anything else!)
-# We can"t do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
-from pycheribuild.targets import target_manager
+from pycheribuild.projects.cross.benchmarks import BenchmarkMixin
+from pycheribuild.projects.cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdMfsImageAndKernels,
+                                                  BuildCheriBsdSysrootArchive)
+from pycheribuild.projects.cross.gdb import BuildGDB
+from pycheribuild.projects.disk_image import BuildDiskImageBase
+from pycheribuild.projects.run_fpga import LaunchFPGABase
+from pycheribuild.projects.run_fvp import LaunchFVPBase
+from pycheribuild.projects.run_qemu import BuildAll, BuildAndRunCheriBSD, LaunchCheriBSD
+from pycheribuild.projects.sdk import BuildCheriBSDSdk, BuildSdk
+from pycheribuild.projects.spike import RunCheriSpikeBase
+from pycheribuild.targets import Target, target_manager
 from .setup_mock_chericonfig import setup_mock_chericonfig
-
-global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
 
 
 # noinspection PyProtectedMember
@@ -22,11 +29,13 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolc
                   skip_sdk=False, build_morello_from_source=False) -> "typing.List[str]":
     target_manager.reset()
     # print(real_targets)
-    real_targets = list(target_manager.get_target(t, None, global_config, caller="_sort_targets") for t in targets)
+    global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
     global_config.include_dependencies = add_dependencies
     global_config.include_toolchain_dependencies = add_toolchain
     global_config.skip_sdk = skip_sdk
     global_config.build_morello_firmware_from_source = build_morello_from_source
+    real_targets = list(target_manager.get_target(t, None, global_config, caller="_sort_targets") for t in targets)
+
     for t in real_targets:
         if t.project_class._xtarget is None:
             continue
@@ -54,7 +63,7 @@ cheribsd_sdk_deps = freestanding_deps + ["cheribsd-mips64-hybrid", "cheribsd-sdk
     pytest.param("sdk-morello-purecap", ["morello-llvm-native", "morello-qemu", "freestanding-morello-sdk",
                                          "cheribsd-morello-purecap", "cheribsd-sdk-morello-purecap",
                                          "sdk-morello-purecap"], id="morello-purecap"),
-    ])
+])
 def test_sdk(target_name, expected_list):
     assert _sort_targets([target_name]) == expected_list
 
@@ -63,7 +72,7 @@ def test_sdk(target_name, expected_list):
     pytest.param("disk-image-fett", "disk-image-fett-riscv64-purecap"),
     pytest.param("llvm", "llvm-native"),
     pytest.param("gdb", "gdb-native"),
-    ])
+])
 def test_alias_resolving(target_name, expected_name):
     # test that we select the default target for multi projects:
     assert _sort_targets([target_name]) == [expected_name]
@@ -92,8 +101,8 @@ def test_disk_image_comes_second_last():
         ["run-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid", "cheribsd-mips64-hybrid"]) == [
                "cheribsd-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid", "run-mips64-hybrid"]
     assert _sort_targets(
-        ["run-mips64-hybrid", "disk-image-mips64-hybrid", "postgres-mips64-hybrid", "cheribsd-mips64-hybrid"]) == [
-               "cheribsd-mips64-hybrid", "postgres-mips64-hybrid", "disk-image-mips64-hybrid", "run-mips64-hybrid"]
+        ["run-mips64-purecap", "disk-image-mips64-purecap", "postgres-mips64-purecap", "cheribsd-mips64-purecap"]) == [
+               "cheribsd-mips64-purecap", "postgres-mips64-purecap", "disk-image-mips64-purecap", "run-mips64-purecap"]
 
 
 def test_cheribsd_default_aliases():
@@ -112,7 +121,7 @@ def test_cheribsd_default_aliases():
     pytest.param("build-and-run-freebsd-aarch64",
                  ["freebsd-aarch64", "disk-image-freebsd-aarch64", "run-freebsd-aarch64"]),
     pytest.param("build-and-run-freebsd-amd64", ["freebsd-amd64", "disk-image-freebsd-amd64", "run-freebsd-amd64"]),
-    ])
+])
 def test_build_and_run(target_name, expected_list):
     assert _sort_targets([target_name], add_dependencies=False) == expected_list + [target_name]
 
@@ -147,7 +156,7 @@ def test_build_and_run(target_name, expected_list):
                  ["install-morello-fvp", "morello-llvm-native", "cheribsd-morello-purecap",
                   "gdb-morello-hybrid-for-purecap-rootfs", "morello-firmware", "disk-image-morello-purecap",
                   "run-fvp-morello-purecap"]),
-    ])
+])
 def test_all_run_deps(target, add_toolchain: bool, expected_deps):
     assert _sort_targets([target], add_dependencies=True, add_toolchain=add_toolchain,
                          build_morello_from_source=False) == expected_deps
@@ -190,15 +199,32 @@ def _check_deps_cached(classes):
         assert len(c.cached_full_dependencies()) > 0
 
 
+def _qtbase_x11_deps(suffix):
+    result = [x + suffix for x in ("xorg-macros-", "xorgproto-", "xcbproto-", "libxau-", "xorg-pthread-stubs-",
+                                   "libxcb-", "libxtrans-", "libx11-", "libxkbcommon-", "libxcb-render-util-",
+                                   "libxcb-util-", "libxcb-image-", "libxcb-cursor-", "libice-", "libsm-", "libxext-",
+                                   "libxfixes-", "libxi-", "libxtst-", "libxcb-wm-", "libxcb-keysyms-",
+                                   "shared-mime-info-", "dejavu-fonts-", "libpng-", "freetype2-", "libexpat-",
+                                   "fontconfig-", "libjpeg-turbo-", "sqlite-")]
+    if suffix != "native":
+        result.insert(result.index("shared-mime-info-" + suffix), "shared-mime-info-native")
+    return result
+
+
+def test_ksyntaxhighlighting_includes_native_dependency():
+    ksyntaxhighlighting_deps = _sort_targets(["ksyntaxhighlighting-amd64"], add_dependencies=True, skip_sdk=True)
+    assert "ksyntaxhighlighting-native" in ksyntaxhighlighting_deps
+
+
 def test_webkit_cached_deps():
     # regression test for a bug in caching deps
-    config = copy.copy(global_config)
+    config = copy.copy(setup_mock_chericonfig(Path("/this/path/does/not/exist")))
     config.skip_sdk = True
     config.include_toolchain_dependencies = False
     config.include_dependencies = True
     webkit_native = target_manager.get_target_raw("qtwebkit-native").project_class
     webkit_cheri = target_manager.get_target_raw("qtwebkit-mips64-purecap").project_class
-    webkit_mips = target_manager.get_target_raw("qtwebkit-mips64-hybrid").project_class
+    webkit_mips = target_manager.get_target_raw("qtwebkit-mips64").project_class
     # Check that the deps are not cached yet
     _check_deps_not_cached((webkit_native, webkit_cheri, webkit_mips))
     assert inspect.getattr_static(webkit_native, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
@@ -206,14 +232,15 @@ def test_webkit_cached_deps():
     assert inspect.getattr_static(webkit_mips, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
 
     cheri_target_names = list(sorted(webkit_cheri.all_dependency_names(config)))
-    assert cheri_target_names == ["cheribsd-mips64-purecap", "icu4c-mips64-purecap", "icu4c-native",
-                                  "libxml2-mips64-purecap", "llvm-native", "qtbase-mips64-purecap",
-                                  "sqlite-mips64-purecap"]
+    expected_cheri_names = sorted(["llvm-native", "cheribsd-mips64-purecap"] + _qtbase_x11_deps("mips64-purecap") + [
+        "qtbase-mips64-purecap", "icu4c-native", "icu4c-mips64-purecap", "libxml2-mips64-purecap"])
+    assert cheri_target_names == expected_cheri_names
     _check_deps_not_cached([webkit_native, webkit_mips])
     _check_deps_cached([webkit_cheri])
     mips_target_names = list(sorted(webkit_mips.all_dependency_names(config)))
-    assert mips_target_names == ["cheribsd-mips64-hybrid", "icu4c-mips64-hybrid", "icu4c-native",
-                                 "libxml2-mips64-hybrid", "llvm-native", "qtbase-mips64-hybrid", "sqlite-mips64-hybrid"]
+    expected_mips_names = sorted(["llvm-native", "cheribsd-mips64"] + _qtbase_x11_deps("mips64") + [
+        "qtbase-mips64", "icu4c-native", "icu4c-mips64", "libxml2-mips64"])
+    assert mips_target_names == expected_mips_names
     _check_deps_cached([webkit_cheri, webkit_mips])
     _check_deps_not_cached([webkit_native])
 
@@ -232,12 +259,11 @@ def test_webkit_deps_2():
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=True) == [
         "qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
 
-    assert _sort_targets(["qtwebkit-mips64-hybrid"], add_dependencies=True, skip_sdk=True) == [
-        "qtbase-mips64-hybrid", "icu4c-native", "icu4c-mips64-hybrid", "libxml2-mips64-hybrid", "sqlite-mips64-hybrid",
-        "qtwebkit-mips64-hybrid"]
-    assert _sort_targets(["qtwebkit-mips64-purecap"], add_dependencies=True, skip_sdk=True) == [
-        "qtbase-mips64-purecap", "icu4c-native", "icu4c-mips64-purecap", "libxml2-mips64-purecap",
-        "sqlite-mips64-purecap", "qtwebkit-mips64-purecap"]
+    assert _sort_targets(["qtwebkit-mips64"], add_dependencies=True, skip_sdk=True) == _qtbase_x11_deps(
+        "mips64") + ["qtbase-mips64", "icu4c-native", "icu4c-mips64", "libxml2-mips64", "qtwebkit-mips64"]
+    assert _sort_targets(["qtwebkit-mips64-purecap"], add_dependencies=True, skip_sdk=True) == _qtbase_x11_deps(
+        "mips64-purecap") + ["qtbase-mips64-purecap", "icu4c-native", "icu4c-mips64-purecap", "libxml2-mips64-purecap",
+                             "qtwebkit-mips64-purecap"]
 
 
 def test_riscv():
@@ -257,9 +283,8 @@ def test_riscv():
 @pytest.mark.parametrize("suffix,expected_suffix", [
     pytest.param("-native", "-native", id="native"),
     pytest.param("-mips64", "-mips64", id="mips64"),
-    pytest.param("-mips64-hybrid", "-mips64-hybrid", id="mips64-hybrid"),
     pytest.param("-mips64-purecap", "-mips64-purecap", id="mips64-purecap"),
-    ])
+])
 def test_libcxx_deps(suffix, expected_suffix):
     expected = ["libunwind" + expected_suffix, "libcxxrt" + expected_suffix, "libcxx" + expected_suffix]
     # Now check that the cross-compile versions explicitly chose the matching target:
@@ -284,10 +309,46 @@ def test_libcxx_deps(suffix, expected_suffix):
     pytest.param("morello-uefi", True, False, ["morello-uefi"], True),
     pytest.param("morello-uefi", True, True,
                  ["gdb-native", "morello-acpica", "morello-llvm-native", "morello-uefi"], True),
-    ])
+])
 def test_skip_toolchain_deps(target_name, include_recursive_deps, include_toolchain, expected_deps,
                              morello_from_source):
     # Check that morello-firmware does not include toolchain dependencies by default, but the individual ones does
     # TODO: should we do the same for all-<target>?
     assert _sort_targets([target_name], add_dependencies=include_recursive_deps, add_toolchain=include_toolchain,
                          build_morello_from_source=morello_from_source) == expected_deps
+
+
+def test_hybrid_targets():
+    # there should only be very few targets that are built hybrid
+    config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+    all_hybrid_targets = [x for x in target_manager.targets if
+                          x.project_class.get_crosscompile_target(config).is_cheri_hybrid()]
+
+    def should_include_target(target: Target):
+        cls = target.project_class
+        # We expect certain tagets to be built hybrid: CheriBSD/disk image/GDB/run
+        if issubclass(cls, (BuildCHERIBSD, LaunchCheriBSD, BuildDiskImageBase, BuildGDB, BuildCheriBsdSysrootArchive,
+                            LaunchFPGABase, LaunchFVPBase, RunCheriSpikeBase)):
+            return False
+        # Also filter out some target aliases
+        if issubclass(cls, (BuildCheriBsdMfsImageAndKernels, BuildAll, BuildCheriBSDSdk, BuildSdk,
+                            BuildAndRunCheriBSD)):
+            return False
+
+        # We allow hybrid for baremetal targets:
+        xtarget = cls.get_crosscompile_target(config)
+        if xtarget.target_info_cls.is_baremetal():
+            return False
+
+        # Benchmarks can also be built hybrid:
+        if issubclass(cls, BenchmarkMixin):
+            return False
+        # Finally, we also build CMake for the hybrid rootfs so that it can be used by --test mode
+        if issubclass(cls, BuildCrossCompiledCMake):
+            return False
+        # Otherwise this target
+        return True
+
+    unexpected_hybrid_targets = filter(should_include_target, all_hybrid_targets)
+    # Currently this list should only include the MIPS-specific BuildSyzkaller target:
+    assert [t.name for t in unexpected_hybrid_targets] == ["cheri-syzkaller"]

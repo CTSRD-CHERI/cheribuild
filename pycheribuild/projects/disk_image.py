@@ -100,8 +100,12 @@ class _AdditionalFileTemplates(object):
 
 def _default_disk_image_name(config: CheriConfig, directory: Path, project: "BuildDiskImageBase"):
     xtarget = project.get_crosscompile_target(config)
+    if project.use_qcow2:
+        suffix = "qcow2"
+    else:
+        suffix = "img"
     # Don't add the os_prefix to the disk image name since it should already be encoded in project.disk_image_prefix)
-    return directory / (project.disk_image_prefix + project.build_configuration_suffix(xtarget) + ".img")
+    return directory / (project.disk_image_prefix + project.build_configuration_suffix(xtarget) + "." + suffix)
 
 
 def _default_disk_image_hostname(prefix: str) -> "ComputedDefaultValue[str]":
@@ -131,7 +135,7 @@ class BuildDiskImageBase(SimpleProject):
         return self._source_class.supported_architectures
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         return [cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
 
     @classmethod
@@ -164,6 +168,8 @@ class BuildDiskImageBase(SimpleProject):
                                                   help="The output path for the QEMU disk image", show_help=True)
         cls.force_overwrite = cls.add_bool_option("force-overwrite", default=True,
                                                   help="Overwrite an existing disk image without prompting")
+        cls.no_autoboot = cls.add_bool_option("no-autoboot", default=False,
+                                              help="Disable autoboot and boot menu for targets that use loader(8)")
 
     def __init__(self, config):
         # TODO: different extra-files directory
@@ -198,13 +204,15 @@ class BuildDiskImageBase(SimpleProject):
         return self.get_crosscompile_target(config)
 
     def add_file_to_image(self, file: Path, *, base_directory: Path = None, user="root", group="wheel", mode=None,
-                          path_in_target=None):
+                          path_in_target=None, strip_binaries: bool = None):
         if path_in_target is None:
             assert base_directory is not None, "Either base_directory or path_in_target must be set!"
             path_in_target = os.path.relpath(str(file), str(base_directory))
         assert not str(path_in_target).startswith(".."), path_in_target
 
-        if self.strip_binaries:
+        if strip_binaries is None:
+            strip_binaries = self.strip_binaries
+        if strip_binaries:
             # Try to shrink the size by stripping all elf binaries
             stripped_path = self.tmpdir / path_in_target
             if self.maybe_strip_elf_file(file, output_path=stripped_path):
@@ -405,7 +413,12 @@ class BuildDiskImageBase(SimpleProject):
 
         loader_conf_contents = ""
         if self.is_x86:
-            loader_conf_contents += "console=\"comconsole\"\n"
+            loader_conf_contents += "console=\"comconsole\"\nautoboot_delay=0\n"
+        if self.no_autoboot:
+            if self.crosscompile_target.is_aarch64(include_purecap=True) or self.is_x86:
+                loader_conf_contents += "autoboot_delay=\"NO\"\nbeastie_disable=\"YES\"\n"
+            else:
+                self.warning("--no-autoboot is not supported for this target, ignoring.")
         self.create_file_for_image("/boot/loader.conf", contents=loader_conf_contents, mode=0o644)
 
         # Avoid long boot time on first start due to missing entropy:
@@ -422,11 +435,16 @@ class BuildDiskImageBase(SimpleProject):
                     f.write(random_data)
             self.add_file_to_image(entropy_file, base_directory=self.tmpdir)
 
+    @property
+    def _gdb_xtarget(self):
+        # Workaround for FETT (we use the normal GDB target to avoid duplicating yet another project)
+        return self.source_project.get_crosscompile_target(self.config)
+
     def add_gdb(self):
         if not self.include_gdb and not self.include_kgdb:
             return
         # FIXME: if /usr/local/bin/gdb is in the image make /usr/bin/gdb a symlink
-        cross_target = self.source_project.get_crosscompile_target(self.config)
+        cross_target = self._gdb_xtarget
         if cross_target not in BuildGDB.supported_architectures:
             self.warning("GDB cannot be built for architecture ", cross_target, " -> not addding it")
             return
@@ -467,7 +485,9 @@ class BuildDiskImageBase(SimpleProject):
             for ignored_dirname in ('.svn', '.git', '.idea'):
                 if ignored_dirname in dirnames:
                     dirnames.remove(ignored_dirname)
-            for filename in filenames:
+            # Symlinks that point to directories are included in dirnames as a
+            # historical wart that can't be fixed without risking breakage...
+            for filename in filenames + [d for d in dirnames if os.path.islink(Path(root, d))]:
                 new_file = Path(root, filename)
                 if root_dir == self.extra_files_dir:
                     self.extra_files.append(new_file)
@@ -507,9 +527,9 @@ class BuildDiskImageBase(SimpleProject):
             return True
         return False
 
-    def make_x86_disk_image(self):
+    def make_x86_disk_image(self, out_img: Path):
         assert self.is_x86
-        root_partition = self.disk_image_path.with_suffix(".root.img")
+        root_partition = out_img.with_suffix(".root.img")
         try:
             self.make_rootfs_image(root_partition)
             # See mk_nogeli_gpt_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
@@ -518,16 +538,16 @@ class BuildDiskImageBase(SimpleProject):
                             "-b", self.rootfs_dir / "boot/pmbr",  # bootload (MBR)
                             "-p", "freebsd-boot:=" + str(self.rootfs_dir / "boot/gptboot"),  # gpt boot partition
                             "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
-                            "-o", self.disk_image_path  # output file
+                            "-o", out_img  # output file
                             ], cwd=self.rootfs_dir)
         finally:
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
 
-    def make_gpt_disk_image(self):
-        root_partition = self.disk_image_path.with_suffix(".root.img")
+    def make_gpt_disk_image(self, out_img: Path):
+        root_partition = out_img.with_suffix(".root.img")
 
         if self.include_efi_partition:
-            efi_partition = self.disk_image_path.with_suffix(".efi.img")
+            efi_partition = out_img.with_suffix(".efi.img")
         else:
             efi_partition = None
 
@@ -551,7 +571,7 @@ class BuildDiskImageBase(SimpleProject):
                             *mkimg_efi_args,
                             "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
                             *mkimg_swap_args,
-                            "-o", self.disk_image_path  # output file
+                            "-o", out_img  # output file
                             ], cwd=self.rootfs_dir)
         finally:
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
@@ -660,24 +680,29 @@ class BuildDiskImageBase(SimpleProject):
             else:
                 self.info("qemu-img command was not found. Will not be able to create QCOW2 images")
 
+        if self.use_qcow2:
+            # If we're going to generate a qcow2 image, avoid clobbering the non-qcow2 image and don't generate a .qcow2
+            # file that isn't acqually qcow2.
+            raw_img = self.disk_image_path.with_suffix(".raw")
+        else:
+            raw_img = self.disk_image_path
+
         if self.rootfs_only:
-            self.make_rootfs_image(self.disk_image_path)
+            self.make_rootfs_image(raw_img)
         elif self.is_x86:
             # X86 currently requires special handling
             # TODO: Switch to normal UEFI booting
-            self.make_x86_disk_image()
+            self.make_x86_disk_image(raw_img)
         else:
-            self.make_gpt_disk_image()
+            self.make_gpt_disk_image(raw_img)
 
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if not self.config.quiet and qemu_img_command.exists():
-            self.run_cmd(qemu_img_command, "info", self.disk_image_path)
+            self.run_cmd(qemu_img_command, "info", raw_img)
         if self.use_qcow2:
             if not qemu_img_command.exists():
                 self.fatal("Cannot create QCOW2 image without qemu-img command!")
             # create a qcow2 version from the raw image:
-            raw_img = self.disk_image_path.with_suffix(".raw")
-            self.run_cmd("mv", "-f", self.disk_image_path, raw_img)
             self.run_cmd(qemu_img_command, "convert",
                          "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
                          "-O", "qcow2",  # convert to qcow2 format
@@ -837,7 +862,7 @@ class BuildDiskImageBase(SimpleProject):
 
 
 class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
-    project_name = "disk-image-minimal"
+    target = "disk-image-minimal"
     _source_class = BuildCHERIBSD
     disk_image_prefix = "cheribsd-minimal"
     include_boot = True
@@ -951,6 +976,25 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         self.mtree.add_dir("var/db", print_status=self.config.verbose)
         self.mtree.add_dir("var/empty", print_status=self.config.verbose)
 
+        if self.is_x86 or self.compiling_for_aarch64(include_purecap=True):
+            # When booting minimal disk images, we need the files in /boot (kernel+loader), but we omit modules.
+            extra_files = []
+            for root, dirnames, filenames in os.walk(str(self.rootfs_dir / "boot")):
+                for filename in filenames:
+                    new_file = Path(root, filename)
+                    # Don't add kernel modules
+                    if new_file.suffix == ".ko":
+                        # Except for those needed to run tests
+                        if new_file.name not in ("tmpfs.ko", "smbfs.ko", "libiconv.ko", "libmchain.ko", "if_vtnet.ko"):
+                            continue
+                    # Also don't add the kernel with debug info
+                    if new_file.suffix == ".full" and new_file.name.startswith("kernel"):
+                        continue
+                    extra_files.append(new_file)
+                    # Stripping kernel modules makes them unloadable:
+                    # kldload: /boot/kernel/smbfs.ko: file must have exactly one symbol table
+                    self.add_file_to_image(new_file, base_directory=self.rootfs_dir, strip_binaries=False)
+            self.verbose_print("Boot files:\n\t", "\n\t".join(map(str, sorted(extra_files))))
         self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
 
     def add_required_libraries(self, libdirs: "typing.List[str]"):
@@ -975,13 +1019,19 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "libbsm.so.3",
             "libcrypto.so.111",
             "libssl.so.111",
-            # PAM libraries (we should only need pam_permit/pam_rootok)
             "libpam.so.6",
-            "pam_permit.so",
-            "pam_permit.so.6",
-            "pam_rootok.so",
-            "pam_rootok.so.6",
+            "libypclnt.so.4",  # needed by pam_unix.so.6
+            # cheribsdbox links these three dynamically since they are needed by other programs too
+            "libprocstat.so.1",
+            "libkvm.so.7",
+            "libelf.so.2",
+            # Needed for backtrace() (required by CTest)
+            "libexecinfo.so.1",  # depends on libelf.so
         ]
+        # Add the required PAM libraries for su(1)/login(1)
+        for i in ("permit", "rootok", "self", "unix", "nologin", "securetty", "lastlog"):
+            required_libs += ["pam_" + i + ".so", "pam_" + i + ".so.6"]
+
         # Libraries to include if they exist
         optional_libs = [
             # Needed for most benchmarks, but not supported on all architectures
@@ -1015,8 +1065,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
     def prepare_rootfs(self):
         super().prepare_rootfs()
         # Add the additional sysctl configs
-        self.create_file_for_image("/etc/pam.d/su", show_contents_non_verbose=False,
-                                   contents=include_local_file("files/minimal-image/pam.d/su"))
+        self.create_file_for_image("/etc/pam.d/system", show_contents_non_verbose=False,
+                                   contents=include_local_file("files/minimal-image/pam.d/system"))
         # disable coredumps (since there is almost no space on the image)
         self.create_file_for_image("/etc/sysctl.conf", show_contents_non_verbose=False,
                                    contents=include_local_file("files/minimal-image/etc/sysctl.conf"))
@@ -1056,7 +1106,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
 
 
 class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
-    project_name = "disk-image-mfs-root"
+    target = "disk-image-mfs-root"
     disk_image_prefix = "cheribsd-mfs-root"
     include_boot = False
 
@@ -1070,13 +1120,12 @@ class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
 
 
 class BuildCheriBSDDiskImage(BuildDiskImageBase):
-    project_name = "disk-image"
+    target = "disk-image"
     _source_class = BuildCHERIBSD
-    _always_add_suffixed_targets = True  # preparation for future multi-target support
     disk_image_prefix = "cheribsd"
 
     @classmethod
-    def dependencies(cls, config):
+    def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config)
         # GDB is not strictly a dependency, but having it in the disk image makes life a lot easier
         result.append("gdb")
@@ -1128,19 +1177,19 @@ class BuildFreeBSDImage(BuildDiskImageBase):
 
 
 class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
-    project_name = "disk-image-freebsd-with-default-options"
+    target = "disk-image-freebsd-with-default-options"
     _source_class = BuildFreeBSDWithDefaultOptions
     hide_options_from_help = True
 
 
 class BuildFreeBSDDeviceModelDiskImage(BuildFreeBSDWithDefaultOptionsDiskImage):
-    project_name = "disk-image-freebsd-device-model"
+    target = "disk-image-freebsd-device-model"
     _source_class = BuildFreeBSDDeviceModel
     hide_options_from_help = True
 
 
 class BuildCheriBSDDeviceModelDiskImage(BuildCheriBSDDiskImage):
-    project_name = "disk-image-cheribsd-device-model"
+    target = "disk-image-cheribsd-device-model"
     _source_class = BuildCheriBsdDeviceModel
     hide_options_from_help = True
 

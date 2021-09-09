@@ -33,7 +33,8 @@ from ..config.compilation_targets import CompilationTargets
 
 
 class BuildAflCheriNinja(Project):
-    project_name = "AFL-CHERI"
+    default_directory_basename = "AFL-CHERI"
+    target = "afl-cheri"
     repository = GitRepository("https://github.com/CTSRD-CHERI/AFL-CHERI")
     native_install_dir = DefaultInstallDir.CHERI_SDK
     make_kind = MakeCommandKind.GnuMake
@@ -64,7 +65,7 @@ class BuildAflCheriNinja(Project):
 
     def install(self, **kwargs):
         self.make_args.set(DESTDIR=self.config.cheri_sdk_dir / "afl")
-        self.run_make("install", options=self.make_args)
+        self.run_make_install(options=self.make_args)
         self.install_file(self.build_dir / "afl-fuzz",
                           BuildCHERIBSD.get_rootfs_dir(self,
                                                        cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID) /

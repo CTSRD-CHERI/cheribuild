@@ -34,7 +34,7 @@ from ..utils import OSInfo
 
 
 class BuildMakefsOnLinux(Project):
-    project_name = "makefs-linux"
+    target = "makefs-linux"
     repository = GitRepository("https://github.com/Engil/makefs.git")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     build_in_source_dir = True  # out of source builds don't work

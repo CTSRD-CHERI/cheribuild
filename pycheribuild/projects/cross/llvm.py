@@ -448,7 +448,7 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
 
 class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git")
-    project_name = "llvm-project"
+    default_directory_basename = "llvm-project"
     target = "llvm"
     skip_cheri_symlinks = False
     is_sdk_target = True
@@ -514,7 +514,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
 
 class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://git.morello-project.org/morello/llvm-project.git")
-    project_name = "morello-llvm-project"
+    default_directory_basename = "morello-llvm-project"
     target = "morello-llvm"
     skip_cheri_symlinks = False  # add target-specific symlinks
     is_sdk_target = True
@@ -558,7 +558,7 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
 
 class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://github.com/llvm/llvm-project.git")
-    project_name = "upstream-llvm-project"
+    default_directory_basename = "upstream-llvm-project"
     target = "upstream-llvm"
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.output_root / "upstream-llvm",
@@ -573,7 +573,7 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
 class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git", force_branch=True,
                                default_branch="temporal")
-    project_name = "cherios-llvm-project"
+    default_directory_basename = "cherios-llvm-project"
     target = "cherios-llvm"
     _default_install_dir_fn = ComputedDefaultValue(function=lambda config, project: config.output_root / "cherios-sdk",
                                                    as_string="$INSTALL_ROOT/cherios-sdk")

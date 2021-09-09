@@ -38,7 +38,6 @@ from ..config.compilation_targets import CompilationTargets
 
 class BuildCheriSpike(AutotoolsProject):
     target = "spike"
-    project_name = "spike"
     repository = GitRepository("https://github.com/CTSRD-CHERI/riscv-isa-sim",
                                default_branch="cheri", force_branch=True)
     native_install_dir = DefaultInstallDir.CHERI_SDK
@@ -73,7 +72,7 @@ class RunCheriSpikeBase(SimpleProject):
     _source_class = None
 
     @classmethod
-    def dependencies(cls, _: CheriConfig):
+    def dependencies(cls, _: CheriConfig) -> "list[str]":
         return [cls._source_class.target, cls._bbl_class.target, BuildCheriSpike.target]
 
     def process(self):

@@ -32,7 +32,7 @@ from pathlib import Path
 
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CPUArchitecture, DefaultInstallDir, GitRepository,
-                       MakeCommandKind, Project)
+                       MakeCommandKind, Project, ReuseOtherProjectRepository)
 from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty, OSInfo
 
@@ -75,14 +75,13 @@ class BuildOpenSBI(Project):
         self.make_args.set(
             O=self.build_dir,  # output dir
             I=self.install_dir,  # install dir
-            CROSS_COMPILE=str(self.sdk_bindir) + "/",
             CC=str(self.CC) + compflags,
             CXX=str(self.CXX) + compflags,
             CPP=str(self.CPP) + compflags,
             LD=self.target_info.linker,
             AR=self.sdk_bindir / "llvm-ar",
             OBJCOPY=self.sdk_bindir / "llvm-objcopy",
-            LD_IS_LLD=True,
+            FW_PIC="n",  # does not appear to work correctly
             FW_OPTIONS="0x2",  # Debug output enabled for now
             # FW_JUMP_ADDR= ## cheribsd start addr
             # FW_JUMP_FDT_ADDR= ## cheribsd fdt addr
@@ -126,7 +125,8 @@ class BuildOpenSBI(Project):
             qemu_fw_dir = BuildQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "share/qemu/"
             self.makedirs(qemu_fw_dir)
             self.run_cmd(self.sdk_bindir / "llvm-objcopy", "-S", "-O", "binary",
-                         self._fw_jump_path(), qemu_fw_dir / "opensbi-riscv64cheri-virt-fw_jump.bin")
+                         self._fw_jump_path(), qemu_fw_dir / "opensbi-riscv64cheri-virt-fw_jump.bin",
+                         print_verbose_only=False)
 
     def _fw_jump_path(self) -> Path:
         # share/opensbi/lp64/generic/firmware//fw_payload.bin
@@ -155,8 +155,7 @@ class BuildOpenSBI(Project):
 
 class BuildOpenSBIGFE(BuildOpenSBI):
     target = "opensbi-gfe"
-    project_name = "opensbi"
-    build_dir_suffix = "-gfe"
+    repository = ReuseOtherProjectRepository(BuildOpenSBI, do_update=True)
 
     def setup(self):
         super().setup()

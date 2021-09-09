@@ -31,6 +31,7 @@ class MockConfig(CheriConfig):
         self.verbose = True
         self.debug_output = True
         self.quiet = False
+        self.print_targets_only = False
         self.skip_update = True
         self.skip_install = True
         self.skip_clone = True

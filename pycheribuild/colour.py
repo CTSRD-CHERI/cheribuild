@@ -40,13 +40,14 @@ class AnsiColour(Enum):
     cyan = 36
     white = 37
 
+    def escape_sequence(self) -> str:
+        return "\x1b[1;" + str(self.value) + "m"
 
-def coloured(colour: AnsiColour, *args, sep=" ") -> str:
-    start_colour = "\x1b[1;" + str(colour.value) + "m"
-    end_colour = "\x1b[0m"  # reset
+
+def coloured(col: AnsiColour, *args, end="\x1b[0m", sep=" ") -> str:
     if len(args) == 1:
-        if isinstance(args[0], str):
-            return start_colour + args[0] + end_colour
-        return start_colour + sep.join(map(str, args[0])) + end_colour
+        if isinstance(args[0], list) or isinstance(args[0], tuple):
+            return col.escape_sequence() + sep.join(map(str, args[0])) + end
+        return col.escape_sequence() + str(args[0]) + end
     else:
-        return start_colour + sep.join(map(str, args)) + end_colour
+        return col.escape_sequence() + sep.join(map(str, args)) + end

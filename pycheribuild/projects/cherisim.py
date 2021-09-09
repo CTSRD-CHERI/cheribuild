@@ -37,7 +37,7 @@ from ..utils import OSInfo
 
 class BuildBluespecCompiler(Project):
     target = "bluespec-compiler"
-    project_name = "bsc"
+    default_directory_basename = "bsc"
     repository = GitRepository("https://github.com/B-Lang-org/bsc.git")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     build_in_source_dir = True
@@ -69,7 +69,7 @@ class BuildBluespecCompiler(Project):
 
 class BuildCheriSim(Project):
     target = "cheri-sim"
-    project_name = "cheri-cpu"
+    default_directory_basename = "cheri-cpu"
     dependencies = ["bluespec-compiler"]
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-cpu")
     native_install_dir = DefaultInstallDir.CHERI_SDK

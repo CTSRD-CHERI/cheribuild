@@ -27,10 +27,12 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import collections
 import getpass
 import grp
 import json
 import os
+import re
 import shutil
 import typing
 from collections import OrderedDict
@@ -40,7 +42,8 @@ from typing import Optional
 
 from .loader import ComputedDefaultValue, MyJsonEncoder
 from ..processutils import latest_system_clang_tool
-from ..utils import (ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, status_update, warning_message)
+from ..utils import (cached_property, ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, status_update,
+                     warning_message)
 
 
 class BuildType(Enum):
@@ -66,7 +69,7 @@ class BuildType(Enum):
     def to_meson_args(self) -> dict:
         if self is BuildType.DEFAULT:
             return dict()  # Note: Meson default value is debug
-        if self in BuildType.DEBUG:
+        if self is BuildType.DEBUG:
             return {"buildtype": "debug"}  # -O0 -g
         elif self is BuildType.RELEASE:
             return {"buildtype": "release"}  # -O3 no debug
@@ -98,6 +101,11 @@ def _default_arm_none_eabi_prefix(c: "CheriConfig", _):
         return str(default_path / "bin/arm-none-eabi-")
 
 
+def _skip_dependency_filter_arg(values: "list[str]") -> "list[re.Pattern]":
+    result = [re.compile(item) for item in values]
+    return result
+
+
 class CheriConfig(ConfigBase):
     def __init__(self, loader, action_class):
         # Work around circular dependencies
@@ -105,6 +113,7 @@ class CheriConfig(ConfigBase):
         from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage
         # noinspection PyTypeChecker
         super().__init__(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt())
+        self._cached_deps = collections.defaultdict(dict)
 
         assert isinstance(loader, ConfigLoaderBase)
         loader._cheri_config = self
@@ -124,10 +133,9 @@ class CheriConfig(ConfigBase):
             else:
                 loader.action_group.add_argument(action.option_name, help=action.help_message, dest="action",
                                                  action="append_const", const=action.actions)
-        self.print_targets_only = loader.add_bool_option("print-targets-only", help_hidden=False,
-                                                         group=loader.action_group,
-                                                         help="Don't run the build but instead only print the targets "
-                                                              "that would be executed")
+        self.print_targets_only = loader.add_commandline_only_bool_option(
+            "print-targets-only", help_hidden=False, group=loader.action_group,
+            help="Don't run the build but instead only print the targets that would be executed")
 
         self.clang_path = loader.add_path_option("clang-path", shortname="-cc-path",
                                                  default=lambda c, _: latest_system_clang_tool(c, "clang", "cc"),
@@ -159,8 +167,9 @@ class CheriConfig(ConfigBase):
         self.skip_kernel = loader.add_bool_option(
             "skip-kernel", "-skip-buildkernel", group=loader.freebsd_group,
             help="Skip the buildkernel step when building FreeBSD or CheriBSD")
-        self.freebsd_kernconf = loader.add_option("kernel-config", "-kernconf", group=loader.freebsd_group,
-                                                  help_hidden=True, help="Override default kernel config to use.")
+        self.freebsd_kernconf = loader.add_commandline_only_option(
+            "kernel-config", "-kernconf", group=loader.freebsd_group, help_hidden=True,
+            help="Override the default FreeBSD/CheriBSD kernel config.")
         self.freebsd_subdir = loader.add_commandline_only_option(
             "freebsd-subdir", "-subdir", group=loader.freebsd_group, type=list, metavar="SUBDIRS",
             help="Only build subdirs SUBDIRS of FreeBSD/CheriBSD instead of the full tree. Useful for quickly "
@@ -210,9 +219,9 @@ class CheriConfig(ConfigBase):
         self.riscv_cheri_gprel = loader.add_bool_option("riscv-cheri-gprel", default=False,
                                                 group=loader.cross_compile_options_group,
                                                 help="Build CHERI-RISC-V libs with gprel ABI for CheriFreeRTOS compartmentalization")
-        self.crosscompile_linkage = loader.add_option("cross-compile-linkage", default=Linkage.DYNAMIC, type=Linkage,
+        self.crosscompile_linkage = loader.add_option("cross-compile-linkage", default=Linkage.DEFAULT, type=Linkage,
                                                       group=loader.cross_compile_options_group,
-                                                      enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
+                                                      enum_choices=(Linkage.DEFAULT, Linkage.DYNAMIC, Linkage.STATIC),
                                                       help="Whether to link cross-compile projects static or dynamic "
                                                            "by default")
         self.csetbounds_stats = loader.add_bool_option("collect-csetbounds-stats",
@@ -225,6 +234,13 @@ class CheriConfig(ConfigBase):
                                                       "everywhere-unsafe"),
                                                   help="Whether to add additional CSetBounds to subobject "
                                                        "references/&-operator")
+        self.use_cheri_ubsan = loader.add_bool_option(
+            "use-cheri-ubsan", group=loader.cross_compile_options_group,
+            help="Add compiler flags to detect certain undefined CHERI behaviour at runtime")
+        self.use_cheri_ubsan_runtime = loader.add_bool_option(
+            "use-cheri-ubsan-runtime", group=loader.cross_compile_options_group, default=False,
+            help="Use the UBSan runtime to provide more detailed information on undefined CHERI behaviour."
+                 "If false (the default) the compiler will generate a trap instruction instead.")
         self.subobject_debug = loader.add_bool_option("subobject-debug", group=loader.cross_compile_options_group,
                                                       default=True, help_hidden=False,
                                                       help="Clear software permission bit 2 when subobject bounds "
@@ -244,23 +260,29 @@ class CheriConfig(ConfigBase):
         self.skip_install = loader.add_bool_option("skip-install", help="Skip the install step (only do the build)")
         self.skip_build = loader.add_bool_option("skip-build", help="Skip the build step (only do the install)")
         self.skip_sdk = loader.add_bool_option(
-            "skip-sdk",
+            "skip-sdk", group=loader.dependencies_group,
             help="When building with --include-dependencies ignore the SDK dependencies. Saves a lot of time "
                  "when building libc++, etc. with dependencies but the sdk is already up-to-date. "
                  "This is like --no-include-toolchain-depedencies but also skips the target that builds the sysroot.")
-        self.trap_on_unrepresentable = loader.add_bool_option("trap-on-unrepresentable", default=False,
-                                                              help="Raise a CHERI exception when capabilities become "
-                                                                   "unreprestable instead of detagging. Useful for "
-                                                                   "debugging, but deviates from the spec, "
-                                                                   "and therefore off by default.")
-        self.debugger_on_cheri_trap = loader.add_bool_option("qemu-gdb-break-on-cheri-trap", default=False,
-                                                             help="Drop into GDB attached to QEMU when a CHERI "
-                                                                  "exception is triggered (QEMU only).")
-        self.qemu_debug_program = loader.add_option("qemu-gdb-debug-userspace-program",
-                                                    help="Print the command to debug the following userspace program "
-                                                         "in GDB attaced to QEMU")
+        self.skip_dependency_filters = loader.add_option(
+            "skip-dependency-filter", group=loader.dependencies_group, action="append", default=[],
+            type=_skip_dependency_filter_arg, metavar="REGEX",
+            help="A regular expression to match against to target names that should be skipped when using"
+                 "--include-dependency. Can be passed multiple times to add more patterns.")  # type: list[re.Pattern]
+        self.trap_on_unrepresentable = loader.add_bool_option(
+            "trap-on-unrepresentable", default=False, group=loader.run_group,
+            help="Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for "
+                 "debugging, but deviates from the spec, and therefore off by default.")
+        self.debugger_on_cheri_trap = loader.add_bool_option(
+            "qemu-gdb-break-on-cheri-trap", default=False, group=loader.run_group,
+            help="Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only).")
+        self.qemu_debug_program = loader.add_option(
+            "qemu-gdb-debug-userspace-program", group=loader.run_group,
+            help="Print the command to debug the following userspace program in GDB attaced to QEMU")
         self.include_dependencies = None  # type: Optional[bool]
         self.include_toolchain_dependencies = True
+        self.start_with = None  # type: Optional[str]
+        self.start_after = None  # type: Optional[str]
         self.preferred_xtarget = None  # type: Optional[CrossCompileTarget]
         self.make_without_nice = None  # type: Optional[bool]
 
@@ -279,7 +301,7 @@ class CheriConfig(ConfigBase):
         self.docker = loader.add_bool_option("docker", help="Run the build inside a docker container",
                                              group=loader.docker_group)
         self.docker_container = loader.add_option("docker-container", help="Name of the docker container to use",
-                                                  default="cheribuild-test", group=loader.docker_group)
+                                                  default="ctsrd/cheribuild-docker", group=loader.docker_group)
         self.docker_reuse_container = loader.add_bool_option("docker-reuse-container", group=loader.docker_group,
                                                              help="Attach to the same container again (note: "
                                                                   "docker-container option must be an id rather than "
@@ -380,7 +402,7 @@ class CheriConfig(ConfigBase):
                  "repositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-shallow clone")
 
         self.fpga_custom_env_setup_script = loader.add_path_option(
-            "beri-fpga-env-setup-script",
+            "beri-fpga-env-setup-script", group=loader.path_group,
             help="Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh")
 
         self.local_arm_none_eabi_toolchain_relpath = Path("arm-none-eabi-sdk")
@@ -395,11 +417,12 @@ class CheriConfig(ConfigBase):
             "build-morello-firmware-from-source", help_hidden=False,
             help="Build the firmware from source instead of downloading the latest release.")
 
-        self.list_kernels = loader.add_bool_option("list-kernels",
+        self.list_kernels = loader.add_bool_option("list-kernels", group=loader.action_group,
                                                    help="List available kernel configs to run and exit")
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
-        self.__optional_properties = ["preferred_xtarget", "internet_connection_last_checked_at"]
+        self.__optional_properties = ["preferred_xtarget", "internet_connection_last_checked_at",
+                                      "start_after", "start_with"]
 
     def load(self):
         self.loader.load()
@@ -448,9 +471,21 @@ class CheriConfig(ConfigBase):
         if "CLICOLOR" in os.environ:
             del os.environ["CLICOLOR"]
 
+        # Check that the skip_dependency_filters arguments are all valid regular expressions. We do it now since
+        # otherwise the validation is delayed until the first time the object is used.
+        assert isinstance(self.skip_dependency_filters, list)
+
+    @cached_property
+    def _other_tools_path_prefix(self) -> str:
+        return str(self.other_tools_dir / "bin") + ":"
+
     @property
     def dollar_path_with_other_tools(self) -> str:
-        return str(self.other_tools_dir / "bin") + ":" + os.getenv("PATH", "")
+        old_path = os.getenv("PATH", "")
+        new_prefix = self._other_tools_path_prefix
+        if old_path.startswith(new_prefix):
+            return old_path  # $PATH already starts with other_tools, don't add it again
+        return new_prefix + old_path
 
     @property
     def make_j_flag(self):
@@ -498,6 +533,15 @@ class CheriConfig(ConfigBase):
         assert self.source_root.is_absolute(), self.source_root
         assert self.build_root.is_absolute(), self.build_root
         return True
+
+    def should_skip_dependency(self, target_name: str, requested_by: str):
+        filters = self.skip_dependency_filters
+        for regex in filters:
+            if regex.fullmatch(target_name):
+                if self.debug_output:
+                    print("Not adding", target_name, "dependency for", requested_by, "due to filter", regex)
+                return True
+        return False
 
     # FIXME: not sure why this is needed
     def __getattribute__(self, item):

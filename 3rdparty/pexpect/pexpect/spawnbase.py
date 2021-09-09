@@ -63,6 +63,11 @@ class SpawnBase(object):
         # Delay used before sending data to child. Time in seconds.
         # Set this to None to skip the time.sleep() call completely.
         self.delaybeforesend = 0.05
+        # Used by send() to send large strings in smaller chunks with an
+        # optional time.sleep(self.delaybeforesend) inbetween. This can be
+        # set if the receiving side loses input when too much data is sent
+        # at once.
+        self.sendchunksize = 0
         # Used by close() to give kernel time to update process status.
         # Time in seconds.
         self.delayafterclose = 0.1
@@ -500,6 +505,25 @@ class SpawnBase(object):
                 break
             lines.append(line)
         return lines
+
+    def _send(self, s):
+        raise NotImplementedError()
+
+    def send(self, s):
+        '''Send a string to the target. If sendchunksize is set, this splits
+        the sent input into chunks of up to sendchunksize and calls _send()
+        for each of those chunks.
+        '''
+        if self.sendchunksize > 0 and len(s) > self.sendchunksize:
+            # If we are sending a string greater than sendchunksize, we have
+            # to split it into multiple calls with a potential time.sleep()
+            # after each call. This can avoid lost input for slow receivers.
+            result = 0
+            for i in range(0, len(s), self.sendchunksize):
+                result += self._send(s[i:i + self.sendchunksize])
+            return
+        else:
+            return self._send(s)
 
     def fileno(self):
         '''Expose file descriptor for a file-like interface

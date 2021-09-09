@@ -116,7 +116,7 @@ class TargetInfo(ABC):
         return None
 
     @property
-    def cmake_prefix_paths(self) -> list:
+    def cmake_prefix_paths(self) -> "list[Path]":
         """List of additional directories to be searched for packages (e.g. sysroot/usr/local/riscv64-purecap)"""
         return []
 
@@ -143,6 +143,10 @@ class TargetInfo(ABC):
         <sysroot>/usr/local/<target> to allow installing hybrid/non-cheri/cheri to the same sysroot.
         """
         return Path()
+
+    @property
+    def additional_rpath_directories(self) -> "list[str]":
+        return []
 
     @cached_property
     def target_triple(self) -> str:
@@ -211,6 +215,10 @@ class TargetInfo(ABC):
     def additional_shared_library_link_flags(self):
         """Additional linker flags that need to be passed when building an shared library (e.g. custom linker script)"""
         return []
+
+    @property
+    def default_libdir(self):
+        return "lib"
 
     @property
     @abstractmethod
@@ -355,11 +363,10 @@ class TargetInfo(ABC):
             return config.cheri_sdk_bindir / "clang-cpp"
         return config.clang_cpp_path
 
-    @staticmethod
-    def host_pkgconfig_dirs(config) -> "typing.List[str]":
-        # We need to add the bootstrap tools pkgconfig dirs to PKG_CONFIG_PATH to find e.g. libxml2, etc.
-        # Note: some packages also install to libdata/pkgconfig
-        return [str(config.other_tools_dir / "lib/pkgconfig"), str(config.other_tools_dir / "libdata/pkgconfig")]
+    def pkgconfig_candidates(self, prefix: Path) -> "list[str]":
+        """:return: a list of potential candidates for pkgconfig .pc files inside prefix"""
+        return [str(prefix / self.default_libdir / "pkgconfig"), str(prefix / "share/pkgconfig"),
+                str(prefix / "libdata/pkgconfig")]
 
 
 # https://reviews.llvm.org/rG14daa20be1ad89639ec209d969232d19cf698845
@@ -465,8 +472,29 @@ class NativeTargetInfo(TargetInfo):
         return True
 
     @property
+    def default_libdir(self):
+        if OSInfo.is_ubuntu() or OSInfo.is_debian():
+            # Ubuntu and Debian default to installing to lib/<triple> directories
+            if self.target.is_x86_64():
+                return "lib/x86_64-linux-gnu"
+            else:
+                self.project.warning("Don't know default libdir for", self.target.cpu_architecture)
+        if OSInfo.is_suse() and self.pointer_size > 4:
+            return "lib64"
+        return "lib"
+
+    @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
-        return self.host_pkgconfig_dirs(self.config)
+        # We need to add the bootstrap tools pkgconfig dirs to PKG_CONFIG_PATH to find e.g. libxml2, etc.
+        # Note: some packages also install to libdata/pkgconfig or share/pkgconfig
+        return self.pkgconfig_candidates(self.config.other_tools_dir)
+
+    def pkgconfig_candidates(self, prefix: Path) -> "list[str]":
+        result = super().pkgconfig_candidates(prefix)
+        if self.default_libdir != "lib":
+            # Also add "lib/pkgconfig" for projects that don't use the default install dirs
+            result.append(str(prefix / "lib/pkgconfig"))
+        return result
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",

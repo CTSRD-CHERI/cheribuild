@@ -7,25 +7,7 @@ pipeline {
   stages {
   stage('Test') {
   parallel {
-    stage('Test Python 3.5.0') {
-      agent {
-        dockerfile {
-          filename 'src/tests/python-350.Dockerfile'
-        }
-      }
-      steps {
-        ansiColor(colorMapName: 'xterm') {
-          dir("tempsrc") { deleteDir() }
-          dir("tempsrc") { sh 'ls -la' }
-          // Avoid git chowning .git/index to root which will cause the next build to fail
-          // Work around old docker version in jenkins that can't change cwd:
-          sh 'cd tempsrc && ../src/tests/run_jenkins_tests.sh 3.5.0'
-          dir("tempsrc") { deleteDir() }
-        }
-        junit '3.5.0-results.xml'
-      }
-    }
-    stage('Test Python 3.6') {
+    stage('Test Python 3.6.0') {
       agent {
         dockerfile {
           filename 'src/tests/python-360.Dockerfile'
@@ -64,7 +46,7 @@ pipeline {
     stage('Test Python 3.8.0') {
       agent {
         dockerfile {
-          filename 'src/tests/python-370.Dockerfile'
+          filename 'src/tests/python-380.Dockerfile'
         }
       }
       steps {
@@ -77,6 +59,24 @@ pipeline {
           dir("tempsrc") { deleteDir() }
         }
         junit '3.8.0-results.xml'
+      }
+    }
+    stage('Test Python 3.9.0') {
+      agent {
+        dockerfile {
+          filename 'src/tests/python-390.Dockerfile'
+        }
+      }
+      steps {
+        ansiColor(colorMapName: 'xterm') {
+          dir("tempsrc") { deleteDir() }
+          dir("tempsrc") { sh 'ls -la' }
+          // Avoid git chowning .git/index to root which will cause the next build to fail
+          // Work around old docker version in jenkins that can't change cwd:
+          sh 'cd tempsrc && ../src/tests/run_jenkins_tests.sh 3.9.0'
+          dir("tempsrc") { deleteDir() }
+        }
+        junit '3.9.0-results.xml'
       }
     }
     stage('Test Python RC') {
@@ -97,7 +97,7 @@ pipeline {
         junit 'rc-results.xml'
       }
     }
-    stage('Test Ubuntu 16.04') {
+    stage('Test Ubuntu 18.04') {
       agent {
         dockerfile {
           filename 'src/tests/ubuntu.Dockerfile'

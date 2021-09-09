@@ -28,19 +28,19 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository, SubversionRepository)
+from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, DefaultInstallDir
+from .crosscompileproject import GitRepository, SubversionRepository
+from ..project import ReuseOtherProjectRepository
 from .expat import BuildExpat
 
 
 class BuildPcre(CrossCompileAutotoolsProject):
     target = "pcre"
-    project_name = "pcre"
 
     repository = SubversionRepository("svn://vcs.pcre.org/pcre",
                                       default_branch="code/trunk")
 
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def configure(self, **kwargs):
         self.run_cmd("autoreconf", "-i", cwd=self.source_dir)
@@ -49,15 +49,12 @@ class BuildPcre(CrossCompileAutotoolsProject):
 
 class BuildApr(CrossCompileAutotoolsProject):
     target = "apr"
-    project_name = "apr"
-
     repository = GitRepository("https://github.com/CTSRD-CHERI/apr.git",
                                default_branch="cheri")
 
     dependencies = ["libexpat"]
 
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def setup(self):
         super().setup()
@@ -96,15 +93,10 @@ class BuildApr(CrossCompileAutotoolsProject):
 
 class BuildApache(CrossCompileAutotoolsProject):
     target = "apache"
-    project_name = "apache"
-
     repository = GitRepository("https://github.com/CTSRD-CHERI/apache-httpd.git",
                                default_branch="2.4.x-cheri")
 
     dependencies = ["apr", "pcre"]
-
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def setup(self):
         super().setup()
@@ -139,3 +131,31 @@ class BuildApache(CrossCompileAutotoolsProject):
                          cwd=self.build_dir / "server")
             self.run_cmd(str(self.host_CC), "gen_test_char.lo", "-o",
                          "gen_test_char", cwd=self.build_dir / "server")
+
+
+class BuildSSLProc(CrossCompileCMakeProject):
+    target = "sslproc"
+
+    repository = GitRepository("https://github.com/CTSRD-CHERI/sslproc.git")
+
+    has_optional_tests = True
+    default_build_tests = False
+    show_optional_tests_in_help = True
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(BUILD_TESTS=self.build_tests)
+
+
+class BuildSSLProcApache(BuildApache):
+    target = "apache-sslproc"
+
+    repository = ReuseOtherProjectRepository(BuildApache, do_update=True)
+
+    dependencies = BuildApache.dependencies + ["sslproc"]
+
+    def setup(self):
+        super().setup()
+        self.configure_args.append(
+            "--with-sslproc=" + str(BuildSSLProc.get_install_dir(self))
+            )

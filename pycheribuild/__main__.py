@@ -39,7 +39,7 @@ from .config.defaultconfig import CheribuildAction, DefaultCheriConfig
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
-from .config.loader import JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
+from .config.loader import JsonAndCommandLineConfigLoader
 # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
 from .projects import *  # noqa: F401,F403
@@ -122,21 +122,8 @@ def real_main():
     # load them from JSON/cmd line
     cheri_config.load()
     init_global_config(cheri_config)
-
-    if cheri_config.docker or JsonAndCommandLineConfigLoader.get_config_prefix() == "docker-":
-        # check that the docker build won't override native binaries
+    if JsonAndCommandLineConfigLoader.get_config_prefix() == "docker-":
         cheri_config.docker = True
-        # get the actual descriptor
-        import inspect
-        output_option = inspect.getattr_static(cheri_config, "output_root")  # type: JsonAndCommandLineConfigOption
-        source_option = inspect.getattr_static(cheri_config, "source_root")  # type: JsonAndCommandLineConfigOption
-        build_option = inspect.getattr_static(cheri_config, "build_root")  # type: JsonAndCommandLineConfigOption
-        # noinspection PyProtectedMember
-        if cheri_config.build_root == build_option._get_default_value(cheri_config) and \
-                cheri_config.source_root == source_option._get_default_value(cheri_config) and \
-                cheri_config.output_root == output_option._get_default_value(cheri_config):
-            fatal_error(
-                "Running cheribuild in docker with the default source/output/build directories is not supported")
 
     if CheribuildAction.LIST_TARGETS in cheri_config.action:
         # Skip target aliases to avoid printing too much output
@@ -198,17 +185,18 @@ def real_main():
                 subprocess.check_call(start_cmd)
                 docker_run_cmd = ["docker", "exec", cheri_config.docker_container] + cheribuild_args
             else:
-                docker_run_cmd = ["docker", "run", "--rm"] + docker_dir_mappings + [
-                    cheri_config.docker_container] + cheribuild_args
-            print_command(docker_run_cmd)
-            subprocess.check_call(docker_run_cmd)
+                docker_run_cmd = ["docker", "run", "--user", str(os.getuid()) + ":" + str(os.getgid()),
+                                  "--rm", "--interactive", "--tty"] + docker_dir_mappings
+                docker_run_cmd += [cheri_config.docker_container] + cheribuild_args
+            run_command(docker_run_cmd, config=cheri_config, give_tty_control=True)
         except subprocess.CalledProcessError as e:
             # if the image is missing print a helpful error message:
             if e.returncode == 125:
                 status_update("It seems like the docker image", cheri_config.docker_container, "was not found.")
-                status_update("In order to build the default docker image for cheribuild (cheribuild-test) run:")
+                status_update("In order to build the default docker image for cheribuild (cheribuild-docker) run:")
                 print(
-                    coloured(AnsiColour.blue, "cd", cheribuild_dir + "/docker && docker build --tag cheribuild-test ."))
+                    coloured(AnsiColour.blue, "cd",
+                             cheribuild_dir + "/docker && docker build --tag cheribuild-docker ."))
                 sys.exit(coloured(AnsiColour.red, "Failed to start docker!"))
             raise
         sys.exit()

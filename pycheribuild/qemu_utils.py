@@ -35,6 +35,7 @@ from pathlib import Path
 
 from .config.target_info import CPUArchitecture, CrossCompileTarget
 from .processutils import run_command
+from .utils import OSInfo, warning_message
 
 
 class QemuOptions:
@@ -70,9 +71,10 @@ class QemuOptions:
             self.can_boot_kernel_directly = False  # boot from disk
             # Try to use KVM instead of TCG if possible to speed up emulation
             if not want_debugger:
-                self.machine_flags = ["-M", "accel=kvm:xen:hax:tcg"]
+                accel_flag = "accel=hvf:hax:tcg" if OSInfo.IS_MAC else "accel=kvm:xen:hax:tcg"
             else:
-                self.machine_flags = ["-M", "accel=tcg"]  # Can't use KVM acceleration if we want to attach GDB
+                accel_flag = "accel=tcg"  # Have to use TCG if we want to attach GDB
+            self.machine_flags = ["-M", accel_flag]
             # Use a more modern CPU than the QEMU default:
             # TCG does not support AVX, so pick the newest pre-AVX Intel CPU (Nehalem)
             # self.machine_flags += ["-cpu", "Nehalem"]
@@ -86,14 +88,31 @@ class QemuOptions:
         else:
             raise ValueError("Unknown target " + str(xtarget))
 
-    def disk_image_args(self, image) -> list:
+    def disk_image_args(self, image: Path, image_format: str) -> list:
+        # Probe the disk image format in case someone has overridden the default image path or format is unspecified
+        if not image.exists():
+            # Either we're pretending or we'll complain elsewhere.
+            if image_format is None:
+                image_format = "qcow2" if image.name.endswith(".qcow2") else "raw"
+        else:
+            with image.open('rb') as imgf:
+                magic = imgf.read(4)
+                is_qcow2 = magic == b'QFI\xfb'
+
+                if image_format is None:
+                    image_format = "qcow2" if is_qcow2 else "raw"
+                elif is_qcow2 and image_format != "qcow2":
+                    warning_message("Disk image looks like qcow2 but claimed image format is", image_format)
+                elif not is_qcow2 and image_format == "qcow2":
+                    warning_message("Disk image does not look like claimed image format of qcow2")
+
         if self.virtio_disk:
             # RISC-V doesn't support virtio-blk-pci, we have to use virtio-blk-device
             device_kind = "virtio-blk-device" if self.xtarget.is_riscv(include_purecap=True) else "virtio-blk-pci"
-            return ["-drive", "if=none,file=" + str(image) + ",id=drv,format=raw",
+            return ["-drive", "if=none,file=" + str(image) + ",id=drv,format=" + image_format,
                     "-device", device_kind + ",drive=drv"]
         else:
-            return ["-drive", "file=" + str(image) + ",format=raw,index=0,media=disk"]
+            return ["-drive", "file=" + str(image) + ",format=" + image_format + ",index=0,media=disk"]
 
     def can_use_virtio_network(self):
         # We'd like to use virtio everwhere, but FreeBSD doesn't like it on BE mips.
@@ -130,9 +149,10 @@ class QemuOptions:
         return Path(found_in_path) if found_in_path is not None else None
 
     def get_commandline(self, *, qemu_command=None, kernel_file: Path = None, disk_image: Path = None,
-                        user_network_args: str = "", add_network_device=True, bios_args: "typing.List[str]" = None,
-                        trap_on_unrepresentable=False, debugger_on_cheri_trap=False, add_virtio_rng=False,
-                        write_disk_image_changes=True, gui_options: "typing.List[str]" = None) -> "typing.List[str]":
+                        disk_image_format: str = "raw", user_network_args: str = "", add_network_device=True,
+                        bios_args: "typing.List[str]" = None, trap_on_unrepresentable=False,
+                        debugger_on_cheri_trap=False, add_virtio_rng=False, write_disk_image_changes=True,
+                        gui_options: "typing.List[str]" = None) -> "typing.List[str]":
         if qemu_command is None:
             qemu_command = self.get_qemu_binary()
         result = [str(qemu_command)]
@@ -153,7 +173,7 @@ class QemuOptions:
             result.append("-kernel")
             result.append(str(kernel_file))
         if disk_image:
-            result.extend(self.disk_image_args(disk_image))
+            result.extend(self.disk_image_args(disk_image, disk_image_format))
         if not write_disk_image_changes:
             # All disk writes go to a tempfile: https://qemu.readthedocs.io/en/latest/system/images.html#snapshot-mode
             result.append("-snapshot")

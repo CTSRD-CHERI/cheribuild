@@ -34,7 +34,7 @@ from ..project import ReuseOtherProjectRepository
 
 
 class BuildJulietTestSuite(CrossCompileCMakeProject):
-    project_name = "juliet-test-suite"
+    target = "juliet-test-suite"
     # TODO: move repo to CTSRD-CHERI
     repository = GitRepository("https://github.com/arichardson/juliet-test-suite-c.git")
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
@@ -99,25 +99,25 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
 
 
 class BuildJulietCWE121(BuildJulietCWESubdir):
-    project_name = "juliet-cwe-121"
+    target = "juliet-cwe-121"
     cwe_number = 121
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
                                              subdirectory="testcases/CWE121_Stack_Based_Buffer_Overflow")
 
 
 class BuildJulietCWE126(BuildJulietCWESubdir):
-    project_name = "juliet-cwe-126"
+    target = "juliet-cwe-126"
     cwe_number = 126
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE126_Buffer_Overread")
 
 
 class BuildJulietCWE415(BuildJulietCWESubdir):
-    project_name = "juliet-cwe-415"
+    target = "juliet-cwe-415"
     cwe_number = 415
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE415_Double_Free")
 
 
 class BuildJulietCWE416(BuildJulietCWESubdir):
-    project_name = "juliet-cwe-416"
+    target = "juliet-cwe-416"
     cwe_number = 416
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE416_Use_After_Free")

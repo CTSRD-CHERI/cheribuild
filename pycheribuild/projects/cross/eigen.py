@@ -28,11 +28,9 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import CrossCompileCMakeProject, GitRepository
 
 
 class BuildEigen(CrossCompileCMakeProject):
-    project_name = "eigen"
+    target = "eigen"
     repository = GitRepository("https://gitlab.com/libeigen/eigen.git")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE

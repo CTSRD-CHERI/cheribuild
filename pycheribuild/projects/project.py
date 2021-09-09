@@ -30,6 +30,7 @@
 import copy
 import datetime
 import errno
+import functools
 import inspect
 import os
 import re
@@ -99,28 +100,27 @@ class ProjectSubclassDefinitionHook(type):
             fatal_error("Found class name ending in Base (", name, ") but do_not_add_to_targets was not defined",
                         sep="")
 
-        project_name = None
-        if "project_name" in clsdict:
-            project_name = clsdict["project_name"]
-        else:
-            # fall back to name of target then infer from class name
-            # if target_name:
-            #     project_name = target_name
-            if name.startswith("Build"):
-                project_name = name[len("Build"):].replace("_", "-")
-            cls.project_name = project_name
-
-        # load "target" field first then check project name (as that might default to target)
+        def die(msg):
+            sys.exit(inspect.getfile(cls) + ":" + str(inspect.findsource(cls)[1] + 1) + ": error: " + msg)
+        # load "target" field first then use that to infer the default source/build/install dir names
         target_name = None
         if "target" in clsdict:
             target_name = clsdict["target"]
-        elif project_name:
-            target_name = project_name.lower()
+        elif name.startswith("Build"):
+            target_name = name[len("Build"):].replace("_", "-").lower()
             cls.target = target_name
-
         if not target_name:
-            sys.exit("target name is not set and cannot infer from class " + name +
-                     " -- set project_name=, target= or do_not_add_to_targets=True")
+            die("target name is not set and cannot infer from class " + name +
+                " -- set target= or do_not_add_to_targets=True")
+
+        # The default source/build/install directory name defaults to the target unless explicitly overwritten.
+        if "default_directory_basename" not in clsdict and not cls.inherit_default_directory_basename:
+            cls.default_directory_basename = target_name
+
+        if "project_name" in clsdict:
+            die("project_name should no longer be used, change the definition of class " + name +
+                " to include target and/or default_directory_basename")
+
         if cls.__dict__.get("dependencies_must_be_built"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
@@ -190,12 +190,34 @@ class ProjectSubclassDefinitionHook(type):
         # print("Adding target", target_name, "with deps:", cls.dependencies)
 
 
+@functools.lru_cache(maxsize=20)
+def _cached_get_homebrew_prefix(package: "typing.Optional[str]", config: CheriConfig):
+    assert OSInfo.IS_MAC, "Should only be called on macos"
+    command = ["brew", "--prefix"]
+    if package:
+        command.append(package)
+    prefix = None
+    try:
+        prefix_str = run_command(command, capture_output=True, run_in_pretend_mode=True,
+                                 print_verbose_only=False, config=config).stdout.decode("utf-8").strip()
+        prefix = Path(prefix_str)
+        if not prefix.exists():
+            prefix = None
+    except subprocess.CalledProcessError:
+        pass
+    return prefix
+
+
 class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     _config_loader = None  # type: ConfigLoaderBase
 
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
-    project_name = None  # type: str
+    # The source dir/build dir names will be inferred from the target name unless default_directory_basename is set.
+    # Note that this is not inherited by default unless you set inherit_default_directory_basename (which itself is
+    # inherited as normal, so can be set in a base class).
+    default_directory_basename = None  # type: str
+    inherit_default_directory_basename = False  # type: bool
     # Old names in the config file (per-architecture) for backwards compat
     _config_file_aliases = tuple()  # type: typing.Tuple[str, ...]
     dependencies = []  # type: typing.List[str]
@@ -208,7 +230,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     _cached_filtered_deps = None  # type: typing.List[Target]
     is_alias = False
     is_sdk_target = False  # for --skip-sdk
-    manual_sysroot_dependencies = False  # For sysroot targets that need a partial sysroot
     # Set to true to omit the extra -<os> suffix in target names (otherwise we would end up with targets such as
     # freebsd-freebsd-amd64, etc.)
     include_os_in_target_suffix = True
@@ -264,14 +285,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     # noinspection PyCallingNonCallable
     @classmethod
-    def _direct_dependencies(cls, config: CheriConfig, *, include_dependencies: bool,
-                             include_toolchain_dependencies: bool,
+    def _direct_dependencies(cls, config: CheriConfig, *, include_toolchain_dependencies: bool,
                              include_sdk_dependencies: bool,
                              explicit_dependencies_only: bool) -> "typing.Iterator[Target]":
         if not include_sdk_dependencies:
             include_toolchain_dependencies = False  # --skip-sdk means skip toolchain and skip sysroot
         assert cls._xtarget is not None
-        assert include_dependencies, "Should not be called with include_dependencies=False"
         dependencies = cls.dependencies
         expected_build_arch = cls.get_crosscompile_target(config)
         assert expected_build_arch is not None
@@ -292,7 +311,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if not explicit_dependencies_only:
             if include_toolchain_dependencies:
                 dependencies.extend(cls._xtarget.target_info_cls.toolchain_targets(cls._xtarget, config))
-            if include_sdk_dependencies and cls.needs_sysroot and not cls.manual_sysroot_dependencies:
+            if include_sdk_dependencies and cls.needs_sysroot:
                 dependencies.extend(cls._xtarget.target_info_cls.base_sysroot_targets(cls._xtarget, config))
         # Try to resovle the target names to actual targets and potentially add recursive depdencies
         for dep_name in dependencies:
@@ -360,20 +379,31 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @classmethod
     def _recursive_dependencies_impl(cls, config: CheriConfig, *, include_dependencies: bool,
                                      include_toolchain_dependencies: bool,
-                                     include_sdk_dependencies: bool,
-                                     dependency_chain: "typing.List[Target]" = []) -> "typing.List[Target]":
+                                     dependency_chain: "typing.List[typing.Type[SimpleProject]]" = None,
+                                     include_sdk_dependencies: bool) -> "typing.List[Target]":
         assert cls._xtarget is not None, cls
-        new_dependency_chain = dependency_chain + [cls]
-        if cls in dependency_chain:
-            cycle = new_dependency_chain[new_dependency_chain.index(cls):]
-            fatal_error("Cyclic dependency found:", " -> ".join(map(lambda c: c.target, cycle)), pretend=False)
         if not include_dependencies:
             return []
+        if dependency_chain:
+            new_dependency_chain = dependency_chain + [cls]
+            if cls in dependency_chain:
+                cycle = new_dependency_chain[new_dependency_chain.index(cls):]
+                fatal_error("Cyclic dependency found:", " -> ".join(map(lambda c: c.target, cycle)), pretend=False)
+        else:
+            new_dependency_chain = [cls]
+        # look only in __dict__ to avoid parent class lookup
+        cache_lookup_args = (include_dependencies, include_toolchain_dependencies, include_sdk_dependencies)
+        # noinspection PyProtectedMember
+        cached_result = config._cached_deps.get(cls.target, dict()).get(cache_lookup_args, None)
+        if cached_result is not None:
+            return cached_result
         result = []
-        for target in cls._direct_dependencies(config, include_dependencies=include_dependencies,
-                                               include_toolchain_dependencies=include_toolchain_dependencies,
+        for target in cls._direct_dependencies(config, include_toolchain_dependencies=include_toolchain_dependencies,
                                                include_sdk_dependencies=include_sdk_dependencies,
                                                explicit_dependencies_only=cls.direct_dependencies_only):
+            if config.should_skip_dependency(target.name, cls.target):
+                continue
+
             if target not in result:
                 result.append(target)
             if cls.direct_dependencies_only:
@@ -387,6 +417,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             for r in recursive_deps:
                 if r not in result:
                     result.append(r)
+        # save the result to avoid recomputing it lots of times
+        # noinspection PyProtectedMember
+        config._cached_deps[cls.target][cache_lookup_args] = result
         return result
 
     @classmethod
@@ -495,6 +528,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def host_CPP(self):
         return TargetInfo.host_c_preprocessor(self.config)
 
+    @property
+    def essential_compiler_and_linker_flags(self):
+        # This property exists so that gdb can override the target flags to build the -purecap targets as hybrid.
+        return self.target_info.get_essential_compiler_and_linker_flags()
+
     @classproperty
     def needs_sysroot(self):
         return not self._xtarget.is_native()  # Most projects need a sysroot (but not native)
@@ -557,9 +595,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @property
     def display_name(self):
         if self._xtarget is None:
-            return self.project_name + " (target alias)"
-        return self.project_name + " (" + self._xtarget.build_suffix(self.config,
-                                                                     include_os=self.include_os_in_target_suffix) + ")"
+            return self.target + " (target alias)"
+        return self.target + " (" + self._xtarget.build_suffix(self.config,
+                                                               include_os=self.include_os_in_target_suffix) + ")"
 
     @classmethod
     def get_class_for_target(cls: "typing.Type[Type_T]", arch: CrossCompileTarget) -> "typing.Type[Type_T]":
@@ -574,7 +612,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if isinstance(target, MultiArchTargetAlias):
             for t in target.derived_targets:
                 if t.target_arch is arch:
-                    assert issubclass(t.project_class, cls)
+                    assert issubclass(t.project_class, target.project_class)
                     return t.project_class
         elif isinstance(target, Target):
             # single architecture target
@@ -613,18 +651,17 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return option.full_option_name
 
     @classmethod
-    def add_config_option(cls, name: str, *, show_help=False, shortname=None, _no_fallback_config_name: bool = False,
+    def add_config_option(cls, name: str, *, show_help=False, shortname: str = None,
                           kind: "Union[typing.Type[Type_T], Callable[[str], Type_T]]" = str,
                           default: "Union[ComputedDefaultValue[Type_T], Type_T, Callable[[], Type_T]]" = None,
                           only_add_for_targets: "typing.List[CrossCompileTarget]" = None,
                           extra_fallback_config_names: "typing.List[str]" = None,
-                          _allow_unknown_targets=False, **kwargs) -> Type_T:
-        # Need a string annotation for kind to avoid https://github.com/python/typing/issues/266 which seems to affect
-        # the version of python in Ubuntu 16.04
-        config_option_key = cls.target
-        # if cls.target != cls.project_name.lower():
-        #    self.fatal("Target name does not match project name:", cls.target, "vs", cls.project_name.lower())
-
+                          use_default_fallback_config_names=True, _allow_unknown_targets=False, **kwargs) -> Type_T:
+        fullname = cls.target + "/" + name
+        if not cls._config_loader.is_needed_for_completion(fullname, shortname, kind):
+            # We are autocompleting and there is a prefix that won't match this option, so we just return the
+            # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
+            return default
         # Hide stuff like --foo/install-directory from --help
         help_hidden = not show_help
 
@@ -663,40 +700,31 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         fallback_config_names = []
         # For targets such as cheribsd-mfs-root-kernel to fall back to checking the value of the option for cheribsd
         extra_fallback_class = getattr(cls, "_config_inherits_from", None)
-        if not _no_fallback_config_name and (fallback_name_base or extra_fallback_class is not None):
-            if name not in ["build-directory"]:
-                if fallback_name_base:
-                    fallback_config_names.append(fallback_name_base + "/" + name)
-                if extra_fallback_class is not None:
-                    # Next add both cheribsd-<suffix> and cheribsd (in that order) so that cheribsd-mfs-root-kernel/...
-                    # overrides the cheribsd defaults.
-                    assert issubclass(extra_fallback_class, SimpleProject), extra_fallback_class
-                    if cls._xtarget is not None:
-                        suffixed_target_class = extra_fallback_class.get_class_for_target(cls._xtarget)
-                        fallback_config_names.append(suffixed_target_class.target + "/" + name)
-                    fallback_config_names.append(extra_fallback_class.target + "/" + name)
-            elif synthetic_base is not None:
-                assert name == "build-directory"
-                assert issubclass(cls, SimpleProject), cls
-                # build-directory should only be inherited for the default target (e.g. cheribsd-cheri -> cheribsd):
-                if cls.default_architecture is not None and cls.default_architecture is cls._xtarget:
-                    # Don't allow cheribsd-purecap/build-directory to fall back to cheribsd/build-directory
-                    # but if the project_name is the same we can assume it's the same class:
-                    if cls.project_name == synthetic_base.project_name and fallback_name_base:
-                        fallback_config_names.append(fallback_name_base + "/" + name)
+        if use_default_fallback_config_names and (fallback_name_base or extra_fallback_class is not None):
+            if fallback_name_base:
+                fallback_config_names.append(fallback_name_base + "/" + name)
+            if extra_fallback_class is not None:
+                assert name not in ["build-directory"]
+                # Next add both cheribsd-<suffix> and cheribsd (in that order) so that cheribsd-mfs-root-kernel/...
+                # overrides the cheribsd defaults.
+                assert issubclass(extra_fallback_class, SimpleProject), extra_fallback_class
+                if cls._xtarget is not None:
+                    suffixed_target_class = extra_fallback_class.get_class_for_target(cls._xtarget)
+                    fallback_config_names.append(suffixed_target_class.target + "/" + name)
+                fallback_config_names.append(extra_fallback_class.target + "/" + name)
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
-        alias_target_names = [prefix + "/" + name for prefix in cls.__dict__.get("_config_file_aliases", tuple())]
-        return cls._config_loader.add_option(config_option_key + "/" + name, shortname, default=default, type=kind,
+        legacy_alias_target_names = [tgt + "/" + name for tgt in cls.__dict__.get("_config_file_aliases", tuple())]
+        return cls._config_loader.add_option(fullname, shortname, default=default, type=kind,
                                              _owning_class=cls, group=cls._commandline_option_group,
                                              help_hidden=help_hidden, _fallback_names=fallback_config_names,
-                                             _alias_names=alias_target_names, **kwargs)
+                                             _legacy_alias_names=legacy_alias_target_names, **kwargs)
 
     @classmethod
     def add_bool_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None,
                         default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
         # noinspection PyTypeChecker
-        return cls.add_config_option(name, default=default, kind=bool, shortname=shortname, action="store_true",
+        return cls.add_config_option(name, default=default, kind=bool, shortname=shortname,
                                      only_add_for_targets=only_add_for_targets, **kwargs)
 
     @classmethod
@@ -736,6 +764,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def has_required_system_tool(self, executable: str):
         return executable in self.__required_system_tools
+
+    def _validate_cheribuild_target_for_system_deps(self, cheribuild_target: "typing.Optional[str]"):
+        if not cheribuild_target:
+            return
+        # Check that the target actually exists
+        tgt = target_manager.get_target(cheribuild_target, None, config=self.config, caller=self)
+        # And check that it's a native target:
+        if not tgt.project_class.get_crosscompile_target(self.config).is_native():
+            self.fatal("add_required_*() should use a native cheribuild target and not ", cheribuild_target,
+                       "- found while processing", self.target, fatal_when_pretending=True)
 
     def add_required_system_tool(self, executable: str, install_instructions: str = None, default: str = None,
                                  freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
@@ -845,7 +883,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     #     self._line_not_important_stdout_filter(line)
 
     def run_with_logfile(self, args: "typing.Sequence[str]", logfile_name: str, *, stdout_filter=None, cwd: Path = None,
-                         env: dict = None, append_to_logfile=False) -> None:
+                         env: dict = None, append_to_logfile=False, stdin=subprocess.DEVNULL) -> None:
         """
         Runs make and logs the output
         config.quiet doesn't display anything, normal only status updates and config.verbose everything
@@ -855,6 +893,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         :param cwd the directory to run make in (defaults to self.build_dir)
         :param stdout_filter a filter to use for standard output (a function that takes a single bytes argument)
         :param env the environment to pass to make
+        :param stdin defaults to /dev/null, set to None to pass the current stdin.
         """
         print_command(args, cwd=cwd, env=env)
         # make sure that env is either None or a os.environ with the updated entries entries
@@ -899,11 +938,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             logfile.write(self.commandline_to_str(args).encode("utf-8") + b"\n\n")
             if self.config.quiet:
                 # a lot more efficient than filtering every line
-                check_call_handle_noexec(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=new_env)
+                check_call_handle_noexec(args, cwd=str(cwd), stdout=logfile, stderr=logfile, stdin=stdin, env=new_env)
                 return
             with keep_terminal_sane(command=args):
                 make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                           env=new_env)
+                                           stdin=stdin, env=new_env)
                 self.__run_process_with_filtered_output(make, logfile, stdout_filter, args)
 
     def __run_process_with_filtered_output(self, proc: subprocess.Popen, logfile: "typing.Optional[typing.IO]",
@@ -1002,7 +1041,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             install_instructions = install_instructions()
         if cheribuild_target:
             self.warning("Dependency for", self.target, "missing:", *args, fixit_hint=install_instructions)
-            if self.query_yes_no("Would you like to install the dependency using cheribuild?", force_result=True):
+            if self.query_yes_no("Would you like to install the dependency (" + cheribuild_target +
+                                 ") using cheribuild?", force_result=True):
                 dep_target = target_manager.get_target(cheribuild_target, None, config=self.config, caller=self)
                 dep_target.check_system_deps(self.config)
                 dep_target.execute(self.config)
@@ -1016,12 +1056,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         """
         for (tool, instructions) in self.__required_system_tools.items():
             assert isinstance(instructions, InstallInstructions)
+            self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
             if not shutil.which(str(tool)):
                 self.dependency_error("Required program", tool, "is missing!",
                                       install_instructions=instructions.fixit_hint(),
                                       cheribuild_target=instructions.cheribuild_target)
         for (package, instructions) in self.__required_pkg_config.items():
             assert isinstance(instructions, InstallInstructions)
+            self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
             if not shutil.which("pkg-config"):
                 # error should already have printed above
                 break
@@ -1034,11 +1076,21 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                       cheribuild_target=instructions.cheribuild_target)
         for (header, instructions) in self.__required_system_headers.items():
             assert isinstance(instructions, InstallInstructions)
-            if not Path("/usr/include", header).exists() and not Path("/usr/local/include", header).exists():
+            self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
+            include_dirs = self.get_compiler_info(self.CC).get_include_dirs(self.essential_compiler_and_linker_flags)
+            if not any(Path(d, header).exists() for d in include_dirs):
                 self.dependency_error("Required C header", header, "is missing!",
                                       install_instructions=instructions.fixit_hint(),
                                       cheribuild_target=instructions.cheribuild_target)
         self._system_deps_checked = True
+
+    def get_homebrew_prefix(self, package: "typing.Optional[str]" = None) -> Path:
+        prefix = _cached_get_homebrew_prefix(package, self.config)
+        if not prefix:
+            self.dependency_error("Could not find homebrew package", package,
+                                  install_instructions="Try running `brew install " + package + "`")
+            prefix = Path("/fake/homebrew/prefix/when/pretending/opt") / package
+        return prefix
 
     def process(self):
         raise NotImplementedError()
@@ -1469,11 +1521,20 @@ _PRETEND_RUN_GIT_COMMANDS = os.getenv("_TEST_SKIP_GIT_COMMANDS") is None
 
 
 class GitRepository(SourceRepository):
-    def __init__(self, url, *, old_urls: typing.List[bytes] = None, default_branch: str = None,
-                 force_branch: bool = False,
+    def __init__(self, url: str, *, old_urls: typing.List[bytes] = None, default_branch: str = None,
+                 force_branch: bool = False, temporary_url_override: str = None,
+                 url_override_reason: "typing.Any" = None,
                  per_target_branches: typing.Dict[CrossCompileTarget, TargetBranchInfo] = None):
-        self.url = url
         self.old_urls = old_urls
+        if temporary_url_override is not None:
+            self.url = temporary_url_override
+            _ = url_override_reason  # silence unused argument warning
+            if self.old_urls is None:
+                self.old_urls = [url.encode("utf-8")]
+            else:
+                self.old_urls.append(url.encode("utf-8"))
+        else:
+            self.url = url
         self._default_branch = default_branch
         self.force_branch = force_branch
         if per_target_branches is None:
@@ -1657,7 +1718,7 @@ class GitRepository(SourceRepository):
             for old_url in self.old_urls:
                 assert isinstance(old_url, bytes)
                 if remote_url == old_url:
-                    current_project.warning(current_project.project_name, "still points to old repository", remote_url)
+                    current_project.warning(current_project.target, "still points to old repository", remote_url)
                     if current_project.query_yes_no("Update to correct URL?"):
                         run_command("git", "remote", "set-url", remote_name, self.url,
                                     run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, cwd=src_dir)
@@ -1794,8 +1855,10 @@ class DefaultInstallDir(Enum):
     # libraries that will be used by other programs, and the latter should be used for standalone programs (such as
     # PostgreSQL or WebKit).
     # Note: for ROOTFS_OPTBASE, the path_in_rootfs attribute can be used to override the default of /opt/...
+    # This also works for ROOTFS_LOCALBASE
     ROOTFS_OPTBASE = "The rootfs for this target (<rootfs>/opt/<arch>/<program> by default)"
     ROOTFS_LOCALBASE = "The sysroot for this target (<rootfs>/usr/local/<arch> by default)"
+    KDE_PREFIX = "The sysroot for this target (<rootfs>/opt/<arch>/kde by default)"
     COMPILER_RESOURCE_DIR = "The compiler resource directory"
     CHERI_SDK = "The CHERI SDK directory"
     MORELLO_SDK = "The Morello SDK directory"
@@ -1824,6 +1887,12 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         return Path(
             rootfs_target.install_dir / "opt" / project.target_info.install_prefix_dirname /
             project._rootfs_install_dir_name)
+    elif install_dir == DefaultInstallDir.KDE_PREFIX:
+        if project.compiling_for_host():
+            return config.output_root / "kde"
+        else:
+            rootfs_target = project.target_info.get_rootfs_project()
+            return Path(rootfs_target.install_dir, "opt", project.target_info.install_prefix_dirname, "kde")
     elif install_dir == DefaultInstallDir.COMPILER_RESOURCE_DIR:
         compiler_for_resource_dir = project.CC
         # For the NATIVE variant we want to install to CHERI clang:
@@ -1831,6 +1900,8 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
             compiler_for_resource_dir = config.cheri_sdk_bindir / "clang"
         return get_compiler_info(compiler_for_resource_dir, config=config).get_resource_dir()
     elif install_dir == DefaultInstallDir.ROOTFS_LOCALBASE:
+        assert getattr(project, "path_in_rootfs", None) is None, \
+            "path_in_rootfs only applies to ROOTFS_OPTBASE: " + str(project)
         assert not project.compiling_for_host(), "ROOTFS_LOCALBASE is only a valid install dir for cross-builds, " \
                                                  "use BOOTSTRAP_TOOLS/CUSTOM_INSTALL_DIR/IN_BUILD_DIRECTORY for native"
         return project.sdk_sysroot
@@ -1848,20 +1919,22 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         return config.other_tools_dir
     elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
         return _INVALID_INSTALL_DIR
-    project.fatal("Unknown install dir for", project.project_name)
+    project.fatal("Unknown install dir for", project.target)
 
 
 def _default_install_dir_str(project: "Project") -> str:
     install_dir = project.get_default_install_dir_kind()
     return str(install_dir.value)
-    # fatal_error("Unknown install dir for", project.project_name)
+    # fatal_error("Unknown install dir for", project.target)
 
 
-def _default_source_dir(config: CheriConfig, project: "Project"):
+def _default_source_dir(config: CheriConfig, project: "Project") -> Path:
     if project.repository is not None and isinstance(project.repository, ReuseOtherProjectRepository):
         # For projects that reuse other source directories, we have to return the default for the source project.
         return project.repository.get_real_source_dir(project, None)
-    return Path(config.source_root / project.project_name.lower())
+    if project.default_directory_basename:
+        return Path(config.source_root / project.default_directory_basename)
+    return Path(config.source_root / project.target)
 
 
 class Project(SimpleProject):
@@ -1876,16 +1949,32 @@ class Project(SimpleProject):
     compile_db_requires_bear = True
     do_not_add_to_targets = True
     set_pkg_config_path = True  # set the PKG_CONFIG_* environment variables when building
-    default_source_dir = ComputedDefaultValue(function=_default_source_dir,
-                                              as_string=lambda cls: "$SOURCE_ROOT/" + cls.project_name.lower())
+    can_run_parallel_install = False  # Most projects don't work well with parallel installation
+    default_source_dir = ComputedDefaultValue(
+        function=_default_source_dir, as_string=lambda cls: "$SOURCE_ROOT/" + cls.default_directory_basename)
+    needs_native_build_for_crosscompile = False  # Some projects (e.g. python) need a native build for build tools, etc.
+    # Some projects build docbook xml files and in order to do so we need to set certain env vars to skip the
+    # DTD validation with newer XML processing tools.
+    builds_docbook_xml = False
+    # Some projects have build flags to enable/disable test building. For some projects skipping them can result in a
+    # significant build speedup as they should not be needed for most users.
+    has_optional_tests = False
+    default_build_tests = True  # whether to build tests by default
+    show_optional_tests_in_help = True  # whether to show the --foo/build-tests in --help
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
+        if cls.needs_native_build_for_crosscompile and not cls.get_crosscompile_target(config).is_native():
+            return [cls.get_class_for_target(BasicCompilationTargets.NATIVE).target]
         return []
 
     @classmethod
     def project_build_dir_help(cls):
-        result = "$BUILD_ROOT/" + cls.project_name.lower()
+        result = "$BUILD_ROOT/"
+        if isinstance(cls.default_directory_basename, ComputedDefaultValue):
+            result += cls.default_directory_basename.as_string
+        else:
+            result += cls.default_directory_basename
         if cls._xtarget is not BasicCompilationTargets.NATIVE or cls.add_build_dir_suffix_for_native:
             result += "-$TARGET"
         result += "-build"
@@ -1922,7 +2011,8 @@ class Project(SimpleProject):
         return cls.get_instance(caller, config, cross_target).real_install_root_dir
 
     def build_dir_for_target(self, target: CrossCompileTarget):
-        return self.config.build_root / (self.project_name.lower() + self.build_configuration_suffix(target) + "-build")
+        return self.config.build_root / (
+                    self.default_directory_basename + self.build_configuration_suffix(target) + "-build")
 
     default_use_asan = False
 
@@ -1937,9 +2027,6 @@ class Project(SimpleProject):
     @classmethod
     def get_default_install_dir_kind(cls) -> DefaultInstallDir:
         if cls.default_install_dir is not None:
-            assert cls.native_install_dir is None, "default_install_dir and native_install_dir are mutually " \
-                                                   "exclusive"
-            assert cls.cross_install_dir is None, "default_install_dir and cross_install_dir are mutually exclusive"
             install_dir = cls.default_install_dir
         else:
             if cls._xtarget is not None and cls._xtarget.is_native():
@@ -1965,38 +2052,37 @@ class Project(SimpleProject):
     _default_install_dir_fn = ComputedDefaultValue(function=_default_install_dir_handler,
                                                    as_string=_default_install_dir_str)
     """ The default installation directory """
-
     @property
     def _rootfs_install_dir_name(self):
-        return self.project_name.lower()
+        return self.default_directory_basename
 
     # useful for cross compile projects that use a prefix and DESTDIR
     _install_prefix = None
     destdir = None
 
-    __can_use_lld_map = dict()  # type: typing.Dict[Path, bool]
+    __can_use_lld_map = dict()  # type: typing.Dict[str, bool]
 
-    @classmethod
-    def can_use_lld(cls, compiler: Path):
-        if OSInfo.IS_MAC:
-            return False  # lld does not work on MacOS
-        if compiler not in cls.__can_use_lld_map:
+    def can_use_lld(self, compiler: Path):
+        command = [str(compiler)] + self.essential_compiler_and_linker_flags + ["-fuse-ld=lld", "-xc", "-o",
+                                                                                "/dev/null", "-"]
+        command_str = commandline_to_str(command)
+        if command_str not in Project.__can_use_lld_map:
             try:
-                run_command([compiler, "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"], run_in_pretend_mode=True,
+                run_command(command, run_in_pretend_mode=True,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raise_in_pretend_mode=True,
                             input="int main() { return 0; }\n", print_verbose_only=True)
                 status_update(compiler, "supports -fuse-ld=lld, linking should be much faster!")
-                cls.__can_use_lld_map[compiler] = True
+                Project.__can_use_lld_map[command_str] = True
             except subprocess.CalledProcessError:
                 status_update(compiler, "does not support -fuse-ld=lld, using slower bfd instead")
-                cls.__can_use_lld_map[compiler] = False
-        return cls.__can_use_lld_map[compiler]
+                Project.__can_use_lld_map[command_str] = False
+        return Project.__can_use_lld_map[command_str]
 
-    @classmethod
-    def can_use_lto(cls, ccinfo: CompilerInfo):
+    def can_use_lto(self, ccinfo: CompilerInfo):
         if ccinfo.compiler == "apple-clang":
             return True
-        elif ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0) and cls.can_use_lld(ccinfo.path):
+        elif ccinfo.compiler == "clang" and (
+                not self.compiling_for_host() or (ccinfo.version >= (4, 0, 0) and self.can_use_lld(ccinfo.path))):
             return True
         else:
             return False
@@ -2016,10 +2102,17 @@ class Project(SimpleProject):
     @classmethod
     def setup_config_options(cls, install_directory_help="", **kwargs):
         super().setup_config_options(**kwargs)
-        cls._initial_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.default_source_dir,
-                                                      help="Override default source directory for " + cls.project_name)
-        cls.build_dir = cls.add_path_option("build-directory", metavar="DIR", default=cls.default_build_dir,
-                                            help="Override default source directory for " + cls.project_name)
+        if cls.source_dir is None:
+            cls._initial_source_dir = cls.add_path_option("source-directory", metavar="DIR",
+                                                          default=cls.default_source_dir,
+                                                          help="Override default source directory for " + cls.target)
+        # --<target>-<suffix>/build-directory is not inherited from the unsuffixed target (unless there is only one
+        # supported target).
+        default_xtarget = cls.default_architecture
+        if cls._xtarget is not None or default_xtarget is not None:
+            cls.build_dir = cls.add_path_option("build-directory", metavar="DIR", default=cls.default_build_dir,
+                                                help="Override default source directory for " + cls.target,
+                                                use_default_fallback_config_names=cls._xtarget == default_xtarget)
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
                 function=lambda config, proj: False if proj.get_crosscompile_target(
@@ -2050,7 +2143,7 @@ class Project(SimpleProject):
                                               help="Override --skip-update/--no-skip-update for this target only ")
 
         if not install_directory_help:
-            install_directory_help = "Override default install directory for " + cls.project_name
+            install_directory_help = "Override default install directory for " + cls.target
         cls._install_dir = cls.add_path_option("install-directory", metavar="DIR", help=install_directory_help,
                                                default=cls._default_install_dir_fn)
         if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository) and \
@@ -2083,6 +2176,11 @@ class Project(SimpleProject):
                                                     " does not pass any additional flags to the configure command).",
                                                default=cls.default_build_type, kind=BuildType,
                                                enum_choice_strings=supported_build_type_strings)  # type: BuildType
+
+        if cls.has_optional_tests and "build_tests" not in cls.__dict__:
+            cls.build_tests = cls.add_bool_option("build-tests", help="Build the tests",
+                                                  default=cls.default_build_tests,
+                                                  show_help=cls.show_optional_tests_in_help)
 
     def linkage(self):
         if self.target_info.must_link_statically:
@@ -2132,6 +2230,9 @@ class Project(SimpleProject):
         if cbt == BuildType.DEFAULT:
             return []
         elif cbt == BuildType.DEBUG:
+            # TODO: once clang's -Og is useful: if self.get_compiler_info(self.CC).supports_Og_flag:
+            if self.get_compiler_info(self.CC).compiler == "gcc":
+                return ["-Og"]
             return ["-O0"]
         elif cbt in (BuildType.RELEASE, BuildType.RELWITHDEBINFO):
             return ["-O2"]
@@ -2147,11 +2248,6 @@ class Project(SimpleProject):
             return self.common_warning_flags + self.host_warning_flags
         else:
             return self.common_warning_flags + self.cross_warning_flags
-
-    @property
-    def essential_compiler_and_linker_flags(self):
-        # This property exists so that gdb can override the target flags to build the -purecap targets as hybrid.
-        return self.target_info.get_essential_compiler_and_linker_flags()
 
     @property
     def default_compiler_flags(self):
@@ -2209,12 +2305,13 @@ class Project(SimpleProject):
         #     emulation = "elf64btsmip_fbsd" if not self.target_info.is_baremetal() else "elf64btsmip"
         # result.append("-Wl,-m" + emulation)
         result += self.essential_compiler_and_linker_flags
-        if self.get_compiler_info(self.CC).is_clang:
-            result.append("-fuse-ld=" + str(self.target_info.linker))
-
+        ccinfo = self.get_compiler_info(self.CC)
+        result.extend(ccinfo.linker_override_flags(self.target_info.linker))
         if self.should_include_debug_info and ".bfd" not in self.target_info.linker.name:
             # Add a gdb_index to massively speed up running GDB on CHERIBSD:
             result.append("-Wl,--gdb-index")
+            # Also reduce the size of debug info to make copying files over faster
+            result.append("-Wl,--compress-debug-sections=zlib")
         if self.target_info.is_cheribsd() and self.config.with_libstatcounters:
             # We need to include the constructor even if there is no reference to libstatcounters:
             # TODO: always include the .a file?
@@ -2228,11 +2325,19 @@ class Project(SimpleProject):
         if hasattr(self, "_repository_url") and isinstance(self.repository, GitRepository):
             # TODO: remove this and use a custom argparse.Action subclass
             self.repository.url = self._repository_url
-        self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
+
+        if isinstance(self.default_directory_basename, ComputedDefaultValue):
+            self.default_directory_basename = self.default_directory_basename(config, self)
+
+        if self.source_dir is None:
+            self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
+        else:
+            if isinstance(self.source_dir, ComputedDefaultValue):
+                self.source_dir = self.source_dir(config, self)
+            self._initial_source_dir = self.source_dir
 
         if self.build_in_source_dir:
-            self.verbose_print("Cannot build", self.project_name, "in a separate build dir, will build in",
-                               self.source_dir)
+            self.verbose_print("Cannot build", self.target, "in a separate build dir, will build in", self.source_dir)
             self.build_dir = self.source_dir
 
         self.configure_command = None
@@ -2250,7 +2355,7 @@ class Project(SimpleProject):
                 self.add_required_system_tool("compiledb", install_instructions="Run `pip install --user compiledb``")
                 self._compiledb_tool = "compiledb"
             else:
-                self.add_required_system_tool("bear", cheribuild_target="bear")
+                self.add_required_system_tool("bear", homebrew="bear", cheribuild_target="bear")
                 self._compiledb_tool = "bear"
         self._force_clean = False
         self._prevent_assign = True
@@ -2269,7 +2374,7 @@ class Project(SimpleProject):
                 else:
                     self._install_prefix = Path("/", self.target_info.sysroot_install_prefix_relative)
                     self.destdir = self._install_dir
-            elif install_dir_kind == DefaultInstallDir.ROOTFS_OPTBASE:
+            elif install_dir_kind in (DefaultInstallDir.ROOTFS_OPTBASE, DefaultInstallDir.KDE_PREFIX):
                 self.rootfs_path = self.target_info.get_rootfs_project().install_dir
                 relative_to_rootfs = os.path.relpath(str(self._install_dir), str(self.rootfs_path))
                 if relative_to_rootfs.startswith(os.path.pardir):
@@ -2311,6 +2416,10 @@ class Project(SimpleProject):
         if self.should_include_debug_info:
             if not self.target_info.is_macos():
                 self.COMMON_FLAGS.append("-ggdb")
+                if not self.compiling_for_mips(include_purecap=True):
+                    # compressed debug info is broken on big endian until
+                    # we depend on a lld version with the fix.
+                    self.COMMON_FLAGS.append("-gz")
         self.CFLAGS = []  # type: typing.List[str]
         self.CXXFLAGS = []  # type: typing.List[str]
         self.ASMFLAGS = []  # type: typing.List[str]
@@ -2324,6 +2433,14 @@ class Project(SimpleProject):
         self._lto_linker_flags = []  # type: typing.List[str]
         self._lto_compiler_flags = []  # type: typing.List[str]
 
+    @property
+    def pkgconfig_dirs(self) -> "list[str]":
+        return self.target_info.pkgconfig_dirs
+
+    def installed_pkgconfig_dirs(self) -> "list[str]":
+        """:return: a list of directories that might contain this projects installed .pc files"""
+        return self.target_info.pkgconfig_candidates(self.install_dir)
+
     def setup(self):
         super().setup()
         if self.set_pkg_config_path:
@@ -2332,7 +2449,7 @@ class Project(SimpleProject):
                 # We have to add the boostrap tools pkgconfig directory to PKG_CONFIG_PATH so that it is searched in
                 # addition to the default paths. Note: We do not set PKG_CONFIG_LIBDIR since that overrides the default.
                 pkg_config_args = dict(
-                    PKG_CONFIG_PATH=":".join(self.target_info.pkgconfig_dirs + [os.getenv("PKG_CONFIG_PATH", "")]))
+                    PKG_CONFIG_PATH=":".join(self.pkgconfig_dirs + [os.getenv("PKG_CONFIG_PATH", "")]))
             elif self.needs_sysroot:
                 # We need to set the PKG_CONFIG variables both when configuring and when running make since some
                 # projects (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set
@@ -2340,7 +2457,7 @@ class Project(SimpleProject):
                 # PKG_CONFIG_PATH: list of directories to be searched for .pc files before the default locations.
                 # PKG_CONFIG_LIBDIR: list of directories to replace the default pkg-config search path.
                 # Since we only want libraries from our sysroots we set both.
-                pkgconfig_dirs = ":".join(self.target_info.pkgconfig_dirs)
+                pkgconfig_dirs = ":".join(self.pkgconfig_dirs)
                 pkg_config_args = dict(
                     PKG_CONFIG_PATH=pkgconfig_dirs,
                     PKG_CONFIG_LIBDIR=pkgconfig_dirs,
@@ -2367,9 +2484,16 @@ class Project(SimpleProject):
         # We might be setting too many flags, ignore this (for now)
         if not self.compiling_for_host() and self.CC.exists() and self.get_compiler_info(self.CC).is_clang:
             self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
+        if self.builds_docbook_xml and OSInfo.IS_MAC:
+            catalog = self.get_homebrew_prefix() / "etc/xml/catalog"
+            if not catalog.exists():
+                self.dependency_error(OSInfo.install_instructions("docbook-xsl", False, homebrew="docbook-xsl"))
+            # Without XML_CATALOG_FILES we get the following error: "I/O error : Attempt to load network entity"
+            self.configure_environment["XML_CATALOG_FILES"] = str(catalog)
+            self.make_args.set_env(XML_CATALOG_FILES=catalog)
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
-        self.fatal("Building", self.project_name, "with LTO is not supported (yet).")
+        self.fatal("Building", self.target, "with LTO is not supported (yet).")
         # raise NotImplementedError()
 
     def add_lto_build_options(self, ccinfo: CompilerInfo) -> bool:
@@ -2387,7 +2511,7 @@ class Project(SimpleProject):
             llvm_nm = ccinfo.get_matching_binutil("llvm-nm")
             lld = ccinfo.get_matching_binutil("ld.lld")
             # Find lld with the correct version (it must match the version of clang otherwise it breaks!)
-            self._lto_linker_flags.append("-fuse-ld=" + shlex.quote(str(lld)))
+            self._lto_linker_flags.extend(ccinfo.linker_override_flags(lld, linker_type="lld"))
             if not llvm_ar or not llvm_ranlib or not llvm_nm:
                 self.warning("Could not find llvm-{ar,ranlib,nm}" + version_suffix,
                              "-> disabling LTO (resulting binary will be a bit slower)")
@@ -2445,13 +2569,17 @@ class Project(SimpleProject):
             assert self._compiledb_tool is not None
             compdb_extra_args = []
             if self._compiledb_tool == "bear":
-                compdb_extra_args = ["--cdb", self.build_dir / compilation_db_name, "--append", make_command]
+                compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "--", make_command]
             elif self._compiledb_tool == "compiledb":
-                compdb_extra_args = ["--output", self.build_dir / compilation_db_name, make_command]
+                compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "make", "--cmd", make_command]
             else:
                 self.fatal("Invalid tool")
-            options.set_command(shutil.which(self._compiledb_tool), can_pass_j_flag=options.can_pass_jflag,
-                                early_args=compdb_extra_args)
+            tool_path = shutil.which(self._compiledb_tool)
+            if not tool_path:
+                self.dependency_error(
+                    "Cannot find '" + self._compiledb_tool + "' which is needed to create a compilation DB")
+                tool_path = self._compiledb_tool
+            options.set_command(tool_path, can_pass_j_flag=options.can_pass_jflag, early_args=compdb_extra_args)
             # Ensure that recursive make invocations reuse the compilation DB tool
             options.set(MAKE=commandline_to_str([options.command] + compdb_extra_args))
             make_command = options.command
@@ -2510,7 +2638,7 @@ class Project(SimpleProject):
 
     def update(self):
         if not self.repository and not self.skip_update:
-            self.fatal("Cannot update", self.project_name, "as it is missing a repository source",
+            self.fatal("Cannot update", self.target, "as it is missing a repository source",
                        fatal_when_pretending=True)
         self.repository.update(self, src_dir=self.source_dir, base_project_source_dir=self._initial_source_dir,
                                revision=self.git_revision, skip_submodules=self.skip_git_submodules)
@@ -2526,8 +2654,7 @@ class Project(SimpleProject):
         if git_dir is None:
             git_dir = self.source_dir
         # just use git clean for cleanup
-        self.warning(self.project_name, "does not support out-of-source builds, using git clean to remove "
-                                        "build artifacts.")
+        self.warning(self.target, "does not support out-of-source builds, using git clean to remove build artifacts.")
         git_clean_cmd = ["git", "clean", "-dfx", "--exclude=.*"] + self._extra_git_clean_excludes
         # Try to keep project files for IDEs and other dotfiles:
         self.run_cmd(git_clean_cmd, cwd=git_dir)
@@ -2629,8 +2756,10 @@ class Project(SimpleProject):
         return self._install_dir
 
     def run_make_install(self, *, options: MakeOptions = None, _stdout_filter=_default_stdout_filter, cwd=None,
-                         parallel=False, target: "typing.Union[str, typing.List[str]]" = "install",
+                         parallel: bool = None, target: "typing.Union[str, typing.List[str]]" = "install",
                          make_install_env=None, **kwargs):
+        if parallel is None:
+            parallel = self.can_run_parallel_install
         if options is None:
             options = self.make_args.copy()
         else:
@@ -2660,7 +2789,7 @@ add_custom_target(cheribuild-verbose-j1 VERBATIM USES_TERMINAL COMMAND {command}
 
 add_custom_target(cheribuild-with-install VERBATIM USES_TERMINAL COMMAND {command} --skip-update {target})
 add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {target})
-""".format(command="${CLEAR_MAKEENV} " + sys.argv[0], project=self.project_name, target=self.target)
+""".format(command="${CLEAR_MAKEENV} " + sys.argv[0], project=self.target, target=self.target)
         target_file = self.source_dir / "CMakeLists.txt"
         create = True
         if target_file.exists():
@@ -2769,7 +2898,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.generate_cmakelists:
             self._do_generate_cmakelists()
         if self.config.verbose:
-            print(self.project_name, "directories: source=%s, build=%s, install=%s" %
+            print(self.target, "directories: source=%s, build=%s, install=%s" %
                   (self.source_dir, self.build_dir, self.install_dir))
 
         if self.use_asan and self.compiling_for_mips(include_purecap=False):
@@ -2881,10 +3010,10 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             # TODO: remove this code after a few weeks
             old_suffixes = []
             if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-                if self.project_name != "cheribsd":  # cheribsd used different build dirs
+                if self.default_directory_basename != "cheribsd":  # cheribsd used different build dirs
                     old_suffixes = ("128-build", "-128-build", "256-build", "-256-build")
             elif self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.MIPS64]):
-                if self.project_name != "cheribsd":  # cheribsd used different build dirs
+                if self.default_directory_basename != "cheribsd":  # cheribsd used different build dirs
                     old_suffixes = ("-mips-hybrid128-build", "-mips-hybrid256-build")
             elif self.crosscompile_target.is_mips(include_purecap=False):
                 old_suffixes = ["-mips-build", "-mips-nocheri-build"]
@@ -2933,6 +3062,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 # Shared between meson and CMake
 class _CMakeAndMesonSharedLogic(Project):
     do_not_add_to_targets = True
+    tests_need_full_disk_image = False
     _minimum_cmake_or_meson_version = None  # type: Tuple[int, int, int]
     _configure_tool_name = None  # type: str
     _configure_tool_cheribuild_target = None
@@ -2985,11 +3115,17 @@ class _CMakeAndMesonSharedLogic(Project):
         elif isinstance(value, list):
             strval = self._toolchain_file_list_to_str(value)
         else:
+            if not isinstance(value, (str, Path, int)):
+                self.fatal(f"Unexpected value type {type(value)} for {key}: {value}", fatal_when_pretending=True)
             strval = str(value)
         result = template.replace("@" + key + "@", strval)
         if required and result == template:
             raise ValueError(key + " not used in toolchain file")
         return result
+
+    @property
+    def cmake_prefix_paths(self):
+        return self.target_info.cmake_prefix_paths
 
     def _replace_values_in_toolchain_file(self, template: str, file: Path, **kwargs):
         result = template
@@ -3037,8 +3173,8 @@ class _CMakeAndMesonSharedLogic(Project):
             TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
             TOOLCHAIN_SYSTEM_NAME=system_name,
             TOOLCHAIN_SYSTEM_VERSION=self.target_info.toolchain_system_version or "",
-            TOOLCHAIN_CMAKE_PREFIX_PATH=self.target_info.cmake_prefix_paths,
-            TOOLCHAIN_PKGCONFIG_DIRS=_CMakeAndMesonSharedLogic.EnvVarPathList(self.target_info.pkgconfig_dirs),
+            TOOLCHAIN_CMAKE_PREFIX_PATH=self.cmake_prefix_paths,
+            TOOLCHAIN_PKGCONFIG_DIRS=_CMakeAndMesonSharedLogic.EnvVarPathList(self.pkgconfig_dirs),
             COMMENT_IF_NATIVE="#" if self.compiling_for_host() else "",
             **kwargs)
 
@@ -3110,10 +3246,12 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     default_build_type = BuildType.RELWITHDEBINFO
     # Some projects (e.g. LLVM) don't store the CMakeLists.txt in the project root directory.
     root_cmakelists_subdirectory = None  # type: Path
+    ctest_script_extra_args = tuple()  # type: typing.Iterable[str]
     # 3.13.4 is the minimum version for LLVM and that also allows us to use "cmake --build -j <N>" unconditionally.
     _minimum_cmake_or_meson_version = (3, 13, 4)
 
     def _toolchain_file_list_to_str(self, value: list) -> str:
+        assert isinstance(value, list), f"Expected a list and not {type(value)}: {value}"
         return ";".join(map(str, value))
 
     def _toolchain_file_command_args_to_str(self, value: _CMakeAndMesonSharedLogic.CommandLineArgs) -> str:
@@ -3184,7 +3322,11 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         if self.config.create_compilation_db:
             # TODO: always generate it?
             self.configure_args.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
-        if not self.compiling_for_host():
+        if self.compiling_for_host():
+            # When building natively, pass arguments on the command line instead of using the toolchain file.
+            # This makes it a lot easier to reproduce the builds outside of cheribuild.
+            self.add_cmake_options(CMAKE_PREFIX_PATH=self._toolchain_file_list_to_str(self.cmake_prefix_paths))
+        else:
             self._toolchain_template = include_local_file("files/CrossToolchain.cmake.in")
             self._toolchain_file = self.build_dir / "CrossToolchain.cmake"
             self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self._toolchain_file)
@@ -3206,7 +3348,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         self._show_line_stdout_filter(line)
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
-        # LD is never invoked directly, so the -fuse-ld= flag is sufficient
+        # LD is never invoked directly, so the -fuse-ld=/--ld-path flag is sufficient
         self.add_cmake_options(CMAKE_AR=ar, CMAKE_RANLIB=ranlib)
 
     def needs_configure(self) -> bool:
@@ -3223,16 +3365,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         # This means we may not need the toolchain file at all
         # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
         # TODO: avoid the toolchain file and set all flags on the command line
-        if self.crosscompile_target.is_cheri_purecap() and self.target_info.is_cheribsd():
-            add_lib_suffix = """
-# cheri libraries are found in /usr/libcheri:
-set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
-# set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
-"""
-        else:
-            add_lib_suffix = "# no lib suffix needed for non-purecap"
-        self._prepare_toolchain_file_common(file, ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
-                                            TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
+        self._prepare_toolchain_file_common(file, TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
                                             TOOLCHAIN_FILE_PATH=file.absolute())
 
     def configure(self, **kwargs):
@@ -3278,10 +3411,15 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
                 CMAKE_SHARED_LIBRARY_SUFFIX=".a",
                 CMAKE_FIND_LIBRARY_SUFFIXES=".a",
                 CMAKE_EXTRA_SHARED_LIBRARY_SUFFIXES=".a")
+        else:
+            # Use $ORIGIN in the build RPATH (this should make it easier to run tests without having the absolute
+            # build directory mounted).
+            self.add_cmake_options(CMAKE_BUILD_RPATH_USE_ORIGIN=True)
         if not self.compiling_for_host() and self.make_args.subkind == MakeCommandKind.Ninja:
             # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
-            # TODO: remove once it has been fixed
-            self.add_cmake_options(CMAKE_BUILD_WITH_INSTALL_RPATH=True)
+            # Fixed in https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 (3.21.20210625)
+            self.add_cmake_options(
+                CMAKE_BUILD_WITH_INSTALL_RPATH=self._get_configure_tool_version() < (3, 21, 20210625))
         # TODO: BUILD_SHARED_LIBS=OFF?
 
         # Add the options from the config file:
@@ -3299,6 +3437,38 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
         if _stdout_filter is _default_stdout_filter:
             _stdout_filter = self._cmake_install_stdout_filter
         super().install(_stdout_filter=_stdout_filter)
+
+    def run_tests(self):
+        if (self.build_dir / "CTestTestfile.cmake").exists():
+            # We can run tests using CTest
+            if self.compiling_for_host():
+                self.run_cmd("ctest", "-V", "--output-on-failure", cwd=self.build_dir)
+            else:
+                from .cmake import BuildCrossCompiledCMake
+                try:
+                    cmake_target = BuildCrossCompiledCMake.get_instance(self)
+                    if not (cmake_target.install_dir / "bin/ctest").is_file():
+                        self.dependency_error("cannot find cross-compiled CTest binary to run tests.",
+                                              cheribuild_target=cmake_target.target)
+                    # --output-junit needs version 3.21
+                    min_version = "3.21"
+                    if not list(cmake_target.install_dir.glob("share/*/Help/release/" + min_version + ".rst")):
+                        self.dependency_error("cannot find release notes for CMake", min_version,
+                                              "- installed CMake version is too old",
+                                              cheribuild_target=cmake_target.target)
+                except LookupError:
+                    self.warning("Do not know how to cross-compile CTest for", self.target_info, "-> cannot run tests")
+                    return
+                args = ["--cmake-install-dir", cmake_target.install_dir]
+                args.extend(self.ctest_script_extra_args)
+                self.target_info.run_cheribsd_test_script("run_ctest_tests.py", *args, mount_builddir=True,
+                                                          mount_sysroot=True, mount_sourcedir=True,
+                                                          use_full_disk_image=self.tests_need_full_disk_image)
+        else:
+            if self.has_optional_tests:
+                self.fatal("Can't run tests for projects that were built with tests disabled. ",
+                           "Please re-run build the target with --", self.get_config_option_name("build_tests"), sep="")
+            self.warning("Do not know how to run tests for", self.target)
 
     @staticmethod
     def find_package(name: str) -> bool:
@@ -3329,6 +3499,12 @@ class AutotoolsProject(Project):
     def __init__(self, config, configure_script="configure"):
         super().__init__(config)
         self.configure_command = self.source_dir / configure_script
+
+    def setup(self):
+        super().setup()
+        if self.config.verbose:
+            # Most autotools-base projects enable verbose output by setting V=1
+            self.make_args.set_env(V=1)
 
     def configure(self, **kwargs):
         if self._configure_supports_prefix:
@@ -3400,10 +3576,12 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     do_not_add_to_targets = True
     make_kind = MakeCommandKind.Ninja
     compile_db_requires_bear = False  # generated by default
+    default_build_type = BuildType.RELWITHDEBINFO
     generate_cmakelists = False  # Can use compilation DB
     # Meson already sets PKG_CONFIG_* variables internally based on the cross toolchain
     set_pkg_config_path = False
     _configure_tool_name = "Meson"
+    meson_test_script_extra_args = tuple()  # additional arguments to pass to run_meson_tests.py
 
     def set_minimum_meson_version(self, major: int, minor: int, patch: int = 0):
         new_version = (major, minor, patch)
@@ -3465,7 +3643,13 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             self.add_meson_options(b_lto=True, b_lto_threads=self.config.make_jobs,
                                    b_lto_mode="thin" if self.get_compiler_info(self.CC).is_clang else "default")
         if self.use_asan:
-            self.add_meson_options(b_sanitize="address,undefined")
+            self.add_meson_options(b_sanitize="address,undefined", b_lundef=False)
+
+        # Unlike CMake, Meson does not set the DT_RUNPATH entry automatically:
+        # See https://github.com/mesonbuild/meson/issues/6220, https://github.com/mesonbuild/meson/issues/6541, etc.
+        rpath_dirs = self.target_info.additional_rpath_directories
+        if rpath_dirs:
+            self.COMMON_LDFLAGS.append("-Wl,-rpath," + ":".join(rpath_dirs))
 
     def needs_configure(self) -> bool:
         return not (self.build_dir / "build.ninja").exists()
@@ -3512,9 +3696,6 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             self.add_meson_options(prefix=self.install_dir)
         self.configure_args.append(str(self.source_dir))
         self.configure_args.append(str(self.build_dir))
-        if self.config.force_configure:
-            self.clean_directory(self.build_dir / "meson-info", ensure_dir_exists=False)
-            self.clean_directory(self.build_dir / "meson-private", ensure_dir_exists=False)
         super().configure(**kwargs)
         if self.config.copy_compilation_db_to_source_dir and (self.build_dir / "compile_commands.json").exists():
             self.install_file(self.build_dir / "compile_commands.json", self.source_dir / "compile_commands.json",
@@ -3523,8 +3704,13 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     def run_tests(self):
         if self.compiling_for_host():
             self.run_cmd(self.configure_command, "test", "--print-errorlogs", cwd=self.build_dir)
+        elif self.target_info.is_cheribsd():
+            self.target_info.run_cheribsd_test_script("run_meson_tests.py", *self.meson_test_script_extra_args,
+                                                      mount_builddir=True, mount_sysroot=True, mount_sourcedir=True,
+                                                      use_full_disk_image=self.tests_need_full_disk_image)
         else:
-            self.info("Don't know how to run tests for", self.target, "when cross-compiling.")
+            self.info("Don't know how to run tests for", self.target, "when cross-compiling for",
+                      self.crosscompile_target)
 
 
 # A target that is just an alias for at least one other targets but does not force building of dependencies

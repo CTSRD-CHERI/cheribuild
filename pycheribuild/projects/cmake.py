@@ -31,23 +31,24 @@
 # SUCH DAMAGE.
 #
 from .project import (AutotoolsProject, CheriConfig, CMakeProject, DefaultInstallDir, GitRepository,
-                      ReuseOtherProjectDefaultTargetRepository)
+                      MakeCommandKind, ReuseOtherProjectDefaultTargetRepository)
+from ..config.chericonfig import BuildType
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..utils import replace_one
 
 
 # Not really autotools but same sequence of commands (other than the script being call bootstrap instead of configure)
 class BuildCMake(AutotoolsProject):
-    # repository = GitRepository("https://cmake.org/cmake.git")
-    repository = GitRepository("https://github.com/Kitware/CMake",  # a lot faster than the official repo
+    repository = GitRepository("https://github.com/Kitware/CMake",  # a lot faster than "https://cmake.org/cmake.git"
                                # track the stable release branch
                                default_branch="release")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
+    make_kind = MakeCommandKind.Ninja
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, configure_script="bootstrap")
         self.configure_args.append("--parallel=" + str(self.config.make_jobs))
-        # TODO: do we need to use gmake on FreeBSD?
+        self.configure_args.append("--generator=Ninja")
 
 
 # When cross-compiling CMake, we do so using the CMake files instead of the bootstrap script
@@ -55,13 +56,37 @@ class BuildCrossCompiledCMake(CMakeProject):
     @staticmethod
     def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
         assert not xtarget.is_native()
-        return replace_one(base_target, "-crosscompiled", "") + "-" + xtarget.generic_suffix
+        if xtarget.is_cheri_purecap():
+            # TODO: commit patches to build purecap
+            # Target is not actually purecap, just using the purecap sysroot
+            result = base_target + "-" + xtarget.get_non_cheri_target().generic_suffix + "-for-purecap-rootfs"
+        else:
+            result = base_target + "-" + xtarget.generic_suffix
+        return replace_one(result, "-crosscompiled", "")
 
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCMake, do_update=True)
     target = "cmake-crosscompiled"  # Can't use cmake here due to command line option conflict
-    project_name = "cmake"
+    default_directory_basename = "cmake"
+    default_build_type = BuildType.RELEASE  # Don't include debug info by default
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS
+    # Also build cmake hybrid so that -hybrid projects can use it with --test
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
+
+    @property
+    def essential_compiler_and_linker_flags(self):
+        # XXX: Ugly hack to build the -purecap targets as non-purecap. TODO: fix purecap ctest
+        if self.crosscompile_target.is_cheri_purecap():
+            return self.target_info.get_essential_compiler_and_linker_flags(
+                xtarget=self.crosscompile_target.get_non_cheri_target())
+        return super().essential_compiler_and_linker_flags
+
+    @property
+    def cmake_prefix_paths(self):
+        return []  # only the default search dirs
+
+    @property
+    def pkgconfig_dirs(self):
+        return []  # only the default search dirs
 
     def setup(self):
         super().setup()

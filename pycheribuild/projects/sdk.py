@@ -43,7 +43,7 @@ class BuildCheriBSDSdk(TargetAliasWithDependencies):
     is_sdk_target = True
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         if cls.get_crosscompile_target(config).is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             deps = ["freestanding-morello-sdk"]
         else:
@@ -67,7 +67,6 @@ class BuildSdk(TargetAliasWithDependencies):
 
 class BuildCheriCompressedCaps(CMakeProject):
     target = "cheri-compressed-cap"
-    project_name = "cheri-compressed-cap"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-compressed-cap.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
 

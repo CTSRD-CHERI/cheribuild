@@ -40,7 +40,6 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/FreeRTOS",
                                force_branch=True, default_branch="hmka2")
     target = "freertos"
-    project_name = "freertos"
     dependencies = ["newlib", "compiler-rt-builtins"]
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot

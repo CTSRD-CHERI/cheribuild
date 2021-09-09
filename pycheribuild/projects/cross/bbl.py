@@ -28,8 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject
 from .cheribsd import ConfigPlatform
+from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompileTarget, DefaultInstallDir,
                        GitRepository, MakeCommandKind, Project)
@@ -51,7 +51,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     mem_start = "0x80000000"
 
     @classmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
         result = super().dependencies(config)
         if cls.kernel_class:
             xtarget = cls.get_crosscompile_target(config)
@@ -121,7 +121,7 @@ def _bbl_install_dir(config: CheriConfig, project: Project):
 # Build BBL without an embedded payload
 class BuildBBLNoPayload(BuildBBLBase):
     target = "bbl"
-    project_name = "bbl"
+    default_directory_basename = "bbl"
     without_payload = True
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
@@ -144,7 +144,7 @@ class BuildBBLNoPayload(BuildBBLBase):
 class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
     mem_start = "0xc0000000"
     target = "bbl-gfe"
-    project_name = "bbl"  # reuse same source dir
+    default_directory_basename = "bbl"  # reuse same source dir
     build_dir_suffix = "-gfe"  # but not the build dir
 
     _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
@@ -153,7 +153,7 @@ class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
 
 class BuildBBLNoPayloadFETT(BuildBBLNoPayloadGFE):
     target = "bbl-fett"
-    project_name = "bbl"  # reuse same source dir
+    default_directory_basename = "bbl"  # reuse same source dir
     build_dir_suffix = "-fett"  # but not the build dir
 
     _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,

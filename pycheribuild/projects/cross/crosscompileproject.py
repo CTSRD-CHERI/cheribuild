@@ -29,21 +29,20 @@
 #
 
 import os
-import pprint
 import typing
 from pathlib import Path
 
-from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, CrossCompileTarget, DefaultInstallDir,
-                       GitRepository, Linkage, MakeCommandKind, MakefileProject, MesonProject, Project,
-                       commandline_to_str, SubversionRepository)
+from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, commandline_to_str, CrossCompileTarget,
+                       DefaultInstallDir, GitRepository, Linkage, MakeCommandKind, MakefileProject, MesonProject,
+                       Project, SimpleProject, SubversionRepository)
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import AutoVarInit
 from ...utils import AnsiColour, coloured
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",  # no-combine
-           "CrossCompileTarget", "CrossCompileProject", "MakeCommandKind", "Linkage",  # no-combine
-           "DefaultInstallDir", "BuildType", "CompilationTargets", "GitRepository",  # no-combine
-           "CrossCompileMixin", "FettProjectMixin", "CrossCompileMakefileProject",  # no-combine
+           "CrossCompileTarget", "CrossCompileSimpleProject", "CrossCompileProject",  # no-combine
+           "MakeCommandKind", "Linkage", "DefaultInstallDir", "BuildType", "CompilationTargets",  # no-combine
+           "GitRepository", "CrossCompileMixin", "FettProjectMixin", "CrossCompileMakefileProject",  # no-combine
            "CrossCompileMesonProject", "commandline_to_str", "SubversionRepository"]  # no-combine
 
 
@@ -55,6 +54,13 @@ class CrossCompileMixin(object):
     add_build_dir_suffix_for_native = True  # Add the suffix for the native build
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     _should_not_be_instantiated = True
+    # Add a (mostly) resonable default for installation directories:
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
+
+
+class CrossCompileSimpleProject(CrossCompileMixin, SimpleProject):
+    do_not_add_to_targets = True
 
 
 class CrossCompileProject(CrossCompileMixin, Project):
@@ -152,8 +158,8 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         env = {k: v for k, v in self.configure_environment.items() if v}
         self.configure_environment.clear()
         self.configure_environment.update(env)
-        self.print(coloured(AnsiColour.yellow, "Cross configure environment:",
-                            pprint.pformat(self.configure_environment, width=160)))
+        self.print(coloured(AnsiColour.yellow, "Cross configure environment:\n\t",
+                            "\n\t".join(k + "=" + str(v) for k, v in self.configure_environment.items())))
         super().configure(**kwargs)
 
     def process(self):
@@ -170,6 +176,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
 class FettProjectMixin:
     path_in_rootfs = "/fett"
     default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES + [CompilationTargets.NATIVE]
     # We default to zero-initializing all stack variables for FETT projects
     default_auto_var_init = AutoVarInit.ZERO
     hide_options_from_help = True

@@ -31,6 +31,7 @@
 import os
 from pathlib import Path
 
+from .cheribsd import BuildCheriBSDFett
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileProject, DefaultInstallDir,
                                   FettProjectMixin, GitRepository, MakeCommandKind)
 from .kcgi import BuildFettKCGI
@@ -39,12 +40,13 @@ from .openssh import BuildFettOpenSSH
 from .sqlbox import BuildFettSQLbox
 from ..disk_image import BuildCheriBSDDiskImage
 from ..run_qemu import LaunchCheriBSD
+from ...config.target_info import CrossCompileTarget
 from ...mtree import MtreeFile
 from ...utils import classproperty
 
 
 class BuildFettConfig(FettProjectMixin, CrossCompileProject):
-    project_name = "fett-config"
+    target = "fett-config"
     repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Target.git", default_branch="cheri")
     skip_git_submodules = True
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
@@ -58,7 +60,7 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
         self.METALOG = self.destdir / "METALOG.world"
 
     def compile(self, **kwargs):
-        print("Nothing to build for " + self.project_name)
+        print("Nothing to build for " + self.target)
 
     def install(self, **kwargs):
         if os.getenv("_TEST_SKIP_METALOG"):
@@ -99,7 +101,7 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
             "stanford.png",
             "static.html",
             "test.txt",
-            ]
+        ]
         for file in html_files:
             mtree.add_file(src / "build/webserver/common/html" / file,
                            nginx_prefix / "html" / file)
@@ -144,7 +146,7 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
             "voter_registration_confirmation.html",
             "voter_registration_update_login.html",
             "voter_registration_verification.html",
-            ]
+        ]
         for file in html_files:
             mtree.add_file(voting_src / "common/static/bvrs" / file,
                            voting_prefix / "bvrs/bvrs" / file)
@@ -165,13 +167,12 @@ class BuildFettConfig(FettProjectMixin, CrossCompileProject):
 
 
 class BuildFettVoting(FettProjectMixin, CrossCompileProject):
-    project_name = "fett-voting"
+    target = "fett-voting"
     repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Voting.git", default_branch="cheri")
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES + [CompilationTargets.NATIVE]
 
     dependencies = ["fett-kcgi", "fett-sqlbox", "fett-sqlite", "fett-zlib", "openradtool"]
 
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     make_kind = MakeCommandKind.GnuMake
@@ -193,7 +194,7 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
             LDFLAGS=self.commandline_to_str(self.default_ldflags),
             CFLAGS=self.commandline_to_str(self.default_compiler_flags),
             BVRS_OS="freebsd"
-            )
+        )
         # Note: We must set these variables on the command line since the Makefile assigns to them with =
         self.make_args.set(PREFIX=self.real_install_root_dir, ORT_PREFIX=self.config.cheri_sdk_bindir / "ort")
 
@@ -207,16 +208,26 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
             self.install_file(self.build_dir / "source/src/bvrs.sql", self.real_install_root_dir / "share/bvrs.sql")
 
 
-class BuildFettDiskImage(BuildCheriBSDDiskImage):
-    project_name = "disk-image-fett"
-    dependencies = ["bash", "fett-config"]
+class BuildFettDiskImage(FettProjectMixin, BuildCheriBSDDiskImage):
+    target = "disk-image-fett"
+    dependencies = ["fett-bash", "fett-config"]
     disk_image_prefix = "fett-cheribsd"
+    _source_class = BuildCheriBSDFett
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     hide_options_from_help = True
 
     @classproperty
     def default_architecture(self):
         return CompilationTargets.FETT_DEFAULT_ARCHITECTURE
+
+    @property
+    def _gdb_xtarget(self):
+        # Workaround for FETT (we use the normal GDB target to avoid duplicating yet another project)
+        for xtarget in BuildCheriBSDDiskImage.supported_architectures:
+            assert isinstance(xtarget, CrossCompileTarget)
+            if xtarget.generic_suffix == self.crosscompile_target.generic_suffix:
+                return xtarget
+        raise ValueError("Can't find GDB arch")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -234,12 +245,12 @@ class BuildFettDiskImage(BuildCheriBSDDiskImage):
         cls.include_kgdb = True
 
 
-class LaunchFett(LaunchCheriBSD):
-    project_name = "run-fett"
+class LaunchFett(FettProjectMixin, LaunchCheriBSD):
+    target = "run-fett"
     _source_class = BuildFettDiskImage
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     hide_options_from_help = True
 
     @classmethod
     def get_cross_target_index(cls):
-        return LaunchCheriBSD.get_cross_target_index(xtarget=cls._xtarget)
+        return super().get_cross_target_index(xtarget=cls._xtarget)

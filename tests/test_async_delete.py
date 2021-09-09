@@ -13,15 +13,16 @@ import subprocess
 # noinspection PyTypeChecker
 class MockProject(Project):
     do_not_add_to_targets = True
-    project_name = "FAKE"
     target = "FAKE"
+    default_directory_basename = "FAKE"
     _xtarget = CompilationTargets.NATIVE
     _should_not_be_instantiated = False
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     repository = ExternallyManagedSourceRepository()
 
     def __init__(self, config: MockConfig, name: str):
-        self.project_name = name
+        self.target = name
+        self.default_directory_basename = name
         expected_src = config.source_root / "sources" / name  # type: Path
         self._initial_source_dir = expected_src
         expected_install = config.source_root / "install" / name  # type: Path

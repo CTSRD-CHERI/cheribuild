@@ -31,7 +31,7 @@ from .project import DefaultInstallDir, GitRepository, Project
 
 
 class BuildNinja(Project):
-    repository = GitRepository("https://github.com/ninja-build/ninja")
+    repository = GitRepository("https://github.com/ninja-build/ninja", default_branch="release", force_branch=True)
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def configure(self, **kwargs):

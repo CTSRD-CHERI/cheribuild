@@ -175,7 +175,7 @@ class Opam2(SimpleProject):
 
 
 class BuildBubbleWrap(AutotoolsProject):
-    project_name = "bubblewrap"
+    target = "bubblewrap"
     repository = GitRepository("https://github.com/projectatomic/bubblewrap")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
@@ -195,7 +195,6 @@ REMS_OPAM_REPO = "https://github.com/rems-project/opam-repository.git"
 
 class BuildSailFromOpam(ProjectUsingOpam):
     target = "sail"
-    project_name = "sail"
     repository = GitRepository("https://github.com/rems-project/sail", default_branch="sail2")
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
@@ -266,7 +265,6 @@ target_manager.add_target_alias("sail-from-opam", "sail", deprecated=True)
 
 class BuildSailCheriMips(ProjectUsingOpam):
     target = "sail-cheri-mips"
-    project_name = "sail-cheri-mips"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-mips")
     dependencies = ["sail"]
     native_install_dir = DefaultInstallDir.CHERI_SDK
@@ -275,8 +273,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
 
     def __init__(self, config):
         super().__init__(config)
-        # not always found in /usr/include
-        # self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -293,7 +290,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
-        self.run_make("install")
+        self.run_make_install()
 
 
 class RunSailShell(OpamMixin, SimpleProject):
@@ -319,7 +316,6 @@ class RunSailShell(OpamMixin, SimpleProject):
 
 class BuildSailRISCV(ProjectUsingOpam):
     target = "sail-riscv"
-    project_name = "sail-riscv"
     repository = GitRepository("https://github.com/rems-project/sail-riscv")
     dependencies = ["sail"]
     native_install_dir = DefaultInstallDir.CHERI_SDK
@@ -331,18 +327,19 @@ class BuildSailRISCV(ProjectUsingOpam):
         self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     def compile(self, **kwargs):
-        cmd = [self.make_args.command, self.config.make_j_flag, "opam-build"] + self.make_args.all_commandline_args
-        self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
+        for arch in ("RV64", "RV32"):
+            cmd = [self.make_args.command, self.config.make_j_flag, "ARCH=" + arch,
+                   "csim", "osim", "rvfi"] + self.make_args.all_commandline_args
+            self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
-        # self.run_make("install")
+        # self.run_make_install()
         self.info("NO INSTALL TARGET YET")
 
 
 class BuildSailCheriRISCV(ProjectUsingOpam):
     target = "sail-cheri-riscv"
-    project_name = "sail-cheri-riscv"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-riscv")
     dependencies = ["sail"]
     native_install_dir = DefaultInstallDir.CHERI_SDK
@@ -354,12 +351,14 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
         self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     def compile(self, **kwargs):
-        cmd = [self.make_args.command, self.config.make_j_flag, "opam-build"] + self.make_args.all_commandline_args
-        self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
+        for arch in ("RV64", "RV32"):
+            cmd = [self.make_args.command, self.config.make_j_flag, "ARCH=" + arch,
+                   "csim", "osim", "rvfi"] + self.make_args.all_commandline_args
+            self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
-        # self.run_make("install")
+        # self.run_make_install()
         self.info("NO INSTALL TARGET YET")
 
 

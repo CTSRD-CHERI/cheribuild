@@ -27,26 +27,30 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import os
 import stat
 import tempfile
-import os
 from pathlib import Path
 
 from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, CrossCompileCMakeProject,
                                   CrossCompileProject,
                                   DefaultInstallDir, GitRepository, MakeCommandKind)
 from .llvm_test_suite import BuildLLVMTestSuite
-from ..project import ComputedDefaultValue, ExternallyManagedSourceRepository, ReuseOtherProjectRepository
+from ..project import ExternallyManagedSourceRepository, ReuseOtherProjectRepository
 from ...config.chericonfig import BuildType
 from ...config.target_info import CPUArchitecture
 from ...utils import is_jenkins_build
 
 
-class BuildMibench(CrossCompileProject):
+class BenchmarkMixin:
+    # We also build benchmarks for hybrid to see whether those compilation flags change the results
+    supported_architecture = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
+
+
+class BuildMibench(BenchmarkMixin, CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/mibench")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    project_name = "mibench"
+    target = "mibench"
     # Needs bsd make to build
     make_kind = MakeCommandKind.BsdMake
     # and we have to build in the source directory
@@ -158,13 +162,11 @@ class BuildMibench(CrossCompileProject):
                                                                        self.benchmark_version])
 
 
-class BuildMiBenchNew(CrossCompileCMakeProject):
+class BuildMiBenchNew(BenchmarkMixin, CrossCompileCMakeProject):
     repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
     default_build_type = BuildType.RELEASE
     target = "mibench-new"
-    project_name = "mibench-new"
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
 
     def setup(self):
         super().setup()
@@ -190,11 +192,10 @@ class BuildMiBenchNew(CrossCompileCMakeProject):
                 self.install_file(new_file, self.install_dir / relpath / filename, print_verbose_only=True)
 
 
-class BuildOlden(CrossCompileProject):
+class BuildOlden(BenchmarkMixin, CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/olden")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    project_name = "olden"
+    target = "olden"
     # Needs bsd make to build
     make_kind = MakeCommandKind.BsdMake
     # and we have to build in the source directory
@@ -286,12 +287,10 @@ class BuildOlden(CrossCompileProject):
                                                                        self.test_arch_suffix])
 
 
-class BuildSpec2006(CrossCompileProject):
+class BuildSpec2006(BenchmarkMixin, CrossCompileProject):
     target = "spec2006"
-    project_name = "spec2006"
     # No repository to clone (just hack around this):
     repository = ExternallyManagedSourceRepository()
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     make_kind = MakeCommandKind.GnuMake
 
@@ -500,8 +499,6 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test \
         self.clean_directory(self.build_dir / "spec-test-dir")
         self.create_tests_dir(self.build_dir / "spec-test-dir")
         test_command = """
-export LD_LIBRARY_PATH=/sysroot/usr/lib:/sysroot/lib;
-export LD_CHERI_LIBRARY_PATH=/sysroot/usr/libcheri;
 cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_flags} \
     -b "{bench_list}" -t {config} -d0 -r1 {arch}""".format(
             config=self.config_name, bench_list=" ".join(self.benchmark_list),
@@ -554,13 +551,11 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
         super().process()
 
 
-class BuildSpec2006New(CrossCompileCMakeProject):
+class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
     repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
     default_build_type = BuildType.RELWITHDEBINFO
     target = "spec2006-new"
-    project_name = "spec2006-new"
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -640,11 +635,10 @@ class BuildSpec2006New(CrossCompileCMakeProject):
                 self.install_file(new_file, self.install_dir / relpath / filename, print_verbose_only=True)
 
 
-class BuildLMBench(CrossCompileProject):
+class BuildLMBench(BenchmarkMixin, CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-lmbench", default_branch="cheri-lmbench")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    project_name = "lmbench"
+    target = "lmbench"
     # Needs bsd make to build
     make_kind = MakeCommandKind.GnuMake
     # and we have to build in the source directory
@@ -723,11 +717,10 @@ class BuildLMBench(CrossCompileProject):
                                                   "--test-timeout", str(120 * 60), mount_builddir=True)
 
 
-class BuildUnixBench(CrossCompileProject):
+class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-unixbench", default_branch="cheri-unixbench")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    project_name = "unixbench"
+    target = "unixbench"
     # Needs bsd make to build
     make_kind = MakeCommandKind.GnuMake
     # and we have to build in the source directory
@@ -796,38 +789,42 @@ class BuildUnixBench(CrossCompileProject):
         self._create_benchmark_dir(self.bundle_dir)
 
 
-class NetPerfBench(CrossCompileAutotoolsProject):
+class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-netperf", default_branch="cheri-netperf")
+    target = "netperf"
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
-    project_name = "netperf"
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     # Needs bsd make to build
     make_kind = MakeCommandKind.GnuMake
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     # The makefiles here can't support any other other tagets:
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
-                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.NATIVE]
-    _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda c, p: p.bundle_dir,
-        as_string="${BUILDDIR}/netperf-<target-suffix>-bundle")
+    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                               CompilationTargets.CHERIBSD_RISCV_HYBRID,
+                               CompilationTargets.CHERIBSD_RISCV_PURECAP]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-
-    @property
-    def bundle_dir(self):
-        return Path(self.build_dir, "netperf-" + self.crosscompile_target.generic_suffix +
-                    self.build_configuration_suffix() + "-bundle")
+        cls.hw_counters = cls.add_config_option("enable-hw-counters",
+                                                choices=("pmc", "statcounters"), default="statcounters",
+                                                help="Use hardware performance counters")
 
     def configure(self, **kwargs):
         if not (self.source_dir / "configure").exists():
             self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
         self.configure_args.append("--enable-unixdomain")
+        if self.hw_counters:
+            self.configure_args.append("--enable-pmc={}".format(self.hw_counters))
         self.add_configure_vars(ac_cv_func_setpgrp_void="yes")
         super().configure(**kwargs)
 
+    def process(self):
+        if (self.compiling_for_riscv(include_purecap=True) and
+                self.hw_counters == "pmc"):
+            self.fatal("hwpmc not supported on riscv")
+            return
+        super().process()
+
     def install(self, **kwargs):
-        self.makedirs(self.install_dir)
         self.run_make_install()

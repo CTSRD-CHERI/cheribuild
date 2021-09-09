@@ -55,5 +55,5 @@ class BuildZlib(CrossCompileAutotoolsProject):
 
 
 class BuildFettZlib(FettProjectMixin, BuildZlib):
-    project_name = "fett-zlib"
+    target = "fett-zlib"
     repository = GitRepository("https://github.com/CTSRD-CHERI/zlib.git", default_branch="fett")

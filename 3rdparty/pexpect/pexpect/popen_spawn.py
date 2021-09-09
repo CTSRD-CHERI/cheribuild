@@ -57,7 +57,7 @@ class PopenSpawn(SpawnBase):
 
         self._read_queue = Queue()
         self._read_thread = threading.Thread(target=self._read_incoming)
-        self._read_thread.setDaemon(True)
+        self._read_thread.daemon = True
         self._read_thread.start()
 
     _read_reached_eof = False
@@ -129,7 +129,7 @@ class PopenSpawn(SpawnBase):
         for s in sequence:
             self.send(s)
 
-    def send(self, s):
+    def _send(self, s):
         '''Send data to the subprocess' stdin.
 
         Returns the number of bytes written.
