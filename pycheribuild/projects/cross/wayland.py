@@ -151,8 +151,7 @@ class BuildWayland(CrossCompileMesonProject):
 
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     repository = GitRepository("https://gitlab.freedesktop.org/wayland/wayland.git", default_branch="main",
-                               force_branch=True, temporary_url_override="https://github.com/CTSRD-CHERI/wayland",
-                               url_override_reason="FreeBSD patches not merged yet")
+                               force_branch=True, old_urls=[b"https://github.com/CTSRD-CHERI/wayland"])
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def setup(self):
