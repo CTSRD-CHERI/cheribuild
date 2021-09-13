@@ -498,6 +498,23 @@ class BuildXVncServer(X11AutotoolsProject):
             self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
 
 
+class BuildXServer(X11MesonProject):
+    target = "xserver"
+    dependencies = ["libx11"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/xserver.git")
+
+    def setup(self):
+        super().setup()
+        # AVoid various dependencies (we only want the basic fb backend for now)
+        self.add_meson_options(xwayland="false")
+        self.add_meson_options(xorg="false")
+        self.add_meson_options(docs="false", **{"devel-docs": "false", "docs-pdf": "false"})
+        self.add_meson_options(xdmcp=False, glx=False)
+        # TODO: upstream fixes for these:
+        if self.compiling_for_cheri():
+            self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+
+
 class BuildTWM(X11AutotoolsProject):
     # Simple window manager to use with XVnc (KWin has too many dependencies)
     target = "twm"
