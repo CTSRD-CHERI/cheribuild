@@ -1551,6 +1551,8 @@ class GitRepository(SourceRepository):
     @staticmethod
     def contains_commit(current_project: "Project", commit: str, *, src_dir: Path, expected_branch="HEAD",
                         invalid_commit_ref_result: typing.Any = False):
+        if current_project.config.pretend and not src_dir.exists():
+            return False
         # Note: merge-base --is-ancestor exits with code 0/1, so we need to pass allow_unexpected_returncode
         is_ancestor = run_command("git", "merge-base", "--is-ancestor", commit, expected_branch, cwd=src_dir,
                                   print_verbose_only=True, capture_error=True, allow_unexpected_returncode=True,
