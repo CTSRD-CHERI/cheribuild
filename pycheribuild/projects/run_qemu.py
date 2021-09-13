@@ -513,6 +513,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     include_os_in_target_suffix = False
     _freebsd_class = None  # type: typing.Type[BuildFreeBSD]
     _source_class = None  # type: typing.Type[BuildDiskImageBase]
+    kyua_test_files = ("/usr/tests/Kyuafile",)
 
     @classproperty
     def supported_architectures(self):
@@ -548,14 +549,18 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         rootfs_kernel_bootdir = None
         if not self.qemu_options.can_boot_kernel_directly:
             rootfs_kernel_bootdir = self.source_project.get_kern_module_path(self.kernel_config)
-        self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.disk_image,
-                                                  kernel_path=self.current_kernel,
+        extra_args = []
+        if self.kyua_test_files and "--kyua-tests-files" not in self.config.test_extra_args:
+            extra_args.extend("--kyua-tests-files=" + x for x in self.kyua_test_files)
+        self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", *extra_args,
+                                                  disk_image_path=self.disk_image, kernel_path=self.current_kernel,
                                                   rootfs_alternate_kernel_dir=rootfs_kernel_bootdir)
 
 
 class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     target = "run"
     _source_class = BuildCheriBSDDiskImage
+    kyua_test_files = tuple()  # don't run kyua tests by default for CheriBSD
 
     @classmethod
     def setup_config_options(cls, **kwargs):
