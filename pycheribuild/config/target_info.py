@@ -300,7 +300,8 @@ class TargetInfo(ABC):
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
                                  use_full_disk_image=False, mount_installdir=False,
-                                 use_benchmark_kernel_by_default=False):
+                                 use_benchmark_kernel_by_default=False,
+                                 rootfs_alternate_kernel_dir=None):
         raise ValueError("run_cheribsd_test_script only supports CheriBSD targets")
 
     def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,

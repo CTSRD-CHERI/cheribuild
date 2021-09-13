@@ -544,6 +544,14 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         super().__init__(config, needs_disk_image=needs_disk_image, freebsd_class=self._freebsd_class,
                          disk_image_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
 
+    def run_tests(self):
+        rootfs_kernel_bootdir = None
+        if not self.qemu_options.can_boot_kernel_directly:
+            rootfs_kernel_bootdir = self.source_project.get_kern_module_path(self.kernel_config)
+        self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.disk_image,
+                                                  kernel_path=self.current_kernel,
+                                                  rootfs_alternate_kernel_dir=rootfs_kernel_bootdir)
+
 
 class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     target = "run"
@@ -569,14 +577,6 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             result.append("bbl-baremetal-riscv64-purecap")
         return result
-
-    def run_tests(self):
-        rootfs_kernel_bootdir = None
-        if not self.qemu_options.can_boot_kernel_directly:
-            rootfs_kernel_bootdir = self.source_project.get_kern_module_path(self.kernel_config)
-        self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.disk_image,
-                                                  kernel_path=self.current_kernel,
-                                                  rootfs_alternate_kernel_dir=rootfs_kernel_bootdir)
 
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):

@@ -347,38 +347,14 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         from ..projects.cross.cheribsd import BuildFreeBSD
         return BuildFreeBSD.get_instance(self.project, cross_target=xtarget)
 
-
-class CheriBSDTargetInfo(FreeBSDTargetInfo):
-    shortname = "CheriBSD"
-    os_prefix = ""  # CheriBSD is the default target, so we omit the OS prefix from target names
-    FREEBSD_VERSION = 13
-
-    def _get_compiler_project(self) -> "typing.Type[Project]":
-        from ..projects.cross.llvm import BuildCheriLLVM
-        return BuildCheriLLVM
-
-    @classmethod
-    def is_cheribsd(cls):
-        return True
-
     def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
-        assert self.is_cheribsd(), "Other cases not handled yet"
-        from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel
-        xtarget = self.target
-        if xtarget not in BuildCheriBsdMfsKernel.supported_architectures:
-            self.project.fatal("No MFS kernel for target", xtarget)
-            raise ValueError()
-        mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(
-            xtarget, self.config, caller=self.project)
-        kernconf = mfs_kernel.default_kernel_config(platform, benchmark=use_benchmark_kernel)
-        return mfs_kernel.get_kernel_install_path(kernconf)
+        raise NotImplementedError("Only implemented for CheriBSD")
 
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
                                  use_full_disk_image=False, mount_installdir=False,
                                  use_benchmark_kernel_by_default=False,
                                  rootfs_alternate_kernel_dir=None):
-        assert self.is_cheribsd(), "Only CheriBSD targets supported right now"
         if typing.TYPE_CHECKING:
             assert isinstance(self.project, Project)
         # mount_sysroot may be needed for projects such as QtWebkit where the minimal image doesn't contain all the
@@ -403,8 +379,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             # We need to boot the disk image instead of running the kernel directly (amd64)
             assert xtarget.is_any_x86() or xtarget.is_aarch64(
                 include_purecap=True), "All other architectures can boot directly"
-            assert self.is_cheribsd(), "Not supported for FreeBSD yet"
             if disk_image_path is None and "--disk-image" not in self.config.test_extra_args:
+                assert self.is_cheribsd(), "Not supported for FreeBSD yet"
                 from ..projects.disk_image import BuildMinimalCheriBSDDiskImage
                 disk_image_path = BuildMinimalCheriBSDDiskImage.get_instance(self.project).disk_image_path
         elif kernel_path is None and "--kernel" not in self.config.test_extra_args:
@@ -431,7 +407,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if not script.exists():
             self.project.fatal("Could not find test script", script)
 
-        cmd = [script, "--ssh-key", self.config.test_ssh_key, "--architecture", xtarget.generic_suffix]
+        cmd = [script, "--ssh-key", self.config.test_ssh_key, "--architecture", xtarget.base_suffix]
         if kernel_path and "--kernel" not in self.config.test_extra_args:
             cmd.extend(["--kernel", kernel_path])
         if "--qemu-cmd" not in self.config.test_extra_args:
@@ -487,6 +463,32 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if self.config.test_extra_args:
             cmd.extend(map(str, self.config.test_extra_args))
         self.project.run_cmd(cmd, give_tty_control=True)
+
+
+class CheriBSDTargetInfo(FreeBSDTargetInfo):
+    shortname = "CheriBSD"
+    os_prefix = ""  # CheriBSD is the default target, so we omit the OS prefix from target names
+    FREEBSD_VERSION = 13
+
+    def _get_compiler_project(self) -> "typing.Type[Project]":
+        from ..projects.cross.llvm import BuildCheriLLVM
+        return BuildCheriLLVM
+
+    @classmethod
+    def is_cheribsd(cls):
+        return True
+
+    def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
+        assert self.is_cheribsd(), "Other cases not handled yet"
+        from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel
+        xtarget = self.target
+        if xtarget not in BuildCheriBsdMfsKernel.supported_architectures:
+            self.project.fatal("No MFS kernel for target", xtarget)
+            raise ValueError()
+        mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(
+            xtarget, self.config, caller=self.project)
+        kernconf = mfs_kernel.default_kernel_config(platform, benchmark=use_benchmark_kernel)
+        return mfs_kernel.get_kernel_install_path(kernconf)
 
     def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,
                            benchmark_script_args: list = None, extra_runbench_args: list = None):
