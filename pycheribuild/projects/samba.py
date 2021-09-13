@@ -61,6 +61,9 @@ class BuildSamba(Project):
             self.make_args.add_flags("--srcdir=" + str(self.source_dir))
             self.configure_args.append("--blddir=" + str(self.build_dir))
             self.configure_args.append("--srcdir=" + str(self.source_dir))
+
+    def setup(self):
+        super().setup()
         # Based on https://willhaley.com/blog/compile-samba-macos/
         # Also try to disable everything that is not needed for QEMU user shares
         self.configure_args.extend([
@@ -72,9 +75,7 @@ class BuildSamba(Project):
             "--without-acl-support",
             "--without-ad-dc",
             "--without-ads",
-            "--without-dnsupdate",
             "--without-ldap",
-            "--without-ntvfs-fileserver",
             "--without-pam",
             "--without-quotas",
             "--without-regedit",
@@ -82,20 +83,29 @@ class BuildSamba(Project):
             "--without-utmp",
             "--without-winbind",
             # "--without-json-audit", "--without-ldb-lmdb", (only needed in master not 4.8 stable)
-            "--without-libarchive",
-            # Avoid depending on libraries from the build tree:
-            "--bundled-libraries=talloc,tdb,pytdb,ldb,pyldb,tevent,pytevent",
-            "--with-static-modules=ALL",
             "--prefix=" + str(self.install_dir),
             ])
-        # Force python2 for now (since py3 seems broken)
-        self.configure_environment["PYTHON"] = shutil.which("python")
         #  version 4.9 "--without-json-audit",
         self.configure_args.append("--without-json")
+        if self.repository.contains_commit(self, "91c024dfd8ecf909f23ab8ee3816ae6a4c9b881c", src_dir=self.source_dir):
+            # current master branch doesn't need as many workarounds
+            self.configure_args.extend([
+                "--without-json",
+                # Avoid depending on libraries from the build tree:
+                "--bundled-libraries=ALL", "--with-static-modules=ALL",
+                "--enable-debug"
+            ])
+        else:
+            self.configure_args.extend([
+                "--without-ntvfs-fileserver", "--without-dnsupdate",
+                # Avoid depending on libraries from the build tree:
+                "--bundled-libraries=talloc,tdb,pytdb,ldb,pyldb,tevent,pytevent", "--with-static-modules=ALL",
+            ])
+            # Force python2 for now (since py3 seems broken)
+            self.configure_environment["PYTHON"] = shutil.which("python")
+
         if OSInfo.IS_MAC:
-            self.add_required_system_tool("/usr/local/opt/krb5/bin/kinit", homebrew="krb5")
-            # TODO: brew --prefix krb5
-            self.configure_args.extend(["--with-system-mitkrb5", "/usr/local/opt/krb5"])
+            self.configure_args.extend(["--with-system-mitkrb5", self.get_homebrew_prefix("krb5")])
 
     def configure(self, **kwargs):
         # Add the yapp binary
@@ -116,9 +126,8 @@ class BuildSamba(Project):
 
     def process(self):
         if OSInfo.IS_MAC:
-            # We need icu4c, krb5 and readline from homebrew:
-            homebrew_keg_only_packages = ['icu4c', 'krb5', 'readline']
-            homebrew_dirs = ["/usr/local/opt/" + x for x in homebrew_keg_only_packages]
+            # We need icu4c, libarchive, readline and krb5 from homebrew:
+            homebrew_dirs = [str(self.get_homebrew_prefix(pkg)) for pkg in ("krb5", "libarchive", "readline", "icu4c")]
             with self.set_env(PATH=':'.join([x + "/bin" for x in homebrew_dirs]) + ':' +
                                    ':'.join([x + "/sbin" for x in homebrew_dirs]) + ':' +
                                    os.getenv("PATH", ""),
