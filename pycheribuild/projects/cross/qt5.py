@@ -36,6 +36,7 @@ from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, Cr
                                   CrossCompileCMakeProject, CrossCompileMesonProject, CrossCompileProject,
                                   DefaultInstallDir, GitRepository,
                                   Linkage, MakeCommandKind)
+from .wayland import BuildWayland
 from .x11 import BuildLibXCB
 from ..project import SimpleProject
 from ...config.loader import ComputedDefaultValue
@@ -589,9 +590,36 @@ class BuildQtTools(BuildQtModuleWithQMake):
         # useful inside the disk image.
         self.configure_args.extend([
             "-no-feature-assistant",
-            # "-no-feature-designer",  #
+            # Some KDE programs/libraries install designer plugins, so for now we install it by default.
+            # This avoids having to patch those projects to make the feature optional.
+            # "-no-feature-designer",
             "-no-feature-linguist",
         ])
+
+
+class BuildQtWayland(BuildQtModuleWithQMake):
+    target = "qtwayland"
+    dependencies = ["qtbase", "wayland", "wayland-native"]
+    repository = GitRepository("https://code.qt.io/qt/qtwayland.git",
+                               temporary_url_override="https://github.com/CTSRD-CHERI/qtwayland",
+                               url_override_reason="Needs a patch to build on FreeBSD",
+                               default_branch="5.15", force_branch=True)
+
+    def setup(self):
+        super().setup()
+        self.configure_args.extend([
+            "-feature-wayland-client",
+            "-feature-wayland-server",
+        ])
+
+    # def compile(self, **kwargs):
+    #     self.run_make()
+
+    def process(self):
+        wayland_native = BuildWayland.get_instance(self, cross_target=CompilationTargets.NATIVE)
+        # This build relies in wayland-scanner being found in $PATH
+        with self.set_env(PATH=str(wayland_native.install_dir / "bin") + ":" + os.getenv("PATH")):
+            super().process()
 
 
 class BuildQtQuickControls2(BuildQtModuleWithQMake):
