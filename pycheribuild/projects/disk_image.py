@@ -384,10 +384,18 @@ class BuildDiskImageBase(SimpleProject):
         if not sshd_config.exists():
             self.info("SSHD not installed, not changing sshd_config")
         else:
-            self.info("Adding 'PermitRootLogin without-password\nUseDNS no' to /etc/ssh/sshd_config")
-            # make sure we can login as root with pubkey auth:
-            new_sshd_config_contents = self.read_file(sshd_config)
-            new_sshd_config_contents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
+            if self.is_besspin:
+                self.info("Adding 'PermitRootLogin without-password\nUseDNS no' to /etc/ssh/sshd_config")
+                # make sure we can login as root even without a password:
+                new_sshd_config_contents = self.read_file(sshd_config)
+                new_sshd_config_contents += "\n# Allow passwordless root login:\n"
+                new_sshd_config_contents += "PermitRootLogin yes\n"
+                new_sshd_config_contents += "PasswordAuthentication yes\nPermitEmptyPasswords yes\n"
+            else:
+                self.info("Adding 'PermitRootLogin without-password\nUseDNS no' to /etc/ssh/sshd_config")
+                # make sure we can login as root with pubkey auth:
+                new_sshd_config_contents = self.read_file(sshd_config)
+                new_sshd_config_contents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
             new_sshd_config_contents += "\n# Major speedup to SSH performance:\n UseDNS no\n"
             self.create_file_for_image("/etc/ssh/sshd_config", contents=new_sshd_config_contents,
                                        show_contents_non_verbose=False)
