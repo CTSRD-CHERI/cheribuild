@@ -168,6 +168,8 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             # BUILTIN_SUPPORTED_ARCH="mips64",
             TARGET_TRIPLE=self.target_info.target_triple,
             )
+        if self.target_info.is_baremetal():
+            self.add_cmake_options(COMPILER_RT_OS_DIR="baremetal")
         if self.should_include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
 
@@ -179,7 +181,10 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if self.target_info.is_rtems():
             self.move_file(self.install_dir / "lib/rtems5" / libname, self.install_dir / "lib" / libname)
         else:
-            self.move_file(self.install_dir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
+            # Non-RISC-V baremetal toolchains search in lib not lib/baremetal
+            # (the inconsistency should be fixed in Clang, although in this
+            # case the RISC-V behaviour is perhaps convenient).
+            self.move_file(self.install_dir / "lib/baremetal" / libname, self.real_install_root_dir / "lib" / libname)
 
             if self.compiling_for_mips(include_purecap=True):
                 # HACK: we don't really need libunwind but the toolchain pulls it in automatically
