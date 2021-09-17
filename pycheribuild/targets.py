@@ -396,7 +396,7 @@ class TargetManager(object):
                 t = t.get_real_target(None, config)
             # Ensure we don't add any duplicates to ensure correct order
             # TODO: this can go away once we properly implement target sorting without the cached_deps hack.
-            if t not in chosen_targets:
+            if t not in chosen_targets and not config.only_dependencies:
                 chosen_targets.append(t)
             for dep in t.get_dependencies(config):
                 if dep not in chosen_targets:

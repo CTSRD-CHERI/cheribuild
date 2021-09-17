@@ -25,8 +25,8 @@ from .setup_mock_chericonfig import setup_mock_chericonfig
 
 
 # noinspection PyProtectedMember
-def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolchain=True,
-                  skip_sdk=False, build_morello_from_source=False) -> "typing.List[str]":
+def _sort_targets(targets: "typing.List[str]", *, add_dependencies=False, add_toolchain=True,
+                  skip_sdk=False, build_morello_from_source=False, only_dependencies=False) -> "typing.List[str]":
     target_manager.reset()
     # print(real_targets)
     global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
@@ -34,6 +34,7 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolc
     global_config.include_toolchain_dependencies = add_toolchain
     global_config.skip_sdk = skip_sdk
     global_config.build_morello_firmware_from_source = build_morello_from_source
+    global_config.only_dependencies = only_dependencies
     real_targets = list(target_manager.get_target(t, None, global_config, caller="_sort_targets") for t in targets)
 
     for t in real_targets:
@@ -128,38 +129,38 @@ def test_build_and_run(target_name, expected_list):
 
 @pytest.mark.parametrize("target,add_toolchain,expected_deps", [
     pytest.param("run-mips64", True,
-                 ["qemu", "llvm-native", "cheribsd-mips64", "gdb-mips64", "disk-image-mips64", "run-mips64"]),
+                 ["qemu", "llvm-native", "cheribsd-mips64", "gdb-mips64", "disk-image-mips64"]),
     pytest.param("run-mips64-hybrid", True,
-                 ["qemu", "llvm-native", "cheribsd-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid",
-                  "run-mips64-hybrid"]),
+                 ["qemu", "llvm-native", "cheribsd-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid"]),
     pytest.param("run-mips64-purecap", True,
                  ["qemu", "llvm-native", "cheribsd-mips64-purecap", "gdb-mips64-hybrid-for-purecap-rootfs",
-                  "disk-image-mips64-purecap", "run-mips64-purecap"]),
+                  "disk-image-mips64-purecap"]),
     pytest.param("run-riscv64", True,
-                 ["qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64", "run-riscv64"]),
+                 ["qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64"]),
     pytest.param("run-riscv64-hybrid", True,
                  ["qemu", "llvm-native", "cheribsd-riscv64-hybrid", "gdb-riscv64-hybrid",
-                  "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-hybrid", "run-riscv64-hybrid"]),
+                  "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-hybrid"]),
     pytest.param("run-riscv64-purecap", True,
                  ["qemu", "llvm-native", "cheribsd-riscv64-purecap", "gdb-riscv64-hybrid-for-purecap-rootfs",
-                  "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"]),
+                  "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap"]),
     # Note: QEMU not needed for aarch64/amd64 since we could also use the system QEMU
     pytest.param("run-aarch64", True,
-                 ["qemu", "llvm-native", "cheribsd-aarch64", "gdb-aarch64", "disk-image-aarch64", "run-aarch64"]),
+                 ["qemu", "llvm-native", "cheribsd-aarch64", "gdb-aarch64", "disk-image-aarch64"]),
     pytest.param("run-amd64", True,
-                 ["qemu", "llvm-native", "cheribsd-amd64", "gdb-amd64", "disk-image-amd64", "run-amd64"]),
+                 ["qemu", "llvm-native", "cheribsd-amd64", "gdb-amd64", "disk-image-amd64"]),
     # Morello code won't run on QEMU (yet)
     pytest.param("run-fvp-morello-hybrid", True,
                  ["install-morello-fvp", "morello-llvm-native", "cheribsd-morello-hybrid", "gdb-morello-hybrid",
-                  "morello-firmware", "disk-image-morello-hybrid", "run-fvp-morello-hybrid"]),
+                  "morello-firmware", "disk-image-morello-hybrid"]),
     pytest.param("run-fvp-morello-purecap", True,
                  ["install-morello-fvp", "morello-llvm-native", "cheribsd-morello-purecap",
-                  "gdb-morello-hybrid-for-purecap-rootfs", "morello-firmware", "disk-image-morello-purecap",
-                  "run-fvp-morello-purecap"]),
+                  "gdb-morello-hybrid-for-purecap-rootfs", "morello-firmware", "disk-image-morello-purecap"]),
 ])
 def test_all_run_deps(target, add_toolchain: bool, expected_deps):
     assert _sort_targets([target], add_dependencies=True, add_toolchain=add_toolchain,
-                         build_morello_from_source=False) == expected_deps
+                         build_morello_from_source=False) == expected_deps + [target]
+    assert _sort_targets([target], add_dependencies=True, add_toolchain=add_toolchain,
+                         build_morello_from_source=False, only_dependencies=True) == expected_deps
 
 
 def test_run_disk_image():
