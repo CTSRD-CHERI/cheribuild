@@ -345,7 +345,8 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--skip-build | --no-skip-build] [--skip-sdk | --no-skip-sdk] [--skip-dependency-filter REGEX]
                      [--trap-on-unrepresentable | --no-trap-on-unrepresentable]
                      [--qemu-gdb-break-on-cheri-trap | --no-qemu-gdb-break-on-cheri-trap]
-                     [--qemu-gdb-debug-userspace-program QEMU-GDB-DEBUG-USERSPACE-PROGRAM] [--docker | --no-docker]
+                     [--qemu-gdb-debug-userspace-program QEMU-GDB-DEBUG-USERSPACE-PROGRAM]
+                     [--only-dependencies | --no-only-dependencies] [--docker | --no-docker]
                      [--docker-container DOCKER-CONTAINER] [--docker-reuse-container | --no-docker-reuse-container]
                      [--compilation-db] [--wait-for-debugger | --no-wait-for-debugger]
                      [--debugger-in-tmux-pane | --no-debugger-in-tmux-pane] [--gdb-random-port | --no-gdb-random-port]
@@ -410,7 +411,7 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--run-mfs-root/ephemeral | --run-mfs-root/no-ephemeral]
                      [--run-mfs-root/remote-kernel-path RUN-MFS-ROOT/REMOTE-KERNEL-PATH]
                      [--run-mfs-root/alternative-kernel RUN-MFS-ROOT/ALTERNATIVE-KERNEL]
-                     [--run-mfs-root/kernel-abi {hybrid,purecap}]
+                     [--run-mfs-root/kernel-abi {hybrid,purecap}] [--sslproc/build-tests | --sslproc/no-build-tests]
                      [--bash/set-as-root-shell | --bash/no-set-as-root-shell]
                      [--qtbase-dev/build-tests | --qtbase-dev/no-build-tests]
                      [--qtbase-dev/build-examples | --qtbase-dev/no-build-examples]
@@ -440,6 +441,8 @@ optional arguments:
                         Skip the install step (only do the build) (default: 'False')
   --skip-build, --no-skip-build
                         Skip the build step (only do the install) (default: 'False')
+  --only-dependencies, --no-only-dependencies
+                        Only build dependencies of targets, not the targets themselves (default: 'False')
   --compilation-db, --cdb
                         Create a compile_commands.json file in the build dir (requires Bear for non-CMake projects)
                         (default: 'False')
@@ -648,7 +651,7 @@ Options controlling the use of docker for building:
   --docker, --no-docker
                         Run the build inside a docker container (default: 'False')
   --docker-container DOCKER-CONTAINER
-                        Name of the docker container to use (default: 'cheribuild-docker')
+                        Name of the docker container to use (default: 'ctsrd/cheribuild-docker')
   --docker-reuse-container, --no-docker-reuse-container
                         Attach to the same container again (note: docker-container option must be an id rather than a
                         container name (default: 'False')
@@ -840,6 +843,10 @@ Options for target 'run-mfs-root':
                         kernel configurations is given by --list-kernels
   --run-mfs-root/kernel-abi {hybrid,purecap}
                         Select extra kernel variant with the given ABI to run.
+
+Options for target 'sslproc':
+  --sslproc/build-tests, --sslproc/no-build-tests
+                        Build the tests (default: 'False')
 
 Options for target 'bash':
   --bash/set-as-root-shell, --bash/no-set-as-root-shell
