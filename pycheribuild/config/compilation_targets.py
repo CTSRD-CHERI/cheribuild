@@ -823,7 +823,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
                 return "mips64c{}-qemu-elf-purecap".format(config.mips_cheri_bits)
             return "mips64-qemu-elf"
         if target.is_riscv(include_purecap=True):
-            return "riscv64-unknown-elf"
+            return target.cpu_architecture.value + "-unknown-elf"
         assert False, "Other baremetal cases have not been tested yet!"
 
     @classmethod
