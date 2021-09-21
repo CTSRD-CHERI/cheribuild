@@ -3520,7 +3520,10 @@ class AutotoolsProject(Project):
         super().configure(**kwargs)
 
     def needs_configure(self):
-        return not (self.build_dir / "Makefile").exists()
+        # Most autotools projects use makefiles, but we also use this class for the CMake
+        # bootstrap build which ends up generating a build.ninja file instead of a Makefile.
+        build_file = "build.ninja" if self.make_args.kind == MakeCommandKind.Ninja else "Makefile"
+        return not (self.build_dir / build_file).exists()
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
         kwargs = {"NM": nm, "AR": ar, "RANLIB": ranlib}
