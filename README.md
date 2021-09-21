@@ -18,7 +18,7 @@ When building on macOS the following packages are required:
 ```shell
 brew install cmake ninja libarchive git glib gnu-sed automake autoconf coreutils llvm make wget pixman pkg-config xz
 # Install samba for shared mounts between host and CheriBSD on QEMU
-brew install arichardson/cheri/samba
+brew install samba
 # If you intend to run the morello FVP model you will also need the following:
 brew install homebrew/cask/docker homebrew/cask/xquartz socat dtc
 ```
