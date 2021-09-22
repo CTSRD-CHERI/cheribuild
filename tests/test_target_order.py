@@ -13,7 +13,7 @@ from pycheribuild.projects.cross import *  # noqa: F401, F403
 from pycheribuild.projects.cross.benchmarks import BenchmarkMixin
 from pycheribuild.projects.cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdMfsImageAndKernels,
                                                   BuildCheriBsdSysrootArchive)
-from pycheribuild.projects.cross.gdb import BuildGDB
+from pycheribuild.projects.cross.gdb import BuildGDBBase
 from pycheribuild.projects.cross.gmp import BuildGmp
 from pycheribuild.projects.disk_image import BuildDiskImageBase
 from pycheribuild.projects.run_fpga import LaunchFPGABase
@@ -329,8 +329,8 @@ def test_hybrid_targets():
     def should_include_target(target: Target):
         cls = target.project_class
         # We expect certain tagets to be built hybrid: CheriBSD/disk image/GDB/run
-        if issubclass(cls, (BuildCHERIBSD, LaunchCheriBSD, BuildDiskImageBase, BuildGDB, BuildCheriBsdSysrootArchive,
-                            LaunchFPGABase, LaunchFVPBase, RunCheriSpikeBase)):
+        if issubclass(cls, (BuildCHERIBSD, LaunchCheriBSD, BuildDiskImageBase, BuildGDBBase,
+                            BuildCheriBsdSysrootArchive, LaunchFPGABase, LaunchFVPBase, RunCheriSpikeBase)):
             return False
         # Also filter out some target aliases
         if issubclass(cls, (BuildCheriBsdMfsImageAndKernels, BuildAll, BuildCheriBSDSdk, BuildSdk,

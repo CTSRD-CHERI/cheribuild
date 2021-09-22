@@ -33,7 +33,9 @@ from pathlib import Path
 
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
                                   DefaultInstallDir, GitRepository, Linkage, MakeCommandKind)
+from .gmp import BuildGmp
 from ..project import TargetBranchInfo
+from ...config.loader import ComputedDefaultValue
 from ...processutils import run_command
 from ...utils import OSInfo, status_update
 
@@ -61,22 +63,11 @@ class TemporarilyRemoveProgramsFromSdk(object):
         return False
 
 
-class BuildGDB(CrossCompileAutotoolsProject):
-    path_in_rootfs = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
-    native_install_dir = DefaultInstallDir.CHERI_SDK
+class BuildGDBBase(CrossCompileAutotoolsProject):
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    _morello_target_branch_info = TargetBranchInfo(branch="morello-8.3", directory_name="morello-gdb")
-    repository = GitRepository(
-        "https://github.com/CTSRD-CHERI/gdb.git",
-        # Branch name is changed for every major GDB release:
-        default_branch="mips_cheri-8.3", force_branch=True,
-        per_target_branches={
-            CompilationTargets.CHERIBSD_AARCH64: _morello_target_branch_info,
-            CompilationTargets.CHERIBSD_MORELLO_HYBRID: _morello_target_branch_info,
-            CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS: _morello_target_branch_info,
-            },
-        old_urls=[b'https://github.com/bsdjhb/gdb.git'])
+    repository = GitRepository("git://sourceware.org/git/binutils-gdb.git")
     make_kind = MakeCommandKind.GnuMake
+    do_not_add_to_targets = True
     is_sdk_target = True
     default_build_type = BuildType.RELEASE
     supported_architectures = (CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS +
@@ -85,14 +76,11 @@ class BuildGDB(CrossCompileAutotoolsProject):
                                CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS + [CompilationTargets.NATIVE])
     default_architecture = CompilationTargets.NATIVE
     prefer_full_lto_over_thin_lto = True
+    dependencies = ["gmp"]
 
     @classmethod
     def is_toolchain_target(cls):
         return cls._xtarget is not None and cls._xtarget.is_native()
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
 
     def linkage(self):
         if not self.compiling_for_host():
@@ -161,6 +149,14 @@ class BuildGDB(CrossCompileAutotoolsProject):
                                               am_cv_CC_dependencies_compiler_type="gcc3",
                                               MAKEINFO="/bin/false"
                                               )
+            # TODO: Make unconditional once CHERI-GDB is updated to 11.1
+            if "gmp" in self.dependencies:
+                self.COMMON_FLAGS.append("-I" + str(BuildGmp.get_install_dir(self) / "include"))
+                self.LDFLAGS.append("-L" + str(BuildGmp.get_install_dir(self) / "lib"))
+                # Autoconf stupidly decides which to use based on file existence
+                # before trying to actually use the thing, so our passing of
+                # -static means the .so fails to link in and thus the build fails.
+                self.configure_args.append("--with-libgmp-type=static")
             self.COMMON_FLAGS.append("-static")  # seems like LDFLAGS is not enough
             # XXX: libtool wants to strip -static from some linker invocations,
             #      and because sbrk's availability is determined based on
@@ -223,6 +219,35 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.install_file(self.build_dir / "binutils/cxxfilt", bindir / "gc++filt")
             self.install_file(self.build_dir / "binutils/nm-new", bindir / "gnm")
             self.install_file(self.build_dir / "binutils/strip-new", bindir / "gstrip")
+
+
+class BuildUpstreamGDB(BuildGDBBase):
+    repository = GitRepository("git://sourceware.org/git/binutils-gdb.git")
+    target = "upstream-gdb"
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, proj:
+            config.output_root / "upstream-gdb" if proj._xtarget.is_native() else None,
+        # NB: We set default_architecture so the unsuffixed target is native
+        as_string=lambda cls:
+            "$INSTALL_ROOT/upstream-gdb" if cls._xtarget is None or cls._xtarget.is_native() else None,
+        inherit=BuildGDBBase._default_install_dir_fn)
+
+
+class BuildGDB(BuildGDBBase):
+    path_in_rootfs = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
+    native_install_dir = DefaultInstallDir.CHERI_SDK
+    _morello_target_branch_info = TargetBranchInfo(branch="morello-8.3", directory_name="morello-gdb")
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/gdb.git",
+        # Branch name is changed for every major GDB release:
+        default_branch="mips_cheri-8.3", force_branch=True,
+        per_target_branches={
+            CompilationTargets.CHERIBSD_AARCH64: _morello_target_branch_info,
+            CompilationTargets.CHERIBSD_MORELLO_HYBRID: _morello_target_branch_info,
+            CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS: _morello_target_branch_info,
+            },
+        old_urls=[b'https://github.com/bsdjhb/gdb.git'])
+    dependencies = []  # TODO: Remove once updated to 11.1
 
 
 class BuildKGDB(BuildGDB):
