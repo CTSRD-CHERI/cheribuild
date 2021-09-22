@@ -41,9 +41,22 @@ dnf install libtool clang-devel bison cmake ninja-build samba flex texinfo glib2
 
 # Basic usage
 
-If you want to start up a QEMU VM running CheriBSD run `cheribuild.py run-riscv64-purecap -d` (-d means build all dependencies).
-If you would like the VM to have all userspace binaries to be built as plain RISC-V binaries instead of CHERI pure-capability ones use `cheribuild.py run-riscv64-hybrid -d`.
-This will build the CHERI compiler, QEMU, CheriBSD, create a disk image and boot that in QEMU.
+The `cheribuild.py` program is normally run from within the
+`cheribuild/` directory as `./cheribuild.py` with options following
+the main command.  Please note the leading `./` before the command name.
+
+To build and run a QEMU VM running CheriBSD on top of the CHERI-RISCV
+ISA run the following command:
+
+`./cheribuild.py run-riscv64-purecap -d` (-d means build all dependencies).
+
+This command will build the CHERI compiler, QEMU, CheriBSD, create a
+disk image and boot that in QEMU.
+
+To build and run the same set of tools and binaries for the Morello
+ISA use the following command:
+
+`./cheribuild.py run-morello-purecap -d`
 
 By default `cheribuild.py` will clone all projects in `~/cheri`, use `~/cheri/build` for build directories
 and install into `~/cheri/output`. However, these directories are all configurable (see below for details).
