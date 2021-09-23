@@ -23,20 +23,13 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from .crosscompileproject import CrossCompileAutotoolsProject
-from .x11 import BuildLibX11
+from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
 from ..project import GitRepository
 
 
-class BuildSDL(CrossCompileAutotoolsProject):
+class BuildSDL(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/libsdl-org/SDL.git")
     dependencies = ["libx11", "libxext", "libxrandr", "libxrender", "libxcursor", "libxi", "libxscrnsaver"]
-
-    def setup(self):
-        super().setup()
-        # AC_PATH_X doesn't use pkg-config so have to specify manually
-        self.configure_args.append("--x-includes=" + str(BuildLibX11.get_install_dir(self) / "include"))
-        self.configure_args.append("--x-libraries=" + str(BuildLibX11.get_install_dir(self) / "lib"))
 
 
 class BuildSDL_Mixer(CrossCompileAutotoolsProject):
