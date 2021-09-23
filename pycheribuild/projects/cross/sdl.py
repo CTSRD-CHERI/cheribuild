@@ -23,20 +23,20 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from .crosscompileproject import CrossCompileAutotoolsProject
-from .x11 import BuildLibX11
+from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
 from ..project import GitRepository
 
 
-class BuildSDL(CrossCompileAutotoolsProject):
+class BuildSDL(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/libsdl-org/SDL.git")
     dependencies = ["libx11", "libxext", "libxrandr", "libxrender", "libxcursor", "libxi", "libxscrnsaver"]
 
     def setup(self):
         super().setup()
-        # AC_PATH_X doesn't use pkg-config so have to specify manually
-        self.configure_args.append("--x-includes=" + str(BuildLibX11.get_install_dir(self) / "include"))
-        self.configure_args.append("--x-libraries=" + str(BuildLibX11.get_install_dir(self) / "lib"))
+        # Tests don't build for purecap until https://github.com/CTSRD-CHERI/llvm-project/pull/624 is included in
+        # CheriBSD (and it needs to be in the main branch not just dev).
+        if self.compiling_for_cheri():
+            self.add_cmake_options(SDL_TEST=False, SDL_TESTS=False)
 
 
 class BuildSDL_Mixer(CrossCompileAutotoolsProject):
