@@ -41,11 +41,14 @@ dnf install libtool clang-devel bison cmake ninja-build samba flex texinfo glib2
 
 # Basic usage
 
-The `cheribuild.py` program is normally run from within the
+In these examples the `cheribuild.py` program is run from within the
 `cheribuild/` directory as `./cheribuild.py` with options following
-the main command.  Please note the leading `./` before the command name.
+the main command.  Please note the leading `./` before the command
+name.  It is also possible to add the `cheribuild/` directory to your
+`PATH` or to link the binary somewhere such as in a `bin/` diretory of
+your choosing.
 
-To build and run a QEMU VM running CheriBSD on top of the CHERI-RISCV
+If you want to start up a QEMU VM running CheriBSD on top of the CHERI-RISCV
 ISA run the following command:
 
 `./cheribuild.py run-riscv64-purecap -d` (-d means build all dependencies).
@@ -53,8 +56,8 @@ ISA run the following command:
 This command will build the CHERI compiler, QEMU, CheriBSD, create a
 disk image and boot that in QEMU.
 
-To build and run the same set of tools and binaries for the Morello
-ISA use the following command:
+If you want to start up a QEMU VM running CheriBSD on top of the
+Morello ISA use the following command:
 
 `./cheribuild.py run-morello-purecap -d`
 
