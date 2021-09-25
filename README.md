@@ -45,10 +45,10 @@ In these examples the `cheribuild.py` program is run from within the
 `cheribuild/` directory as `./cheribuild.py` with options following
 the main command.  Please note the leading `./` before the command
 name.  It is also possible to add the `cheribuild/` directory to your
-`PATH` or to link the binary somewhere such as in a `bin/` diretory of
+`PATH` or to link the binary somewhere such as in a `bin/` directory of
 your choosing.
 
-If you want to start up a QEMU VM running CheriBSD on top of the CHERI-RISCV
+If you want to start up a QEMU VM running CheriBSD on top of the CHERI-RISC-V
 ISA run the following command:
 
 `./cheribuild.py run-riscv64-purecap -d` (-d means build all dependencies).
