@@ -184,9 +184,10 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
         fip_make.set_env(CFLAGS="", CPPFLAGS="", CXXFLAGS="")
         if OSInfo.IS_MAC:
             # TODO: should handle non-homebrew too
-            fip_make.set_env(HOSTLDFLAGS="-L/usr/local/opt/openssl@1.1/lib",
-                             HOSTCCFLAGS="-I/usr/local/opt/openssl@1.1/include",
-                             CPPFLAGS="-I/usr/local/opt/openssl@1.1/include")
+            openssl_prefix = self.get_homebrew_prefix("openssl")
+            fip_make.set_env(HOSTLDFLAGS="-L" + str(openssl_prefix / "lib"),
+                             HOSTCCFLAGS="-I" + str(openssl_prefix / "include"),
+                             CPPFLAGS="-I" + str(openssl_prefix / "include"))
             # FIXME: Makefile doesn't add HOSTLDFLAGS
             fip_make.set(HOSTCC=str(self.host_CC) + " -Qunused-arguments " + fip_make.env_vars["HOSTLDFLAGS"])
         self.run_make(make_target="all", cwd=self.source_dir / "tools/fiptool", options=fip_make)
