@@ -121,6 +121,8 @@ class BuildQEMUBase(AutotoolsProject):
 
         if self.use_asan:
             self.configure_args.append("--enable-sanitizers")
+            # Ensure that tests crash on UBSan reports
+            self.COMMON_FLAGS.append("-fno-sanitize-recover=all")
             if self.use_lto:
                 self.info("Disabling LTO for ASAN instrumented builds")
             self.use_lto = False
