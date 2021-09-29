@@ -470,7 +470,8 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
             # Save some time by only building the targets that we need.
             self.add_cmake_options(LLVM_TARGETS_TO_BUILD="AArch64;ARM;Mips;RISCV;X86;host")
 
-        # We aren't ready yet to switch over to the new pass manager
+        # The current master branch isn't ready yet to switch over to the new pass manager
+        # TODO: remove this after the next dev->master merge
         self.add_cmake_options(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER=False)
         # CLANG_ROUND_TRIP_CC1_ARGS doesn't work for us yet. See e.g. https://reviews.llvm.org/D97462#2677130
         self.add_cmake_options(CLANG_ROUND_TRIP_CC1_ARGS=False)
