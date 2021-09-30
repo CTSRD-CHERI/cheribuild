@@ -114,7 +114,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
 
 
 def _bbl_install_dir(config: CheriConfig, project: Project):
-    dir_name = project.crosscompile_target.generic_suffix.replace("baremetal-", "")
+    dir_name = project.crosscompile_target.generic_arch_suffix.replace("baremetal-", "")
     return config.cheri_sdk_dir / ("bbl" + project.build_dir_suffix) / dir_name
 
 

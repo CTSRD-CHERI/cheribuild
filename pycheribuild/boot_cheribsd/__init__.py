@@ -62,17 +62,17 @@ assert (_pexpect_dir / "pexpect/__init__.py").exists()
 assert str(_pexpect_dir.resolve()) in sys.path, str(_pexpect_dir) + " not found in " + str(sys.path)
 import pexpect  # noqa: E402
 
-SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
-                                                         CompilationTargets.CHERIBSD_MIPS_HYBRID,
-                                                         CompilationTargets.CHERIBSD_MIPS_PURECAP,
-                                                         CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
-                                                         CompilationTargets.CHERIBSD_RISCV_HYBRID,
-                                                         CompilationTargets.CHERIBSD_RISCV_PURECAP,
-                                                         CompilationTargets.CHERIBSD_X86_64,
-                                                         CompilationTargets.CHERIBSD_AARCH64,
-                                                         CompilationTargets.CHERIBSD_MORELLO_HYBRID,
-                                                         CompilationTargets.CHERIBSD_MORELLO_PURECAP,
-                                                         )}
+SUPPORTED_ARCHITECTURES = {x.generic_target_suffix: x for x in (CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
+                                                                CompilationTargets.CHERIBSD_MIPS_HYBRID,
+                                                                CompilationTargets.CHERIBSD_MIPS_PURECAP,
+                                                                CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                                                                CompilationTargets.CHERIBSD_RISCV_HYBRID,
+                                                                CompilationTargets.CHERIBSD_RISCV_PURECAP,
+                                                                CompilationTargets.CHERIBSD_X86_64,
+                                                                CompilationTargets.CHERIBSD_AARCH64,
+                                                                CompilationTargets.CHERIBSD_MORELLO_HYBRID,
+                                                                CompilationTargets.CHERIBSD_MORELLO_PURECAP,
+                                                                )}
 
 AUTOBOOT_PROMPT = re.compile(r"(H|, h)it \[Enter\] to boot ")
 BOOT_LOADER_PROMPT = "OK "
@@ -444,14 +444,14 @@ def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
     if not qemu.xtarget.is_hybrid_or_purecap_cheri():
         local_dir = "usr/local"
         if qemu.xtarget.target_info_cls.is_cheribsd():
-            local_dir += "/" + qemu.xtarget.generic_suffix
+            local_dir += "/" + qemu.xtarget.generic_arch_suffix
         qemu.run("export {var}=/{l}:/usr/{l}:/usr/local/{l}:/sysroot/{l}:/sysroot/usr/{l}:"
                  "/sysroot/{prefix}/{l}:${var}".format(prefix=local_dir, l="lib", var="LD_LIBRARY_PATH"), timeout=3)
         return
 
-    purecap_install_prefix = "usr/local/" + qemu.xtarget.get_cheri_purecap_target().generic_suffix
-    hybrid_install_prefix = "usr/local/" + qemu.xtarget.get_cheri_hybrid_target().generic_suffix
-    nocheri_install_prefix = "usr/local/" + qemu.xtarget.get_non_cheri_target().generic_suffix
+    purecap_install_prefix = "usr/local/" + qemu.xtarget.get_cheri_purecap_target().generic_arch_suffix
+    hybrid_install_prefix = "usr/local/" + qemu.xtarget.get_cheri_hybrid_target().generic_arch_suffix
+    nocheri_install_prefix = "usr/local/" + qemu.xtarget.get_non_cheri_target().generic_arch_suffix
 
     noncheri_ld_lib_path_var = "LD_LIBRARY_PATH" if not qemu.xtarget.is_cheri_purecap() else "LD_64_LIBRARY_PATH"
     cheri_ld_lib_path_var = "LD_LIBRARY_PATH" if qemu.xtarget.is_cheri_purecap() else "LD_CHERI_LIBRARY_PATH"

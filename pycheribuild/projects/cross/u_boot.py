@@ -101,7 +101,7 @@ class BuildUBoot(Project):
 
     @property
     def uboot_suffix(self):
-        return self.crosscompile_target.generic_suffix.replace("baremetal-", "")
+        return self.crosscompile_target.generic_arch_suffix.replace("baremetal-", "")
 
     @property
     def firmware_path(self):

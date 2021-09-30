@@ -69,7 +69,7 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
 
     @property
     def bundle_dir(self):
-        return Path(self.build_dir, self.crosscompile_target.generic_suffix +
+        return Path(self.build_dir, self.crosscompile_target.generic_target_suffix +
                     self.build_configuration_suffix() + "-bundle")
 
     @property
@@ -655,7 +655,7 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
 
     @property
     def bundle_dir(self):
-        return Path(self.build_dir, "lmbench-" + self.crosscompile_target.generic_suffix +
+        return Path(self.build_dir, "lmbench-" + self.crosscompile_target.generic_target_suffix +
                     self.build_configuration_suffix() + "-bundle")
 
     @property
@@ -740,7 +740,7 @@ class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
 
     @property
     def bundle_dir(self):
-        return Path(self.build_dir, "unixbench-" + self.crosscompile_target.generic_suffix +
+        return Path(self.build_dir, "unixbench-" + self.crosscompile_target.generic_target_suffix +
                     self.build_configuration_suffix() + "-bundle")
 
     @property

@@ -34,7 +34,6 @@ from pathlib import Path
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
                                   DefaultInstallDir, GitRepository, Linkage, MakeCommandKind)
 from ..project import TargetBranchInfo
-from ...config.target_info import CrossCompileTarget
 from ...processutils import run_command
 from ...utils import OSInfo, status_update
 
@@ -66,24 +65,23 @@ class BuildGDB(CrossCompileAutotoolsProject):
     path_in_rootfs = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    _morello_target_branch_info = TargetBranchInfo(branch="morello-8.3", directory_name="morello-gdb")
     repository = GitRepository(
         "https://github.com/CTSRD-CHERI/gdb.git",
         # Branch name is changed for every major GDB release:
         default_branch="mips_cheri-8.3", force_branch=True,
         per_target_branches={
-            CompilationTargets.CHERIBSD_AARCH64: TargetBranchInfo(branch="morello-8.3",
-                                                                  directory_name="morello-gdb"),
-            CompilationTargets.CHERIBSD_MORELLO_HYBRID: TargetBranchInfo(branch="morello-8.3",
-                                                                         directory_name="morello-gdb"),
-            CompilationTargets.CHERIBSD_MORELLO_PURECAP: TargetBranchInfo(branch="morello-8.3",
-                                                                          directory_name="morello-gdb"),
+            CompilationTargets.CHERIBSD_AARCH64: _morello_target_branch_info,
+            CompilationTargets.CHERIBSD_MORELLO_HYBRID: _morello_target_branch_info,
+            CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS: _morello_target_branch_info,
             },
         old_urls=[b'https://github.com/bsdjhb/gdb.git'])
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
     default_build_type = BuildType.RELEASE
-    supported_architectures = (CompilationTargets.ALL_CHERIBSD_NON_MORELLO_TARGETS +
-                               CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS +
+    supported_architectures = (CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS +
+                               CompilationTargets.ALL_CHERIBSD_HYBRID_TARGETS +
+                               CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS +
                                CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS + [CompilationTargets.NATIVE])
     default_architecture = CompilationTargets.NATIVE
     prefer_full_lto_over_thin_lto = True
@@ -105,22 +103,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
     def __init__(self, config: CheriConfig):
         self._compile_status_message = None
         super().__init__(config)
-
-    @property
-    def essential_compiler_and_linker_flags(self):
-        # XXX: Ugly hack to build the -purecap GDB targets as hybrid. This avoids having to build a hybrid sysroot
-        # just to build gdb for the purecap disk images.
-        if self.crosscompile_target.is_cheri_purecap():
-            return self.target_info.get_essential_compiler_and_linker_flags(
-                xtarget=self.crosscompile_target.get_cheri_hybrid_target())
-        return super().essential_compiler_and_linker_flags
-
-    @staticmethod
-    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
-        if xtarget.is_cheri_purecap():
-            # Target is not actually purecap, just using the purecap sysroot
-            return base_target + "-" + xtarget.get_cheri_hybrid_target().generic_suffix + "-for-purecap-rootfs"
-        return base_target + "-" + xtarget.generic_suffix
 
     def setup(self):
         super().setup()

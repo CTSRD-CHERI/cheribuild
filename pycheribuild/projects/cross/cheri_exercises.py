@@ -60,8 +60,8 @@ class BuildCheriExercises(CrossCompileProject):
 
     def _compile_for_cheri_and_non_cheri(self, output_name_prefix: str, *src_and_args):
         non_cheri_target = self.crosscompile_target.get_non_cheri_target()
-        self._compile_file(self.build_dir / (output_name_prefix + "-" + non_cheri_target.generic_suffix), *src_and_args,
-                           target_override=non_cheri_target)
+        self._compile_file(self.build_dir / (output_name_prefix + "-" + non_cheri_target.generic_arch_suffix),
+                           *src_and_args, target_override=non_cheri_target)
         self._compile_file(self.build_dir / (output_name_prefix + "-cheri"), *src_and_args)
 
     def compile(self, **kwargs):

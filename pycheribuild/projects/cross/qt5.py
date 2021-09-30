@@ -792,7 +792,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         if not self.compiling_for_host():
             # we need to find the installed Qt
             self.add_cmake_options(
-                Qt5_DIR=self.cross_sysroot_path / ("usr/local/" + self._xtarget.generic_suffix) / "lib/cmake/Qt5")
+                Qt5_DIR=self.cross_sysroot_path / ("usr/local/" + self._xtarget.generic_arch_suffix) / "lib/cmake/Qt5")
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
             self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.get_source_dir(self) / "src/3rdparty/libpng")
             if self.force_static_linkage:

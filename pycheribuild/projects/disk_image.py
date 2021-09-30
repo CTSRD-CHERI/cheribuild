@@ -1128,7 +1128,9 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config)
         # GDB is not strictly a dependency, but having it in the disk image makes life a lot easier
-        result.append("gdb")
+        xtarget = cls.get_crosscompile_target(config)
+        gdb_xtarget = xtarget.get_cheri_hybrid_for_purecap_rootfs_target() if xtarget.is_cheri_purecap() else xtarget
+        result.append(BuildGDB.get_class_for_target(gdb_xtarget).target)
         return result
 
     @classmethod
@@ -1172,7 +1174,7 @@ class BuildFreeBSDImage(BuildDiskImageBase):
         if self.crosscompile_target.is_x86_64(include_purecap=False):
             # remove the old -x86, -x86_64 and -native disk images
             self._cleanup_old_files(self.disk_image_path,
-                                    "-" + self.crosscompile_target.base_suffix + self.cheri_config_suffix,
+                                    "-" + self.crosscompile_target.base_arch_suffix + self.cheri_config_suffix,
                                     ["-x86", "-x86_64", "-native"])
 
 

@@ -38,7 +38,7 @@ from ...utils import classproperty, OSInfo
 
 
 def opensbi_install_dir(config: CheriConfig, project: "Project") -> Path:
-    dir_name = project.crosscompile_target.generic_suffix.replace("baremetal-", "")
+    dir_name = project.crosscompile_target.generic_arch_suffix.replace("baremetal-", "")
     return config.cheri_sdk_dir / ("opensbi" + project.build_dir_suffix) / dir_name
 
 

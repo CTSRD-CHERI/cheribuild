@@ -265,7 +265,7 @@ class TargetInfo(ABC):
     def install_prefix_dirname(self):
         """The name of the root directory to install to: i.e. for CheriBSD /usr/local/mips64-purecap or
         /usr/local/riscv64-hybrid"""
-        result = self.target.generic_suffix
+        result = self.target.generic_arch_suffix
         if self.config.cross_target_suffix:
             result += "-" + self.config.cross_target_suffix
         return result
@@ -281,7 +281,9 @@ class TargetInfo(ABC):
 
     @final
     def get_rootfs_project(self, xtarget: "CrossCompileTarget" = None) -> "Project":
-        return self._get_rootfs_project(xtarget if xtarget is not None else self.target)
+        if xtarget is None:
+            xtarget = self.target
+        return self._get_rootfs_project(xtarget.get_rootfs_target())
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         raise RuntimeError("Should not be called for " + self.project.target)
@@ -550,33 +552,59 @@ class CrossCompileTarget(object):
     # Currently the same for all targets
     DEFAULT_SUBOBJECT_BOUNDS = "conservative"
 
-    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[TargetInfo]",
-                 *, is_cheri_purecap=False, is_cheri_hybrid=False, check_conflict_with: "CrossCompileTarget" = None,
+    def __init__(self, suffix: "typing.Union[str, typing.Tuple[str, str]]", cpu_architecture: CPUArchitecture,
+                 target_info_cls: "typing.Type[TargetInfo]", *, is_cheri_purecap=False, is_cheri_hybrid=False,
+                 check_conflict_with: "CrossCompileTarget" = None, rootfs_target: "CrossCompileTarget" = None,
                  non_cheri_target: "CrossCompileTarget" = None, hybrid_target: "CrossCompileTarget" = None,
-                 purecap_target: "CrossCompileTarget" = None):
-        assert not suffix.startswith("-"), suffix
+                 purecap_target: "CrossCompileTarget" = None,
+                 non_cheri_for_hybrid_rootfs_target: "CrossCompileTarget" = None,
+                 non_cheri_for_purecap_rootfs_target: "CrossCompileTarget" = None,
+                 hybrid_for_purecap_rootfs_target: "CrossCompileTarget" = None,
+                 purecap_for_hybrid_rootfs_target: "CrossCompileTarget" = None):
+        if isinstance(suffix, tuple):
+            assert len(suffix) == 2
+            arch_suffix = suffix[0]
+            extra_target_suffix = "-" + suffix[1] if suffix[1] else ""
+        else:
+            arch_suffix = suffix
+            extra_target_suffix = ""
+        assert not arch_suffix.startswith("-"), arch_suffix
+
         name_prefix = target_info_cls.shortname
         if target_info_cls.os_prefix is not None:
             self.os_prefix = target_info_cls.os_prefix
         else:
             self.os_prefix = name_prefix.lower() + "-"
-        self.name = name_prefix + "-" + suffix
-        self.base_suffix = suffix  # Excluding the OS names
-        self.generic_suffix = self.os_prefix + suffix
+        self.name = name_prefix + "-" + arch_suffix + extra_target_suffix
+
+        self.base_arch_suffix = arch_suffix  # Excluding the OS names
+        self.generic_arch_suffix = self.os_prefix + self.base_arch_suffix
+        self.base_target_suffix = self.base_arch_suffix + extra_target_suffix
+        self.generic_target_suffix = self.generic_arch_suffix + extra_target_suffix
+
         self.cpu_architecture = cpu_architecture
         # TODO: self.operating_system = ...
         self._is_cheri_purecap = is_cheri_purecap
         self._is_cheri_hybrid = is_cheri_hybrid
         assert not (is_cheri_purecap and is_cheri_hybrid), "Can't be both hybrid and purecap"
         self.check_conflict_with = check_conflict_with  # Check that we don't reuse install-dir, etc for this target
+        self._rootfs_target = rootfs_target
         self.target_info_cls = target_info_cls
         # FIXME: there must be a better way of doing this, but this works for now
-        self._hybrid_target = non_cheri_target
-        self._purecap_target = hybrid_target
-        self._non_cheri_target = purecap_target
+        self._non_cheri_target = non_cheri_target
+        self._hybrid_target = hybrid_target
+        self._purecap_target = purecap_target
+        self._non_cheri_for_hybrid_rootfs_target = non_cheri_for_hybrid_rootfs_target
+        self._non_cheri_for_purecap_rootfs_target = non_cheri_for_purecap_rootfs_target
+        self._hybrid_for_purecap_rootfs_target = hybrid_for_purecap_rootfs_target
+        self._purecap_for_hybrid_rootfs_target = purecap_for_hybrid_rootfs_target
         self._set_for(non_cheri_target)
         self._set_for(hybrid_target)
         self._set_for(purecap_target)
+        self._set_for(non_cheri_for_hybrid_rootfs_target)
+        self._set_for(non_cheri_for_purecap_rootfs_target)
+        self._set_for(hybrid_for_purecap_rootfs_target)
+        self._set_for(purecap_for_hybrid_rootfs_target)
 
     # noinspection PyProtectedMember
     def _set_from(self, other_target: "CrossCompileTarget"):
@@ -591,22 +619,69 @@ class CrossCompileTarget(object):
         if self._purecap_target is None and other_target._purecap_target is not None:
             self._purecap_target = other_target._purecap_target
             other_target._purecap_target._set_from(self)
+        if self._non_cheri_for_hybrid_rootfs_target is None and \
+           other_target._non_cheri_for_hybrid_rootfs_target is not None:
+            self._non_cheri_for_hybrid_rootfs_target = other_target._non_cheri_for_hybrid_rootfs_target
+            other_target._non_cheri_for_hybrid_rootfs_target._set_from(self)
+        if self._non_cheri_for_purecap_rootfs_target is None and \
+           other_target._non_cheri_for_purecap_rootfs_target is not None:
+            self._non_cheri_for_purecap_rootfs_target = other_target._non_cheri_for_purecap_rootfs_target
+            other_target._non_cheri_for_purecap_rootfs_target._set_from(self)
+        if self._hybrid_for_purecap_rootfs_target is None and \
+           other_target._hybrid_for_purecap_rootfs_target is not None:
+            self._hybrid_for_purecap_rootfs_target = other_target._hybrid_for_purecap_rootfs_target
+            other_target._hybrid_for_purecap_rootfs_target._set_from(self)
+        if self._purecap_for_hybrid_rootfs_target is None and \
+           other_target._purecap_for_hybrid_rootfs_target is not None:
+            self._purecap_for_hybrid_rootfs_target = other_target._purecap_for_hybrid_rootfs_target
+            other_target._purecap_for_hybrid_rootfs_target._set_from(self)
 
     # Set the related targets:
     def _set_for(self, other_target: "typing.Optional[CrossCompileTarget]", also_set_other=True):
         if other_target is not None and self is not other_target:
             if self._is_cheri_hybrid:
-                assert other_target._hybrid_target is None or other_target._hybrid_target is self, "Already set?"
-                other_target._hybrid_target = self
-                self._hybrid_target = self
+                if self._rootfs_target is not None:
+                    assert self._rootfs_target._is_cheri_purecap, \
+                           "Only support purecap separate rootfs for hybrid targets"
+                    assert other_target._hybrid_for_purecap_rootfs_target is None or \
+                           other_target._hybrid_for_purecap_rootfs_target is self, "Already set?"
+                    other_target._hybrid_for_purecap_rootfs_target = self
+                    self._hybrid_for_purecap_rootfs_target = self
+                else:
+                    assert other_target._hybrid_target is None or other_target._hybrid_target is self, "Already set?"
+                    other_target._hybrid_target = self
+                    self._hybrid_target = self
             elif self._is_cheri_purecap:
-                assert other_target._purecap_target is None or other_target._purecap_target is self, "Already set?"
-                other_target._purecap_target = self
-                self._purecap_target = self
+                if self._rootfs_target is not None:
+                    assert self._rootfs_target._is_cheri_hybrid, \
+                           "Only support hybrid separate rootfs for purecap targets"
+                    assert other_target._purecap_for_hybrid_rootfs_target is None or \
+                           other_target._purecap_for_hybrid_rootfs_target is self, "Already set?"
+                    other_target._purecap_for_hybrid_rootfs_target = self
+                    self._purecap_for_hybrid_rootfs_target = self
+                else:
+                    assert other_target._purecap_target is None or other_target._purecap_target is self, "Already set?"
+                    other_target._purecap_target = self
+                    self._purecap_target = self
             else:
-                assert other_target._non_cheri_target is None or other_target._non_cheri_target is self, "Already set?"
-                other_target._non_cheri_target = self
-                self._non_cheri_target = self
+                if self._rootfs_target is not None:
+                    if self._rootfs_target._is_cheri_hybrid:
+                        assert other_target._non_cheri_for_hybrid_rootfs_target is None or \
+                               other_target._non_cheri_for_hybrid_rootfs_target is self, "Already set?"
+                        other_target._non_cheri_for_hybrid_rootfs_target = self
+                        self._non_cheri_for_hybrid_rootfs_target = self
+                    else:
+                        assert self._rootfs_target._is_cheri_purecap, "Separate non-CHERI rootfs for non-CHERI target?"
+                        assert other_target._non_cheri_for_purecap_rootfs_target is None or \
+                               other_target._non_cheri_for_purecap_rootfs_target is self, "Already set?"
+                        other_target._non_cheri_for_purecap_rootfs_target = self
+                        self._non_cheri_for_purecap_rootfs_target = self
+                else:
+                    assert self._rootfs_target is None, "Separate rootfs targets only supported for CHERI targets"
+                    assert other_target._non_cheri_target is None or other_target._non_cheri_target is self, \
+                           "Already set?"
+                    other_target._non_cheri_target = self
+                    self._non_cheri_target = self
             if also_set_other:
                 other_target._set_for(self, also_set_other=False)
             other_target._set_from(self)
@@ -616,7 +691,7 @@ class CrossCompileTarget(object):
 
     def build_suffix(self, config: "CheriConfig", *, include_os: bool):
         assert self.target_info_cls is not None
-        target_suffix = self.generic_suffix if include_os else self.base_suffix
+        target_suffix = self.generic_target_suffix if include_os else self.base_target_suffix
         result = "-" + target_suffix + self.cheri_config_suffix(config)
         return result
 
@@ -705,26 +780,61 @@ class CrossCompileTarget(object):
     def is_hybrid_or_purecap_cheri(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None):
         return self.is_cheri_purecap(valid_cpu_archs) or self.is_cheri_hybrid(valid_cpu_archs)
 
+    def get_rootfs_target(self) -> "CrossCompileTarget":
+        if self._rootfs_target is not None:
+            return self._rootfs_target
+        return self
+
     def get_cheri_hybrid_target(self) -> "CrossCompileTarget":
-        if self._is_cheri_hybrid:
+        if self._is_cheri_hybrid and self._rootfs_target is None:
             return self
         elif self._hybrid_target is not None:
             return self._hybrid_target
         raise ValueError("Don't know CHERI hybrid version of " + repr(self))
 
     def get_cheri_purecap_target(self) -> "CrossCompileTarget":
-        if self._is_cheri_purecap:
+        if self._is_cheri_purecap and self._rootfs_target is None:
             return self
         elif self._purecap_target is not None:
             return self._purecap_target
         raise ValueError("Don't know CHERI purecap version of " + repr(self))
 
     def get_non_cheri_target(self) -> "CrossCompileTarget":
-        if not self._is_cheri_purecap and not self._is_cheri_hybrid:
+        if not self._is_cheri_purecap and not self._is_cheri_hybrid and self._rootfs_target is None:
             return self
         elif self._non_cheri_target is not None:
             return self._non_cheri_target
         raise ValueError("Don't know non-CHERI version of " + repr(self))
+
+    def get_non_cheri_for_hybrid_rootfs_target(self) -> "CrossCompileTarget":
+        if not self._is_cheri_purecap and not self._is_cheri_hybrid and self._rootfs_target is not None and \
+           self._rootfs_target._is_cheri_hybrid:
+            return self
+        elif self._non_cheri_for_hybrid_rootfs_target is not None:
+            return self._non_cheri_for_hybrid_rootfs_target
+        raise ValueError("Don't know non-CHERI for hybrid rootfs version of " + repr(self))
+
+    def get_non_cheri_for_purecap_rootfs_target(self) -> "CrossCompileTarget":
+        if not self._is_cheri_purecap and not self._is_cheri_hybrid and self._rootfs_target is not None and \
+           self._rootfs_target._is_cheri_purecap:
+            return self
+        elif self._non_cheri_for_purecap_rootfs_target is not None:
+            return self._non_cheri_for_purecap_rootfs_target
+        raise ValueError("Don't know non-CHERI for purecap rootfs version of " + repr(self))
+
+    def get_cheri_hybrid_for_purecap_rootfs_target(self) -> "CrossCompileTarget":
+        if self._is_cheri_hybrid and self._rootfs_target is not None and self._rootfs_target._is_cheri_purecap:
+            return self
+        elif self._hybrid_for_purecap_rootfs_target is not None:
+            return self._hybrid_for_purecap_rootfs_target
+        raise ValueError("Don't know CHERI hybrid for purecap rootfs version of " + repr(self))
+
+    def get_cheri_purecap_for_hybrid_rootfs_target(self) -> "CrossCompileTarget":
+        if self._is_cheri_purecap and self._rootfs_target is not None and self._rootfs_target._is_cheri_hybrid:
+            return self
+        elif self._purecap_for_hybrid_rootfs_target is not None:
+            return self._purecap_for_hybrid_rootfs_target
+        raise ValueError("Don't know CHERI purecap for hybrid rootfs version of " + repr(self))
 
     def __repr__(self):
         result = self.target_info_cls.__name__ + "(" + self.cpu_architecture.name
@@ -732,7 +842,20 @@ class CrossCompileTarget(object):
             result += " purecap"
         if self._is_cheri_hybrid:
             result += " hybrid"
-        return result + ")"
+        result += ")"
+        if self._rootfs_target is not None:
+            result += " for "
+            result += repr(self._rootfs_target)
+            result += " rootfs"
+        return result
+
+    def _dump_target_relations(self):
+        self_repr = repr(self)
+        for n in ('non_cheri', 'hybrid', 'purecap', 'non_cheri_for_hybrid_rootfs', 'non_cheri_for_purecap_rootfs',
+                  'hybrid_for_purecap_rootfs', 'purecap_for_hybrid_rootfs'):
+            k = '_' + n + '_target'
+            v = self.__dict__[k]
+            print(self_repr + "." + n + ": " + repr(v))
 
     # def __eq__(self, other):
     #     raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")

@@ -56,13 +56,7 @@ class BuildCrossCompiledCMake(CMakeProject):
     @staticmethod
     def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
         assert not xtarget.is_native()
-        if xtarget.is_cheri_purecap():
-            # TODO: commit patches to build purecap
-            # Target is not actually purecap, just using the purecap sysroot
-            result = base_target + "-" + xtarget.get_non_cheri_target().generic_suffix + "-for-purecap-rootfs"
-        else:
-            result = base_target + "-" + xtarget.generic_suffix
-        return replace_one(result, "-crosscompiled", "")
+        return replace_one(base_target + "-" + xtarget.generic_target_suffix, "-crosscompiled", "")
 
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCMake, do_update=True)
     target = "cmake-crosscompiled"  # Can't use cmake here due to command line option conflict
@@ -70,15 +64,11 @@ class BuildCrossCompiledCMake(CMakeProject):
     default_build_type = BuildType.RELEASE  # Don't include debug info by default
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     # Also build cmake hybrid so that -hybrid projects can use it with --test
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
-
-    @property
-    def essential_compiler_and_linker_flags(self):
-        # XXX: Ugly hack to build the -purecap targets as non-purecap. TODO: fix purecap ctest
-        if self.crosscompile_target.is_cheri_purecap():
-            return self.target_info.get_essential_compiler_and_linker_flags(
-                xtarget=self.crosscompile_target.get_non_cheri_target())
-        return super().essential_compiler_and_linker_flags
+    # TODO: commit patches to build purecap
+    # TODO: fix purecap ctest
+    supported_architectures = (CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS +
+                               CompilationTargets.ALL_CHERIBSD_HYBRID_TARGETS +
+                               CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS)
 
     @property
     def cmake_prefix_paths(self):

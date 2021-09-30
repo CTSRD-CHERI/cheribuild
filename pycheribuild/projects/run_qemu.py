@@ -174,7 +174,8 @@ class LaunchQEMUBase(SimpleProject):
             if uboot_xtarget is not None:
                 qemu_loader_or_kernel = BuildUBoot.get_firmware_path(self, self.config, cross_target=uboot_xtarget)
             else:
-                self.warning("Unsupported U-Boot QEMU target", xtarget.generic_suffix, "- falling back on kernel")
+                self.warning("Unsupported U-Boot QEMU target", xtarget.generic_target_suffix,
+                             "- falling back on kernel")
 
         if qemu_loader_or_kernel is not None and not qemu_loader_or_kernel.exists():
             self.dependency_error("Loader/kernel is missing:", qemu_loader_or_kernel,

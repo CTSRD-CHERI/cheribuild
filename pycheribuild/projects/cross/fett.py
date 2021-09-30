@@ -225,7 +225,7 @@ class BuildFettDiskImage(FettProjectMixin, BuildCheriBSDDiskImage):
         # Workaround for FETT (we use the normal GDB target to avoid duplicating yet another project)
         for xtarget in BuildCheriBSDDiskImage.supported_architectures:
             assert isinstance(xtarget, CrossCompileTarget)
-            if xtarget.generic_suffix == self.crosscompile_target.generic_suffix:
+            if xtarget.generic_target_suffix == self.crosscompile_target.generic_target_suffix:
                 return xtarget
         raise ValueError("Can't find GDB arch")
 

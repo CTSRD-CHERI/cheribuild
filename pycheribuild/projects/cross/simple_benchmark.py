@@ -49,7 +49,7 @@ class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):
 
     @property
     def archname_column(self):
-        return self.crosscompile_target.generic_suffix + self.build_configuration_suffix()
+        return self.crosscompile_target.generic_arch_suffix + self.build_configuration_suffix()
 
     def run_tests(self):
         if self.compiling_for_host():

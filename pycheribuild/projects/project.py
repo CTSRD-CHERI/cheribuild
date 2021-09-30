@@ -150,11 +150,11 @@ class ProjectSubclassDefinitionHook(type):
                     new_name = custom_target_cb(target_name, arch)
                 else:
                     if cls.include_os_in_target_suffix:
-                        new_name = target_name + "-" + arch.generic_suffix
+                        new_name = target_name + "-" + arch.generic_target_suffix
                     else:
                         # Don't add the OS name to the target suffixed when building the OS: we want the target
                         # to be called freebsd-amd64 and not freebsd-freebsd-amd64.
-                        new_name = target_name + "-" + arch.base_suffix
+                        new_name = target_name + "-" + arch.base_target_suffix
                 new_dict = cls.__dict__.copy()
                 new_dict["_xtarget"] = arch
                 new_dict["_should_not_be_instantiated"] = False  # unlike the subclass we can instantiate these
@@ -312,11 +312,18 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if include_toolchain_dependencies:
                 dependencies.extend(cls._xtarget.target_info_cls.toolchain_targets(cls._xtarget, config))
             if include_sdk_dependencies and cls.needs_sysroot:
-                dependencies.extend(cls._xtarget.target_info_cls.base_sysroot_targets(cls._xtarget, config))
+                # For A-for-B-rootfs targets the sysroot should use B targets,
+                # not A-for-B-rootfs.
+                for dep_name in cls._xtarget.target_info_cls.base_sysroot_targets(cls._xtarget, config):
+                    try:
+                        dep_target = target_manager.get_target(dep_name, arch=expected_build_arch.get_rootfs_target(),
+                                                               config=config, caller=cls)
+                        dependencies.append(dep_target.name)
+                    except KeyError:
+                        fatal_error("Could not find sysroot target '", dep_name, "' for ", cls.__name__, sep="")
+                        raise
         # Try to resovle the target names to actual targets and potentially add recursive depdencies
         for dep_name in dependencies:
-            if callable(dep_name):
-                dep_name = dep_name(cls, config)
             try:
                 dep_target = target_manager.get_target(dep_name, arch=expected_build_arch, config=config, caller=cls)
             except KeyError:
@@ -1651,7 +1658,7 @@ class GitRepository(SourceRepository):
                 continue
         if matching_remote is None:
             current_project.warning("Could not find remote for URL", per_target_url, "will add a new one")
-            new_remote = "remote-" + current_project.crosscompile_target.generic_suffix
+            new_remote = "remote-" + current_project.crosscompile_target.generic_arch_suffix
             run_command(["git", "-C", base_project_source_dir, "remote", "add", new_remote, per_target_url],
                         print_verbose_only=False)
             matching_remote = new_remote
@@ -3588,7 +3595,10 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             else:
                 from .cmake import BuildCrossCompiledCMake
                 try:
-                    cmake_target = BuildCrossCompiledCMake.get_instance(self)
+                    xtarget = self.get_crosscompile_target(self.config)
+                    cmake_xtarget = \
+                        xtarget.get_non_cheri_for_purecap_rootfs_target() if xtarget.is_cheri_purecap() else xtarget
+                    cmake_target = BuildCrossCompiledCMake.get_instance(self, cross_target=cmake_xtarget)
                     if not (cmake_target.install_dir / "bin/ctest").is_file():
                         self.dependency_error("cannot find cross-compiled CTest binary to run tests.",
                                               cheribuild_target=cmake_target.target)
