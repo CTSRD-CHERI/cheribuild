@@ -14,6 +14,7 @@ from pycheribuild.projects.cross.benchmarks import BenchmarkMixin
 from pycheribuild.projects.cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdMfsImageAndKernels,
                                                   BuildCheriBsdSysrootArchive)
 from pycheribuild.projects.cross.gdb import BuildGDB
+from pycheribuild.projects.cross.gmp import BuildGmp
 from pycheribuild.projects.disk_image import BuildDiskImageBase
 from pycheribuild.projects.run_fpga import LaunchFPGABase
 from pycheribuild.projects.run_fvp import LaunchFVPBase
@@ -344,9 +345,14 @@ def test_hybrid_targets():
         # Benchmarks can also be built hybrid:
         if issubclass(cls, BenchmarkMixin):
             return False
-        # Finally, we also build CMake for the hybrid rootfs so that it can be used by --test mode
+        # We also build CMake for the hybrid rootfs so that it can be used by --test mode
         if issubclass(cls, BuildCrossCompiledCMake):
             return False
+
+        # Finally, filter out dependencies of any of the above:
+        if issubclass(cls, BuildGmp):
+            return False
+
         # Otherwise this target
         return True
 
