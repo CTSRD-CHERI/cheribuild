@@ -137,6 +137,7 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
 class BuildWayland(CrossCompileMesonProject):
     # We need a native wayland-scanner during the build
     needs_native_build_for_crosscompile = True
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
@@ -148,8 +149,6 @@ class BuildWayland(CrossCompileMesonProject):
         if target.target_info_cls.is_freebsd():
             deps += ["epoll-shim"]
         return deps
-
-    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     repository = GitRepository("https://gitlab.freedesktop.org/wayland/wayland.git", default_branch="main",
                                force_branch=True, old_urls=[b"https://github.com/CTSRD-CHERI/wayland"])
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
@@ -163,3 +162,16 @@ class BuildWayland(CrossCompileMesonProject):
         if self.target_info.is_macos():
             # Only build wayland-scanner
             self.add_meson_options(libraries=False)
+
+
+class BuildWaylandProtocols(CrossCompileMesonProject):
+    target = "wayland-protocols"
+    dependencies = ["wayland", "wayland-native"]  # native wayland-scanner is needed for tests
+    repository = GitRepository("https://gitlab.freedesktop.org/wayland/wayland-protocols.git")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
+
+    def setup(self):
+        super().setup()
+        # Tests depend on https://gitlab.freedesktop.org/wayland/wayland-protocols/-/merge_requests/119
+        self.add_meson_options(tests=False)
