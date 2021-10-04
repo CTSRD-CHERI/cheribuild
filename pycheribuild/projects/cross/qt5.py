@@ -229,6 +229,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         self.configure_args.extend([
             # To ensure the host and cross-compiled version is the same also disable opengl
             "-no-opengl",
+            # Since the cross-compiled version doesn't have glib, also disable it for the native on
+            "-no-glib",
             # Needed for webkit:
             # "-icu",
             # "-no-Werror",
