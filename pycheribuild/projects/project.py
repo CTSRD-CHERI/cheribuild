@@ -1889,7 +1889,7 @@ class MercurialRepository(SourceRepository):
             clone_cmd = ["clone"]
             if self.default_branch:
                 clone_cmd += ["--branch", self.default_branch]
-            self.run_rg(None, clone_cmd + [self.url, base_project_source_dir], cwd="/")
+            self.run_hg(None, clone_cmd + [self.url, base_project_source_dir], cwd="/")
         assert src_dir == base_project_source_dir, "Worktrees only supported with git"
 
     def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path = None, revision=None,
