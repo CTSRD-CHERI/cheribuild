@@ -103,6 +103,11 @@ class BuildLLVMBase(CMakeProject):
                                  "llvm-readobj", "llvm-size", "llvm-strings", "llvm-strip", "llvm-symbolizer",
                                  "opt"]
 
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        # NB: macOS includes it in the SDK, FreeBSD includes it in base
+        self.add_required_pkg_config("zlib", apt="zlib1g-dev", zypper="zlib-devel")
+
     def setup(self):
         super().setup()
         if self.compiling_for_host():
@@ -143,6 +148,9 @@ class BuildLLVMBase(CMakeProject):
         # No need for libxml2 (only used for c-index-test and WindowsManifestMerger. The build system doesn't set RPATH
         # correctly for libxml2, so linking against libxml2 in bootstrap tools breaks the build.
         self.add_cmake_options(LLVM_ENABLE_LIBXML2=False)
+
+        # Ensure zlib compressed debug support is present (ON is really AUTO)
+        self.add_cmake_options(LLVM_ENABLE_ZLIB="FORCE_ON")
 
         if self.use_modules_build:
             self.add_cmake_options(LLVM_ENABLE_MODULES=True,
