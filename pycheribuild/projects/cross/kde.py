@@ -33,7 +33,7 @@ from pathlib import Path
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
 from .freetype import BuildFontConfig, BuildFreeType2
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
-from .wayland import BuildLibInput
+from .wayland import BuildLibInput, BuildWayland
 from .x11 import BuildLibXCB
 from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, TargetAliasWithDependencies
 from ...colour import AnsiColour, coloured
@@ -197,11 +197,25 @@ class BuildGettext(CrossCompileAutotoolsProject):
             super().process()
 
 
+class BuildPlasmaWaylandProtocols(KDECMakeProject):
+    target = "plasma-wayland-protocols"
+    repository = GitRepository("https://invent.kde.org/libraries/plasma-wayland-protocols")
+
+
 #
 # Frameworks, tier1
 #
-# frameworks/syntax-highlighting: third-party/taglib
-# frameworks/kwayland: kdesupport/plasma-wayland-protocols
+class BuildKWayland(KDECMakeProject):
+    target = "kwayland"
+    dependencies = ["libglvnd", "wayland-protocols"]
+    repository = GitRepository("https://invent.kde.org/frameworks/kwayland")
+
+    def setup(self):
+        super().setup()
+        wayland_native_install_dir = BuildWayland.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
+        self.add_cmake_options(WaylandScanner_EXECUTABLE=wayland_native_install_dir / "bin/wayland-scanner")
+
+
 class BuildBreezeIcons(KDECMakeProject):
     target = "breeze-icons"
     repository = GitRepository("https://invent.kde.org/frameworks/breeze-icons.git")
