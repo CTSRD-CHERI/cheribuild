@@ -115,6 +115,12 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     hide_options_from_help = True  # hide this for now
     default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
 
+    @property
+    def pkgconfig_dirs(self) -> "list[str]":
+        if not self.target_info.is_macos():
+            return BuildLibXCB.get_instance(self).installed_pkgconfig_dirs() + super().pkgconfig_dirs
+        return super().pkgconfig_dirs
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.configure_command = self.source_dir / "configure"
@@ -129,11 +135,14 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         deps = super().dependencies(config)
-        if not cls.get_crosscompile_target(config).is_native():
+        if not cls.get_crosscompile_target(config).target_info_cls.is_macos():
             # TODO: should only need these if minimal is not set
+            # The system X11 libraries might be too old, so add the cheribuild-provided ones as a dependency
             deps.extend(["libx11", "libxcb", "libxkbcommon", "libxcb-cursor", "libxcb-util", "libxcb-image", "libice",
-                         "libsm", "libxext", "libxtst", "libxcb-render-util", "libxcb-wm", "libxcb-keysyms",
-                         "shared-mime-info", "dejavu-fonts", "fontconfig", "libpng", "libjpeg-turbo", "sqlite"])
+                         "libsm", "libxext", "libxtst", "libxcb-render-util", "libxcb-wm", "libxcb-keysyms"])
+            # Assume that we can use system libraries for sqlite+libpng+fonts
+            if not cls.get_crosscompile_target(config).is_native():
+                deps.extend(["shared-mime-info", "dejavu-fonts", "fontconfig", "libpng", "libjpeg-turbo", "sqlite"])
         return deps
 
     @classmethod

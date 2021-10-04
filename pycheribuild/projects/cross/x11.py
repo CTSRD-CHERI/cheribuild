@@ -42,8 +42,16 @@ class X11Mixin:
     path_in_rootfs = "/usr/local"  # Always install X11 programs in /usr/local/bin to make X11 forwarding work
     default_build_type = BuildType.RELWITHDEBINFO
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL  # Don't override the native installation
+    # Don't override the native installation, only use it when paths are explicitly added
+    native_install_dir = DefaultInstallDir.KDE_PREFIX  # TODO: should use a separate prefix but for now this works.
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+
+    # noinspection PyUnresolvedReferences
+    @property
+    def pkgconfig_dirs(self) -> "list[str]":
+        if self.compiling_for_host():
+            return self.installed_pkgconfig_dirs() + super().pkgconfig_dirs
+        return super().pkgconfig_dirs
 
     def setup(self):
         # noinspection PyUnresolvedReferences
