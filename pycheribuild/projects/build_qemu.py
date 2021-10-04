@@ -28,13 +28,12 @@
 # SUCH DAMAGE.
 #
 import os
-import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-from .project import (AutotoolsProject, BuildType, CheriConfig, CrossCompileTarget, DefaultInstallDir, GitRepository,
-                      MakeCommandKind, SimpleProject)
+from .project import (_cached_get_homebrew_prefix, AutotoolsProject, BuildType, CheriConfig, CrossCompileTarget,
+                      DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
 from ..config.loader import ComputedDefaultValue
 
@@ -158,14 +157,14 @@ class BuildQEMUBase(AutotoolsProject):
             if self.target_info.is_freebsd():
                 smbd_path = "/usr/local/sbin/smbd"
             elif self.target_info.is_macos():
-                try:
-                    prefix = self.run_cmd("brew", "--prefix", "samba", capture_output=True, run_in_pretend_mode=True,
-                                          print_verbose_only=True).stdout.decode("utf-8").strip()
-                except subprocess.CalledProcessError:
-                    prefix = self.config.other_tools_dir
-                smbd_path = Path(prefix, "sbin/smbd")
-                print("Guessed samba path", smbd_path)
+                prefix = _cached_get_homebrew_prefix("samba", self.config)
+                if prefix:
+                    smbd_path = prefix / "sbin/samba-dot-org-smbd"
+                else:
+                    smbd_path = self.config.other_tools_dir / "sbin/smbd"
+                self.info("Guessed samba path", smbd_path)
 
+            # Prefer the self-compiled samba if available.
             if (self.config.other_tools_dir / "sbin/smbd").exists():
                 smbd_path = self.config.other_tools_dir / "sbin/smbd"
 
@@ -177,9 +176,9 @@ class BuildQEMUBase(AutotoolsProject):
                 if self.target_info.is_macos():
                     # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
                     # sources but the macos /usr/sbin/smbd is incompatible with that:
-                    self.warning("QEMU user-mode samba shares require the samba.org smbd. You will need to build it "
-                                 "from source (using `cheribuild.py samba`) since the /usr/sbin/smbd shipped by MacOS"
-                                 " is incompatible with QEMU")
+                    self.warning("QEMU user-mode samba shares require the samba.org smbd. You will need to install it "
+                                 "using homebrew (`brew install samba`) or build from source (`cheribuild.py samba`) "
+                                 "since the /usr/sbin/smbd shipped by macOS is incompatible with QEMU")
                 self.fatal("Could not find smbd -> QEMU SMB shares networking will not work",
                            fixit_hint="Either install samba using the system package manager or with cheribuild. "
                                       "If you really don't need QEMU host shares you can disable the samba dependency "

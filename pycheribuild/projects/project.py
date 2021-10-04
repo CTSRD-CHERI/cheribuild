@@ -65,7 +65,7 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
            "ReuseOtherProjectDefaultTargetRepository", "MakefileProject", "MesonProject",  # no-combine
            "TargetBranchInfo", "Linkage", "BasicCompilationTargets", "DefaultInstallDir", "BuildType",  # no-combine
-           "SubversionRepository"]  # no-combine
+           "SubversionRepository", "_cached_get_homebrew_prefix"]  # no-combine
 
 Type_T = typing.TypeVar("Type_T")
 
