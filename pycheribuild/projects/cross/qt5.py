@@ -34,8 +34,7 @@ from pathlib import Path
 
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
                                   CrossCompileCMakeProject, CrossCompileMesonProject, CrossCompileProject,
-                                  DefaultInstallDir, GitRepository,
-                                  Linkage, MakeCommandKind)
+                                  DefaultInstallDir, GitRepository, Linkage, MakeCommandKind)
 from .wayland import BuildWayland
 from .x11 import BuildLibXCB
 from ..project import SimpleProject
@@ -114,6 +113,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     hide_options_from_help = True  # hide this for now
     default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
+    use_x11: bool
+    minimal: bool
 
     @property
     def pkgconfig_dirs(self) -> "list[str]":
@@ -135,8 +136,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         deps = super().dependencies(config)
-        if not cls.get_crosscompile_target(config).target_info_cls.is_macos():
-            # TODO: should only need these if minimal is not set
+        if cls.use_x11 and not cls.minimal:
             # The system X11 libraries might be too old, so add the cheribuild-provided ones as a dependency
             deps.extend(["libx11", "libxcb", "libxkbcommon", "libxcb-cursor", "libxcb-util", "libxcb-image", "libice",
                          "libsm", "libxext", "libxtst", "libxcb-render-util", "libxcb-wm", "libxcb-keysyms"])
@@ -168,6 +168,10 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         cls.assertions = cls.add_bool_option("assertions", default=assertions_by_default, show_help=True,
                                              help="Include assertions (even in release builds)")
         cls.minimal = cls.add_bool_option("minimal", show_help=True, help="Don't build QtWidgets or QtGui, etc")
+        # Link against X11 libs by default if we aren't compiling for macOS
+        native_is_macos = cls._xtarget is not None and cls._xtarget.is_native() and OSInfo.IS_MAC
+        cls.use_x11 = cls.add_bool_option("use-x11", default=not native_is_macos,
+                                          show_help=False, help="Build Qt with the XCB backend.")
 
     def configure(self, **kwargs):
         if self.force_static_linkage:
@@ -301,7 +305,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         else:
             self.configure_args.append("-dbus")  # we want to build QtDBus
             # Enable X11 support when cross-compiling by default
-            if not self.compiling_for_host():
+            if self.use_x11:
                 self.configure_args.extend(["-xcb", "-xkbcommon", "-xcb-xlib"])
                 # Note: all X11 libraries are installed into the same directory
                 self.configure_args.append("-L" + str(BuildLibXCB.get_install_dir(self) / "lib"))

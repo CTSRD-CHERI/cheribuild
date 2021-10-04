@@ -515,16 +515,15 @@ class ConfigOptionBase(object):
         return self._is_default_value
 
     def __get__(self, instance, owner):
-        assert instance is not None, "This attribute needs an object instance. Owner = " + str(owner)
+        assert instance is not None or not callable(self.default), \
+            f"Tried to access read config option {self.full_option_name} without an object instance. " \
+            f"Config options using computed defaults can only be used with an object instance. Owner = {owner}"
 
         # TODO: would be nice if this was possible (but too much depends on accessing values without instances)
         # if instance is None:
         #     return self
         assert not self._owning_class or issubclass(owner, self._owning_class)
         if self._cached is None:
-            # allow getting the value when used on a class as well:
-            if instance is None:
-                instance = owner
             # noinspection PyProtectedMember
             self._cached = self.load_option(self._loader._cheri_config, instance, owner)
         return self._cached
