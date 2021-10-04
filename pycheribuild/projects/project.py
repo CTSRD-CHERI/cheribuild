@@ -1705,32 +1705,36 @@ class GitRepository(SourceRepository):
         if not src_dir.exists():
             return
 
-        # handle repositories that have moved
+        # handle repositories that have moved:
         if src_dir.exists() and self.old_urls:
-            # Try to get the name of the default remove from the configured upstream branch
-            remote_name = "origin"
+            # Try to get the name of the default remote from the configured upstream branch
+            remote_name = None
             try:
                 revparse = run_command(
                     ["git", "-C", base_project_source_dir, "rev-parse", "--symbolic-full-name",
-                     "@{upstream}"], capture_output=True).stdout.decode("utf-8")  # type: str
+                     "@{upstream}"], capture_output=True, capture_error=True).stdout.decode("utf-8")  # type: str
                 if revparse.startswith("refs/remotes") and len(revparse.split("/")) > 3:
                     remote_name = revparse.split("/")[2]
                 else:
-                    current_project.warning("Could not parse git rev-parse output. No upstream configured?",
-                                            "Output was", revparse, "-- will use ", remote_name, "as remote name.")
+                    current_project.warning("Could not parse git rev-parse output. ",
+                                            "Output was", revparse, "-- will not attempt to update remote URLs.")
             except subprocess.CalledProcessError as e:
-                current_project.warning("git rev-parse failed, will use ", remote_name, "as remote name:", e)
+                if b"no upstream configured" in e.stderr:
+                    remote_name = None
+                else:
+                    current_project.warning("git rev-parse failed, will not attempt to update remote URLs:", e)
 
-            remote_url = run_command("git", "remote", "get-url", remote_name, capture_output=True,
-                                     cwd=src_dir).stdout.strip()
-            # Update from the old url:
-            for old_url in self.old_urls:
-                assert isinstance(old_url, bytes)
-                if remote_url == old_url:
-                    current_project.warning(current_project.target, "still points to old repository", remote_url)
-                    if current_project.query_yes_no("Update to correct URL?"):
-                        run_command("git", "remote", "set-url", remote_name, self.url,
-                                    run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, cwd=src_dir)
+            if remote_name is not None:
+                remote_url = run_command("git", "remote", "get-url", remote_name, capture_output=True,
+                                         cwd=src_dir).stdout.strip()
+                # Update from the old url:
+                for old_url in self.old_urls:
+                    assert isinstance(old_url, bytes)
+                    if remote_url == old_url:
+                        current_project.warning(current_project.target, "still points to old repository", remote_url)
+                        if current_project.query_yes_no("Update to correct URL?"):
+                            run_command("git", "remote", "set-url", remote_name, self.url,
+                                        run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, cwd=src_dir)
 
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
