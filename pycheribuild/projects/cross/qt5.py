@@ -185,11 +185,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 # otherwise the build assumes GCC
                 self.configure_args.append("-platform")
                 self.configure_args.append("linux-clang")
-            # FreeBSD header files may use the register storage class but c++17 disallows this
-            if OSInfo.IS_FREEBSD:
-                self.configure_args.append("-platform")
-                self.configure_args.append("offscreen")
-                self.configure_args.extend(["-c++std", "c++14"])
             if OSInfo.IS_MAC:
                 # Use my (rejected) patch to add additional data directories for macos
                 # (https://codereview.qt-project.org/c/qt/qtbase/+/238640), so that we can find shared data and run
