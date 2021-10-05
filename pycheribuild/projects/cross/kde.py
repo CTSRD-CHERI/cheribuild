@@ -35,7 +35,8 @@ from .freetype import BuildFontConfig, BuildFreeType2
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
 from .wayland import BuildLibInput, BuildWayland
 from .x11 import BuildLibXCB
-from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, TargetAliasWithDependencies
+from ..project import (CMakeProject, DefaultInstallDir, GitRepository, MakeCommandKind,
+                       ReuseOtherProjectDefaultTargetRepository, TargetAliasWithDependencies)
 from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
@@ -790,12 +791,44 @@ class BuildKScreenLocker(KDECMakeProject):
     _uses_wayland_scanner = True
 
 
+class BuildKWaylandServer(KDECMakeProject):
+    target = "kwayland-server"
+    repository = GitRepository("https://invent.kde.org/plasma/kwayland-server.git",
+                               temporary_url_override="https://invent.kde.org/arichardson/kwayland-server.git",
+                               url_override_reason="https://invent.kde.org/plasma/kwayland-server/-/merge_requests/302")
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        result = super().dependencies(config) + ["kwayland", "libinput"]
+        # We need the build tools
+        if not cls.get_crosscompile_target(config).is_native():
+            result.extend(["qtwaylandscanner-kde"])
+        return result
+
+    def setup(self):
+        super().setup()
+        if not self.compiling_for_host():
+            native_scanner_build = BuildQtWaylandScannerKDE.get_build_dir(self, cross_target=CompilationTargets.NATIVE)
+            self.add_cmake_options(qtwaylandscanner_kde_EXECUTABLE=native_scanner_build / "qtwaylandscanner_kde")
+
+
+class BuildQtWaylandScannerKDE(CMakeProject):
+    target = "qtwaylandscanner-kde"
+    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildKWaylandServer, subdirectory="src/tools")
+
+    @property
+    def cmake_prefix_paths(self):
+        return [BuildQtBase.get_install_dir(self)] + super().cmake_prefix_paths
+
+
 class BuildKWin(KDECMakeProject):
     target = "kwin"
     repository = GitRepository("https://invent.kde.org/plasma/kwin.git",
                                temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
                                url_override_reason="Needs lots of ifdefs for -no-opengl QtBase and no-wayland")
-    dependencies = ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker", "libinput", "qttools"]
+    dependencies = ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker", "libinput", "qttools",
+                    "kwayland-server"]
 
     def setup(self):
         super().setup()
