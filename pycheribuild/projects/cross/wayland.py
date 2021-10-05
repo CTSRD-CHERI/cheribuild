@@ -190,6 +190,3 @@ class BuildLibGlvnd(CrossCompileMesonProject):
     def setup(self):
         super().setup()
         self.add_meson_options(glx="enabled")
-        if self.compiling_for_cheri():
-            # TODO: remove when https://gitlab.freedesktop.org/glvnd/libglvnd/-/merge_requests/256 is merged
-            self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
