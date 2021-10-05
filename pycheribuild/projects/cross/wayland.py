@@ -162,6 +162,10 @@ class BuildWayland(CrossCompileMesonProject):
         if self.target_info.is_macos():
             # Only build wayland-scanner
             self.add_meson_options(libraries=False)
+        if not self.compiling_for_host():
+            # Don't cross-compile wayland-scanner, otherwise downstream projects will try to use the cross-compiled
+            # version instead of the host binary
+            self.add_meson_options(scanner=False)
 
 
 class BuildWaylandProtocols(CrossCompileMesonProject):
