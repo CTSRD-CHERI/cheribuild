@@ -184,7 +184,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             # Non-RISC-V baremetal toolchains search in lib not lib/baremetal
             # (the inconsistency should be fixed in Clang, although in this
             # case the RISC-V behaviour is perhaps convenient).
-            self.move_file(self.install_dir / "lib/baremetal" / libname, self.real_install_root_dir / "lib" / libname)
+            if not self.target_info.target.is_riscv(include_purecap=True):
+                self.move_file(self.install_dir / "lib/baremetal" / libname,
+                               self.real_install_root_dir / "lib" / libname)
 
             if self.compiling_for_mips(include_purecap=True):
                 # HACK: we don't really need libunwind but the toolchain pulls it in automatically
