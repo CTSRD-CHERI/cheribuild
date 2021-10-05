@@ -57,6 +57,7 @@ class KDECMakeProject(CrossCompileCMakeProject):
     tests_need_full_disk_image = False  # default to running with the full disk image
     _has_qt_designer_plugin = False
     _needs_newer_bison = False
+    _uses_wayland_scanner = False
     # Default to not building the tests since it saves a lot of build time
     has_optional_tests = True
     default_build_tests = False
@@ -93,6 +94,9 @@ class KDECMakeProject(CrossCompileCMakeProject):
         # Skip the QtDesigner plugin for now, it won't be particularly useful
         if self._has_qt_designer_plugin:
             self.add_cmake_options(BUILD_DESIGNERPLUGIN=False)
+        if self._uses_wayland_scanner:
+            wayland_native_install_dir = BuildWayland.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
+            self.add_cmake_options(WaylandScanner_EXECUTABLE=wayland_native_install_dir / "bin/wayland-scanner")
         if not self.compiling_for_host():
             # We need native tools (e.g. desktoptojson/kconfig_compiler) for some projects
             native_project = BuildKCoreAddons.get_instance(self, cross_target=CompilationTargets.NATIVE)
@@ -209,11 +213,7 @@ class BuildKWayland(KDECMakeProject):
     target = "kwayland"
     dependencies = ["libglvnd", "wayland-protocols"]
     repository = GitRepository("https://invent.kde.org/frameworks/kwayland")
-
-    def setup(self):
-        super().setup()
-        wayland_native_install_dir = BuildWayland.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
-        self.add_cmake_options(WaylandScanner_EXECUTABLE=wayland_native_install_dir / "bin/wayland-scanner")
+    _uses_wayland_scanner = True
 
 
 class BuildBreezeIcons(KDECMakeProject):
@@ -773,6 +773,13 @@ class BuildKIdleTime(KDECMakeProject):
         if not cls.get_crosscompile_target(config).is_native():
             result.extend(["libxext", "libxcb", "qtx11extras"])
         return result
+
+
+class LayerShellQt(KDECMakeProject):
+    target = "layer-shell-qt"
+    repository = GitRepository("https://invent.kde.org/plasma/layer-shell-qt")
+    dependencies = ["qtwayland", "wayland-protocols", "libxkbcommon", "qtdeclarative"]
+    _uses_wayland_scanner = True
 
 
 class BuildKScreenLocker(KDECMakeProject):
