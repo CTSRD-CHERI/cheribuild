@@ -93,7 +93,7 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
                 self.add_cmake_options(LIBUINWIND_BUILD_STATIC_TEST_BINARIES=False)
         else:
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=False,
-                                   LIBUNWIND_ENABLE_SHARED=True)
+                                   LIBUNWIND_ENABLE_SHARED=not self.target_info.must_link_statically)
             # collect_test_binaries = self.build_dir / "test-output"
             # executor = self.commandline_to_str([self.source_dir / "../libcxx/utils/copy_files.py",
             #                                "--output-dir", collect_test_binaries])
