@@ -567,3 +567,8 @@ class BuildIceWM(X11Mixin, CrossCompileCMakeProject):
         # /usr/local/bin/icewmbg --scaled=1 --center=1 --image /root/cherries.jpeg
         self.add_cmake_options(CONFIG_LIBPNG=True, CONFIG_LIBJPEG=True, CONFIG_IMLIB2=False, CONFIG_XPM=True)
         self.add_cmake_options(ENABLE_NLS=False, CONFIG_I18N=False)
+
+
+class BuildLibPCIAccess(CrossCompileMesonProject):
+    target = "libpciaccess"
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libpciaccess.git")
