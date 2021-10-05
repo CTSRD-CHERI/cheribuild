@@ -538,10 +538,15 @@ class BuildQtModuleWithQMake(CrossCompileProject):
         function=lambda config, project: BuildQt5.get_source_dir(project, config) / project.default_directory_basename,
         as_string=lambda cls: "$SOURCE_ROOT/qt5/" + cls.default_directory_basename)
 
+    def __init__(self, config):
+        super().__init__(config)
+        self.early_qmake_args = []
+
     def configure(self, **kwargs):
         # Run the QtBase QMake to generate a makefile
-        self.run_cmd(BuildQtBase.get_instance(self).qt_host_tools_path / "bin/qmake", self.source_dir,
-                     "--", *self.configure_args, cwd=self.build_dir)
+        self.run_cmd(BuildQtBase.get_instance(self).qt_host_tools_path / "bin/qmake", *self.early_qmake_args,
+                     self.source_dir, "--", *self.configure_args, cwd=self.build_dir,
+                     env=self.configure_environment)
 
     def compile(self, **kwargs):
         self.run_make("sub-src")
