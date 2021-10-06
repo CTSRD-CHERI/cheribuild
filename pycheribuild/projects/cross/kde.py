@@ -828,7 +828,7 @@ class BuildKWin(KDECMakeProject):
                                temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
                                url_override_reason="Needs lots of ifdefs for -no-opengl QtBase and no-wayland")
     dependencies = ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker", "libinput", "qttools",
-                    "kwayland-server"]
+                    "kwayland-server", "mesa", "libepoxy"]
 
     def setup(self):
         super().setup()
