@@ -572,3 +572,15 @@ class BuildIceWM(X11Mixin, CrossCompileCMakeProject):
 class BuildLibPCIAccess(CrossCompileMesonProject):
     target = "libpciaccess"
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libpciaccess.git")
+
+
+class BuildLibXshmFence(X11AutotoolsProject):
+    target = "libxshmfence"
+    dependencies = ["xorgproto"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxshmfence.git")
+
+
+class BuildLibXxf86vm(X11AutotoolsProject):
+    target = "libxxf86vm"
+    dependencies = ["xorgproto", "libxext"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxxf86vm.git")
