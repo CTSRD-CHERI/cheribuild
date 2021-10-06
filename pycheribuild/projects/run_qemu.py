@@ -603,7 +603,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         cherios = BuildCheriOS.get_instance(self, config)
         self.current_kernel = BuildCheriOS.get_build_dir(self) / "boot/cherios.elf"
         self.disk_image = self.config.output_root / "cherios-disk.img"
-        self._project_specific_options = ["-no-reboot"]
+        self._project_specific_options = ["-no-reboot", "-global", "virtio-mmio.force-legacy=false"]
 
         if cherios.build_net:
             self._after_disk_options.extend([
@@ -616,6 +616,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
             self._project_specific_options.append(str(cherios.smp_cores))
 
         self.qemu_options.virtio_disk = True  # CheriOS needs virtio
+        self.qemu_options.force_virtio_blk_device = True
         self.qemu_user_networking = False
 
     def setup(self):
