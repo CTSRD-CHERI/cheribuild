@@ -92,3 +92,15 @@ class BuildMesa(CrossCompileMesonProject):
         # and don't need to be functional.
         # TODO: actually look at those warnings and see which of them matter.
         self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+
+
+class BuildLibeEpoxy(CrossCompileMesonProject):
+    target = "libepoxy"
+    dependencies = ["mesa"]
+    repository = GitRepository("https://github.com/anholt/libepoxy",
+                               temporary_url_override="https://github.com/arichardson/libepoxy",
+                               url_override_reason="https://github.com/anholt/libepoxy/pull/261")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+
+    def setup(self):
+        super().setup()
