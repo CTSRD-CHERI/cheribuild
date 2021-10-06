@@ -49,6 +49,17 @@ class BuildLibDrm(CrossCompileMesonProject):
                                    valgrind=False, **{"cairo-tests": False, "freedreno-kgsl": False})
 
 
+class BuildLibGlvnd(CrossCompileMesonProject):
+    target = "libglvnd"
+    dependencies = ["libx11"]
+    repository = GitRepository("https://gitlab.freedesktop.org/glvnd/libglvnd.git")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+
+    def setup(self):
+        super().setup()
+        self.add_meson_options(glx="enabled")
+
+
 class BuildMesa(CrossCompileMesonProject):
     target = "mesa"
     dependencies = ["libdrm", "wayland", "libx11", "libglvnd", "libxshmfence", "libxxf86vm"]
