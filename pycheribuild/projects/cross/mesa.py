@@ -94,12 +94,22 @@ class BuildMesa(CrossCompileMesonProject):
         self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
 
 
-class BuildLibeEpoxy(CrossCompileMesonProject):
+class BuildLibEpoxy(CrossCompileMesonProject):
     target = "libepoxy"
     dependencies = ["mesa"]
     repository = GitRepository("https://github.com/anholt/libepoxy",
                                temporary_url_override="https://github.com/arichardson/libepoxy",
                                url_override_reason="https://github.com/anholt/libepoxy/pull/261")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+
+    def setup(self):
+        super().setup()
+
+
+class BuildVirglRenderer(CrossCompileMesonProject):
+    target = "virglrenderer"
+    dependencies = ["libepoxy", "libx11"]
+    repository = GitRepository("https://gitlab.freedesktop.org/virgl/virglrenderer")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def setup(self):
