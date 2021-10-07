@@ -52,7 +52,9 @@ class BuildLibDrm(CrossCompileMesonProject):
 class BuildLibGlvnd(CrossCompileMesonProject):
     target = "libglvnd"
     dependencies = ["libx11"]
-    repository = GitRepository("https://gitlab.freedesktop.org/glvnd/libglvnd.git")
+    repository = GitRepository("https://gitlab.freedesktop.org/glvnd/libglvnd.git",
+                               temporary_url_override="https://gitlab.freedesktop.org/arichardson/libglvnd.git",
+                               url_override_reason="Needs https://github.com/KhronosGroup/EGL-Registry/pull/137/")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def setup(self):
