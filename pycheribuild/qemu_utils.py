@@ -109,9 +109,10 @@ class QemuOptions:
 
         if self.virtio_disk:
             # RISC-V doesn't support virtio-blk-pci, we have to use virtio-blk-device
-            device_kind = "virtio-blk-device" if self.xtarget.is_riscv(include_purecap=True) or \
-                                                 self.force_virtio_blk_device                   \
-                                              else "virtio-blk-pci"
+            if self.xtarget.is_riscv(include_purecap=True) or self.force_virtio_blk_device:
+                device_kind = "virtio-blk-device"
+            else:
+                device_kind = "virtio-blk-pci"
             return ["-drive", "if=none,file=" + str(image) + ",id=drv,format=" + image_format,
                     "-device", device_kind + ",drive=drv"]
         else:
