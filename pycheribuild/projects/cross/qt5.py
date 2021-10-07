@@ -481,6 +481,25 @@ class BuildQtBase(BuildQtWithConfigureScript):
     _installed_examples = ("examples/corelib/mimetypes", "examples/widgets/widgets/tetrix")
 
     def compile(self, **kwargs):
+        # Some directories in the build system are broken and pick headers installed to the sysroot.
+        # To avoid this problem we remove the conflicting headers first
+        # We use the syncqt modules list to clean all of them:
+        modules_cmd = self.run_cmd("perl", "-e", """
+my $syncprofile = "./sync.profile";
+unless ($result = do "$syncprofile") {
+    die "couldn't parse $syncprofile: $@" if $@;
+}
+if (! %modules) {
+    die "couldn't parse $syncprofile";
+}
+for my $module (keys %modules) {
+    print "$module\n";
+}""", capture_output=True, run_in_pretend_mode=True, cwd=self.source_dir)
+        if not modules_cmd.stdout.strip():
+            self.fatal("Coulnd't parse list of Qt Modules")
+        for module in modules_cmd.stdout.decode("utf-8").strip().split():
+            self.clean_directory(self.real_install_root_dir / "include" / module, ensure_dir_exists=False)
+        # Now we can build without risking stale headers breaking the build
         self.run_make("sub-src-all")
         # Tests are build as part of --test
         # Build some examples (e.g. tetris demo and mimetype browser)
