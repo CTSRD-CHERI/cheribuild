@@ -3331,20 +3331,22 @@ class _CMakeAndMesonSharedLogic(Project):
             COMMENT_IF_NATIVE="#" if self.compiling_for_host() else "",
             **kwargs)
 
-    def _add_configure_options(self, *, _include_empty_vars=False, _replace=True, _config_file_options: list, **kwargs):
+    def _add_configure_options(self, *, _include_empty_vars=False, _replace=True, _implicitly_convert_lists=False,
+                               _config_file_options: list, **kwargs):
         for option, value in kwargs.items():
             if not _replace and any(x.startswith("-D" + option + "=") for x in self.configure_args):
                 self.verbose_print("Not replacing ", option, "since it is already set.")
                 return
             if any(x.startswith("-D" + option) for x in _config_file_options):
-                self.info("Not using default value of '", value, "' for CMake option '", option,
+                self.info("Not using default value of '", value, "' for configure option '", option,
                           "' since it is explicitly overwritten in the configuration", sep="")
                 continue
             if isinstance(value, bool):
                 value = self._bool_to_str(value)
             if (not str(value) or not value) and not _include_empty_vars:
                 continue
-            assert not isinstance(value, list), "Lists must be converted to strings explicitly: " + str(value)
+            assert _implicitly_convert_lists or not isinstance(value, list), \
+                "Lists must be converted to strings explicitly: " + str(value)
             assert value is not None
             self.configure_args.append("-D" + option + "=" + str(value))
 

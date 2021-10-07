@@ -64,11 +64,21 @@ class BuildLibGlvnd(CrossCompileMesonProject):
 
 class BuildMesa(CrossCompileMesonProject):
     target = "mesa"
-    dependencies = ["libdrm", "wayland", "libx11", "libglvnd", "libxshmfence", "libxxf86vm"]
     repository = GitRepository("https://gitlab.freedesktop.org/mesa/mesa.git",
                                temporary_url_override="https://gitlab.freedesktop.org/arichardson/mesa.git",
                                url_override_reason="Various incorrect changes to allow purecap compilation")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    include_x11 = True
+    include_wayland = True
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        result = super().dependencies(config) + ["libdrm", "libglvnd"]
+        if cls.include_wayland:
+            result.append("wayland")
+        if cls.include_x11:
+            result.extend(["libx11", "libxshmfence", "libxxf86vm"])
+        return result
 
     def check_system_dependencies(self):
         # TODO: check for python-mako
@@ -76,18 +86,20 @@ class BuildMesa(CrossCompileMesonProject):
 
     def setup(self):
         super().setup()
+        platforms = []
+        if self.include_wayland:
+            platforms.append("wayland")
+        if self.include_x11:
+            platforms.append("x11")
         meson_args = {
-            "vulkan-drivers": "[]",  # TODO: swrast?
-            "dri-drivers": "[]",
-            "gallium-drivers": "['virgl']",  # TODO: "gallium-drivers": "['virgl','swrast']",
-            "egl-native-platform": "wayland",
+            "vulkan-drivers": [],  # TODO: swrast?
+            "dri-drivers": [],
+            "gallium-drivers": ["virgl"],  # TODO: "gallium-drivers": "['virgl','swrast']",
+            "egl-native-platform": platforms[0] if platforms else "",
         }
-        self.add_meson_options(gbm="enabled", egl="enabled", glvnd=True, llvm="disabled", osmesa=False, **meson_args)
-        if self.compiling_for_cheri():
-            # The x11 platform has some static_asserts and casts that won't work for CHERI
-            self.add_meson_options(platforms="['wayland']", glx="disabled")
-        else:
-            self.add_meson_options(platforms="['x11','wayland']", glx="dri")
+        self.add_meson_options(gbm="enabled", egl="enabled", glvnd=True, llvm="disabled", osmesa=False,
+                               platforms=platforms,
+                               _include_empty_vars=True, _implicitly_convert_lists=True, **meson_args)
         # threads_posix.h:274:13: error: releasing mutex 'mtx' that was not held [-Werror,-Wthread-safety-analysis]
         self.cross_warning_flags.append("-Wno-thread-safety-analysis")
         # There are quite a lot of -Wcheri-capability-misuse warnings, but for now we just want the library to exist
