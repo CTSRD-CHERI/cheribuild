@@ -114,6 +114,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     hide_options_from_help = True  # hide this for now
     default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
     use_x11: bool
+    use_opengl: bool
     minimal: bool
 
     @property
@@ -143,6 +144,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # Assume that we can use system libraries for sqlite+libpng+fonts
             if not cls.get_crosscompile_target(config).is_native():
                 deps.extend(["shared-mime-info", "dejavu-fonts", "fontconfig", "libpng", "libjpeg-turbo", "sqlite"])
+        if cls.use_opengl and not cls.get_crosscompile_target(config).is_native():
+            deps.append("mesa")
         return deps
 
     @classmethod
@@ -172,6 +175,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         native_is_macos = cls._xtarget is not None and cls._xtarget.is_native() and OSInfo.IS_MAC
         cls.use_x11 = cls.add_bool_option("use-x11", default=not native_is_macos,
                                           show_help=False, help="Build Qt with the XCB backend.")
+        cls.use_opengl = cls.add_bool_option("use-opengl", default=False, show_help=False,
+                                             help="Build Qt with OpenGL support")
 
     def configure(self, **kwargs):
         if self.force_static_linkage:
@@ -228,7 +233,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
         self.configure_args.extend([
             # To ensure the host and cross-compiled version is the same also disable opengl
-            "-no-opengl",
+            "-opengl" if self.use_opengl else "-no-opengl",
             # Since the cross-compiled version doesn't have glib, also disable it for the native on
             "-no-glib",
             # Needed for webkit:
