@@ -580,7 +580,7 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
 
 class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git", force_branch=True,
-                               default_branch="temporal")
+                               default_branch="temporal_merge_neat")
     default_directory_basename = "cherios-llvm-project"
     target = "cherios-llvm"
     _default_install_dir_fn = ComputedDefaultValue(function=lambda config, project: config.output_root / "cherios-sdk",

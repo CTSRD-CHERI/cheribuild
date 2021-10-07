@@ -338,7 +338,8 @@ class BuildMorelloQEMU(BuildQEMU):
 
 
 class BuildCheriOSQEMU(BuildQEMU):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="cherios", force_branch=True)
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri",
+                               force_branch=True)
     default_targets = "cheri128-softmmu"
     target = "cherios-qemu"
     _default_install_dir_fn = ComputedDefaultValue(
