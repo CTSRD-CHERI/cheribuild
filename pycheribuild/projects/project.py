@@ -2762,7 +2762,7 @@ class Project(SimpleProject):
         if not options:
             options = self.make_args
         if not make_command:
-            make_command = self.make_args.command
+            make_command = options.command
         all_args = self._get_make_commandline(make_target, make_command, options, parallel=parallel,
                                               compilation_db_name=compilation_db_name)
         if not cwd:

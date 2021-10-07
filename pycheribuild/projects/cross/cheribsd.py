@@ -38,6 +38,7 @@ from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
 
+from .crosscompileproject import CrossCompileProject
 from .llvm import BuildLLVMMonoRepoBase
 from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
                        MakeCommandKind, MakeOptions, Project, ReuseOtherProjectRepository, SimpleProject,
@@ -975,9 +976,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     kernel_options.remove_var("X" + binutil_name)
         kernel_options.set(KERNCONF=kernconf)
         if self.add_debug_info_flag:
-            self.make_args.set(DEBUG="-g")
+            kernel_options.set(DEBUG="-g")
         if extra_make_args:
-            self.make_args.set(**extra_make_args)
+            kernel_options.set(**extra_make_args)
         return kernel_options
 
     def clean(self) -> ThreadJoiner:
@@ -2193,3 +2194,33 @@ class BuildCheriBsdDeviceModel(BuildCHERIBSD):
     # def compile(self, **kwargs):
     #    self.kernel_config = "CHERI_DE4_USBROOT"
     #    super().compile(all_kernel_configs=self.kernel_config, **kwargs)
+
+
+class BuildDrmKMod(CrossCompileProject):
+    target = "drm-kmod"
+    repository = GitRepository("https://github.com/freebsd/drm-kmod", default_branch="master", force_branch=True)
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS
+    build_in_source_dir = False
+    freebsd_project: BuildFreeBSD
+    kernel_make_args: MakeOptions
+
+    def setup(self):
+        super().setup()
+        self.freebsd_project = self.target_info.get_rootfs_project()
+        extra_make_args = dict(LOCAL_MODULES=self.source_dir.name,
+                           LOCAL_MODULES_DIR=self.source_dir.parent,
+                           MODULES_OVERRIDE="linuxkpi")
+        self.kernel_make_args = self.freebsd_project.kernel_make_args_for_config(self.freebsd_project.kernel_config,
+                                                                                 extra_make_args)
+        assert self.kernel_make_args.get_var("LOCAL_MODULES") is not None
+        assert self.kernel_make_args.kind == MakeCommandKind.BsdMake
+
+    def compile(self, **kwargs):
+        self.info("Building drm-kmod modules for configs:", self.freebsd_project.kernel_config)
+        self.run_make("buildkernel", options=self.kernel_make_args,
+                      cwd=self.freebsd_project.source_dir, parallel=False)
+
+    def install(self, **kwargs):
+        self.info("Building drm-kmod modules for configs:", self.freebsd_project.kernel_config)
+        self.run_make_install(target="installkernel", options=self.kernel_make_args,
+                              cwd=self.freebsd_project.source_dir, parallel=False)
