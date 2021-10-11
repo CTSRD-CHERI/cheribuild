@@ -918,6 +918,7 @@ class BuildDoplhin(KDECMakeProject):
 
 
 class BuildLibPng(CrossCompileCMakeProject):
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
     repository = GitRepository("https://github.com/glennrp/libpng",
                                temporary_url_override="https://github.com/CTSRD-CHERI/libpng",
                                url_override_reason="Needs https://github.com/glennrp/libpng/pull/386",

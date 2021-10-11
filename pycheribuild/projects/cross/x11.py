@@ -44,7 +44,7 @@ class X11Mixin:
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     # Don't override the native installation, only use it when paths are explicitly added
     native_install_dir = DefaultInstallDir.KDE_PREFIX  # TODO: should use a separate prefix but for now this works.
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     # noinspection PyUnresolvedReferences
     @property
@@ -72,6 +72,10 @@ class X11AutotoolsProjectBase(X11Mixin, CrossCompileAutotoolsProject):
 
 
 class X11MesonProject(X11Mixin, CrossCompileMesonProject):
+    do_not_add_to_targets = True
+
+
+class X11CMakeProject(X11Mixin, CrossCompileCMakeProject):
     do_not_add_to_targets = True
 
 
@@ -376,7 +380,7 @@ class BuildLibXScrnSaver(X11AutotoolsProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxscrnsaver.git")
 
 
-class BuildLibJpegTurbo(CrossCompileCMakeProject):
+class BuildLibJpegTurbo(X11CMakeProject):
     target = "libjpeg-turbo"
     repository = GitRepository("https://github.com/libjpeg-turbo/libjpeg-turbo.git",
                                old_urls=[b"https://github.com/arichardson/libjpeg-turbo.git"])
@@ -388,7 +392,7 @@ class BuildLibJpegTurbo(CrossCompileCMakeProject):
             self.add_cmake_options(WITH_SIMD=False)  # Tries to compile files in non-existent arm/aarch128 directory
 
 
-class BuildTigerVNC(CrossCompileCMakeProject):
+class BuildTigerVNC(X11CMakeProject):
     target = "tigervnc"
     repository = GitRepository("https://github.com/TigerVNC/tigervnc")
     dependencies = ["pixman", "libxext", "libxfixes", "libxdamage", "libxtst", "libjpeg-turbo"]
@@ -555,7 +559,7 @@ class BuildLibXpm(X11AutotoolsProject):
 
 
 # Slightly more functional window manager than TWM
-class BuildIceWM(X11Mixin, CrossCompileCMakeProject):
+class BuildIceWM(X11CMakeProject):
     target = "icewm"
     dependencies = ["fontconfig", "libxcomposite", "libxdamage", "libpng", "libjpeg-turbo",
                     "libxpm", "libxft", "libxrandr"]
@@ -569,7 +573,7 @@ class BuildIceWM(X11Mixin, CrossCompileCMakeProject):
         self.add_cmake_options(ENABLE_NLS=False, CONFIG_I18N=False)
 
 
-class BuildLibPCIAccess(CrossCompileMesonProject):
+class BuildLibPCIAccess(X11MesonProject):
     target = "libpciaccess"
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libpciaccess.git")
 
