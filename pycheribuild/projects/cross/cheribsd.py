@@ -645,6 +645,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
                                     " may cause strange errors so is off by default.")
         cls.with_manpages = cls.add_bool_option("with-manpages", help="Also install manpages. This is off by default"
                                                                       " since they can just be read from the host.")
+        cls.build_drm_kmod = cls.add_bool_option("build-drm-kmod", help="Also build drm-kmod during buildkernel",
+                                                 show_help=False)
         if cls._xtarget is None or not cls._xtarget.cpu_architecture.is_32bit():
             cls.build_lib32 = cls.add_bool_option(
                 "build-lib32", default=False,
@@ -974,6 +976,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 if xbinutil:
                     kernel_options.set(**{binutil_name: xbinutil})
                     kernel_options.remove_var("X" + binutil_name)
+        if self.build_drm_kmod:
+            drm_kmod = BuildDrmKMod.get_instance(self)
+            kernel_options.set(LOCAL_MODULES=drm_kmod.source_dir.name, LOCAL_MODULES_DIR=drm_kmod.source_dir.parent)
         kernel_options.set(KERNCONF=kernconf)
         if self.add_debug_info_flag:
             kernel_options.set(DEBUG="-g")
