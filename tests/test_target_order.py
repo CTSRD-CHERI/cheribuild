@@ -15,6 +15,7 @@ from pycheribuild.projects.cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdMf
                                                   BuildCheriBsdSysrootArchive)
 from pycheribuild.projects.cross.gdb import BuildGDBBase
 from pycheribuild.projects.cross.gmp import BuildGmp
+from pycheribuild.projects.cross.qt5 import BuildQtBase
 from pycheribuild.projects.disk_image import BuildDiskImageBase
 from pycheribuild.projects.run_fpga import LaunchFPGABase
 from pycheribuild.projects.run_fvp import LaunchFVPBase
@@ -213,7 +214,18 @@ def _qtbase_x11_deps(suffix):
     return result
 
 
+def _avoid_native_qtbase_x11_deps():
+    BuildQtBase.use_x11 = True
+    BuildQtBase.use_opengl = False
+    BuildQtBase.minimal = False
+    # Avoid native X11 dependencies:
+    qtbase_native = target_manager.get_target_raw("qtbase-native").project_class
+    assert issubclass(qtbase_native, BuildQtBase)
+    qtbase_native.use_x11 = False
+
+
 def test_ksyntaxhighlighting_includes_native_dependency():
+    _avoid_native_qtbase_x11_deps()
     ksyntaxhighlighting_deps = _sort_targets(["ksyntaxhighlighting-amd64"], add_dependencies=True, skip_sdk=True)
     assert "ksyntaxhighlighting-native" in ksyntaxhighlighting_deps
 
@@ -224,6 +236,8 @@ def test_webkit_cached_deps():
     config.skip_sdk = True
     config.include_toolchain_dependencies = False
     config.include_dependencies = True
+    _avoid_native_qtbase_x11_deps()
+
     webkit_native = target_manager.get_target_raw("qtwebkit-native").project_class
     webkit_cheri = target_manager.get_target_raw("qtwebkit-mips64-purecap").project_class
     webkit_mips = target_manager.get_target_raw("qtwebkit-mips64").project_class
@@ -255,6 +269,8 @@ def test_webkit_cached_deps():
 
 
 def test_webkit_deps_2():
+    _avoid_native_qtbase_x11_deps()
+
     # SDK should not add new targets
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=False) == [
         "qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]

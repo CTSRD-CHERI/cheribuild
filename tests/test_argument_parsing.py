@@ -153,16 +153,17 @@ def test_target_subsets(args, expected):
     pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=qtbase.*", "kcoreaddons-amd64"],
                  ["extra-cmake-modules-amd64", "kcoreaddons-amd64"],
                  id="kcoreaddons-amd64-without-qtbase"),
-    pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=libx.*",
-                  "--skip-dependency-filter=xorg.*", "kauth-amd64"],  # includes native qtbase as well
+    pytest.param(["--include-dependencies", "--skip-sdk", "--qtbase-native/no-use-x11",  # skip native X11 deps
+                  "--skip-dependency-filter=libx.*", "--skip-dependency-filter=xorg.*", "kauth-amd64"],
                  ["libice-amd64", "libsm-amd64", "shared-mime-info-native", "shared-mime-info-amd64",
                   "dejavu-fonts-amd64", "libpng-amd64", "freetype2-amd64", "libexpat-amd64", "fontconfig-amd64",
                   "libjpeg-turbo-amd64", "sqlite-amd64", "qtbase-amd64", "extra-cmake-modules-amd64",
                   "kcoreaddons-amd64", "qtbase-native", "extra-cmake-modules-native", "kcoreaddons-native",
                   "kauth-amd64"],
                  id="kauth-amd64-full-without-x11"),
-    pytest.param(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=libx.*",
-                  "--skip-dependency-filter=xorg.*", "--skip-dependency-filter=qt.*", "kauth-amd64"],
+    pytest.param(["--include-dependencies", "--skip-sdk", "--qtbase-native/no-use-x11",  # skip native X11 deps
+                  "--skip-dependency-filter=libx.*", "--skip-dependency-filter=xorg.*", "--skip-dependency-filter=qt.*",
+                  "kauth-amd64"],
                  ["extra-cmake-modules-amd64", "kcoreaddons-amd64", "extra-cmake-modules-native", "kcoreaddons-native",
                   "kauth-amd64"],
                  id="kauth-amd64-without-qt-without-x11"),  # skips most dependencies but includes kcoreaddons-native
