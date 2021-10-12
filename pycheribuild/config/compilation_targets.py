@@ -693,8 +693,10 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
         if xtarget.is_cheri_purecap([CPUArchitecture.AARCH64]):
             # emulated TLS is currently required for purecap, but breaks hybrid
             result.append("-femulated-tls")
-        if xtarget.is_aarch64(include_purecap=True) and not xtarget.is_hybrid_or_purecap_cheri():
-            # When building plain aarch64 code with the Morello compiler, we use the Morello CPU as the basline:
+        if xtarget.is_aarch64(include_purecap=True):
+            # When building with the Morello compiler, we use the Morello CPU as the basline.
+            # This makes a noticeable difference for plain aarch64 (v8.2 instead of v8.0) and also enables a few
+            # extensions that are not enabled by -march=morello (crypto+crc32
             result.append("-mcpu=rainier")
         return result
 
