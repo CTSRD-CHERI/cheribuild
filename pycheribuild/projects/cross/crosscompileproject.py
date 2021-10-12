@@ -61,7 +61,9 @@ class CrossCompileMixin(object):
 
 # We also build benchmarks for hybrid to see whether those compilation flags change the results
 class BenchmarkMixin:
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
+    # We also allow building for AArch64 with the Morello compiler
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID + [
+        CompilationTargets.CHERIBSD_MORELLO_NO_CHERI_FOR_PURECAP_ROOTFS, CompilationTargets.NATIVE]
 
 
 class CrossCompileSimpleProject(CrossCompileMixin, SimpleProject):

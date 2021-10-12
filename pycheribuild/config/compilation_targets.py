@@ -1054,11 +1054,12 @@ class CompilationTargets(BasicCompilationTargets):
                                                   check_conflict_with=CHERIBSD_MORELLO_HYBRID,
                                                   hybrid_target=CHERIBSD_MORELLO_HYBRID)
     CHERIBSD_MORELLO_NO_CHERI_FOR_HYBRID_ROOTFS = \
-        CrossCompileTarget(("morello", "for-hybrid-rootfs"), CPUArchitecture.AARCH64, CheriBSDMorelloTargetInfo,
+        CrossCompileTarget(("morello-aarch64", "for-hybrid-rootfs"), CPUArchitecture.AARCH64, CheriBSDMorelloTargetInfo,
                            rootfs_target=CHERIBSD_MORELLO_HYBRID, non_cheri_target=CHERIBSD_MORELLO_NO_CHERI)
     CHERIBSD_MORELLO_NO_CHERI_FOR_PURECAP_ROOTFS = \
-        CrossCompileTarget(("morello", "for-purecap-rootfs"), CPUArchitecture.AARCH64, CheriBSDMorelloTargetInfo,
-                           rootfs_target=CHERIBSD_MORELLO_PURECAP, non_cheri_target=CHERIBSD_MORELLO_NO_CHERI)
+        CrossCompileTarget(("morello-aarch64", "for-purecap-rootfs"), CPUArchitecture.AARCH64,
+                           CheriBSDMorelloTargetInfo, rootfs_target=CHERIBSD_MORELLO_PURECAP,
+                           non_cheri_target=CHERIBSD_MORELLO_NO_CHERI)
     CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS = \
         CrossCompileTarget(("morello-hybrid", "for-purecap-rootfs"), CPUArchitecture.AARCH64, CheriBSDMorelloTargetInfo,
                            is_cheri_hybrid=True, rootfs_target=CHERIBSD_MORELLO_PURECAP,

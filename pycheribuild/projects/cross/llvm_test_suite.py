@@ -29,13 +29,13 @@
 #
 from pathlib import Path
 
-from .crosscompileproject import (BuildType, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
-                                  GitRepository)
+from .crosscompileproject import (BenchmarkMixin, BuildType, CompilationTargets, CrossCompileCMakeProject,
+                                  DefaultInstallDir, GitRepository)
 from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import ReuseOtherProjectRepository
 
 
-class BuildLLVMTestSuite(CrossCompileCMakeProject):
+class BuildLLVMTestSuite(BenchmarkMixin, CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-test-suite.git")
     dependencies = ["llvm-native"]
     default_build_type = BuildType.RELWITHDEBINFO
