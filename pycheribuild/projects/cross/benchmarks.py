@@ -27,24 +27,20 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import os
 import stat
+
+import os
 import tempfile
 from pathlib import Path
 
-from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, CrossCompileCMakeProject,
-                                  CrossCompileProject,
-                                  DefaultInstallDir, GitRepository, MakeCommandKind)
+from .crosscompileproject import (BenchmarkMixin, CompilationTargets, CrossCompileAutotoolsProject,
+                                  CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
+                                  MakeCommandKind)
 from .llvm_test_suite import BuildLLVMTestSuite
 from ..project import ExternallyManagedSourceRepository, ReuseOtherProjectRepository
 from ...config.chericonfig import BuildType
 from ...config.target_info import CPUArchitecture
 from ...utils import is_jenkins_build
-
-
-class BenchmarkMixin:
-    # We also build benchmarks for hybrid to see whether those compilation flags change the results
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
 
 
 class BuildMibench(BenchmarkMixin, CrossCompileProject):
