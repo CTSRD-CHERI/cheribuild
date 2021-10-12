@@ -44,7 +44,7 @@ from ...utils import is_jenkins_build
 
 class BenchmarkMixin:
     # We also build benchmarks for hybrid to see whether those compilation flags change the results
-    supported_architecture = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
 
 
 class BuildMibench(BenchmarkMixin, CrossCompileProject):
