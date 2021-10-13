@@ -46,9 +46,17 @@ __all__ = ["BenchmarkMixin", "CheriConfig", "CrossCompileCMakeProject", "CrossCo
            "CrossCompileMesonProject", "commandline_to_str", "SubversionRepository"]  # no-combine
 
 
+if typing.TYPE_CHECKING:
+    _BenchmarkMixinBase = Project
+    _CrossCompileMixinBase = SimpleProject
+else:
+    _BenchmarkMixinBase = object
+    _CrossCompileMixinBase = object
+
+
 # This mixin sets supported_architectures to ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS and thereby
 # avoids repeating this for every target than can be cross-built
-class CrossCompileMixin(object):
+class CrossCompileMixin(_CrossCompileMixinBase):
     do_not_add_to_targets = True
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     add_build_dir_suffix_for_native = True  # Add the suffix for the native build
@@ -60,10 +68,16 @@ class CrossCompileMixin(object):
 
 
 # We also build benchmarks for hybrid to see whether those compilation flags change the results
-class BenchmarkMixin:
+class BenchmarkMixin(_BenchmarkMixinBase):
     # We also allow building for AArch64 with the Morello compiler
     supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID + [
         CompilationTargets.CHERIBSD_MORELLO_NO_CHERI_FOR_PURECAP_ROOTFS, CompilationTargets.NATIVE]
+
+    @property
+    def optimization_flags(self):
+        if self.build_type.is_release:
+            return ["-O3"]
+        return super().optimization_flags
 
 
 class CrossCompileSimpleProject(CrossCompileMixin, SimpleProject):
