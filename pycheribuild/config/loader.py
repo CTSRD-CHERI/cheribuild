@@ -303,7 +303,7 @@ class ConfigLoaderBase(object):
                 import difflib
                 # There is no officially supported API to get back all option strings, but fortunately we store
                 # all the actions here anyway
-                all_options = getattr(self._parser, "_option_string_actionss", {}).keys()
+                all_options = getattr(self._parser, "_option_string_actions", {}).keys()
                 if not all_options:
                     error_message("Internal argparse API change, cannot detect available command line options.")
                     all_options = ["--" + opt for opt in self.options.keys()]
