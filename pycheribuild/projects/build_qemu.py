@@ -36,7 +36,7 @@ from types import SimpleNamespace
 from .project import (_cached_get_homebrew_prefix, AutotoolsProject, BuildType, CheriConfig, CrossCompileTarget,
                       DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
-from ..config.loader import ComputedDefaultValue, JsonAndCommandLineConfigOption
+from ..config.loader import ComputedDefaultValue, ConfigOptionBase
 
 
 class BuildQEMUBase(AutotoolsProject):
@@ -283,7 +283,7 @@ class BuildQEMU(BuildQEMUBase):
         if "morello-softmmu" not in self.qemu_targets and (
                 self.source_dir / "default-configs/targets/morello-softmmu.mak").exists():
             targets = inspect.getattr_static(self, "qemu_targets")
-            assert isinstance(targets, JsonAndCommandLineConfigOption)
+            assert isinstance(targets, ConfigOptionBase)
             if targets.is_default_value:
                 self.qemu_targets += ",morello-softmmu"
         super().setup()
@@ -325,7 +325,7 @@ class BuildMorelloQEMU(BuildQEMU):
                                    b"ssh://git@github.com/LawrenceEsswood/qemu.git",
                                    b"ssh://github.com/LawrenceEsswood/qemu.git",
                                    b"git@github.com:LawrenceEsswood/qemu.git"
-                                ])
+                               ])
     native_install_dir = DefaultInstallDir.MORELLO_SDK
     default_targets = "aarch64-softmmu,morello-softmmu"
     target = "morello-qemu"
