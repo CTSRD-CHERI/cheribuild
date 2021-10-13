@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import inspect
 import os
 import sys
 from pathlib import Path
@@ -35,7 +36,7 @@ from types import SimpleNamespace
 from .project import (_cached_get_homebrew_prefix, AutotoolsProject, BuildType, CheriConfig, CrossCompileTarget,
                       DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
-from ..config.loader import ComputedDefaultValue
+from ..config.loader import ComputedDefaultValue, JsonAndCommandLineConfigOption
 
 
 class BuildQEMUBase(AutotoolsProject):
@@ -50,7 +51,6 @@ class BuildQEMUBase(AutotoolsProject):
     default_targets = "some-invalid-target"
     default_build_type = BuildType.RELEASE
     lto_by_default = True
-    _initial_meson_commit = "a56650518f5ba84ed15b9415fa1041311eeeece0"
 
     @classmethod
     def is_toolchain_target(cls):
@@ -279,6 +279,13 @@ class BuildQEMU(BuildQEMUBase):
             self.COMMON_FLAGS.append("-DDO_CHERI_STATISTICS=1")
 
     def setup(self):
+        # Build Morello by default if we are building a commit that has morello support merged.
+        if "morello-softmmu" not in self.qemu_targets and (
+                self.source_dir / "default-configs/targets/morello-softmmu.mak").exists():
+            targets = inspect.getattr_static(self, "qemu_targets")
+            assert isinstance(targets, JsonAndCommandLineConfigOption)
+            if targets.is_default_value:
+                self.qemu_targets += ",morello-softmmu"
         super().setup()
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DENABLE_CHERI_SANITIY_CHECKS=1")
