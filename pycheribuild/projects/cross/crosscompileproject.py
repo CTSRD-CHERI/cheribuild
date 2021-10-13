@@ -72,6 +72,7 @@ class BenchmarkMixin(_BenchmarkMixinBase):
     # We also allow building for AArch64 with the Morello compiler
     supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID + [
         CompilationTargets.CHERIBSD_MORELLO_NO_CHERI_FOR_PURECAP_ROOTFS, CompilationTargets.NATIVE]
+    default_build_type = BuildType.RELEASE
 
     @property
     def optimization_flags(self):
