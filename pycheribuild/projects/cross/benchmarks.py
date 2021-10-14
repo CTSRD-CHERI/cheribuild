@@ -27,9 +27,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import stat
-
 import os
+import shutil
+import stat
 import tempfile
 from pathlib import Path
 
@@ -40,7 +40,8 @@ from .llvm_test_suite import BuildLLVMTestSuite
 from ..project import ExternallyManagedSourceRepository, ReuseOtherProjectRepository
 from ...config.chericonfig import BuildType
 from ...config.target_info import CPUArchitecture
-from ...utils import is_jenkins_build
+from ...processutils import get_program_version
+from ...utils import is_jenkins_build, OSInfo
 
 
 class BuildMibench(BenchmarkMixin, CrossCompileProject):
@@ -555,9 +556,7 @@ class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.spec_iso_path = cls.add_path_option("iso-path",
-                                                default="/you/must/set the spec2006-new/iso-path config option",
-                                                help="Path to the SPEC2006 ISO image")
+        cls.spec_iso_path = cls.add_path_option("iso-path", default=None, help="Path to the SPEC2006 ISO image")
         cls.fast_benchmarks_only = cls.add_bool_option("fast-benchmarks-only", default=False)
         cls.benchmark_override = cls.add_config_option("benchmarks", default=[], kind=list,
                                                        help="override the list of benchmarks to run")
@@ -595,6 +594,9 @@ class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
             self.benchmark_list = self.working_benchmark_list
 
     def setup(self):
+        if self.spec_iso_path is None:
+            self.fatal("You must set --", self.get_config_option_name("spec_iso_path"))
+            self.spec_iso_path = "/missing/spec2006.iso"
         super().setup()
         # Only build spec2006
         self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006",
@@ -605,12 +607,30 @@ class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
                                TEST_SUITE_RUN_TYPE='test',  # TODO: allow train+ref
                                TEST_SUITE_SPEC2006_ROOT=self.extracted_spec_sources)
 
+    def _check_broken_bsdtar(self, bsdtar: Path) -> "tuple[bool, tuple[int, int, int]]":
+        bsdtar_version = get_program_version(bsdtar, regex=rb"bsdtar\s+(\d+)\.(\d+)\.?(\d+)? \- libarchive",
+                                             config=self.config)
+        # At least version 3.3.2 of libarchive fails to extract the SPEC ISO image correctly (at least two files
+        # are missing). This does not appear to be a problem with Ubuntu 18.04's version 3.2.2.
+        return (3, 3) <= bsdtar_version < (3, 5), bsdtar_version
+
     def configure(self, **kwargs):
         # Need to extract the ISO it before configuring
         self.makedirs(self.extracted_spec_sources)
         if not (self.extracted_spec_sources / "install.sh").exists():
             self.clean_directory(self.extracted_spec_sources)  # clean up partial builds
-            self.run_cmd("bsdtar", "xf", self.spec_iso_path, "-C", self.extracted_spec_sources, cwd=self.build_dir)
+            bsdtar = Path(shutil.which("bsdtar") or "bsdtar")
+            if self._check_broken_bsdtar(bsdtar)[0] and OSInfo.IS_MAC:
+                # macOS 11.4 ships with 3.3.2, try to fall back to homebrew in that case
+                libarchive_path = self.get_homebrew_prefix("libarchive")
+                bsdtar = libarchive_path / "bin/bsdtar"
+            bsdtar_broken, bsdtar_version = self._check_broken_bsdtar(bsdtar)
+            if bsdtar_broken:
+                self.fatal("The installed version of libarchive (", ".".join(map(str, bsdtar_version)),
+                           ") has a bug that results in some files not being extracted from the SPEC ISO.",
+                           fixit_hint="Please update bsdtar to at least 3.5.0", sep="")
+
+            self.run_cmd(bsdtar, "xf", self.spec_iso_path, "-C", self.extracted_spec_sources, cwd=self.build_dir)
             # Some of the files in that archive are not user-writable; go pave
             # over the permissions so that we don't die if we try to clean up
             # later.
