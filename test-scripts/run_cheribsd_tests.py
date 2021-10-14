@@ -127,7 +127,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
                 old_test = base[1] + ''.join(features)
                 if not run_cheribsdtest(qemu, test, old_test, args):
                     tests_successful = False
-                    boot_cheribsd.failure("At least one test failure in", test, exit=False)
+                    boot_cheribsd.failure("At least one test failure in ", test, exit=False)
         qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
 
     # Run kyua tests
