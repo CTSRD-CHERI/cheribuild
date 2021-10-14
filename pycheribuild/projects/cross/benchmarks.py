@@ -620,6 +620,8 @@ class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
                                TEST_SUITE_SPEC2006_ROOT=self.extracted_spec_sources)
 
     def _check_broken_bsdtar(self, bsdtar: Path) -> "tuple[bool, tuple[int, int, int]]":
+        if self.config.pretend and not bsdtar.exists():
+            return False, (0, 0, 0)
         bsdtar_version = get_program_version(bsdtar, regex=rb"bsdtar\s+(\d+)\.(\d+)\.?(\d+)? \- libarchive",
                                              config=self.config)
         # At least version 3.3.2 of libarchive fails to extract the SPEC ISO image correctly (at least two files
@@ -631,7 +633,7 @@ class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
         self.makedirs(self.extracted_spec_sources)
         if not (self.extracted_spec_sources / "install.sh").exists():
             self.clean_directory(self.extracted_spec_sources)  # clean up partial builds
-            bsdtar = Path(shutil.which("bsdtar") or "bsdtar")
+            bsdtar = Path(shutil.which("bsdtar") or "/could/not/find/bsdtar")
             if self._check_broken_bsdtar(bsdtar)[0] and OSInfo.IS_MAC:
                 # macOS 11.4 ships with 3.3.2, try to fall back to homebrew in that case
                 libarchive_path = self.get_homebrew_prefix("libarchive")
