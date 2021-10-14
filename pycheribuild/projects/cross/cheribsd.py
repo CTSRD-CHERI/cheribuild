@@ -1626,9 +1626,15 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.mfs_root_image = cls.add_path_option(
             "mfs-root-image", help="Path to an MFS root image to be embedded in the kernel for booting")
 
+        # NB: Full CHERI-MIPS purecap kernel support was never merged
+        purecap_kernel_targets = [CompilationTargets.CHERIBSD_RISCV_HYBRID,
+                                  CompilationTargets.CHERIBSD_RISCV_PURECAP,
+                                  CompilationTargets.CHERIBSD_MORELLO_HYBRID,
+                                  CompilationTargets.CHERIBSD_MORELLO_PURECAP]
+
         cls.default_kernel_abi = cls.add_config_option(
             "default-kernel-abi", show_help=True, _allow_unknown_targets=True,
-            only_add_for_targets=CompilationTargets.ALL_CHERIBSD_CHERI_TARGETS_WITH_HYBRID,
+            only_add_for_targets=purecap_kernel_targets,
             kind=KernelABI, default=KernelABI.HYBRID,
             enum_choices=[KernelABI.HYBRID, KernelABI.PURECAP],
             help="Select default kernel to build")
@@ -1637,8 +1643,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.build_alternate_abi_kernels = cls.add_bool_option(
             "build-alternate-abi-kernels", show_help=True,
             _allow_unknown_targets=True,
-            only_add_for_targets=(CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS +
-                                  CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS),
+            only_add_for_targets=purecap_kernel_targets,
             help="Also build kernels with non-default ABI (purecap or hybrid)")
 
         cls.build_bench_kernels = cls.add_bool_option("build-bench-kernels", show_help=True,

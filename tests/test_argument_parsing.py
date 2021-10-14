@@ -733,12 +733,6 @@ def test_disk_image_path(target, expected_name):
                  "CHERI_MALTA64", ["CHERI_DE4_USBROOT", "CHERI_DE4_NFSROOT"]),
     pytest.param("cheribsd-mips64-purecap", ["--cheribsd/build-fpga-kernels", "--cheribsd/build-bench-kernels"],
                  "CHERI_MALTA64", ["CHERI_DE4_USBROOT_BENCHMARK", "CHERI_DE4_USBROOT", "CHERI_DE4_NFSROOT"]),
-    pytest.param("cheribsd-mips64-purecap", ["--cheribsd/build-alternate-abi-kernels"],
-                 "CHERI_MALTA64", ["CHERI_PURECAP_MALTA64"]),
-    pytest.param("cheribsd-mips64-purecap",
-                 ["--cheribsd/build-alternate-abi-kernels",
-                  "--cheribsd/default-kernel-abi", "purecap"],
-                 "CHERI_PURECAP_MALTA64", ["CHERI_MALTA64"]),
     # Morello kernconf tests
     pytest.param("cheribsd-aarch64", [], "GENERIC", []),
     pytest.param("cheribsd-morello-purecap", [], "GENERIC-MORELLO", []),
@@ -781,12 +775,6 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
                  ["CHERI_MALTA64_MFS_ROOT", "CHERI_DE4_MFS_ROOT"]),
     pytest.param("cheribsd-mfs-root-kernel-mips64-purecap",
                  ["--cheribsd-mfs-root-kernel-mips64-purecap/build-fpga-kernels",
-                  "--cheribsd-mfs-root-kernel-mips64-purecap/build-alternate-abi-kernels"],
-                 ["CHERI_MALTA64_MFS_ROOT", "CHERI_PURECAP_MALTA64_MFS_ROOT",
-                  "CHERI_DE4_MFS_ROOT", "CHERI_PURECAP_DE4_MFS_ROOT"]),
-    pytest.param("cheribsd-mfs-root-kernel-mips64-purecap",
-                 ["--cheribsd-mfs-root-kernel-mips64-purecap/build-fpga-kernels",
-                  "--cheribsd-mfs-root-kernel-mips64-purecap/build-alternate-abi-kernels",
                   "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=CHERI_MALTA64_MFS_ROOT"],
                  ["CHERI_MALTA64_MFS_ROOT"]),
 ])
@@ -1093,16 +1081,28 @@ def test_mfs_root_kernel_inherits_defaults_from_cheribsd():
     # Parse args once to ensure target_manager is initialized
     config = _parse_arguments([])
     mfs_riscv64 = _get_target_instance("cheribsd-mfs-root-kernel-riscv64-purecap", config, BuildCheriBsdMfsKernel)
-    mfs_mips64 = _get_target_instance("cheribsd-mfs-root-kernel-mips64-purecap", config, BuildCheriBsdMfsKernel)
     cheribsd_riscv64 = _get_target_instance("cheribsd-riscv64-purecap", config, BuildCHERIBSD)
-    cheribsd_mips64 = _get_target_instance("cheribsd-mips64-purecap", config, BuildCHERIBSD)
-    _parse_arguments(["--cheribsd/build-alternate-abi-kernels",
-                      "--cheribsd-mips64-purecap/no-build-alternate-abi-kernels"])
+    _parse_arguments(["--cheribsd/build-alternate-abi-kernels"])
 
     assert cheribsd_riscv64.build_alternate_abi_kernels
-    assert not cheribsd_mips64.build_alternate_abi_kernels
     assert mfs_riscv64.build_alternate_abi_kernels
-    assert not mfs_mips64.build_alternate_abi_kernels
+
+    _parse_arguments(["--cheribsd/no-build-alternate-abi-kernels"])
+
+    assert not cheribsd_riscv64.build_alternate_abi_kernels
+    assert not mfs_riscv64.build_alternate_abi_kernels
+
+    _parse_arguments(["--cheribsd/build-alternate-abi-kernels",
+                      "--cheribsd-riscv64-purecap/no-build-alternate-abi-kernels"])
+
+    assert not cheribsd_riscv64.build_alternate_abi_kernels
+    assert not mfs_riscv64.build_alternate_abi_kernels
+
+    _parse_arguments(["--cheribsd/no-build-alternate-abi-kernels",
+                      "--cheribsd-riscv64-purecap/build-alternate-abi-kernels"])
+
+    assert cheribsd_riscv64.build_alternate_abi_kernels
+    assert mfs_riscv64.build_alternate_abi_kernels
 
     # Check that the config options are inherited in the right order:
     _parse_arguments(["--cheribsd/source-directory=/generic-base-target-dir",
