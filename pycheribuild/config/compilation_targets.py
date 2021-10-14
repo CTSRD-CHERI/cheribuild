@@ -414,7 +414,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         if not script.exists():
             self.project.fatal("Could not find test script", script)
 
-        cmd = [script, "--ssh-key", self.config.test_ssh_key, "--architecture", rootfs_xtarget.base_arch_suffix]
+        cmd = [script, "--architecture", rootfs_xtarget.base_arch_suffix]
+        if self.config.test_ssh_key is not None:
+            cmd.extend(["--ssh-key", self.config.test_ssh_key])
         if kernel_path and "--kernel" not in self.config.test_extra_args:
             cmd.extend(["--kernel", kernel_path])
         if "--qemu-cmd" not in self.config.test_extra_args:
@@ -538,7 +540,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             basic_args = ["--berictl=" + str(
                 BuildBeriCtl.get_build_dir(self.project, cross_target=CompilationTargets.NATIVE) / "berictl")]
 
-        if self.config.test_ssh_key.with_suffix("").exists():
+        if self.config.test_ssh_key is not None:
             basic_args.extend(["--ssh-key", str(self.config.test_ssh_key.with_suffix(""))])
 
         if self.config.benchmark_ld_preload:

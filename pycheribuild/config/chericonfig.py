@@ -324,10 +324,9 @@ class CheriConfig(ConfigBase):
                                                          "targets ignore this flag.")
 
         # Test options:
-        self.test_ssh_key = loader.add_path_option("test-ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"),
+        self.test_ssh_key = loader.add_path_option("test-ssh-key", default=None, group=loader.tests_group,
                                                    help="The SSH key to used to connect to the QEMU instance when "
-                                                        "running"
-                                                        " tests on CheriBSD", group=loader.tests_group)
+                                                        "running tests on CheriBSD.")
         self.use_minimal_benchmark_kernel = loader.add_bool_option("use-minimal-benchmark-kernel",
                                                                    help="Use a CHERI BENCHMARK version of the "
                                                                         "cheribsd-mfs-root-kernel (without "
