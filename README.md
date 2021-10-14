@@ -586,8 +586,7 @@ Adjust flags used when compiling MIPS/CHERI projects:
 
 Configuration for running tests:
   --test-ssh-key TEST-SSH-KEY
-                        The SSH key to used to connect to the QEMU instance when running tests on CheriBSD (default:
-                        '$HOME/.ssh/id_ed25519.pub')
+                        The SSH key to used to connect to the QEMU instance when running tests on CheriBSD.
   --use-minimal-benchmark-kernel, --no-use-minimal-benchmark-kernel
                         Use a CHERI BENCHMARK version of the cheribsd-mfs-root-kernel (without INVARIATES) for the run-
                         minimal target and for tests. This can speed up longer running tests. This is the default for
