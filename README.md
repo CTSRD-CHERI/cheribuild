@@ -734,7 +734,7 @@ Options for target 'cheribsd':
   --cheribsd/default-kernel-abi {hybrid,purecap}
                         Select default kernel to build (default: 'hybrid')
   --cheribsd/build-alternate-abi-kernels, --cheribsd/no-build-alternate-abi-kernels
-                        Also build kernels with non-default ABI (purecap or hybrid) (default: 'False')
+                        Also build kernels with non-default ABI (purecap or hybrid) (default: 'True')
   --cheribsd/build-bench-kernels, --cheribsd/no-build-bench-kernels
                         Also build benchmark kernels (default: 'False')
   --cheribsd/caprevoke-kernel, --cheribsd/no-caprevoke-kernel
@@ -753,7 +753,7 @@ Options for target 'cheribsd-mfs-root-kernel':
   --cheribsd-mfs-root-kernel/default-kernel-abi {hybrid,purecap}
                         Select default kernel to build (default: 'hybrid')
   --cheribsd-mfs-root-kernel/build-alternate-abi-kernels, --cheribsd-mfs-root-kernel/no-build-alternate-abi-kernels
-                        Also build kernels with non-default ABI (purecap or hybrid) (default: 'False')
+                        Also build kernels with non-default ABI (purecap or hybrid) (default: 'True')
   --cheribsd-mfs-root-kernel/build-bench-kernels, --cheribsd-mfs-root-kernel/no-build-bench-kernels
                         Also build benchmark kernels (default: 'False')
   --cheribsd-mfs-root-kernel/caprevoke-kernel, --cheribsd-mfs-root-kernel/no-caprevoke-kernel
