@@ -36,9 +36,11 @@ from pathlib import Path
 from .crosscompileproject import (BenchmarkMixin, CompilationTargets, CrossCompileAutotoolsProject,
                                   CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
                                   MakeCommandKind)
+from .llvm import BuildCheriLLVM
 from .llvm_test_suite import BuildLLVMTestSuite
 from ..project import ExternallyManagedSourceRepository, ReuseOtherProjectRepository
 from ...config.chericonfig import BuildType
+from ...config.compilation_targets import FreeBSDTargetInfo
 from ...config.target_info import CPUArchitecture
 from ...processutils import get_program_version
 from ...utils import is_jenkins_build, OSInfo
@@ -599,7 +601,17 @@ class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
             self.spec_iso_path = "/missing/spec2006.iso"
         super().setup()
         # Only build spec2006
+        if isinstance(self.target_info, FreeBSDTargetInfo):
+            # noinspection PyProtectedMember
+            llvm_project = self.target_info._get_compiler_project().get_instance(self,
+                                                                                 cross_target=CompilationTargets.NATIVE)
+        else:
+            llvm_project = BuildCheriLLVM.get_instance(self, cross_target=CompilationTargets.NATIVE)
+
         self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006",
+                               TEST_SUITE_LIT=llvm_project.build_dir / "bin/llvm-lit",
+                               TEST_SUITE_LLVM_SIZE=llvm_project.build_dir / "bin/llvm-size",
+                               TEST_SUITE_LLVM_PROFDATA=llvm_project.build_dir / "bin/llvm-profdata",
                                TEST_SUITE_COPY_DATA=True,
                                TEST_SUITE_COLLECT_CODE_SIZE=False,
                                TEST_SUITE_COLLECT_COMPILE_TIME=False,
