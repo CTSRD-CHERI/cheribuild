@@ -366,7 +366,8 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--docker-container DOCKER-CONTAINER] [--docker-reuse-container | --no-docker-reuse-container]
                      [--compilation-db] [--wait-for-debugger | --no-wait-for-debugger]
                      [--debugger-in-tmux-pane | --no-debugger-in-tmux-pane] [--gdb-random-port | --no-gdb-random-port]
-                     [--run-under-gdb | --no-run-under-gdb] [--test-ssh-key TEST-SSH-KEY]
+                     [--run-under-gdb | --no-run-under-gdb]
+                     [--emulate-usb-input-devices | --no-emulate-usb-input-devices] [--test-ssh-key TEST-SSH-KEY]
                      [--use-minimal-benchmark-kernel | --no-use-minimal-benchmark-kernel] [--test-extra-args ARGS]
                      [--interact-after-tests] [--test-environment-only] [--test-ld-preload TEST-LD-PRELOAD]
                      [--benchmark-fpga-extra-args ARGS] [--benchmark-clean-boot | --no-benchmark-clean-boot]
@@ -647,6 +648,8 @@ Configuration for launching QEMU (and other simulators):
   --run-under-gdb, --no-run-under-gdb
                         Run tests/benchmarks under GDB. Note: currently most targets ignore this flag. (default:
                         'False')
+  --emulate-usb-input-devices, --no-emulate-usb-input-devices
+                        Emulate USB keyboard+mouse in QEMU (default: 'True')
 
 FreeBSD and CheriBSD build configuration:
   --skip-world, --no-skip-world, --skip-buildworld, --no-skip-buildworld

@@ -308,7 +308,8 @@ class LaunchQEMUBase(SimpleProject):
                                                          user_network_args=user_network_options,
                                                          trap_on_unrepresentable=self.config.trap_on_unrepresentable,
                                                          debugger_on_cheri_trap=self.config.debugger_on_cheri_trap,
-                                                         add_virtio_rng=self._add_virtio_rng)
+                                                         add_virtio_rng=self._add_virtio_rng,
+                                                         add_usb_input=self.config.emulate_usb_input_devices)
         qemu_command += self._project_specific_options + self._after_disk_options + monitor_options
         qemu_command += logfile_options + self.extra_qemu_options + virtfs_args
         self.info("About to run QEMU with image", self.disk_image, "and loader/kernel", qemu_loader_or_kernel)
