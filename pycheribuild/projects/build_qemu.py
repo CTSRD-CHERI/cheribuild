@@ -183,7 +183,6 @@ class BuildQEMUBase(AutotoolsProject):
 
         self.configureArgs.extend([
             "--target-list=" + self.qemu_targets,
-            "--enable-slirp=git",
             "--disable-linux-user",
             "--disable-bsd-user",
             "--disable-xen",
