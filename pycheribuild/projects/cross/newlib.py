@@ -51,6 +51,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         [CompilationTargets.BAREMETAL_NEWLIB_MIPS64,
          CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP,
          CompilationTargets.BAREMETAL_NEWLIB_RISCV32,
+         CompilationTargets.BAREMETAL_NEWLIB_RISCV32_HYBRID,
          CompilationTargets.BAREMETAL_NEWLIB_RISCV32_PURECAP,
          CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
          CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID,
