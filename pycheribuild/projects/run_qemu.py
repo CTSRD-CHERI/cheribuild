@@ -651,6 +651,18 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
     def process(self):
         super().process()
 
+class LaunchDmQEMU(LaunchCheriBSD):
+    target = "run-dm"
+    forward_ssh_port = False
+    _enable_smbfs_support = False
+    _add_virtio_rng = False
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.qemu_user_networking = False
+
+    def process(self):
+        super().process()
 
 class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     target = "run-freertos"
