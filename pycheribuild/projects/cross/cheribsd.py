@@ -2209,33 +2209,6 @@ target_manager.add_target_alias("cheribsd-native", "cheribsd-amd64", deprecated=
 target_manager.add_target_alias("cheribsd-x86_64", "cheribsd-amd64", deprecated=True)
 
 
-class BuildFreeBSDDeviceModel(BuildFreeBSDWithDefaultOptions):
-    target = "device-model-freebsd"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/device-model-freebsd.git",
-                               default_branch="dma")
-    supported_architectures = [CompilationTargets.FREEBSD_MIPS64]
-    kernel_config = "BERI_DE4_USBROOT"
-    hide_options_from_help = True
-
-    def compile(self, **kwargs):
-        self.kernel_config = "BERI_DE4_USBROOT"
-        super().compile(all_kernel_configs=self.kernel_config, **kwargs)
-
-
-class BuildCheriBsdDeviceModel(BuildCHERIBSD):
-    target = "device-model-cheribsd"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git",
-                               default_branch="device-model")
-    # kernel_config = "CHERI_DE4_USBROOT"
-    default_extra_make_options = ["DM_IOMMU=1", "DM_PCI=1"]
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
-    hide_options_from_help = True
-
-    # def compile(self, **kwargs):
-    #    self.kernel_config = "CHERI_DE4_USBROOT"
-    #    super().compile(all_kernel_configs=self.kernel_config, **kwargs)
-
-
 class BuildDrmKMod(CrossCompileProject):
     target = "drm-kmod"
     repository = GitRepository("https://github.com/freebsd/drm-kmod", default_branch="master", force_branch=True)
