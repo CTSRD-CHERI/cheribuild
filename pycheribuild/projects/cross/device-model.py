@@ -35,13 +35,16 @@ from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProjec
 
 
 class BuildDeviceModel(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/device-model")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/device-model-riscv")
     target = "device-model"
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot
-    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_MIPS64]
+    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP]
     default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     build_in_source_dir = True  # Cannot build out-of-source
 
+    def compile(self, **kwargs):
+        self.run_make("purecap")
+
     def install(self, **kwargs):
-        self.install_file(self.build_dir / "obj/device-model.bin", self.real_install_root_dir / "device-model.bin")
+        self.install_file(self.build_dir / "obj/device-model-riscv.bin", self.real_install_root_dir / "device-model-riscv.bin")
