@@ -700,7 +700,7 @@ class BuildQtGraphicalEffects(BuildQtModuleWithQMake):
 # Webkit needs ICU (and recommended for QtBase too):
 class BuildICU4C(CrossCompileAutotoolsProject):
     # noinspection PyUnreachableCode
-    repository = GitRepository("https://github.com/CTSRD-CHERI/icu.git", default_branch="maint/maint-67",
+    repository = GitRepository("https://github.com/CTSRD-CHERI/icu.git", default_branch="maint/maint-70",
                                force_branch=True, old_urls=[b"https://github.com/unicode-org/icu.git"])
     default_directory_basename = "icu"
     target = "icu4c"
