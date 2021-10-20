@@ -1049,7 +1049,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if cheribuild_target:
             self.warning("Dependency for", self.target, "missing:", *args, fixit_hint=install_instructions)
             if self.query_yes_no("Would you like to install the dependency (" + cheribuild_target +
-                                 ") using cheribuild?", force_result=True):
+                                 ") using cheribuild?", force_result=False if is_jenkins_build() else True):
                 dep_target = target_manager.get_target(cheribuild_target, None, config=self.config, caller=self)
                 dep_target.check_system_deps(self.config)
                 dep_target.execute(self.config)
@@ -3605,9 +3605,11 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                     cmake_xtarget = \
                         xtarget.get_non_cheri_for_purecap_rootfs_target() if xtarget.is_cheri_purecap() else xtarget
                     cmake_target = BuildCrossCompiledCMake.get_instance(self, cross_target=cmake_xtarget)
-                    if not (cmake_target.install_dir / "bin/ctest").is_file():
-                        self.dependency_error("cannot find cross-compiled CTest binary to run tests.",
-                                              cheribuild_target=cmake_target.target)
+                    expected_ctest_path = cmake_target.install_dir / "bin/ctest"
+                    if not expected_ctest_path.is_file():
+                        self.dependency_error(
+                            f"cannot find cross-compiled CTest binary ({expected_ctest_path}) to run tests.",
+                            cheribuild_target=cmake_target.target)
                     # --output-junit needs version 3.21
                     min_version = "3.21"
                     if not list(cmake_target.install_dir.glob("share/*/Help/release/" + min_version + ".rst")):
