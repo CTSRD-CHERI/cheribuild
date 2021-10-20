@@ -1727,9 +1727,14 @@ class GitRepository(SourceRepository):
             if remote_name is not None:
                 remote_url = run_command("git", "remote", "get-url", remote_name, capture_output=True,
                                          cwd=src_dir).stdout.strip()
+                # Strip any .git suffix to match more old URLs
+                if remote_url.endswith(b".git"):
+                    remote_url = remote_url[:-4]
                 # Update from the old url:
                 for old_url in self.old_urls:
                     assert isinstance(old_url, bytes)
+                    if old_url.endswith(b".git"):
+                        old_url = old_url[:-4]
                     if remote_url == old_url:
                         current_project.warning(current_project.target, "still points to old repository", remote_url)
                         if current_project.query_yes_no("Update to correct URL?"):
