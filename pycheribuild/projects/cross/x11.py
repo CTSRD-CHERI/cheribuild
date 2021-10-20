@@ -26,6 +26,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 import os
+import shutil
 from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
@@ -33,7 +34,7 @@ from .freetype import BuildFreeType2
 from ..project import DefaultInstallDir, GitRepository, Project
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
-from ...processutils import DoNoQuoteStr, set_env
+from ...processutils import DoNoQuoteStr, get_program_version, set_env
 from ...utils import OSInfo
 
 
@@ -111,6 +112,21 @@ class X11AutotoolsProject(X11AutotoolsProjectBase):
 class BuildXCBProto(X11AutotoolsProject):
     target = "xcbproto"
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/proto/xcbproto.git")
+
+    def compile(self, **kwargs):
+        super().compile(**kwargs)
+        # Work around automake 1.16.4 bug resulting in a broken .pc file that triggers a pkg-config error while:
+        # `Variable 'PYTHON_PREFIX' not defined in '<rootfs>/usr/local/lib/pkgconfig/xcb-proto.pc'`
+        # See https://www.mail-archive.com/bug-automake@gnu.org/msg04957.html and
+        # https://gitlab.freedesktop.org/xorg/proto/xcbproto/-/merge_requests/25
+        if self.config.pretend and not shutil.which("automake"):
+            automake_version = (0, 0, 0)
+        else:
+            automake_version = get_program_version(Path("automake"), config=self.config,
+                                                   regex=rb"automake\s+\(GNU automake\)\s+(\d+)\.(\d+)\.?(\d+)?")
+        if automake_version >= (1, 16, 4):
+            self.info("Working around https://www.mail-archive.com/bug-automake@gnu.org/msg04957.html")
+            self.replace_in_file(self.build_dir / "xcb-proto.pc", {"${PYTHON_PREFIX}": str(self.install_prefix)})
 
 
 class BuildXorgProto(X11AutotoolsProject):

@@ -258,6 +258,15 @@ class FileSystemUtils(object):
         status_update("Adding '", line, "' to ", file, sep="")
         self.rewrite_file(file, lambda lines: lines if line in lines else (lines + [line]))
 
+    def replace_in_file(self, file: Path, replacements: "dict[str, str]"):
+        def do_replace(old_lines: "typing.Iterable[str]"):
+            for line in old_lines:
+                for old, new in replacements.items():
+                    line = line.replace(old, new)
+                yield line
+        status_update("Remapping ", replacements, " in ", file, sep="")
+        self.rewrite_file(file, do_replace)
+
     @property
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
         raise ValueError("Must override triple_prefixes_for_binaries to use create_triple_prefixed_symlinks!")
