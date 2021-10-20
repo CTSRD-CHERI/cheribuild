@@ -651,6 +651,7 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
     def process(self):
         super().process()
 
+
 class LaunchDmQEMU(LaunchCheriBSD):
     target = "run-dm"
     forward_ssh_port = False
@@ -663,6 +664,7 @@ class LaunchDmQEMU(LaunchCheriBSD):
 
     def process(self):
         super().process()
+
 
 class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     target = "run-freertos"

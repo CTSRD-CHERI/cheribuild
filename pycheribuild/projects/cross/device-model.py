@@ -47,4 +47,5 @@ class BuildDeviceModel(CrossCompileAutotoolsProject):
         self.run_make("purecap")
 
     def install(self, **kwargs):
-        self.install_file(self.build_dir / "obj/device-model-riscv.bin", self.real_install_root_dir / "device-model-riscv.bin")
+        self.install_file(self.build_dir / "obj/device-model-riscv.bin",
+                          self.real_install_root_dir / "device-model-riscv.bin")
