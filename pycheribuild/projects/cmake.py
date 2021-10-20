@@ -34,6 +34,7 @@ from .project import (AutotoolsProject, CheriConfig, CMakeProject, DefaultInstal
                       MakeCommandKind, ReuseOtherProjectDefaultTargetRepository)
 from ..config.chericonfig import BuildType
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
+from ..targets import target_manager
 from ..utils import replace_one
 
 
@@ -93,3 +94,7 @@ class BuildCrossCompiledCMake(CMakeProject):
         self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
                                                   "--test-timeout", str(120 * 60),
                                                   mount_builddir=True, mount_sourcedir=True, mount_sysroot=True)
+
+
+# Add a cmake-native target for consistency.
+target_manager.add_target_alias("cmake-native", "cmake")
