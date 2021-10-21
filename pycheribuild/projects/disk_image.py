@@ -558,7 +558,7 @@ class BuildDiskImageBase(SimpleProject):
         try:
             if efi_partition is not None:
                 self.make_efi_partition(efi_partition)
-                if not efi_partition.exists():
+                if not efi_partition.exists() and not self.config.pretend:
                     self.fatal("Failed to create the EFI partition", efi_partition)
                 mkimg_efi_args = ["-p", "efi:=" + str(efi_partition)]
             else:
