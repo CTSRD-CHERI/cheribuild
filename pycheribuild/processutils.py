@@ -725,7 +725,8 @@ def extract_version(output: bytes, component_kind: "typing.Type[Type_T]" = int, 
         print(output)
         raise ValueError("Expected to match regex " + str(regex))
     # noinspection PyTypeChecker
-    return tuple(map(component_kind, match.groups()))
+    # Python 3.7.0 includes None elements for unmatched optional groups, so we have to omit those.
+    return tuple(component_kind(x) for x in match.groups() if x is not None)
 
 
 def latest_system_clang_tool(config: ConfigBase, basename: str,
