@@ -716,7 +716,7 @@ def get_program_version(program: Path, command_args: tuple = None, component_kin
 def extract_version(output: bytes, component_kind: "typing.Type[Type_T]" = int, regex: "typing.Pattern" = None,
                     program_name: bytes = b"") -> "typing.Tuple[Type_T, Type_T, Type_T]":
     if regex is None:
-        prefix = program_name + b" " if program_name else b""
+        prefix = re.escape(program_name) + b" " if program_name else b""
         regex = re.compile(prefix + b"version\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?")
     elif isinstance(regex, bytes):
         regex = re.compile(regex)
