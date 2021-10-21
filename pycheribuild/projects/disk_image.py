@@ -444,6 +444,11 @@ class BuildDiskImageBase(SimpleProject):
             return
         # FIXME: if /usr/local/bin/gdb is in the image make /usr/bin/gdb a symlink
         cross_target = self._gdb_xtarget
+        # Done here rather than in _gdb_xtarget to avoid duplication in the
+        # FETT override (and because without FETT we would just inline the
+        # implementation here)
+        if cross_target.is_cheri_purecap():
+            cross_target = cross_target.get_cheri_hybrid_for_purecap_rootfs_target()
         if cross_target not in BuildGDB.supported_architectures:
             self.warning("GDB cannot be built for architecture ", cross_target, " -> not addding it")
             return
