@@ -700,6 +700,9 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
             # This makes a noticeable difference for plain aarch64 (v8.2 instead of v8.0) and also enables a few
             # extensions that are not enabled by -march=morello (crypto+crc32
             result.append("-mcpu=rainier")
+            if not xtarget.is_hybrid_or_purecap_cheri():
+                # -mcpu=rainier enables capabilities unless -march=morello+noa64c is also passed
+                result.append("-march=morello+noa64c")
         return result
 
 
