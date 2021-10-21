@@ -192,7 +192,8 @@ class CheriConfig(ConfigBase):
                                                      help="The ABI to use for cap-table mode")
         self.cross_target_suffix = loader.add_option("cross-target-suffix", help_hidden=True, default="",
                                                      help="Add a suffix to the cross build and install directories.")
-
+        self.allow_running_as_root = loader.add_bool_option("allow-running-as-root", help_hidden=True, default=False,
+                                                            help="Allow running cheribuild as root (not recommended!)")
         # Attributes for code completion:
         self.verbose = None  # type: Optional[bool]
         self.debug_output = loader.add_commandline_only_bool_option("debug-output", "vv",

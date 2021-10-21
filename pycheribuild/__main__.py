@@ -107,8 +107,6 @@ def real_main():
     ensure_fd_is_blocking(sys.stdout.fileno())
     ensure_fd_is_blocking(sys.stderr.fileno())
 
-    check_not_root()
-
     config_loader = JsonAndCommandLineConfigLoader()
     # Don't suggest deprecated names when tab-completing
     if config_loader.is_completing_arguments:
@@ -122,6 +120,8 @@ def real_main():
     target_manager.register_command_line_options()
     # load them from JSON/cmd line
     cheri_config.load()
+    if not cheri_config.allow_running_as_root:
+        check_not_root()
     init_global_config(cheri_config)
     if JsonAndCommandLineConfigLoader.get_config_prefix() == "docker-":
         cheri_config.docker = True
