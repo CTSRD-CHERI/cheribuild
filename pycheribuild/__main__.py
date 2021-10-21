@@ -32,6 +32,7 @@ import os
 import shutil
 import subprocess
 import sys
+import traceback
 # noinspection PyUnresolvedReferences
 from pathlib import Path
 
@@ -243,7 +244,11 @@ def real_main():
 
 
 def main():
-    run_and_kill_children_on_exit(real_main)
+    try:
+        run_and_kill_children_on_exit(real_main)
+    except Exception as e:
+        traceback.print_exc()
+        fatal_error("Unhandled exception:", e, fatal_when_pretending=True)
 
 
 if __name__ == "__main__":
