@@ -1002,6 +1002,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
 
     def add_required_libraries(self, libdirs: "typing.List[str]"):
+        optional_libs = []
         required_libs = [
             "libc.so.7",
             "libcrypt.so.5",
@@ -1011,11 +1012,14 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "libz.so.6",
             # Commonly used (and tiny)
             "libdl.so.1",
-            # needed by /bin/sh & /bin/csh (if we included the purecap sh/csh)
-            "libedit.so.7",
             "libncursesw.so.9",
             "libxo.so.0",
             "libz.so.6",
+        ]
+        # required, but versions were bumped with changes to ncurses
+        optional_libs += [
+            # needed by /bin/sh & /bin/csh (if we included the purecap sh/csh)
+            "libedit.so.7", "libedit.so.8"
         ]
         # additional cheribsdbox dependencies (PAM+SSL+BSM)
         # We don't know what ABI cheribsdbox is built for so let's just add the libraries for all ABIs
@@ -1037,7 +1041,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             required_libs += ["pam_" + i + ".so", "pam_" + i + ".so.6"]
 
         # Libraries to include if they exist
-        optional_libs = [
+        optional_libs += [
             # Needed for most benchmarks, but not supported on all architectures
             "libstatcounters.so.3"
         ]
