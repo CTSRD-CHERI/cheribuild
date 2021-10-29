@@ -765,7 +765,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
         min_version = (10, 0)
         if OSInfo.IS_MAC:
             # Don't use apple_clang from /usr/bin
-            compiler_path = shutil.which("clang", path="/usr/local/opt/llvm/bin:/usr/local/bin:/usr/bin")
+            prefix = self.get_homebrew_prefix()
+            path = [str(prefix / "opt/llvm/bin"), str(prefix / "bin"), "/usr/bin"]
+            compiler_path = shutil.which("clang", path=":".join(path))
         else:
             # Try using the latest installed clang
             compiler_path = latest_system_clang_tool(self.config, "clang", None)
