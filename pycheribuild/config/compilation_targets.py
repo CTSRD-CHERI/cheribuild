@@ -1080,7 +1080,10 @@ class CompilationTargets(BasicCompilationTargets):
                            hybrid_for_purecap_rootfs_target=CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS)
     CHERIBSD_X86_64 = CrossCompileTarget("amd64", CPUArchitecture.X86_64, CheriBSDTargetInfo)
 
-    CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips", CPUArchitecture.MIPS64, CheriOSTargetInfo, is_cheri_purecap=True)
+    CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, CheriOSTargetInfo,
+                                              is_cheri_purecap=True)
+    CHERIOS_RISCV_PURECAP = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriOSTargetInfo,
+                                               is_cheri_purecap=True)
 
     # Baremetal targets
     BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, NewlibBaremetalTargetInfo)

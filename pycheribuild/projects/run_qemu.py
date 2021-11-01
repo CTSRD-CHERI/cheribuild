@@ -35,7 +35,7 @@ import sys
 import typing
 from pathlib import Path
 
-from .build_qemu import BuildCheriOSQEMU, BuildMorelloQEMU, BuildQEMU
+from .build_qemu import BuildMorelloQEMU, BuildQEMU
 from .cherios import BuildCheriOS
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.freertos import BuildFreeRTOS
@@ -587,8 +587,8 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
-    dependencies = ["cherios-qemu", "cherios"]
-    supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP]
+    dependencies = ["qemu", "cherios"]
+    supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP]
     forward_ssh_port = False
     qemu_user_networking = False
     hide_options_from_help = True
@@ -618,10 +618,6 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         self.qemu_options.virtio_disk = True  # CheriOS needs virtio
         self.qemu_options.force_virtio_blk_device = True
         self.qemu_user_networking = False
-
-    def setup(self):
-        super().setup()
-        self.qemu_binary = BuildCheriOSQEMU.qemu_binary(self)
 
     def process(self):
         if not self.disk_image.exists():
