@@ -619,10 +619,6 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         self.qemu_options.force_virtio_blk_device = True
         self.qemu_user_networking = False
 
-    def setup(self):
-        super().setup()
-        self.qemu_binary = BuildQEMU.qemu_cheri_binary(self)
-
     def process(self):
         if not self.disk_image.exists():
             if self.query_yes_no("CheriOS disk image is missing. Would you like to create a zero-filled 1MB image?"):

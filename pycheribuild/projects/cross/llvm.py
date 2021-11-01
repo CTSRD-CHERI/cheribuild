@@ -589,7 +589,7 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
     hide_options_from_help = True
 
     def configure(self, **kwargs):
-        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="RISCV;Mips;host")
+        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips;RISCV;host")
         super().configure(**kwargs)
 
     @classmethod
