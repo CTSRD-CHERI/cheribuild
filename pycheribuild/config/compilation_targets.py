@@ -1081,7 +1081,8 @@ class CompilationTargets(BasicCompilationTargets):
     CHERIBSD_X86_64 = CrossCompileTarget("amd64", CPUArchitecture.X86_64, CheriBSDTargetInfo)
 
     CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips", CPUArchitecture.MIPS64, CheriOSTargetInfo, is_cheri_purecap=True)
-    CHERIOS_RISCV_PURECAP = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriOSTargetInfo, is_cheri_purecap=True)
+    CHERIOS_RISCV_PURECAP = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriOSTargetInfo,
+                                               is_cheri_purecap=True)
 
     # Baremetal targets
     BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, NewlibBaremetalTargetInfo)

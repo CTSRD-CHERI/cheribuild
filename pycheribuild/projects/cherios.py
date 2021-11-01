@@ -38,7 +38,8 @@ class BuildCheriOS(CMakeProject):
     default_build_type = BuildType.DEBUG
     repository = GitRepository("https://github.com/CTSRD-CHERI/cherios.git", default_branch="master")
     _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, cls: config.output_root / ("cherios" + cls._xtarget.build_suffix(config,include_os=False)),
+        function=lambda config, cls: config.output_root / ("cherios" + cls._xtarget.build_suffix(config,
+                                                                                                 include_os=False)),
         as_string="<OUTPUT_ROOT>/cherios128")
     needs_sysroot = False
     supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP]
@@ -59,3 +60,4 @@ class BuildCheriOS(CMakeProject):
         self.add_cmake_options(PLATFORM=self._xtarget.base_target_suffix)
     def install(self, **kwargs):
         pass  # nothing to install yet
+
