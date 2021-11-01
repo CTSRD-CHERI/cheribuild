@@ -40,7 +40,7 @@ class BuildCheriOS(CMakeProject):
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, cls: config.output_root / ("cherios" + cls._xtarget.build_suffix(config,
                                                                                                  include_os=False)),
-        as_string="$OUTPUT_ROOT/cherios-{mips,riscv64}")
+        as_string="$OUTPUT_ROOT/cherios-{mips64,riscv64}")
     needs_sysroot = False
     supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP]
 
