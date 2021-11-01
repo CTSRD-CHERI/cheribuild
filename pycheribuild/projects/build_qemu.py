@@ -341,4 +341,3 @@ class BuildMorelloQEMU(BuildQEMU):
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
         return caller.config.morello_qemu_bindir / os.getenv("QEMU_MORELLO_PATH", binary_name)
-
