@@ -34,14 +34,19 @@ from .crosscompileproject import (CrossCompileProject, DefaultInstallDir, FettPr
 
 
 class BuildOpenSSL(CrossCompileProject):
-    # Just add the FETT target below for now.
-    do_not_add_to_targets = True
     build_in_source_dir = True
+    # nginx looks in /usr/local
+    path_in_rootfs = "/usr/local"
 
-    repository = GitRepository("https://github.com/CTSRD-CHERI/openssl.git")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/openssl.git",
+                               default_branch="OpenSSL_1_1_1-stable-cheri")
 
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+
+    @classmethod
+    def get_version(cls) -> tuple:
+        return (1, 1, 1)
 
     def setup(self):
         super().setup()
@@ -51,16 +56,26 @@ class BuildOpenSSL(CrossCompileProject):
         self.configure_args.append(str(self.source_dir / "Configure"))
         self.configure_args.append("BSD-generic64")
         self.configure_args.append("-shared")
-        self.configure_args.append("--install-prefix=" + str(self.destdir))
+
+        if self.get_version() <= (1, 1, 0):
+            self.configure_args.append("--install-prefix=" + str(self.destdir))
+        else:
+            self.configure_args.append("--prefix=" + str(self._install_prefix))
+            self.make_args.set(DESTDIR=str(self.destdir))
+
         if not self._xtarget.is_native():
             self.configure_args.append("--openssldir=" + str(self._install_prefix))
-
-    def compile(self, **kwargs):
-        # link errors at -j40
-        super().compile(parallel=False)
 
 
 class BuildFettOpenSSL(FettProjectMixin, BuildOpenSSL):
     target = "fett-openssl"
     repository = GitRepository("https://github.com/CTSRD-CHERI/openssl.git",
                                default_branch="fett")
+
+    @classmethod
+    def get_version(cls) -> tuple:
+        return (1, 0, 2)
+
+    def compile(self, **kwargs):
+        # link errors at -j40
+        super().compile(parallel=False)
