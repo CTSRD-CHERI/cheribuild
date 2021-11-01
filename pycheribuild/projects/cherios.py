@@ -38,17 +38,16 @@ class BuildCheriOS(CMakeProject):
     default_build_type = BuildType.DEBUG
     repository = GitRepository("https://github.com/CTSRD-CHERI/cherios.git", default_branch="master")
     _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, cls: config.output_root / ("cherios" + config.mips_cheri_bits_str),
+        function=lambda config, cls: config.output_root / ("cherios" + cls._xtarget.build_suffix(config,include_os=False)),
         as_string="<OUTPUT_ROOT>/cherios128")
     needs_sysroot = False
-    supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.smp_cores = cls.add_config_option("smp-cores", default=1, kind=int)
         cls.build_net = cls.add_bool_option("build-net", default=False)
-
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.add_cmake_options(CHERI_SDK_DIR=self.target_info.sdk_root_dir)
@@ -57,6 +56,6 @@ class BuildCheriOS(CMakeProject):
         self.add_cmake_options(SMP_CORES=self.smp_cores)
         self.add_cmake_options(CMAKE_AR=self.sdk_bindir / "llvm-ar")
         self.add_cmake_options(CMAKE_RANLIB=self.sdk_bindir / "llvm-ranlib")
-
+        self.add_cmake_options(PLATFORM=self._xtarget.base_target_suffix)
     def install(self, **kwargs):
         pass  # nothing to install yet

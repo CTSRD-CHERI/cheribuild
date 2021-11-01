@@ -342,22 +342,3 @@ class BuildMorelloQEMU(BuildQEMU):
             raise ValueError("Invalid xtarget" + str(xtarget))
         return caller.config.morello_qemu_bindir / os.getenv("QEMU_MORELLO_PATH", binary_name)
 
-
-class BuildCheriOSQEMU(BuildQEMU):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri",
-                               force_branch=True)
-    default_targets = "cheri128-softmmu"
-    target = "cherios-qemu"
-    _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, project: config.output_root / "cherios-sdk",
-        as_string="$INSTALL_ROOT/cherios-sdk")
-    hide_options_from_help = True
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-
-    @classmethod
-    def qemu_binary(cls, caller: SimpleProject, _=None):
-        binary_name = "qemu-system-cheri" + caller.config.mips_cheri_bits_str
-        return cls.get_instance(caller, caller.config,
-                                cross_target=CompilationTargets.NATIVE).install_dir / "bin" / binary_name
