@@ -562,6 +562,20 @@ class LaunchFVPBase(SimpleProject):
                 fvp_args = [x for param in model_params for x in ("-C", param)]
                 self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number"] + fvp_args)
         else:
+            if self.fvp_project.fvp_revision < self.required_fvp_version:
+                self.dependency_error("FVP is too old, please update to the latest version",
+                                      problem="outdated", cheribuild_target="install-morello-fvp",
+                                      cheribuild_action="update")
+                del self.fvp_project.fvp_revision  # reset cached value
+                if self.fvp_project.fvp_revision < self.required_fvp_version:
+                    self.fatal("FVP update failed, version is reported as", self.fvp_project.fvp_revision,
+                               "but needs to be at least", self.required_fvp_version)
+            elif self.fvp_project.fvp_revision < self.fvp_project.latest_known_fvp:
+                self.dependency_warning("FVP is old, it is recommended to update to the latest version",
+                                        problem="outdated", cheribuild_target="install-morello-fvp",
+                                        cheribuild_action="update")
+                del self.fvp_project.fvp_revision  # reset cached value
+
             self.fvp_project.check_system_dependencies()  # warn if socat/docker is missing
             model_params += [
                 "displayController=0",  # won't work yet
@@ -569,13 +583,7 @@ class LaunchFVPBase(SimpleProject):
             ]
             if not self.smp:
                 model_params += ["num_clusters=1", "num_cores=1"]
-            if self.fvp_project.fvp_revision < self.required_fvp_version:
-                self.dependency_error("FVP is too old, please update to latest version",
-                                      cheribuild_target="install-morello-fvp")
-                del self.fvp_project.fvp_revision  # reset cached value
-                if self.fvp_project.fvp_revision < self.required_fvp_version:
-                    self.fatal("FVP update failed, version is reported as", self.fvp_project.fvp_revision,
-                               "but needs to be at least", self.required_fvp_version)
+
             # virtio-rng supported in 0.10.312
             model_params += [
                 "board.virtio_rng.enabled=1",
