@@ -79,6 +79,9 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
     def setup(self):
         super().setup()
 
+        # Fix build for ICU >= 68
+        self.COMMON_FLAGS.append("-DU_DEFINE_FALSE_AND_TRUE")
+
         if self.crosscompile_target.is_aarch64(include_purecap=True):
             # XXX: Morello hybrid gives relocation errors without this, add to purecap
             # as well for comparability
