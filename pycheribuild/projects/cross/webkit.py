@@ -137,3 +137,11 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
                                        ENABLE_JSHEAP_CHERI_OFFSET_REFS=False)
             else:
                 self.add_cmake_options(ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=self.tier2ptrliterals)
+
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.fatal("Running host tests not implemented")
+        else:
+            # full disk image to get icu library
+            self.target_info.run_cheribsd_test_script("run_morello_webkit_tests.py", mount_sourcedir=True,
+                                                      use_full_disk_image=True)
