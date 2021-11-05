@@ -26,8 +26,10 @@
 # SUCH DAMAGE.
 #
 import argparse
+import datetime
 
-from run_tests_common import boot_cheribsd, run_tests_main
+from run_tests_common import (boot_cheribsd, finish_and_write_junit_xml_report, get_default_junit_xml_name, junitparser,
+                              run_tests_main)
 
 
 def setup_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> None:
@@ -44,22 +46,41 @@ def run_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
                        "crypto-sha1.js", "math-partial-sums.js", "string-base64.js", "string-validate-input.js",
                        "access-binary-trees.js", "bitops-3bit-bits-in-byte.js", "controlflow-recursive.js",
                        "date-format-tofte.js", "math-spectral-norm.js", "string-fasta.js"]
-    tests_successful = True
+    xml = junitparser.JUnitXml()
+    all_tests_starttime = datetime.datetime.utcnow()
     for test in sunspider_tests:
+        suite = junitparser.TestSuite(name=test)
+        t = junitparser.TestCase(name=test)
+        starttime = datetime.datetime.utcnow()
         try:
             qemu.checked_run("/opt/{ta}/webkit/bin/jsc /source/PerformanceTests/SunSpider/tests/sunspider-1.0.2/{test}"
                              .format(ta=qemu.xtarget.generic_arch_suffix, test=test), timeout=300)
         except boot_cheribsd.CheriBSDCommandFailed as e:
             boot_cheribsd.failure("Failed to run ", test, ": ", str(e), exit=False)
             if isinstance(e, boot_cheribsd.CheriBSDCommandTimeout):
+                t.result = junitparser.Failure(message="Command timed out")
                 # Send CTRL+C if the process timed out.
                 qemu.sendintr()
                 qemu.sendintr()
                 qemu.expect_prompt(timeout=5 * 60)
-            tests_successful = False
-    return tests_successful
+            else:
+                t.result = junitparser.Failure(message="Command failed")
+        t.time = (datetime.datetime.utcnow() - starttime).total_seconds()
+        suite.add_testcase(t)
+        xml.add_testsuite(suite)
+    return finish_and_write_junit_xml_report(all_tests_starttime, xml, args.junit_xml)
+
+
+def adjust_args(args: argparse.Namespace):
+    args.junit_xml = get_default_junit_xml_name(args.junit_xml, args.build_dir)
+
+
+def add_args(parser: argparse.ArgumentParser):
+    parser.add_argument("--junit-xml", required=False, help="Output file name for the JUnit XML results")
 
 
 if __name__ == '__main__':
     run_tests_main(test_function=run_webkit_tests, test_setup_function=setup_webkit_tests,
+                   argparse_adjust_args_callback=adjust_args,
+                   argparse_setup_callback=add_args,
                    should_mount_builddir=False, should_mount_srcdir=True)
