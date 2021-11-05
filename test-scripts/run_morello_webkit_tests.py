@@ -41,10 +41,20 @@ def run_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
                        "crypto-sha1.js", "math-partial-sums.js", "string-base64.js", "string-validate-input.js",
                        "access-binary-trees.js", "bitops-3bit-bits-in-byte.js", "controlflow-recursive.js",
                        "date-format-tofte.js", "math-spectral-norm.js", "string-fasta.js"]
+    tests_successful = True
     for test in sunspider_tests:
-        qemu.checked_run("/opt/{ta}/webkit/bin/jsc /source/PerformanceTests/SunSpider/tests/sunspider-1.0.2/{test}"
-                         .format(ta=target_arch, test=test), timeout=300)
-    return True
+        try:
+            qemu.checked_run("/opt/{ta}/webkit/bin/jsc /source/PerformanceTests/SunSpider/tests/sunspider-1.0.2/{test}"
+                             .format(ta=target_arch, test=test), timeout=300)
+        except boot_cheribsd.CheriBSDCommandFailed as e:
+            boot_cheribsd.failure("Failed to run ", test, ": ", str(e), exit=False)
+            if isinstance(e, boot_cheribsd.CheriBSDCommandTimeout):
+                # Send CTRL+C if the process timed out.
+                qemu.sendintr()
+                qemu.sendintr()
+                qemu.expect_prompt(timeout=5 * 60)
+            tests_successful = False
+    return tests_successful
 
 
 if __name__ == '__main__':
