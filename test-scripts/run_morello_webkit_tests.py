@@ -30,9 +30,12 @@ import argparse
 from run_tests_common import boot_cheribsd, run_tests_main
 
 
+def setup_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> None:
+    qemu.checked_run("export LD_LIBRARY_PATH=/opt/{ta}/webkit/lib:/usr/local/{ta}/lib/"
+                     .format(ta=qemu.xtarget.generic_arch_suffix))
+
+
 def run_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
-    target_arch = qemu.xtarget.generic_arch_suffix
-    qemu.checked_run("export LD_LIBRARY_PATH=/opt/{ta}/webkit/lib:/usr/local/{ta}/lib/".format(ta=target_arch))
     boot_cheribsd.info("Running SunSpider jsc tests")
     sunspider_tests = ["3d-cube.js", "access-fannkuch.js", "bitops-bits-in-byte.js", "crypto-aes.js",
                        "date-format-xparb.js", "regexp-dna.js", "string-tagcloud.js", "3d-morph.js",
@@ -45,7 +48,7 @@ def run_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     for test in sunspider_tests:
         try:
             qemu.checked_run("/opt/{ta}/webkit/bin/jsc /source/PerformanceTests/SunSpider/tests/sunspider-1.0.2/{test}"
-                             .format(ta=target_arch, test=test), timeout=300)
+                             .format(ta=qemu.xtarget.generic_arch_suffix, test=test), timeout=300)
         except boot_cheribsd.CheriBSDCommandFailed as e:
             boot_cheribsd.failure("Failed to run ", test, ": ", str(e), exit=False)
             if isinstance(e, boot_cheribsd.CheriBSDCommandTimeout):
@@ -58,4 +61,5 @@ def run_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
 
 
 if __name__ == '__main__':
-    run_tests_main(test_function=run_webkit_tests, should_mount_builddir=False, should_mount_srcdir=True)
+    run_tests_main(test_function=run_webkit_tests, test_setup_function=setup_webkit_tests,
+                   should_mount_builddir=False, should_mount_srcdir=True)
