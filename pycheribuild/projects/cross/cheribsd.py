@@ -2224,6 +2224,15 @@ target_manager.add_target_alias("cheribsd-native", "cheribsd-amd64", deprecated=
 target_manager.add_target_alias("cheribsd-x86_64", "cheribsd-amd64", deprecated=True)
 
 
+class BuildCheriBsdDeviceModel(BuildCHERIBSD):
+    target = "cheribsd-device-model"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git",
+                               default_branch="device-model-riscv")
+    default_extra_make_options = []
+    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP]
+    hide_options_from_help = True
+
+
 class BuildDrmKMod(CrossCompileProject):
     target = "drm-kmod"
     repository = GitRepository("https://github.com/freebsd/drm-kmod", default_branch="master", force_branch=True)
