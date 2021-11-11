@@ -31,7 +31,6 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import CheriConfig
 from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
 
 
