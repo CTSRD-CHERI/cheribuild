@@ -237,10 +237,14 @@ class BuildGDB(BuildGDBBase):
     path_in_rootfs = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
     native_install_dir = DefaultInstallDir.CHERI_SDK
     _morello_target_branch_info = TargetBranchInfo(branch="morello-8.3", directory_name="morello-gdb")
+    default_branch = "mips_cheri-8.3"
     repository = GitRepository(
         "https://github.com/CTSRD-CHERI/gdb.git",
         # Branch name is changed for every major GDB release:
-        default_branch="mips_cheri-8.3", force_branch=True,
+        default_branch=default_branch,
+        old_branches={"mips_cheri_7.12": default_branch,
+                      "mips_cheri-8.0.1": default_branch,
+                      "mips_cheri-8.2": default_branch},
         per_target_branches={
             CompilationTargets.CHERIBSD_AARCH64: _morello_target_branch_info,
             CompilationTargets.CHERIBSD_MORELLO_HYBRID: _morello_target_branch_info,
