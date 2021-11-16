@@ -1547,7 +1547,8 @@ class GitRepository(SourceRepository):
     def __init__(self, url: str, *, old_urls: typing.List[bytes] = None, default_branch: str = None,
                  force_branch: bool = False, temporary_url_override: str = None,
                  url_override_reason: "typing.Any" = None,
-                 per_target_branches: typing.Dict[CrossCompileTarget, TargetBranchInfo] = None):
+                 per_target_branches: typing.Dict[CrossCompileTarget, TargetBranchInfo] = None,
+                 old_branches: typing.Dict[str, str] = None):
         self.old_urls = old_urls
         if temporary_url_override is not None:
             self.url = temporary_url_override
@@ -1563,6 +1564,7 @@ class GitRepository(SourceRepository):
         if per_target_branches is None:
             per_target_branches = dict()
         self.per_target_branches = per_target_branches
+        self.old_branches = old_branches
 
     def get_default_branch(self, current_project: "Project", *, include_per_target: bool) -> str:
         if include_per_target:
@@ -1570,6 +1572,14 @@ class GitRepository(SourceRepository):
             if target_override is not None:
                 return target_override.branch
         return self._default_branch
+
+    def get_current_branch(self, src_dir: str) -> str:
+        status = run_command("git", "status", "-b", "-s", "--porcelain", "-u", "no",
+                             capture_output=True, print_verbose_only=True, cwd=src_dir,
+                             run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS)
+        if status.stdout.startswith(b"## "):
+            return status.stdout[3:status.stdout.find(b"...")].strip()
+        return None
 
     @staticmethod
     def contains_commit(current_project: "Project", commit: str, *, src_dir: Path, expected_branch="HEAD",
@@ -1770,24 +1780,22 @@ class GitRepository(SourceRepository):
             return
 
         # Handle forced branches now that we have fetched the latest changes
-        if src_dir.exists() and self.force_branch:
-            default_branch = self.get_default_branch(current_project, include_per_target=True)
-            assert default_branch, "default_branch must be set if force_branch is true!"
-            # TODO: move this to Project so it can also be used for other targets
-            status = run_command("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                                 capture_output=True, print_verbose_only=True, cwd=src_dir,
-                                 run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS)
-            if status.stdout.startswith(b"## ") and not status.stdout.startswith(
-                    b"## " + default_branch.encode("utf-8") + b"..."):
-                current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
-                current_project.warning("You are trying to build the", current_branch.decode("utf-8"),
+        if src_dir.exists() and (self.force_branch or self.old_branches):
+            current_branch = self.get_current_branch(src_dir).decode("utf-8")
+            if self.force_branch:
+                assert self.old_branches is None, "cannot set both force_branch and old_branches"
+                default_branch = self.get_default_branch(current_project, include_per_target=True)
+                assert default_branch, "default_branch must be set if force_branch is true!"
+            else:
+                default_branch = self.old_branches.get(current_branch)
+            if default_branch and current_branch != default_branch:
+                current_project.warning("You are trying to build the", current_branch,
                                         "branch. You should be using", default_branch)
                 if current_project.query_yes_no("Would you like to change to the " + default_branch + " branch?"):
                     run_command("git", "checkout", default_branch, cwd=src_dir)
                 else:
                     current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
-                                                         error_message="Wrong branch: " + current_branch.decode(
-                                                             "utf-8"))
+                                                         error_message="Wrong branch: " + current_branch)
 
         # We don't need to update if the upstream commit is an ancestor of the current HEAD.
         # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
