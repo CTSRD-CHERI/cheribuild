@@ -182,6 +182,10 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
             default=False,
             help="Enable FreeRTOS debug featuers")
 
+        cls.enable_mpu = cls.add_bool_option("enable_mpu", show_help=True,
+            default=False,
+            help="Enable FreeRTOS-MPU")
+
         cls.log_udp = cls.add_bool_option("log_udp", show_help=True,
             default=False,
             help="Send output over UDP instead of stdout/serial")
@@ -276,6 +280,9 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
             if self.debug:
               config_options += ["--debug"]
+
+            if self.enable_mpu:
+              config_options += ["--enable_mpu"]
 
             if self.log_udp:
               config_options += ["--log_udp"]
