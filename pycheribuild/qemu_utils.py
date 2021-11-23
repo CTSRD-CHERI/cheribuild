@@ -39,7 +39,8 @@ from .utils import OSInfo, warning_message
 
 
 class QemuOptions:
-    def __init__(self, xtarget: CrossCompileTarget, want_debugger=False) -> None:
+    def __init__(self, xtarget: CrossCompileTarget, want_debugger=False,
+            is_system_mode=True) -> None:
         self.xtarget = xtarget
         self.virtio_disk = True
         self.force_virtio_blk_device = False
@@ -152,16 +153,19 @@ class QemuOptions:
         found_in_path = shutil.which("qemu-system-" + self.qemu_arch_sufffix)
         return Path(found_in_path) if found_in_path is not None else None
 
-    def get_commandline(self, *, qemu_command=None, kernel_file: "Optional[Path]" = None,
+    def get_common_commandline(self, *, qemu_command=None):
+        if qemu_command is None:
+            qemu_command = self.get_qemu_binary()
+        return [str(qemu_command)]
+
+    def get_system_commandline(self, *, qemu_command=None, kernel_file: "Optional[Path]" = None,
                         disk_image: "Optional[Path]" = None, disk_image_format: str = "raw",
                         user_network_args: str = "", add_network_device=True, bios_args: "Optional[list[str]]" = None,
                         trap_on_unrepresentable=False, debugger_on_cheri_trap=False, add_virtio_rng=False,
                         write_disk_image_changes=True, gui_options: "Optional[list[str]]" = None) -> "list[str]":
         if kernel_file is None and disk_image is None:
             raise ValueError("Must pass kernel and/or disk image path when launching QEMU")
-        if qemu_command is None:
-            qemu_command = self.get_qemu_binary()
-        result = [str(qemu_command)]
+        result = self.get_common_commandline()
         result.extend(self.machine_flags)
         result.extend(["-m", self.memory_size])
         if gui_options is None:
@@ -187,6 +191,14 @@ class QemuOptions:
             result.extend(self.user_network_args(user_network_args))
         if add_virtio_rng:
             result.extend(["-device", "virtio-rng-pci"])
+        return result
+
+    def get_user_commandline(self, *, qemu_command=None, rootfs_path: Path = None, program: Path =None):
+        result = self.get_common_commandline(qemu_command=qemu_command)
+        if rootfs_path:
+            result.extend(["-L", rootfs_path])
+        if program:
+            result.append(program)
         return result
 
 
