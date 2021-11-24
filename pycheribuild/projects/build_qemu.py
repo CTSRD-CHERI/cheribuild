@@ -408,14 +408,17 @@ class BuildBsdUserQEMU(BuildQEMU):
     hide_options_from_help = True
 
     @classmethod
-    def qemu_cheri_binary(cls, caller: SimpleProject, xtarget: CrossCompileTarget = None):
+    def qemu_cheri_binary(cls, caller: SimpleProject, xtarget: CrossCompileTarget = None, absolute_path=True):
         if xtarget is None:
             xtarget = caller.get_crosscompile_target()
         if xtarget.is_riscv(include_purecap=True):
             binary_name = "qemu-riscv64cheri"
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
-        return caller.config.bsd_user_qemu_bindir / os.getenv("QEMU_BSD_USER_PATH", binary_name)
+        if absolute_path:
+            return caller.config.bsd_user_qemu_bindir / os.getenv("QEMU_BSD_USER_PATH", binary_name)
+        else:
+            return binary_name
 
     def setup(self):
         super().setup()

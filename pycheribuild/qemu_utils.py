@@ -193,12 +193,12 @@ class QemuOptions:
             result.extend(["-device", "virtio-rng-pci"])
         return result
 
-    def get_user_commandline(self, *, qemu_command=None, rootfs_path: Path = None, program: Path =None):
+    def get_user_commandline(self, *, qemu_command=None, rootfs_path: Path = None, user_command: Path = None):
         result = self.get_common_commandline(qemu_command=qemu_command)
         if rootfs_path:
             result.extend(["-L", rootfs_path])
-        if program:
-            result.append(program)
+        if user_command:
+            result.extend(user_command)
         return result
 
 

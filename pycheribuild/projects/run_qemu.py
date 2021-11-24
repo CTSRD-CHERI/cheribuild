@@ -600,24 +600,45 @@ class LaunchBsdUserQEMUBase(SimpleProject):
 
     def setup(self):
         super().setup()
+        absolute_path = not self.chroot and not self.jail
         xtarget = self.crosscompile_target
         if xtarget.is_riscv(include_purecap=True):
-            self.qemu_binary = BuildBsdUserQEMU.qemu_cheri_binary(self)
+            self.qemu_binary = BuildBsdUserQEMU.qemu_cheri_binary(self, absolute_path=absolute_path)
         else:
             assert False, "Unknown target " + str(xtarget)
 
     def process(self):
         assert self.qemu_binary is not None
-        if not self.qemu_binary.exists():
-            self.dependency_error("QEMU is missing:", self.qemu_binary, cheribuild_target="qemu")
+        assert self.rootfs_path is not None
 
-        program = "{}{}".format(self.rootfs_path, "/bin/sh")
-        qemu_command = self.qemu_options.get_user_commandline(qemu_command=self.qemu_binary,
-                rootfs_path=self.rootfs_path, program=program)
+        if self.chroot and self.jail:
+            self.fatal("Chroot and jail options are mutually exclusive.")
+        elif self.chroot:
+            command = ["chroot", self.rootfs_path]
+            qemu_command = self.qemu_binary
+            rootfs_path = None
+        elif self.jail:
+            command = ["jail", "-c", "path={}".format(self.rootfs_path)]
+            qemu_command = "command={}".format(self.qemu_binary)
+            rootfs_path = None
+        else:
+            command = []
+            qemu_command = self.qemu_binary
+            rootfs_path = self.rootfs_path
 
-        self.info("About to run '{}' with the QEMU user mode".format(program))
+        if self.command:
+            user_command = self.command
+        elif rootfs_path:
+            user_command = ["{}{}".format(rootfs_path, "/bin/sh")]
+        else:
+            user_command = ["sh"]
 
-        self.run_cmd(qemu_command, stdout=sys.stdout, stderr=sys.stderr, give_tty_control=True)
+        command.extend(self.qemu_options.get_user_commandline(qemu_command=qemu_command,
+                rootfs_path=rootfs_path, user_command=user_command))
+
+        self.info("About to run '{}' with the QEMU user mode".format(" ".join(user_command)))
+
+        self.run_cmd(command, stdout=sys.stdout, stderr=sys.stderr, give_tty_control=True)
 
 
 class AbstractLaunchFreeBSD(LaunchQEMUBase):
@@ -792,8 +813,8 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         return result
 
 
-class LaunchCheriBSDShell(LaunchBsdUserQEMUBase):
-    target = "run"
+class AbstractLaunchFreeBSDProgram(LaunchBsdUserQEMUBase):
+    do_not_add_to_targets = True
     _source_class = BuildCHERIBSD
     _freebsd_class = BuildCHERIBSD
     _always_add_suffixed_targets = True
@@ -803,9 +824,17 @@ class LaunchCheriBSDShell(LaunchBsdUserQEMUBase):
         super().__init__(config)
         self.rootfs_path = self._source_class.get_rootfs_dir(self, config=config)
 
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.chroot = cls.add_bool_option("chroot", default=False, show_help=True,
+                                         help="Change the root directory to a sysroot before executing a command.")
+        cls.jail = cls.add_bool_option("jail", default=False, show_help=True,
+                                       help="Enter a jail with a sysroot before executing a command.")
+
     @staticmethod
     def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
-        return base_target + '-' + xtarget.generic_target_suffix + '-shell'
+        return "run-{}-{}".format(xtarget.generic_target_suffix, base_target)
 
     @classmethod
     def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "list[str]":
@@ -813,6 +842,23 @@ class LaunchCheriBSDShell(LaunchBsdUserQEMUBase):
         result = ["bsd-user-qemu", cls._source_class.get_class_for_target(xtarget).target]
         return result
 
+
+class LaunchCheriBSDShell(AbstractLaunchFreeBSDProgram):
+    target = "shell"
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.command = None
+
+
+class LaunchCheriBSDExec(AbstractLaunchFreeBSDProgram):
+    target = "exec"
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.command = cls.add_config_option("command", metavar="COMMAND", show_help=True, kind=list,
+                                            help="Command to execute.")
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
