@@ -832,10 +832,6 @@ class AbstractLaunchFreeBSDProgram(LaunchBsdUserQEMUBase):
         cls.jail = cls.add_bool_option("jail", default=False, show_help=True,
                                        help="Enter a jail with a sysroot before executing a command.")
 
-    @staticmethod
-    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
-        return "run-{}-{}".format(xtarget.generic_target_suffix, base_target)
-
     @classmethod
     def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "list[str]":
         xtarget = cls.get_crosscompile_target(config)
@@ -844,7 +840,7 @@ class AbstractLaunchFreeBSDProgram(LaunchBsdUserQEMUBase):
 
 
 class LaunchCheriBSDShell(AbstractLaunchFreeBSDProgram):
-    target = "shell"
+    target = "run-shell"
 
     def __init__(self, config):
         super().__init__(config)
@@ -852,7 +848,7 @@ class LaunchCheriBSDShell(AbstractLaunchFreeBSDProgram):
 
 
 class LaunchCheriBSDExec(AbstractLaunchFreeBSDProgram):
-    target = "exec"
+    target = "run-user"
 
     @classmethod
     def setup_config_options(cls, **kwargs):

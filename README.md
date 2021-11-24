@@ -184,8 +184,9 @@ For the `cheribsd`, `disk-image` and `run` targets the hybrid vs purecap distinc
 #### Other targets
 - `freebsd-<architecture>` builds and installs [freebsd/freebsd](https://github.com/freebsd/freebsd).
 - `disk-image-freebsd-<architecture>` creates a FreeBSD disk-image.
-- `run-<architecture>-shell` launches a shell with the QEMU user mode in a CheriBSD sysroot.
 - `run-freebsd-<architecture>` launches QEMU with the FreeBSD disk image.
+- `run-shell-<architecture>` launches a shell with the QEMU user mode in a CheriBSD sysroot.
+- `run-user-<architecture>` launches a command with the QEMU user mode in a CheriBSD sysroot.
 - `cmake` builds and installs latest [CMake](https://github.com/Kitware/CMake)
 - `cherios` builds and installs [CTSRD-CHERI/cherios](https://github.com/CTSRD-CHERI/cherios)
 - `cheritrace` builds and installs [CTSRD-CHERI/cheritrace](https://github.com/CTSRD-CHERI/cheritrace)
