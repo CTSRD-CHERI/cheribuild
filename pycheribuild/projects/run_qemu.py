@@ -619,6 +619,8 @@ class LaunchBsdUserQEMUBase(SimpleProject):
             rootfs_path = None
         elif self.jail:
             command = ["jail", "-c", "path={}".format(self.rootfs_path)]
+            if self.jail_extra_args:
+                command.extend(self.jail_extra_args)
             qemu_command = "command={}".format(self.qemu_binary)
             rootfs_path = None
         else:
@@ -831,6 +833,8 @@ class AbstractLaunchFreeBSDProgram(LaunchBsdUserQEMUBase):
                                          help="Change the root directory to a sysroot before executing a command.")
         cls.jail = cls.add_bool_option("jail", default=False, show_help=True,
                                        help="Enter a jail with a sysroot before executing a command.")
+        cls.jail_extra_args = cls.add_config_option("jail-extra-args", metavar="ARGS", kind=list, show_help=True,
+                                                    help="Extra jail parameters to pass to jail(8).")
 
     @classmethod
     def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "list[str]":
