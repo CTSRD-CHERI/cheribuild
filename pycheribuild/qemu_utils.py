@@ -39,8 +39,7 @@ from .utils import OSInfo, warning_message
 
 
 class QemuOptions:
-    def __init__(self, xtarget: CrossCompileTarget, want_debugger=False,
-            is_system_mode=True) -> None:
+    def __init__(self, xtarget: CrossCompileTarget, want_debugger=False, is_system_mode=True) -> None:
         self.xtarget = xtarget
         self.virtio_disk = True
         self.force_virtio_blk_device = False
@@ -159,10 +158,10 @@ class QemuOptions:
         return [str(qemu_command)]
 
     def get_system_commandline(self, *, qemu_command=None, kernel_file: "Optional[Path]" = None,
-                        disk_image: "Optional[Path]" = None, disk_image_format: str = "raw",
-                        user_network_args: str = "", add_network_device=True, bios_args: "Optional[list[str]]" = None,
-                        trap_on_unrepresentable=False, debugger_on_cheri_trap=False, add_virtio_rng=False,
-                        write_disk_image_changes=True, gui_options: "Optional[list[str]]" = None) -> "list[str]":
+                               disk_image: "Optional[Path]" = None, disk_image_format: str = "raw",
+                               user_network_args: str = "", add_network_device=True, bios_args: "Optional[list[str]]" = None,
+                               trap_on_unrepresentable=False, debugger_on_cheri_trap=False, add_virtio_rng=False,
+                               write_disk_image_changes=True, gui_options: "Optional[list[str]]" = None) -> "list[str]":
         if kernel_file is None and disk_image is None:
             raise ValueError("Must pass kernel and/or disk image path when launching QEMU")
         result = self.get_common_commandline()

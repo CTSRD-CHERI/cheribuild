@@ -51,7 +51,7 @@ from .disk_image import (
 )
 from .project import CheriConfig, ComputedDefaultValue, CPUArchitecture, Project
 from .simple_project import SimpleProject, TargetAliasWithDependencies
-from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
+from ..config.compilation_targets import CompilationTargets
 from ..qemu_utils import QemuOptions, qemu_supports_9pfs, riscv_bios_arguments
 from ..utils import AnsiColour, OSInfo, classproperty, coloured, fatal_error, find_free_port
 
@@ -447,16 +447,12 @@ class LaunchQEMUBase(SimpleProject):
             self._after_disk_options += ["-snapshot"]
 
         # input("Press enter to continue")
-        qemu_command = self.qemu_options.get_system_commandline(qemu_command=self.chosen_qemu.binary,
-                                                         kernel_file=qemu_loader_or_kernel,
-                                                         disk_image=self.disk_image,
-                                                         disk_image_format=self.disk_image_format,
-                                                         add_network_device=self.qemu_user_networking,
-                                                         bios_args=self.bios_flags,
-                                                         user_network_args=user_network_options,
-                                                         trap_on_unrepresentable=self.config.trap_on_unrepresentable,
-                                                         debugger_on_cheri_trap=self.config.debugger_on_cheri_trap,
-                                                         add_virtio_rng=self._add_virtio_rng)
+        qemu_command = self.qemu_options.get_system_commandline(
+            qemu_command=self.chosen_qemu.binary, kernel_file=qemu_loader_or_kernel, disk_image=self.disk_image,
+            disk_image_format=self.disk_image_format, add_network_device=self.qemu_user_networking,
+            bios_args=self.bios_flags, user_network_args=user_network_options,
+            trap_on_unrepresentable=self.config.trap_on_unrepresentable,
+            debugger_on_cheri_trap=self.config.debugger_on_cheri_trap, add_virtio_rng=self._add_virtio_rng)
         qemu_command += self._project_specific_options + self._after_disk_options + monitor_options
         qemu_command += logfile_options + self.extra_qemu_options + virtfs_args
         if self.disk_image is None:
@@ -636,7 +632,7 @@ class LaunchBsdUserQEMUBase(SimpleProject):
             user_command = ["sh"]
 
         command.extend(self.qemu_options.get_user_commandline(qemu_command=qemu_command,
-                rootfs_path=rootfs_path, user_command=user_command))
+                       rootfs_path=rootfs_path, user_command=user_command))
 
         self.info("About to run '{}' with the QEMU user mode".format(" ".join(user_command)))
 
@@ -859,6 +855,7 @@ class LaunchCheriBSDExec(AbstractLaunchFreeBSDProgram):
         super().setup_config_options(**kwargs)
         cls.command = cls.add_config_option("command", metavar="COMMAND", show_help=True, kind=list,
                                             help="Command to execute.")
+
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
