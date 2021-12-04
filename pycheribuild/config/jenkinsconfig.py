@@ -141,6 +141,9 @@ class JenkinsConfig(CheriConfig):
             help="Don't use the CHERI SDK -> only /usr (for native builds)")
         self.strip_elf_files = loader.add_commandline_only_bool_option(
             "strip-elf-files", help="Strip ELF files before creating the tarball", default=True, negatable=True)
+        self._bsd_user_sdk_dir_override = loader.add_commandline_only_option(
+            "bsd-user-sdk-path", default=None, type=Path,
+            help="Override the path to the BSD user mode SDK (default is $WORKSPACE/bsd-user-sdk)")  # type: Path
         self._cheri_sdk_dir_override = loader.add_commandline_only_option(
             "cheri-sdk-path", default=None, type=Path,
             help="Override the path to the CHERI SDK (default is $WORKSPACE/cherisdk)")
@@ -207,6 +210,23 @@ class JenkinsConfig(CheriConfig):
             os_suffix = "unknown-os"
         return self.workspace / ("qemu-" + os_suffix) / "bin"
 
+    @property
+    def bsd_user_qemu_bindir(self):
+        for i in self.bsd_user_sdk_bindir.glob("qemu-*"):
+            if self.verbose:
+                print("Found QEMU binary", i, "in BSD user-mode SDK dir -> using that for BSD user-mode QEMU binaries")
+            # If one qemu-foo exists in the bsd_user_sdk_bindir use that instead of $WORKSPACE/qemu-<OS>
+            return self.bsd_user_sdk_bindir
+        if OSInfo.IS_LINUX:
+            os_suffix = "linux"
+        elif OSInfo.IS_FREEBSD:
+            os_suffix = "freebsd"
+        elif OSInfo.IS_MAC:
+            os_suffix = "mac"
+        else:
+            os_suffix = "unknown-os"
+        return self.workspace / ("qemu-" + os_suffix) / "bin"
+
     def load(self) -> None:
         super().load()
 
@@ -229,6 +249,11 @@ class JenkinsConfig(CheriConfig):
         self.cheribsd_image_root = self.workspace
 
         self.other_tools_dir = self.workspace / "bootstrap"
+
+        if self._bsd_user_sdk_dir_override is not None:
+            self.bsd_user_sdk_dir = self._bsd_user_sdk_dir_override
+        else:
+            self.bsd_user_sdk_dir = self.workspace / self.default_bsd_user_sdk_directory_name
 
         if self._cheri_sdk_dir_override is not None:
             self.cheri_sdk_dir = self._cheri_sdk_dir_override
@@ -280,6 +305,8 @@ class JenkinsConfig(CheriConfig):
                 self.clang_plusplus_path = compiler_dir_override / "clang++"
                 self.clang_cpp_path = compiler_dir_override / "clang-cpp"
 
+        if self._bsd_user_sdk_dir_override is not None:
+            assert self.bsd_user_sdk_bindir == self._bsd_user_sdk_dir_override / "bin"
         if self._cheri_sdk_dir_override is not None:
             assert self.cheri_sdk_bindir == self._cheri_sdk_dir_override / "bin"
         if self._morello_sdk_dir_override is not None:
