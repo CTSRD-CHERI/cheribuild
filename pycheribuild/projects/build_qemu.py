@@ -223,7 +223,6 @@ class BuildQEMUBase(AutotoolsProject):
         self.configure_args.extend([
             "--target-list=" + self.qemu_targets,
             "--disable-linux-user",
-            "--disable-bsd-user",
             "--disable-xen",
             "--disable-docs",
             "--disable-rdma",
@@ -278,8 +277,17 @@ class BuildQEMUBase(AutotoolsProject):
         super().process()
 
 
+class BuildSystemQEMU(BuildQEMUBase):
+    do_not_add_to_targets = True
+
+    def setup(self):
+        super().setup()
+        # Don't build BSD user mode targets as we only want system mode binaries.
+        self.configure_args.append("--disable-bsd-user")
+
+
 # noinspection PyAbstractClass
-class BuildUpstreamQEMU(BuildQEMUBase):
+class BuildUpstreamQEMU(BuildSystemQEMU):
     repository = GitRepository("https://github.com/qemu/qemu.git")
     target = "upstream-qemu"
     _default_install_dir_fn = ComputedDefaultValue(
@@ -309,7 +317,7 @@ class BuildUpstreamQEMU(BuildQEMUBase):
         return config.output_root / "upstream-qemu/bin" / binary_name
 
 
-class BuildQEMU(BuildQEMUBase):
+class BuildQEMU(BuildSystemQEMU):
     target = "qemu"
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri")
     default_targets = "aarch64-softmmu,morello-softmmu," \
@@ -397,7 +405,7 @@ class BuildQEMU(BuildQEMUBase):
                                 *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.svg"))
 
 
-class BuildBsdUserQEMU(BuildQEMU):
+class BuildBsdUserQEMU(BuildQEMUBase):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git",
                                default_branch="qemu-cheri-bsd-user",
                                force_branch=True)
@@ -422,6 +430,8 @@ class BuildBsdUserQEMU(BuildQEMU):
 
     def setup(self):
         super().setup()
+        # Disable capstone disassembler unsupporting CHERI instructions.
+        self.configure_args.append("--disable-capstone")
         # Disable RVFI-DDI unsupported in the user mode.
         self.configure_args.append("--disable-rvfi-dii")
         # Enable to build BSD user mode targets.
