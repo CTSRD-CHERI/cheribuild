@@ -253,8 +253,8 @@ def get_console(tty_info: ListPortInfo) -> SerialConnection:
     # We fall back to using the miniterm command bundled with PySerial as the interactive prompt.
     # This means that we don't depend on minicom/picocom being installed.
     print("Connecting to TTY...")
-    if shutil.which("picocom"):
-        return PicoComConnection(tty_info)
+    #if shutil.which("picocom"):
+    #    return PicoComConnection(tty_info)
     return PySerialConnection(tty_info)
 
 
