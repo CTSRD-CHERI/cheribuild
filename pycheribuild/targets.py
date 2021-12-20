@@ -322,7 +322,7 @@ class TargetManager(object):
         self._targets_for_command_line_options_only[target.name] = target
 
     def add_target(self, target: Target) -> None:
-        assert target.name not in self._all_targets
+        assert target.name not in self._all_targets, "Duplicate target " + target.name
         assert target.name != "cheribsd-cheri"
         self._all_targets[target.name] = target
 
