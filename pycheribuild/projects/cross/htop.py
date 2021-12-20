@@ -23,8 +23,6 @@
 # SUCH DAMAGE.
 #
 
-from pathlib import Path
-
 from .crosscompileproject import CrossCompileAutotoolsProject, GitRepository
 
 
