@@ -226,6 +226,9 @@ class BuildLLVMBase(CMakeProject):
                                    LLVM_INSTALL_TOOLCHAIN_ONLY=False,  # This prevents some targets from being created
                                    )
 
+        if not self.compiling_for_host():
+            self.add_cmake_options(LLVM_DEFAULT_TARGET_TRIPLE=self.target_info.target_triple)
+
     def set_lto_binutils(self, ar, ranlib, nm, ld):
         super().set_lto_binutils(ar=ar, ranlib=ranlib, nm=nm, ld=ld)
         # we are passing an explicit linker path -> cannot use LLVM_ENABLE_LLD
