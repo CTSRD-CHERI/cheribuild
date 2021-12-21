@@ -697,30 +697,18 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def arch_build_flags(self):
         assert isinstance(self.target_info, FreeBSDTargetInfo)
         result = {
+            "TARGET": self.target_info.freebsd_target,
             "TARGET_ARCH": self.target_info.freebsd_target_arch,
         }
-        if self.compiling_for_mips(include_purecap=True):
-            result["TARGET"] = "mips"
-            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                result["CHERI"] = self.config.mips_cheri_bits_str
-        elif self.crosscompile_target.is_x86_64():
-            result["TARGET"] = "amd64"
-        elif self.crosscompile_target.is_riscv(include_purecap=True):
-            result["TARGET"] = "riscv"
-        elif self.crosscompile_target.is_i386():
-            result["TARGET"] = "i386"
-        elif self.crosscompile_target.is_aarch64(include_purecap=True):
-            result["TARGET"] = "arm64"
-            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                # FIXME: still needed?
-                result["WITH_CHERI"] = True
-        else:
-            assert False, "This should not be reached!"
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
             if self.crosscompile_target.is_aarch64(include_purecap=True):
                 result["TARGET_CPUTYPE"] = "morello"
+                # FIXME: still needed?
+                result["WITH_CHERI"] = True
             else:
                 result["TARGET_CPUTYPE"] = "cheri"
+                if self.compiling_for_mips(include_purecap=True):
+                    result["CHERI"] = self.config.mips_cheri_bits_str
         return result
 
     def _setup_make_args(self):
