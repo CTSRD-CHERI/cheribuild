@@ -197,6 +197,10 @@ class FileSystemUtils(object):
         if mode:
             file.chmod(mode)
 
+    # NB: Deliberately not implemented in terms of create_symlinks since that
+    # would require create_symlinks to inherit some of ln's heuristics about
+    # whether to create a new file called src.basename() inside dest, whether
+    # to use dest.parent or dest, etc.
     @staticmethod
     def create_symlink(src: Path, dest: Path, *, relative=True, cwd: Path = None, print_verbose_only=True):
         assert dest.is_absolute() or cwd is not None
@@ -210,6 +214,21 @@ class FileSystemUtils(object):
             run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only)
         else:
             run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only)
+
+    @staticmethod
+    def create_symlinks(srcs: typing.Iterable[Path], destdir: Path, *, relative=True, cwd: Path = None,
+                        print_verbose_only=True):
+        assert destdir.is_absolute() or cwd is not None
+        if not cwd:
+            cwd = destdir
+        if relative:
+            relstart = str(destdir if destdir.is_absolute() else cwd)
+            srcs = map(lambda src: os.path.relpath(str(src), relstart) if src.is_absolute() else src, srcs)
+            if cwd is not None and cwd.is_dir():
+                destdir = destdir.relative_to(cwd)
+        srcs = list(srcs)
+        if srcs:
+            run_command("ln", "-fs", *srcs, str(destdir) + "/", cwd=cwd, print_verbose_only=print_verbose_only)
 
     def move_file(self, src: Path, dest: Path, force=False, create_dirs=True):
         if not src.exists():

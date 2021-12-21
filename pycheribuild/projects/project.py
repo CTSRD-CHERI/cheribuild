@@ -240,6 +240,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
     install_dir = None  # type: Path
     build_in_source_dir = False  # For projects that can't build in the source dir
+    build_via_symlink_farm = False  # Create source symlink farm to work around lack of out-of-tree build support
     # For target_info.py. Real value is only set for Project subclasses, since SimpleProject subclasses should not
     # include C/C++ compilation (there is no source+build dir)
     auto_var_init = AutoVarInit.NONE
@@ -2519,6 +2520,7 @@ class Project(SimpleProject):
             self._initial_source_dir = self.source_dir
 
         if self.build_in_source_dir:
+            assert not self.build_via_symlink_farm, "Using a symlink farm only makes sense with a separate build dir"
             self.verbose_print("Cannot build", self.target, "in a separate build dir, will build in", self.source_dir)
             self.build_dir = self.source_dir
 
@@ -2890,6 +2892,16 @@ class Project(SimpleProject):
             cwd = self.build_dir
         if not self.should_run_configure():
             return
+
+        if self.build_via_symlink_farm:
+            banned_dirs = set([".hg", ".git", ".svn"])
+            for root, dirnames, filenames in os.walk(self.source_dir):
+                dirnames[:] = [d for d in dirnames if d not in banned_dirs]
+                root = Path(root)
+                relroot = root.relative_to(self.source_dir)
+                for dirname in dirnames:
+                    self.makedirs(self.build_dir / relroot / dirname)
+                self.create_symlinks(map(lambda x: root / x, filenames), self.build_dir / relroot)
 
         if configure_path is None:
             configure_path = self.configure_command
