@@ -462,7 +462,8 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     default_architecture = CompilationTargets.NATIVE
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+    supported_architectures = (CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS +
+                               CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -529,7 +530,8 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
     native_install_dir = DefaultInstallDir.MORELLO_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     default_architecture = CompilationTargets.NATIVE
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+    supported_architectures = (CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS +
+                               CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
 
     @property
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
