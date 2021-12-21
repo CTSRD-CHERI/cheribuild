@@ -32,6 +32,3 @@ class BuildLibevent(CrossCompileCMakeProject):
     def setup(self):
         super().setup()
         self.add_cmake_options(EVENT__DISABLE_MBEDTLS=True)
-        # Couple of harmless "shove integer in void * for generic callback"
-        # instances in the test suite. TODO: Upstream using (u)intptr_t.
-        self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
