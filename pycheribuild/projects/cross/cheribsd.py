@@ -1031,7 +1031,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def _list_kernel_configs(self):
         """Emit a list of valid kernel configurations that can be given as --kernel-config overrides"""
-        conf_dir = self.source_dir / "sys" / self.target_info.freebsd_target_cputype / "conf"
+        conf_dir = self.source_dir / "sys" / self.target_info.freebsd_target / "conf"
         configs = conf_dir.glob("*")
         blacklist = ["NOTES", "LINT", "DEFAULTS"]
         self.info("Valid kernel configuration files for --" + self.target + "/kernel-config:")
