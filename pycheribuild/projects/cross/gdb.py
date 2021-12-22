@@ -171,6 +171,8 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
             self.LDFLAGS.append("-lelf")
             self.LDFLAGS.append("-lmd")
             self.configure_environment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
+            # Look in /usr/lib not /usr/local/lib
+            self.configure_args.append("--with-separate-debug-dir=/usr/lib/debug")
         if self.make_args.command == "gmake":
             self.configure_environment["MAKE"] = "gmake"
 
