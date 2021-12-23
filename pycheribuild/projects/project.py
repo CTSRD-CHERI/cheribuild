@@ -1788,8 +1788,12 @@ class GitRepository(SourceRepository):
 
         # Handle forced branches now that we have fetched the latest changes
         if src_dir.exists() and (self.force_branch or self.old_branches):
-            current_branch = self.get_current_branch(src_dir).decode("utf-8")
-            if self.force_branch:
+            current_branch = self.get_current_branch(src_dir)
+            if current_branch is not None:
+                current_branch = current_branch.decode('utf-8')
+            if current_branch is None:
+                default_branch = None
+            elif self.force_branch:
                 assert self.old_branches is None, "cannot set both force_branch and old_branches"
                 default_branch = self.get_default_branch(current_project, include_per_target=True)
                 assert default_branch, "default_branch must be set if force_branch is true!"
