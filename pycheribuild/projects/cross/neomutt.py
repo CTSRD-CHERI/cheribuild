@@ -24,10 +24,8 @@
 #
 
 from .crosscompileproject import CrossCompileAutotoolsProject
-from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileProject
+from .crosscompileproject import CheriConfig, CompilationTargets
 from ..project import GitRepository
-from ...config.compilation_targets import CompilationTargets
-
 
 class BuildNeomutt(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/neomutt/neomutt.git")
@@ -44,4 +42,4 @@ class BuildNeomutt(CrossCompileAutotoolsProject):
 
         # enable OpenSSL (in base system), disable internationalisation libs we don't have
         self.configure_args.extend(['--disable-nls', '--disable-idn',
-          '--disable-doc', '--ssl'])
+            '--disable-doc', '--ssl'])
