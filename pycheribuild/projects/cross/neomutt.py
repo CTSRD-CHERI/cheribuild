@@ -24,7 +24,6 @@
 #
 
 from .crosscompileproject import CrossCompileAutotoolsProject
-from .crosscompileproject import CompilationTargets
 from ..project import GitRepository
 
 
