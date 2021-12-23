@@ -37,8 +37,7 @@ class BuildNeomutt(CrossCompileAutotoolsProject):
 
         # neomutt's build system doesn't use autotools, it justs pretends to look the same
         # - but it doesn't implement the --target option, so we strip it
-        indices = [i for i, s in enumerate(self.configure_args) if '--target=' in s]
-        self.configure_args.pop(indices[0])
+        self.configure_args[:] = [arg for arg in self.configure_args if not arg.startswith('--target=')]
 
         # enable OpenSSL (in base system), disable internationalisation libs we don't have
         self.configure_args.extend(['--disable-nls', '--disable-idn',
