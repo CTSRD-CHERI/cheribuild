@@ -31,7 +31,7 @@ from ..project import GitRepository
 class BuildNeomutt(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/neomutt/neomutt.git")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
-    dependencies = ['gettext', 'libxml2']
+    dependencies = ['libxml2']
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
