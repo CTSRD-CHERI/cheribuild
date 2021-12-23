@@ -30,11 +30,10 @@ from ..project import GitRepository
 
 class BuildNeomutt(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/neomutt/neomutt.git")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
     dependencies = ['libxml2']
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
 
         # neomutt's build system doesn't use autotools, it justs pretends to look the same
         # - but it doesn't implement the --target option, so we strip it
