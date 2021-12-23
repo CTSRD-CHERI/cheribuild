@@ -1,5 +1,6 @@
 import argparse
 import pytest
+import sys
 
 from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
@@ -21,6 +22,7 @@ class TestArgumentParser(argparse.ArgumentParser):
 
 @pytest.fixture(scope="session", autouse=True)
 def _register_targets():
+    sys.argv = ["cheribuild.py"]
     loader = JsonAndCommandLineConfigLoader(argparser_class=TestArgumentParser)
     all_target_names = list(sorted(target_manager.target_names)) + ["__run_everything__"]
     ConfigLoaderBase._cheri_config = DefaultCheriConfig(loader, all_target_names)
