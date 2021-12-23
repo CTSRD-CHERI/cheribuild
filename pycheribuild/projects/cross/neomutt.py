@@ -24,7 +24,7 @@
 #
 
 from .crosscompileproject import CrossCompileAutotoolsProject
-from .crosscompileproject import CheriConfig, CompilationTargets
+from .crosscompileproject import CompilationTargets
 from ..project import GitRepository
 
 
