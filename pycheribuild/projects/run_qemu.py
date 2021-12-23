@@ -793,6 +793,7 @@ class LaunchDmQEMU(LaunchCheriBSD):
     forward_ssh_port = False
     _enable_smbfs_support = False
     _add_virtio_rng = False
+    hide_options_from_help = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

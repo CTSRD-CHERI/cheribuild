@@ -1137,6 +1137,7 @@ class BuildBesspinCheriBSDDiskImage(BuildDiskImageBase):
     _source_class = BuildCHERIBSD
     disk_image_prefix = "cheribsd-besspin"
     include_boot = True
+    hide_options_from_help = True
 
     @classmethod
     def setup_config_options(cls, **kwargs):

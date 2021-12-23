@@ -1961,6 +1961,7 @@ class BuildCheriBsdMfsImageAndKernels(TargetAliasWithDependencies):
 
 class BuildBesspinCheriBsdMfsKernel(BuildCheriBsdMfsKernel):
     target = "besspin-cheribsd-mfs-root-kernel"
+    hide_options_from_help = True
 
     @classproperty
     def mfs_root_image_class(self):
