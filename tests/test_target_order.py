@@ -131,6 +131,8 @@ def test_build_and_run(target_name, expected_list):
 
 
 @pytest.mark.parametrize("target,add_toolchain,expected_deps", [
+    # Note: For architectures that CHERI QEMU builds by default we currently
+    # explicitly default to using that rather than the system QEMU.
     pytest.param("run-mips64", True,
                  ["qemu", "llvm-native", "cheribsd-mips64", "gdb-mips64", "disk-image-mips64"]),
     pytest.param("run-mips64-hybrid", True,
@@ -146,7 +148,6 @@ def test_build_and_run(target_name, expected_list):
     pytest.param("run-riscv64-purecap", True,
                  ["qemu", "llvm-native", "cheribsd-riscv64-purecap", "gdb-riscv64-hybrid-for-purecap-rootfs",
                   "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap"]),
-    # Note: QEMU not needed for aarch64/amd64 since we could also use the system QEMU
     pytest.param("run-aarch64", True,
                  ["qemu", "llvm-native", "cheribsd-aarch64", "gdb-aarch64", "disk-image-aarch64"]),
     pytest.param("run-amd64", True,

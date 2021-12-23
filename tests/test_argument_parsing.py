@@ -1,4 +1,3 @@
-import argparse
 import collections
 import inspect
 import re
@@ -14,8 +13,7 @@ import pytest
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
 from pycheribuild.config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
-from pycheribuild.config.loader import (ConfigLoaderBase, ConfigOptionBase, JsonAndCommandLineConfigLoader,
-                                        JsonAndCommandLineConfigOption)
+from pycheribuild.config.loader import ConfigLoaderBase, ConfigOptionBase, JsonAndCommandLineConfigOption
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # noqa: F401, F403
 from pycheribuild.projects.cross import *  # noqa: F401, F403
@@ -32,22 +30,6 @@ from pycheribuild.projects.run_qemu import LaunchCheriBSD
 from pycheribuild.targets import MultiArchTargetAlias, Target, target_manager
 
 
-class TestArgumentParser(argparse.ArgumentParser):
-    # This is not a test, despite its name matching Test*
-    __test__ = False
-
-    # Don't use sys.exit(), raise an exception instead
-    def exit(self, status=0, message=None):
-        if status == 2:
-            raise KeyError(message)
-        else:
-            raise RuntimeError(status, message)
-
-
-_loader = JsonAndCommandLineConfigLoader(argparser_class=TestArgumentParser)
-SimpleProject._config_loader = _loader
-
-_targets_registered = False
 Target.instantiating_targets_should_warn = False
 
 T = typing.TypeVar("T", bound=SimpleProject)
@@ -68,14 +50,6 @@ def _parse_arguments(args: typing.List[str], *, config_file=Path("/this/does/not
                      allow_unknown_options=False) -> DefaultCheriConfig:
     assert isinstance(args, list)
     assert all(isinstance(arg, str) for arg in args), "Invalid argv " + str(args)
-    global _targets_registered
-    if not _targets_registered:
-        all_target_names = list(sorted(target_manager.target_names)) + ["__run_everything__"]
-        ConfigLoaderBase._cheri_config = DefaultCheriConfig(_loader, all_target_names)
-        ConfigLoaderBase._cheri_config.TEST_MODE = True
-        SimpleProject._config_loader = _loader
-        target_manager.register_command_line_options()
-        _targets_registered = True
     ConfigLoaderBase._cheri_config._cached_deps = collections.defaultdict(dict)
     target_manager.reset()
     ConfigLoaderBase._cheri_config.loader._config_path = config_file
@@ -84,7 +58,6 @@ def _parse_arguments(args: typing.List[str], *, config_file=Path("/this/does/not
     ConfigLoaderBase._cheri_config.loader.unknown_config_option_is_error = not allow_unknown_options
     ConfigLoaderBase._cheri_config.load()
     # pprint.pprint(vars(ret))
-    assert ConfigLoaderBase._cheri_config
     return ConfigLoaderBase._cheri_config
 
 

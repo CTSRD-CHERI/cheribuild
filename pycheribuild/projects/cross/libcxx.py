@@ -326,7 +326,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             if not run_qemu_script.exists():
                 self.warning("run_with_qemu.py is needed to run libcxx baremetal tests but could not find it:",
                              run_qemu_script, "does not exist")
-            prefix = [str(run_qemu_script), "--qemu", str(BuildQEMU.qemu_cheri_binary(self)), "--timeout", "20"]
+            prefix = [str(run_qemu_script), "--qemu", str(BuildQEMU.qemu_binary(self)), "--timeout", "20"]
             prefix_list = '[\\\"' + "\\\", \\\"".join(prefix) + "\\\"]"
             executor = "PrefixExecutor(" + prefix_list + ", LocalExecutor())"
         elif self.nfs_mounted_path:

@@ -1200,6 +1200,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def fatal(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False):
         fatal_error(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending)
 
+    @classmethod
+    def targets_reset(cls):
+        # For unit tests to get a fresh instance
+        cls._cached_full_deps = None
+        cls._cached_filtered_deps = None
+
 
 def install_dir_not_specified(_: CheriConfig, project: "Project"):
     raise RuntimeError("install_dir_not_specified! dummy impl must not be called: " + str(project))

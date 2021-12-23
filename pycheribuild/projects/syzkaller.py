@@ -173,7 +173,7 @@ class RunSyzkaller(SimpleProject):
         # XXX this should be a cross target
         xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
 
-        self.qemu_binary = BuildQEMU.qemu_cheri_binary(self, xtarget=xtarget)
+        self.qemu_binary = BuildQEMU.qemu_binary(self, xtarget=xtarget)
         self.syzkaller_binary = BuildSyzkaller.get_instance(self, cross_target=xtarget).syzkaller_binary()
         kernel_project = BuildCHERIBSD.get_instance(self, cross_target=xtarget)
         kernel_config = CheriBSDConfigTable.get_configs(xtarget, ConfigPlatform.QEMU,

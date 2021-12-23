@@ -33,8 +33,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-from .project import (_cached_get_homebrew_prefix, AutotoolsProject, BuildType, CheriConfig, CrossCompileTarget,
-                      DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
+from .project import (_cached_get_homebrew_prefix, AutotoolsProject, BuildType, CheriConfig, CPUArchitecture,
+                      CrossCompileTarget, DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
 from ..config.loader import ComputedDefaultValue, ConfigOptionBase
 
@@ -80,7 +80,21 @@ class BuildQEMUBase(AutotoolsProject):
                                                                 help="Prefer full LTO over LLVM ThinLTO when using LTO")
 
     @classmethod
-    def qemu_cheri_binary(cls, caller: SimpleProject):
+    def qemu_binary(cls, caller: SimpleProject = None, xtarget: CrossCompileTarget = None,
+                    config: CheriConfig = None):
+        if caller is not None:
+            if config is None:
+                config = caller.config
+            if xtarget is None:
+                xtarget = caller.get_crosscompile_target(config)
+        else:
+            if xtarget is None:
+                xtarget = cls.get_crosscompile_target(config)
+            assert config is not None, "Need either caller or config argument!"
+        return cls.qemu_binary_for_target(xtarget, config)
+
+    @classmethod
+    def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
         raise NotImplementedError()
 
     def __init__(self, config: CheriConfig):
@@ -237,6 +251,24 @@ class BuildUpstreamQEMU(BuildQEMUBase):
                       "riscv64-softmmu,riscv32-softmmu," \
                       "x86_64-softmmu,aarch64-softmmu"
 
+    @classmethod
+    def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
+        if xtarget.is_hybrid_or_purecap_cheri():
+            raise ValueError("Upstream QEMU does not support CHERI")
+        if xtarget.is_aarch64():
+            binary_name = "qemu-system-aarch64"
+        elif xtarget.is_mips():
+            binary_name = "qemu-system-mips64"
+        elif xtarget.is_riscv32():
+            binary_name = "qemu-system-riscv32"
+        elif xtarget.is_riscv64():
+            binary_name = "qemu-system-riscv64"
+        elif xtarget.is_any_x86():
+            binary_name = "qemu-system-x86_64"
+        else:
+            raise ValueError("Invalid xtarget" + str(xtarget))
+        return config.output_root / "upstream-qemu/bin" / binary_name
+
 
 class BuildQEMU(BuildQEMUBase):
     target = "qemu"
@@ -255,17 +287,24 @@ class BuildQEMU(BuildQEMUBase):
                                              help="Collect statistics on out-of-bounds capability creation.")
 
     @classmethod
-    def qemu_cheri_binary(cls, caller: SimpleProject, xtarget: CrossCompileTarget = None):
-        if xtarget is None:
-            xtarget = caller.get_crosscompile_target(caller.config)
+    def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
         if xtarget.is_riscv(include_purecap=True):
             # Always use the CHERI qemu even for plain riscv:
             binary_name = "qemu-system-riscv64cheri"
         elif xtarget.is_mips(include_purecap=True):
             binary_name = "qemu-system-mips64cheri128"
+        elif xtarget.is_aarch64(include_purecap=True):
+            # Only use CHERI QEMU for Morello for now, not AArch64 too, until
+            # we can rely on builds being up-to-date
+            if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+                binary_name = "qemu-system-morello"
+            else:
+                binary_name = "qemu-system-aarch64"
+        elif xtarget.is_any_x86():
+            binary_name = "qemu-system-x86_64"
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
-        return caller.config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
+        return config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
 
     @classmethod
     def get_firmware_dir(cls, caller: SimpleProject, cross_target: CrossCompileTarget = None):
@@ -332,12 +371,10 @@ class BuildMorelloQEMU(BuildQEMU):
     hide_options_from_help = True
 
     @classmethod
-    def qemu_cheri_binary(cls, caller: SimpleProject, xtarget: CrossCompileTarget = None):
-        if xtarget is None:
-            xtarget = caller.get_crosscompile_target(caller.config)
+    def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
         if xtarget.is_aarch64(include_purecap=True):
             # Always use the Morello qemu even for plain AArch64:
             binary_name = "qemu-system-morello"
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
-        return caller.config.morello_qemu_bindir / os.getenv("QEMU_MORELLO_PATH", binary_name)
+        return config.morello_qemu_bindir / os.getenv("QEMU_MORELLO_PATH", binary_name)

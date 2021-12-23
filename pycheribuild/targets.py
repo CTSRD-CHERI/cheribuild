@@ -152,8 +152,7 @@ class Target(object):
         self._tests_have_run = False
         self.__project = None
         self._creating_project = False
-        self._project_class._cached_full_deps = None
-        self._project_class._cached_filtered_deps = None
+        self._project_class.targets_reset()
 
     # noinspection PyProtectedMember
     def __lt__(self, other: "Target"):

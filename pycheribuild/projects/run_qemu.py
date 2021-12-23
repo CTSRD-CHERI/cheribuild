@@ -33,9 +33,10 @@ import shutil
 import socket
 import sys
 import typing
+from enum import Enum
 from pathlib import Path
 
-from .build_qemu import BuildMorelloQEMU, BuildQEMU
+from .build_qemu import BuildMorelloQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
 from .cherios import BuildCheriOS
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.freertos import BuildFreeRTOS
@@ -57,6 +58,70 @@ def get_default_ssh_forwarding_port(addend: int):
     return 9999 + ((os.getuid() - 1000) % 10000) + addend
 
 
+class QEMUType(Enum):
+    DEFAULT = "default"
+    CHERI = "cheri"
+    MORELLO = "morello"
+    UPSTREAM = "upstream"
+    SYSTEM = "system"
+    CUSTOM = "custom"
+
+
+class ChosenQEMU(object):
+    def __init__(self, cls: typing.Optional[typing.Type[BuildQEMUBase]], binary: typing.Optional[Path],
+                 can_provide_src_via_smb: typing.Optional[bool]):
+        self.cls = cls
+        self._binary = binary
+        self._can_provide_src_via_smb = can_provide_src_via_smb
+        self._setup = False
+
+    @property
+    def binary(self) -> Path:
+        assert self._setup, "Cannot get binary before LaunchQEMUBase has called our setup"
+        return self._binary
+
+    @property
+    def can_provide_src_via_smb(self) -> bool:
+        assert self._setup, "Cannot get SMBD status before LaunchQEMUBase has called our setup"
+        return self._can_provide_src_via_smb
+
+    def setup(self, launch):
+        assert not self._setup, "Called setup twice"
+        self._setup = True
+
+        if self.cls is not None:
+            assert self._binary is not None, "cheribuild-built QEMU should be known"
+
+        if self._binary is not None:
+            assert self._can_provide_src_via_smb is not None, "Known binary should have known SMBD status"
+            return
+
+        if self._binary is None:
+            assert self._can_provide_src_via_smb is None, "Unknown binary cannot have known SMBD status"
+
+        # No cheribuild class and everything unknown, must be a system binary,
+        # either explicitly or as the default. If using the default QEMU we
+        # prefer CHERI QEMU's corresponding non-CHERI binary if it exists, in
+        # part due to its SMBD support
+        assert launch.use_qemu == QEMUType.SYSTEM or launch.use_qemu == QEMUType.DEFAULT, \
+               "Unexpected use_qemu for lazy binary location: " + str(launch.use_qemu)
+        binary_name = "qemu-system-" + launch.qemu_options.qemu_arch_sufffix
+        if (launch.config.qemu_bindir / binary_name).is_file() and launch.use_qemu != QEMUType.SYSTEM:
+            # Only CHERI QEMU supports more than one SMB share
+            self._can_provide_src_via_smb = True
+            self._binary = launch.config.qemu_bindir / binary_name
+        else:
+            # Only CHERI QEMU supports more than one SMB share; conservatively
+            # guess what kind of QEMU this is
+            self._can_provide_src_via_smb = launch.crosscompile_target.is_hybrid_or_purecap_cheri()
+            launch.add_required_system_tool(binary_name)
+            binary_path = shutil.which(binary_name)
+            if not binary_path:
+                launch.fatal("Could not find system QEMU", binary_name)
+                binary_path = "/could/not/find/qemu"
+            self._binary = Path(binary_path)
+
+
 class LaunchQEMUBase(SimpleProject):
     do_not_add_to_targets = True
     forward_ssh_port = True
@@ -66,10 +131,17 @@ class LaunchQEMUBase(SimpleProject):
     # Add a virtio RNG to speed up random number generation
     _add_virtio_rng = True
     _enable_smbfs_support = True
+    _cached_chosen_qemu = None  # type: typing.Optional[ChosenQEMU]
 
     @classmethod
     def setup_config_options(cls, default_ssh_port: int = None, **kwargs):
         super().setup_config_options(**kwargs)
+        cls.use_qemu = cls.add_config_option("use-qemu", kind=QEMUType, default=QEMUType.DEFAULT,
+                                             enum_choice_strings=[t.value for t in QEMUType],
+                                             help="The QEMU type to run with. When set to 'custom', "
+                                             "the 'custom-qemu-path' option must also be set.")
+        cls.custom_qemu_path = cls.add_path_option("custom-qemu-path", help="Path to the custom QEMU binary",
+                                                   default=None)
         cls.use_uboot = cls.add_bool_option("use-u-boot", default=False,
                                             help="Boot using U-Boot for UEFI if supported (only RISC-V)")
         cls.extra_qemu_options = cls.add_config_option("extra-options", default=[], kind=list, metavar="QEMU_OPTIONS",
@@ -109,7 +181,6 @@ class LaunchQEMUBase(SimpleProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.qemu_binary = None  # type: typing.Optional[Path]
         self.current_kernel = None  # type: typing.Optional[Path]
         self.disk_image = None  # type: typing.Optional[Path]
         self.disk_image_format = "raw"
@@ -124,42 +195,111 @@ class LaunchQEMUBase(SimpleProject):
         # Explicit bios args no longer needed now that qemu defaults to a different file name for CHERI
         return riscv_bios_arguments(self.crosscompile_target, self)
 
-    def setup(self):
-        super().setup()
-        xtarget = self.crosscompile_target
-        self._can_provide_src_via_smb = False
-        if xtarget.is_riscv(include_purecap=True):
-            self.bios_flags += self.get_riscv_bios_args()
-            self.qemu_binary = BuildQEMU.qemu_cheri_binary(self)
-            self._can_provide_src_via_smb = True
-        elif xtarget.is_mips(include_purecap=True):
-            self.qemu_binary = BuildQEMU.qemu_cheri_binary(self)
-            self._can_provide_src_via_smb = True
-        elif xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-            # Only use Morello QEMU for Morello for now, not AArch64 too, as we
-            # don't want to force everyone to build Morello QEMU while it's in
-            # a separate branch.
-            self.qemu_binary = BuildMorelloQEMU.qemu_cheri_binary(self)
-            self._can_provide_src_via_smb = True
+    @classmethod
+    def targets_reset(cls):
+        super().targets_reset()
+        cls._cached_chosen_qemu = None
+
+    @classmethod
+    def get_chosen_qemu(cls, config):
+        if cls._cached_chosen_qemu:
+            return cls._cached_chosen_qemu
+
+        xtarget = cls.get_crosscompile_target(config)
+        can_provide_src_via_smb = False
+        supported_qemu_classes = []
+        if (xtarget.is_mips(include_purecap=True) or
+                xtarget.is_riscv(include_purecap=True)):
+            can_provide_src_via_smb = True
+            supported_qemu_classes += [BuildQEMU]
+            if not xtarget.is_hybrid_or_purecap_cheri():
+                supported_qemu_classes += [BuildUpstreamQEMU, None]
+            can_provide_src_via_smb = True
+            supported_qemu_classes += [BuildQEMU]
+            if not xtarget.is_hybrid_or_purecap_cheri():
+                supported_qemu_classes += [BuildUpstreamQEMU, None]
+        elif xtarget.is_aarch64(include_purecap=True):
+            can_provide_src_via_smb = True
+            # Default to Morello QEMU for Morello, since CHERI QEMU builds may
+            # not be up to date, but prefer CHERI QEMU for AArch64 like other
+            # architectures.
+            if xtarget.is_hybrid_or_purecap_cheri():
+                supported_qemu_classes += [BuildMorelloQEMU, BuildQEMU]
+            else:
+                supported_qemu_classes += [BuildQEMU, BuildMorelloQEMU]
+            if not xtarget.is_hybrid_or_purecap_cheri():
+                supported_qemu_classes += [BuildUpstreamQEMU, None]
         elif xtarget.is_any_x86() or xtarget.is_aarch64(include_purecap=False):
-            # Use the system QEMU instead of CHERI QEMU (for now)
+            # Default to CHERI QEMU instead of the system QEMU (for now)
             # Note: x86_64 can be either CHERI QEMU or system QEMU:
-            self.add_required_system_tool("qemu-system-" + self.qemu_options.qemu_arch_sufffix)
+            supported_qemu_classes += [BuildQEMU, BuildUpstreamQEMU, None]
         else:
             assert False, "Unknown target " + str(xtarget)
-        if self.qemu_binary is None:
-            # only CHERI QEMU supports more than one SMB share
-            self._can_provide_src_via_smb = True
-            binary_name = "qemu-system-" + self.qemu_options.qemu_arch_sufffix
-            if (self.config.qemu_bindir / binary_name).is_file():
-                self.qemu_binary = self.config.qemu_bindir / binary_name
+
+        if cls.use_qemu == QEMUType.CUSTOM:
+            # Only CHERI QEMU supports more than one SMB share; conservatively
+            # guess what kind of QEMU this is
+            can_provide_src_via_smb = xtarget.is_hybrid_or_purecap_cheri()
+            if not cls.custom_qemu_path:
+                cls.fatal("Must specify path to custom QEMU with --" + cls.target + "/custom-qemu-path")
+                qemu_binary = Path("/no/custom/path/to/qemu")
             else:
-                self.qemu_binary = Path(shutil.which(binary_name) or "/could/not/find/qemu")
+                qemu_binary = Path(cls.custom_qemu_path)
+            if not qemu_binary.is_file():
+                cls.fatal("Custom QEMU", cls.custom_qemu_path, "is not a file")
+            qemu_class = None
+        else:
+            if cls.use_qemu == QEMUType.DEFAULT:
+                qemu_class = supported_qemu_classes[0]
+                qemu_binary = None
+            elif cls.use_qemu in (QEMUType.CHERI, QEMUType.MORELLO, QEMUType.UPSTREAM):
+                qemu_class = {
+                    QEMUType.CHERI: BuildQEMU,
+                    QEMUType.MORELLO: BuildMorelloQEMU,
+                    QEMUType.UPSTREAM: BuildUpstreamQEMU
+                }[cls.use_qemu]
+                if qemu_class not in supported_qemu_classes:
+                    cls.fatal("Cannot use", cls.use_qemu.value, "QEMU with target", xtarget.generic_target_suffix)
+                    qemu_class = None
+                    qemu_binary = Path("/target/not/supported/with/this/qemu")
+                else:
+                    qemu_binary = None
+            else:
+                assert cls.use_qemu == QEMUType.SYSTEM, "Unknown use_qemu " + str(cls.use_qemu)
+                qemu_class = None
+                qemu_binary = None
+
+            # None means determine it from qemu_class; non-None is used for a
+            # dummy value when pretending and the requested combination is not
+            # supported.
+            if qemu_binary is None:
+                if qemu_class is None:
+                    # Deferred until setup time when we have an instance (need
+                    # qemu_options member and add_required_system_tool)
+                    can_provide_src_via_smb = None
+                    qemu_binary = None
+                else:
+                    # Only CHERI QEMU supports more than one SMB share
+                    can_provide_src_via_smb = qemu_class in [BuildQEMU, BuildMorelloQEMU]
+                    qemu_binary = qemu_class.qemu_binary(cls, xtarget=xtarget, config=config)
+
+        cls._cached_chosen_qemu = ChosenQEMU(qemu_class, qemu_binary, can_provide_src_via_smb)
+        return cls._cached_chosen_qemu
+
+    @property
+    def chosen_qemu(self):
+        return self.get_chosen_qemu(self.config)
+
+    def setup(self):
+        super().setup()
+        if self.crosscompile_target.is_riscv(include_purecap=True):
+            self.bios_flags += self.get_riscv_bios_args()
+        self.chosen_qemu.setup(self)
 
     def process(self):
-        assert self.qemu_binary is not None
-        if not self.qemu_binary.exists():
-            self.dependency_error("QEMU is missing:", self.qemu_binary, cheribuild_target="qemu")
+        if not self.chosen_qemu.binary.exists():
+            self.dependency_error("QEMU is missing:", self.chosen_qemu.binary,
+                                  cheribuild_target=self.chosen_qemu.cls.target if self.chosen_qemu.cls else None)
 
         qemu_loader_or_kernel = self.current_kernel
         if self.use_uboot:
@@ -223,9 +363,9 @@ class LaunchQEMUBase(SimpleProject):
         user_network_options = ""
         smb_dir_count = 0
         have_9pfs_support = (self.crosscompile_target.is_native() or
-                             self.crosscompile_target.is_any_x86()) and qemu_supports_9pfs(self.qemu_binary)
+                             self.crosscompile_target.is_any_x86()) and qemu_supports_9pfs(self.chosen_qemu.binary)
         # Only default to providing the smb mount if smbd exists
-        have_smbfs_support = self._can_provide_src_via_smb and shutil.which("smbd")
+        have_smbfs_support = self.chosen_qemu.can_provide_src_via_smb and shutil.which("smbd")
 
         def add_smb_or_9p_dir(directory, target, share_name=None, readonly=False):
             if not directory:
@@ -299,7 +439,7 @@ class LaunchQEMUBase(SimpleProject):
             self._after_disk_options += ["-snapshot"]
 
         # input("Press enter to continue")
-        qemu_command = self.qemu_options.get_commandline(qemu_command=self.qemu_binary,
+        qemu_command = self.qemu_options.get_commandline(qemu_command=self.chosen_qemu.binary,
                                                          kernel_file=qemu_loader_or_kernel,
                                                          disk_image=self.disk_image,
                                                          disk_image_format=self.disk_image_format,
@@ -430,7 +570,6 @@ class LaunchQEMUBase(SimpleProject):
 
 class AbstractLaunchFreeBSD(LaunchQEMUBase):
     do_not_add_to_targets = True
-    _can_provide_src_via_smb = True
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -536,10 +675,11 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     @classmethod
     def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "list[str]":
         xtarget = cls.get_crosscompile_target(config)
-        qemu = "qemu"
-        if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-            qemu = "morello-qemu"
-        result = [qemu, cls._source_class.get_class_for_target(xtarget).target]
+        result = []
+        chosen_qemu = cls.get_chosen_qemu(config)
+        if chosen_qemu.cls:
+            result.append(chosen_qemu.cls.target)
+        result.append(cls._source_class.get_class_for_target(xtarget).target)
         return result
 
     def __init__(self, config, *, needs_disk_image=True):

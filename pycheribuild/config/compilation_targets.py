@@ -421,12 +421,12 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                 # as we don't want to force everyone to build Morello QEMU
                 # while it's in a separate branch.
                 from ..projects.build_qemu import BuildMorelloQEMU
-                qemu_path = BuildMorelloQEMU.qemu_cheri_binary(self.project)
+                qemu_path = BuildMorelloQEMU.qemu_binary(self.project)
                 if not qemu_path.exists():
                     self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
             elif rootfs_xtarget.is_hybrid_or_purecap_cheri():
                 from ..projects.build_qemu import BuildQEMU
-                qemu_path = BuildQEMU.qemu_cheri_binary(self.project)
+                qemu_path = BuildQEMU.qemu_binary(self.project)
                 if not qemu_path.exists():
                     self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
             else:
@@ -524,7 +524,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
         if self.config.benchmark_with_qemu:
             from ..projects.build_qemu import BuildQEMU
-            qemu_path = BuildQEMU.qemu_cheri_binary(self.project)
+            qemu_path = BuildQEMU.qemu_binary(self.project)
             qemu_ssh_socket = find_free_port()
             if not qemu_path.exists():
                 self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
