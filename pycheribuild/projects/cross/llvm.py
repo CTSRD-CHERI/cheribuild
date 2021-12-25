@@ -351,7 +351,7 @@ exec {lld} "$@"
 """.format(lld=self.install_dir / "bin/ld.lld")
                 self.write_file(self.install_dir / "bin/ld", script, overwrite=True, mode=0o755)
             self.create_triple_prefixed_symlinks(self.install_dir / "bin/ld.lld", tool_name="ld",
-                                                 create_unprefixed_link=not OSInfo.IS_MAC)
+                                                 create_unprefixed_link=not self.target_info.is_macos())
 
     def run_tests(self):
         if not self.compiling_for_host():
