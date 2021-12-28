@@ -132,7 +132,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         if self.compiling_for_host():
             return self.install_dir
         else:
-            return self.install_dir / "qt-host-tools"
+            return self.build_dir / "qt-host-tools"
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
