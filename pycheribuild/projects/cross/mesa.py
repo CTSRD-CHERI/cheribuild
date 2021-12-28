@@ -60,6 +60,8 @@ class BuildLibGlvnd(CrossCompileMesonProject):
     def setup(self):
         super().setup()
         self.add_meson_options(glx="enabled")
+        if self.compiling_for_cheri():
+            self.add_meson_options(asm="disabled")
 
 
 class BuildMesa(CrossCompileMesonProject):
