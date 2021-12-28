@@ -427,6 +427,11 @@ class BuildSonnet(KDECMakeProject):
     # * VOIKKO, Spell checking support via Voikko, <http://voikko.puimula.org/>
     _has_qt_designer_plugin = True
 
+    def setup(self):
+        super().setup()
+        # We don't currently build QtQuick
+        self.add_cmake_options(SONNET_USE_QML=False)
+
 
 #
 # Frameworks, tier2
@@ -744,6 +749,11 @@ class BuildPlasmaFramework(KDECMakeProject):
                                temporary_url_override="https://invent.kde.org/arichardson/plasma-framework.git",
                                url_override_reason="Needs some compilation fixes for -no-opengl QtBase")
 
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_OpenGL=True)
+        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_EGL=True)
+
 
 class BuildKRunner(KDECMakeProject):
     target = "krunner"
@@ -793,8 +803,14 @@ class BuildKScreenLocker(KDECMakeProject):
     target = "kscreenlocker"
     repository = GitRepository("https://invent.kde.org/plasma/kscreenlocker.git",
                                old_urls=[b"https://invent.kde.org/arichardson/kscreenlocker.git"])
-    dependencies = ["kwindowsystem", "kxmlgui", "kwindowsystem", "kidletime", "libxcb", "kwayland", "layer-shell-qt"]
-    _uses_wayland_scanner = True
+    dependencies = ["kwindowsystem", "kxmlgui", "kwindowsystem", "kidletime", "libxcb"]
+    # TODO: Not yet:
+    # "kwayland", "layer-shell-tq"
+    # _uses_wayland_scanner = True
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(KSCREENLOCKER_BUILD_WAYLAND=False)
 
 
 class BuildKWaylandServer(KDECMakeProject):
@@ -833,13 +849,16 @@ class BuildKWin(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/plasma/kwin.git",
                                temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
                                url_override_reason="Needs lots of ifdefs for -no-opengl QtBase and no-wayland")
-    dependencies = ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker", "libinput", "qttools",
-                    "kwayland-server", "mesa", "libepoxy"]
+    dependencies = ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker", "libinput", "qttools"]
+    # TODO: Not yet:
+    # "kwayland-server", "libepoxy", "mesa"
 
     def setup(self):
         super().setup()
         # TODO: build wayland backend
         self.add_cmake_options(KWIN_BUILD_WAYLAND=False)
+        # We build Qt wihtout OpenGL support, so we shouldn't build the OpenGL code.
+        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_epoxy=True)
         if self.target_info.is_freebsd():
             # To get linux/input.h on FreeBSD
             if not BuildLibInput.get_source_dir(self).exists():
@@ -1040,7 +1059,9 @@ class BuildKPty(KDECMakeProject):
 class BuildOkular(KDECMakeProject):
     target = "okular"
     dependencies = ["poppler", "threadweaver", "kparts", "kio", "kiconthemes"]  # ktpy
-    repository = GitRepository("https://invent.kde.org/graphics/okular.git")
+    repository = GitRepository("https://invent.kde.org/graphics/okular.git",
+                               temporary_url_override="https://invent.kde.org/arichardson/okular.git",
+                               url_override_reason="https://invent.kde.org/graphics/okular/-/merge_requests/456")
 
     def setup(self):
         super().setup()
