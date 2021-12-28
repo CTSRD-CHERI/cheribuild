@@ -199,6 +199,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 kde_install_dir = BuildKCoreAddons.get_install_dir(self)
                 if kde_install_dir != self.install_dir:
                     self.configure_args.extend(["-additional-datadir", kde_install_dir / "share"])
+                # 5.15 hard-codes QMAKE_APPLE_DEVICE_ARCHS as x86_64
+                apple_arch = self.target_info.target_triple.split('-')[0]
+                self.configure_args.append("QMAKE_APPLE_DEVICE_ARCHS=" + apple_arch)
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = self.default_compiler_flags
