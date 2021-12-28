@@ -618,6 +618,15 @@ class BuildQtDeclarative(BuildQtModuleWithQMake):
             "-quick-designer",  # needed for quickcontrols2
         ])
 
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
+        deps = super().dependencies
+        # Need the host tools qmlcachegen to be built against our Qt due to
+        # changed string layout.
+        if not cls.get_crosscompile_target(config).is_native():
+            deps.append("qtdeclarative-native")
+        return deps
+
 
 class BuildQtTools(BuildQtModuleWithQMake):
     target = "qttools"
