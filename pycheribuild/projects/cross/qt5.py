@@ -40,7 +40,6 @@ from .x11 import BuildLibXCB
 from ..project import SimpleProject
 from ...config.loader import ComputedDefaultValue
 from ...processutils import set_env
-from ...utils import OSInfo
 
 
 class InstallDejaVuFonts(SimpleProject):
@@ -173,7 +172,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                                              help="Include assertions (even in release builds)")
         cls.minimal = cls.add_bool_option("minimal", show_help=True, help="Don't build QtWidgets or QtGui, etc")
         # Link against X11 libs by default if we aren't compiling for macOS
-        native_is_macos = cls._xtarget is not None and cls._xtarget.is_native() and OSInfo.IS_MAC
+        native_is_macos = cls._xtarget is not None and cls._xtarget.target_info_cls.is_macos()
         cls.use_x11 = cls.add_bool_option("use-x11", default=not native_is_macos,
                                           show_help=False, help="Build Qt with the XCB backend.")
         cls.use_opengl = cls.add_bool_option("use-opengl", default=False, show_help=False,
@@ -187,11 +186,11 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configure_args.extend(["-prefix", str(self.install_dir)])
             self.configure_args.append("QMAKE_CC=" + str(self.CC))
             self.configure_args.append("QMAKE_CXX=" + str(self.CXX))
-            if OSInfo.IS_LINUX and self.get_compiler_info(self.CC).is_clang:
+            if self.target_info.is_linux() and self.get_compiler_info(self.CC).is_clang:
                 # otherwise the build assumes GCC
                 self.configure_args.append("-platform")
                 self.configure_args.append("linux-clang")
-            if OSInfo.IS_MAC:
+            if self.target_info.is_macos():
                 # Use my (rejected) patch to add additional data directories for macos
                 # (https://codereview.qt-project.org/c/qt/qtbase/+/238640), so that we can find shared data and run
                 # KDE unit tests/applications correctly
@@ -252,7 +251,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         ])
         if self.build_tests:
             self.configure_args.append("-developer-build")
-            if OSInfo.IS_MAC:
+            if self.target_info.is_macos():
                 # Otherwise we get "ERROR: debug-only framework builds are not supported. Configure with -no-framework
                 # if you want a pure debug build."
                 self.configure_args.append("-no-framework")
@@ -417,7 +416,7 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
             self.add_cmake_options(CMAKE_PREFIX_PATH="/usr/local")  # Find homebrew libraries
         if self.build_tests:
             self.add_cmake_options(FEATURE_developer_build=True)
-            if OSInfo.IS_MAC:
+            if self.target_info.is_macos():
                 # Otherwise we get "ERROR: debug-only framework builds are not supported. Configure with -no-framework
                 # if you want a pure debug build."
                 self.add_cmake_options(FEATURE_framework=False)
