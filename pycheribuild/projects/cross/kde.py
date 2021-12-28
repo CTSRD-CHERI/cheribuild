@@ -1071,5 +1071,6 @@ class BuildOkular(KDECMakeProject):
 class BuildKDEX11Desktop(TargetAliasWithDependencies):
     target = "kde-x11-desktop"
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
-    dependencies = ["plasma-desktop", "dolphin", "okular", "gwenview", "systemsettings", "xvnc-server",
+    # TODO: "systemsettings" - now needs a newer plasma-workspace
+    dependencies = ["plasma-desktop", "dolphin", "okular", "gwenview", "xvnc-server",
                     "xeyes", "twm", "xev"]  # Add some basic X11 things as a fallback
