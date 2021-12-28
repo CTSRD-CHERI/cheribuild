@@ -96,7 +96,7 @@ class BuildMesa(CrossCompileMesonProject):
         meson_args = {
             "vulkan-drivers": [],  # TODO: swrast?
             "dri-drivers": [],
-            "gallium-drivers": ["virgl"],  # TODO: "gallium-drivers": "['virgl','swrast']",
+            "gallium-drivers": ["virgl", "swrast"],
             "egl-native-platform": platforms[0] if platforms else "",
         }
         self.add_meson_options(gbm="enabled", egl="enabled", glvnd=True, llvm="disabled", osmesa=False,
