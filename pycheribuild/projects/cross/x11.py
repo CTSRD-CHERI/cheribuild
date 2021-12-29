@@ -295,6 +295,12 @@ class BuildLibXmu(X11AutotoolsProject):
         self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
 
 
+class BuildXWinInfo(X11AutotoolsProject):
+    target = "xwininfo"
+    dependencies = ["libx11", "libxext", "libxmu", "libxcb", "xorgproto"]
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xwininfo.git")
+
+
 class BuildXHost(X11AutotoolsProject):
     target = "xhost"
     dependencies = ["libxau", "libx11"]
