@@ -1056,6 +1056,11 @@ class BuildKPty(KDECMakeProject):
             self.add_cmake_options(UTEMPTER_EXECUTABLE="/usr/libexec/ulog-helper")
 
 
+class BuildKonsole(KDECMakeProject):
+    target = "konsole"
+    repository = GitRepository("https://invent.kde.org/utilities/konsole")
+
+
 class BuildOkular(KDECMakeProject):
     target = "okular"
     dependencies = ["poppler", "threadweaver", "kparts", "kio", "kiconthemes"]  # ktpy
@@ -1072,5 +1077,6 @@ class BuildKDEX11Desktop(TargetAliasWithDependencies):
     target = "kde-x11-desktop"
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     # TODO: "systemsettings" - now needs a newer plasma-workspace
-    dependencies = ["plasma-desktop", "dolphin", "okular", "gwenview", "xvnc-server",
+    dependencies = ["plasma-desktop", "dolphin", "konsole", "okular", "gwenview",
+                    "xvnc-server",
                     "xeyes", "twm", "xev"]  # Add some basic X11 things as a fallback
