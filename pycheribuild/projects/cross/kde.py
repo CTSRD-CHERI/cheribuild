@@ -1073,10 +1073,29 @@ class BuildOkular(KDECMakeProject):
         self.add_cmake_options(ALLOW_OPTIONAL_DEPENDENCIES=True)
 
 
+class BuildKTextEditor(KDECMakeProject):
+    target = "ktexteditor"
+    repository = GitRepository("https://invent.kde.org/frameworks/ktexteditor.git")
+    # Optional; add when built:
+    #   - editorconfig-core-c (needs pcre2, which SIGBUSes due to unaligned pointer store)
+    dependencies = ["extra-cmake-modules", "karchive", "kauth", "kconfig", "kguiaddons", "ki18n", "kio", "kparts",
+                    "ksyntaxhighlighting", "ktextwidgets", "sonnet", "qtbase", "qtdeclarative"]
+
+
+class BuildKate(KDECMakeProject):
+    target = "kate"
+    repository = GitRepository("https://invent.kde.org/utilities/kate.git")
+    # Optional; add when built:
+    #   - kwallet
+    dependencies = ["extra-cmake-modules", "kactivities", "kconfig", "kcoreaddons", "kcrash", "kdbusaddons",
+                    "kguiaddons", "ki18n", "kiconthemes", "kitemmodels", "kitemviews", "knewstuff",
+                    "ksyntaxhighlighting", "ktexteditor", "ktextwidgets", "kwindowsystem", "qtbase"]
+
+
 class BuildKDEX11Desktop(TargetAliasWithDependencies):
     target = "kde-x11-desktop"
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     # TODO: "systemsettings" - now needs a newer plasma-workspace
-    dependencies = ["plasma-desktop", "dolphin", "konsole", "okular", "gwenview",
+    dependencies = ["plasma-desktop", "dolphin", "konsole", "okular", "gwenview", "kate",
                     "xvnc-server",
                     "xeyes", "twm", "xev"]  # Add some basic X11 things as a fallback
