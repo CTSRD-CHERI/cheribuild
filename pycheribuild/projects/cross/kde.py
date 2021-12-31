@@ -1059,6 +1059,10 @@ class BuildKPty(KDECMakeProject):
 class BuildKonsole(KDECMakeProject):
     target = "konsole"
     repository = GitRepository("https://invent.kde.org/utilities/konsole")
+    dependencies = ["extra-cmake-modules", "kbookmarks", "kconfig", "kconfigwidgets", "kcoreaddons", "kcrash",
+                    "kglobalaccel", "kguiaddons", "kdbusaddons", "ki18n", "kiconthemes", "kio", "knewstuff",
+                    "knotifications", "knotifyconfig", "kparts", "kpty", "kservice", "ktextwidgets", "kwidgetsaddons",
+                    "kwindowsystem", "kxmlgui", "qtbase"]
 
 
 class BuildOkular(KDECMakeProject):
