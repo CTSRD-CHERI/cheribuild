@@ -1080,10 +1080,8 @@ class BuildOkular(KDECMakeProject):
 class BuildKTextEditor(KDECMakeProject):
     target = "ktexteditor"
     repository = GitRepository("https://invent.kde.org/frameworks/ktexteditor.git")
-    # Optional; add when built:
-    #   - editorconfig-core-c (needs pcre2, which SIGBUSes due to unaligned pointer store)
-    dependencies = ["extra-cmake-modules", "karchive", "kauth", "kconfig", "kguiaddons", "ki18n", "kio", "kparts",
-                    "ksyntaxhighlighting", "ktextwidgets", "sonnet", "qtbase", "qtdeclarative"]
+    dependencies = ["editorconfig-core-c", "extra-cmake-modules", "karchive", "kauth", "kconfig", "kguiaddons", "ki18n",
+                    "kio", "kparts", "ksyntaxhighlighting", "ktextwidgets", "sonnet", "qtbase", "qtdeclarative"]
 
 
 class BuildKate(KDECMakeProject):
