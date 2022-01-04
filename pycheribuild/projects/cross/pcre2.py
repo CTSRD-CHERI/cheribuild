@@ -30,6 +30,4 @@ from .crosscompileproject import CrossCompileCMakeProject, GitRepository
 
 
 class BuildPcre2(CrossCompileCMakeProject):
-    repository = GitRepository("https://github.com/PhilipHazel/pcre2.git",
-                               temporary_url_override="https://github.com/jrtc27/pcre2.git",
-                               url_override_reason="https://github.com/PhilipHazel/pcre2/pull/72")
+    repository = GitRepository("https://github.com/PhilipHazel/pcre2.git")
