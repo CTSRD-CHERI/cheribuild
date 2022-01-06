@@ -230,7 +230,7 @@ def _jenkins_main():
         sys.exit()
 
     if RUN_EVERYTHING_TARGET in cheri_config.targets:
-        cheri_config.targets = list(target_manager.target_names)
+        cheri_config.targets = list(sorted(target_manager.target_names))
 
     if cheri_config.action == [""]:
         fatal_error("No action specified, did you mean to pass --build?")
