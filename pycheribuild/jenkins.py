@@ -210,10 +210,12 @@ def create_sdk_from_archives(cheri_config: JenkinsConfig, needs_cheribsd_sysroot
 
 def _jenkins_main():
     os.environ["_CHERIBUILD_JENKINS_BUILD"] = "1"
-    all_target_names = list(sorted(target_manager.target_names))
+    all_target_names = list(sorted(target_manager.target_names(None)))
     config_loader = JenkinsConfigLoader()
     # Register all command line options
     cheri_config = JenkinsConfig(config_loader, all_target_names)
+    # Make sure nothing other than the config loader uses this as it will include disabled target names
+    del all_target_names
     SimpleProject._config_loader = config_loader
     target_manager.register_command_line_options()
     cheri_config.load()
@@ -230,7 +232,7 @@ def _jenkins_main():
         sys.exit()
 
     if RUN_EVERYTHING_TARGET in cheri_config.targets:
-        cheri_config.targets = list(sorted(target_manager.target_names))
+        cheri_config.targets = list(sorted(target_manager.target_names(cheri_config)))
 
     if cheri_config.action == [""]:
         fatal_error("No action specified, did you mean to pass --build?")
@@ -250,7 +252,7 @@ def _jenkins_main():
 
     if JenkinsAction.BUILD in cheri_config.action or JenkinsAction.TEST in cheri_config.action:
         # Ugly workaround to override all install dirs to go to the tarball
-        for tgt in target_manager.targets:
+        for tgt in target_manager.targets(cheri_config):
             if isinstance(tgt, SimpleTargetAlias):
                 continue
             cls = tgt.project_class

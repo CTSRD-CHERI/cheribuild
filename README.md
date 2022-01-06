@@ -132,20 +132,23 @@ CHERI-LLVM fork built as a RISC-V binary to run on CheriBSD.
 
 ##### Supported architectures
 - `riscv64`: RISC-V without CHERI support
-- `riscv64-hybrid`: RISC-V with CHERI support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
 - `riscv64-purecap`: [pure-capability](https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-947.html) RISC-V: all pointers are CHERI capabilities.
 - `mips64`: MIPS without CHERI support
-- `mips64-hybrid`: MIPS with CHERI support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
 - `mips64-purecap`: [pure-capability](https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-947.html) MIPS: all pointers are CHERI capabilities.
 - `aarch64`: AArch64 without CHERI support
-- `morello-hybrid`: AArch64 with CHERI (Morello) support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
 - `morello-purecap`: [pure-capability](https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-947.html) AArch64 (Morello): all pointers are CHERI capabilities.
 - `amd64`: 64-bit Intel x86.
 
 Most projects (the ones that don't build a full OS, but just a program or library) also support `-native` configuration
   that builds for the host. This can be useful to verify that changes made for CHERI have not broken the native builds.
 
-For the `cheribsd`, `disk-image` and `run` targets the hybrid vs purecap distinction applies means that the userspace space (see [below for more details](#building-and-running-cheribsd)).
+The following targets are also supported, but discouraged, as they serve little benefit over and above their non-CHERI counterparts, and so should not be used unless absolutely sure.
+If you still wish to use them despite that, they can be enabled with `--enable-hybrid-targets`.
+- `riscv64-hybrid`: RISC-V with CHERI support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
+- `mips64-hybrid`: MIPS with CHERI support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
+- `morello-hybrid`: AArch64 with CHERI (Morello) support: pointers are integers by default but can be annotated with `__capability` to use CHERI capabilities.
+
+For the `cheribsd`, `disk-image` and `run` targets the hybrid vs purecap distinction applies solely to userspace (see [below for more details](#building-and-running-cheribsd)).
 
 #### Other targets
 - `freebsd-<architecture>` builds and installs [freebsd/freebsd](https://github.com/freebsd/freebsd).
@@ -169,15 +172,17 @@ All binaries will by default be installed to `~/cheri/sdk/bin`.
 
 To build CheriBSD run `cheribuild.py cheribsd-<architecture>`, with architecture being one of
 - `riscv64`: Kernel and userspace are RISC-V without CHERI support.
-- `riscv64-hybrid`: Kernel is RISC-V with CHERI support (hybrid), but most programs built as plain RISC-V.
 - `riscv64-purecap`: Kernel is RISC-V with CHERI support (hybrid), and all userspace programs built as pure-capability CHERI binaries.
 - `mips64`: Kernel and userspace are MIPS without CHERI support.
-- `mips64-hybrid`: Kernel is MIPS with CHERI support (hybrid), but most programs built as plain RISC-V.
 - `mips64-purecap`: Kernel is MIPS with CHERI support (hybrid), and all userspace programs built as pure-capability CHERI binaries.
 - `aarch64`: Kernel and userspace are AArch64 without CHERI support.
-- `morello-hybrid`: Kernel is AArch64 with CHERI (Morello) support (hybrid), but most programs built as plain AArch64.
 - `morello-purecap`: Kernel is AArch64 with CHERI (Morello) support (hybrid), and all userspace programs built as pure-capability CHERI binaries.
 - `amd64`: Kernel and userspace are 64-bit Intel x86.
+
+The following targets also exist but are disabled by default and discouraged (see [Supported architectures](#supported-architectures) for more details):
+- `riscv64-hybrid`: Kernel is RISC-V with CHERI support (hybrid), but most programs built as plain RISC-V.
+- `mips64-hybrid`: Kernel is MIPS with CHERI support (hybrid), but most programs built as plain RISC-V.
+- `morello-hybrid`: Kernel is AArch64 with CHERI (Morello) support (hybrid), but most programs built as plain AArch64.
 
 ### Disk image
 

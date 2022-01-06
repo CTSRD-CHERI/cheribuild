@@ -273,6 +273,7 @@ class CheriConfig(ConfigBase):
             help="Print the command to debug the following userspace program in GDB attaced to QEMU")
         self.include_dependencies = None  # type: Optional[bool]
         self.include_toolchain_dependencies = True
+        self.enable_hybrid_targets = False
         self.only_dependencies = loader.add_bool_option("only-dependencies",
                                                         help="Only build dependencies of targets, "
                                                              "not the targets themselves")

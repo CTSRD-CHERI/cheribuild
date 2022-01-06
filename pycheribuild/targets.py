@@ -61,6 +61,13 @@ class Target(object):
         assert result._xtarget is not None
         return result
 
+    @property
+    def xtarget(self):
+        result = self._project_class
+        # noinspection PyProtectedMember
+        assert result._xtarget is not None
+        return result._xtarget
+
     def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config, caller=None) -> "Target":
         return self
 
@@ -205,6 +212,11 @@ class MultiArchTarget(Target):
         assert self.target_arch is not None
         return self._project_class
 
+    @property
+    def xtarget(self):
+        assert self.target_arch is not None
+        return self.target_arch
+
     def _create_project(self, config: CheriConfig) -> "SimpleProject":
         return self.project_class(config)
 
@@ -217,6 +229,10 @@ class _TargetAliasBase(Target):
     def project_class(self) -> "typing.Type[SimpleProject]":
         assert self._project_class is not None
         return self._project_class
+
+    @property
+    def xtarget(self):
+        raise NotImplementedError()
 
     def _create_project(self, config: CheriConfig):
         raise ValueError("Should not be called!")
@@ -256,6 +272,13 @@ class MultiArchTargetAlias(_TargetAliasBase):
     def __repr__(self):
         return "<Cross target alias " + self.name + ">"
 
+    @property
+    def xtarget(self):
+        cross_target = self.project_class.default_architecture
+        if cross_target is None:
+            raise ValueError("ERROR:", self.name, "does not have a default_architecture value!")
+        return cross_target
+
     def get_real_target(self, cross_target: "typing.Optional[CrossCompileTarget]", config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
         assert self.derived_targets, "derived targets must not be empty"
@@ -288,6 +311,10 @@ class SimpleTargetAlias(_TargetAliasBase):
             real_cls._config_file_aliases = config_aliases + (self.name,)
             if len(set(real_cls._config_file_aliases)) != len(real_cls._config_file_aliases):
                 raise ValueError("Duplicate aliases for {}: {}".format(self.name, real_cls._config_file_aliases))
+
+    @property
+    def xtarget(self):
+        return self._real_target.xtarget
 
     def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
@@ -344,25 +371,38 @@ class TargetManager(object):
         for tgt in self._targets_for_command_line_options_only.values():
             tgt.project_class.setup_config_options()
 
-    @property
-    def target_names(self):
-        return self._all_targets.keys()
+    def target_disabled_reason(self, target: Target, config: CheriConfig) -> typing.Optional[str]:
+        if not config.enable_hybrid_targets:
+            xtarget = target.xtarget
+            # NB: We allow hybrid for baremetal targets (for now...)
+            if xtarget.get_rootfs_target().is_cheri_hybrid() and not xtarget.target_info_cls.is_baremetal():
+                return target.name + " is a hybrid target, which should not be used unless you know what you're " + \
+                       "doing. If you are still sure you want to build this, use --enable-hybrid-targets."
+        return None
 
-    @property
-    def non_alias_target_names(self) -> "typing.Generator[str]":
-        for name, value in self._all_targets.items():
+    def enabled_target_items(self, config: typing.Optional[CheriConfig]):
+        items = self._all_targets.items()
+        if config is not None:
+            items = filter(lambda item: not self.target_disabled_reason(item[1], config), items)
+        return items
+
+    def target_names(self, config: typing.Optional[CheriConfig]):
+        for name, value in self.enabled_target_items(config):
+            yield name
+
+    def non_alias_target_names(self, config: typing.Optional[CheriConfig]) -> "typing.Generator[str]":
+        for name, value in self.enabled_target_items(config):
             if not isinstance(value, _TargetAliasBase):
                 yield name
 
-    @property
-    def non_deprecated_target_names(self) -> "typing.Generator[str]":
-        for name, value in self._all_targets.items():
+    def non_deprecated_target_names(self, config: typing.Optional[CheriConfig]) -> "typing.Generator[str]":
+        for name, value in self.enabled_target_items(config):
             if not isinstance(value, DeprecatedTargetAlias):
                 yield name
 
-    @property
-    def targets(self) -> "typing.Iterable[Target]":
-        return self._all_targets.values()
+    def targets(self, config: typing.Optional[CheriConfig]) -> "typing.Iterable[Target]":
+        for name, value in self.enabled_target_items(config):
+            yield value
 
     def get_target_raw(self, name: str) -> Target:
         # return the actual target without resolving MultiArchTargetAlias
@@ -468,6 +508,10 @@ class TargetManager(object):
                 sys.exit(errmsg)
             explicitly_chosen_targets.append(self.get_target(target_name, None, config, caller="cmdline parsing"))
         chosen_targets = self.get_all_targets(explicitly_chosen_targets, config)
+        for target in chosen_targets:
+            disabled = self.target_disabled_reason(target, config)
+            if disabled is not None:
+                sys.exit(coloured(AnsiColour.red, disabled))
         print("Will execute the following", len(chosen_targets), "targets:\n  ",
               "\n   ".join(t.name for t in chosen_targets))
         # now that the chosen targets have been resolved run them

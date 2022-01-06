@@ -95,6 +95,10 @@ class DefaultCheriConfig(CheriConfig):
         self.include_toolchain_dependencies = loader.add_bool_option(
             "include-toolchain-dependencies", default=True, group=loader.dependencies_group,
             help="Include toolchain targets such as LLVM and QEMU when --include-dependencies is set.")
+        self.enable_hybrid_targets = loader.add_bool_option(
+            "enable-hybrid-targets", default=False, help_hidden=True,
+            help="Enable building hybrid targets. This is highly discouraged, "
+                 "only enable if you know what you're doing.")
 
         start_after_group = loader.dependencies_group.add_mutually_exclusive_group()
 

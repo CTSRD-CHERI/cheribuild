@@ -223,12 +223,12 @@ def test_target_aliases_default_target(target_name, resolved_target):
     # specify the target name for e.g. cheribsd-* run-*, etc
     if resolved_target is None:
         # The target should not exist in the list of targets accepted on the command line
-        assert target_name not in target_manager.target_names
+        assert target_name not in target_manager.target_names(None)
         # However, if we use get_target_raw we should get the TargetAlias
         assert isinstance(target_manager.get_target_raw(target_name), MultiArchTargetAlias)
         assert target_manager.get_target_raw(target_name).project_class.default_architecture is None
     else:
-        assert target_name in target_manager.target_names
+        assert target_name in target_manager.target_names(None)
         raw_target = target_manager.get_target_raw(target_name)
         assert isinstance(raw_target, MultiArchTargetAlias) or raw_target.name == resolved_target
         target = target_manager.get_target(target_name, None, _parse_arguments([]),

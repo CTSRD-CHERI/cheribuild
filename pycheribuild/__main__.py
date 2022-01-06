@@ -110,12 +110,14 @@ def real_main():
     config_loader = JsonAndCommandLineConfigLoader()
     # Don't suggest deprecated names when tab-completing
     if config_loader.is_completing_arguments:
-        all_target_names = list(sorted(target_manager.non_deprecated_target_names))
+        all_target_names = list(sorted(target_manager.non_deprecated_target_names(None)))
     else:
-        all_target_names = list(sorted(target_manager.target_names))
+        all_target_names = list(sorted(target_manager.target_names(None)))
     run_everything_target = "__run_everything__"
     # Register all command line options
     cheri_config = DefaultCheriConfig(config_loader, all_target_names + [run_everything_target])
+    # Make sure nothing other than the config loader uses this as it will include disabled target names
+    del all_target_names
     SimpleProject._config_loader = config_loader
     target_manager.register_command_line_options()
     # load them from JSON/cmd line
@@ -128,7 +130,7 @@ def real_main():
 
     if CheribuildAction.LIST_TARGETS in cheri_config.action:
         # Skip target aliases to avoid printing too much output
-        names = list(target_manager.non_alias_target_names)
+        names = list(target_manager.non_alias_target_names(cheri_config))
         print("There are", len(names), "available targets:\n ", "\n  ".join(names))
         sys.exit()
     elif CheribuildAction.DUMP_CONFIGURATION in cheri_config.action:
@@ -203,7 +205,7 @@ def real_main():
         sys.exit()
 
     if run_everything_target in cheri_config.targets:
-        cheri_config.targets = all_target_names
+        cheri_config.targets = list(sorted(target_manager.target_names(cheri_config)))
     if not cheri_config.targets:
         # Make --libcheri-buildenv and --buildenv without any targets imply cheribsd
         if cheri_config.libcompat_buildenv or cheri_config.buildenv:

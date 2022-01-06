@@ -43,7 +43,7 @@ def _sort_targets(targets: "typing.List[str]", *, add_dependencies=False, add_to
     for t in real_targets:
         if t.project_class._xtarget is None:
             continue
-    for t in target_manager.targets:
+    for t in target_manager.targets(global_config):
         assert t.project_class._cached_full_deps is None
         assert t.project_class._cached_filtered_deps is None
     result = list(t.name for t in target_manager.get_all_targets(real_targets, global_config))
@@ -338,14 +338,29 @@ def test_skip_toolchain_deps(target_name, include_recursive_deps, include_toolch
                          build_morello_from_source=morello_from_source) == expected_deps
 
 
-def test_hybrid_targets():
+@pytest.mark.parametrize("enable_hybrid_targets", [
+    pytest.param(True),
+    pytest.param(False),
+])
+def test_hybrid_targets(enable_hybrid_targets):
     # there should only be very few targets that are built hybrid
     config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
-    all_hybrid_targets = [x for x in target_manager.targets if
+    config.enable_hybrid_targets = enable_hybrid_targets
+    all_hybrid_targets = [x for x in target_manager.targets(config) if
                           x.project_class.get_crosscompile_target(config).is_cheri_hybrid()]
 
     def should_include_target(target: Target):
         cls = target.project_class
+
+        # We allow hybrid for baremetal targets:
+        xtarget = cls.get_crosscompile_target(config)
+        if xtarget.target_info_cls.is_baremetal():
+            return False
+
+        # Should never see anything else if hybrid targets aren't enabled
+        if not enable_hybrid_targets and xtarget.get_rootfs_target().is_cheri_hybrid():
+            return True
+
         # We expect certain tagets to be built hybrid: CheriBSD/disk image/GDB/LLVM/run
         if issubclass(cls, (BuildCHERIBSD, LaunchCheriBSD, BuildCheriBsdSysrootArchive, BuildDiskImageBase,
                             BuildGDBBase, BuildCheriLLVM, BuildMorelloLLVM,
@@ -354,11 +369,6 @@ def test_hybrid_targets():
         # Also filter out some target aliases
         if issubclass(cls, (BuildCheriBsdMfsImageAndKernels, BuildAll, BuildCheriBSDSdk, BuildSdk,
                             BuildAndRunCheriBSD)):
-            return False
-
-        # We allow hybrid for baremetal targets:
-        xtarget = cls.get_crosscompile_target(config)
-        if xtarget.target_info_cls.is_baremetal():
             return False
 
         # Benchmarks can also be built hybrid:

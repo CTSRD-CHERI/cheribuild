@@ -179,6 +179,7 @@ class JenkinsConfig(CheriConfig):
         self.skip_configure = loader.add_bool_option("skip-configure", help="Skip the configure step")
         self.force_configure = True
         self.include_dependencies = False
+        self.enable_hybrid_targets = True
         self.allow_more_than_one_target = loader.add_commandline_only_bool_option(
             "allow-more-than-one-target",  # help_hidden=True, Note: setting this to True seems to break argparse
             help="Allow more than one target on the command line. This should only be used for testing since "
