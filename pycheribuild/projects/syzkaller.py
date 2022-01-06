@@ -42,7 +42,7 @@ from ..utils import ThreadJoiner
 
 
 class BuildSyzkaller(CrossCompileProject):
-    dependencies = ["go", "cheribsd"]
+    dependencies = ["go"]
     target = "cheri-syzkaller"
     github_base_url = "https://github.com/CTSRD-CHERI/"
     repository = GitRepository(github_base_url + "cheri-syzkaller.git")
@@ -51,7 +51,7 @@ class BuildSyzkaller(CrossCompileProject):
     make_kind = MakeCommandKind.GnuMake
 
     # is_sdk_target = True
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID_FOR_PURECAP_ROOTFS]
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
 
     @classmethod
@@ -80,7 +80,8 @@ class BuildSyzkaller(CrossCompileProject):
         self._new_path = (str(self.config.cheri_sdk_dir / "bin") + ":" +
                           str(self.config.dollar_path_with_other_tools))
 
-        self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self)
+        cheribsd_target = self.get_crosscompile_target(config).get_rootfs_target()
+        self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self, cross_target=cheribsd_target)
 
     def syzkaller_install_path(self):
         return self.config.cheri_sdk_bindir
@@ -171,10 +172,11 @@ class RunSyzkaller(SimpleProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # XXX this should be a cross target
-        xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
+        xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
+        syzkaller_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID_FOR_PURECAP_ROOTFS
 
         self.qemu_binary = BuildQEMU.qemu_binary(self, xtarget=xtarget)
-        self.syzkaller_binary = BuildSyzkaller.get_instance(self, cross_target=xtarget).syzkaller_binary()
+        self.syzkaller = BuildSyzkaller.get_instance(self, cross_target=syzkaller_xtarget)
         kernel_project = BuildCHERIBSD.get_instance(self, cross_target=xtarget)
         kernel_config = CheriBSDConfigTable.get_configs(xtarget, ConfigPlatform.QEMU,
                                                         kernel_project.get_default_kernel_abi(), fuzzing=True)
@@ -205,9 +207,7 @@ class RunSyzkaller(SimpleProject):
                 "http": ":10000",
                 "rpc": ":10001",
                 "workdir": str(self.syz_workdir),
-                "syzkaller": str(BuildSyzkaller.get_instance(
-                    self, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID)
-                                 .syzkaller_install_path().parent),
+                "syzkaller": str(self.syzkaller.syzkaller_install_path().parent),
                 "sshkey": str(self.syz_ssh_key),
                 # (used for report symbolization and coverage reports, optional).
                 "kernel_obj": str(self.kernel_path),
@@ -239,7 +239,7 @@ class RunSyzkaller(SimpleProject):
             return syz_config
 
     def process(self):
-        syz_args = [self.syzkaller_binary, "-config", self.syzkaller_config()]
+        syz_args = [self.syzkaller.syzkaller_binary(), "-config", self.syzkaller_config()]
         if self.config.verbose:
             syz_args += ["-debug"]
         self.run_cmd(*syz_args)
