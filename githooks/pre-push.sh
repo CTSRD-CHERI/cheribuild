@@ -101,13 +101,13 @@ do
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --allow-more-than-one-target --build --test --cpu=default -p __run_everything__
 		# Regression for --benchmark-clean-boot:
 		try_run ./cheribuild.py mibench-mips64 --benchmark --benchmark-clean-boot -p
-		try_run ./cheribuild.py mibench-mips64-hybrid --benchmark --benchmark-clean-boot -p
+		try_run ./cheribuild.py mibench-mips64-purecap --benchmark --benchmark-clean-boot -p
 		# Various jenkins things that have failed in the past
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --test --tarball -p libcxx-riscv64-purecap
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p run-mips64-purecap
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --test --tarball --cpu=cheri128 -p llvm-native
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --test --tarball --cpu=cheri128 -p llvm-native --without-sdk
-		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --cpu=cheri128 --test run-minimal-mips64-hybrid --keep-install-dir --install-prefix=/rootfs --cheribsd/build-fpga-kernels --no-clean -p
+		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --cpu=cheri128 --test run-minimal-mips64-purecap --keep-install-dir --install-prefix=/rootfs --cheribsd/build-fpga-kernels --no-clean -p
 
 		# Run python tests before pushing
 		if [ -e pytest.ini ]; then
