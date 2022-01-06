@@ -890,10 +890,9 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
                     success("===> started POSIX sh (PS1 already set)")
                 elif i == 1:  # POSIX sh without PS1
                     success("===> started POSIX sh (PS1 not set)")
-                    _set_pexpect_sh_prompt(child)
-            if i == 1:  # /bin/sh prompt
+            elif i == 1:  # /bin/sh prompt
                 success("===> got /sbin/sh prompt")
-                _set_pexpect_sh_prompt(child)
+            _set_pexpect_sh_prompt(child)
         elif i == boot_expect_strings.index(SHELL_OPEN):  # shell started from /etc/rc:
             child.expect_exact([INITIAL_PROMPT_SH], timeout=30)
             success("===> /etc/rc completed, got command prompt")
