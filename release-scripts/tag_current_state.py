@@ -38,4 +38,3 @@ for r in ["cheribsd", "gdb",
           # firmware forks where we can't use the morello/release-1.0 tag:
           "morello-trusted-firmware-a", "morello-edk2/edk2-platforms"]:
     add_tag_and_push(Path.home() / "cheri", r)
-

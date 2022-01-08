@@ -45,16 +45,16 @@ assert (_pexpect_dir / "pexpect/__init__.py").exists()
 sys.path.insert(1, str(_pexpect_dir))
 sys.path.insert(1, str(_pexpect_dir.parent / "ptyprocess"))
 sys.path.insert(1, str(_cheribuild_root))
-from pycheribuild.colour import AnsiColour, coloured
-from pycheribuild.utils import ConfigBase, fatal_error, get_global_config, init_global_config
-from pycheribuild.config.compilation_targets import CompilationTargets
-from pycheribuild.processutils import print_command
-from pycheribuild.boot_cheribsd import (boot_and_login, CheriBSDInstance, CheriBSDSpawnMixin, failure, info,
-                                        PretendSpawn, success, pexpect)
-from pycheribuild.filesystemutils import FileSystemUtils
+from pycheribuild.colour import AnsiColour, coloured  # noqa: E402
+from pycheribuild.utils import ConfigBase, fatal_error, get_global_config, init_global_config  # noqa: E402
+from pycheribuild.config.compilation_targets import CompilationTargets  # noqa: E402
+from pycheribuild.processutils import print_command  # noqa: E402
+from pycheribuild.boot_cheribsd import (boot_and_login, CheriBSDInstance, CheriBSDSpawnMixin, failure,  # noqa: E402
+                                        info, PretendSpawn, success, pexpect)
+from pycheribuild.filesystemutils import FileSystemUtils  # noqa: E402
 
-from serial.tools.list_ports import comports
-from serial.tools.list_ports_common import ListPortInfo
+from serial.tools.list_ports import comports  # noqa: E402
+from serial.tools.list_ports_common import ListPortInfo  # noqa: E402
 
 VIVADO_SCRIPT = b"""
 # Setup some variables

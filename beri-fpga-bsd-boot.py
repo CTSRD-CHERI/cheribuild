@@ -51,10 +51,10 @@ assert (_pexpect_dir / "pexpect/__init__.py").exists()
 sys.path.insert(1, str(_pexpect_dir))
 sys.path.insert(1, str(_pexpect_dir.parent / "ptyprocess"))
 sys.path.insert(1, str(_cheribuild_root))
-from pycheribuild import boot_cheribsd
-from pycheribuild.qemu_utils import QemuOptions
-from pycheribuild.config.compilation_targets import CompilationTargets
-import pexpect
+from pycheribuild import boot_cheribsd  # noqa: E402
+from pycheribuild.qemu_utils import QemuOptions  # noqa: E402
+from pycheribuild.config.compilation_targets import CompilationTargets  # noqa: E402
+import pexpect  # noqa: E402
 
 ##########################
 # Command line arguments #
