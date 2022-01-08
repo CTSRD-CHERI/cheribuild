@@ -28,8 +28,7 @@ jobs:
     - name: Lint with flake8
       run: |
         # stop the build if there are any flake8 warnings
-        # TODO: --max-complexity=20
-        flake8 pycheribuild/ tests/ test-scripts/ --count --max-line-length=120 --show-source --statistics
+        flake8
     - name: Test with pytest
       run: |
         pytest
