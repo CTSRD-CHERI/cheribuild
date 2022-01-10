@@ -410,7 +410,7 @@ class BuildBsdUserQEMU(BuildQEMUBase):
                                default_branch="qemu-cheri-bsd-user",
                                force_branch=True)
     native_install_dir = DefaultInstallDir.BSD_USER_SDK
-    default_targets = "riscv64cheri-bsd-user"
+    default_targets = "aarch64-bsd-user,riscv64-bsd-user,riscv64cheri-bsd-user"
     default_use_smbd = False
     target = "bsd-user-qemu"
     hide_options_from_help = True
