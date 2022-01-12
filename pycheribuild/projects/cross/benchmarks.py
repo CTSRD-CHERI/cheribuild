@@ -577,6 +577,8 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
 
     def configure(self, **kwargs):
         self.configure_args.append("--enable-unixdomain")
+        self.configure_args.append("--program-prefix=''")
+        self.configure_args.append("--program-suffix=''")
         if self.hw_counters:
             self.configure_args.append("--enable-pmc={}".format(self.hw_counters))
         self.add_configure_vars(ac_cv_func_setpgrp_void="yes")
