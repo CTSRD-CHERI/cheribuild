@@ -1587,6 +1587,9 @@ class BuildCHERIBSD(BuildFreeBSD):
             "caprevoke-kernel", show_help=True, _allow_unknown_targets=True,
             only_add_for_targets=CompilationTargets.ALL_CHERIBSD_CHERI_TARGETS_WITH_HYBRID,
             help="Build kernel with caprevoke support (experimental)")
+
+        cls.extra_configs = cls.add_config_option("extra-kernel-configs", metavar="CONFIG", default=[], kind=list,
+                                                  nargs="+", help="Additional kernel configuration files to build")
         if kernel_only_target:
             return  # The remaining options only affect the userspace build
         cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=False,
@@ -1599,6 +1602,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         configs = self.extra_kernel_configs()
         self.extra_kernels += [c.kernconf for c in configs if not c.mfsroot]
         self.extra_kernels_with_mfs += [c.kernconf for c in configs if c.mfsroot]
+        self.extra_kernels += self.extra_configs
 
     def get_default_kernel_abi(self) -> KernelABI:
         # XXX: Because the config option has _allow_unknown_targets it exists
@@ -1676,7 +1680,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "list[str]":
         default = super().get_kernel_configs(platform)
         extra = filter_kernel_configs(self.extra_kernel_configs(), platform=platform, kABI=None)
-        return default + [c.kernconf for c in extra]
+        return default + [c.kernconf for c in extra] + self.extra_configs
 
     def setup(self) -> None:
         super().setup()
