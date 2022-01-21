@@ -65,9 +65,15 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     return config.output_root / ("rootfs" + project.build_configuration_suffix(xtarget))
 
 
-def cheribsd_mfsroot_build_dir(config: CheriConfig, project: "SimpleProject"):
+def cheribsd_reuse_build_dir(config: CheriConfig, project: "SimpleProject"):
     build_cheribsd = BuildCHERIBSD.get_instance(project, config)
     return build_cheribsd.default_build_dir(config, build_cheribsd)
+
+
+def cheribsd_release_install_dir(config: CheriConfig, project: "BuildCheriBSDRelease"):
+    assert isinstance(project, BuildCheriBSDRelease)
+    xtarget = project.crosscompile_target
+    return config.output_root / ("cheribsd-release" + project.build_configuration_suffix(xtarget))
 
 
 def _clear_dangerous_make_env_vars():
@@ -1845,7 +1851,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     dependencies = ["disk-image-mfs-root"]
     repository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD, do_update=True)
     supported_architectures = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
-    default_build_dir = ComputedDefaultValue(function=cheribsd_mfsroot_build_dir,
+    default_build_dir = ComputedDefaultValue(function=cheribsd_reuse_build_dir,
                                              as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
     # This exists specifically for this target
     has_default_buildkernel_kernel_config = False
@@ -1967,6 +1973,87 @@ class BuildBesspinCheriBsdMfsKernel(BuildCheriBsdMfsKernel):
     def mfs_root_image_class(self):
         from ..disk_image import BuildBesspinMfsRootCheriBSDDiskImage
         return BuildBesspinMfsRootCheriBSDDiskImage
+
+
+class BuildCheriBSDRelease(BuildCHERIBSD):
+    target = "cheribsd-release"
+    dependencies = ["cheribsd"]
+    repository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD)
+    supported_architectures = [CompilationTargets.CHERIBSD_MORELLO_PURECAP]
+    _always_add_suffixed_targets = True
+    default_build_dir = ComputedDefaultValue(function=cheribsd_reuse_build_dir,
+                                             as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
+    _default_install_dir_fn = cheribsd_release_install_dir
+    # We want the CheriBSD config options as well, so that defaults (e.g. build-alternate-abi-kernels) are inherited.
+    _config_inherits_from = BuildCHERIBSD
+
+    @property
+    def release_objdir(self):
+        result = self.objdir.parent / "release"
+        if result.exists() or self.config.pretend:
+            return result
+        self.warning("Could not infer release objdir")
+        return None
+
+    def process(self):
+        if self.config.clean:
+            release_objdir = self.release_objdir
+            if release_objdir:
+                with self.async_clean_directory(release_objdir):
+                    self.verbose_print("Cleaning ", release_objdir)
+
+        # release/Makefile needs to install both world and kernel to create
+        # images, so start with the arguments for the combination of the two.
+        kernconf = " ".join(self.get_kernel_configs())
+        release_args = self.installworld_args.copy()
+        release_args.update(self.kernel_make_args_for_config(kernconf, None).copy())
+
+        # DISTDIR contains OBJTOP already when doing the various recursive
+        # makes, adding an extra level isn't needed and breaks things, and we
+        # don't want installworld's. Ideally release/Makefile would just set
+        # DESTDIR= for the various recursive makes that are sensitive to it and
+        # need it to be empty. Note DESTDIR=/ breaks too, we don't want a
+        # trailing slash as Makefile.inc1 uses DESTDIR=${DESTDIR}/... for
+        # various things and we need DESTDIR to be a strict prefix of the
+        # installed file paths so it's stripped in the METALOG. We also want
+        # the default METALOG rather than our split name.
+        del release_args.env_vars["DESTDIR"]
+        del release_args.env_vars["METALOG"]
+
+        # make.py forces changing directory to the source root before calling
+        # the real make, so we need to bypass it. -C release won't work as the
+        # argument parsing and reassembling will separate them, but -Crelease
+        # makes it through unscathed and works.
+        release_args.add_flags("-Crelease")
+
+        # Release scripts seem to end up with OBJTOP not including
+        # TARGET.TARGET_ARCH, so manually set it here.
+        release_args.set_env(OBJTOP=self.objdir)
+
+        # TODO: Fix build system to pick these up from PATH rather than override it.
+        release_args.set_env(INSTALL="sh " + str(self.source_dir / "tools/install.sh"))
+        release_args.set_env(XZ_CMD=str(self.objdir / "tmp/legacy/usr/bin/xz -T 0"))
+
+        # Make our various bootstrap and cross tools available
+        # TODO: Do this automatically in the build system?
+        extra_path_entries = [
+            self.objdir / "tmp/legacy/usr/sbin",
+            self.objdir / "tmp/legacy/usr/bin",
+            self.objdir / "tmp/legacy/bin",
+            self.objdir / "tmp/obj-tools/usr.sbin/makefs",
+        ]
+        release_args.set_env(PATH=":".join(map(str, extra_path_entries)) + ":" +
+                                  release_args.env_vars.get("PATH", os.getenv("PATH")))
+
+        # DESTDIR for install target is where to install the media, as you'd
+        # expect, unlike the release target where it leaks into installworld
+        # etc recursive makes. Otherwise everything is the same, though many
+        # options are likely unused.
+        install_args = release_args.copy()
+        install_args.set_env(DESTDIR=self.install_dir)
+
+        self.run_make("release", options=release_args, parallel=False)
+        self.run_make("install", options=install_args, parallel=False)
 
 
 # def cheribsd_minimal_install_dir(config: CheriConfig, project: SimpleProject):
