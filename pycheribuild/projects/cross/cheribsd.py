@@ -949,6 +949,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kernel_options.set(DEBUG="-g")
         if extra_make_args:
             kernel_options.set(**extra_make_args)
+        if self.config.csetbounds_stats:
+            kernel_options.set(CHERI_SUBOBJECT_BOUNDS_STATS=True)
+
         return kernel_options
 
     def clean(self) -> ThreadJoiner:
@@ -1590,6 +1593,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
         cls.extra_configs = cls.add_config_option("extra-kernel-configs", metavar="CONFIG", default=[], kind=list,
                                                   nargs="+", help="Additional kernel configuration files to build")
+
         if kernel_only_target:
             return  # The remaining options only affect the userspace build
         cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=False,
