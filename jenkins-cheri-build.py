@@ -38,5 +38,6 @@ import sys
 if __name__ == "__main__":
     module_dir = Path(__file__).resolve().parent
     sys.path.append(str(module_dir))
+    import pycheribuild.check_version  # noqa: E402
     import pycheribuild.jenkins
     pycheribuild.jenkins.jenkins_main()
