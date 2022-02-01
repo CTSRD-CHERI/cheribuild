@@ -1254,7 +1254,7 @@ class MakeOptions(object):
                 v = "1" if v else "0"
             if isinstance(v, (Path, int)):
                 v = str(v)
-            assert isinstance(v, str), "Should only pass int/bool/str/Path here!"
+            assert isinstance(v, str), "Should only pass int/bool/str/Path here and not " + str(type(v))
             target_dict[k] = v
 
     def set(self, **kwargs):
