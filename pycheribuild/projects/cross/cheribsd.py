@@ -1416,12 +1416,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if install_to_sysroot_cmd:
                 install_to_sysroot_cmd += " &&  "
             install_cmd = install_to_sysroot_cmd + make_in_subdir + "install " + install_nometalog_cmd
-        if self.crosscompile_target.is_cheri_purecap() and not is_lib:
-            # for non-library targets we need to set WANT_CHERI=pure in the environment to get the binary
-            # to build as a CHERI binary
-            if any("WITH_CHERI_PURE" in x for x in make_args.all_commandline_args):
-                self.info("WITH_CHERI_PURE found in build args -> set WANT_CHERI?=pure for non-library", subdir)
-                make_args.set_env(WANT_CHERI="pure")
         colour_diags = "export CLANG_FORCE_COLOR_DIAGNOSTICS=always; " if self.config.clang_colour_diags else ""
         build_cmd = "{colour_diags} {clean} && {build} && {install} && echo \"  Done.\"".format(
             build=make_in_subdir + "all " + self.commandline_to_str(
