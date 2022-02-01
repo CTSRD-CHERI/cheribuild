@@ -180,6 +180,10 @@ class BuildLibXCBCursor(X11AutotoolsProject):
     dependencies = ["libxcb-render-util", "libxcb-image"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-cursor.git")
 
+    def __init__(self, config):
+        super().__init__(config)
+        self.add_required_system_tool("gperf", apt="gperf")
+
     def setup(self):
         super().setup()
         if not self.compiling_for_host():
@@ -422,7 +426,7 @@ class BuildTigerVNC(X11CMakeProject):
     def __init__(self, config):
         super().__init__(config)
         if self.compiling_for_host():
-            self.add_required_system_tool("fltk-config", homebrew="ftlk")
+            self.add_required_system_tool("fltk-config", homebrew="ftlk", apt="libfltk1.3-dev")
 
     def setup(self):
         super().setup()
