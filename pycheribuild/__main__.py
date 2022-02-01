@@ -249,8 +249,14 @@ def main():
     try:
         run_and_kill_children_on_exit(real_main)
     except Exception as e:
-        traceback.print_exc()
-        fatal_error("Unhandled exception:", e, fatal_when_pretending=True)
+        # If we are currently debugging, raise the exception to allow e.g. PyCharm's
+        # "break on exception that terminates execution" feature works.
+        debugger_attached = getattr(sys, 'gettrace', lambda: None)() is not None
+        if debugger_attached:
+            raise e
+        else:
+            traceback.print_exc()
+            fatal_error("Unhandled exception:", e, fatal_when_pretending=True)
 
 
 if __name__ == "__main__":
