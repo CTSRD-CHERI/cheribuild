@@ -729,7 +729,7 @@ class BuildKActivitiesStats(KDECMakeProject):
     target = "kactivities-stats"
     dependencies = ["kactivities"]
     repository = GitRepository("https://invent.kde.org/frameworks/kactivities-stats.git",
-                               force_branch=True, default_branch="work/adridg/reduce-boost")  # avoid boost dep
+                               force_branch=True, default_branch="master")
 
 
 class BuildKirigami(KDECMakeProject):
@@ -1038,8 +1038,7 @@ class BuildPoppler(CrossCompileCMakeProject):
 class BuildThreadWeaver(KDECMakeProject):
     target = "threadweaver"
     repository = GitRepository("https://invent.kde.org/frameworks/threadweaver.git",
-                               force_branch=True, default_branch="work/arichardson/cheri",
-                               url_override_reason="https://invent.kde.org/frameworks/threadweaver/-/merge_requests/5")
+                               force_branch=True, default_branch="master")
 
 
 # Doesn't build on FreeBSD properly:
