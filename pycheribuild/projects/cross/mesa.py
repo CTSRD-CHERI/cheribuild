@@ -76,9 +76,9 @@ class BuildMesa(CrossCompileMesonProject):
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config) + ["libdrm", "libglvnd"]
         if cls.include_wayland:
-            result.append("wayland")
+            result.extend(["wayland", "wayland-protocols"])
         if cls.include_x11:
-            result.extend(["libx11", "libxshmfence", "libxxf86vm"])
+            result.extend(["libx11", "libxshmfence", "libxxf86vm", "libxrandr"])
         return result
 
     def check_system_dependencies(self):
