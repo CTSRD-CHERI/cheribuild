@@ -58,6 +58,18 @@ def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
     return config.output_root / ("freebsd" + project.build_configuration_suffix(xtarget))
 
 
+def freebsd_reuse_build_dir(config: CheriConfig, project: "SimpleProject"):
+    build_freebsd = BuildFreeBSD.get_instance(project, config)
+    return build_freebsd.default_build_dir(config, build_freebsd)
+
+
+def freebsd_release_install_dir(config: CheriConfig, project: "BuildFreeBSDRelease"):
+    assert isinstance(project, BuildFreeBSDRelease)
+    xtarget = project.crosscompile_target
+    assert not xtarget.is_hybrid_or_purecap_cheri(), "FreeBSD does not build for CHERI (yet?)"
+    return config.output_root / ("freebsd-release" + project.build_configuration_suffix(xtarget))
+
+
 # noinspection PyProtectedMember
 def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     assert isinstance(project, BuildCHERIBSD)
@@ -1964,18 +1976,7 @@ class BuildBesspinCheriBsdMfsKernel(BuildCheriBsdMfsKernel):
         return BuildBesspinMfsRootCheriBSDDiskImage
 
 
-class BuildCheriBSDRelease(BuildCHERIBSD):
-    target = "cheribsd-release"
-    dependencies = ["cheribsd"]
-    repository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD)
-    supported_architectures = [CompilationTargets.CHERIBSD_MORELLO_PURECAP]
-    _always_add_suffixed_targets = True
-    default_build_dir = ComputedDefaultValue(function=cheribsd_reuse_build_dir,
-                                             as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
-    _default_install_dir_fn = cheribsd_release_install_dir
-    # We want the CheriBSD config options as well, so that defaults (e.g. build-alternate-abi-kernels) are inherited.
-    _config_inherits_from = BuildCHERIBSD
-
+class BuildFreeBSDReleaseMixin:
     @property
     def release_objdir(self):
         result = self.objdir.parent / "release"
@@ -2043,6 +2044,35 @@ class BuildCheriBSDRelease(BuildCHERIBSD):
 
         self.run_make("release", options=release_args, parallel=False)
         self.run_make("install", options=install_args, parallel=False)
+
+
+class BuildFreeBSDRelease(BuildFreeBSDReleaseMixin, BuildFreeBSD):
+    target = "freebsd-release"
+    dependencies = ["freebsd"]
+    repository = ReuseOtherProjectRepository(source_project=BuildFreeBSD)
+    supported_architectures = [CompilationTargets.FREEBSD_AARCH64]
+    _always_add_suffixed_targets = True
+    default_build_dir = ComputedDefaultValue(function=freebsd_reuse_build_dir,
+                                             as_string=lambda cls: BuildFreeBSD.project_build_dir_help())
+    _default_install_dir_fn = freebsd_release_install_dir
+    # We want the FreeBSD config options as well so the release installworld,
+    # distributeworld etc. calls match what was built.
+    _config_inherits_from = BuildFreeBSD
+
+
+class BuildCheriBSDRelease(BuildFreeBSDReleaseMixin, BuildCHERIBSD):
+    target = "cheribsd-release"
+    dependencies = ["cheribsd"]
+    repository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD)
+    supported_architectures = [CompilationTargets.CHERIBSD_AARCH64,
+                               CompilationTargets.CHERIBSD_MORELLO_PURECAP]
+    _always_add_suffixed_targets = True
+    default_build_dir = ComputedDefaultValue(function=cheribsd_reuse_build_dir,
+                                             as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
+    _default_install_dir_fn = cheribsd_release_install_dir
+    # We want the CheriBSD config options as well so the release installworld,
+    # distributeworld etc. calls match what was built.
+    _config_inherits_from = BuildCHERIBSD
 
 
 # def cheribsd_minimal_install_dir(config: CheriConfig, project: SimpleProject):
