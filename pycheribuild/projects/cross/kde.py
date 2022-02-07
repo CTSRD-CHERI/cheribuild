@@ -33,7 +33,7 @@ from pathlib import Path
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
 from .freetype import BuildFontConfig, BuildFreeType2
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
-from .wayland import BuildLibInput, BuildWayland
+from .wayland import BuildWayland
 from .x11 import BuildLibXCB
 from ..project import (CMakeProject, DefaultInstallDir, GitRepository, MakeCommandKind,
                        ReuseOtherProjectDefaultTargetRepository, TargetAliasWithDependencies)
@@ -212,9 +212,16 @@ class BuildPlasmaWaylandProtocols(KDECMakeProject):
 #
 class BuildKWayland(KDECMakeProject):
     target = "kwayland"
-    dependencies = ["libglvnd", "wayland-protocols"]
     repository = GitRepository("https://invent.kde.org/frameworks/kwayland")
     _uses_wayland_scanner = True
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        result = super().dependencies(config) + ["libglvnd", "wayland-protocols", "qtwayland",
+                                                 "plasma-wayland-protocols"]
+        if cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
+            result.append("linux-input-h")
+        return result
 
 
 class BuildBreezeIcons(KDECMakeProject):
@@ -847,9 +854,15 @@ class BuildKWin(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/plasma/kwin.git",
                                temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
                                url_override_reason="Needs lots of ifdefs for -no-opengl QtBase and no-wayland")
-    dependencies = ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker", "libinput", "qttools"]
-    # TODO: Not yet:
-    # "kwayland-server", "libepoxy", "mesa"
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        # TODO: Not yet: "kwayland-server", "libepoxy", "libglvnd"
+        result = super().dependencies(config) + ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker",
+                                                 "libinput", "qttools"]
+        if cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
+            result.append("linux-input-h")
+        return result
 
     def setup(self):
         super().setup()
@@ -857,13 +870,6 @@ class BuildKWin(KDECMakeProject):
         self.add_cmake_options(KWIN_BUILD_WAYLAND=False)
         # We build Qt wihtout OpenGL support, so we shouldn't build the OpenGL code.
         self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_epoxy=True)
-        if self.target_info.is_freebsd():
-            # To get linux/input.h on FreeBSD
-            if not BuildLibInput.get_source_dir(self).exists():
-                self.warning("Need to clone libinput first to get linux/input.h compat header.")
-                self.ask_for_confirmation("Would you like to clone it now?")
-                BuildLibInput.get_instance(self).update()
-            self.COMMON_FLAGS.append("-isystem" + str(BuildLibInput.get_source_dir(self) / "include"))
 
 
 class BuildLibKScreen(KDECMakeProject):

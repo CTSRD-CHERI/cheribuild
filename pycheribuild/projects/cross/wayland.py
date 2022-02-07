@@ -26,7 +26,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
-from ..project import DefaultInstallDir, GitRepository
+from ..project import DefaultInstallDir, GitRepository, SimpleProject
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import Linkage
@@ -65,24 +65,42 @@ class BuildLibUdevDevd(CrossCompileMesonProject):
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
 
 
+# Some projects unconditionally include linux/input.h to exist. For FreeBSD dev/evdev/input.h provides a
+# (mostly/fully?) interface, so we just include that instead.
+# XXX: the evdev-proto port downloads the Linux headers and patches those instead, but it seems to me that creating
+# a file that includes the native dev/evdev/*.h is less fragile since it doesn't rely on ioctl() numbers being
+# compatible, etc.
+class BuildLinux_Input_H(SimpleProject):
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
+
+    def process(self):
+        evdev_headers = ("input.h", "input-event-codes.h", "uinput.h")
+        self.makedirs(self.sdk_sysroot / "usr/include/linux")
+        for header in evdev_headers:
+            dev_evdev_h = self.sdk_sysroot / "usr/include/dev/evdev" / header
+            if not dev_evdev_h.is_file():
+                self.fatal("Missing evdev header:", dev_evdev_h)
+            self.write_file(self.sdk_sysroot / "usr/include/linux" / header,
+                            contents=f"#include <dev/evdev/{header}>\n", overwrite=True)
+
+
 class BuildMtdev(CrossCompileAutotoolsProject):
     target = "mtdev"
     needs_full_history = True  # can't use --depth with http:// git repo
     repository = GitRepository("http://bitmath.org/git/mtdev.git")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
+        if cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
+            return super().dependencies(config) + ["linux-input-h"]
+        return super().dependencies(config)
+
     def linkage(self):
         return Linkage.STATIC
 
     def setup(self):
         super().setup()
-        if self.target_info.is_freebsd():
-            # To get linux/input.h on FreeBSD
-            if not BuildLibInput.get_source_dir(self).exists():
-                self.warning("Need to clone libinput first to get linux/input.h compat header.")
-                self.ask_for_confirmation("Would you like to clone it now?")
-                BuildLibInput.get_instance(self).update()
-            self.COMMON_FLAGS.append("-isystem" + str(BuildLibInput.get_source_dir(self) / "include"))
         self.COMMON_FLAGS.append("-fPIC")  # need a pic archive since it's linked into a .so
         self.cross_warning_flags.append("-Wno-error=format")
 
