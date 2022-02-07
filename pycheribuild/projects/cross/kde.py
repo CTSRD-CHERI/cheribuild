@@ -736,9 +736,7 @@ class BuildKirigami(KDECMakeProject):
     target = "kirigami"
     dependencies = ["qtquickcontrols2", "extra-cmake-modules", "qtgraphicaleffects"]
     repository = GitRepository("https://invent.kde.org/frameworks/kirigami.git",
-                               temporary_url_override="https://invent.kde.org/arichardson/kirigami.git",
-                               url_override_reason="Needs some compilation fixes for -no-opengl QtBase")
-    # TODO: DISABLE_DBUS=True?
+                               old_urls=[b"https://invent.kde.org/arichardson/kirigami.git"])
 
 
 class BuildPlasmaFramework(KDECMakeProject):
