@@ -52,8 +52,7 @@ class BuildLibGlvnd(CrossCompileMesonProject):
     target = "libglvnd"
     dependencies = ["libx11"]
     repository = GitRepository("https://gitlab.freedesktop.org/glvnd/libglvnd.git",
-                               temporary_url_override="https://gitlab.freedesktop.org/arichardson/libglvnd.git",
-                               url_override_reason="https://gitlab.freedesktop.org/glvnd/libglvnd/-/merge_requests/263")
+                               old_urls=[b"https://gitlab.freedesktop.org/arichardson/libglvnd.git"])
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def setup(self):
