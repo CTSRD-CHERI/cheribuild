@@ -31,9 +31,8 @@ from ..project import ExternallyManagedSourceRepository, GitRepository
 
 class BuildChocolate_Doom(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/chocolate-doom/chocolate-doom.git",
-                               temporary_url_override="https://github.com/jrtc27/chocolate-doom.git",
-                               url_override_reason="https://github.com/chocolate-doom/chocolate-doom/pull/1385",
-                               default_branch="cheri", force_branch=True)
+                               old_urls=[b"https://github.com/jrtc27/chocolate-doom.git"],
+                               default_branch="master", force_branch=True)
     dependencies = ["sdl", "sdl-mixer", "sdl-net", "libpng"]
 
     def configure(self, **kwargs):
