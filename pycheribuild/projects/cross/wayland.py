@@ -147,6 +147,11 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
     target = "libffi"
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
+    def setup(self):
+        super().setup()
+        if self.get_compiler_info(self.CC).supports_warning_flag("-Werror=shorten-cap-to-int"):
+            self.cross_warning_flags.append("-Werror=shorten-cap-to-int")
+
     def configure(self, **kwargs):
         self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
         super().configure(**kwargs)
