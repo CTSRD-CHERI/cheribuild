@@ -28,7 +28,7 @@
 import shutil
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
-from ..project import DefaultInstallDir, GitRepository, SimpleProject
+from ..project import DefaultInstallDir, GitRepository, SimpleProject, AutotoolsProject
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import Linkage
@@ -143,6 +143,13 @@ class BuildLibInput(CrossCompileMesonProject):
         # Does not prepend sysroot to prefix:
         if self.target_info.is_freebsd():
             self.add_meson_options(**{"epoll-dir": BuildEPollShim.get_install_dir(self)})
+
+
+class BuildDejaGNU(AutotoolsProject):
+    repository = GitRepository("https://git.savannah.gnu.org/git/dejagnu.git",
+                               temporary_url_override="https://github.com/arichardson/dejagnu.git",
+                               url_override_reason="Remote test execution is broken(-ish) upstream")
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
 
 class BuildLibFFI(CrossCompileAutotoolsProject):
