@@ -65,10 +65,8 @@ class BuildCrossCompiledCMake(CMakeProject):
     default_build_type = BuildType.RELEASE  # Don't include debug info by default
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     # Also build cmake hybrid so that -hybrid projects can use it with --test
-    # TODO: commit patches to build purecap
-    # TODO: fix purecap ctest
-    supported_architectures = (CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS +
-                               CompilationTargets.ALL_CHERIBSD_HYBRID_TARGETS +
+    # TODO: fix purecap ctest: libuv passes pointers to itself through a pipe
+    supported_architectures = (CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS +
                                CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS)
 
     @property
