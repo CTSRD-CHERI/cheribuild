@@ -25,11 +25,14 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+import shutil
+
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
 from ..project import DefaultInstallDir, GitRepository, SimpleProject
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import Linkage
+from ...utils import OSInfo
 
 
 class BuildEPollShim(CrossCompileCMakeProject):
@@ -156,6 +159,15 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
         self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
         super().configure(**kwargs)
 
+    def run_tests(self):
+        runtest_cmd = shutil.which("runtest")
+        if not runtest_cmd:
+            self.dependency_error(
+                OSInfo.install_instructions("runtest", False, default="dejagnu", apt="dejagnu", homebrew="deja-gnu"),
+                cheribuild_target="dejagnu")
+        if self.compiling_for_host():
+            self.run_cmd("make", "check", "RUNTESTFLAGS=-a", cwd=self.build_dir,
+                         env=dict(DEJAGNU=self.source_dir / ".ci/site.exp", BOARDSDIR=self.source_dir / ".ci"))
 
 class BuildWayland(CrossCompileMesonProject):
     # We need a native wayland-scanner during the build
