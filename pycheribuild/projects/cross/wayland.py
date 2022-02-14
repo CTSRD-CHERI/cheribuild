@@ -26,6 +26,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 import shutil
+from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
 from ..project import DefaultInstallDir, GitRepository, SimpleProject, AutotoolsProject
@@ -33,6 +34,7 @@ from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import Linkage
 from ...utils import OSInfo
+from ...processutils import get_program_version
 
 
 class BuildEPollShim(CrossCompileCMakeProject):
@@ -175,6 +177,17 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
         if self.compiling_for_host():
             self.run_cmd("make", "check", "RUNTESTFLAGS=-a", cwd=self.build_dir,
                          env=dict(DEJAGNU=self.source_dir / ".ci/site.exp", BOARDSDIR=self.source_dir / ".ci"))
+        elif self.target_info.is_cheribsd():
+            # We need two minor fixes for SSH execution:
+            runtest_ver = get_program_version(Path(runtest_cmd or "runtest"), program_name=b"DejaGnu",
+                                              config=self.config)
+            if runtest_ver < (1, 6, 4):
+                self.dependency_error("DejaGnu version", runtest_ver, "cannot be used to run tests remotely,",
+                                      "please install a newer version with cheribuild", cheribuild_target="dejagnu")
+            self.target_info.run_cheribsd_test_script("run_libffi_tests.py", "--test-timeout", str(120 * 60),
+                                                      mount_builddir=True, mount_sourcedir=True, mount_sysroot=False,
+                                                      use_full_disk_image=True)
+
 
 class BuildWayland(CrossCompileMesonProject):
     # We need a native wayland-scanner during the build
