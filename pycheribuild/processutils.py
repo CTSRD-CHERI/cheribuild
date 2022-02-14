@@ -708,7 +708,11 @@ def get_program_version(program: Path, command_args: tuple = None, component_kin
         config = get_global_config()  # TODO: remove
     if program_name is None:
         program_name = program.name.encode("utf-8")
-    stdout = get_version_output(program, command_args=command_args, config=config)
+    try:
+        stdout = get_version_output(program, command_args=command_args, config=config)
+    except subprocess.CalledProcessError as e:
+        fatal_error("Failed to determine version for", program, ":", e)
+        return 0, 0, 0
     return extract_version(stdout, component_kind, regex, program_name)
 
 
