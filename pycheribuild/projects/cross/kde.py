@@ -630,6 +630,17 @@ class BuildKIO(KDECMakeProject):
     _has_qt_designer_plugin = True
 
 
+class BuildKWallet(KDECMakeProject):
+    target = "kwallet"
+    repository = GitRepository("https://invent.kde.org/frameworks/kwallet.git")
+    dependencies = ["kconfig", "kwindowsystem", "ki18n", "kcoreaddons"]
+    # For KWalletD: ["kdbusaddons", "kwidgetsaddons", "kservice", "knotifications", "gpgme", "gcrypt"]
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(BUILD_KWALLETD=False)  # TODO: needs gpgmepp and gcrypt
+
+
 # frameworks/kmediaplayer: frameworks/ki18n
 # frameworks/kmediaplayer: frameworks/kparts
 # frameworks/kmediaplayer: frameworks/kxmlgui
@@ -651,16 +662,6 @@ class BuildKIO(KDECMakeProject):
 # frameworks/ktexteditor: frameworks/sonnet
 # frameworks/ktexteditor: frameworks/kxmlgui
 # frameworks/ktexteditor: frameworks/syntax-highlighting
-# frameworks/kwallet: frameworks/kconfig
-# frameworks/kwallet: frameworks/kcoreaddons
-# frameworks/kwallet: frameworks/kdbusaddons
-# frameworks/kwallet: frameworks/kiconthemes
-# frameworks/kwallet: frameworks/ki18n
-# frameworks/kwallet: frameworks/knotifications
-# frameworks/kwallet: frameworks/kservice
-# frameworks/kwallet: frameworks/kwindowsystem
-# frameworks/kwallet: frameworks/kwidgetsaddons
-# frameworks/kwallet: third-party/gpgme
 # frameworks/purpose: frameworks/kcoreaddons
 # frameworks/purpose: frameworks/kconfig
 # frameworks/purpose: frameworks/ki18n
