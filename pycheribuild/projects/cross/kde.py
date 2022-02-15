@@ -808,14 +808,8 @@ class BuildKScreenLocker(KDECMakeProject):
     target = "kscreenlocker"
     repository = GitRepository("https://invent.kde.org/plasma/kscreenlocker.git",
                                old_urls=[b"https://invent.kde.org/arichardson/kscreenlocker.git"])
-    dependencies = ["kwindowsystem", "kxmlgui", "kwindowsystem", "kidletime", "libxcb"]
-    # TODO: Not yet:
-    # "kwayland", "layer-shell-tq"
-    # _uses_wayland_scanner = True
-
-    def setup(self):
-        super().setup()
-        self.add_cmake_options(KSCREENLOCKER_BUILD_WAYLAND=False)
+    dependencies = ["kwindowsystem", "kxmlgui", "kwindowsystem", "kidletime", "libxcb", "kwayland", "layer-shell-qt"]
+    _uses_wayland_scanner = True
 
 
 class BuildKWaylandServer(KDECMakeProject):
