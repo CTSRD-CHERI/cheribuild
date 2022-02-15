@@ -869,13 +869,8 @@ class BuildKWin(KDECMakeProject):
 class BuildLibKScreen(KDECMakeProject):
     target = "libkscreen"
     repository = GitRepository("https://invent.kde.org/plasma/libkscreen.git",
-                               temporary_url_override="https://invent.kde.org/arichardson/libkscreen.git",
-                               url_override_reason="Support for no-wayland")
-    dependencies = ["qtx11extras"]
-
-    def setup(self):
-        super().setup()
-        self.add_cmake_options(LIBKSCREEN_BUILD_WAYLAND=False)
+                               old_urls=[b"https://invent.kde.org/arichardson/libkscreen.git"])
+    dependencies = ["qtx11extras", "kwayland"]
 
 
 class BuildLibKSysguard(KDECMakeProject):
