@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import copy
 import inspect
 import os
 import shlex
@@ -43,6 +44,7 @@ from ..utils import cached_property, find_free_port, is_jenkins_build, SocketAnd
 if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine
     from ..projects.project import Project, SimpleProject  # no-combine
+    from ..projects.run_qemu import AbstractLaunchFreeBSD  # no-combine
 
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
@@ -350,6 +352,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
         raise NotImplementedError("Only implemented for CheriBSD")
 
+    def _get_run_project(self) -> "typing.Type[AbstractLaunchFreeBSD]":
+        from ..projects.run_qemu import LaunchFreeBSD
+        return LaunchFreeBSD
+
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
                                  use_full_disk_image=False, mount_installdir=False,
@@ -363,19 +369,19 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         rootfs_xtarget = xtarget.get_rootfs_target()
         from ..qemu_utils import QemuOptions
         qemu_options = QemuOptions(rootfs_xtarget)
+        run_instance = self._get_run_project().get_instance(self.project,
+                                                            cross_target=rootfs_xtarget)  # type: AbstractLaunchFreeBSD
         if rootfs_xtarget.cpu_architecture not in (CPUArchitecture.MIPS64, CPUArchitecture.RISCV64,
                                                    CPUArchitecture.X86_64, CPUArchitecture.AARCH64):
             self.project.warning("CheriBSD test scripts currently only work for MIPS, RISC-V, AArch64, and x86-64")
             return
         if use_full_disk_image:
             assert self.is_cheribsd(), "Not supported for FreeBSD yet"
-            from ..projects.run_qemu import LaunchCheriBSD
-            instance = LaunchCheriBSD.get_instance(self.project, cross_target=rootfs_xtarget)
             if qemu_options.can_boot_kernel_directly:
                 if kernel_path is None and "--kernel" not in self.config.test_extra_args:
-                    kernel_path = instance.current_kernel
+                    kernel_path = run_instance.current_kernel
             if disk_image_path is None and "--disk-image" not in self.config.test_extra_args:
-                disk_image_path = instance.disk_image
+                disk_image_path = run_instance.disk_image
         elif not qemu_options.can_boot_kernel_directly:
             # We need to boot the disk image instead of running the kernel directly (amd64)
             assert rootfs_xtarget.is_any_x86() or rootfs_xtarget.is_aarch64(
@@ -415,26 +421,14 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         if kernel_path and "--kernel" not in self.config.test_extra_args:
             cmd.extend(["--kernel", kernel_path])
         if "--qemu-cmd" not in self.config.test_extra_args:
-            qemu_path = None
-            if rootfs_xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-                # Only use Morello QEMU for Morello for now, not AArch64 too,
-                # as we don't want to force everyone to build Morello QEMU
-                # while it's in a separate branch.
-                from ..projects.build_qemu import BuildMorelloQEMU
-                qemu_path = BuildMorelloQEMU.qemu_binary(self.project)
-                if not qemu_path.exists():
-                    self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
-            elif rootfs_xtarget.is_hybrid_or_purecap_cheri():
-                from ..projects.build_qemu import BuildQEMU
-                qemu_path = BuildQEMU.qemu_binary(self.project)
-                if not qemu_path.exists():
-                    self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
-            else:
-                binary_name = "qemu-system-" + qemu_options.qemu_arch_sufffix
-                if (self.config.qemu_bindir / binary_name).is_file():
-                    qemu_path = self.config.qemu_bindir / binary_name
-            if qemu_path is not None:
-                cmd.extend(["--qemu-cmd", qemu_path])
+            chosen_qemu = run_instance.chosen_qemu
+            # FIXME: this is rather ugly: In order to access the binary property we have to call setup() first, but
+            #  we can't call setup() on the run_instance since that might result in multiple calls to setup().
+            # noinspection PyProtectedMember
+            if not chosen_qemu._setup:
+                chosen_qemu = copy.deepcopy(chosen_qemu)  # avoid modifying the object referenced by run_instance
+                chosen_qemu.setup(run_instance)
+            cmd.extend(["--qemu-cmd", chosen_qemu.binary])
         if mount_builddir and self.project.build_dir and "--build-dir" not in self.config.test_extra_args:
             cmd.extend(["--build-dir", self.project.build_dir])
         if mount_sourcedir and self.project.source_dir and "--source-dir" not in self.config.test_extra_args:
@@ -479,6 +473,10 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def _get_compiler_project(self) -> "typing.Type[Project]":
         from ..projects.cross.llvm import BuildCheriLLVM
         return BuildCheriLLVM
+
+    def _get_run_project(self) -> "typing.Type[AbstractLaunchFreeBSD]":
+        from ..projects.run_qemu import LaunchCheriBSD
+        return LaunchCheriBSD
 
     @classmethod
     def is_cheribsd(cls):
@@ -652,6 +650,10 @@ class CheriBSDFettTargetInfo(CheriBSDTargetInfo):
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         from ..projects.cross.cheribsd import BuildCheriBSDFett
         return BuildCheriBSDFett.get_instance(self.project, cross_target=xtarget)
+
+    def _get_run_project(self) -> "typing.Type[AbstractLaunchFreeBSD]":
+        from ..projects.cross.fett import LaunchFett
+        return LaunchFett
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
