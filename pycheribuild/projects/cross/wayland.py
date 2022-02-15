@@ -217,10 +217,16 @@ class BuildWayland(CrossCompileMesonProject):
         if self.target_info.is_macos():
             # Only build wayland-scanner
             self.add_meson_options(libraries=False)
+        # We have to install the wayland.xml file, which only happens if we enable the scanner option.
+        self.add_meson_options(scanner=True)
+
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        # If we install the cross-compiled wayland-scanner, downstream projects will try to use the cross-compiled
+        # version instead of the host binary, so for now delete wayland-scanner from the bindir after installation
+        # FIXME: fix the downstream projects (e.g. kwayland-server) instead...
         if not self.compiling_for_host():
-            # Don't cross-compile wayland-scanner, otherwise downstream projects will try to use the cross-compiled
-            # version instead of the host binary
-            self.add_meson_options(scanner=False)
+            self.delete_file(self.install_dir / "bin/wayland-scanner", warn_if_missing=True)
 
 
 class BuildWaylandProtocols(CrossCompileMesonProject):
