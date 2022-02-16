@@ -895,7 +895,8 @@ class BuildPlasmaWorkspace(KDECMakeProject):
                                url_override_reason="Lots of no-wayland changes etc.")
     dependencies = ["xprop", "xsetroot", "plasma-framework", "kwin", "breeze", "kidletime", "kitemmodels", "kcmutils",
                     "knotifyconfig", "kded", "kinit", "kscreenlocker", "libkscreen", "libxft", "libxtst", "kpeople",
-                    "kparts", "prison", "krunner", "kactivities-stats", "libksysguard", "kunitconversion"]
+                    "kparts", "prison", "krunner", "kactivities-stats", "libksysguard", "kunitconversion", "kwallet",
+                    "ktexteditor", "kwayland", "layer-shell-qt"]
     # needs OpenGL: "kquickcharts"
 
     def setup(self):
