@@ -872,6 +872,7 @@ class BuildLibKScreen(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/plasma/libkscreen.git",
                                old_urls=[b"https://invent.kde.org/arichardson/libkscreen.git"])
     dependencies = ["qtx11extras", "kwayland"]
+    _uses_wayland_scanner = True
 
 
 class BuildLibKSysguard(KDECMakeProject):
