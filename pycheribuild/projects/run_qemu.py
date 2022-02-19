@@ -128,6 +128,7 @@ class LaunchQEMUBase(SimpleProject):
     _can_provide_src_via_smb = False
     ssh_forwarding_port = None  # type: int
     custom_qemu_smb_mount = None
+    needs_sysroot = False
     # Add a virtio RNG to speed up random number generation
     _add_virtio_rng = True
     _enable_smbfs_support = True
