@@ -890,7 +890,9 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def sysroot_dir(self) -> Path:
-        raise ValueError("Should not have a valid sysroot")
+        suffix = self.target.get_rootfs_target().generic_arch_suffix
+        sysroot_dir = self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name
+        return sysroot_dir / "baremetal" / suffix / self.target_triple
 
     @property
     def must_link_statically(self):
@@ -908,8 +910,7 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
     def triple_for_target(cls, target, config, include_version: bool) -> str:
         if target.cpu_architecture == CPUArchitecture.ARM32:
             return "arm-none-eabi"
-        assert target.is_aarch64(include_purecap=True)
-        if target.is_hybrid_or_purecap_cheri():
+        if target.is_aarch64(include_purecap=True):
             return "aarch64-unknown-elf"
         assert False, "Other baremetal cases have not been tested yet!"
 
@@ -919,8 +920,7 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs) -> typing.List[str]:
-        if xtarget.cpu_architecture == CPUArchitecture.ARM32 or xtarget.is_hybrid_or_purecap_cheri(
-                [CPUArchitecture.AARCH64]):
+        if xtarget.cpu_architecture == CPUArchitecture.ARM32 or xtarget.is_aarch64(include_purecap=True):
             return super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs)
         raise ValueError("Other baremetal cases have not been tested yet!")
 
@@ -1106,6 +1106,9 @@ class CompilationTargets(BasicCompilationTargets):
                                                           NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                           hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
 
+    MORELLO_BAREMETAL_NO_CHERI = CrossCompileTarget("morello-aarch64", CPUArchitecture.AARCH64,
+                                                    MorelloBaremetalTargetInfo, is_cheri_hybrid=False,
+                                                    is_cheri_purecap=False)
     MORELLO_BAREMETAL_HYBRID = CrossCompileTarget("morello-hybrid", CPUArchitecture.AARCH64,
                                                   MorelloBaremetalTargetInfo, is_cheri_hybrid=True,
                                                   is_cheri_purecap=False)
@@ -1178,7 +1181,10 @@ class CompilationTargets(BasicCompilationTargets):
                                        BAREMETAL_NEWLIB_RISCV32_PURECAP,
                                        BAREMETAL_NEWLIB_RISCV64,
                                        BAREMETAL_NEWLIB_RISCV64_HYBRID,
-                                       BAREMETAL_NEWLIB_RISCV64_PURECAP]
+                                       BAREMETAL_NEWLIB_RISCV64_PURECAP,
+                                       MORELLO_BAREMETAL_NO_CHERI,
+                                       MORELLO_BAREMETAL_HYBRID,
+                                       MORELLO_BAREMETAL_PURECAP]
     ALL_SUPPORTED_RTEMS_TARGETS = [RTEMS_RISCV64, RTEMS_RISCV64_PURECAP]
     ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = \
         ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + ALL_SUPPORTED_BAREMETAL_TARGETS
