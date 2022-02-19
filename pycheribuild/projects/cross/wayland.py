@@ -214,7 +214,7 @@ class BuildWayland(CrossCompileMesonProject):
         super().setup()
         # Can be set to False to avoid libxml2 depdency:
         self.add_meson_options(dtd_validation=True)
-        # Avoid docbook depedency
+        # Avoid docbook dependency
         self.add_meson_options(documentation=False)
         if self.target_info.is_macos():
             # Only build wayland-scanner
