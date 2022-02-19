@@ -115,7 +115,7 @@ class BuildMesa(CrossCompileMesonProject):
 
 class BuildLibEpoxy(CrossCompileMesonProject):
     target = "libepoxy"
-    dependencies = ["mesa"]
+    dependencies = ["libglvnd"]
     repository = GitRepository("https://github.com/anholt/libepoxy",
                                temporary_url_override="https://github.com/arichardson/libepoxy",
                                url_override_reason="https://github.com/anholt/libepoxy/pull/261")
