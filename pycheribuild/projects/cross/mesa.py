@@ -60,6 +60,11 @@ class BuildLibGlvnd(CrossCompileMesonProject):
         self.add_meson_options(glx="enabled")
         if self.compiling_for_cheri():
             self.add_meson_options(asm="disabled")
+        if "-femulated-tls" in self.essential_compiler_and_linker_flags:
+            # The version script does not export __emutls_v._glapi_tls_Current, but the project has an option to
+            # disable use of TLS so let's use that instead of patching the project since we won't be using emulated
+            # TLS for much longer.
+            self.add_meson_options(tls=False)
 
 
 class BuildMesa(CrossCompileMesonProject):
