@@ -155,7 +155,9 @@ class BuildDejaGNU(AutotoolsProject):
 
 
 class BuildLibFFI(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/libffi/libffi.git")
+    repository = GitRepository("https://github.com/libffi/libffi.git",
+                               temporary_url_override="https://github.com/CTSRD-CHERI/libffi.git",
+                               url_override_reason="Needs lots of CHERI fixes")
     target = "libffi"
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
