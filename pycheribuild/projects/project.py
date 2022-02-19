@@ -1170,12 +1170,15 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 else:
                     self.info("Will try to download again.")
                     should_download = True
+        elif self.config.clean:
+            # Always download when using --clean and the SHA256 is not specified.
+            should_download = True
         if should_download:
             self.makedirs(dest.parent)
             self.run_cmd("wget", url, "-O", dest)
             downloaded_sha256 = self.sha256sum(dest)
             self.verbose_print("Downloaded", url, "with SHA256 hash", downloaded_sha256)
-            if sha256 and downloaded_sha256 != sha256:
+            if sha256 is not None and downloaded_sha256 != sha256:
                 self.warning("Downloaded file SHA256 hash", downloaded_sha256, "does not match expected SHA256", sha256)
                 self.ask_for_confirmation("Continue with unexpected file?", default_result=False)
         return should_download
