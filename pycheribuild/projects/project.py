@@ -1044,7 +1044,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def _dependency_message(self, *args, problem="missing",
                             install_instructions: "typing.Union[str, typing.Callable[[], str]]" = None,
-                            cheribuild_target: str = None, cheribuild_action: str = "install", fatal: bool):
+                            cheribuild_target: str = None, cheribuild_xtarget: CrossCompileTarget = None,
+                            cheribuild_action: str = "install", fatal: bool):
         self._system_deps_checked = True  # make sure this is always set
         if callable(install_instructions):
             install_instructions = install_instructions()
@@ -1052,7 +1053,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             self.warning("Dependency for", self.target, problem + ":", *args, fixit_hint=install_instructions)
             if self.query_yes_no("Would you like to " + cheribuild_action + " the dependency (" + cheribuild_target +
                                  ") using cheribuild?", force_result=False if is_jenkins_build() else True):
-                dep_target = target_manager.get_target(cheribuild_target, None, config=self.config, caller=self)
+                xtarget = cheribuild_xtarget if cheribuild_xtarget is not None else self.crosscompile_target
+                dep_target = target_manager.get_target(cheribuild_target, xtarget, config=self.config, caller=self)
                 dep_target.check_system_deps(self.config)
                 dep_target.execute(self.config)
                 return  # should be installed now
@@ -1061,17 +1063,19 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def dependency_error(self, *args, problem="missing",
                          install_instructions: "typing.Union[str, typing.Callable[[], str]]" = None,
-                         cheribuild_target: str = None, cheribuild_action: str = "install"):
+                         cheribuild_target: str = None, cheribuild_xtarget: CrossCompileTarget = None,
+                         cheribuild_action: str = "install"):
         self._dependency_message(*args, problem=problem, install_instructions=install_instructions,
                                  cheribuild_target=cheribuild_target, cheribuild_action=cheribuild_action,
-                                 fatal=True)
+                                 cheribuild_xtarget=cheribuild_xtarget, fatal=True)
 
     def dependency_warning(self, *args, problem="missing",
                            install_instructions: "typing.Union[str, typing.Callable[[], str]]" = None,
-                           cheribuild_target: str = None, cheribuild_action: str = "install"):
+                           cheribuild_target: str = None, cheribuild_xtarget: CrossCompileTarget = None,
+                           cheribuild_action: str = "install"):
         self._dependency_message(*args, problem=problem, install_instructions=install_instructions,
-                                 cheribuild_target=cheribuild_target, cheribuild_action=cheribuild_action,
-                                 fatal=False)
+                                 cheribuild_target=cheribuild_target, cheribuild_xtarget=cheribuild_xtarget,
+                                 cheribuild_action=cheribuild_action, fatal=False)
 
     def check_system_dependencies(self) -> None:
         """
