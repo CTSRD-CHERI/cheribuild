@@ -206,17 +206,19 @@ class TargetInfo(ABC):
     @classmethod
     @abstractmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
-                                                 perform_sanity_checks=True, default_flags_only=False):
+                                                 perform_sanity_checks=True, default_flags_only=False,
+                                                 softfloat: bool = None):
         """
         :return: flags such as -target + -mabi which are needed for both compiler and linker
         """
         ...
 
     def get_essential_compiler_and_linker_flags(self, xtarget: "CrossCompileTarget" = None,
-                                                perform_sanity_checks=True, default_flags_only=False):
+                                                perform_sanity_checks=True, default_flags_only=False,
+                                                softfloat: bool = None):
         return self.essential_compiler_and_linker_flags_impl(self, perform_sanity_checks=perform_sanity_checks,
                                                              xtarget=xtarget if xtarget is not None else self.target,
-                                                             default_flags_only=default_flags_only)
+                                                             default_flags_only=default_flags_only, softfloat=softfloat)
 
     @property
     def additional_executable_link_flags(self):
@@ -513,7 +515,8 @@ class NativeTargetInfo(TargetInfo):
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
-                                                 perform_sanity_checks=True, default_flags_only=False):
+                                                 perform_sanity_checks=True, default_flags_only=False,
+                                                 softfloat: bool = None):
         result = []
         if instance.project.auto_var_init != AutoVarInit.NONE:
             compiler = instance.project.get_compiler_info(instance.c_compiler)

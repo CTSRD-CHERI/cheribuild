@@ -109,7 +109,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "_ClangBasedTargetInfo", *,
-                                                 xtarget: "CrossCompileTarget",
+                                                 xtarget: "CrossCompileTarget", softfloat: bool = None,
                                                  perform_sanity_checks=True, default_flags_only=False):
         assert xtarget is not None
         config = instance.config
@@ -175,9 +175,10 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                     result.append("-mcpu=beri")
         elif xtarget.is_riscv(include_purecap=True):
             # Note: Baremetal/FreeRTOS currently only supports softfloat
-            softfloat = cls.is_baremetal()
+            if softfloat is None:
+                softfloat = cls.is_baremetal()  # assume softfloat for baremetal
             # Use the insane RISC-V arch string to enable CHERI
-            result.append("-march=" + cls.get_riscv_arch_string(xtarget, softfloat=cls.is_baremetal()))
+            result.append("-march=" + cls.get_riscv_arch_string(xtarget, softfloat=softfloat))
             result.append("-mabi=" + cls.get_riscv_abi(xtarget, softfloat=softfloat))
             result.append("-mno-relax")  # Linker relaxations are not supported with clang+lld
 
