@@ -462,13 +462,16 @@ class LaunchQEMUBase(SimpleProject):
 
             def gdb_command(main_binary, bp=None, extra_binary=None) -> str:
                 gdb_cmd = BuildGDB.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"
-                # Set the sysroot to ensure that the .debug file is loaded from <ROOTFS>/usr/lib/debug/boot/kernel
-                # It seems this does not always work as expected, so also set substitute-path and debug-file-directory.
-                assert self.rootfs_path is not None
-                result = [gdb_cmd, main_binary,
-                          "--init-eval-command=set sysroot " + str(self.rootfs_path),
-                          "--init-eval-command=set substitute-path " + str(self.rootfs_path) + " /",
-                          "--init-eval-command=set debug-file-directory " + str(self.rootfs_path / "usr/lib/debug")]
+                result = [gdb_cmd, main_binary]
+                if self.target_info.is_freebsd():
+                    # Set the sysroot to ensure that the .debug file is loaded from <ROOTFS>/usr/lib/debug/boot/kernel
+                    # It seems this does not always work as expected, so also set substitute-path and
+                    # debug-file-directory.
+                    assert self.rootfs_path is not None
+                    result.extend(["--init-eval-command=set sysroot " + str(self.rootfs_path),
+                                   "--init-eval-command=set substitute-path " + str(self.rootfs_path) + " /",
+                                   "--init-eval-command=set debug-file-directory " + str(
+                                       self.rootfs_path / "usr/lib/debug")])
                 # Once the file has been loaded set a breakpoint on panic() and connect to the remote host
                 if bp:
                     result.append("--eval-command=break " + bp)
@@ -486,21 +489,23 @@ class LaunchQEMUBase(SimpleProject):
             kernel_full_guess = path_to_kernel.with_name(path_to_kernel.name + ".full")
             if kernel_full_guess.exists():
                 path_to_kernel = kernel_full_guess
+
             if self.config.qemu_debug_program:
-                self.info("\t", coloured(AnsiColour.red, gdb_command(self.rootfs_path / self.config.qemu_debug_program,
-                                                                     "main", path_to_kernel)), sep="")
+                program = Path(self.rootfs_path or "/", self.config.qemu_debug_program)
+                self.info("\t", coloured(AnsiColour.red, gdb_command(program, "main", path_to_kernel)), sep="")
             else:
                 self.info("\t", coloured(AnsiColour.red, gdb_command(path_to_kernel, "panic")), sep="")
-                self.info("If you would like to debug /sbin/init (or any other statically linked program) run this"
-                          " inside GDB:")
-                self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0", str(self.rootfs_path / "sbin/init")))
-                self.info("For dynamically linked programs you will have to add libraries at the correct offset. For "
-                          "example:")
-                self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0x40212000",
-                                   str(self.rootfs_path / "lib/libc.so.7")))
-                self.info("If you would like to debug a userspace program (e.g. sbin/init):")
-                self.info("\t", coloured(AnsiColour.red, gdb_command(self.rootfs_path / "sbin/init", "main",
-                                                                     path_to_kernel)), sep="")
+                if self.rootfs_path is not None:
+                    self.info("If you would like to debug /sbin/init (or any other statically linked program) run this"
+                              " inside GDB:")
+                    self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0", str(self.rootfs_path / "sbin/init")))
+                    self.info("For dynamically linked programs you will have to add libraries at the correct offset."
+                              " For example:")
+                    self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0x40212000",
+                                       str(self.rootfs_path / "lib/libc.so.7")))
+                    self.info("If you would like to debug a userspace program (e.g. sbin/init):")
+                    self.info("\t", coloured(AnsiColour.red, gdb_command(self.rootfs_path / "sbin/init", "main",
+                                                                         path_to_kernel)), sep="")
             self.info("Launching QEMU in suspended state...")
 
             def start_gdb_in_tmux_pane(command):
