@@ -204,7 +204,7 @@ class BuildGettext(CrossCompileAutotoolsProject):
 
 class BuildPlasmaWaylandProtocols(KDECMakeProject):
     target = "plasma-wayland-protocols"
-    repository = GitRepository("https://invent.kde.org/libraries/plasma-wayland-protocols")
+    repository = GitRepository("https://invent.kde.org/libraries/plasma-wayland-protocols.git")
 
 
 #
@@ -212,7 +212,7 @@ class BuildPlasmaWaylandProtocols(KDECMakeProject):
 #
 class BuildKWayland(KDECMakeProject):
     target = "kwayland"
-    repository = GitRepository("https://invent.kde.org/frameworks/kwayland")
+    repository = GitRepository("https://invent.kde.org/frameworks/kwayland.git")
     _uses_wayland_scanner = True
 
     @classmethod
@@ -770,7 +770,7 @@ class BuildKDecoration(KDECMakeProject):
 
 class BuildKFrameworkIntegration(KDECMakeProject):
     target = "kframeworkintegration"
-    repository = GitRepository("https://invent.kde.org/frameworks/frameworkintegration")
+    repository = GitRepository("https://invent.kde.org/frameworks/frameworkintegration.git")
     dependencies = ["knewstuff"]
 
 
@@ -795,7 +795,7 @@ class BuildKIdleTime(KDECMakeProject):
 
 class LayerShellQt(KDECMakeProject):
     target = "layer-shell-qt"
-    repository = GitRepository("https://invent.kde.org/plasma/layer-shell-qt")
+    repository = GitRepository("https://invent.kde.org/plasma/layer-shell-qt.git")
     dependencies = ["qtwayland", "wayland-protocols", "libxkbcommon", "qtdeclarative"]
     _uses_wayland_scanner = True
 
@@ -1035,7 +1035,7 @@ class BuildThreadWeaver(KDECMakeProject):
 # /Users/alex/cheri/kde-frameworks/kpty/src/kpty.cpp:72:10: fatal error: 'utmp.h' file not found
 class BuildKPty(KDECMakeProject):
     target = "kpty"
-    repository = GitRepository("https://invent.kde.org/frameworks/kpty",
+    repository = GitRepository("https://invent.kde.org/frameworks/kpty.git",
                                temporary_url_override="https://invent.kde.org/arichardson/kpty",
                                url_override_reason="https://invent.kde.org/frameworks/kpty/-/merge_requests/12")
 
@@ -1047,7 +1047,7 @@ class BuildKPty(KDECMakeProject):
 
 class BuildKonsole(KDECMakeProject):
     target = "konsole"
-    repository = GitRepository("https://invent.kde.org/utilities/konsole")
+    repository = GitRepository("https://invent.kde.org/utilities/konsole.git")
     dependencies = ["extra-cmake-modules", "kbookmarks", "kconfig", "kconfigwidgets", "kcoreaddons", "kcrash",
                     "kglobalaccel", "kguiaddons", "kdbusaddons", "ki18n", "kiconthemes", "kio", "knewstuff",
                     "knotifications", "knotifyconfig", "kparts", "kpty", "kservice", "ktextwidgets", "kwidgetsaddons",
