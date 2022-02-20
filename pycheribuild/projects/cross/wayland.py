@@ -80,13 +80,16 @@ class BuildLinux_Input_H(SimpleProject):
 
     def process(self):
         evdev_headers = ("input.h", "input-event-codes.h", "uinput.h")
-        self.makedirs(self.sdk_sysroot / "usr/include/linux")
         for header in evdev_headers:
             dev_evdev_h = self.sdk_sysroot / "usr/include/dev/evdev" / header
             if not dev_evdev_h.is_file():
                 self.fatal("Missing evdev header:", dev_evdev_h)
-            self.write_file(self.sdk_sysroot / "usr/local/include/linux" / header,
-                            contents=f"#include <dev/evdev/{header}>\n", overwrite=True)
+            self.write_file(self.include_install_dir / "linux" / header, contents=f"#include <dev/evdev/{header}>\n",
+                            overwrite=True, print_verbose_only=False)
+
+    @property
+    def include_install_dir(self) -> Path:
+        return self.sdk_sysroot / self.target_info.sysroot_install_prefix_relative / "include"
 
 
 class BuildMtdev(CrossCompileAutotoolsProject):
@@ -108,6 +111,8 @@ class BuildMtdev(CrossCompileAutotoolsProject):
         super().setup()
         self.COMMON_FLAGS.append("-fPIC")  # need a pic archive since it's linked into a .so
         self.cross_warning_flags.append("-Wno-error=format")
+        if self.target_info.is_freebsd():
+            self.CFLAGS.append("-I" + str(BuildLinux_Input_H.get_instance(self).include_install_dir))
 
     def configure(self, **kwargs):
         self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
