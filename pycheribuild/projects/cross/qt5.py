@@ -74,8 +74,7 @@ class InstallDejaVuFonts(SimpleProject):
 class BuildSharedMimeInfo(CrossCompileMesonProject):
     target = "shared-mime-info"
     repository = GitRepository("https://gitlab.freedesktop.org/xdg/shared-mime-info.git",
-                               temporary_url_override="https://gitlab.freedesktop.org/arichardson/shared-mime-info.git",
-                               url_override_reason="Currently needs a patch to avoid glib2 dependency")
+                               old_urls=[b"https://gitlab.freedesktop.org/arichardson/shared-mime-info.git"])
     # We don't actually want to install the mime info, we just want the update-mime-info tool for native builds
     native_install_dir = DefaultInstallDir.KDE_PREFIX
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
@@ -85,16 +84,16 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
 
     def __init__(self, config):
         super().__init__(config)
-        self.add_required_system_tool("itstool", homebrew="itstool", apt="itstool")
         self.add_required_system_tool("xmlto", homebrew="xmlto", apt="xmlto")
         self.add_required_system_tool("xmllint", homebrew="libxml2", apt="libxml2-utils",
                                       cheribuild_target="libxml2-native")
 
     def setup(self):
         super().setup()
-        self.configure_args.append("-Dupdate-mimedb=True")
-        if not self.compiling_for_host():
-            self.configure_args.append("-Dbuild-tools=False")
+        self.add_meson_options(**{
+            "update-mimedb": True,
+            "build-tools": self.compiling_for_host(),
+        })
 
     def configure(self, **kwargs):
         if not self.compiling_for_host():
