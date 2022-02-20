@@ -750,15 +750,16 @@ class BuildKirigami(KDECMakeProject):
 class BuildPlasmaFramework(KDECMakeProject):
     target = "plasma-framework"
     dependencies = ["kio", "kconfigwidgets", "kactivities", "kdbusaddons", "kglobalaccel", "kpackage", "kdeclarative",
-                    "qtquickcontrols", "qtquickcontrols2", "kxmlgui", "threadweaver", "kirigami"]
+                    "qtquickcontrols", "qtquickcontrols2", "kxmlgui", "threadweaver", "kirigami", "kwayland",
+                    "libglvnd"]
     repository = GitRepository("https://invent.kde.org/frameworks/plasma-framework.git",
-                               temporary_url_override="https://invent.kde.org/arichardson/plasma-framework.git",
-                               url_override_reason="Needs some compilation fixes for -no-opengl QtBase")
+                               old_urls=[b"https://invent.kde.org/arichardson/plasma-framework.git"])
 
     def setup(self):
         super().setup()
-        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_OpenGL=True)
-        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_EGL=True)
+        # Needed until https://invent.kde.org/frameworks/plasma-framework/-/merge_requests/455 is merged.
+        self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+
 
 
 class BuildKRunner(KDECMakeProject):
