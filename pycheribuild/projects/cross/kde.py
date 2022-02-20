@@ -375,6 +375,10 @@ class BuildKItemViews(KDECMakeProject):
 class BuildKItemModels(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kitemmodels.git")
 
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        return super().dependencies(config) + ["qtdeclarative"]
+
 
 class BuildKI18N(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/ki18n.git")
@@ -687,7 +691,7 @@ class BuildKWallet(KDECMakeProject):
 class BuildKPeople(KDECMakeProject):
     target = "kpeople"
     repository = GitRepository("https://invent.kde.org/frameworks/kpeople.git")
-    dependencies = ["kcoreaddons", "kcoreaddons-native", "kwidgetsaddons", "ki18n", "kitemviews"]
+    dependencies = ["kcoreaddons", "kcoreaddons-native", "kwidgetsaddons", "ki18n", "kitemviews", "qtdeclarative"]
 
 
 class BuildKSyntaxHighlighting(KDECMakeProject):
