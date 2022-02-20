@@ -144,7 +144,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             if not cls.get_crosscompile_target(config).is_native():
                 deps.extend(["shared-mime-info", "dejavu-fonts", "fontconfig", "libpng", "libjpeg-turbo", "sqlite"])
         if cls.use_opengl and not cls.get_crosscompile_target(config).is_native():
-            deps.append("mesa")
+            deps.append("libglvnd")
         return deps
 
     @classmethod
