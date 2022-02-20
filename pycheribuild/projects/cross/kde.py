@@ -887,7 +887,7 @@ class BuildPlasmaWorkspace(KDECMakeProject):
     target = "plasma-workspace"
     repository = GitRepository("https://invent.kde.org/plasma/plasma-workspace.git",
                                temporary_url_override="https://invent.kde.org/arichardson/plasma-workspace.git",
-                               url_override_reason="Lots of no-wayland changes etc.")
+                               url_override_reason="Lots of changes to support running without DBus")
     dependencies = ["xprop", "xsetroot", "plasma-framework", "kwin", "breeze", "kidletime", "kitemmodels", "kcmutils",
                     "knotifyconfig", "kded", "kinit", "kscreenlocker", "libkscreen", "libxft", "libxtst", "kpeople",
                     "kparts", "prison", "krunner", "kactivities-stats", "libksysguard", "kunitconversion", "kwallet",
