@@ -174,7 +174,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         native_is_macos = cls._xtarget is not None and cls._xtarget.target_info_cls.is_macos()
         cls.use_x11 = cls.add_bool_option("use-x11", default=not native_is_macos,
                                           show_help=False, help="Build Qt with the XCB backend.")
-        cls.use_opengl = cls.add_bool_option("use-opengl", default=False, show_help=False,
+        cls.use_opengl = cls.add_bool_option("use-opengl", default=True, show_help=False,
                                              help="Build Qt with OpenGL support")
 
     def configure(self, **kwargs):

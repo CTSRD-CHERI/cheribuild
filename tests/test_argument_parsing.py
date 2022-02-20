@@ -130,7 +130,7 @@ def test_target_subsets(args, expected):
                   "--skip-dependency-filter=libx.*", "--skip-dependency-filter=xorg.*", "kauth-amd64"],
                  ["libice-amd64", "libsm-amd64", "shared-mime-info-native", "shared-mime-info-amd64",
                   "dejavu-fonts-amd64", "libpng-amd64", "freetype2-amd64", "libexpat-amd64", "fontconfig-amd64",
-                  "libjpeg-turbo-amd64", "sqlite-amd64", "qtbase-amd64", "extra-cmake-modules-amd64",
+                  "libjpeg-turbo-amd64", "sqlite-amd64", "libglvnd-amd64", "qtbase-amd64", "extra-cmake-modules-amd64",
                   "kcoreaddons-amd64", "qtbase-native", "extra-cmake-modules-native", "kcoreaddons-native",
                   "kauth-amd64"],
                  id="kauth-amd64-full-without-x11"),
