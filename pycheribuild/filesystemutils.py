@@ -177,8 +177,7 @@ class FileSystemUtils(object):
         with file.open("r", encoding="utf-8") as f:
             return f.read()
 
-    def write_file(self, file: Path, contents: str, *, overwrite: bool, never_print_cmd=False, mode=None,
-                   print_verbose_only=True) -> None:
+    def write_file(self, file: Path, contents: str, *, overwrite: bool, never_print_cmd=False, mode=None) -> None:
         """
         :param file: The target path to write contents to
         :param contents: the contents of the new file
@@ -187,8 +186,7 @@ class FileSystemUtils(object):
         :param never_print_cmd: don't ever print the echo commmand (even in verbose)
         """
         if not never_print_cmd:
-            print_command("echo", contents, colour=AnsiColour.green, output_file=file,
-                          print_verbose_only=print_verbose_only)
+            print_command("echo", contents, colour=AnsiColour.green, output_file=file, print_verbose_only=True)
         if self.config.pretend:
             return
         if not overwrite and file.exists():

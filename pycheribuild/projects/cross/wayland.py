@@ -85,8 +85,8 @@ class BuildLinux_Input_H(SimpleProject):
             dev_evdev_h = self.sdk_sysroot / "usr/include/dev/evdev" / header
             if not dev_evdev_h.is_file():
                 self.fatal("Missing evdev header:", dev_evdev_h)
-            self.write_file(self.sdk_sysroot / "usr/include/linux" / header,
-                            contents=f"#include <dev/evdev/{header}>\n", overwrite=True, print_verbose_only=False)
+            self.write_file(self.sdk_sysroot / "usr/local/include/linux" / header,
+                            contents=f"#include <dev/evdev/{header}>\n", overwrite=True)
 
 
 class BuildMtdev(CrossCompileAutotoolsProject):
