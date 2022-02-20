@@ -35,8 +35,7 @@ from .freetype import BuildFontConfig, BuildFreeType2
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
 from .wayland import BuildWayland
 from .x11 import BuildLibXCB
-from ..project import (CMakeProject, DefaultInstallDir, GitRepository, MakeCommandKind,
-                       ReuseOtherProjectDefaultTargetRepository, TargetAliasWithDependencies)
+from ..project import (DefaultInstallDir, GitRepository, MakeCommandKind, TargetAliasWithDependencies)
 from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
@@ -823,27 +822,16 @@ class BuildKWaylandServer(KDECMakeProject):
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        result = super().dependencies(config) + ["kwayland", "libinput"]
-        # We need the build tools
-        if not cls.get_crosscompile_target(config).is_native():
-            result.extend(["qtwaylandscanner-kde"])
-        return result
+        return super().dependencies(config) + ["kwayland", "libinput"]
 
     def setup(self):
         super().setup()
         if not self.compiling_for_host():
-            native_scanner_build = BuildQtWaylandScannerKDE.get_build_dir(self, cross_target=CompilationTargets.NATIVE)
-            self.add_cmake_options(qtwaylandscanner_kde_EXECUTABLE=native_scanner_build / "qtwaylandscanner_kde")
-
-
-class BuildQtWaylandScannerKDE(CMakeProject):
-    target = "qtwaylandscanner-kde"
-    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
-    repository = ReuseOtherProjectDefaultTargetRepository(BuildKWaylandServer, subdirectory="src/tools")
-
-    @property
-    def cmake_prefix_paths(self):
-        return [BuildQtBase.get_install_dir(self)] + super().cmake_prefix_paths
+            # We need to find the host Qt libraries for qwaylandscanner_kde
+            self.add_cmake_options(NATIVE_PREFIX=";".join([
+                str(BuildQtBase.get_install_dir(self, cross_target=CompilationTargets.NATIVE)),
+                str(BuildKCoreAddons.get_install_dir(self, cross_target=CompilationTargets.NATIVE)),
+            ]))
 
 
 class BuildKWin(KDECMakeProject):
