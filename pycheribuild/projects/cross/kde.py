@@ -850,23 +850,31 @@ class BuildKWin(KDECMakeProject):
     target = "kwin"
     repository = GitRepository("https://invent.kde.org/plasma/kwin.git",
                                temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
-                               url_override_reason="Needs lots of ifdefs for -no-opengl QtBase and no-wayland")
+                               url_override_reason="Avoid libdrm/libgbm dependency+a few minor fixes")
+    use_mesa: bool
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.use_mesa = cls.add_bool_option("use-mesa", default=False,
+                                           help="Add a dependency on Mesa to build the wayland DRM backend")
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        # TODO: Not yet: "kwayland-server", "libepoxy", "libglvnd"
         result = super().dependencies(config) + ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker",
-                                                 "libinput", "qttools"]
+                                                 "libinput", "qttools", "kwayland-server", "libepoxy"]
+        # TODO: mesa for libgbm
+        if cls.use_mesa:
+            result.append("mesa")
         if cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
             result.append("linux-input-h")
         return result
 
     def setup(self):
         super().setup()
-        # TODO: build wayland backend
-        self.add_cmake_options(KWIN_BUILD_WAYLAND=False)
-        # We build Qt wihtout OpenGL support, so we shouldn't build the OpenGL code.
-        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_epoxy=True)
+        # The DRM and wayland EGL backends need libdrm and libgbm, since we don't use those right now make them
+        # optional to avoid having to build mesa+dependencies.
+        self.add_cmake_options(KWIN_BUILD_DRM_BACKEND=self.use_mesa, KWIN_BUILD_WAYLAND_EGL=self.use_mesa)
 
 
 class BuildLibKScreen(KDECMakeProject):
