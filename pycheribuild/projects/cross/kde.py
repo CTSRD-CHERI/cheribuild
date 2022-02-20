@@ -1031,13 +1031,10 @@ class BuildThreadWeaver(KDECMakeProject):
                                force_branch=True, default_branch="master")
 
 
-# Doesn't build on FreeBSD properly:
-# /Users/alex/cheri/kde-frameworks/kpty/src/kpty.cpp:72:10: fatal error: 'utmp.h' file not found
 class BuildKPty(KDECMakeProject):
     target = "kpty"
     repository = GitRepository("https://invent.kde.org/frameworks/kpty.git",
-                               temporary_url_override="https://invent.kde.org/arichardson/kpty",
-                               url_override_reason="https://invent.kde.org/frameworks/kpty/-/merge_requests/12")
+                               old_urls=[b"https://invent.kde.org/arichardson/kpty"])
 
     def setup(self):
         super().setup()
