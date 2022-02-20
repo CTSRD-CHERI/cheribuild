@@ -974,7 +974,8 @@ class BuildLCMS2(CrossCompileAutotoolsProject):
 
 
 class BuildExiv2(CrossCompileCMakeProject):
-    repository = GitRepository("https://github.com/Exiv2/exiv2")
+    # We use the stable branch since the main branch regularly changes APIs and that breaks e.g. Gwenview.
+    repository = GitRepository("https://github.com/Exiv2/exiv2", default_branch="0.27-maintenance", force_branch=True)
     target = "exiv2"
     dependencies = ["libexpat"]
 
