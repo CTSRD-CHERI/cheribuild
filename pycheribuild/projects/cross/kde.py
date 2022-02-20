@@ -243,8 +243,7 @@ class BuildKCodecs(KDECMakeProject):
 
 class BuildKCoreAddons(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kcoreaddons.git",
-                               temporary_url_override="https://invent.kde.org/arichardson/kcoreaddons.git",
-                               url_override_reason="A few minor fixes/speedups that haven't been merged yet")
+                               old_urls=[b"https://invent.kde.org/arichardson/kcoreaddons.git"])
 
     def setup(self):
         super().setup()
