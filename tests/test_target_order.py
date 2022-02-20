@@ -59,7 +59,7 @@ cheribsd_sdk_deps = freestanding_deps + ["cheribsd-mips64-hybrid", "cheribsd-sdk
 
 
 @pytest.mark.parametrize("target_name,expected_list", [
-    pytest.param("freestanding-sdk", freestanding_deps, id="freestanding-sdk"),
+    pytest.param("freestanding-cheri-sdk", freestanding_deps, id="freestanding-sdk"),
     pytest.param("baremetal-sdk", baremetal_deps, id="baremetal-sdk"),
     # Ensure that cheribsd is added to deps even on Linux/Mac
     pytest.param("cheribsd-sdk-mips64-hybrid", cheribsd_sdk_deps, id="cheribsd-sdk"),
@@ -84,11 +84,10 @@ def test_alias_resolving(target_name, expected_name):
 
 def test_reordering():
     # GDB is a cross compiled project so cheribsd should be built first
-    assert _sort_targets(["cheribsd-mips64-hybrid", "gdb-mips64-hybrid"]) == ["cheribsd-mips64-hybrid",
-                                                                              "gdb-mips64-hybrid"]
-    assert _sort_targets(["gdb-mips64-hybrid", "cheribsd-mips64-hybrid"]) == ["cheribsd-mips64-hybrid",
-                                                                              "gdb-mips64-hybrid"]
-    assert _sort_targets(["gdb-mips64-hybrid", "cheribsd-cheri"]) == ["cheribsd-mips64-hybrid", "gdb-mips64-hybrid"]
+    assert _sort_targets(["cheribsd-riscv64-hybrid", "gdb-riscv64-hybrid"]) == ["cheribsd-riscv64-hybrid",
+                                                                                "gdb-riscv64-hybrid"]
+    assert _sort_targets(["gdb-riscv64-hybrid", "cheribsd-riscv64-hybrid"]) == ["cheribsd-riscv64-hybrid",
+                                                                                "gdb-riscv64-hybrid"]
 
 
 def test_run_comes_last():

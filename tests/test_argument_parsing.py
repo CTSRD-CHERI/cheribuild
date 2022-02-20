@@ -391,43 +391,6 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assert not cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should have a JSON false override for debug-kernel"
 
 
-def test_legacy_cheri_suffix_target_alias():
-    config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/some/image"}')
-    # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
-    # We should load config options for that target from
-    cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
-    assert str(cheribsd_cheri.mfs_root_image) == "/some/image"
-    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
-    assert str(cheribsd_mips_hybrid.mfs_root_image) == "/some/image"
-    # Try again with the other key:
-    config = _parse_config_file_and_args(b'{"cheribsd-mips-hybrid/mfs-root-image": "/some/image"}')
-    # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips64-hybrid
-    # We should load config options for that target from
-    cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
-    assert str(cheribsd_cheri.mfs_root_image) == "/some/image"
-    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
-    assert str(cheribsd_mips_hybrid.mfs_root_image) == "/some/image"
-
-    # Check command line aliases:
-    config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/json/value"}',
-                                         "--cheribsd-mips64-hybrid/mfs-root-image=/command/line/value")
-    # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
-    # We should load config options for that target from
-    cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
-    assert str(cheribsd_cheri.mfs_root_image) == "/command/line/value"
-    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
-    assert str(cheribsd_mips_hybrid.mfs_root_image) == "/command/line/value"
-
-    config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/json/value"}',
-                                         "--cheribsd-mips64-hybrid/mfs-root-image=/command/line/value")
-    # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
-    # We should load config options for that target from
-    cheribsd_cheri = _get_cheribsd_instance("cheribsd-cheri", config)
-    assert str(cheribsd_cheri.mfs_root_image) == "/command/line/value"
-    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
-    assert str(cheribsd_mips_hybrid.mfs_root_image) == "/command/line/value"
-
-
 def test_kernconf():
     # The kernel-config command line option is special: There is a global (command-line-only) flag that is used
     # as the default, but otherwise there should be no inheritance
@@ -645,7 +608,7 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     # CheriBSD
     pytest.param("disk-image-mips64", "cheribsd-mips64.img"),
     pytest.param("disk-image-mips64-hybrid", "cheribsd-mips64-hybrid.img"),
-    pytest.param("disk-image-purecap", "cheribsd-mips64-purecap.img"),
+    pytest.param("disk-image-mips64-purecap", "cheribsd-mips64-purecap.img"),
     pytest.param("disk-image-riscv64", "cheribsd-riscv64.img"),
     pytest.param("disk-image-riscv64-hybrid", "cheribsd-riscv64-hybrid.img"),
     pytest.param("disk-image-riscv64-purecap", "cheribsd-riscv64-purecap.img"),
@@ -655,7 +618,7 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     # Minimal image
     pytest.param("disk-image-minimal-mips64", "cheribsd-minimal-mips64.img"),
     pytest.param("disk-image-minimal-mips64-hybrid", "cheribsd-minimal-mips64-hybrid.img"),
-    pytest.param("disk-image-minimal-purecap", "cheribsd-minimal-mips64-purecap.img"),
+    pytest.param("disk-image-minimal-mips64-purecap", "cheribsd-minimal-mips64-purecap.img"),
     pytest.param("disk-image-minimal-riscv64", "cheribsd-minimal-riscv64.img"),
     pytest.param("disk-image-minimal-riscv64-hybrid", "cheribsd-minimal-riscv64-hybrid.img"),
     pytest.param("disk-image-minimal-riscv64-purecap", "cheribsd-minimal-riscv64-purecap.img"),
@@ -830,14 +793,14 @@ def test_freebsd_toolchains_cheribsd_purecap():
 @pytest.mark.parametrize("target,args,expected", [
     pytest.param("cheribsd-mips64-hybrid", [], "cheribsd-mips64-hybrid-build"),
     pytest.param("llvm", [], "llvm-project-build"),
-    pytest.param("cheribsd-purecap", [], "cheribsd-mips64-purecap-build"),
+    pytest.param("cheribsd-riscv64-purecap", [], "cheribsd-riscv64-purecap-build"),
     # --subobject debug should not have any effect if subobject bounds is disabled
-    pytest.param("cheribsd-purecap", ["--subobject-bounds=conservative", "--subobject-debug"],
-                 "cheribsd-mips64-purecap-build"),
-    pytest.param("cheribsd-purecap", ["--subobject-bounds=subobject-safe", "--subobject-debug"],
-                 "cheribsd-mips64-purecap-subobject-safe-build"),
-    pytest.param("cheribsd-purecap", ["--subobject-bounds=subobject-safe", "--no-subobject-debug"],
-                 "cheribsd-mips64-purecap-subobject-safe-subobject-nodebug-build"),
+    pytest.param("cheribsd-riscv64-purecap", ["--subobject-bounds=conservative", "--subobject-debug"],
+                 "cheribsd-riscv64-purecap-build"),
+    pytest.param("cheribsd-riscv64-purecap", ["--subobject-bounds=subobject-safe", "--subobject-debug"],
+                 "cheribsd-riscv64-purecap-subobject-safe-build"),
+    pytest.param("cheribsd-riscv64-purecap", ["--subobject-bounds=subobject-safe", "--no-subobject-debug"],
+                 "cheribsd-riscv64-purecap-subobject-safe-subobject-nodebug-build"),
     # Passing "--cap-table-abi=pcrel" also changes the build dir even though it's (currently) the default for all
     # architectures.
     pytest.param("cheribsd-mips64-hybrid", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],

@@ -47,7 +47,6 @@ from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CompilerType as FreeBSDToolchainKind, CrossCompileTarget
 from ...processutils import latest_system_clang_tool, print_command
-from ...targets import target_manager
 from ...utils import cached_property, classproperty, include_local_file, is_jenkins_build, OSInfo, ThreadJoiner
 
 
@@ -2311,13 +2310,6 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
             if not libgcc_eh.is_file():
                 self.warning("CHERI libgcc_eh missing! You should probably update CheriBSD")
                 self.run_cmd("ar", "rc", libgcc_eh)
-
-
-# Add a target aliases for old script invocations
-target_manager.add_target_alias("cheribsd-cheri", "cheribsd-mips64-hybrid", deprecated=True)
-target_manager.add_target_alias("cheribsd-purecap", "cheribsd-mips64-purecap", deprecated=True)
-target_manager.add_target_alias("cheribsd-native", "cheribsd-amd64", deprecated=True)
-target_manager.add_target_alias("cheribsd-x86_64", "cheribsd-amd64", deprecated=True)
 
 
 class BuildDrmKMod(CrossCompileProject):

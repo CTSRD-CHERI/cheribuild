@@ -42,7 +42,6 @@ from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUAr
                       DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile
-from ..targets import target_manager
 from ..utils import AnsiColour, classproperty, coloured, include_local_file
 
 
@@ -1424,10 +1423,3 @@ class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
     target = "disk-image-freebsd-with-default-options"
     _source_class = BuildFreeBSDWithDefaultOptions
     hide_options_from_help = True
-
-
-# Backwards compatibility:
-target_manager.add_target_alias("disk-image-purecap", "disk-image-mips64-purecap", deprecated=True)
-target_manager.add_target_alias("disk-image-minimal-purecap", "disk-image-minimal-mips64-purecap", deprecated=True)
-target_manager.add_target_alias("disk-image-native", "disk-image-amd64", deprecated=True)
-target_manager.add_target_alias("disk-image-x86_64", "disk-image-amd64", deprecated=True)

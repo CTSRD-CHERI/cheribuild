@@ -107,8 +107,6 @@ class BuildFreestandingMorelloSdk(TargetAliasWithDependencies):
     is_sdk_target = True
 
 
-target_manager.add_target_alias("freestanding-sdk", "freestanding-cheri-sdk", deprecated=True)
-
 # Binutils now just builds LLVM since we don't need GNU binutils or Elftoolchain any more
 target_manager.add_target_alias("binutils", "llvm-native")
 

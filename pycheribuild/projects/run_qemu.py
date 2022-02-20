@@ -49,7 +49,6 @@ from .project import CheriConfig, CPUArchitecture, SimpleProject, TargetAliasWit
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue
 from ..qemu_utils import qemu_supports_9pfs, QemuOptions, riscv_bios_arguments
-from ..targets import target_manager
 from ..utils import AnsiColour, classproperty, coloured, find_free_port, OSInfo
 
 
@@ -907,15 +906,6 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
             if str(self.remote_kernel_path).endswith("MFS_ROOT"):
                 self.remote_kernel_path += "_BENCHMARK"
         self.rootfs_path = BuildCHERIBSD.get_rootfs_dir(self, config)
-
-
-# Backwards compatibility:
-target_manager.add_target_alias("run-cheri", "run-mips64-hybrid", deprecated=True)
-target_manager.add_target_alias("run-purecap", "run-mips64-purecap", deprecated=True)
-target_manager.add_target_alias("run-minimal-cheri", "run-minimal-mips64-hybrid", deprecated=True)
-target_manager.add_target_alias("run-minimal-purecap", "run-minimal-mips64-purecap", deprecated=True)
-target_manager.add_target_alias("run-native", "run-amd64", deprecated=True)
-target_manager.add_target_alias("run-x86_64", "run-amd64", deprecated=True)
 
 
 class BuildAndRunCheriBSD(TargetAliasWithDependencies):
