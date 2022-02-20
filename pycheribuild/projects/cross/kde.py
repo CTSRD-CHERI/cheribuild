@@ -338,6 +338,10 @@ exec /usr/local/bin/kde-shell-x11
 class BuildKConfig(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kconfig.git")
 
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        return super().dependencies(config) + ["qtdeclarative"]
+
 
 class BuildKDBusAddons(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kdbusaddons.git")
