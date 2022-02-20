@@ -755,12 +755,6 @@ class BuildPlasmaFramework(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/plasma-framework.git",
                                old_urls=[b"https://invent.kde.org/arichardson/plasma-framework.git"])
 
-    def setup(self):
-        super().setup()
-        # Needed until https://invent.kde.org/frameworks/plasma-framework/-/merge_requests/455 is merged.
-        self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
-
-
 
 class BuildKRunner(KDECMakeProject):
     target = "krunner"
