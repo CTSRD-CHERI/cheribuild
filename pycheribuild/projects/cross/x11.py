@@ -27,6 +27,7 @@
 #
 import os
 import shutil
+import subprocess
 from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
@@ -512,9 +513,18 @@ class BuildXVncServer(X11AutotoolsProject):
         tigervnc_source = BuildTigerVNC.get_instance(self).source_dir
         if (self.source_dir / "hw").is_dir():
             self.create_symlink(tigervnc_source / "unix/xserver/hw/vnc", self.source_dir / "hw/vnc")
-        if not (self.source_dir / ".tigervnc-patch-applied").exists():
-            self.run_cmd("patch", "-p1", "-i", tigervnc_source / "unix/xserver120.patch", cwd=self.source_dir)
-            self.write_file(self.source_dir / ".tigervnc-patch-applied", "applied", overwrite=True)
+        try:
+            # Check if the patch was already applied with --dry-run
+            self.run_cmd("patch", "-p1", "--forward", "--dry-run", "-i",
+                         tigervnc_source / "unix/xserver120.patch", cwd=self.source_dir, capture_error=True,
+                         capture_output=True)
+            self.run_cmd("patch", "-p1", "--forward", "-i",
+                         tigervnc_source / "unix/xserver120.patch", cwd=self.source_dir, capture_error=True,
+                         capture_output=True)
+        except subprocess.CalledProcessError as e:
+            if b"Skipping patch" in e.stdout:
+                return
+            raise e
 
     def setup(self):
         super().setup()
@@ -525,7 +535,8 @@ class BuildXVncServer(X11AutotoolsProject):
             "--disable-dmx", "--disable-xwin", "--disable-xephyr", "--disable-kdrive",
             "--disable-libdrm",
             "--disable-config-dbus", "--disable-config-hal",
-            "--disable-dri2", "--enable-install-libxf86config",
+            "--disable-dri", "--disable-dri2", "--disable-dri3",
+            "--enable-install-libxf86config",
             "--disable-glx",  # "--enable-glx",
             "-with-default-font-path=catalogue:" + str(fonts_dir) + ",built-ins",
             "--with-serverconfig-path=" + str(self.install_prefix / "lib/X11"),
