@@ -548,11 +548,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def compiling_for_mips(self, include_purecap: bool):
         return self.crosscompile_target.is_mips(include_purecap=include_purecap)
 
-    def compiling_for_cheri(self):
-        return self.crosscompile_target.is_cheri_purecap()
+    def compiling_for_cheri(self, valid_cpu_archs: "list[CPUArchitecture]" = None):
+        return self.crosscompile_target.is_cheri_purecap(valid_cpu_archs)
 
-    def compiling_for_cheri_hybrid(self):
-        return self.crosscompile_target.is_cheri_hybrid()
+    def compiling_for_cheri_hybrid(self, valid_cpu_archs: "list[CPUArchitecture]" = None):
+        return self.crosscompile_target.is_cheri_hybrid(valid_cpu_archs)
 
     def compiling_for_host(self):
         return self.crosscompile_target.is_native()
