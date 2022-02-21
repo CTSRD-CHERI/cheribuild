@@ -1079,10 +1079,8 @@ class BuildKTextEditor(KDECMakeProject):
 class BuildKate(KDECMakeProject):
     target = "kate"
     repository = GitRepository("https://invent.kde.org/utilities/kate.git")
-    # Optional; add when built:
-    #   - kwallet
     dependencies = ["extra-cmake-modules", "kactivities", "kconfig", "kcoreaddons", "kcrash", "kdbusaddons",
-                    "kguiaddons", "ki18n", "kiconthemes", "kitemmodels", "kitemviews", "knewstuff",
+                    "kguiaddons", "ki18n", "kiconthemes", "kitemmodels", "kitemviews", "knewstuff", "kwallet",
                     "ksyntaxhighlighting", "ktexteditor", "ktextwidgets", "kwindowsystem", "qtbase"]
 
 
