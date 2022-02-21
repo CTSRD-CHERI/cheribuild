@@ -1089,5 +1089,5 @@ class BuildKDEX11Desktop(TargetAliasWithDependencies):
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     # TODO: "systemsettings" - now needs a newer plasma-workspace
     dependencies = ["plasma-desktop", "dolphin", "konsole", "okular", "gwenview", "kate",
-                    "xvnc-server",
+                    "xvnc-server", "systemsettings",
                     "xeyes", "twm", "xev"]  # Add some basic X11 things as a fallback
