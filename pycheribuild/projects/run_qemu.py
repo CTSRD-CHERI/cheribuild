@@ -846,7 +846,8 @@ class LaunchUser(LaunchBsdUserQEMUBase):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.command = cls.add_config_option("command", metavar="COMMAND", show_help=True, kind=list,
-                                            help="Command to execute.")
+                                            help="Command to execute (default: '<ROOTFS>/bin/sh').",
+                                            default=lambda _, p: str(p.rootfs_path) + "/bin/sh")
 
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
