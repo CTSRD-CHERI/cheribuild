@@ -625,6 +625,7 @@ class LaunchBsdUserQEMUBase(SimpleProject):
         assert self.qemu_binary is not None
         assert self.rootfs_path is not None
         assert self.interpreter_path is not None
+        assert self.command is not None
 
         if self.chroot and self.jail:
             self.fatal("Chroot and jail options are mutually exclusive.")
@@ -643,18 +644,11 @@ class LaunchBsdUserQEMUBase(SimpleProject):
             qemu_command = self.qemu_binary
             rootfs_path = self.rootfs_path
 
-        if self.command:
-            user_command = self.command
-        elif rootfs_path:
-            user_command = ["{}{}".format(rootfs_path, "/bin/sh")]
-        else:
-            user_command = ["sh"]
-
         command.extend(self.qemu_options.get_user_commandline(qemu_command=qemu_command,
                        rootfs_path=rootfs_path, interpreter_path=self.interpreter_path,
-                       user_command=user_command))
+                       user_command=self.command))
 
-        self.info("About to run '{}' with the QEMU user mode".format(" ".join(user_command)))
+        self.info("About to run '{}' with the QEMU user mode".format(" ".join(self.command)))
 
         self.run_cmd(command, stdout=sys.stdout, stderr=sys.stderr, give_tty_control=True)
 
@@ -834,9 +828,15 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
 class LaunchUserShell(LaunchBsdUserQEMUBase):
     target = "run-user-shell"
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.command = None
+    def process(self):
+        assert self.rootfs_path is not None
+
+        command = "/bin/sh"
+        if self.chroot or self.jail:
+            self.command = [command]
+        else:
+            self.command = [str(self.rootfs_path) + command]
+        super().process()
 
 
 class LaunchUser(LaunchBsdUserQEMUBase):
