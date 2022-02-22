@@ -583,16 +583,34 @@ class LaunchQEMUBase(SimpleProject):
 
 class LaunchBsdUserQEMUBase(SimpleProject):
     do_not_add_to_targets = True
+    _source_class = BuildCHERIBSD
+    _freebsd_class = BuildCHERIBSD
+    _always_add_suffixed_targets = True
+    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP]
 
     @classmethod
-    def setup_config_options(cls, default_ssh_port: int = None, **kwargs):
+    def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
+        cls.chroot = cls.add_bool_option("chroot", default=False, show_help=True,
+                                         help="Change the root directory to a sysroot before executing a command.")
+        cls.interpreter_path = cls.add_path_option("interpreter", metavar="PATH", default="/libexec/ld-elf.so.1",
+                                              show_help=True, help="ELF interpreter path relative to a sysroot")
+        cls.jail = cls.add_bool_option("jail", default=False, show_help=True,
+                                       help="Enter a jail with a sysroot before executing a command.")
+        cls.jail_extra_args = cls.add_config_option("jail-extra-args", metavar="ARGS", kind=list, show_help=True,
+                                                    help="Extra jail parameters to pass to jail(8).")
+
+    @classmethod
+    def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "list[str]":
+        xtarget = cls.get_crosscompile_target()
+        result = ["bsd-user-qemu", cls._source_class.get_class_for_target(xtarget).target]
+        return result
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.qemu_binary = None  # type: typing.Optional[Path]
         self.qemu_options = QemuOptions(self.crosscompile_target)
-        self.rootfs_path = None  # type:typing.Optional[Path]
+        self.rootfs_path = self._source_class.get_rootfs_dir(self)
 
     def setup(self):
         super().setup()
@@ -813,37 +831,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         return result
 
 
-class AbstractLaunchFreeBSDProgram(LaunchBsdUserQEMUBase):
-    do_not_add_to_targets = True
-    _source_class = BuildCHERIBSD
-    _freebsd_class = BuildCHERIBSD
-    _always_add_suffixed_targets = True
-    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP]
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.rootfs_path = self._source_class.get_rootfs_dir(self, config=config)
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.chroot = cls.add_bool_option("chroot", default=False, show_help=True,
-                                         help="Change the root directory to a sysroot before executing a command.")
-        cls.interpreter_path = cls.add_path_option("interpreter", metavar="PATH", default="/libexec/ld-elf.so.1",
-                                              show_help=True, help="ELF interpreter path relative to a sysroot")
-        cls.jail = cls.add_bool_option("jail", default=False, show_help=True,
-                                       help="Enter a jail with a sysroot before executing a command.")
-        cls.jail_extra_args = cls.add_config_option("jail-extra-args", metavar="ARGS", kind=list, show_help=True,
-                                                    help="Extra jail parameters to pass to jail(8).")
-
-    @classmethod
-    def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "list[str]":
-        xtarget = cls.get_crosscompile_target(config)
-        result = ["bsd-user-qemu", cls._source_class.get_class_for_target(xtarget).target]
-        return result
-
-
-class LaunchUserShell(AbstractLaunchFreeBSDProgram):
+class LaunchUserShell(LaunchBsdUserQEMUBase):
     target = "run-user-shell"
 
     def __init__(self, config):
@@ -851,7 +839,7 @@ class LaunchUserShell(AbstractLaunchFreeBSDProgram):
         self.command = None
 
 
-class LaunchUser(AbstractLaunchFreeBSDProgram):
+class LaunchUser(LaunchBsdUserQEMUBase):
     target = "run-user"
 
     @classmethod
