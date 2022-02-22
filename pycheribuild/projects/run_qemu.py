@@ -839,15 +839,15 @@ class AbstractLaunchFreeBSDProgram(LaunchBsdUserQEMUBase):
         return result
 
 
-class LaunchCheriBSDShell(AbstractLaunchFreeBSDProgram):
-    target = "run-shell"
+class LaunchUserShell(AbstractLaunchFreeBSDProgram):
+    target = "run-user-shell"
 
     def __init__(self, config):
         super().__init__(config)
         self.command = None
 
 
-class LaunchCheriBSDExec(AbstractLaunchFreeBSDProgram):
+class LaunchUser(AbstractLaunchFreeBSDProgram):
     target = "run-user"
 
     @classmethod
