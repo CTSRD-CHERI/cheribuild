@@ -591,7 +591,7 @@ class LaunchBsdUserQEMUBase(SimpleProject):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.qemu_binary = None  # type: typing.Optional[Path]
-        self.qemu_options = QemuOptions(self.crosscompile_target, is_system_mode=False)
+        self.qemu_options = QemuOptions(self.crosscompile_target)
         self.rootfs_path = None  # type:typing.Optional[Path]
 
     def setup(self):

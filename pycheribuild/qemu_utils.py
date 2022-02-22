@@ -39,7 +39,7 @@ from .utils import OSInfo, warning_message
 
 
 class QemuOptions:
-    def __init__(self, xtarget: CrossCompileTarget, want_debugger=False, is_system_mode=True) -> None:
+    def __init__(self, xtarget: CrossCompileTarget, want_debugger=False) -> None:
         self.xtarget = xtarget
         self.virtio_disk = True
         self.force_virtio_blk_device = False
