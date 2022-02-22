@@ -199,6 +199,9 @@ class QemuOptions:
             result.extend(["-L", rootfs_path])
         if interpreter_path:
             result.extend(["-interpreter", interpreter_path])
+        # Map a guest address space at 0x100000000 not to overlap with a host
+        # address space.
+        result.extend(["-B", "4294967296"])
         if user_command:
             result.extend(user_command)
         return result
