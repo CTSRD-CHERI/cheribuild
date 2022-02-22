@@ -606,6 +606,7 @@ class LaunchBsdUserQEMUBase(SimpleProject):
     def process(self):
         assert self.qemu_binary is not None
         assert self.rootfs_path is not None
+        assert self.interpreter_path is not None
 
         if self.chroot and self.jail:
             self.fatal("Chroot and jail options are mutually exclusive.")
@@ -632,7 +633,8 @@ class LaunchBsdUserQEMUBase(SimpleProject):
             user_command = ["sh"]
 
         command.extend(self.qemu_options.get_user_commandline(qemu_command=qemu_command,
-                       rootfs_path=rootfs_path, user_command=user_command))
+                       rootfs_path=rootfs_path, interpreter_path=self.interpreter_path,
+                       user_command=user_command))
 
         self.info("About to run '{}' with the QEMU user mode".format(" ".join(user_command)))
 
@@ -827,6 +829,8 @@ class AbstractLaunchFreeBSDProgram(LaunchBsdUserQEMUBase):
         super().setup_config_options(**kwargs)
         cls.chroot = cls.add_bool_option("chroot", default=False, show_help=True,
                                          help="Change the root directory to a sysroot before executing a command.")
+        cls.interpreter_path = cls.add_path_option("interpreter", metavar="PATH", default="/libexec/ld-elf.so.1",
+                                              show_help=True, help="ELF interpreter path relative to a sysroot")
         cls.jail = cls.add_bool_option("jail", default=False, show_help=True,
                                        help="Enter a jail with a sysroot before executing a command.")
         cls.jail_extra_args = cls.add_config_option("jail-extra-args", metavar="ARGS", kind=list, show_help=True,
