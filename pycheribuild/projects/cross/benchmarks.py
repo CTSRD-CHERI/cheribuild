@@ -609,9 +609,9 @@ class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
             llvm_project = BuildCheriLLVM.get_instance(self, cross_target=CompilationTargets.NATIVE)
 
         self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006",
-                               TEST_SUITE_LIT=llvm_project.build_dir / "bin/llvm-lit",
-                               TEST_SUITE_LLVM_SIZE=llvm_project.build_dir / "bin/llvm-size",
-                               TEST_SUITE_LLVM_PROFDATA=llvm_project.build_dir / "bin/llvm-profdata",
+                               TEST_SUITE_LIT=llvm_project.build_dir / "llvm-lit",
+                               TEST_SUITE_LLVM_SIZE=self.sdk_bindir / "llvm-size",
+                               TEST_SUITE_LLVM_PROFDATA=self.sdk_bindir / "llvm-profdata",
                                TEST_SUITE_COPY_DATA=True,
                                TEST_SUITE_COLLECT_CODE_SIZE=False,
                                TEST_SUITE_COLLECT_COMPILE_TIME=False,
