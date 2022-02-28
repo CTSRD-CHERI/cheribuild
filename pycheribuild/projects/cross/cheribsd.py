@@ -1975,7 +1975,13 @@ class BuildBesspinCheriBsdMfsKernel(BuildCheriBsdMfsKernel):
         return BuildBesspinMfsRootCheriBSDDiskImage
 
 
-class BuildFreeBSDReleaseMixin:
+if typing.TYPE_CHECKING:
+    ReleaseMixinBase = BuildFreeBSD
+else:
+    ReleaseMixinBase = object
+
+
+class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
     @property
     def release_objdir(self):
         result = self.objdir.parent / "release"
