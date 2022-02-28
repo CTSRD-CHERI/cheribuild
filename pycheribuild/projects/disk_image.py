@@ -739,15 +739,6 @@ class BuildDiskImageBase(SimpleProject):
         self.copy_remote_file(rsync_path, self.disk_image_path)
 
     def process(self):
-        # Remove some old disk image names:
-        old_names = []
-        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            old_names = ["-mips-purecap128", "-mips-purecap256"]
-        elif self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.MIPS64]):
-            old_names = ["-mips-hybrid128", "-mips-hybrid256"]
-        elif self.crosscompile_target.is_x86_64(include_purecap=False):
-            old_names = ["-native", "-x86-64"]
-        self._cleanup_old_files(self.disk_image_path, self.build_configuration_suffix(), old_names)
         self.__process()
 
     @staticmethod
@@ -1382,18 +1373,6 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
         super().__init__(config)
         self.minimum_image_size = "256m"  # let's try to shrink the image size
 
-    def process(self):
-        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            # Clean up old inconsistent disk image names
-            self._cleanup_old_files(self.disk_image_path, self.disk_image_path.name,
-                                    ["purecap-128-disk.img", "purecap-cheri128-disk.img",
-                                     "purecap-256-disk.img", "purecap-256-disk.img"])
-        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            # Clean up old inconsistent disk image names
-            self._cleanup_old_files(self.disk_image_path, self.disk_image_path.name,
-                                    ["cheri128-disk.img", "cheri256-disk.img"])
-        super().process()
-
 
 class BuildFreeBSDImage(BuildDiskImageBase):
     target = "disk-image-freebsd"
@@ -1409,14 +1388,6 @@ class BuildFreeBSDImage(BuildDiskImageBase):
         super().__init__(config)
         # TODO: different extra-files directory
         self.minimum_image_size = "256m"
-
-    def process(self):
-        super().process()
-        if self.crosscompile_target.is_x86_64(include_purecap=False):
-            # remove the old -x86, -x86_64 and -native disk images
-            self._cleanup_old_files(self.disk_image_path,
-                                    "-" + self.crosscompile_target.base_arch_suffix + self.cheri_config_suffix,
-                                    ["-x86", "-x86_64", "-native"])
 
 
 class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):

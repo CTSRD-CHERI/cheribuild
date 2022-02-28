@@ -3217,21 +3217,6 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         with cleaning_task:
             if not self.build_dir.is_dir():
                 self.makedirs(self.build_dir)
-            # Delete some old build dirs to save disk space:
-            # TODO: remove this code after a few weeks
-            old_suffixes = []
-            if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-                if self.default_directory_basename != "cheribsd":  # cheribsd used different build dirs
-                    old_suffixes = ("128-build", "-128-build", "256-build", "-256-build")
-            elif self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.MIPS64]):
-                if self.default_directory_basename != "cheribsd":  # cheribsd used different build dirs
-                    old_suffixes = ("-mips-hybrid128-build", "-mips-hybrid256-build")
-            elif self.crosscompile_target.is_mips(include_purecap=False):
-                old_suffixes = ["-mips-build", "-mips-nocheri-build"]
-            if self.build_dir != self.source_dir:
-                self._cleanup_old_files(self.build_dir,
-                                        self.build_configuration_suffix(self.crosscompile_target) + "-build",
-                                        old_suffixes)
 
             # Clean has been performed -> write the last clean counter now (if needed).
             if required_clean_counter is not None and clean_counter_in_build_dir != required_clean_counter:

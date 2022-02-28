@@ -1282,13 +1282,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 # Don't try to install the kernel if we are only building a sysroot
                 return
             else:
-                if self.crosscompile_target.is_x86_64(include_purecap=False):
-                    # remove the old -x86/-native rootfs dirs
-                    self._cleanup_old_files(self.install_dir, self.build_configuration_suffix(), ["-x86", "-native"])
-                elif self.crosscompile_target.is_mips(include_purecap=False):
-                    # remove the old -mips rootfs dir (hybrid/purecap handled in cheribsd)
-                    if not self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                        self._cleanup_old_files(self.install_dir, self.build_configuration_suffix(), ["-mips"])
                 # Ensure that METALOG does not contain stale values:
                 self.delete_file(self.install_dir / "METALOG.world")
                 self.run_make("installworld", options=install_world_args)
@@ -1298,18 +1291,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
                         installsysroot_args.set_env(DESTDIR=self.target_info.sysroot_dir)
                     installsysroot_args.set_env(METALOG=installsysroot_args.env_vars["DESTDIR"] + "/METALOG")
                     self.run_make("installsysroot", options=installsysroot_args)
-                    # remove the old sysroot dirs
-                    old_suffixes = []
-                    if self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_PURECAP:
-                        old_suffixes = ["-purecap128", "-purecap256"]
-                    elif self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_PURECAP:
-                        old_suffixes = ["128", "256"]
-                    elif self.crosscompile_target.is_mips(include_purecap=False):
-                        old_suffixes = ["-mips"]
-                    elif self.crosscompile_target.is_x86_64(include_purecap=False):
-                        old_suffixes = ["-native", "-x86_64", "-x86"]
-                    self._cleanup_old_files(self.target_info.sysroot_dir, self.build_configuration_suffix(),
-                                            old_suffixes)
 
                 # Enable toor user with a shell of sh for those who dislike root's csh
                 def rewrite_passwd(old):
@@ -1783,13 +1764,6 @@ class BuildCHERIBSD(BuildFreeBSD):
             self.make_args.set_with_options(INIT_ALL_PATTERN=True)
 
     def compile(self, **kwargs):
-        if self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_PURECAP:
-            self._cleanup_old_files(self.build_dir, self.build_dir.name,
-                                    ["cheribsd-purecap-128-build", "cheribsd-purecap-256-build"])
-        elif self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_HYBRID:
-            self._cleanup_old_files(self.build_dir, self.build_dir.name,
-                                    ["cheribsd-obj-128", "cheribsd-128-build", "cheribsd-mips-hybrid128-build",
-                                     "cheribsd-obj-256", "cheribsd-256-build", "cheribsd-mips-hybrid256-build"])
         # We could also just pass all values in KERNCONF to build all those kernels. However, if MFS_ROOT is set
         # that will apply to all those kernels and embed the rootfs even if not needed
         super().compile(all_kernel_configs=self.kernel_config, mfs_root_image=self.mfs_root_image,
@@ -1808,13 +1782,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         available_kernconfs = [self.kernel_config] + self.extra_kernels
         if self.mfs_root_image:
             available_kernconfs += self.extra_kernels_with_mfs
-        if self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_PURECAP:
-            # remove the old rootfs-purecap128/256 rootfs dirs
-            self._cleanup_old_files(self.install_dir, "rootfs-mips64-purecap",
-                                    ["rootfs-purecap128", "rootfs-purecap256"])
-        elif self.crosscompile_target == CompilationTargets.CHERIBSD_MIPS_HYBRID:
-            # remove the old rootfs128/256 rootfs dirs
-            self._cleanup_old_files(self.install_dir, "rootfs-mips64-hybrid", ["rootfs128", "rootfs256"])
         super().install(all_kernel_configs=" ".join(available_kernconfs), sysroot_only=self.sysroot_only, **kwargs)
 
 
