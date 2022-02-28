@@ -18,7 +18,6 @@ from pycheribuild.projects.cross.gmp import BuildGmp
 from pycheribuild.projects.cross.llvm import BuildCheriLLVM, BuildMorelloLLVM
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 from pycheribuild.projects.disk_image import BuildDiskImageBase
-from pycheribuild.projects.run_fpga import LaunchFPGABase
 from pycheribuild.projects.run_fvp import LaunchFVPBase
 from pycheribuild.projects.run_qemu import BuildAll, BuildAndRunCheriBSD, LaunchCheriBSD
 from pycheribuild.projects.sdk import BuildCheriBSDSdk, BuildSdk
@@ -362,8 +361,7 @@ def test_hybrid_targets(enable_hybrid_targets):
 
         # We expect certain tagets to be built hybrid: CheriBSD/disk image/GDB/LLVM/run
         if issubclass(cls, (BuildCHERIBSD, LaunchCheriBSD, BuildCheriBsdSysrootArchive, BuildDiskImageBase,
-                            BuildGDBBase, BuildCheriLLVM, BuildMorelloLLVM,
-                            LaunchFPGABase, LaunchFVPBase, RunCheriSpikeBase)):
+                            BuildGDBBase, BuildCheriLLVM, BuildMorelloLLVM, LaunchFVPBase, RunCheriSpikeBase)):
             return False
         # Also filter out some target aliases
         if issubclass(cls, (BuildCheriBsdMfsImageAndKernels, BuildAll, BuildCheriBSDSdk, BuildSdk,
