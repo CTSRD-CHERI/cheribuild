@@ -87,10 +87,15 @@ class BuildSamba(Project):
             ])
         #  version 4.9 "--without-json-audit",
         self.configure_args.append("--without-json")
+
+        if OSInfo.IS_MAC:
+            self.configure_args.extend(["--with-system-mitkrb5", self.get_homebrew_prefix("krb5")])
+
+    def configure(self, **kwargs):
+        # XXX: Can't call contains_commit inside setup() since we might not have cloned the repo yet.
         if self.repository.contains_commit(self, "91c024dfd8ecf909f23ab8ee3816ae6a4c9b881c", src_dir=self.source_dir):
             # current master branch doesn't need as many workarounds
             self.configure_args.extend([
-                "--without-json",
                 # Avoid depending on libraries from the build tree:
                 "--bundled-libraries=ALL", "--with-static-modules=ALL",
                 "--enable-debug"
@@ -103,11 +108,6 @@ class BuildSamba(Project):
             ])
             # Force python2 for now (since py3 seems broken)
             self.configure_environment["PYTHON"] = shutil.which("python")
-
-        if OSInfo.IS_MAC:
-            self.configure_args.extend(["--with-system-mitkrb5", self.get_homebrew_prefix("krb5")])
-
-    def configure(self, **kwargs):
         # Add the yapp binary
         self.configure_environment["PATH"] = os.getenv("PATH") + ":" + str(Path(shutil.which("perl")).resolve().parent)
         super().configure(cwd=self.source_dir, **kwargs)
