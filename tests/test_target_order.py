@@ -51,15 +51,11 @@ def _sort_targets(targets: "typing.List[str]", *, add_dependencies=False, add_to
 
 
 freestanding_deps = ["llvm-native", "qemu", "gdb-native", "freestanding-cheri-sdk"]
-baremetal_deps = freestanding_deps + ["newlib-baremetal-riscv64", "compiler-rt-builtins-baremetal-riscv64",
-                                      "libunwind-baremetal-riscv64", "libcxxrt-baremetal-riscv64",
-                                      "libcxx-baremetal-riscv64", "baremetal-sdk"]
 cheribsd_sdk_deps = freestanding_deps + ["cheribsd-riscv64-hybrid", "cheribsd-sdk-riscv64-hybrid"]
 
 
 @pytest.mark.parametrize("target_name,expected_list", [
     pytest.param("freestanding-cheri-sdk", freestanding_deps, id="freestanding-sdk"),
-    pytest.param("baremetal-sdk", baremetal_deps, id="baremetal-sdk"),
     # Ensure that cheribsd is added to deps even on Linux/Mac
     pytest.param("cheribsd-sdk-riscv64-hybrid", cheribsd_sdk_deps, id="cheribsd-sdk"),
     pytest.param("sdk-riscv64-hybrid", cheribsd_sdk_deps + ["sdk-riscv64-hybrid"], id="sdk"),

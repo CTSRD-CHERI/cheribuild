@@ -111,13 +111,6 @@ class BuildFreestandingMorelloSdk(TargetAliasWithDependencies):
 target_manager.add_target_alias("binutils", "llvm-native")
 
 
-class BuildBaremetalSdk(TargetAliasWithDependencies):
-    target = "baremetal-sdk"  # FIXME: this should be a multi-arch target (or just build both probably)
-    dependencies = ["freestanding-cheri-sdk", "newlib-baremetal-mips64",
-                    "libcxx-baremetal-mips64"]  # TODO: add libcxx-baremetal-cheri
-    is_sdk_target = True
-
-
 class StartCheriSDKShell(SimpleProject):
     target = "sdk-shell"
 
