@@ -190,61 +190,6 @@ class KernelConfigFactory:
         return CheriBSDConfig(kernconf, platform, kABI=kABI, **kwargs)
 
 
-class MIPSKernelConfigFactory(KernelConfigFactory):
-    platform_name_map = {
-        ConfigPlatform.QEMU: "MALTA64",
-        ConfigPlatform.BERI: "DE4"
-    }
-
-    def get_kabi_name(self, platform, kABI):
-        if platform == ConfigPlatform.BERI and kABI == KernelABI.NOCHERI:
-            return "BERI"
-        return super().get_kabi_name(platform, kABI)
-
-    def get_flag_names(self, platform, kABI, usbroot=False, nfsroot=False, default=False, caprevoke=False,
-                       mfsroot=False, debug=False, benchmark=False, fuzzing=False, fett=False):
-        flags = []
-        if usbroot:
-            flags.append("USBROOT")
-        if nfsroot:
-            flags.append("NFSROOT")
-        flags += super().get_flag_names(platform, kABI, mfsroot=mfsroot, fuzzing=fuzzing)
-        if benchmark:
-            flags.append("BENCHMARK")
-        return flags
-
-    def make_config(self, platform, kABI, base_context=None, **kwargs):
-        kernconf_ctx = self._prepare_kernconf_context(platform, kABI, base_context=base_context, **kwargs)
-        valid_ctx_items = (v for v in kernconf_ctx.values() if v is not None)
-        kernconf = self.separator.join(valid_ctx_items)
-        # Drop MIPS-only flags only used to generate kernel variants
-        kwargs.pop("usbroot", None)
-        kwargs.pop("nfsroot", None)
-        return CheriBSDConfig(kernconf, platform, kABI=kABI, **kwargs)
-
-    def make_all(self):
-        configs = []
-        # Generate QEMU kernels
-        for kABI in KernelABI:
-            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, default=True))
-            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, fuzzing=True))
-            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, mfsroot=True, default=True))
-            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, mfsroot=True, benchmark=True, default=True))
-        # Generate BERI/CHERI-FPGA kernels
-        for kABI in KernelABI:
-            configs.append(self.make_config(ConfigPlatform.BERI, kABI, mfsroot=True, default=True))
-            configs.append(self.make_config(ConfigPlatform.BERI, kABI, mfsroot=True, benchmark=True, default=True))
-            configs.append(self.make_config(ConfigPlatform.BERI, kABI, mfsroot=True, fuzzing=True))
-            configs.append(self.make_config(ConfigPlatform.BERI, kABI, mfsroot=True, benchmark=True, fuzzing=True))
-        # Generate extra FPGA kernels
-        for kABI in [KernelABI.NOCHERI, KernelABI.HYBRID]:
-            configs.append(self.make_config(ConfigPlatform.BERI, kABI, usbroot=True))
-            configs.append(self.make_config(ConfigPlatform.BERI, kABI, usbroot=True, benchmark=True))
-            configs.append(self.make_config(ConfigPlatform.BERI, kABI, nfsroot=True))
-
-        return configs
-
-
 class RISCVKernelConfigFactory(KernelConfigFactory):
     kernconf_components = OrderedDict([(k, None) for k in (
         "kabi_name", "caprevoke", "platform_name", "flags")])
@@ -364,7 +309,9 @@ class CheriBSDConfigTable:
     X86_CONFIGS = [
         CheriBSDConfig("GENERIC", ConfigPlatform.QEMU, default=True)
     ]
-    MIPS_CONFIGS = []
+    MIPS_CONFIGS = [
+        CheriBSDConfig("MALTA64", ConfigPlatform.QEMU, default=True)
+    ]
     RISCV_CONFIGS = []
     AARCH64_CONFIGS = []
 
@@ -373,8 +320,8 @@ class CheriBSDConfigTable:
         if xtarget.is_any_x86():
             factory = None
             config_list = cls.X86_CONFIGS
-        elif xtarget.is_mips(include_purecap=True):
-            factory = MIPSKernelConfigFactory()
+        elif xtarget.is_mips(include_purecap=False):
+            factory = None
             config_list = cls.MIPS_CONFIGS
         elif xtarget.is_riscv(include_purecap=True):
             factory = RISCVKernelConfigFactory()
@@ -812,6 +759,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.has_default_buildkernel_kernel_config:
             assert self.kernel_config is not None
         self.make_args.set(**self.arch_build_flags)
+        self.extra_kernels = []
 
         if self.subdir_override:
             # build only part of the tree
@@ -1655,7 +1603,6 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.extra_kernels = []
         self.extra_kernels_with_mfs = []
 
         configs = self.extra_kernel_configs()

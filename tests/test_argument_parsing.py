@@ -704,10 +704,21 @@ def test_disk_image_path(target, expected_name):
                  [],
                  "GENERIC-MORELLO",
                  ["GENERIC-MORELLO-PURECAP"]),
+    # FreeBSD kernel configs
+    pytest.param("freebsd-i386", [], "GENERIC", []),
+    pytest.param("freebsd-aarch64", [], "GENERIC", []),
+    pytest.param("freebsd-amd64", [], "GENERIC", []),
+    pytest.param("freebsd-riscv64", [], "QEMU", []),
+    pytest.param("freebsd-mips64", [], "MALTA64", []),
+    pytest.param("freebsd-with-default-options-i386", [], "GENERIC", []),
+    pytest.param("freebsd-with-default-options-aarch64", [], "GENERIC", []),
+    pytest.param("freebsd-with-default-options-amd64", [], "GENERIC", []),
+    pytest.param("freebsd-with-default-options-riscv64", [], "QEMU", []),
+    pytest.param("freebsd-with-default-options-mips64", [], "MALTA64", []),
 ])
 def test_kernel_configs(target, config_options: "list[str]", expected_name, extra_kernels):
     config = _parse_arguments(config_options)
-    project = _get_target_instance(target, config, BuildCHERIBSD)
+    project = _get_target_instance(target, config, BuildFreeBSD)
     assert project.kernel_config == expected_name
     assert project.extra_kernels == extra_kernels
 
