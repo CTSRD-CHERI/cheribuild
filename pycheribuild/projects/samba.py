@@ -107,7 +107,7 @@ class BuildSamba(Project):
                 "--bundled-libraries=talloc,tdb,pytdb,ldb,pyldb,tevent,pytevent", "--with-static-modules=ALL",
             ])
             # Force python2 for now (since py3 seems broken)
-            self.configure_environment["PYTHON"] = shutil.which("python")
+            self.configure_environment["PYTHON"] = shutil.which("python2.7")
         # Add the yapp binary
         self.configure_environment["PATH"] = os.getenv("PATH") + ":" + str(Path(shutil.which("perl")).resolve().parent)
         super().configure(cwd=self.source_dir, **kwargs)
