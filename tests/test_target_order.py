@@ -51,18 +51,18 @@ def _sort_targets(targets: "typing.List[str]", *, add_dependencies=False, add_to
 
 
 freestanding_deps = ["llvm-native", "qemu", "gdb-native", "freestanding-cheri-sdk"]
-baremetal_deps = freestanding_deps + ["newlib-baremetal-mips64", "compiler-rt-builtins-baremetal-mips64",
-                                      "libunwind-baremetal-mips64", "libcxxrt-baremetal-mips64",
-                                      "libcxx-baremetal-mips64", "baremetal-sdk"]
-cheribsd_sdk_deps = freestanding_deps + ["cheribsd-mips64-hybrid", "cheribsd-sdk-mips64-hybrid"]
+baremetal_deps = freestanding_deps + ["newlib-baremetal-riscv64", "compiler-rt-builtins-baremetal-riscv64",
+                                      "libunwind-baremetal-riscv64", "libcxxrt-baremetal-riscv64",
+                                      "libcxx-baremetal-riscv64", "baremetal-sdk"]
+cheribsd_sdk_deps = freestanding_deps + ["cheribsd-riscv64-hybrid", "cheribsd-sdk-riscv64-hybrid"]
 
 
 @pytest.mark.parametrize("target_name,expected_list", [
     pytest.param("freestanding-cheri-sdk", freestanding_deps, id="freestanding-sdk"),
     pytest.param("baremetal-sdk", baremetal_deps, id="baremetal-sdk"),
     # Ensure that cheribsd is added to deps even on Linux/Mac
-    pytest.param("cheribsd-sdk-mips64-hybrid", cheribsd_sdk_deps, id="cheribsd-sdk"),
-    pytest.param("sdk-mips64-hybrid", cheribsd_sdk_deps + ["sdk-mips64-hybrid"], id="sdk"),
+    pytest.param("cheribsd-sdk-riscv64-hybrid", cheribsd_sdk_deps, id="cheribsd-sdk"),
+    pytest.param("sdk-riscv64-hybrid", cheribsd_sdk_deps + ["sdk-riscv64-hybrid"], id="sdk"),
     pytest.param("sdk-morello-purecap", ["morello-llvm-native", "morello-qemu", "freestanding-morello-sdk",
                                          "cheribsd-morello-purecap", "cheribsd-sdk-morello-purecap",
                                          "sdk-morello-purecap"], id="morello-purecap"),
@@ -90,27 +90,28 @@ def test_reordering():
 
 
 def test_run_comes_last():
-    assert _sort_targets(["run-mips64-hybrid", "disk-image-mips64-hybrid"]) == [
-        "disk-image-mips64-hybrid", "run-mips64-hybrid"]
+    assert _sort_targets(["run-riscv64-hybrid", "disk-image-riscv64-hybrid"]) == [
+        "disk-image-riscv64-hybrid", "run-riscv64-hybrid"]
 
 
 def test_disk_image_comes_second_last():
-    assert _sort_targets(["run-mips64-hybrid", "disk-image-mips64-hybrid"]) == ["disk-image-mips64-hybrid",
-                                                                                "run-mips64-hybrid"]
-    assert _sort_targets(["run-mips64-hybrid", "disk-image-mips64-hybrid", "cheribsd-mips64-hybrid"]) == [
-        "cheribsd-mips64-hybrid", "disk-image-mips64-hybrid", "run-mips64-hybrid"]
+    assert _sort_targets(["run-riscv64-hybrid", "disk-image-riscv64-hybrid"]) == ["disk-image-riscv64-hybrid",
+                                                                                  "run-riscv64-hybrid"]
+    assert _sort_targets(["run-riscv64-hybrid", "disk-image-riscv64-hybrid", "cheribsd-riscv64-hybrid"]) == [
+        "cheribsd-riscv64-hybrid", "disk-image-riscv64-hybrid", "run-riscv64-hybrid"]
     assert _sort_targets(
-        ["run-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid", "cheribsd-mips64-hybrid"]) == [
-               "cheribsd-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid", "run-mips64-hybrid"]
+        ["run-riscv64-hybrid", "gdb-riscv64-hybrid", "disk-image-riscv64-hybrid", "cheribsd-riscv64-hybrid"]) == [
+               "cheribsd-riscv64-hybrid", "gdb-riscv64-hybrid", "disk-image-riscv64-hybrid", "run-riscv64-hybrid"]
     assert _sort_targets(
-        ["run-mips64-purecap", "disk-image-mips64-purecap", "postgres-mips64-purecap", "cheribsd-mips64-purecap"]) == [
-               "cheribsd-mips64-purecap", "postgres-mips64-purecap", "disk-image-mips64-purecap", "run-mips64-purecap"]
+        ["run-riscv64-purecap", "disk-image-riscv64-purecap", "postgres-riscv64-purecap",
+         "cheribsd-riscv64-purecap"]) == ["cheribsd-riscv64-purecap", "postgres-riscv64-purecap",
+                                          "disk-image-riscv64-purecap", "run-riscv64-purecap"]
 
 
 def test_cheribsd_default_aliases():
-    assert _sort_targets(["run-mips64-hybrid"]) == ["run-mips64-hybrid"]
-    assert _sort_targets(["disk-image-mips64-hybrid"]) == ["disk-image-mips64-hybrid"]
-    assert _sort_targets(["cheribsd-mips64-hybrid"]) == ["cheribsd-mips64-hybrid"]
+    assert _sort_targets(["run-riscv64-hybrid"]) == ["run-riscv64-hybrid"]
+    assert _sort_targets(["disk-image-riscv64-hybrid"]) == ["disk-image-riscv64-hybrid"]
+    assert _sort_targets(["cheribsd-riscv64-hybrid"]) == ["cheribsd-riscv64-hybrid"]
 
 
 @pytest.mark.parametrize("target_name,expected_list", [
@@ -131,13 +132,12 @@ def test_build_and_run(target_name, expected_list):
 @pytest.mark.parametrize("target,add_toolchain,expected_deps", [
     # Note: For architectures that CHERI QEMU builds by default we currently
     # explicitly default to using that rather than the system QEMU.
-    pytest.param("run-mips64", True,
-                 ["qemu", "llvm-native", "cheribsd-mips64", "gdb-mips64", "disk-image-mips64"]),
-    pytest.param("run-mips64-hybrid", True,
-                 ["qemu", "llvm-native", "cheribsd-mips64-hybrid", "gdb-mips64-hybrid", "disk-image-mips64-hybrid"]),
-    pytest.param("run-mips64-purecap", True,
-                 ["qemu", "llvm-native", "cheribsd-mips64-purecap", "gdb-mips64-hybrid-for-purecap-rootfs",
-                  "disk-image-mips64-purecap"]),
+    pytest.param("run-morello-hybrid", True,
+                 ["morello-qemu", "morello-llvm-native", "cheribsd-morello-hybrid", "gdb-morello-hybrid",
+                  "disk-image-morello-hybrid"]),
+    pytest.param("run-morello-purecap", True,
+                 ["morello-qemu", "morello-llvm-native", "cheribsd-morello-purecap",
+                  "gdb-morello-hybrid-for-purecap-rootfs", "disk-image-morello-purecap"]),
     pytest.param("run-riscv64", True,
                  ["qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64"]),
     pytest.param("run-riscv64-hybrid", True,
@@ -166,10 +166,10 @@ def test_all_run_deps(target, add_toolchain: bool, expected_deps):
 
 
 def test_run_disk_image():
-    assert _sort_targets(["run-mips64-hybrid", "disk-image-mips64-hybrid", "run-freebsd-mips64", "llvm",
+    assert _sort_targets(["run-riscv64-hybrid", "disk-image-riscv64-hybrid", "run-freebsd-riscv64", "llvm",
                           "disk-image-freebsd-amd64"]) == [
-               "llvm-native", "disk-image-mips64-hybrid", "disk-image-freebsd-amd64", "run-mips64-hybrid",
-               "run-freebsd-mips64"]
+               "llvm-native", "disk-image-riscv64-hybrid", "disk-image-freebsd-amd64", "run-riscv64-hybrid",
+               "run-freebsd-riscv64"]
 
 
 def test_remove_duplicates():
@@ -178,15 +178,12 @@ def test_remove_duplicates():
 
 def test_mfs_root_run():
     # Check that we build the mfs root first
-    assert _sort_targets(["disk-image-mfs-root-mips64-hybrid",
-                          "cheribsd-mfs-root-kernel-mips64-hybrid",
-                          "run-mfs-root-mips64-hybrid"]) == ["disk-image-mfs-root-mips64-hybrid",
-                                                             "cheribsd-mfs-root-kernel-mips64-hybrid",
-                                                             "run-mfs-root-mips64-hybrid"]
-    assert _sort_targets(["cheribsd-mfs-root-kernel-mips64-hybrid", "disk-image-mfs-root-mips64-hybrid",
-                          "run-mfs-root-mips64-hybrid"]) == ["disk-image-mfs-root-mips64-hybrid",
-                                                             "cheribsd-mfs-root-kernel-mips64-hybrid",
-                                                             "run-mfs-root-mips64-hybrid"]
+    assert _sort_targets(["disk-image-mfs-root-riscv64-hybrid", "cheribsd-mfs-root-kernel-riscv64-hybrid",
+                          "run-mfs-root-riscv64-hybrid"]) == [
+        "disk-image-mfs-root-riscv64-hybrid", "cheribsd-mfs-root-kernel-riscv64-hybrid", "run-mfs-root-riscv64-hybrid"]
+    assert _sort_targets(["cheribsd-mfs-root-kernel-riscv64-hybrid", "disk-image-mfs-root-riscv64-hybrid",
+                          "run-mfs-root-riscv64-hybrid"]) == [
+        "disk-image-mfs-root-riscv64-hybrid", "cheribsd-mfs-root-kernel-riscv64-hybrid", "run-mfs-root-riscv64-hybrid"]
 
 
 def _check_deps_not_cached(classes):
@@ -239,33 +236,33 @@ def test_webkit_cached_deps():
     _avoid_native_qtbase_x11_deps()
 
     webkit_native = target_manager.get_target_raw("qtwebkit-native").project_class
-    webkit_cheri = target_manager.get_target_raw("qtwebkit-mips64-purecap").project_class
-    webkit_mips = target_manager.get_target_raw("qtwebkit-mips64").project_class
+    webkit_purecap = target_manager.get_target_raw("qtwebkit-riscv64-purecap").project_class
+    webkit_riscv = target_manager.get_target_raw("qtwebkit-riscv64").project_class
     # Check that the deps are not cached yet
-    _check_deps_not_cached((webkit_native, webkit_cheri, webkit_mips))
+    _check_deps_not_cached((webkit_native, webkit_purecap, webkit_riscv))
     assert inspect.getattr_static(webkit_native, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
-    assert inspect.getattr_static(webkit_cheri, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
-    assert inspect.getattr_static(webkit_mips, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
+    assert inspect.getattr_static(webkit_purecap, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
+    assert inspect.getattr_static(webkit_riscv, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
 
-    cheri_target_names = list(sorted(webkit_cheri.all_dependency_names(config)))
-    expected_cheri_names = sorted(["llvm-native", "cheribsd-mips64-purecap"] + _qtbase_x11_deps("mips64-purecap") + [
-        "qtbase-mips64-purecap", "icu4c-native", "icu4c-mips64-purecap", "libxml2-mips64-purecap"])
+    cheri_target_names = list(sorted(webkit_purecap.all_dependency_names(config)))
+    expected_cheri_names = sorted(["llvm-native", "cheribsd-riscv64-purecap"] + _qtbase_x11_deps("riscv64-purecap") + [
+        "qtbase-riscv64-purecap", "icu4c-native", "icu4c-riscv64-purecap", "libxml2-riscv64-purecap"])
     assert cheri_target_names == expected_cheri_names
-    _check_deps_not_cached([webkit_native, webkit_mips])
-    _check_deps_cached([webkit_cheri])
-    mips_target_names = list(sorted(webkit_mips.all_dependency_names(config)))
-    expected_mips_names = sorted(["llvm-native", "cheribsd-mips64"] + _qtbase_x11_deps("mips64") + [
-        "qtbase-mips64", "icu4c-native", "icu4c-mips64", "libxml2-mips64"])
+    _check_deps_not_cached([webkit_native, webkit_riscv])
+    _check_deps_cached([webkit_purecap])
+    mips_target_names = list(sorted(webkit_riscv.all_dependency_names(config)))
+    expected_mips_names = sorted(["llvm-native", "cheribsd-riscv64"] + _qtbase_x11_deps("riscv64") + [
+        "qtbase-riscv64", "icu4c-native", "icu4c-riscv64", "libxml2-riscv64"])
     assert mips_target_names == expected_mips_names
-    _check_deps_cached([webkit_cheri, webkit_mips])
+    _check_deps_cached([webkit_purecap, webkit_riscv])
     _check_deps_not_cached([webkit_native])
 
     native_target_names = list(sorted(webkit_native.all_dependency_names(config)))
     assert native_target_names == ["icu4c-native", "libxml2-native", "qtbase-native", "sqlite-native"]
-    _check_deps_cached([webkit_cheri, webkit_mips, webkit_native])
+    _check_deps_cached([webkit_purecap, webkit_riscv, webkit_native])
     assert inspect.getattr_static(webkit_native, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
-    assert inspect.getattr_static(webkit_cheri, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
-    assert inspect.getattr_static(webkit_mips, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
+    assert inspect.getattr_static(webkit_purecap, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
+    assert inspect.getattr_static(webkit_riscv, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
 
 
 def test_webkit_deps_2():
@@ -277,11 +274,11 @@ def test_webkit_deps_2():
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=True) == [
         "qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
 
-    assert _sort_targets(["qtwebkit-mips64"], add_dependencies=True, skip_sdk=True) == _qtbase_x11_deps(
-        "mips64") + ["qtbase-mips64", "icu4c-native", "icu4c-mips64", "libxml2-mips64", "qtwebkit-mips64"]
-    assert _sort_targets(["qtwebkit-mips64-purecap"], add_dependencies=True, skip_sdk=True) == _qtbase_x11_deps(
-        "mips64-purecap") + ["qtbase-mips64-purecap", "icu4c-native", "icu4c-mips64-purecap", "libxml2-mips64-purecap",
-                             "qtwebkit-mips64-purecap"]
+    assert _sort_targets(["qtwebkit-riscv64"], add_dependencies=True, skip_sdk=True) == _qtbase_x11_deps(
+        "riscv64") + ["qtbase-riscv64", "icu4c-native", "icu4c-riscv64", "libxml2-riscv64", "qtwebkit-riscv64"]
+    assert _sort_targets(["qtwebkit-riscv64-purecap"], add_dependencies=True, skip_sdk=True) == _qtbase_x11_deps(
+        "riscv64-purecap") + ["qtbase-riscv64-purecap", "icu4c-native", "icu4c-riscv64-purecap",
+                              "libxml2-riscv64-purecap", "qtwebkit-riscv64-purecap"]
 
 
 def test_riscv():
@@ -297,11 +294,11 @@ def test_riscv():
 
 
 # Check that libcxx deps with skip sdk pick the matching -native/-mips versions
-# Also the libcxx target should resolve to libcxx-mips64-purecap:
+# Also the libcxx target should resolve to libcxx-riscv64-purecap:
 @pytest.mark.parametrize("suffix,expected_suffix", [
     pytest.param("-native", "-native", id="native"),
-    pytest.param("-mips64", "-mips64", id="mips64"),
-    pytest.param("-mips64-purecap", "-mips64-purecap", id="mips64-purecap"),
+    pytest.param("-riscv64", "-riscv64", id="riscv64"),
+    pytest.param("-riscv64-purecap", "-riscv64-purecap", id="riscv64-purecap"),
 ])
 def test_libcxx_deps(suffix, expected_suffix):
     expected = ["libunwind" + expected_suffix, "libcxxrt" + expected_suffix, "libcxx" + expected_suffix]
