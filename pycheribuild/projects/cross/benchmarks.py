@@ -610,14 +610,16 @@ class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
 
         self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006",
                                TEST_SUITE_LIT=llvm_project.build_dir / "bin/llvm-lit",
-                               TEST_SUITE_LLVM_SIZE=self.sdk_bindir / "llvm-size",
-                               TEST_SUITE_LLVM_PROFDATA=self.sdk_bindir / "llvm-profdata",
                                TEST_SUITE_COPY_DATA=True,
                                TEST_SUITE_COLLECT_CODE_SIZE=False,
                                TEST_SUITE_COLLECT_COMPILE_TIME=False,
                                TEST_SUITE_COLLECT_STATS=False,
                                TEST_SUITE_RUN_TYPE='test',  # TODO: allow train+ref
                                TEST_SUITE_SPEC2006_ROOT=self.extracted_spec_sources)
+
+        if not self.compiling_for_host():
+            self.add_cmake_options(TEST_SUITE_LLVM_SIZE=self.sdk_bindir / "llvm-size",
+                                   TEST_SUITE_LLVM_PROFDATA=self.sdk_bindir / "llvm-profdata")
 
     def _check_broken_bsdtar(self, bsdtar: Path) -> "tuple[bool, tuple[int, int, int]]":
         if self.config.pretend and not bsdtar.exists():
