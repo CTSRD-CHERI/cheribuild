@@ -510,7 +510,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
     target = "freebsd"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     needs_sysroot = False  # We are building the full OS so we don't need a sysroot
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
+    # We still allow building FreeBSD for MIPS64. While the main branch no longer has support, this allows building
+    # the stable/13 branch using cheribuild. However, MIPS is no longer included in ALL_SUPPORTED_FREEBSD_TARGETS.
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS + [CompilationTargets.FREEBSD_MIPS64]
 
     _default_install_dir_fn = ComputedDefaultValue(function=freebsd_install_dir,
                                                    as_string="$INSTALL_ROOT/freebsd-{mips/x86}")
