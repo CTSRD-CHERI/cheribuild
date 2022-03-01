@@ -1614,7 +1614,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                                      "etc. depending on target)"
         super().setup_config_options(install_directory_help=install_directory_help, use_upstream_llvm=False,
                                      kernel_only_target=kernel_only_target)
-        fpga_targets = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
+        fpga_targets = CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS
         cls.build_fpga_kernels = cls.add_bool_option("build-fpga-kernels", show_help=True, _allow_unknown_targets=True,
                                                      only_add_for_targets=fpga_targets,
                                                      help="Also build kernels for the FPGA.")
@@ -1808,7 +1808,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     target = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-mfs-root"]
     repository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD, do_update=True)
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS
     default_build_dir = ComputedDefaultValue(function=cheribsd_reuse_build_dir,
                                              as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
     # This exists specifically for this target

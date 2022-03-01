@@ -560,23 +560,23 @@ class SystemClangIfExistsElse:
 
 @pytest.mark.parametrize("target,expected_path,kind,extra_args", [
     # FreeBSD targets default to system clang if it exists, otherwise LLVM:
-    pytest.param("freebsd-mips64", SystemClangIfExistsElse("$OUTPUT$/upstream-llvm/bin/clang"),
+    pytest.param("freebsd-riscv64", SystemClangIfExistsElse("$OUTPUT$/upstream-llvm/bin/clang"),
                  FreeBSDToolchainKind.DEFAULT_COMPILER, []),
-    pytest.param("freebsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
-    pytest.param("freebsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
-    pytest.param("freebsd-mips64", "$BUILD$/freebsd-mips64-build/tmp/usr/bin/clang",
+    pytest.param("freebsd-riscv64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
+    pytest.param("freebsd-riscv64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
+    pytest.param("freebsd-riscv64", "$BUILD$/freebsd-riscv64-build/tmp/usr/bin/clang",
                  FreeBSDToolchainKind.BOOTSTRAPPED, []),
-    pytest.param("freebsd-mips64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
-                 ["--freebsd-mips64/toolchain-path", "/path/to/custom/toolchain"]),
+    pytest.param("freebsd-riscv64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
+                 ["--freebsd-riscv64/toolchain-path", "/path/to/custom/toolchain"]),
 
     # CheriBSD-mips can be built with all these toolchains (but defaults to CHERI LLVM):
-    pytest.param("cheribsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.DEFAULT_COMPILER, []),
-    pytest.param("cheribsd-mips64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
-    pytest.param("cheribsd-mips64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
-    pytest.param("cheribsd-mips64", "$BUILD$/cheribsd-mips64-build/tmp/usr/bin/clang",
+    pytest.param("cheribsd-riscv64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.DEFAULT_COMPILER, []),
+    pytest.param("cheribsd-riscv64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
+    pytest.param("cheribsd-riscv64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
+    pytest.param("cheribsd-riscv64", "$BUILD$/cheribsd-riscv64-build/tmp/usr/bin/clang",
                  FreeBSDToolchainKind.BOOTSTRAPPED, []),
-    pytest.param("cheribsd-mips64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
-                 ["--cheribsd-mips64/toolchain-path", "/path/to/custom/toolchain"]),
+    pytest.param("cheribsd-riscv64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
+                 ["--cheribsd-riscv64/toolchain-path", "/path/to/custom/toolchain"]),
 ])
 def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, extra_args):
     # Avoid querying bmake for the objdir
@@ -607,9 +607,6 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
 
 @pytest.mark.parametrize("target,expected_name", [
     # CheriBSD
-    pytest.param("disk-image-mips64", "cheribsd-mips64.img"),
-    pytest.param("disk-image-mips64-hybrid", "cheribsd-mips64-hybrid.img"),
-    pytest.param("disk-image-mips64-purecap", "cheribsd-mips64-purecap.img"),
     pytest.param("disk-image-riscv64", "cheribsd-riscv64.img"),
     pytest.param("disk-image-riscv64-hybrid", "cheribsd-riscv64-hybrid.img"),
     pytest.param("disk-image-riscv64-purecap", "cheribsd-riscv64-purecap.img"),
@@ -617,9 +614,6 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     pytest.param("disk-image-morello-hybrid", "cheribsd-morello-hybrid.img"),
     pytest.param("disk-image-morello-purecap", "cheribsd-morello-purecap.img"),
     # Minimal image
-    pytest.param("disk-image-minimal-mips64", "cheribsd-minimal-mips64.img"),
-    pytest.param("disk-image-minimal-mips64-hybrid", "cheribsd-minimal-mips64-hybrid.img"),
-    pytest.param("disk-image-minimal-mips64-purecap", "cheribsd-minimal-mips64-purecap.img"),
     pytest.param("disk-image-minimal-riscv64", "cheribsd-minimal-riscv64.img"),
     pytest.param("disk-image-minimal-riscv64-hybrid", "cheribsd-minimal-riscv64-hybrid.img"),
     pytest.param("disk-image-minimal-riscv64-purecap", "cheribsd-minimal-riscv64-purecap.img"),
@@ -697,19 +691,6 @@ def test_disk_image_path(target, expected_name):
                   "CHERI-PURECAP-QEMU",
                   "CHERI-FETT",
                   "CHERI-PURECAP-FETT"]),
-    # MIPS kernconf tests
-    pytest.param("cheribsd-mips64-purecap",
-                 ["--cheribsd/build-fpga-kernels"],
-                 "CHERI_MALTA64",
-                 ["CHERI_DE4_USBROOT",
-                  "CHERI_DE4_NFSROOT"]),
-    pytest.param("cheribsd-mips64-purecap",
-                 ["--cheribsd/build-fpga-kernels",
-                  "--cheribsd/build-bench-kernels"],
-                 "CHERI_MALTA64",
-                 ["CHERI_DE4_USBROOT_BENCHMARK",
-                  "CHERI_DE4_USBROOT",
-                  "CHERI_DE4_NFSROOT"]),
     # Morello kernconf tests
     pytest.param("cheribsd-aarch64",
                  [],
@@ -756,22 +737,6 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
                   "--cheribsd-mfs-root-kernel-riscv64-purecap/build-alternate-abi-kernels",
                   "--cheribsd-mfs-root-kernel-riscv64-purecap/kernel-config=CHERI-QEMU-MFS-ROOT"],
                  ["CHERI-QEMU-MFS-ROOT"]),
-    # MIPS kernconf tests
-    pytest.param("cheribsd-mfs-root-kernel-mips64",
-                 [],
-                 ["MALTA64_MFS_ROOT"]),
-    pytest.param("cheribsd-mfs-root-kernel-mips64",
-                 ["--cheribsd-mfs-root-kernel-mips64/build-fpga-kernels"],
-                 ["MALTA64_MFS_ROOT",
-                  "BERI_DE4_MFS_ROOT"]),
-    pytest.param("cheribsd-mfs-root-kernel-mips64-purecap",
-                 ["--cheribsd-mfs-root-kernel-mips64-purecap/build-fpga-kernels"],
-                 ["CHERI_MALTA64_MFS_ROOT",
-                  "CHERI_DE4_MFS_ROOT"]),
-    pytest.param("cheribsd-mfs-root-kernel-mips64-purecap",
-                 ["--cheribsd-mfs-root-kernel-mips64-purecap/build-fpga-kernels",
-                  "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=CHERI_MALTA64_MFS_ROOT"],
-                 ["CHERI_MALTA64_MFS_ROOT"]),
 ])
 def test_mfsroot_kernel_configs(target, config_options: "list[str]", expected_kernels):
     config = _parse_arguments(config_options)
@@ -823,12 +788,6 @@ def test_default_build_dir(target: str, args: list, expected: str):
 
 
 @pytest.mark.parametrize("target,args,expected_sysroot,expected_rootfs", [
-    pytest.param("cheribsd-mips64", [],
-                 "sdk/sysroot-mips64", "rootfs-mips64"),
-    pytest.param("cheribsd-mips64-hybrid", [],
-                 "sdk/sysroot-mips64-hybrid", "rootfs-mips64-hybrid"),
-    pytest.param("cheribsd-mips64-purecap", [],
-                 "sdk/sysroot-mips64-purecap", "rootfs-mips64-purecap"),
     pytest.param("cheribsd-riscv64", [],
                  "sdk/sysroot-riscv64", "rootfs-riscv64"),
     pytest.param("cheribsd-riscv64-hybrid", [],
@@ -890,13 +849,6 @@ def test_default_rootfs_and_sysroot_dir(target: str, args: list, expected_sysroo
     assert str(rootfs_dir.relative_to(config.output_root)) == expected_rootfs
 
 
-def test_backwards_compat_old_suffixes():
-    config = _parse_config_file_and_args(b'{"qtbase-mips-purecap/build-directory": "/some/build/dir"}')
-    # Check that qtbase-mips-purecap is a (deprecated) config file alias for qtbase-mips64-purecap
-    qtbase_mips_purecap = _get_target_instance("qtbase-mips64-purecap", config, BuildQtBase)
-    assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
-
-
 def _check_source_dir(target: str, expected: str, config_file: bytes, cmdline: typing.List[str]):
     config = _parse_config_file_and_args(config_file, *cmdline)
     project = _get_target_instance(target, config)
@@ -918,14 +870,6 @@ def test_backwards_compat_old_suffixes_freebsd_mips():
     _check_source_dir("freebsd-mips64", "/new/dir",
                       b'{"freebsd-mips/source-directory": "/old/dir",'
                       b' "freebsd-mips64/source-directory": "/new/dir" }', [])
-
-    # Also check the CheriBSD names:
-    _check_source_dir("cheribsd-mips64", "/from/json",
-                      b'{"cheribsd-mips-nocheri/source-directory": "/from/json"}', [])
-    _check_source_dir("cheribsd-mips64-hybrid", "/from/json",
-                      b'{"cheribsd-mips-hybrid/source-directory": "/from/json"}', [])
-    _check_source_dir("cheribsd-mips64-purecap", "/from/json",
-                      b'{"cheribsd-mips-purecap/source-directory": "/from/json"}', [])
 
     # Finally, using the old name on the command line should be an error:
     with pytest.raises(KeyError, match=r"error: unknown argument '--freebsd-mips/source-directory=/cmdline'"):
