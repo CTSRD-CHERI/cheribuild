@@ -31,13 +31,14 @@
 
 import json
 import os
-import sys
 
 from .build_qemu import BuildQEMU
 from .cross.cheribsd import BuildCHERIBSD, ConfigPlatform, CheriBSDConfigTable
-from .cross.crosscompileproject import CheriConfig, CompilationTargets, CrossCompileProject
+from .cross.crosscompileproject import CompilationTargets, CrossCompileProject
 from .disk_image import BuildCheriBSDDiskImage
 from .project import DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject
+from ..processutils import commandline_to_str
+from ..qemu_utils import QemuOptions
 from ..utils import ThreadJoiner
 
 
@@ -51,7 +52,7 @@ class BuildSyzkaller(CrossCompileProject):
     make_kind = MakeCommandKind.GnuMake
 
     # is_sdk_target = True
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID_FOR_PURECAP_ROOTFS]
+    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS]
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
 
     @classmethod
@@ -97,7 +98,7 @@ class BuildSyzkaller(CrossCompileProject):
 
         self.make_args.set_env(
             HOSTARCH="amd64",
-            TARGETARCH="mips64",
+            TARGETARCH=self.crosscompile_target.cpu_architecture.value,
             TARGETOS="freebsd",
             GOROOT=self.goroot.expanduser(),
             GOPATH=self.gopath.expanduser(),
@@ -135,7 +136,7 @@ class BuildSyzkaller(CrossCompileProject):
         self.run_cmd(["chmod", "-R", "u+w", self.build_dir])
         self.make_args.set_env(
             HOSTARCH="amd64",
-            TARGETARCH="mips64",
+            TARGETARCH=self.crosscompile_target.cpu_architecture.value,
             TARGETOS="freebsd",
             GOROOT=self.goroot.expanduser(),
             GOPATH=self.gopath.expanduser(),
@@ -149,6 +150,7 @@ class BuildSyzkaller(CrossCompileProject):
 
 class RunSyzkaller(SimpleProject):
     target = "run-syzkaller"
+    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -169,31 +171,25 @@ class RunSyzkaller(SimpleProject):
         cls.syz_debug = cls.add_bool_option("debug",
                                             help="Run syz-manager in debug mode, requires manual startup of the VM.")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        # XXX this should be a cross target
-        xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
-        syzkaller_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID_FOR_PURECAP_ROOTFS
-
-        self.qemu_binary = BuildQEMU.qemu_binary(self, xtarget=xtarget)
-        self.syzkaller = BuildSyzkaller.get_instance(self, cross_target=syzkaller_xtarget)
-        kernel_project = BuildCHERIBSD.get_instance(self, cross_target=xtarget)
-        kernel_config = CheriBSDConfigTable.get_configs(xtarget, ConfigPlatform.QEMU,
-                                                        kernel_project.get_default_kernel_abi(), fuzzing=True)
-        if len(kernel_config) == 0:
-            self.fatal("No kcov kernel configuration found")
-            sys.exit("Can not continue...")
-        self.kernel_path = kernel_project.get_kernel_install_path(kernel_config[0].kernconf)
-
-        self.kernel_src_path = kernel_project.source_dir
-        self.kernel_build_path = kernel_project.build_dir
-        self.disk_image = BuildCheriBSDDiskImage.get_instance(self, cross_target=xtarget).disk_image_path
-
-    def syzkaller_config(self):
+    def syzkaller_config(self, syzkaller: BuildSyzkaller):
         """ Get path of syzkaller configuration file to use. """
         if self.syz_config:
             return self.syz_config
         else:
+            xtarget = syzkaller.crosscompile_target.get_cheri_purecap_target()
+            qemu_binary = BuildQEMU.qemu_binary(self, xtarget=xtarget)
+            kernel_project = BuildCHERIBSD.get_instance(self, cross_target=xtarget)
+            kernel_config = CheriBSDConfigTable.get_configs(xtarget, ConfigPlatform.QEMU,
+                                                            kernel_project.get_default_kernel_abi(), fuzzing=True)
+            if len(kernel_config) == 0:
+                self.fatal("No kcov kernel configuration found")
+                return
+            kernel_path = kernel_project.get_kernel_install_path(kernel_config[0].kernconf)
+
+            kernel_src_path = kernel_project.source_dir
+            kernel_build_path = kernel_project.build_dir
+            disk_image = BuildCheriBSDDiskImage.get_instance(self, cross_target=xtarget).disk_image_path
+
             self.makedirs(self.syz_workdir)
             syz_config = self.syz_workdir / "syzkaller-config.json"
             vm_type = "qemu"
@@ -201,28 +197,31 @@ class RunSyzkaller(SimpleProject):
                 # Run in debug mode
                 vm_type = "none"
 
+            qemu_opts = QemuOptions(self.crosscompile_target)
             template = {
                 "name": "cheribsd-n64",
-                "target": "freebsd/mips64",
+                "target": "freebsd/" + self.crosscompile_target.cpu_architecture.value,
                 "http": ":10000",
                 "rpc": ":10001",
                 "workdir": str(self.syz_workdir),
-                "syzkaller": str(self.syzkaller.syzkaller_install_path().parent),
+                "syzkaller": str(syzkaller.syzkaller_install_path().parent),
                 "sshkey": str(self.syz_ssh_key),
                 # (used for report symbolization and coverage reports, optional).
-                "kernel_obj": str(self.kernel_path),
+                "kernel_obj": str(kernel_path),
                 # Kernel source directory (if not set defaults to KernelObj)
-                "kernel_src": str(self.kernel_src_path),
+                "kernel_src": str(kernel_src_path),
                 # Location of the driectory where the kernel was built (if not set defaults to KernelSrc)
-                "kernel_build_src": str(self.kernel_build_path),
+                "kernel_build_src": str(kernel_build_path),
                 "sandbox": "none",
                 "procs": 1,
-                "image": str(self.disk_image),
+                "image": str(disk_image),
                 "type": vm_type,
                 "vm": {
-                    "qemu": str(self.qemu_binary),
-                    "qemu_args": "-M malta -device virtio-rng-pci -D syz-trace.log",
-                    "kernel": str(self.kernel_path),
+                    "qemu": str(qemu_binary),
+                    "qemu_args": commandline_to_str(qemu_opts.machine_flags +
+                                                    ["-device", "virtio-rng-pci",
+                                                     "-D", "syz-trace.log"]),
+                    "kernel": str(kernel_path),
                     "image_device": "drive index=0,media=disk,format=raw,file=",
                     "count": 1,
                     "cpu": 1,
@@ -239,7 +238,8 @@ class RunSyzkaller(SimpleProject):
             return syz_config
 
     def process(self):
-        syz_args = [self.syzkaller.syzkaller_binary(), "-config", self.syzkaller_config()]
+        syzkaller = BuildSyzkaller.get_instance(self)
+        syz_args = [syzkaller.syzkaller_binary(), "-config", self.syzkaller_config(syzkaller)]
         if self.config.verbose:
             syz_args += ["-debug"]
         self.run_cmd(*syz_args)

@@ -383,5 +383,5 @@ def test_hybrid_targets(enable_hybrid_targets):
         return True
 
     unexpected_hybrid_targets = filter(should_include_target, all_hybrid_targets)
-    # Currently this list should only include the MIPS-specific BuildSyzkaller target:
-    assert [t.name for t in unexpected_hybrid_targets] == ["cheri-syzkaller"]
+    # Currently this list should only include the Syzkaller targets:
+    assert [t.name for t in unexpected_hybrid_targets] == ["cheri-syzkaller", "run-syzkaller"]
