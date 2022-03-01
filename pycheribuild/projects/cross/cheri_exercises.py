@@ -39,9 +39,7 @@ class BuildCheriExercises(CrossCompileProject):
     target = "cheri-exercises"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-exercises.git")
     supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP,
-                               CompilationTargets.CHERIBSD_MORELLO_PURECAP,
-                               CompilationTargets.CHERIBSD_MIPS_PURECAP,  # untested, but should work
-                               ]
+                               CompilationTargets.CHERIBSD_MORELLO_PURECAP]
     default_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     path_in_rootfs = "/opt/cheri-exercises"
 
