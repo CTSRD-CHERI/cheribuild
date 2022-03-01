@@ -241,53 +241,53 @@ def test_cross_compile_project_inherits():
     config = _parse_arguments(["--skip-configure"])
     qtbase_class = target_manager.get_target_raw("qtbase").project_class
     qtbase_native = _get_target_instance("qtbase-native", config, BuildQtBase)
-    qtbase_mips = _get_target_instance("qtbase-mips64", config, BuildQtBase)
+    qtbase_riscv = _get_target_instance("qtbase-riscv64", config, BuildQtBase)
 
     # Check that project name is the same:
-    assert qtbase_mips.default_directory_basename == qtbase_native.default_directory_basename
+    assert qtbase_riscv.default_directory_basename == qtbase_native.default_directory_basename
     # These classes were generated:
     # noinspection PyUnresolvedReferences
     assert qtbase_native.synthetic_base == qtbase_class
     # noinspection PyUnresolvedReferences
-    assert qtbase_mips.synthetic_base == qtbase_class
+    assert qtbase_riscv.synthetic_base == qtbase_class
     assert not hasattr(qtbase_class, "synthetic_base")
 
     # Now check a property that should be inherited:
     _parse_arguments(["--qtbase-native/build-tests"])
     assert qtbase_native.build_tests, "qtbase-native build-tests should be set on cmdline"
-    assert not qtbase_mips.build_tests, "qtbase-mips build-tests should default to false"
+    assert not qtbase_riscv.build_tests, "qtbase-mips build-tests should default to false"
     # If the base qtbase option is set but no per-target one use the basic one:
     _parse_arguments(["--qtbase/build-tests"])
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
-    assert qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
+    assert qtbase_riscv.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
 
     # But target-specific ones should override
-    _parse_arguments(["--qtbase/build-tests", "--qtbase-mips64/no-build-tests"])
+    _parse_arguments(["--qtbase/build-tests", "--qtbase-riscv64/no-build-tests"])
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
-    assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
+    assert not qtbase_riscv.build_tests, "qtbase-mips should have a false override for build-tests"
 
     # Check that we hav ethe same behaviour when loading from json:
     _parse_config_file_and_args(b'{"qtbase-native/build-tests": true }')
     assert qtbase_native.build_tests, "qtbase-native build-tests should be set on cmdline"
-    assert not qtbase_mips.build_tests, "qtbase-mips build-tests should default to false"
+    assert not qtbase_riscv.build_tests, "qtbase-mips build-tests should default to false"
     # If the base qtbase option is set but no per-target one use the basic one:
     _parse_config_file_and_args(b'{"qtbase/build-tests": true }')
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
-    assert qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
+    assert qtbase_riscv.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
 
     # But target-specific ones should override
-    _parse_config_file_and_args(b'{"qtbase/build-tests": true, "qtbase-mips64/build-tests": false }')
+    _parse_config_file_and_args(b'{"qtbase/build-tests": true, "qtbase-riscv64/build-tests": false }')
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
-    assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
+    assert not qtbase_riscv.build_tests, "qtbase-mips should have a false override for build-tests"
 
     # And that cmdline still overrides JSON:
-    _parse_config_file_and_args(b'{"qtbase/build-tests": true }', "--qtbase-mips64/no-build-tests")
+    _parse_config_file_and_args(b'{"qtbase/build-tests": true }', "--qtbase-riscv64/no-build-tests")
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
-    assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
+    assert not qtbase_riscv.build_tests, "qtbase-mips should have a false override for build-tests"
     # But if a per-target option is set in the json that still overrides the default set on the cmdline
-    _parse_config_file_and_args(b'{"qtbase-mips64/build-tests": false }', "--qtbase/build-tests")
+    _parse_config_file_and_args(b'{"qtbase-riscv64/build-tests": false }', "--qtbase/build-tests")
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
-    assert not qtbase_mips.build_tests, "qtbase-mips should have a JSON false override for build-tests"
+    assert not qtbase_riscv.build_tests, "qtbase-mips should have a JSON false override for build-tests"
 
 
 def test_build_dir_not_inherited():
@@ -326,105 +326,106 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     # Parse args once to ensure target_manager is initialized
     config = _parse_arguments(["--skip-configure"])
     cheribsd_class = target_manager.get_target_raw("cheribsd").project_class
-    cheribsd_mips = _get_cheribsd_instance("cheribsd-mips64", config)
-    cheribsd_mips_hybrid = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
-    cheribsd_mips_purecap = _get_cheribsd_instance("cheribsd-mips64-purecap", config)
+    cheribsd_riscv = _get_cheribsd_instance("cheribsd-riscv64", config)
+    cheribsd_riscv_hybrid = _get_cheribsd_instance("cheribsd-riscv64-hybrid", config)
+    cheribsd_riscv_purecap = _get_cheribsd_instance("cheribsd-riscv64-purecap", config)
 
     # Check that project name is the same:
-    assert cheribsd_mips.default_directory_basename == cheribsd_mips_hybrid.default_directory_basename
-    assert cheribsd_mips_hybrid.default_directory_basename == cheribsd_mips_purecap.default_directory_basename
+    assert cheribsd_riscv.default_directory_basename == cheribsd_riscv_hybrid.default_directory_basename
+    assert cheribsd_riscv_hybrid.default_directory_basename == cheribsd_riscv_purecap.default_directory_basename
 
     # noinspection PyUnresolvedReferences
-    assert cheribsd_mips_hybrid.synthetic_base == cheribsd_class
+    assert cheribsd_riscv_hybrid.synthetic_base == cheribsd_class
     # noinspection PyUnresolvedReferences
-    assert cheribsd_mips_purecap.synthetic_base == cheribsd_class
+    assert cheribsd_riscv_purecap.synthetic_base == cheribsd_class
 
-    _parse_arguments(["--cheribsd-mips64/debug-kernel"])
-    assert not cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap debug-kernel should default to false"
-    assert not cheribsd_mips_hybrid.debug_kernel, "cheribsd-mips-hybrid debug-kernel should default to false"
-    assert cheribsd_mips.debug_kernel, "cheribsd-mips64 debug-kernel should be set on cmdline"
-    _parse_arguments(["--cheribsd-mips64-purecap/debug-kernel"])
-    assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap debug-kernel should be set on cmdline"
-    assert not cheribsd_mips_hybrid.debug_kernel, "cheribsd-mips-hybrid debug-kernel should default to false"
-    assert not cheribsd_mips.debug_kernel, "cheribsd-mips64 debug-kernel should default to false"
-    _parse_arguments(["--cheribsd-mips64-hybrid/debug-kernel"])
-    assert not cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap debug-kernel should default to false"
-    assert cheribsd_mips_hybrid.debug_kernel, "cheribsd-mips64-hybrid debug-kernel should be set on cmdline"
-    assert not cheribsd_mips.debug_kernel, "cheribsd-mips64 debug-kernel should default to false"
+    _parse_arguments(["--cheribsd-riscv64/debug-kernel"])
+    assert not cheribsd_riscv_purecap.debug_kernel, "cheribsd-purecap debug-kernel should default to false"
+    assert not cheribsd_riscv_hybrid.debug_kernel, "cheribsd-mips-hybrid debug-kernel should default to false"
+    assert cheribsd_riscv.debug_kernel, "cheribsd-riscv64 debug-kernel should be set on cmdline"
+    _parse_arguments(["--cheribsd-riscv64-purecap/debug-kernel"])
+    assert cheribsd_riscv_purecap.debug_kernel, "cheribsd-purecap debug-kernel should be set on cmdline"
+    assert not cheribsd_riscv_hybrid.debug_kernel, "cheribsd-mips-hybrid debug-kernel should default to false"
+    assert not cheribsd_riscv.debug_kernel, "cheribsd-riscv64 debug-kernel should default to false"
+    _parse_arguments(["--cheribsd-riscv64-hybrid/debug-kernel"])
+    assert not cheribsd_riscv_purecap.debug_kernel, "cheribsd-purecap debug-kernel should default to false"
+    assert cheribsd_riscv_hybrid.debug_kernel, "cheribsd-riscv64-hybrid debug-kernel should be set on cmdline"
+    assert not cheribsd_riscv.debug_kernel, "cheribsd-riscv64 debug-kernel should default to false"
 
-    # If the base cheribsd option is set but no per-target one use both cheribsd-mips64-hybrid and cheribsd-purecap
+    # If the base cheribsd option is set but no per-target one use both cheribsd-riscv64-hybrid and cheribsd-purecap
     # should    # inherit basic one:
     _parse_arguments(["--cheribsd/debug-kernel"])
-    assert cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should inherit debug-kernel from cheribsd(default)"
-    assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_riscv_hybrid.debug_kernel, "riscv64-hybrid should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_riscv_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
 
     # But target-specific ones should override
-    _parse_arguments(["--cheribsd/debug-kernel", "--cheribsd-mips64-purecap/no-debug-kernel"])
-    assert cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should inherit debug-kernel from cheribsd(default)"
-    assert not cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should have a false override for debug-kernel"
+    _parse_arguments(["--cheribsd/debug-kernel", "--cheribsd-riscv64-purecap/no-debug-kernel"])
+    assert cheribsd_riscv_hybrid.debug_kernel, "riscv64-hybrid should inherit debug-kernel from cheribsd(default)"
+    assert not cheribsd_riscv_purecap.debug_kernel, "cheribsd-purecap should have a false override for debug-kernel"
 
-    _parse_arguments(["--cheribsd/debug-kernel", "--cheribsd-mips64-hybrid/no-debug-kernel"])
-    assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
-    assert not cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should have a false override for debug-kernel"
+    _parse_arguments(["--cheribsd/debug-kernel", "--cheribsd-riscv64-hybrid/no-debug-kernel"])
+    assert cheribsd_riscv_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
+    assert not cheribsd_riscv_hybrid.debug_kernel, "riscv64-hybrid should have a false override for debug-kernel"
 
     # Check that we hav ethe same behaviour when loading from json:
     _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true }')
-    assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
-    assert cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should inherit debug-kernel from cheribsd(default)"
-    assert cheribsd_mips.debug_kernel, "cheribsd-mips should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_riscv_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_riscv_hybrid.debug_kernel, "riscv64-hybrid should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_riscv.debug_kernel, "cheribsd-mips should inherit debug-kernel from cheribsd(default)"
 
     # But target-specific ones should override
-    _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true, "cheribsd-mips64-hybrid/debug-kernel": false }')
-    assert cheribsd_mips.debug_kernel, "cheribsd-mips debug-kernel should be inherited on cmdline"
-    assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
-    assert not cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should have a false override for debug-kernel"
+    _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true, "cheribsd-riscv64-hybrid/debug-kernel": false }')
+    assert cheribsd_riscv.debug_kernel, "cheribsd-mips debug-kernel should be inherited on cmdline"
+    assert cheribsd_riscv_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
+    assert not cheribsd_riscv_hybrid.debug_kernel, "riscv64-hybrid should have a false override for debug-kernel"
 
     # And that cmdline still overrides JSON:
-    _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true }', "--cheribsd-mips64-hybrid/no-debug-kernel")
-    assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
-    assert cheribsd_mips.debug_kernel, "cheribsd-mips debug-kernel should be inherited from cheribsd(default)"
-    assert not cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should have a false override for debug-kernel"
+    _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true }', "--cheribsd-riscv64-hybrid/no-debug-kernel")
+    assert cheribsd_riscv_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_riscv.debug_kernel, "cheribsd-mips debug-kernel should be inherited from cheribsd(default)"
+    assert not cheribsd_riscv_hybrid.debug_kernel, "riscv64-hybrid should have a false override for debug-kernel"
     # But if a per-target option is set in the json that still overrides the default set on the cmdline
-    _parse_config_file_and_args(b'{"cheribsd-mips64-hybrid/debug-kernel": false }', "--cheribsd/debug-kernel")
-    assert cheribsd_mips_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
-    assert cheribsd_mips.debug_kernel, "cheribsd-mips debug-kernel should be inherited from cheribsd(default)"
-    assert not cheribsd_mips_hybrid.debug_kernel, "mips64-hybrid should have a JSON false override for debug-kernel"
+    _parse_config_file_and_args(b'{"cheribsd-riscv64-hybrid/debug-kernel": false }', "--cheribsd/debug-kernel")
+    assert cheribsd_riscv_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_riscv.debug_kernel, "cheribsd-mips debug-kernel should be inherited from cheribsd(default)"
+    assert not cheribsd_riscv_hybrid.debug_kernel, "riscv64-hybrid should have a JSON false override for debug-kernel"
 
 
 def test_kernconf():
     # The kernel-config command line option is special: There is a global (command-line-only) flag that is used
     # as the default, but otherwise there should be no inheritance
     config = _parse_arguments([])
-    cheribsd_cheri = _get_cheribsd_instance("cheribsd-mips64-hybrid", config)
-    cheribsd_mips = _get_cheribsd_instance("cheribsd-mips64", config)
-    freebsd_mips = _get_target_instance("freebsd-mips64", config, BuildFreeBSD)
+    cheribsd_riscv_hybrid = _get_cheribsd_instance("cheribsd-riscv64-hybrid", config)
+    cheribsd_riscv = _get_cheribsd_instance("cheribsd-riscv64", config)
+    freebsd_riscv = _get_target_instance("freebsd-riscv64", config, BuildFreeBSD)
     freebsd_native = _get_target_instance("freebsd-amd64", config, BuildFreeBSD)
     assert config.freebsd_kernconf is None
-    assert freebsd_mips.kernel_config == "MALTA64"
-    assert cheribsd_cheri.kernel_config == "CHERI_MALTA64"
+    assert freebsd_riscv.kernel_config == "QEMU"
+    assert cheribsd_riscv_hybrid.kernel_config == "CHERI-QEMU"
     assert freebsd_native.kernel_config == "GENERIC"
 
     # Check that --kernconf is used as the fallback
-    config = _parse_arguments(["--kernconf=LINT", "--freebsd-mips64/kernel-config=NOTMALTA64"])
+    config = _parse_arguments(["--kernconf=LINT", "--freebsd-riscv64/kernel-config=FOO"])
     assert config.freebsd_kernconf == "LINT"
-    attr = inspect.getattr_static(freebsd_mips, "kernel_config")
+    attr = inspect.getattr_static(freebsd_riscv, "kernel_config")
     # previously we would replace the command line attribute with a string -> check this is no longer true
     assert isinstance(attr, JsonAndCommandLineConfigOption)
-    assert freebsd_mips.kernel_config == "NOTMALTA64"
-    assert cheribsd_cheri.kernel_config == "LINT"
+    assert freebsd_riscv.kernel_config == "FOO"
+    assert cheribsd_riscv_hybrid.kernel_config == "LINT"
     assert freebsd_native.kernel_config == "LINT"
 
-    config = _parse_arguments(["--kernconf=LINT", "--cheribsd-mips64-hybrid/kernel-config=SOMETHING"])
+    config = _parse_arguments(["--kernconf=LINT", "--cheribsd-riscv64-hybrid/kernel-config=SOMETHING"])
     assert config.freebsd_kernconf == "LINT"
-    assert freebsd_mips.kernel_config == "LINT"
-    assert cheribsd_cheri.kernel_config == "SOMETHING"
+    assert freebsd_riscv.kernel_config == "LINT"
+    assert cheribsd_riscv_hybrid.kernel_config == "SOMETHING"
     assert freebsd_native.kernel_config == "LINT"
 
-    config = _parse_config_file_and_args(b'{ "cheribsd-mips64/kernel-config": "MIPS64_CONFIG" }', "--kernconf=GENERIC")
+    config = _parse_config_file_and_args(b'{ "cheribsd-riscv64/kernel-config": "RISCV64_CONFIG" }',
+                                         "--kernconf=GENERIC")
     assert config.freebsd_kernconf == "GENERIC"
-    assert cheribsd_cheri.kernel_config == "GENERIC"
-    assert cheribsd_mips.kernel_config == "MIPS64_CONFIG"
-    assert freebsd_mips.kernel_config == "GENERIC"
+    assert cheribsd_riscv_hybrid.kernel_config == "GENERIC"
+    assert cheribsd_riscv.kernel_config == "RISCV64_CONFIG"
+    assert freebsd_riscv.kernel_config == "GENERIC"
     assert freebsd_native.kernel_config == "GENERIC"
 
     # kernel-config/--kernconf should only be valid on the command line:
@@ -539,17 +540,17 @@ def test_libcxxrt_dependency_path():
 
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
-    check_libunwind_path(config.output_root / "rootfs-mips64-purecap/opt/mips64-purecap/c++/lib",
-                         "libcxxrt-mips64-purecap")
-    check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib",
-                         "libcxxrt-mips64")
+    check_libunwind_path(config.output_root / "rootfs-riscv64-purecap/opt/riscv64-purecap/c++/lib",
+                         "libcxxrt-riscv64-purecap")
+    check_libunwind_path(config.output_root / "rootfs-riscv64/opt/riscv64/c++/lib",
+                         "libcxxrt-riscv64")
     # Check the defaults:
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
     config = _parse_arguments(["--skip-configure"])
-    check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib",
-                         "libcxxrt-mips64")
-    check_libunwind_path(config.output_root / "rootfs-mips64/opt/mips64/c++/lib", "libcxxrt-mips64")
+    check_libunwind_path(config.output_root / "rootfs-riscv64/opt/riscv64/c++/lib",
+                         "libcxxrt-riscv64")
+    check_libunwind_path(config.output_root / "rootfs-riscv64/opt/riscv64/c++/lib", "libcxxrt-riscv64")
 
 
 class SystemClangIfExistsElse:
@@ -784,14 +785,14 @@ def test_freebsd_toolchains_cheribsd_purecap():
     # Argparse should exit with exit code 2
     with pytest.raises(KeyError, match=r"error: unknown argument '--[\w-]+/toolchain'"):
         for i in FreeBSDToolchainKind:
-            test_freebsd_toolchains("cheribsd-purecap", "/wrong/path", i, [])
-            test_freebsd_toolchains("cheribsd-mips64-hybrid", "/wrong/path", i, [])
             test_freebsd_toolchains("cheribsd-riscv64-hybrid", "/wrong/path", i, [])
             test_freebsd_toolchains("cheribsd-riscv64-purecap", "/wrong/path", i, [])
+            test_freebsd_toolchains("cheribsd-morello-hybrid", "/wrong/path", i, [])
+            test_freebsd_toolchains("cheribsd-morello-purecap", "/wrong/path", i, [])
 
 
 @pytest.mark.parametrize("target,args,expected", [
-    pytest.param("cheribsd-mips64-hybrid", [], "cheribsd-mips64-hybrid-build"),
+    pytest.param("cheribsd-riscv64-hybrid", [], "cheribsd-riscv64-hybrid-build"),
     pytest.param("llvm", [], "llvm-project-build"),
     pytest.param("cheribsd-riscv64-purecap", [], "cheribsd-riscv64-purecap-build"),
     # --subobject debug should not have any effect if subobject bounds is disabled
@@ -803,17 +804,13 @@ def test_freebsd_toolchains_cheribsd_purecap():
                  "cheribsd-riscv64-purecap-subobject-safe-subobject-nodebug-build"),
     # Passing "--cap-table-abi=pcrel" also changes the build dir even though it's (currently) the default for all
     # architectures.
-    pytest.param("cheribsd-mips64-hybrid", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
-                 "cheribsd-mips64-hybrid-pcrel-build"),
+    pytest.param("cheribsd-riscv64-hybrid", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
+                 "cheribsd-riscv64-hybrid-pcrel-build"),
     # plt should be encoded
-    pytest.param("cheribsd-mips64-hybrid", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
-                 "cheribsd-mips64-hybrid-plt-build"),
-    # everything
-    pytest.param("cheribsd-mips64-purecap",
-                 ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
-                 "cheribsd-mips64-purecap-plt-aggressive-hardfloat-build"),
+    pytest.param("cheribsd-riscv64-hybrid", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
+                 "cheribsd-riscv64-hybrid-plt-build"),
     # plt should be encoded
-    pytest.param("sqlite-mips64-purecap", [], "sqlite-mips64-purecap-build"),
+    pytest.param("sqlite-riscv64-purecap", [], "sqlite-riscv64-purecap-build"),
     pytest.param("sqlite-native", [], "sqlite-native-build"),
 ])
 def test_default_build_dir(target: str, args: list, expected: str):
@@ -860,14 +857,14 @@ def test_default_build_dir(target: str, args: list, expected: str):
                  "rootfs-riscv64-purecap-subobject-safe-subobject-nodebug"),
 
     # Passing "--cap-table-abi=pcrel" also changes the dir even though it's the default for all architectures.
-    pytest.param("cheribsd-mips64-purecap", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
-                 "sdk/sysroot-mips64-purecap-pcrel", "rootfs-mips64-purecap-pcrel"),
-    pytest.param("cheribsd-mips64-purecap", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
-                 "sdk/sysroot-mips64-purecap-plt", "rootfs-mips64-purecap-plt"),
-    pytest.param("cheribsd-mips64-purecap",
-                 ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
-                 "sdk/sysroot-mips64-purecap-plt-aggressive-hardfloat",
-                 "rootfs-mips64-purecap-plt-aggressive-hardfloat"),
+    pytest.param("cheribsd-riscv64-purecap", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
+                 "sdk/sysroot-riscv64-purecap-pcrel", "rootfs-riscv64-purecap-pcrel"),
+    pytest.param("cheribsd-riscv64-purecap", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
+                 "sdk/sysroot-riscv64-purecap-plt", "rootfs-riscv64-purecap-plt"),
+    pytest.param("cheribsd-riscv64-purecap",
+                 ["--cap-table-abi=plt", "--subobject-bounds=aggressive"],
+                 "sdk/sysroot-riscv64-purecap-plt-aggressive",
+                 "rootfs-riscv64-purecap-plt-aggressive"),
 
     # FreeBSD
     pytest.param("freebsd-aarch64", [],
@@ -1045,11 +1042,11 @@ def test_source_dir_option_when_reusing_git_repo(monkeypatch):
     # Check that cheribsd-mfs-root-kernel reused the cheribsd source dir
     assert str(_get_target_instance("cheribsd-mfs-root-kernel-riscv64-purecap",
                                     config).source_dir) == "/foo/cheribsd"
-    assert str(_get_target_instance("cheribsd-mfs-root-kernel-mips64-purecap",
+    assert str(_get_target_instance("cheribsd-mfs-root-kernel-riscv64-hybrid",
                                     config).source_dir) == "/foo/cheribsd"
     config = _parse_config_file_and_args(b'{ "cheribsd-riscv64-purecap/source-directory": "/custom/cheribsd-riscv-dir",'
                                          b'  "source-root": "/foo" }')
-    assert str(_get_target_instance("cheribsd-mfs-root-kernel-mips64-purecap",
+    assert str(_get_target_instance("cheribsd-mfs-root-kernel-riscv64-hybrid",
                                     config).source_dir) == "/foo/cheribsd"
     assert str(_get_target_instance("cheribsd-mfs-root-kernel-riscv64-purecap",
                                     config).source_dir) == "/custom/cheribsd-riscv-dir"
@@ -1075,56 +1072,56 @@ def test_mfs_root_kernel_inherits_defaults_from_cheribsd():
     # Parse args once to ensure target_manager is initialized
     config = _parse_arguments([])
     mfs_riscv64 = _get_target_instance("cheribsd-mfs-root-kernel-riscv64-purecap", config, BuildCheriBsdMfsKernel)
-    cheribsd_riscv64 = _get_target_instance("cheribsd-riscv64-purecap", config, BuildCHERIBSD)
+    cheribsd_riscv64_purecap = _get_target_instance("cheribsd-riscv64-purecap", config, BuildCHERIBSD)
     _parse_arguments(["--cheribsd/build-alternate-abi-kernels"])
 
-    assert cheribsd_riscv64.build_alternate_abi_kernels
+    assert cheribsd_riscv64_purecap.build_alternate_abi_kernels
     assert mfs_riscv64.build_alternate_abi_kernels
 
     _parse_arguments(["--cheribsd/no-build-alternate-abi-kernels"])
 
-    assert not cheribsd_riscv64.build_alternate_abi_kernels
+    assert not cheribsd_riscv64_purecap.build_alternate_abi_kernels
     assert not mfs_riscv64.build_alternate_abi_kernels
 
     _parse_arguments(["--cheribsd/build-alternate-abi-kernels",
                       "--cheribsd-riscv64-purecap/no-build-alternate-abi-kernels"])
 
-    assert not cheribsd_riscv64.build_alternate_abi_kernels
+    assert not cheribsd_riscv64_purecap.build_alternate_abi_kernels
     assert not mfs_riscv64.build_alternate_abi_kernels
 
     _parse_arguments(["--cheribsd/no-build-alternate-abi-kernels",
                       "--cheribsd-riscv64-purecap/build-alternate-abi-kernels"])
 
-    assert cheribsd_riscv64.build_alternate_abi_kernels
+    assert cheribsd_riscv64_purecap.build_alternate_abi_kernels
     assert mfs_riscv64.build_alternate_abi_kernels
 
     # Check that the config options are inherited in the right order:
     _parse_arguments(["--cheribsd/source-directory=/generic-base-target-dir",
                       "--cheribsd-riscv64-purecap/source-directory=/base-target-dir-riscv64",
                       "--cheribsd-mfs-root-kernel/source-directory=/generic-mfs-target-dir",
-                      "--cheribsd-mfs-root-kernel-mips64-purecap/source-directory=/mfs-target-dir-mips64"])
+                      "--cheribsd-mfs-root-kernel-riscv64-hybrid/source-directory=/mfs-target-dir-riscv64-hybrid"])
     mfs_riscv64 = _get_target_instance("cheribsd-mfs-root-kernel-riscv64-purecap", config, BuildCheriBsdMfsKernel)
-    mfs_mips64 = _get_target_instance("cheribsd-mfs-root-kernel-mips64-purecap", config, BuildCheriBsdMfsKernel)
-    cheribsd_riscv64 = _get_target_instance("cheribsd-riscv64-purecap", config, BuildCHERIBSD)
-    cheribsd_mips64 = _get_target_instance("cheribsd-mips64-purecap", config, BuildCHERIBSD)
-    assert str(cheribsd_riscv64._initial_source_dir) == "/base-target-dir-riscv64"
-    assert str(cheribsd_mips64._initial_source_dir) == "/generic-base-target-dir"
+    mfs_riscv64_hybrid = _get_target_instance("cheribsd-mfs-root-kernel-riscv64-hybrid", config, BuildCheriBsdMfsKernel)
+    cheribsd_riscv64_purecap = _get_target_instance("cheribsd-riscv64-purecap", config, BuildCHERIBSD)
+    cheribsd_riscv64_hybrid = _get_target_instance("cheribsd-riscv64-hybrid", config, BuildCHERIBSD)
+    assert str(cheribsd_riscv64_purecap._initial_source_dir) == "/base-target-dir-riscv64"
+    assert str(cheribsd_riscv64_hybrid._initial_source_dir) == "/generic-base-target-dir"
     assert str(mfs_riscv64._initial_source_dir) == "/generic-mfs-target-dir"
-    assert str(mfs_mips64._initial_source_dir) == "/mfs-target-dir-mips64"
+    assert str(mfs_riscv64_hybrid._initial_source_dir) == "/mfs-target-dir-riscv64-hybrid"
 
     _parse_arguments(["--cheribsd-riscv64-purecap/kernel-config=BASE_CONFIG_RISCV64",
-                      "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=MFS_CONFIG_MIPS64"])
-    assert cheribsd_riscv64.kernel_config == "BASE_CONFIG_RISCV64"
-    assert cheribsd_mips64.kernel_config == "CHERI_MALTA64"
+                      "--cheribsd-mfs-root-kernel-riscv64-hybrid/kernel-config=MFS_CONFIG_RISCV64_HYBRID"])
+    assert cheribsd_riscv64_purecap.kernel_config == "BASE_CONFIG_RISCV64"
+    assert cheribsd_riscv64_hybrid.kernel_config == "CHERI-QEMU"
     assert mfs_riscv64.kernel_config is None
-    assert mfs_mips64.kernel_config == "MFS_CONFIG_MIPS64"
+    assert mfs_riscv64_hybrid.kernel_config == "MFS_CONFIG_RISCV64_HYBRID"
     _parse_arguments(["--kernel-config=CONFIG_DEFAULT",
                       "--cheribsd-riscv64-purecap/kernel-config=BASE_CONFIG_RISCV64",
-                      "--cheribsd-mfs-root-kernel-mips64-purecap/kernel-config=MFS_CONFIG_MIPS64"])
-    assert cheribsd_riscv64.kernel_config == "BASE_CONFIG_RISCV64"
-    assert cheribsd_mips64.kernel_config == "CONFIG_DEFAULT"
+                      "--cheribsd-mfs-root-kernel-riscv64-hybrid/kernel-config=MFS_CONFIG_RISCV64_HYBRID"])
+    assert cheribsd_riscv64_purecap.kernel_config == "BASE_CONFIG_RISCV64"
+    assert cheribsd_riscv64_hybrid.kernel_config == "CONFIG_DEFAULT"
     assert mfs_riscv64.kernel_config == "CONFIG_DEFAULT"
-    assert mfs_mips64.kernel_config == "MFS_CONFIG_MIPS64"
+    assert mfs_riscv64_hybrid.kernel_config == "MFS_CONFIG_RISCV64_HYBRID"
 
 
 def test_relative_paths_in_config():
