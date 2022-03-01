@@ -506,8 +506,6 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     @property
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
         triples = [
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, self.config,
-                                                 include_version=False),
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config,
                                                  include_version=False),
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_AARCH64, self.config,

@@ -1007,28 +1007,6 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
 
 
 class CompilationTargets(BasicCompilationTargets):
-    CHERIBSD_MIPS_NO_CHERI = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, CheriBSDTargetInfo)
-    CHERIBSD_MIPS_HYBRID = CrossCompileTarget("mips64-hybrid", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
-                                              is_cheri_hybrid=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI,
-                                              non_cheri_target=CHERIBSD_MIPS_NO_CHERI)
-    CHERIBSD_MIPS_PURECAP = CrossCompileTarget("mips64-purecap", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
-                                               is_cheri_purecap=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI,
-                                               hybrid_target=CHERIBSD_MIPS_HYBRID)
-    CHERIBSD_MIPS_NO_CHERI_FOR_HYBRID_ROOTFS = \
-        CrossCompileTarget(("mips64", "for-hybrid-rootfs"), CPUArchitecture.MIPS64, CheriBSDTargetInfo,
-                           rootfs_target=CHERIBSD_MIPS_HYBRID, non_cheri_target=CHERIBSD_MIPS_NO_CHERI)
-    CHERIBSD_MIPS_NO_CHERI_FOR_PURECAP_ROOTFS = \
-        CrossCompileTarget(("mips64", "for-purecap-rootfs"), CPUArchitecture.MIPS64, CheriBSDTargetInfo,
-                           rootfs_target=CHERIBSD_MIPS_PURECAP, non_cheri_target=CHERIBSD_MIPS_NO_CHERI)
-    CHERIBSD_MIPS_HYBRID_FOR_PURECAP_ROOTFS = \
-        CrossCompileTarget(("mips64-hybrid", "for-purecap-rootfs"), CPUArchitecture.MIPS64, CheriBSDTargetInfo,
-                           is_cheri_hybrid=True, rootfs_target=CHERIBSD_MIPS_PURECAP,
-                           non_cheri_for_hybrid_rootfs_target=CHERIBSD_MIPS_NO_CHERI_FOR_HYBRID_ROOTFS)
-    CHERIBSD_MIPS_PURECAP_FOR_HYBRID_ROOTFS = \
-        CrossCompileTarget(("mips64-purecap", "for-hybrid-rootfs"), CPUArchitecture.MIPS64, CheriBSDTargetInfo,
-                           is_cheri_purecap=True, rootfs_target=CHERIBSD_MIPS_HYBRID,
-                           hybrid_for_purecap_rootfs_target=CHERIBSD_MIPS_HYBRID_FOR_PURECAP_ROOTFS)
-
     CHERIBSD_RISCV_NO_CHERI = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDTargetInfo)
     CHERIBSD_RISCV_HYBRID = CrossCompileTarget("riscv64-hybrid", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
                                                is_cheri_hybrid=True, non_cheri_target=CHERIBSD_RISCV_NO_CHERI)
@@ -1130,14 +1108,13 @@ class CompilationTargets(BasicCompilationTargets):
     RTEMS_RISCV64_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, RTEMSTargetInfo,
                                                is_cheri_purecap=True, non_cheri_target=RTEMS_RISCV64)
 
-    ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS = [CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI,
-                                           CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI]
-    ALL_CHERIBSD_NON_MORELLO_TARGETS = ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS + [CHERIBSD_AARCH64, CHERIBSD_X86_64]
+    ALL_CHERIBSD_RISCV_TARGETS = [CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI]
+    ALL_CHERIBSD_NON_MORELLO_TARGETS = ALL_CHERIBSD_RISCV_TARGETS + [CHERIBSD_AARCH64, CHERIBSD_X86_64]
     ALL_CHERIBSD_MORELLO_TARGETS = [CHERIBSD_MORELLO_PURECAP, CHERIBSD_MORELLO_HYBRID]
-    ALL_CHERIBSD_HYBRID_TARGETS = [CHERIBSD_RISCV_HYBRID, CHERIBSD_MIPS_HYBRID, CHERIBSD_MORELLO_HYBRID]
-    ALL_CHERIBSD_PURECAP_TARGETS = [CHERIBSD_RISCV_PURECAP, CHERIBSD_MIPS_PURECAP, CHERIBSD_MORELLO_PURECAP]
+    ALL_CHERIBSD_HYBRID_TARGETS = [CHERIBSD_RISCV_HYBRID, CHERIBSD_MORELLO_HYBRID]
+    ALL_CHERIBSD_PURECAP_TARGETS = [CHERIBSD_RISCV_PURECAP, CHERIBSD_MORELLO_PURECAP]
     ALL_CHERIBSD_TARGETS_WITH_HYBRID = ALL_CHERIBSD_NON_MORELLO_TARGETS + ALL_CHERIBSD_MORELLO_TARGETS
-    ALL_CHERIBSD_NON_CHERI_TARGETS = [CHERIBSD_MIPS_NO_CHERI, CHERIBSD_RISCV_NO_CHERI, CHERIBSD_AARCH64,
+    ALL_CHERIBSD_NON_CHERI_TARGETS = [CHERIBSD_RISCV_NO_CHERI, CHERIBSD_AARCH64,
                                       CHERIBSD_X86_64]  # does not include i386
     ALL_CHERIBSD_CHERI_TARGETS_WITH_HYBRID = list(
                 set(ALL_CHERIBSD_TARGETS_WITH_HYBRID) - set(ALL_CHERIBSD_NON_CHERI_TARGETS))
@@ -1146,17 +1123,13 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_FREEBSD_AND_CHERIBSD_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + ALL_SUPPORTED_FREEBSD_TARGETS
 
     # Special targets for specific uses only, not part of any of the above
-    ALL_CHERIBSD_NON_CHERI_FOR_HYBRID_ROOTFS_TARGETS = [CHERIBSD_MIPS_NO_CHERI_FOR_HYBRID_ROOTFS,
-                                                        CHERIBSD_MORELLO_NO_CHERI_FOR_HYBRID_ROOTFS,
+    ALL_CHERIBSD_NON_CHERI_FOR_HYBRID_ROOTFS_TARGETS = [CHERIBSD_MORELLO_NO_CHERI_FOR_HYBRID_ROOTFS,
                                                         CHERIBSD_RISCV_NO_CHERI_FOR_HYBRID_ROOTFS]
-    ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS = [CHERIBSD_MIPS_NO_CHERI_FOR_PURECAP_ROOTFS,
-                                                         CHERIBSD_MORELLO_NO_CHERI_FOR_PURECAP_ROOTFS,
+    ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS = [CHERIBSD_MORELLO_NO_CHERI_FOR_PURECAP_ROOTFS,
                                                          CHERIBSD_RISCV_NO_CHERI_FOR_PURECAP_ROOTFS]
-    ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS = [CHERIBSD_MIPS_HYBRID_FOR_PURECAP_ROOTFS,
-                                                      CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS,
+    ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS = [CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS,
                                                       CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS]
-    ALL_CHERIBSD_PURECAP_FOR_HYBRID_ROOTFS_TARGETS = [CHERIBSD_MIPS_PURECAP_FOR_HYBRID_ROOTFS,
-                                                      CHERIBSD_MORELLO_PURECAP_FOR_HYBRID_ROOTFS,
+    ALL_CHERIBSD_PURECAP_FOR_HYBRID_ROOTFS_TARGETS = [CHERIBSD_MORELLO_PURECAP_FOR_HYBRID_ROOTFS,
                                                       CHERIBSD_RISCV_PURECAP_FOR_HYBRID_ROOTFS]
 
     # Same as above, but the default is purecap RISC-V
