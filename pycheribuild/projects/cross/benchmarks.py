@@ -56,9 +56,8 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
     build_in_source_dir = True
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
-    # The makefiles here can't support any other other tagets:
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
-                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.NATIVE]
+    # The makefiles here can't support any other tagets:
+    supported_architectures = [CompilationTargets.NATIVE]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -199,9 +198,8 @@ class BuildOlden(BenchmarkMixin, CrossCompileProject):
     make_kind = MakeCommandKind.BsdMake
     # and we have to build in the source directory
     build_in_source_dir = True
-    # The makefiles here can't support any other other tagets:
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
-                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.NATIVE]
+    # The makefiles here can't support any other tagets:
+    supported_architectures = [CompilationTargets.NATIVE]
 
     def compile(self, **kwargs):
         new_env = dict()
@@ -676,9 +674,8 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
     build_in_source_dir = True
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
-    # The makefiles here can't support any other other tagets:
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
-                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.NATIVE]
+    # The makefiles here can't support any other tagets:
+    supported_architectures = [CompilationTargets.NATIVE]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -758,9 +755,8 @@ class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
     build_in_source_dir = True
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
-    # The makefiles here can't support any other other tagets:
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
-                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.NATIVE]
+    # The makefiles here can't support any other tagets:
+    supported_architectures = [CompilationTargets.NATIVE]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -829,7 +825,7 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
-    # The makefiles here can't support any other other tagets:
+    # The makefiles here can't support any other tagets:
     supported_architectures = [CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
                                CompilationTargets.CHERIBSD_RISCV_HYBRID,
                                CompilationTargets.CHERIBSD_RISCV_PURECAP]

@@ -1617,9 +1617,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                                      "etc. depending on target)"
         super().setup_config_options(install_directory_help=install_directory_help, use_upstream_llvm=False,
                                      kernel_only_target=kernel_only_target)
-        fpga_targets = [CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_MIPS_HYBRID,
-                        CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
-                        CompilationTargets.CHERIBSD_RISCV_HYBRID, CompilationTargets.CHERIBSD_RISCV_PURECAP]
+        fpga_targets = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
         cls.build_fpga_kernels = cls.add_bool_option("build-fpga-kernels", show_help=True, _allow_unknown_targets=True,
                                                      only_add_for_targets=fpga_targets,
                                                      help="Also build kernels for the FPGA.")
@@ -1648,12 +1646,10 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                       _allow_unknown_targets=True,
                                                       help="Also build benchmark kernels")
 
-        cls.caprevoke_kernel = cls.add_bool_option("caprevoke-kernel", show_help=True, _allow_unknown_targets=True,
-                                                   only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP,
-                                                                         CompilationTargets.CHERIBSD_MIPS_HYBRID,
-                                                                         CompilationTargets.CHERIBSD_RISCV_PURECAP,
-                                                                         CompilationTargets.CHERIBSD_RISCV_HYBRID],
-                                                   help="Build kernel with caprevoke support (experimental)")
+        cls.caprevoke_kernel = cls.add_bool_option(
+            "caprevoke-kernel", show_help=True, _allow_unknown_targets=True,
+            only_add_for_targets=CompilationTargets.ALL_CHERIBSD_CHERI_TARGETS_WITH_HYBRID,
+            help="Build kernel with caprevoke support (experimental)")
         if kernel_only_target:
             return  # The remaining options only affect the userspace build
         cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=False,
