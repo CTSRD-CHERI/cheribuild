@@ -622,12 +622,12 @@ Configuration for running tests:
 
 Configuration for running benchmarks:
   --benchmark-fpga-extra-args ARGS
-                        Extra options for beri-fpga-bsd-boot.py
+                        Extra options for the FPGA management script
   --benchmark-clean-boot, --no-benchmark-clean-boot
                         Reboot the FPGA with a new bitfile and kernel before running benchmarks. If not set, assume the
                         FPGA is running. (default: 'False')
   --benchmark-extra-args ARGS
-                        Additional flags to pass to the beri-fpga-bsd-boot.py script in --benchmark
+                        Additional flags to pass to the program executed in --benchmark
   --benchmark-ssh-host BENCHMARK-SSH-HOST
                         The SSH hostname/IP for the benchmark FPGA (default: 'cheri-fpga')
   --benchmark-csv-suffix BENCHMARK-CSV-SUFFIX
