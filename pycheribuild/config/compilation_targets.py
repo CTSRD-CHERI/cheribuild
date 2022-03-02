@@ -499,6 +499,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                            benchmark_script_args: list = None, extra_runbench_args: list = None):
         assert benchmarks_dir is not None
         assert output_file is not None, "output_file must be set to a valid value"
+        self.project.fatal("run_fpga_benchmark has not been updated for RISC-V")
+        return
         if typing.TYPE_CHECKING:
             assert isinstance(self.project, Project)
         self.project.strip_elf_files(benchmarks_dir)
@@ -510,29 +512,16 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                     self.project.warning("Will copy a .dump file to the FPGA:", file)
 
         runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
-
-        from ..projects.cherisim import BuildCheriSim, BuildBeriCtl
-        sim_project = BuildCheriSim.get_instance(self.project, cross_target=CompilationTargets.NATIVE)
-        cherilibs_dir = Path(sim_project.source_dir, "cherilibs")
-        cheri_dir = Path(sim_project.source_dir, "cheri")
-        if not cheri_dir.exists() or not cherilibs_dir.exists():
-            self.project.fatal("cheri-cpu repository missing. Run `cheribuild.py berictl` or `git clone {} {}`".format(
-                sim_project.repository.url, sim_project.source_dir))
-
         qemu_ssh_socket = None  # type: typing.Optional[SocketAndPort]
-
+        basic_args = []
         if self.config.benchmark_with_qemu:
             from ..projects.build_qemu import BuildQEMU
             qemu_path = BuildQEMU.qemu_binary(self.project)
             qemu_ssh_socket = find_free_port()
             if not qemu_path.exists():
                 self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
-            basic_args = ["--use-qemu-instead-of-fpga",
-                          "--qemu-path=" + str(qemu_path),
-                          "--qemu-ssh-port=" + str(qemu_ssh_socket.port)]
-        else:
-            basic_args = ["--berictl=" + str(
-                BuildBeriCtl.get_build_dir(self.project, cross_target=CompilationTargets.NATIVE) / "berictl")]
+            basic_args += ["--use-qemu-instead-of-fpga", "--qemu-path=" + str(qemu_path),
+                           "--qemu-ssh-port=" + str(qemu_ssh_socket.port)]
 
         if self.config.test_ssh_key is not None:
             basic_args.extend(["--ssh-key", str(self.config.test_ssh_key.with_suffix(""))])
@@ -562,11 +551,11 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             basic_args.append("--kernel-img=" + str(kernel_image))
         elif self.config.benchmark_clean_boot:
             # use a bitfile from jenkins. TODO: add option for overriding
-            assert self.target.is_mips(include_purecap=True)
-            basic_args.append("--jenkins-bitfile=cheri128")
+            assert self.target.is_riscv(include_purecap=True)
+            basic_args.append("--jenkins-bitfile")
             mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self.target.get_rootfs_target(),
                                                                               self.config, caller=self.project)
-            kernel_config = mfs_kernel.default_kernel_config(ConfigPlatform.BERI,
+            kernel_config = mfs_kernel.default_kernel_config(ConfigPlatform.GFE,
                                                              benchmark=not self.config.benchmark_with_debug_kernel)
             kernel_image = mfs_kernel.get_kernel_install_path(kernel_config)
             basic_args.append("--kernel-img=" + str(kernel_image))
@@ -580,26 +569,13 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             runbench_args.extend(extra_runbench_args)
 
         cheribuild_path = Path(__file__).absolute().parent.parent.parent
-        beri_fpga_bsd_boot_script = """
-set +x
-source "{cheri_dir}/setup.sh"
-set -x
-export PATH="$PATH:{cherilibs_dir}/tools:{cherilibs_dir}/tools/debug"
-exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbench_args}
-            """.format(cheri_dir=cheri_dir, cherilibs_dir=cherilibs_dir,
-                       runbench_args=commandline_to_str(runbench_args),
-                       basic_args=commandline_to_str(basic_args), cheribuild_path=cheribuild_path)
         if self.config.benchmark_with_qemu:
             # Free the port that we reserved for QEMU before starting beri-fpga-bsd-boot.py
             if qemu_ssh_socket is not None:
                 qemu_ssh_socket.socket.close()
-            # noinspection PyTypeChecker
-            self.project.run_cmd(
-                [cheribuild_path / "beri-fpga-bsd-boot.py"] + basic_args + ["-vvvvv", "runbench"] + runbench_args,
-                give_tty_control=True)
-        else:
-            # the setup script needs bash not sh
-            self.project.run_shell_script(beri_fpga_bsd_boot_script, shell="bash", give_tty_control=True)
+        self.project.run_cmd(
+            [cheribuild_path / "vcu118-bsd-boot.py"] + basic_args + ["-vvvvv", "runbench"] + runbench_args,
+            give_tty_control=True)
 
     @property
     def freebsd_target_arch(self):

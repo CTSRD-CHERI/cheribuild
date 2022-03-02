@@ -105,12 +105,11 @@ class ConfigPlatform(Enum):
     QEMU = "qemu"
     FVP = "fvp"
     GFE = "gfe"
-    BERI = "cheri-beri"
     AWS = "aws-f1"
 
     @classmethod
     def fpga_platforms(cls) -> set:
-        return {cls.BERI, cls.GFE, cls.AWS}
+        return {cls.GFE, cls.AWS}
 
 
 class CheriBSDConfig:
