@@ -570,7 +570,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
         cheribuild_path = Path(__file__).absolute().parent.parent.parent
         if self.config.benchmark_with_qemu:
-            # Free the port that we reserved for QEMU before starting beri-fpga-bsd-boot.py
+            # Free the port that we reserved for QEMU before starting the FPGA boot script
             if qemu_ssh_socket is not None:
                 qemu_ssh_socket.socket.close()
         self.project.run_cmd(

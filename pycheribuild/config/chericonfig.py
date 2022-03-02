@@ -360,14 +360,14 @@ class CheriConfig(ConfigBase):
 
         self.benchmark_fpga_extra_args = loader.add_commandline_only_option(
             "benchmark-fpga-extra-args", group=loader.benchmark_group, type=list, metavar="ARGS",
-            help="Extra options for beri-fpga-bsd-boot.py")
+            help="Extra options for the FPGA management script")
         self.benchmark_clean_boot = loader.add_bool_option("benchmark-clean-boot", group=loader.benchmark_group,
                                                            help="Reboot the FPGA with a new bitfile and kernel before "
                                                                 "running benchmarks. "
                                                                 "If not set, assume the FPGA is running.")
         self.benchmark_extra_args = loader.add_commandline_only_option(
             "benchmark-extra-args", group=loader.benchmark_group, type=list,
-            metavar="ARGS", help="Additional flags to pass to the beri-fpga-bsd-boot.py script in --benchmark")
+            metavar="ARGS", help="Additional flags to pass to the program executed in --benchmark")
         self.benchmark_ssh_host = loader.add_option(
             "benchmark-ssh-host", group=loader.benchmark_group, type=str,
             default="cheri-fpga", help="The SSH hostname/IP for the benchmark FPGA")
