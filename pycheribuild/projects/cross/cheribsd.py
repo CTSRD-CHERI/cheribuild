@@ -2084,12 +2084,6 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
-        target = cls.get_crosscompile_target(config)  # type: CrossCompileTarget
-        if target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            # TODO: can't access this member here...
-            # if cls.use_cheribsd_purecap_rootfs:
-            #    return ["cheribsd-purecap"]
-            pass
         return [cls.rootfs_source_class.target]
 
     def __init__(self, config: CheriConfig):
@@ -2127,12 +2121,6 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         cls.remote_path = cls.add_config_option("remote-sdk-path", show_help=True, metavar="PATH",
                                                 help="The path to the CHERI SDK on the remote FreeBSD machine (e.g. "
                                                      "vica:~foo/cheri/output/sdk)")
-        cls.use_cheri_sysroot_for_mips = cls.add_bool_option(
-            "use-cheri-sysroot-for-mips",
-            help="Create the MIPS sysroot using the files from hybrid CHERI libraries (note: binaries build from this "
-                 "sysroot will only work on the matching CHERI architecture)")
-        cls.use_cheribsd_purecap_rootfs = cls.add_bool_option("use-cheribsd-purecap-rootfs",
-                                                              help="Use the rootfs built by cheribsd-purecap instead")
         cls.install_dir_override = cls.add_path_option("install-directory",
                                                        help="Override for the sysroot install directory")
 
@@ -2180,20 +2168,11 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
                    "--include=./usr/lib64c", "--include=./usr/libsoft",
                    # only pack those files that are mentioned in METALOG
                    "@METALOG.world"]
-        if self.compiling_for_mips(include_purecap=False) and self.use_cheri_sysroot_for_mips:
-            rootfs_target = self.rootfs_source_class.get_instance_for_cross_target(
-                CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config)
-        else:
-            rootfs_target = self.rootfs_source_class.get_instance(self)
+        rootfs_target = self.rootfs_source_class.get_instance(self)
         rootfs_dir = rootfs_target.real_install_root_dir
         if not (rootfs_dir / "lib/libc.so.7").is_file():
-            if self.compiling_for_mips(include_purecap=False) and not self.use_cheri_sysroot_for_mips:
-                fixit = "Either build a plain-mips CheriBSD rootfs first by running `cheribuild.py " + \
-                        rootfs_target.target + "` or set --cheribsd-sysroot-mips/use-cheri-sysroot-for-mips" \
-                                               " to copy from the CheriBSD sysroot instead"
-            else:
-                fixit = "Run `cheribuild.py " + rootfs_target.target + "` first"
-            self.fatal("Sysroot source directory", rootfs_dir, "does not contain libc.so.7", fixit_hint=fixit)
+            self.fatal("Sysroot source directory", rootfs_dir, "does not contain libc.so.7",
+                       fixit_hint="Run `cheribuild.py " + rootfs_target.target + "` first")
         print_command(tar_cmd, cwd=rootfs_dir)
         if not self.config.pretend:
             tar_cwd = str(rootfs_dir)
