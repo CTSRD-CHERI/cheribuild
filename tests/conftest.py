@@ -1,6 +1,7 @@
 import argparse
 import pytest
 import sys
+from pathlib import Path
 
 from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
@@ -24,6 +25,7 @@ class TestArgumentParser(argparse.ArgumentParser):
 def _register_targets():
     sys.argv = ["cheribuild.py"]
     loader = JsonAndCommandLineConfigLoader(argparser_class=TestArgumentParser)
+    loader._config_path = Path("/dev/null")
     all_target_names = list(sorted(target_manager.target_names(None))) + ["__run_everything__"]
     ConfigLoaderBase._cheri_config = DefaultCheriConfig(loader, all_target_names)
     ConfigLoaderBase._cheri_config.TEST_MODE = True
