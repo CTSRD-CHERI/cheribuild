@@ -1133,19 +1133,13 @@ class CompilationTargets(BasicCompilationTargets):
                                                       CHERIBSD_RISCV_PURECAP_FOR_HYBRID_ROOTFS]
 
     # Same as above, but the default is purecap RISC-V
-    FETT_MIPS_NO_CHERI = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, CheriBSDFettTargetInfo)
-    FETT_MIPS_HYBRID = CrossCompileTarget("mips64-hybrid", CPUArchitecture.MIPS64, CheriBSDFettTargetInfo,
-                                          is_cheri_hybrid=True, non_cheri_target=FETT_MIPS_NO_CHERI)
-    FETT_MIPS_PURECAP = CrossCompileTarget("mips64-purecap", CPUArchitecture.MIPS64, CheriBSDFettTargetInfo,
-                                           is_cheri_purecap=True, hybrid_target=FETT_MIPS_HYBRID)
-
     FETT_RISCV_NO_CHERI = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo)
     FETT_RISCV_HYBRID = CrossCompileTarget("riscv64-hybrid", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo,
                                            is_cheri_hybrid=True, non_cheri_target=FETT_RISCV_NO_CHERI)
     FETT_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo,
                                             is_cheri_purecap=True, hybrid_target=FETT_RISCV_HYBRID)
     FETT_DEFAULT_ARCHITECTURE = FETT_RISCV_PURECAP
-    FETT_SUPPORTED_ARCHITECTURES = [FETT_RISCV_PURECAP, FETT_RISCV_NO_CHERI, FETT_MIPS_PURECAP, FETT_MIPS_NO_CHERI]
+    FETT_SUPPORTED_ARCHITECTURES = [FETT_RISCV_PURECAP, FETT_RISCV_NO_CHERI]
 
     ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64,
                                        BAREMETAL_NEWLIB_MIPS64_PURECAP,
