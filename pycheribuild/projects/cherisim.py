@@ -27,11 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import shlex
-from pathlib import Path
-
-from .project import (BasicCompilationTargets, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project,
-                      ReuseOtherProjectRepository)
+from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..utils import OSInfo
 
 
@@ -65,60 +61,3 @@ class BuildBluespecCompiler(Project):
                 self.info("Alternatively, try running:",
                           self.source_dir / ".github/workflows/install_dependencies_ubuntu.sh")
             raise
-
-
-class BuildCheriSim(Project):
-    target = "cheri-sim"
-    default_directory_basename = "cheri-cpu"
-    dependencies = ["bluespec-compiler"]
-    repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-cpu")
-    native_install_dir = DefaultInstallDir.CHERI_SDK
-    build_in_source_dir = True  # Needs to build in the source dir
-    make_kind = MakeCommandKind.GnuMake
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        # TODO: move this to project
-        self.add_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
-        self.add_required_system_tool("bsc", cheribuild_target="bluespec-compiler")
-        self.add_required_system_header("mpfr.h", apt="libmpfr-dev")
-        self.make_args.set(COP1="1" if self.build_fpu else "0")
-        if self.build_cheri:
-            if self.config.mips_cheri_bits == 128:
-                self.make_args.set(CAP128="1")
-            else:
-                self.make_args.set(CAP="1")
-        self.make_args.set(NOPRINTS="1")  # This massively speeds up the simulator
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.build_fpu = cls.add_bool_option("fpu", default=True, help="include the FPU code")
-        cls.build_cheri = cls.add_bool_option("cheri", default=True,
-                                              help="include the CHERI code in the simulator. If false build BERI")
-
-    def clean(self):
-        self.run_make("clean", parallel=False, cwd=self.source_dir / "cheri")
-        return None
-
-    def compile(self, **kwargs):
-        setup_sh = self.source_dir / "cheri" / "setup.sh"
-        if self.config.fpga_custom_env_setup_script:
-            setup_sh = self.config.fpga_custom_env_setup_script
-        if not setup_sh.exists():
-            self.fatal("Could not find setup.sh, please set --cheri-sim/source-directory or --fpga-env-setup-script")
-        source_cmd = "source {setup_script}".format(setup_script=setup_sh)
-        self.run_shell_script(
-            source_cmd + " && " + self.commandline_to_str(self.get_make_commandline("sim", parallel=False)),
-            cwd=self.source_dir / "cheri", shell="bash")
-
-    def install(self, **kwargs):
-        pass
-
-    def process(self):
-        if OSInfo.is_ubuntu() and not Path("/usr/lib/x86_64-linux-gnu/libgmp.so.3").exists():
-            # BSC needs libgmp.so.3
-            self.fatal("libgmp.so.3 is needed to run BSC",
-                       fixit_hint="Creating a symlink to /usr/lib/x86_64-linux-gnu/libgmp.so.10 seems to work.\n"
-                                  "\t\tTry running `sudo ln -s libgmp.so.10 /usr/lib/x86_64-linux-gnu/libgmp.so.3`")
-        super().process()

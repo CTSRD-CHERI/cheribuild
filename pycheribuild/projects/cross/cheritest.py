@@ -27,8 +27,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-
-from ..cherisim import BuildCheriSim
 from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..sail import BuildSailCheriMips
 
@@ -92,33 +90,6 @@ class BuildCheriMipsTestQEMU(_BuildCheriMipsTestBase):
             self.run_make("pytest_qemu128")
             self.run_make("qemu_logs_mips")
             self.run_make("pytest_qemu_mips")
-
-
-class BuildCheriMipsTestBluesim(_BuildCheriMipsTestBase):
-    target = "cheritest-sim"
-    default_directory_basename = "cheritest"  # reuse source and build dirs
-    dependencies = ["cheri-sim"]
-
-    def setup(self):
-        super().setup()
-        self.make_args.set(CHERI_CPU_GIT_ROOT=BuildCheriSim.get_source_dir(self))
-
-    def do_cheritest(self):
-        multicore = False
-        if self.single_test:
-            if multicore:
-                self.run_make("pytest/sim_multi/tests/" + str(self.single_test), parallel=False)
-                self.run_make("pytest/sim_cachedmulti/tests/" + str(self.single_test), parallel=False)
-            else:
-                self.run_make("pytest/sim_uncached/tests/" + str(self.single_test), parallel=False)
-                self.run_make("pytest/sim_cached/tests/" + str(self.single_test), parallel=False)
-        else:
-            if multicore:
-                test_targets = ("nosetests_multi", "nosetests_cachedmulti")
-            else:
-                test_targets = ("nosetest", "nosetest_cached")
-            for tgt in test_targets:
-                self.run_make(tgt)
 
 
 class BuildCheriMipsTestSail(_BuildCheriMipsTestBase):
