@@ -62,10 +62,7 @@ assert (_pexpect_dir / "pexpect/__init__.py").exists()
 assert str(_pexpect_dir.resolve()) in sys.path, str(_pexpect_dir) + " not found in " + str(sys.path)
 import pexpect  # noqa: E402
 
-SUPPORTED_ARCHITECTURES = {x.generic_target_suffix: x for x in (CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
-                                                                CompilationTargets.CHERIBSD_MIPS_HYBRID,
-                                                                CompilationTargets.CHERIBSD_MIPS_PURECAP,
-                                                                CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+SUPPORTED_ARCHITECTURES = {x.generic_target_suffix: x for x in (CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
                                                                 CompilationTargets.CHERIBSD_RISCV_HYBRID,
                                                                 CompilationTargets.CHERIBSD_RISCV_PURECAP,
                                                                 CompilationTargets.CHERIBSD_X86_64,
