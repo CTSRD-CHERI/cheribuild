@@ -771,6 +771,10 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
                 self.run_cmd("dd", "if=/dev/zero", "of=" + str(self.disk_image), size_flag, "count=1")
         super().process()
 
+    def get_riscv_bios_args(self) -> typing.List[str]:
+        # CheriOS bundles its kernel with its own bootloader
+        return ["-bios", "none"]
+
 
 class LaunchRtemsQEMU(LaunchQEMUBase):
     target = "run-rtems"
