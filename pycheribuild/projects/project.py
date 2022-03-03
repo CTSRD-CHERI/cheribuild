@@ -3492,6 +3492,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         generator = custom_generator if custom_generator else self._default_cmake_generator_arg
         self.ctest_environment = dict()  # type: dict[str, str]
         self.configure_args.append(generator)
+        self.build_type_var_suffix = ""
         if "Ninja" in generator:
             self.make_args.subkind = MakeCommandKind.Ninja
             self.add_required_system_tool("ninja", homebrew="ninja", apt="ninja-build")
@@ -3517,8 +3518,10 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                 # no CMake equivalent for MinSizeRelWithDebInfo -> set minsizerel and force debug info
                 self._force_debug_info = True
                 self.add_cmake_options(CMAKE_BUILD_TYPE=BuildType.MINSIZEREL.value)
+                self.build_type_var_suffix = "_" + BuildType.MINSIZEREL.value.upper()
             else:
                 self.add_cmake_options(CMAKE_BUILD_TYPE=self.build_type.value)
+                self.build_type_var_suffix = "_" + self.build_type.value.upper()
         if self.config.create_compilation_db:
             # TODO: always generate it?
             self.configure_args.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
@@ -3590,6 +3593,16 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(
                 custom_ldflags + self.target_info.additional_shared_library_link_flags),
         )
+        if self.optimization_flags:
+            # If the project uses custom optimization flags (e.g. SPEC), override the CMake defaults defined in
+            # Modules/Compiler/GNU.cmake. Just adding them to CMAKE_<LANG>_FLAGS_INIT is not enough since the
+            # CMAKE_<LANG>_FLAGS_<CONFIG>_INIT and  CMAKE_<LANG>_FLAGS variables will be appended and override the
+            # optimization flags that we passed as part of CMAKE_<LANG>_FLAGS_INIT.
+            flags = " " + commandline_to_str(self.optimization_flags)
+            if self.build_type.is_release:
+                flags += " -DNDEBUG"
+            self.add_cmake_options(**{f"CMAKE_C_FLAGS{self.build_type_var_suffix}": flags,
+                                      f"CMAKE_CXX_FLAGS{self.build_type_var_suffix}": flags})
         if not self.compiling_for_host():
             # TODO: set CMAKE_STRIP, CMAKE_NM, CMAKE_OBJDUMP, CMAKE_READELF, CMAKE_DLLTOOL, CMAKE_DLLTOOL,
             #  CMAKE_ADDR2LINE
