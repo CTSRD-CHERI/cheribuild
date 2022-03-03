@@ -77,7 +77,8 @@ class BenchmarkMixin(_BenchmarkMixinBase):
     @property
     def optimization_flags(self):
         if self.build_type.is_release:
-            return ["-O3"]
+            # NB: the -fno- flags must come after any -O flag since -O2/-O3 reset them to enabled.
+            return ["-O3", "-fno-slp-vectorize", "-fno-vectorize"]
         return super().optimization_flags
 
 
