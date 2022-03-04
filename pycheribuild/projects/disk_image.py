@@ -442,19 +442,11 @@ class BuildDiskImageBase(SimpleProject):
                     f.write(random_data)
             self.add_file_to_image(entropy_file, base_directory=self.tmpdir)
 
-    @property
-    def _gdb_xtarget(self):
-        # Workaround for FETT (we use the normal GDB target to avoid duplicating yet another project)
-        return self.source_project.get_crosscompile_target(self.config)
-
     def add_gdb(self):
         if not self.include_gdb and not self.include_kgdb:
             return
         # FIXME: if /usr/local/bin/gdb is in the image make /usr/bin/gdb a symlink
-        cross_target = self._gdb_xtarget
-        # Done here rather than in _gdb_xtarget to avoid duplication in the
-        # FETT override (and because without FETT we would just inline the
-        # implementation here)
+        cross_target = self.source_project.get_crosscompile_target(self.config)
         if cross_target.is_cheri_purecap():
             cross_target = cross_target.get_cheri_hybrid_for_purecap_rootfs_target()
         if cross_target not in BuildGDB.supported_architectures:

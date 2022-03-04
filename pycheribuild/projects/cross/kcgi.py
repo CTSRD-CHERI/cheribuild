@@ -28,13 +28,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDir, FettProjectMixin,
+from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository, MakeCommandKind)
 
 
 class BuildKCGI(CrossCompileAutotoolsProject):
-    # Just add add the FETT target below for now.
-    do_not_add_to_targets = True
     build_in_source_dir = True
 
     repository = GitRepository("https://github.com/kristapsdz/kcgi.git")
@@ -53,8 +51,3 @@ class BuildKCGI(CrossCompileAutotoolsProject):
 
     def needs_configure(self):
         return not (self.build_dir / "config.h").exists()
-
-
-class BuildFettKCGI(FettProjectMixin, BuildKCGI):
-    target = "fett-kcgi"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/kcgi.git", default_branch="fett")

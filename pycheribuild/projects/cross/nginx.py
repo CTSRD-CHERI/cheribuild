@@ -29,9 +29,8 @@
 #
 import re
 
-from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, FettProjectMixin,
+from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository, MakeCommandKind)
-from .openssl import BuildFettOpenSSL
 
 
 class BuildNginx(CrossCompileAutotoolsProject):
@@ -122,29 +121,3 @@ class BuildNginx(CrossCompileAutotoolsProject):
 class BuildNginxColoc(BuildNginx):
     target = "nginx-coloc"
     repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git", default_branch="master")  # TODO: New branch
-
-
-class BuildFettNginx(FettProjectMixin, BuildNginx):
-    target = "fett-nginx"
-    path_in_rootfs = "/fett/nginx"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git", default_branch="fett")
-    dependencies = ["fett-openssl"]
-
-    def configure(self):
-        openssl_dir = str(BuildFettOpenSSL.get_instance(self)._install_prefix)
-        self.configure_environment["NGX_OPENSSL_fett_path"] = str(
-            BuildFettOpenSSL.get_instance(self).destdir) + openssl_dir
-        self.configure_environment["NGX_OPENSSL_fett_rpath"] = openssl_dir + "/lib"
-        self.configure_args.extend(["--without-http_geo_module"])
-        super().configure()
-
-    def install(self):
-        super().install()
-        # Remove files we need to replace later
-        remove_files = [
-            self.install_dir / "conf/nginx.conf",
-            self.install_dir / "conf/mime.types",
-            ]
-        for file in remove_files:
-            if file.is_file():
-                self.delete_file(file)

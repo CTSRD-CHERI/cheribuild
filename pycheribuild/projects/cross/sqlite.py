@@ -27,8 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, FettProjectMixin,
-                                  GitRepository)
+from .crosscompileproject import (CrossCompileAutotoolsProject, GitRepository)
 
 
 class BuildSQLite(CrossCompileAutotoolsProject):
@@ -74,14 +73,3 @@ class BuildSQLite(CrossCompileAutotoolsProject):
 
     def needs_configure(self):
         return not (self.build_dir / "Makefile").exists()
-
-
-class BuildFettSQLite(FettProjectMixin, BuildSQLite):
-    target = "fett-sqlite"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git", default_branch="fett")
-    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    _needed_for_webkit = False
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.configure_args.extend(["--enable-fts3"])

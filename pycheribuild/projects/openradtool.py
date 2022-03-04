@@ -52,9 +52,3 @@ class BuildOpenRADTool(AutotoolsProject):
 
     def needs_configure(self):
         return not (self.build_dir / "config.h").exists()
-
-
-class BuildFettOpenRADTool(BuildOpenRADTool):
-    target = "fett-openradtool"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/openradtool.git",
-                               default_branch="fett")

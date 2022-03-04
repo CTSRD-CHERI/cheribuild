@@ -22,7 +22,6 @@ from pycheribuild.projects.cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdMf
 from pycheribuild.projects.cross.llvm import BuildCheriLLVM
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 # noinspection PyProtectedMember
-from pycheribuild.projects.cross.sqlite import BuildSQLite
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase
 # Override the default config loader:
 from pycheribuild.projects.project import SimpleProject
@@ -213,14 +212,6 @@ def test_per_project_override():
     pytest.param("disk-image-freebsd", None),
     pytest.param("qtbase", None),
     pytest.param("libcxx", None),
-
-    # The only exception are the fett-* targets which should target riscv64-purecap by default
-    pytest.param("fett-sqlite", "fett-sqlite-riscv64-purecap"),
-    pytest.param("fett-sqlite", "fett-sqlite-riscv64-purecap"),
-    pytest.param("fett-sqlite", "fett-sqlite-riscv64-purecap"),
-    pytest.param("run-fett", "run-fett-riscv64-purecap"),
-    pytest.param("disk-image-fett", "disk-image-fett-riscv64-purecap"),
-    pytest.param("cheribsd-fett", "cheribsd-fett-riscv64-purecap"),
 ])
 def test_target_aliases_default_target(target_name, resolved_target):
     # Check that only some targets (e.g. llvm) have a default target and that we have to explicitly
@@ -889,70 +880,6 @@ def test_backwards_compat_old_suffixes_freebsd_mips():
     # Finally, using the old name on the command line should be an error:
     with pytest.raises(KeyError, match=r"error: unknown argument '--freebsd-mips/source-directory=/cmdline'"):
         _ = _parse_config_file_and_args(b'{}', "--freebsd-mips/source-directory=/cmdline")
-
-
-def test_fett_install_dirs(monkeypatch):
-    config = _parse_arguments(["--source-root=/home/foo"])
-    cheribsd = _get_cheribsd_instance("cheribsd-riscv64-purecap", config)
-    cheribsd_fett = _get_cheribsd_instance("cheribsd-fett-riscv64-purecap", config)
-    assert cheribsd_fett.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
-    assert cheribsd.crosscompile_target == CompilationTargets.CHERIBSD_RISCV_PURECAP
-    assert cheribsd_fett.source_dir == Path("/home/foo/cheribsd"), "should reuse the same source dir"
-    assert cheribsd_fett.source_dir == cheribsd.source_dir, "should reuse the same source dir"
-    # Build and install dir should be different though
-    assert cheribsd_fett.install_dir == Path("/home/foo/output/rootfs-fett-init-zero-riscv64-purecap")
-    assert cheribsd.install_dir == Path("/home/foo/output/rootfs-riscv64-purecap")
-    assert cheribsd_fett.build_dir == Path("/home/foo/build/cheribsd-fett-init-zero-riscv64-purecap-build")
-    assert cheribsd.build_dir == Path("/home/foo/build/cheribsd-riscv64-purecap-build")
-
-    fett_disk_image = _get_target_instance("disk-image-fett-riscv64-purecap", config, BuildCheriBSDDiskImage)
-    disk_image = _get_target_instance("disk-image-riscv64-purecap", config, BuildCheriBSDDiskImage)
-    assert fett_disk_image.disk_image_path == Path("/home/foo/output/fett-cheribsd-riscv64-purecap.img")
-    assert disk_image.disk_image_path == Path("/home/foo/output/cheribsd-riscv64-purecap.img")
-    assert fett_disk_image.rootfs_dir == cheribsd_fett.install_dir
-    assert disk_image.rootfs_dir == cheribsd.install_dir
-    assert fett_disk_image.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
-    assert disk_image.crosscompile_target == CompilationTargets.CHERIBSD_RISCV_PURECAP
-    assert fett_disk_image.all_dependency_names(config) == ['fett-bash-riscv64-purecap',
-                                                            'llvm-native',
-                                                            'cheribsd-fett-riscv64-purecap',
-                                                            'fett-config-riscv64-purecap',
-                                                            'fett-nginx-riscv64-purecap',
-                                                            'fett-openssl-riscv64-purecap',
-                                                            'fett-openssh-riscv64-purecap',
-                                                            'fett-zlib-riscv64-purecap',
-                                                            'fett-sqlite-riscv64-purecap',
-                                                            'fett-voting-riscv64-purecap',
-                                                            'fett-kcgi-riscv64-purecap',
-                                                            'fett-sqlbox-riscv64-purecap',
-                                                            'openradtool']
-
-    assert disk_image._gdb_xtarget == CompilationTargets.CHERIBSD_RISCV_PURECAP
-    assert fett_disk_image._gdb_xtarget == CompilationTargets.CHERIBSD_RISCV_PURECAP
-
-    fett_voting = _get_target_instance("fett-voting-riscv64-purecap", config)
-    assert fett_voting.install_dir == cheribsd_fett.install_dir / "fett"
-    assert fett_voting.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
-
-    fett_sqlite = _get_target_instance("fett-sqlite-riscv64-purecap", config)
-    sqlite = _get_target_instance("sqlite-riscv64-purecap", config, BuildSQLite)
-    assert fett_sqlite.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
-    assert sqlite.crosscompile_target == CompilationTargets.CHERIBSD_RISCV_PURECAP
-    assert fett_sqlite.install_dir == cheribsd_fett.install_dir / "fett"
-    assert sqlite.install_dir == cheribsd.install_dir / "usr/local/riscv64-purecap"
-
-    fett_openssh = _get_target_instance("fett-openssh-riscv64-purecap", config)
-    assert fett_openssh.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
-    assert fett_openssh.install_dir == cheribsd_fett.install_dir / "fett"
-
-    fett_openssl = _get_target_instance("fett-openssl-riscv64-purecap", config)
-    assert fett_openssl.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
-    assert fett_openssl.install_dir == cheribsd_fett.install_dir / "fett"
-
-    fett_bash = _get_target_instance("fett-bash-riscv64-purecap", config)
-    assert fett_bash.crosscompile_target == CompilationTargets.FETT_RISCV_PURECAP
-    assert fett_bash.install_dir == cheribsd_fett.install_dir / "fett"
-    assert fett_bash.all_dependency_names(config) == ['llvm-native', 'cheribsd-fett-riscv64-purecap']
 
 
 def test_expand_tilde_and_env_vars(monkeypatch):

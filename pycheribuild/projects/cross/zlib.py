@@ -28,13 +28,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDir, FettProjectMixin, GitRepository)
+from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository)
 
 
 class BuildZlib(CrossCompileAutotoolsProject):
-    # Just add add the FETT target below for now.
-    do_not_add_to_targets = True
-
     repository = GitRepository("https://github.com/CTSRD-CHERI/zlib.git")
 
     # Enable the same hacks as nginx since this isn't really autoconf...
@@ -52,8 +49,3 @@ class BuildZlib(CrossCompileAutotoolsProject):
             # because the .o files are not macOS object files.
             self.add_configure_vars(uname=self.target_info.cmake_system_name,
                                     AR=self.sdk_bindir / "llvm-ar", RANLIB=self.sdk_bindir / "llvm-ranlib")
-
-
-class BuildFettZlib(FettProjectMixin, BuildZlib):
-    target = "fett-zlib"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/zlib.git", default_branch="fett")

@@ -149,12 +149,3 @@ class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
 
     _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
                                                    as_string="$SDK_ROOT/bbl-gfe/riscv{32,64}{,-purecap}")
-
-
-class BuildBBLNoPayloadFETT(BuildBBLNoPayloadGFE):
-    target = "bbl-fett"
-    default_directory_basename = "bbl"  # reuse same source dir
-    build_dir_suffix = "-fett"  # but not the build dir
-
-    _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
-                                                   as_string="$SDK_ROOT/bbl-fett/riscv{32,64}{,-purecap}")

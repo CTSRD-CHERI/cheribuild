@@ -164,8 +164,6 @@ add_filtered_file(script_dir / "projects/cheri_afl.py")
 cross_files = [(script_dir / "projects/cross/cheribsd.py").resolve(),
                (script_dir / "projects/cross/crosscompileproject.py").resolve()]
 for file in sorted((script_dir / "projects/cross").glob("*.py")):
-    if file.name == "fett.py":
-        continue
     path = file.resolve()
     if path not in cross_files:
         cross_files.append(path)
@@ -180,7 +178,6 @@ add_filtered_file(script_dir / "projects/sdk.py")
 add_filtered_file(script_dir / "projects/spike.py")
 add_filtered_file(script_dir / "projects/run_qemu.py")
 add_filtered_file(script_dir / "projects/run_fpga.py")
-add_filtered_file(script_dir / "projects/cross/fett.py")  # depends on disk_image.py and run_qemu.py
 
 # this one should not be needed
 add_filtered_file(script_dir / "projects/samba.py")

@@ -25,7 +25,7 @@
 
 from pathlib import Path
 
-from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, FettProjectMixin, GitRepository
+from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
 
 
 class BuildBash(CrossCompileAutotoolsProject):
@@ -78,7 +78,3 @@ class BuildBash(CrossCompileAutotoolsProject):
                 pwd_mkdb_cmd = freebsd_builddir / "tmp/legacy/usr/sbin/pwd_mkdb"
                 self.rewrite_file(self.destdir / "etc/master.passwd", rewrite)
                 self.run_cmd([pwd_mkdb_cmd, "-p", "-d", self.destdir / "etc", self.destdir / "etc/master.passwd"])
-
-
-class BuildFettBash(FettProjectMixin, BuildBash):
-    target = "fett-bash"
