@@ -28,16 +28,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, FettProjectMixin,
+from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository)
-from .openssl import BuildFettOpenSSL
-from .zlib import BuildFettZlib
 
 
 class BuildOpenSSH(CrossCompileAutotoolsProject):
-    # Just add add the FETT target below for now.
-    do_not_add_to_targets = True
-
     repository = GitRepository("https://github.com/CTSRD-CHERI/openssh-portable.git")
 
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
@@ -54,24 +49,4 @@ class BuildOpenSSH(CrossCompileAutotoolsProject):
         self.add_configure_env_arg("DESTDIR", self.destdir)
         self.add_configure_env_arg("ac_cv_have_control_in_msghdr", "yes")
         self.run_cmd("autoreconf", str(self.source_dir), cwd=self.build_dir)
-        super().configure(**kwargs)
-
-
-class BuildFettOpenSSH(FettProjectMixin, BuildOpenSSH):
-    target = "fett-openssh"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/openssh-portable.git",
-                               default_branch="fett")
-
-    dependencies = ["fett-zlib", "fett-openssl"]
-
-    def configure(self, **kwargs):
-        openssl_dir = str(BuildFettOpenSSL.get_instance(self)._install_prefix)
-        self.configure_args.append(
-            "--with-ssl-dir=" + str(BuildFettOpenSSL.get_instance(self).destdir) + "/" + openssl_dir)
-        self.COMMON_LDFLAGS.append("-Wl,-rpath," + openssl_dir + "/lib")
-
-        zlib_dir = str(BuildFettZlib.get_instance(self)._install_prefix)
-        self.configure_args.append("--with-zlib=" + str(BuildFettZlib.get_instance(self).destdir) + "/" + zlib_dir)
-        self.COMMON_LDFLAGS.append("-Wl,-rpath," + zlib_dir + "/lib")
-
         super().configure(**kwargs)

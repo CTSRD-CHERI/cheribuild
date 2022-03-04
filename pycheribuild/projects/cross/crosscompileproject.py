@@ -36,13 +36,12 @@ from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, c
                        DefaultInstallDir, GitRepository, Linkage, MakeCommandKind, MakefileProject, MesonProject,
                        Project, SimpleProject, SubversionRepository)
 from ...config.compilation_targets import CompilationTargets
-from ...config.target_info import AutoVarInit
 from ...utils import AnsiColour, coloured
 
 __all__ = ["BenchmarkMixin", "CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",  # no-combine
            "CrossCompileTarget", "CrossCompileSimpleProject", "CrossCompileProject",  # no-combine
            "MakeCommandKind", "Linkage", "DefaultInstallDir", "BuildType", "CompilationTargets",  # no-combine
-           "GitRepository", "CrossCompileMixin", "FettProjectMixin", "CrossCompileMakefileProject",  # no-combine
+           "GitRepository", "CrossCompileMixin", "CrossCompileMakefileProject",  # no-combine
            "CrossCompileMesonProject", "commandline_to_str", "SubversionRepository"]  # no-combine
 
 
@@ -192,13 +191,3 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         else:
             # when building the native target we just rely on the host tools in /usr/bin
             super().process()
-
-
-# Sets some default values common to all FETT projects
-class FettProjectMixin:
-    path_in_rootfs = "/fett"
-    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
-    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES + [CompilationTargets.NATIVE]
-    # We default to zero-initializing all stack variables for FETT projects
-    default_auto_var_init = AutoVarInit.ZERO
-    hide_options_from_help = True

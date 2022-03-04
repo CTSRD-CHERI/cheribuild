@@ -69,7 +69,6 @@ def test_sdk(target_name, expected_list):
 
 
 @pytest.mark.parametrize("target_name,expected_name", [
-    pytest.param("disk-image-fett", "disk-image-fett-riscv64-purecap"),
     pytest.param("llvm", "llvm-native"),
     pytest.param("gdb", "gdb-native"),
 ])

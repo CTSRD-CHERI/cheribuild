@@ -30,7 +30,7 @@
 #
 import shutil
 
-from .crosscompileproject import (CrossCompileProject, DefaultInstallDir, FettProjectMixin, GitRepository)
+from .crosscompileproject import (CrossCompileProject, DefaultInstallDir, GitRepository)
 
 
 class BuildOpenSSL(CrossCompileProject):
@@ -57,25 +57,8 @@ class BuildOpenSSL(CrossCompileProject):
         self.configure_args.append("BSD-generic64")
         self.configure_args.append("-shared")
 
-        if self.get_version() <= (1, 1, 0):
-            self.configure_args.append("--install-prefix=" + str(self.destdir))
-        else:
-            self.configure_args.append("--prefix=" + str(self._install_prefix))
-            self.make_args.set(DESTDIR=str(self.destdir))
+        self.configure_args.append("--prefix=" + str(self._install_prefix))
+        self.make_args.set(DESTDIR=str(self.destdir))
 
         if not self._xtarget.is_native():
             self.configure_args.append("--openssldir=" + str(self._install_prefix))
-
-
-class BuildFettOpenSSL(FettProjectMixin, BuildOpenSSL):
-    target = "fett-openssl"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/openssl.git",
-                               default_branch="fett")
-
-    @classmethod
-    def get_version(cls) -> tuple:
-        return (1, 0, 2)
-
-    def compile(self, **kwargs):
-        # link errors at -j40
-        super().compile(parallel=False)

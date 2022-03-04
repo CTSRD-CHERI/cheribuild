@@ -685,21 +685,6 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         return 0
 
 
-# Custom target info for FETT projects to ensure
-class CheriBSDFettTargetInfo(CheriBSDTargetInfo):
-    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
-        from ..projects.cross.cheribsd import BuildCheriBSDFett
-        return BuildCheriBSDFett.get_instance(self.project, cross_target=xtarget)
-
-    def _get_run_project(self) -> "typing.Type[AbstractLaunchFreeBSD]":
-        from ..projects.cross.fett import LaunchFett
-        return LaunchFett
-
-    @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["cheribsd-fett"]  # Pick the matching sysroot (-purecap for purecap, -hybrid for hybrid etc.)
-
-
 class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     shortname = "CheriBSD-Morello"
     uses_morello_llvm = True
@@ -1186,15 +1171,6 @@ class CompilationTargets(BasicCompilationTargets):
         ALL_SUPPORTED_CHERIBSD_TARGETS.extend(ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
     ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + [BasicCompilationTargets.NATIVE]
     ALL_FREEBSD_AND_CHERIBSD_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + ALL_SUPPORTED_FREEBSD_TARGETS
-
-    # Same as above, but the default is purecap RISC-V
-    FETT_RISCV_NO_CHERI = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo)
-    FETT_RISCV_HYBRID = CrossCompileTarget("riscv64-hybrid", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo,
-                                           is_cheri_hybrid=True, non_cheri_target=FETT_RISCV_NO_CHERI)
-    FETT_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo,
-                                            is_cheri_purecap=True, hybrid_target=FETT_RISCV_HYBRID)
-    FETT_DEFAULT_ARCHITECTURE = FETT_RISCV_PURECAP
-    FETT_SUPPORTED_ARCHITECTURES = [FETT_RISCV_PURECAP, FETT_RISCV_NO_CHERI]
 
     ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64,
                                        BAREMETAL_NEWLIB_MIPS64_PURECAP,

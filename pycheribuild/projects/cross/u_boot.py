@@ -32,7 +32,7 @@ from pathlib import Path
 
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompileTarget, DefaultInstallDir,
-                       GitRepository, MakeCommandKind, Project, ReuseOtherProjectRepository)
+                       GitRepository, MakeCommandKind, Project)
 from ...config.compilation_targets import CompilationTargets
 
 
@@ -147,16 +147,3 @@ class BuildUBoot(Project):
             assert kwargs['cwd'] == self.build_dir
             del kwargs['cwd']
         super().run_make(*args, **kwargs, cwd=self.source_dir)
-
-
-class BuildUBootFETT(BuildUBoot):
-    target = "u-boot-fett"
-    repository = ReuseOtherProjectRepository(BuildUBoot, do_update=True)  # reuse same source dir
-    _default_install_dir_fn = ComputedDefaultValue(function=uboot_install_dir,
-                                                   as_string="$SDK_ROOT/u-boot-fett/riscv{32,64}{,-hybrid,-purecap}")
-
-    @property
-    def platform(self):
-        if self.crosscompile_target.is_riscv():
-            return "fett-riscv64_smode"
-        assert False, "unhandled target"

@@ -1732,34 +1732,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         super().install(all_kernel_configs=" ".join(available_kernconfs), sysroot_only=self.sysroot_only, **kwargs)
 
 
-def cheribsd_fett_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
-    return config.output_root / ("rootfs-fett" + project.build_configuration_suffix())
-
-
-class BuildCheriBSDFett(BuildCHERIBSD):
-    target = "cheribsd-fett"
-    # Note: we have to set repo_for_target since we use different CompilationTargets here (with CheriBSDFettTargetInfo)
-    repository = ReuseOtherProjectRepository(BuildCHERIBSD, do_update=True,
-                                             repo_for_target=CompilationTargets.CHERIBSD_RISCV_PURECAP)
-    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
-    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
-    _default_install_dir_fn = cheribsd_fett_install_dir
-
-    hide_options_from_help = True  # hide this from --help for now
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.make_args.set_with_options(CHERI_CAPREVOKE=True, DLMALLOC=True)
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.auto_var_init = AutoVarInit.ZERO
-        if cls._xtarget is not None and cls._xtarget.is_cheri_purecap():
-            cls.build_fett_kernels = True
-            cls.with_manpages = True
-
-
 class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     target = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-mfs-root"]
