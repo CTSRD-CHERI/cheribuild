@@ -1996,6 +1996,9 @@ class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
         release_args.set_env(INSTALL="sh " + str(self.source_dir / "tools/install.sh"))
         release_args.set_env(XZ_CMD=str(self.objdir / "tmp/legacy/usr/bin/xz -T 0"))
 
+        # Need bsdtar for @file support
+        release_args.set_env(TAR_CMD="bsdtar")
+
         # Make our various bootstrap and cross tools available
         # TODO: Do this automatically in the build system?
         extra_path_entries = [
