@@ -2020,7 +2020,6 @@ class BuildFreeBSDRelease(BuildFreeBSDReleaseMixin, BuildFreeBSD):
     target = "freebsd-release"
     dependencies = ["freebsd"]
     repository = ReuseOtherProjectRepository(source_project=BuildFreeBSD)
-    supported_architectures = [CompilationTargets.FREEBSD_AARCH64]
     _always_add_suffixed_targets = True
     default_build_dir = ComputedDefaultValue(function=freebsd_reuse_build_dir,
                                              as_string=lambda cls: BuildFreeBSD.project_build_dir_help())
@@ -2034,8 +2033,6 @@ class BuildCheriBSDRelease(BuildFreeBSDReleaseMixin, BuildCHERIBSD):
     target = "cheribsd-release"
     dependencies = ["cheribsd"]
     repository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD)
-    supported_architectures = [CompilationTargets.CHERIBSD_AARCH64,
-                               CompilationTargets.CHERIBSD_MORELLO_PURECAP]
     _always_add_suffixed_targets = True
     default_build_dir = ComputedDefaultValue(function=cheribsd_reuse_build_dir,
                                              as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
