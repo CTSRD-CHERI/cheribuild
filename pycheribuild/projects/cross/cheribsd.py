@@ -1594,12 +1594,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git",
                                old_branches={"master": "main"})
     _default_install_dir_fn = cheribsd_install_dir
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
-                               CompilationTargets.CHERIBSD_RISCV_NO_CHERI, CompilationTargets.CHERIBSD_RISCV_HYBRID,
-                               CompilationTargets.CHERIBSD_X86_64, CompilationTargets.CHERIBSD_AARCH64,
-                               CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_RISCV_PURECAP,
-                               CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP,
-                               ]
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
     is_sdk_target = True
     hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
     use_llvm_binutils = True
