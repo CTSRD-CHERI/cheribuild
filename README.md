@@ -416,6 +416,18 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--cheribsd-mfs-root-kernel/build-alternate-abi-kernels | --cheribsd-mfs-root-kernel/no-build-alternate-abi-kernels]
                      [--cheribsd-mfs-root-kernel/build-bench-kernels | --cheribsd-mfs-root-kernel/no-build-bench-kernels]
                      [--cheribsd-mfs-root-kernel/caprevoke-kernel | --cheribsd-mfs-root-kernel/no-caprevoke-kernel]
+                     [--freebsd-release/build-tests | --freebsd-release/no-build-tests]
+                     [--freebsd-release/build-options OPTIONS]
+                     [--freebsd-release/debug-info | --freebsd-release/no-debug-info] [--freebsd-release/subdir SUBDIRS]
+                     [--cheribsd-release/build-tests | --cheribsd-release/no-build-tests]
+                     [--cheribsd-release/build-options OPTIONS]
+                     [--cheribsd-release/debug-info | --cheribsd-release/no-debug-info]
+                     [--cheribsd-release/subdir SUBDIRS]
+                     [--cheribsd-release/build-fpga-kernels | --cheribsd-release/no-build-fpga-kernels]
+                     [--cheribsd-release/default-kernel-abi {hybrid,purecap}]
+                     [--cheribsd-release/build-alternate-abi-kernels | --cheribsd-release/no-build-alternate-abi-kernels]
+                     [--cheribsd-release/build-bench-kernels | --cheribsd-release/no-build-bench-kernels]
+                     [--cheribsd-release/caprevoke-kernel | --cheribsd-release/no-caprevoke-kernel]
                      [--cheribsd-sysroot/remote-sdk-path PATH] [--disk-image-minimal/extra-files DIR]
                      [--disk-image-minimal/path IMGPATH] [--disk-image-mfs-root/extra-files DIR]
                      [--disk-image-mfs-root/path IMGPATH] [--disk-image/extra-files DIR] [--disk-image/path IMGPATH]
@@ -762,6 +774,44 @@ Options for target 'cheribsd-mfs-root-kernel':
   --cheribsd-mfs-root-kernel/build-bench-kernels, --cheribsd-mfs-root-kernel/no-build-bench-kernels
                         Also build benchmark kernels (default: 'False')
   --cheribsd-mfs-root-kernel/caprevoke-kernel, --cheribsd-mfs-root-kernel/no-caprevoke-kernel
+                        Build kernel with caprevoke support (experimental) (default: 'False')
+
+Options for target 'freebsd-release':
+  --freebsd-release/build-tests, --freebsd-release/no-build-tests
+                        Build the tests (default: 'True')
+  --freebsd-release/build-options OPTIONS
+                        Additional make options to be passed to make when building FreeBSD/CheriBSD. See `man src.conf`
+                        for more info. (default: '[]')
+  --freebsd-release/debug-info, --freebsd-release/no-debug-info
+                        pass make flags for building with debug info (default: 'True')
+  --freebsd-release/subdir SUBDIRS
+                        Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding individual
+                        programs/libraries. If more than one dir is passed, they will be processed in order. Note: This
+                        will break if not all dependencies have been built. (default: 'the value of the global
+                        --freebsd-subdir options')
+
+Options for target 'cheribsd-release':
+  --cheribsd-release/build-tests, --cheribsd-release/no-build-tests
+                        Build the tests (default: 'True')
+  --cheribsd-release/build-options OPTIONS
+                        Additional make options to be passed to make when building FreeBSD/CheriBSD. See `man src.conf`
+                        for more info. (default: '[]')
+  --cheribsd-release/debug-info, --cheribsd-release/no-debug-info
+                        pass make flags for building with debug info (default: 'True')
+  --cheribsd-release/subdir SUBDIRS
+                        Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding individual
+                        programs/libraries. If more than one dir is passed, they will be processed in order. Note: This
+                        will break if not all dependencies have been built. (default: 'the value of the global
+                        --freebsd-subdir options')
+  --cheribsd-release/build-fpga-kernels, --cheribsd-release/no-build-fpga-kernels
+                        Also build kernels for the FPGA. (default: 'False')
+  --cheribsd-release/default-kernel-abi {hybrid,purecap}
+                        Select default kernel to build (default: 'hybrid')
+  --cheribsd-release/build-alternate-abi-kernels, --cheribsd-release/no-build-alternate-abi-kernels
+                        Also build kernels with non-default ABI (purecap or hybrid) (default: 'True')
+  --cheribsd-release/build-bench-kernels, --cheribsd-release/no-build-bench-kernels
+                        Also build benchmark kernels (default: 'False')
+  --cheribsd-release/caprevoke-kernel, --cheribsd-release/no-caprevoke-kernel
                         Build kernel with caprevoke support (experimental) (default: 'False')
 
 Options for target 'cheribsd-sysroot':
