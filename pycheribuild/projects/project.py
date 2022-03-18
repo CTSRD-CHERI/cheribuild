@@ -1587,7 +1587,8 @@ class GitRepository(SourceRepository):
                 return target_override.branch
         return self._default_branch
 
-    def get_current_branch(self, src_dir: str) -> str:
+    @staticmethod
+    def get_current_branch(src_dir: str) -> "typing.Optional[bytes]":
         status = run_command("git", "status", "-b", "-s", "--porcelain", "-u", "no",
                              capture_output=True, print_verbose_only=True, cwd=src_dir,
                              run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS)
