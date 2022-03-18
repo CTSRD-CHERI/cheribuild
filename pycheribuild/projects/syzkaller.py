@@ -52,7 +52,7 @@ class BuildSyzkaller(CrossCompileProject):
     make_kind = MakeCommandKind.GnuMake
 
     # is_sdk_target = True
-    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS]
+    supported_architectures = [CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS]
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
 
     @classmethod
@@ -150,7 +150,7 @@ class BuildSyzkaller(CrossCompileProject):
 
 class RunSyzkaller(SimpleProject):
     target = "run-syzkaller"
-    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS]
+    supported_architectures = [CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
