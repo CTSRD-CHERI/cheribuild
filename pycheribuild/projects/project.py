@@ -3490,6 +3490,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         # allow a -G flag in cmake-options to override the default generator (Ninja).
         custom_generator = next((x for x in self.cmake_options if x.startswith("-G")), None)
         generator = custom_generator if custom_generator else self._default_cmake_generator_arg
+        self.ctest_environment = dict()  # type: dict[str, str]
         self.configure_args.append(generator)
         if "Ninja" in generator:
             self.make_args.subkind = MakeCommandKind.Ninja
@@ -3641,7 +3642,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         if (self.build_dir / "CTestTestfile.cmake").exists():
             # We can run tests using CTest
             if self.compiling_for_host():
-                self.run_cmd("ctest", "-V", "--output-on-failure", cwd=self.build_dir)
+                self.run_cmd("ctest", "-V", "--output-on-failure", cwd=self.build_dir, env=self.ctest_environment)
             else:
                 from .cmake import BuildCrossCompiledCMake
                 try:
@@ -3664,6 +3665,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                     self.warning("Do not know how to cross-compile CTest for", self.target_info, "-> cannot run tests")
                     return
                 args = ["--cmake-install-dir", str(cmake_target.install_dir)]
+                for var, value in self.ctest_environment.items():
+                    args.append("--test-setup-command=export " + shlex.quote(var + "=" + value))
                 args.extend(self.ctest_script_extra_args)
                 self.target_info.run_cheribsd_test_script("run_ctest_tests.py", *args, mount_builddir=True,
                                                           mount_sysroot=True, mount_sourcedir=True,
