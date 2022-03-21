@@ -33,13 +33,17 @@ from run_tests_common import boot_cheribsd, run_tests_main, get_default_junit_xm
 
 
 def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+    if not args.extra_library_paths:
+        # If the used passed extra library paths assume that those are correct.
+        # Otherwise, set up the default LD_LIBRARY_PATH to include the sysroot
+        # and the libraries from the build directory.
+        boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
+        # Prefer the files from the build directory over the sysroot.
+        boot_cheribsd.prepend_ld_library_path(qemu, "/build/lib:/build/bin")
+    # If the user supplied test setup steps, run them now.
     if args.test_setup_commands:
-        # If the user supplied test setup steps, run them now.
         for command in args.test_setup_commands:
             qemu.checked_run(command)
-    else:
-        # Otherwise, we just set up the default LD_LIBRARY_PATH.
-        boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
 
     # Update all references to CMAKE_COMMAND in the CTest file. Otherwise tests that use something like
     # `${CMAKE} -E copy_if_different ...` will fail.
