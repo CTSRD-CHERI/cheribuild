@@ -46,9 +46,10 @@ class BuildSamba(Project):
         make_kind = MakeCommandKind.CustomMakeTool
     else:
         build_in_source_dir = True
+    # NB: We can't update beyond 4.13 due to https://bugzilla.samba.org/show_bug.cgi?id=15024
     repository = GitRepository("https://github.com/CTSRD-CHERI/samba.git",
                                old_urls=[b"https://github.com/samba-team/samba.git"],
-                               default_branch="v4-12-stable", force_branch=True)
+                               default_branch="v4-13-stable", force_branch=True)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -106,8 +107,6 @@ class BuildSamba(Project):
                 # Avoid depending on libraries from the build tree:
                 "--bundled-libraries=talloc,tdb,pytdb,ldb,pyldb,tevent,pytevent", "--with-static-modules=ALL",
             ])
-            # Force python2 for now (since py3 seems broken)
-            self.configure_environment["PYTHON"] = shutil.which("python2.7")
         # Add the yapp binary
         self.configure_environment["PATH"] = os.getenv("PATH") + ":" + str(Path(shutil.which("perl")).resolve().parent)
         super().configure(cwd=self.source_dir, **kwargs)
@@ -142,3 +141,7 @@ class BuildSamba(Project):
 
     def needs_configure(self):
         return True
+
+    def clean(self):
+        self.clean_directory(self.source_dir / "bin", ensure_dir_exists=False)
+        return super().clean()
