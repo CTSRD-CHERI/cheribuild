@@ -2685,7 +2685,7 @@ class Project(SimpleProject):
 
         # We might be setting too many flags, ignore this (for now)
         if not self.compiling_for_host() and self.CC.exists() and self.get_compiler_info(self.CC).is_clang:
-            self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
+            self.COMMON_FLAGS.append("-Wno-error=unused-command-line-argument")
         if self.builds_docbook_xml and OSInfo.IS_MAC:
             catalog = self.get_homebrew_prefix() / "etc/xml/catalog"
             if not catalog.exists():
