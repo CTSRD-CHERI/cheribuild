@@ -1407,7 +1407,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # updated static lib
             if install_to_sysroot_cmd:
                 install_to_sysroot_cmd += " &&  "
-            install_cmd = install_to_sysroot_cmd + make_in_subdir + "install " + install_nometalog_cmd
+            # Execute install and installconfig targets to install both object files and optional configuration
+            # (e.g., in usr.sbin/pkg).
+            # Note that installconfig doesn't fail if there is no configuration in a subdirectory.
+            install_cmd = install_to_sysroot_cmd + make_in_subdir + "install installconfig " + install_nometalog_cmd
         colour_diags = "export CLANG_FORCE_COLOR_DIAGNOSTICS=always; " if self.config.clang_colour_diags else ""
         build_cmd = "{colour_diags} {clean} && {build} && {install} && echo \"  Done.\"".format(
             build=make_in_subdir + "all " + self.commandline_to_str(
