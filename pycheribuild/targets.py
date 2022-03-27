@@ -132,7 +132,6 @@ class Target(object):
             return
         assert self.__project is not None, "Should have been initialized in check_system_deps()"
         # noinspection PyProtectedMember
-        assert not self.__project._setup_called, str(self._project_class) + ".setup() should not have been called yet."
         self._do_run(config, msg="Built", func=lambda project: project.process())
         self._completed = True
 

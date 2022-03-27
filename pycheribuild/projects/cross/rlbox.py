@@ -26,7 +26,6 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 from .crosscompileproject import CrossCompileCMakeProject
-from ..cmake import BuildCrossCompiledCMake
 from ..project import DefaultInstallDir, GitRepository
 from ...config.compilation_targets import CompilationTargets
 
@@ -61,8 +60,4 @@ class BuildCatch2(CrossCompileCMakeProject):
         if self.compiling_for_host():
             self.run_make("test")
         else:
-            xtarget = self.get_crosscompile_target(self.config)
-            cmake_xtarget = xtarget.get_non_cheri_for_purecap_rootfs_target() if xtarget.is_cheri_purecap() else xtarget
-            args = ["--cmake-install-dir", BuildCrossCompiledCMake.get_install_dir(self, cross_target=cmake_xtarget)]
-            self.target_info.run_cheribsd_test_script("run_ctest_tests.py", *args, mount_builddir=True,
-                                                      mount_sysroot=True, mount_sourcedir=True)
+            super().run_tests()

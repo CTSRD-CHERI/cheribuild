@@ -3663,7 +3663,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                 except LookupError:
                     self.warning("Do not know how to cross-compile CTest for", self.target_info, "-> cannot run tests")
                     return
-                args = ["--cmake-install-dir", cmake_target.install_dir]
+                args = ["--cmake-install-dir", str(cmake_target.install_dir)]
                 args.extend(self.ctest_script_extra_args)
                 self.target_info.run_cheribsd_test_script("run_ctest_tests.py", *args, mount_builddir=True,
                                                           mount_sysroot=True, mount_sourcedir=True,

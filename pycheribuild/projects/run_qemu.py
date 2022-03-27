@@ -595,6 +595,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
     def __init__(self, config: CheriConfig, freebsd_class: "typing.Type[BuildFreeBSD]" = None,
                  disk_image_class: "typing.Type[BuildFreeBSDImage]" = None, needs_disk_image=True):
         super().__init__(config)
+        self.disk_image_class = disk_image_class
         if freebsd_class is None and disk_image_class is not None:
             # noinspection PyProtectedMember
             disk_image_instance = disk_image_class.get_instance(self)

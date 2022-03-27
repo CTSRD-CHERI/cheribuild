@@ -383,6 +383,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                     kernel_path = run_instance.current_kernel
             if disk_image_path is None and "--disk-image" not in self.config.test_extra_args:
                 disk_image_path = run_instance.disk_image
+                if not disk_image_path.exists():
+                    self.project.dependency_error("Missing disk image",
+                                                  cheribuild_target=run_instance.disk_image_class.target)
         elif not qemu_options.can_boot_kernel_directly:
             # We need to boot the disk image instead of running the kernel directly (amd64)
             assert rootfs_xtarget.is_any_x86() or rootfs_xtarget.is_aarch64(
@@ -392,6 +395,8 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                 from ..projects.disk_image import BuildMinimalCheriBSDDiskImage
                 instance = BuildMinimalCheriBSDDiskImage.get_instance(self.project, cross_target=rootfs_xtarget)
                 disk_image_path = instance.disk_image_path
+                if not disk_image_path.exists():
+                    self.project.dependency_error("Missing disk image", cheribuild_target=instance.target)
         elif kernel_path is None and "--kernel" not in self.config.test_extra_args:
             from ..projects.cross.cheribsd import ConfigPlatform
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
@@ -443,6 +448,8 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                 cmd.extend(["--install-prefix", self.project.install_prefix])
         if disk_image_path and "--disk-image" not in self.config.test_extra_args:
             cmd.extend(["--disk-image", disk_image_path])
+            if not disk_image_path.exists():
+                self.project.fatal("Could not find disk image", disk_image_path)
         if self.config.tests_interact:
             cmd.append("--interact")
         if self.config.tests_env_only:
@@ -460,7 +467,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         if rootfs_alternate_kernel_dir and not qemu_options.can_boot_kernel_directly:
             cmd.extend(["--alternate-kernel-rootfs-path", rootfs_alternate_kernel_dir])
 
-        cmd += list(script_args)
+        cmd.extend(map(str, script_args))
         if self.config.test_extra_args:
             cmd.extend(map(str, self.config.test_extra_args))
         self.project.run_cmd(cmd, give_tty_control=True)
