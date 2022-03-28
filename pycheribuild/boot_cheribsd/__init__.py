@@ -299,11 +299,18 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         assert ssh_pubkey is None or isinstance(ssh_pubkey, Path)
         self.ssh_public_key = ssh_pubkey
         # strip the .pub from the key file
-        self.ssh_private_key = Path(ssh_pubkey).with_suffix("") if ssh_pubkey else None
-        assert self.ssh_private_key != self.ssh_public_key
+        self._ssh_private_key = Path(ssh_pubkey).with_suffix("") if ssh_pubkey else None
         self.ssh_user = "root"
         self.smb_dirs = []  # type: typing.List[SmbMount]
         self.smb_failed = False
+
+    @property
+    def ssh_private_key(self):
+        if self._ssh_private_key is None:
+            failure("Attempted to use SSH without specifying a key, please pass --test-ssh-key=/path/to/id_foo.pub to "
+                    "cheribuild.", exit=True)
+        assert self._ssh_private_key != self.ssh_public_key, (self._ssh_private_key, "!=", self.ssh_public_key)
+        return self._ssh_private_key
 
     @staticmethod
     def _ssh_options(use_controlmaster: bool):
@@ -1087,7 +1094,7 @@ def default_ssh_key():
         guess = Path(os.path.expanduser("~/.ssh/"), i)
         if guess.exists():
             return str(guess)
-    return "/could/not/infer/default/ssh/public/key/path"
+    return None
 
 
 def get_argument_parser() -> argparse.ArgumentParser:
@@ -1110,7 +1117,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-write-disk-image-changes", action="store_false", dest="write_disk_image_changes")
     parser.add_argument("--trap-on-unrepresentable", action="store_true",
                         help="CHERI trap on unrepresentable caps instead of detagging")
-    parser.add_argument("--ssh-key", default=default_ssh_key())
+    parser.add_argument("--ssh-key", "--test-ssh-key", default=default_ssh_key())
     parser.add_argument("--ssh-port", type=int, default=None)
     parser.add_argument("--use-smb-instead-of-ssh", action="store_true")
     parser.add_argument("--smb-mount-directory", metavar="HOST_PATH:IN_TARGET",
@@ -1223,10 +1230,13 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
     test_archives = []  # type: list
     test_ld_preload_files = []  # type: list
     if not args.use_smb_instead_of_ssh and not args.skip_ssh_setup:
+        if args.ssh_key is None:
+            failure("No SSH key specified, but test script needs SSH. Please pass --test-ssh-key=/path/to/id_foo.pub",
+                    exit=True)
+        elif not Path(args.ssh_key).exists():
+            failure("Specified SSH key do not exist: ", args.ssh_key, exit=True)
         if Path(args.ssh_key).suffix != ".pub":
             failure("--ssh-key should point to the public key and not ", args.ssh_key, exit=True)
-        if not Path(args.ssh_key).exists():
-            failure("SSH key missing: ", args.ssh_key, exit=True)
     if args.test_archive or args.test_ld_preload:
         if args.use_smb_instead_of_ssh and not args.smb_mount_directories:
             failure("--smb-mount-directory is required if ssh is disabled", exit=True)
