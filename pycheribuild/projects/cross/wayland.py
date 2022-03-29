@@ -66,8 +66,14 @@ class BuildEPollShim(CrossCompileCMakeProject):
 
 class BuildLibUdevDevd(CrossCompileMesonProject):
     target = "libudev-devd"
-    repository = GitRepository("https://github.com/FreeBSDDesktop/libudev-devd")
+    repository = GitRepository("https://github.com/wulf7/libudev-devd",
+                               old_urls=[b"https://github.com/FreeBSDDesktop/libudev-devd"])
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
+    dependencies = ["linux-input-h"]
+
+    def setup(self):
+        super().setup()
+        self.CFLAGS.append("-I" + str(BuildLinux_Input_H.get_instance(self).include_install_dir))
 
 
 # Some projects unconditionally include linux/input.h to exist. For FreeBSD dev/evdev/input.h provides a
