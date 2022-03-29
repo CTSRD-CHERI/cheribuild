@@ -415,12 +415,13 @@ class BuildLibXScrnSaver(X11AutotoolsProject):
 class BuildLibJpegTurbo(X11CMakeProject):
     target = "libjpeg-turbo"
     repository = GitRepository("https://github.com/libjpeg-turbo/libjpeg-turbo.git",
-                               old_urls=[b"https://github.com/arichardson/libjpeg-turbo.git"])
+                               old_urls=[b"https://github.com/arichardson/libjpeg-turbo.git"],
+                               temporary_url_override="https://github.com/arichardson/libjpeg-turbo.git",
+                               url_override_reason="https://github.com/libjpeg-turbo/libjpeg-turbo/pull/587")
 
     def setup(self):
         super().setup()
         if self.compiling_for_aarch64(include_purecap=True):
-            # self.add_cmake_options(NEON_INTRINSICS=True)
             self.add_cmake_options(WITH_SIMD=False)  # Tries to compile files in non-existent arm/aarch128 directory
 
 
