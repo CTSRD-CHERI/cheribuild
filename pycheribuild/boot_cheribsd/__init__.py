@@ -449,7 +449,7 @@ def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
         local_dir = "usr/local"
         if qemu.xtarget.target_info_cls.is_cheribsd():
             local_dir += "/" + qemu.xtarget.generic_arch_suffix
-        qemu.run("export {var}=/{l}:/usr/{l}:/usr/local/{l}:/sysroot/{l}:/sysroot/usr/{l}:"
+        qemu.run("export {var}=/{l}:/usr/{l}:/usr/local/{l}:/sysroot/{l}:/sysroot/usr/{l}:/sysroot/usr/local/{l}:"
                  "/sysroot/{prefix}/{l}:${var}".format(prefix=local_dir, l="lib", var="LD_LIBRARY_PATH"), timeout=3)
         return
 
@@ -460,10 +460,10 @@ def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
     noncheri_ld_lib_path_var = "LD_LIBRARY_PATH" if not qemu.xtarget.is_cheri_purecap() else "LD_64_LIBRARY_PATH"
     cheri_ld_lib_path_var = "LD_LIBRARY_PATH" if qemu.xtarget.is_cheri_purecap() else "LD_CHERI_LIBRARY_PATH"
     qemu.run("export {var}=/{lib}:/usr/{lib}:/usr/local/{lib}:/sysroot/{lib}:/sysroot/usr/{lib}:/sysroot/{hybrid}/lib:"
-             "/sysroot/{noncheri}/lib:${var}".format(lib=non_cheri_libdir, hybrid=hybrid_install_prefix,
-                                                     noncheri=nocheri_install_prefix,
-                                                     var=noncheri_ld_lib_path_var), timeout=3)
-    qemu.run("export {var}=/{l}:/usr/{l}:/usr/local/{l}:/sysroot/{l}:/sysroot/usr/{l}:"
+             "/sysroot/usr/local/{lib}:/sysroot/{noncheri}/lib:${var}".format(
+                lib=non_cheri_libdir, hybrid=hybrid_install_prefix, noncheri=nocheri_install_prefix,
+                var=noncheri_ld_lib_path_var), timeout=3)
+    qemu.run("export {var}=/{l}:/usr/{l}:/usr/local/{l}:/sysroot/{l}:/sysroot/usr/{l}:/sysroot/usr/local/{l}:"
              "/sysroot/{prefix}/lib:${var}".format(prefix=purecap_install_prefix, l=cheri_libdir,
                                                    var=cheri_ld_lib_path_var), timeout=3)
 
@@ -1292,8 +1292,8 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
 
     boot_starttime = datetime.datetime.now()
     qemu = boot_cheribsd(qemu_options, qemu_command=args.qemu_cmd, kernel_image=kernel, disk_image=diskimg,
-                         ssh_port=args.ssh_port, ssh_pubkey=Path(args.ssh_key), smb_dirs=args.smb_mount_directories,
-                         kernel_init_only=args.test_kernel_init_only,
+                         ssh_port=args.ssh_port, ssh_pubkey=Path(args.ssh_key) if args.ssh_key is not None else None,
+                         smb_dirs=args.smb_mount_directories, kernel_init_only=args.test_kernel_init_only,
                          smp_args=["-smp", str(args.qemu_smp)] if args.qemu_smp else [],
                          trap_on_unrepresentable=args.trap_on_unrepresentable, skip_ssh_setup=args.skip_ssh_setup,
                          bios_path=args.bios, write_disk_image_changes=args.write_disk_image_changes,

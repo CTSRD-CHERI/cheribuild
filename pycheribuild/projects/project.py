@@ -2984,6 +2984,8 @@ class Project(SimpleProject):
 
     def install(self, _stdout_filter=_default_stdout_filter):
         self.run_make_install(_stdout_filter=_stdout_filter)
+        if self.compiling_for_cheri() and not (self.real_install_root_dir / "lib64c").exists():
+            self.create_symlink(self.real_install_root_dir / "lib", self.real_install_root_dir / "lib64c")
 
     def _do_generate_cmakelists(self):
         assert not isinstance(self, CMakeProject), self
