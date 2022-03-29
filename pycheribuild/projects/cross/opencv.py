@@ -53,3 +53,10 @@ class BuildOpenCV(CrossCompileCMakeProject):
         self.add_cmake_options(WITH_PROTOBUF=False)  # doesn't compile for CHERI yet.
         self.add_cmake_options(WITH_ITT=False, BUILD_ITT=False)  # doesn't compile for CHERI yet.
         self.add_cmake_options(OPENCV_TEST_DATA_PATH=self.source_dir / "opencv_extra/testdata")
+
+    @property
+    def optimization_flags(self):
+        if self.build_type.is_release and self.compiling_for_aarch64(include_purecap=True):
+            # Work around https://git.morello-project.org/morello/llvm-project/-/issues/47
+            return ["-O3", "-fno-vectorize"]
+        return super().optimization_flags
