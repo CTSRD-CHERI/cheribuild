@@ -3903,12 +3903,14 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         )
         if not self.compiling_for_host():
             native_toolchain_template = include_local_file("files/meson-cross-file-native-env.ini.in")
+            from .cmake import BuildCMake  # Could also use any other native project
+            native_target_info = BuildCMake.get_instance(self, cross_target=BasicCompilationTargets.NATIVE).target_info
             self._replace_values_in_toolchain_file(
                 native_toolchain_template, self._native_toolchain_file,
                 NATIVE_C_COMPILER=self.host_CC, NATIVE_CXX_COMPILER=self.host_CXX,
                 TOOLCHAIN_PKGCONFIG_BINARY=pkg_config_bin, TOOLCHAIN_CMAKE_BINARY=cmake_bin,
-                # To find native packages we have to add the bootstrap tools to PKG_CONFIG_PATH and CMAKE_PREFIX_PATH .
-                NATIVE_PKG_CONFIG_PATH=[self.config.other_tools_dir / "lib/pkgconfig"],
+                # To find native packages we have to add the bootstrap tools to PKG_CONFIG_PATH and CMAKE_PREFIX_PATH.
+                NATIVE_PKG_CONFIG_PATH=native_target_info.pkgconfig_dirs,
                 NATIVE_CMAKE_PREFIX_PATH=[self.config.other_tools_dir],
             )
 
