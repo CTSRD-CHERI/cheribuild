@@ -267,6 +267,8 @@ class BuildKCoreAddons(KDECMakeProject):
             self.write_file(self.rootfs_path / "usr/local/bin/kde-shell-x11", overwrite=True, mode=0o755,
                             contents=f"""#!/bin/sh
 set -xe
+# QML disk caching is currently broken
+export QML_DISABLE_DISK_CACHE=1
 export DISPLAY=:0
 export QT_QPA_PLATFORM=xcb
 if [ ! -f "{shared_mime_info.install_prefix / "share/mime/mime.cache"}" ]; then
