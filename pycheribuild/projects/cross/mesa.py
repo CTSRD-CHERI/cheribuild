@@ -30,7 +30,7 @@ from .crosscompileproject import CompilationTargets, CrossCompileMesonProject, G
 
 class BuildLibDrm(CrossCompileMesonProject):
     target = "libdrm"
-    dependencies = ["libpciaccess"]
+    dependencies = ["libpciaccess", "xorg-pthread-stubs"]
     repository = GitRepository("https://gitlab.freedesktop.org/mesa/drm.git",
                                old_urls=[b"https://gitlab.freedesktop.org/arichardson/drm.git"])
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
