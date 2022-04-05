@@ -97,6 +97,8 @@ class KDECMakeProject(CrossCompileCMakeProject):
         if self._uses_wayland_scanner:
             wayland_native_install_dir = BuildWayland.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
             self.add_cmake_options(WaylandScanner_EXECUTABLE=wayland_native_install_dir / "bin/wayland-scanner")
+        # Ensure that our qmake is selected and not a native one
+        self.add_cmake_options(CMAKE_PROGRAM_PATH=BuildQtBase.get_instance(self).qt_host_tools_path / "bin")
         if not self.compiling_for_host():
             # We need native tools (e.g. desktoptojson/kconfig_compiler) for some projects
             native_project = BuildKCoreAddons.get_instance(self, cross_target=CompilationTargets.NATIVE)
