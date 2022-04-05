@@ -666,9 +666,9 @@ class BuildQtWayland(BuildQtModuleWithQMake):
 class BuildQtQuickControls2(BuildQtModuleWithQMake):
     target = "qtquickcontrols2"
     dependencies = ["qtdeclarative"]
-    repository = GitRepository("https://code.qt.io/qt/qtquickcontrols2.git",
-                               # "https://invent.kde.org/qt/qt/qtquickcontrols2.git",
-                               default_branch="5.15", force_branch=True)
+    repository = GitRepository("https://invent.kde.org/qt/qt/qtquickcontrols2.git",
+                               old_urls=[b"https://code.qt.io/qt/qtquickcontrols2.git"],
+                               default_branch="kde/5.15", force_branch=True)
 
     def compile(self, **kwargs):
         self.run_make()
