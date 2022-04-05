@@ -1091,4 +1091,4 @@ class BuildKDEX11Desktop(TargetAliasWithDependencies):
     # TODO: "systemsettings" - now needs a newer plasma-workspace
     dependencies = ["plasma-desktop", "dolphin", "konsole", "okular", "gwenview", "kate",
                     "xvnc-server", "systemsettings",
-                    "xeyes", "twm", "xev"]  # Add some basic X11 things as a fallback
+                    "xeyes", "twm", "xev", "xauth"]  # Add some basic X11 things as a fallback
