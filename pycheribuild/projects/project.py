@@ -57,7 +57,7 @@ from ..processutils import (check_call_handle_noexec, commandline_to_str, Compil
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import (AnsiColour, cached_property, classproperty, coloured, fatal_error, include_local_file,
                      InstallInstructions, is_jenkins_build, OSInfo, remove_prefix, replace_one, status_update,
-                     ThreadJoiner, warning_message)
+                     ThreadJoiner, warning_message, remove_duplicates)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
@@ -2637,7 +2637,28 @@ class Project(SimpleProject):
 
     @property
     def pkgconfig_dirs(self) -> "list[str]":
-        return self.target_info.pkgconfig_dirs
+        # TODO: if this is too slow we could look at the direct depedencies only
+        deps = self.cached_full_dependencies()
+        try:
+            rootfs_project = self.target_info.get_rootfs_project()
+        except NotImplementedError:
+            rootfs_project = None  # If there isn't a rootfs, there is no need to skip that project.
+        all_install_dirs = dict()  # Use a dict to ensure reproducible order (guaranteed since Python 3.6)
+        for d in deps:
+            if d.xtarget is not self.crosscompile_target:
+                continue  # Don't add pkg-config directories for targets with a different architecture
+            project = d.get_or_create_project(None, self.config)
+            if project == rootfs_project:
+                # Don't add pkg-config dirs for the rootfs target, since target_info.pkgconfig_candidates() will not
+                # return the correct values. We explicitly append target_info.pkgconfig_dirs instead.
+                continue
+            install_dir = project.install_dir
+            if install_dir is not None:
+                all_install_dirs[install_dir] = 1
+        dependency_pkgconfig_dirs = self.target_info.pkgconfig_dirs
+        for d in all_install_dirs.keys():
+            dependency_pkgconfig_dirs.extend(self.target_info.pkgconfig_candidates(d))
+        return remove_duplicates(dependency_pkgconfig_dirs)
 
     def installed_pkgconfig_dirs(self) -> "list[str]":
         """:return: a list of directories that might contain this projects installed .pc files"""

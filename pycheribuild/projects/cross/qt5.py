@@ -116,12 +116,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     use_opengl: bool
     minimal: bool
 
-    @property
-    def pkgconfig_dirs(self) -> "list[str]":
-        if not self.target_info.is_macos():
-            return BuildLibXCB.get_instance(self).installed_pkgconfig_dirs() + super().pkgconfig_dirs
-        return super().pkgconfig_dirs
-
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.configure_command = self.source_dir / "configure"

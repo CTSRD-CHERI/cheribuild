@@ -49,7 +49,7 @@ __all__ = ["typing", "include_local_file", "Type_T", "init_global_config",  # no
            "warning_message", "DoNotUseInIfStmt", "ThreadJoiner", "InstallInstructions",  # no-combine
            "SafeDict", "error_message", "ConfigBase", "final", "add_error_context",  # no-combine
            "default_make_jobs_count", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
-           "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
+           "classproperty", "find_free_port", "have_working_internet_connection",  "remove_duplicates",  # no-combine
            "is_case_sensitive_dir", "SocketAndPort", "replace_one", "cached_property", "remove_prefix"]  # no-combine
 
 if sys.version_info < (3, 6, 0):
@@ -486,6 +486,11 @@ def replace_one(s: str, old, new) -> str:
     if result == s:
         raise ValueError(old + " not contained in " + s)
     return result
+
+
+def remove_duplicates(items: "typing.Iterable[Type_T]") -> "list[Type_T]":
+    # Convert to a dict to remove duplicates (retains order since python 3.6, which is our minimum)
+    return list(dict.fromkeys(items))
 
 
 def remove_prefix(s: str, prefix: str, prefix_required=False):

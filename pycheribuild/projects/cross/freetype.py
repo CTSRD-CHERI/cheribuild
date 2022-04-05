@@ -57,10 +57,6 @@ class BuildFontConfig(CrossCompileMesonProject):
         temporary_url_override="https://gitlab.freedesktop.org/arichardson/fontconfig",
         url_override_reason="Needs pointer provenance fixes (no PR posted yet)")
 
-    @property
-    def pkgconfig_dirs(self) -> "list[str]":
-        return BuildFreeType2.get_instance(self).installed_pkgconfig_dirs() + self.target_info.pkgconfig_dirs
-
     def setup(self):
         super().setup()
         self.add_meson_options(doc="disabled")

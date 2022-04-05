@@ -288,7 +288,7 @@ class TargetInfo(ABC):
         return self._get_rootfs_project(xtarget.get_rootfs_target())
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
-        raise RuntimeError("Should not be called for " + self.project.target)
+        raise NotImplementedError("Should not be called for " + self.project.target)
 
     @classmethod
     def is_native(cls):

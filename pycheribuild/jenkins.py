@@ -286,6 +286,7 @@ def build_target(cheri_config, target: Target):
         # need to set destdir after check_system_deps:
         project = target.get_or_create_project(cheri_config.preferred_xtarget, cheri_config)
         assert project
+        _ = project.all_dependency_names(cheri_config)  # Ensure dependencies are cached.
         cross_target = project.get_crosscompile_target(cheri_config)
         if isinstance(target, MultiArchTargetAlias) and cross_target is not None and \
                 cross_target != cheri_config.preferred_xtarget and cheri_config.preferred_xtarget is not None:

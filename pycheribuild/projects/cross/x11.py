@@ -49,13 +49,6 @@ class X11Mixin:
     native_install_dir = DefaultInstallDir.KDE_PREFIX  # TODO: should use a separate prefix but for now this works.
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
-    # noinspection PyUnresolvedReferences
-    @property
-    def pkgconfig_dirs(self) -> "list[str]":
-        if self.compiling_for_host():
-            return self.installed_pkgconfig_dirs() + super().pkgconfig_dirs
-        return super().pkgconfig_dirs
-
     def setup(self):
         # noinspection PyUnresolvedReferences
         super().setup()

@@ -693,7 +693,7 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
     FREEBSD_VERSION = 0
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
-        raise ValueError("Should not be called")
+        raise NotImplementedError("Should not be called")
 
     def _get_sdk_root_dir_lazy(self):
         from ..projects.cross.llvm import BuildCheriOSLLVM
