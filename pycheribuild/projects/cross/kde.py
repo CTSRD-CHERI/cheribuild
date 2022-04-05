@@ -122,10 +122,6 @@ class KDECMakeProject(CrossCompileCMakeProject):
         self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_Doxygen=True)
         self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_KF5DocTools=True)
 
-    @property
-    def cmake_prefix_paths(self):
-        return [self.install_dir, BuildQtBase.get_install_dir(self)] + super().cmake_prefix_paths
-
     def run_tests(self):
         self.info("To debug failing tests, you can increase verbosity by setting",
                   coloured(AnsiColour.yellow, 'export QT_LOGGING_RULES="*.debug=true"'))

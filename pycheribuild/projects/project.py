@@ -2635,28 +2635,32 @@ class Project(SimpleProject):
         self._lto_linker_flags = []  # type: typing.List[str]
         self._lto_compiler_flags = []  # type: typing.List[str]
 
-    @property
-    def pkgconfig_dirs(self) -> "list[str]":
+    @cached_property
+    def dependency_install_prefixes(self) -> "list[Path]":
         # TODO: if this is too slow we could look at the direct depedencies only
         deps = self.cached_full_dependencies()
-        try:
-            rootfs_project = self.target_info.get_rootfs_project()
-        except NotImplementedError:
-            rootfs_project = None  # If there isn't a rootfs, there is no need to skip that project.
         all_install_dirs = dict()  # Use a dict to ensure reproducible order (guaranteed since Python 3.6)
         for d in deps:
             if d.xtarget is not self.crosscompile_target:
                 continue  # Don't add pkg-config directories for targets with a different architecture
             project = d.get_or_create_project(None, self.config)
-            if project == rootfs_project:
-                # Don't add pkg-config dirs for the rootfs target, since target_info.pkgconfig_candidates() will not
-                # return the correct values. We explicitly append target_info.pkgconfig_dirs instead.
-                continue
             install_dir = project.install_dir
             if install_dir is not None:
                 all_install_dirs[install_dir] = 1
+        try:
+            # Don't add the rootfs directory, since e.g. target_info.pkgconfig_candidates(<rootfs>) will not return the
+            # correct values. For the root directory we rely on the methods in target_info instead.
+            rootfs_project = self.target_info.get_rootfs_project()
+            if rootfs_project.install_dir in all_install_dirs:
+                del all_install_dirs[rootfs_project.install_dir]
+        except NotImplementedError:
+            pass  # If there isn't a rootfs, there is no need to skip that project.
+        return list(all_install_dirs.keys())
+
+    @property
+    def pkgconfig_dirs(self) -> "list[str]":
         dependency_pkgconfig_dirs = self.target_info.pkgconfig_dirs
-        for d in all_install_dirs.keys():
+        for d in self.dependency_install_prefixes:
             dependency_pkgconfig_dirs.extend(self.target_info.pkgconfig_candidates(d))
         return remove_duplicates(dependency_pkgconfig_dirs)
 
@@ -3345,7 +3349,7 @@ class _CMakeAndMesonSharedLogic(Project):
 
     @property
     def cmake_prefix_paths(self):
-        return self.target_info.cmake_prefix_paths
+        return remove_duplicates(self.target_info.cmake_prefix_paths + self.dependency_install_prefixes)
 
     def _replace_values_in_toolchain_file(self, template: str, file: Path, **kwargs):
         result = template
