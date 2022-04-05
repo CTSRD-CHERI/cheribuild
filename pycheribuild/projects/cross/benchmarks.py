@@ -412,42 +412,26 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
     build_in_source_dir = True
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
-    # The makefiles here can't support any other tagets:
-    supported_architectures = [CompilationTargets.NATIVE]
+    # The makefiles here can't support any other other tagets:
+    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                               CompilationTargets.CHERIBSD_RISCV_HYBRID, CompilationTargets.NATIVE]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
-    @property
-    def bundle_dir(self):
-        return Path(self.build_dir, "lmbench-" + self.crosscompile_target.generic_target_suffix +
-                    self.build_configuration_suffix() + "-bundle")
-
-    @property
-    def benchmark_version(self):
-        if self.compiling_for_host():
-            return "x86"
-        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            return "cheri" + self.config.mips_cheri_bits_str
-        if self.compiling_for_mips(include_purecap=False):
-            return "mips-asan" if self.use_asan else "mips"
-        raise ValueError("Unsupported target architecture!")
-
     def compile(self, **kwargs):
         new_env = dict()
         if not self.compiling_for_host():
-            new_env = dict(MIPS_SDK=self.target_info.sdk_root_dir,
-                           CHERI128_SDK=self.target_info.sdk_root_dir,
-                           CHERI_SDK=self.target_info.sdk_root_dir)
+            new_env = dict(CHERI_SDK=self.target_info.sdk_root_dir)
         with self.set_env(**new_env):
-            self.make_args.set(CC="clang")
             if not self.compiling_for_host():
+                self.make_args.set(CC=str(self.sdk_bindir / "clang"))
                 self.make_args.set(AR=str(self.sdk_bindir / "llvm-ar"))
-                self.make_args.set(OS="mips64c128-unknown-freebsd")
+                self.make_args.set(OS="riscv64-unknown-freebsd")
 
-            self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(self.default_compiler_flags))
-            self.make_args.set(ADDITIONAL_LDFLAGS=self.commandline_to_str(self.default_ldflags))
+            self.make_args.set(CFLAGS=self.commandline_to_str(self.default_compiler_flags))
+            self.make_args.set(LDFLAGS=self.commandline_to_str(self.default_ldflags))
             if self.build_type.is_debug:
                 self.run_make("debug", cwd=self.source_dir / "src")
             else:
@@ -466,21 +450,7 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
         self.install_file(self.source_dir / "Makefile", install_dir / "Makefile")
 
     def install(self, **kwargs):
-        if is_jenkins_build():
-            self._create_benchmark_dir(self.install_dir / self.bundle_dir.name)
-        else:
-            self._create_benchmark_dir(self.bundle_dir)
-            self.info("Not installing LMBench for non-Jenkins builds")
-
-    def run_tests(self):
-        if self.compiling_for_host():
-            self.fatal("running x86 tests is not implemented yet")
-            return
-        # testing, not benchmarking -> run only once
-        test_command = "cd '/build/{dirname}' && ./run_jenkins-bluehive.sh -d0 -r1 -s".format(
-            dirname=self.bundle_dir.name)
-        self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
-                                                  "--test-timeout", str(120 * 60), mount_builddir=True)
+        self._create_benchmark_dir(self.install_dir)
 
 
 class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
