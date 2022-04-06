@@ -54,7 +54,7 @@ class BuildFreedoom(CrossCompileProject):
             'freedm': ['freedm']
         }
 
-    def compile(self):
+    def compile(self, **kwargs):
         for pkgname, wads in self.packages.items():
             filename = "{0}-{1}.zip".format(pkgname, self.version)
             wadfiles = ['*/' + wad + ".wad" for wad in wads]
@@ -62,7 +62,7 @@ class BuildFreedoom(CrossCompileProject):
                 self.run_cmd("wget", self.url_prefix + filename, cwd=self.build_dir)
             self.run_cmd("unzip", "-jo", filename, *wadfiles, cwd=self.build_dir)
 
-    def install(self):
+    def install(self, **kwargs):
         for wads in self.packages.values():
             for wad in wads:
                 wadfile = wad + ".wad"
