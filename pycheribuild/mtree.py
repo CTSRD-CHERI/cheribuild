@@ -260,8 +260,10 @@ class MtreeFile(object):
         mtree_path = self._ensure_mtree_path_fmt(str(item))
         return mtree_path in self._mtree
 
-    def exclude_matching(self, globs, exceptions=[], print_status=False):
+    def exclude_matching(self, globs, exceptions=None, print_status=False):
         """Remove paths matching any pattern in globs (but not matching any in exceptions)"""
+        if exceptions is None:
+            exceptions = []
         if type(globs) == str:
             globs = [globs]
         for glob in globs + exceptions:
