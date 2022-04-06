@@ -2937,7 +2937,7 @@ class Project(SimpleProject):
             return
 
         if self.build_via_symlink_farm:
-            banned_dirs = set([".hg", ".git", ".svn"])
+            banned_dirs = {".hg", ".git", ".svn"}
             for root, dirnames, filenames in os.walk(self.source_dir):
                 dirnames[:] = [d for d in dirnames if d not in banned_dirs]
                 root = Path(root)
