@@ -250,7 +250,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
 
 class AArch64KernelConfigFactory(KernelConfigFactory):
     kernconf_components = OrderedDict([(k, None) for k in (
-        "platform_name", "kabi_name")])
+        "platform_name", "kabi_name", "flags")])
     separator = "-"
     platform_name_map = {
         ConfigPlatform.QEMU: "GENERIC",
@@ -265,11 +265,18 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
         elif kABI == KernelABI.PURECAP:
             return "MORELLO{sep}PURECAP".format(sep=self.separator)
 
+    def get_flag_names(self, platform, kABI, default=False, mfsroot=False):
+        flags = []
+        flags += super().get_flag_names(platform, kABI, mfsroot=mfsroot)
+        return flags
+
     def make_all(self):
         configs = []
         # Generate QEMU/FVP kernels
         for kABI in KernelABI:
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True))
+            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
+                                            mfsroot=True))
 
         return configs
 
@@ -1736,7 +1743,9 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     target = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-mfs-root"]
     repository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD, do_update=True)
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS + \
+        CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS + \
+        [CompilationTargets.CHERIBSD_AARCH64]
     default_build_dir = ComputedDefaultValue(function=cheribsd_reuse_build_dir,
                                              as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
     # This exists specifically for this target
