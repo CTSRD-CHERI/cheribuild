@@ -32,7 +32,8 @@ class BuildLibDrm(CrossCompileMesonProject):
     target = "libdrm"
     dependencies = ["libpciaccess", "xorg-pthread-stubs"]
     repository = GitRepository("https://gitlab.freedesktop.org/mesa/drm.git",
-                               old_urls=[b"https://gitlab.freedesktop.org/arichardson/drm.git"])
+                               temporary_url_override="https://gitlab.freedesktop.org/arichardson/drm.git",
+                               url_override_reason="Lots of uinptr_t != u64 fun")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def setup(self):
@@ -41,11 +42,10 @@ class BuildLibDrm(CrossCompileMesonProject):
             # Needs to be fixed properly to stop passing pointers in __u64 fields.
             # For now we just want the library to compile so that code using it does not need to be modified (but it
             # won't work at runtime yet).
-            self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+            self.cross_warning_flags.append("-Werror=cheri-capability-misuse")
+            self.cross_warning_flags.append("-Werror=shorten-cap-to-int")
         if not self.compiling_for_host():
-            self.add_meson_options(amdgpu=False, nouveau=False, intel=False, radeon=False, vmwgfx=True,
-                                   omap=False, exynos=False, freedreno=False, tegra=False, etnaviv=False,
-                                   valgrind=False, **{"cairo-tests": False, "freedreno-kgsl": False})
+            self.add_meson_options(valgrind=False, **{"cairo-tests": False, "freedreno-kgsl": False})
 
 
 class BuildLibGlvnd(CrossCompileMesonProject):
