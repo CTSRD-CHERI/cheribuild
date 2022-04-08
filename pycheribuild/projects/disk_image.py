@@ -1106,6 +1106,11 @@ class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
     include_boot_kernel = False
     include_boot_files = False
 
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.include_boot_kernel = cls.add_bool_option("include-kernel", help="Include /boot/kernel/kernel in MFS")
+
     @property
     def rootfs_only(self):
         return True
@@ -1334,6 +1339,11 @@ class BuildBesspinMfsRootCheriBSDDiskImage(BuildBesspinCheriBSDDiskImage):
     disk_image_prefix = "cheribsd-besspin-mfs-root"
     include_boot_kernel = False
     include_boot_files = False
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.include_boot_kernel = cls.add_bool_option("include-kernel", help="Include /boot/kernel/kernel in MFS")
 
     @property
     def rootfs_only(self):
