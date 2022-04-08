@@ -865,7 +865,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
     target = "disk-image-minimal"
     _source_class = BuildCHERIBSD
     disk_image_prefix = "cheribsd-minimal"
-    include_boot = True
+    include_boot_kernel = True
+    include_boot_files = True
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
         def get_rc_conf_template(self):
@@ -920,7 +921,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                         include_local_file("files/minimal-image/etc.files")]
         if self._have_cplusplus_support(["lib", "usr/lib"]):
             files_to_add.append(include_local_file("files/minimal-image/need-cplusplus.files"))
-        if self.include_boot:
+        if self.include_boot_kernel:
             files_to_add.append(include_local_file("files/minimal-image/boot.files"))
 
         for files_list in files_to_add:
@@ -966,7 +967,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         self.mtree.add_dir("var/db", print_status=self.config.verbose)
         self.mtree.add_dir("var/empty", print_status=self.config.verbose)
 
-        if self.is_x86 or self.compiling_for_aarch64(include_purecap=True):
+        if self.include_boot_files and (self.is_x86 or self.compiling_for_aarch64(include_purecap=True)):
             # When booting minimal disk images, we need the files in /boot (kernel+loader), but we omit modules.
             extra_files = []
             for root, dirnames, filenames in os.walk(str(self.rootfs_dir / "boot")):
@@ -1102,7 +1103,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
 class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
     target = "disk-image-mfs-root"
     disk_image_prefix = "cheribsd-mfs-root"
-    include_boot = False
+    include_boot_kernel = False
+    include_boot_files = False
 
     @property
     def rootfs_only(self):
@@ -1117,7 +1119,6 @@ class BuildBesspinCheriBSDDiskImage(BuildDiskImageBase):
     target = "disk-image-besspin"
     _source_class = BuildCHERIBSD
     disk_image_prefix = "cheribsd-besspin"
-    include_boot = True
     hide_options_from_help = True
 
     @classmethod
@@ -1331,7 +1332,8 @@ class BuildBesspinCheriBSDDiskImage(BuildDiskImageBase):
 class BuildBesspinMfsRootCheriBSDDiskImage(BuildBesspinCheriBSDDiskImage):
     target = "disk-image-besspin-mfs-root"
     disk_image_prefix = "cheribsd-besspin-mfs-root"
-    include_boot = False
+    include_boot_kernel = False
+    include_boot_files = False
 
     @property
     def rootfs_only(self):
