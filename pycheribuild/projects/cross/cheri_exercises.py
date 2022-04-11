@@ -42,6 +42,7 @@ from ...config.target_info import CrossCompileTarget
 # development exercises such as general C and memory-allocator adaptation
 # tasks.
 #
+
 class BuildCheriExercises(CrossCompileProject):
     target = "cheri-exercises"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-exercises.git")
@@ -78,11 +79,14 @@ class BuildCheriExercises(CrossCompileProject):
 
         # Exercise sundry inter-object buffer overflows (needs -G0)
         self._compile_for_cheri_and_non_cheri(
-            "buffer-overflow-global", self.source_dir / "src/exercises/buffer-overflow-global/buffer-overflow-global.c", "-G0")
+            "buffer-overflow-global",
+            self.source_dir / "src/exercises/buffer-overflow-global/buffer-overflow-global.c", "-G0")
         self._compile_for_cheri_and_non_cheri(
-            "buffer-overflow-heap", self.source_dir / "src/exercises/buffer-overflow-heap/buffer-overflow-heap.c", "-G0")
+            "buffer-overflow-heap",
+            self.source_dir / "src/exercises/buffer-overflow-heap/buffer-overflow-heap.c", "-G0")
         self._compile_for_cheri_and_non_cheri(
-            "buffer-overflow-stack", self.source_dir / "src/exercises/buffer-overflow-stack/buffer-overflow-stack.c", "-G0")
+            "buffer-overflow-stack",
+            self.source_dir / "src/exercises/buffer-overflow-stack/buffer-overflow-stack.c", "-G0")
 
         # Exercise a subobject buffer overflow
         self._compile_for_cheri_and_non_cheri(
