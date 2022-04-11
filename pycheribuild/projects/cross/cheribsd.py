@@ -1912,6 +1912,11 @@ class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
         release_args = self.installworld_args.copy()
         release_args.update(self.kernel_make_args_for_config(kernconf, None).copy())
 
+        # Don't build src.txz or ports.txz into our releases.  We prefer users
+        # check them out properly, or use a tool like portsnap.
+        release_args.set(NOSRC=True)
+        release_args.set(NOPORTS=True)
+
         # DISTDIR contains OBJTOP already when doing the various recursive
         # makes, adding an extra level isn't needed and breaks things, and we
         # don't want installworld's. Ideally release/Makefile would just set
