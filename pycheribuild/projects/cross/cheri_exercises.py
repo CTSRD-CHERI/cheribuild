@@ -35,15 +35,15 @@ from ..project import DefaultInstallDir
 from ...config.compilation_targets import CheriBSDTargetInfo
 from ...config.target_info import CrossCompileTarget
 
-#
-# We automatically build parts of cheri-exercises that demonstrate CHERI
-# properties or require dynamic debugging, such as those illustrating the
-# impact of a buffer overflow or pointer injection.  We don't build
-# development exercises such as general C and memory-allocator adaptation
-# tasks.
-#
-
 class BuildCheriExercises(CrossCompileProject):
+    """
+    Automatically build parts of cheri-exercises that demonstrate CHERI
+    properties or require dynamic debugging, such as those illustrating the
+    impact of a buffer overflow or pointer injection.  Do not build
+    development exercises such as general C and memory-allocator adaptation
+    tasks.
+    """
+
     target = "cheri-exercises"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-exercises.git")
     supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP,
