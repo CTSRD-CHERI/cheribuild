@@ -2637,7 +2637,7 @@ class Project(SimpleProject):
 
     @cached_property
     def dependency_install_prefixes(self) -> "list[Path]":
-        # TODO: if this is too slow we could look at the direct depedencies only
+        # TODO: if this is too slow we could look at the direct dependencies only
         deps = self.cached_full_dependencies()
         all_install_dirs = dict()  # Use a dict to ensure reproducible order (guaranteed since Python 3.6)
         for d in deps:
@@ -2651,8 +2651,7 @@ class Project(SimpleProject):
             # Don't add the rootfs directory, since e.g. target_info.pkgconfig_candidates(<rootfs>) will not return the
             # correct values. For the root directory we rely on the methods in target_info instead.
             rootfs_project = self.target_info.get_rootfs_project()
-            if rootfs_project.install_dir in all_install_dirs:
-                del all_install_dirs[rootfs_project.install_dir]
+            all_install_dirs.pop(rootfs_project.install_dir, None)
         except NotImplementedError:
             pass  # If there isn't a rootfs, there is no need to skip that project.
         return list(all_install_dirs.keys())
@@ -3896,9 +3895,16 @@ class MesonProject(_CMakeAndMesonSharedLogic):
 
         # Unlike CMake, Meson does not set the DT_RUNPATH entry automatically:
         # See https://github.com/mesonbuild/meson/issues/6220, https://github.com/mesonbuild/meson/issues/6541, etc.
-        rpath_dirs = self.target_info.additional_rpath_directories
+        extra_libdirs = [s / self.target_info.default_libdir for s in self.dependency_install_prefixes]
+        try:
+            # If we are installing into a rootfs, remove the rootfs prefix from the RPATH
+            rootfs_project = self.target_info.get_rootfs_project()
+            extra_libdirs = ["/" + str(s.relative_to(rootfs_project.install_dir)) for s in extra_libdirs]
+        except NotImplementedError:
+            pass  # If there isn't a rootfs, we use the absolute paths instead.
+        rpath_dirs = remove_duplicates(self.target_info.additional_rpath_directories + extra_libdirs)
         if rpath_dirs:
-            self.COMMON_LDFLAGS.append("-Wl,-rpath," + ":".join(rpath_dirs))
+            self.COMMON_LDFLAGS.append("-Wl,-rpath," + ":".join(map(str, rpath_dirs)))
 
     def needs_configure(self) -> bool:
         return not (self.build_dir / "build.ninja").exists()
