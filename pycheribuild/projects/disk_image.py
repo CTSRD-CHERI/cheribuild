@@ -1374,6 +1374,40 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
         self.minimum_image_size = "256m"  # let's try to shrink the image size
 
 
+def _default_tar_name(config: CheriConfig, directory: Path, project: "BuildDiskImageBase"):
+    xtarget = project.get_crosscompile_target(config)
+    return directory / (project.disk_image_prefix + project.build_configuration_suffix(xtarget) + ".tar.xz")
+
+
+class BuildCheriBSDTarball(BuildCheriBSDDiskImage):
+    target = "rootfs-tarball"
+
+    default_disk_image_path = ComputedDefaultValue(
+        function=lambda conf, proj: _default_tar_name(conf, conf.output_root, proj),
+        as_string=lambda cls: "$OUTPUT_ROOT/" + cls.disk_image_prefix + "-<TARGET>.tar.xz depending on architecture")
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.add_required_system_tool("bsdtar", cheribuild_target="bsdtar", apt="libarchive-tools")
+
+    def make_disk_image(self):
+        # write out the manifest file:
+        self.mtree.write(self.manifest_file, pretend=self.config.pretend)
+        bsdtar_path = shutil.which("bsdtar")
+        if not bsdtar_path:
+            if not self.config.pretend:
+                raise LookupError("Could not find bsdtar command in PATH")
+            bsdtar_path = "bsdtar"
+        try:
+            self.run_cmd([bsdtar_path, "acf", self.disk_image_path, "@"+str(self.manifest_file)], cwd=self.rootfs_dir)
+        except Exception:
+            self.warning("bsdtar failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
+                         " or cheribsd) and attach the METALOG file.")
+            self.query_yes_no("About to delete the temporary directory. Copy any files you need before pressing enter.",
+                              yes_no_str="")
+            raise
+
+
 class BuildFreeBSDImage(BuildDiskImageBase):
     target = "disk-image-freebsd"
     include_os_in_target_suffix = False
