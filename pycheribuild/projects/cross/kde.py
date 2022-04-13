@@ -27,6 +27,7 @@
 #
 
 import os
+import shlex
 import tempfile
 from pathlib import Path
 
@@ -259,7 +260,8 @@ class BuildKCoreAddons(KDECMakeProject):
         if not self.compiling_for_host():
             # TODO: should probably just install Qt and KDE files in the same directory
             install_prefix = self.install_prefix
-            qt_dir = BuildQtBase.get_instance(self).install_prefix
+            all_prefixes = " ".join(shlex.quote("/" + str(s.relative_to(self.rootfs_dir))) for s in
+                                    self.dependency_install_prefixes)
             self.write_file(self.rootfs_dir / "usr/local/bin/kde-shell-x11", overwrite=True, mode=0o755,
                             contents=f"""#!/bin/sh
 set -xe
@@ -271,30 +273,33 @@ if [ ! -f "{shared_mime_info.install_prefix / "share/mime/mime.cache"}" ]; then
     echo "MIME database cache is missing, run cheribuild.py {shared_mime_info.target}!"
     false;
 fi
-# Add the Qt install directory to $PATH if it isn't yet:
-qtbindir="{qt_dir}/bin"
-if [ "${{PATH#*$qtbindir}}" = "$PATH" ]; then
-  echo "Qt bin dir is not in PATH, adding it"
-  export "PATH=$qtbindir:$PATH"
-fi
-qtsharedir="{qt_dir}/share"
+# Add the Qt/X11/etc. install directories to $PATH/XDG_DATA_DIRS/XDG_CONFIG_DIRS if they aren't yet:
 XDG_DATA_DIRS=${{XDG_DATA_DIRS:-/usr/local/share/:/usr/share/}}
-if [ "${{XDG_DATA_DIRS#*$qtsharedir}}" = "$XDG_DATA_DIRS" ]; then
-  echo "Qt share/ dir is not in XDG_DATA_DIRS, adding it"
-  export "XDG_DATA_DIRS=$qtsharedir:$XDG_DATA_DIRS"
-fi
-qtconfigdir="{qt_dir}/etc/xdg"
 XDG_CONFIG_DIRS=${{XDG_CONFIG_DIRS:-/usr/local/etc/xdg:/etc/xdg}}
-if [ -d "${{qtconfigdir}}" ] && [ "${{XDG_CONFIG_DIRS#*$qtconfigdir}}" = "XDG_CONFIG_DIRS" ]; then
-  echo "Qt share/ dir is not in XDG_CONFIG_DIRS, adding it"
-  export "XDG_CONFIG_DIRS=$qtsharedir:$XDG_CONFIG_DIRS"
-fi
+for prefix in {all_prefixes}; do
+  bindir="$prefix/bin"
+  if [ -d "$bindir" ] && [ "${{PATH#*$bindir}}" = "$PATH" ]; then
+    echo "Dependency binary directory $bindir is not in PATH, adding it"
+    export "PATH=$bindir:$PATH"
+  fi
+  datadir="$prefix/share"
+  if [ -d "$datadir" ] && [ "${{XDG_DATA_DIRS#*$datadir}}" = "$XDG_DATA_DIRS" ]; then
+    echo "Dependency data directory $datadir is not in XDG_DATA_DIRS, adding it"
+    export "XDG_DATA_DIRS=$datadir:$XDG_DATA_DIRS"
+  fi
+  configdir="$prefix/etc/xdg"
+  if [ -d "$configdir" ] && [ "${{XDG_CONFIG_DIRS#*$configdir}}" = "XDG_CONFIG_DIRS" ]; then
+    echo "Dependency config directory $configdir is not in XDG_CONFIG_DIRS, adding it"
+    export "XDG_CONFIG_DIRS=$configdir:$XDG_CONFIG_DIRS"
+  fi
+done
 . {install_prefix}/prefix.sh
 # Create all the XDG data directories if they don't exist
 # Silence "QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-root'"
 if [ -z "$XDG_RUNTIME_DIR" ]; then
     XDG_RUNTIME_DIR=/tmp/$USER-runtime
     test -d "$XDG_RUNTIME_DIR" || mkdir -m 0700 "$XDG_RUNTIME_DIR"
+    export XDG_RUNTIME_DIR
 fi
 # Create the default XDG_* directories if the env vars aren't set:
 # https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
@@ -304,7 +309,7 @@ test -z "$XDG_STATE_HOME" && mkdir -p $HOME/.local/state
 test -z "$XDG_CACHE_HOME" && mkdir -p $HOME/.cache
 env | sort
 set +xe
-# Provide a resonable logging rules default
+# Provide a reasonable logging rules default
 # TODO: should we write a QtProject/qtlogging.ini file?
 # To debug logging rules we can set QT_LOGGING_DEBUG=1
 printf "To get debug output from application you can run:\n\t export \\"QT_LOGGING_RULES=%s%s%s%s\\"\\n" \
