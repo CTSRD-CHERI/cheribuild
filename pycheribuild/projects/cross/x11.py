@@ -325,17 +325,18 @@ class BuildXEyes(X11AutotoolsProject):
 
 class BuildLibXKBCommon(X11MesonProject):
     target = "libxkbcommon"
-    dependencies = ["libx11"]
+    dependencies = ["libxcb"]
     repository = GitRepository("https://github.com/xkbcommon/libxkbcommon.git")
 
     def setup(self):
         # avoid wayland dep for now
         super().setup()
-        self.configure_args.append("-Denable-wayland=false")
-        # Don't build docs with Doxygen
-        self.configure_args.append("-Denable-docs=false")
-        # Avoid libxml2 dep
-        self.configure_args.append("-Denable-xkbregistry=false")
+        self.add_meson_options(**{
+            "enable-x11": True,
+            "enable-xkbregistry": False,  # Avoid dependency on libxml2
+            "enable-docs": False,  # Avoid lots of dependencies to build docs
+            "enable-tools": False,  # No need for wayland deps just for the xkbcli tool
+        })
 
     def process(self):
         newpath = os.getenv("PATH")
