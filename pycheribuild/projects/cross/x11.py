@@ -42,9 +42,7 @@ from ...utils import OSInfo
 
 class X11Mixin:
     do_not_add_to_targets = True
-    path_in_rootfs = "/usr/local"  # Always install X11 programs in /usr/local/bin to make X11 forwarding work
     default_build_type = BuildType.RELWITHDEBINFO
-    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     # Don't override the native installation, only use it when paths are explicitly added
     native_install_dir = DefaultInstallDir.KDE_PREFIX  # TODO: should use a separate prefix but for now this works.
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
@@ -311,6 +309,13 @@ class BuildXAuth(X11AutotoolsProject):
     dependencies = ["libx11", "libxau", "libxext", "libxmu", "xorgproto"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xauth")
 
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        if not self.compiling_for_host() and self.target_info.is_cheribsd():
+            # Ensure that xauth is in the default $PATH, so that ssh -X works
+            self.create_symlink(self.install_dir / "bin/xauth", self.rootfs_dir / "usr/local/bin/xauth",
+                                print_verbose_only=False)
+
 
 class BuildXEyes(X11AutotoolsProject):
     target = "xeyes"
@@ -500,6 +505,12 @@ class BuildXVncServer(X11AutotoolsProject):
         # TODO: should we install a service that we can start with `service xvnc start`?
         self.write_file(self.install_dir / "bin/startxvnc", overwrite=True, mode=0o755,
                         contents="#!/bin/sh\nXvnc -geometry 1024x768 -SecurityTypes=None \"$@\"\n")
+        if not self.compiling_for_host():
+            # Ensure that Xvnc is in the default $PATH
+            self.create_symlink(self.install_dir / "bin/Xvnc", self.rootfs_dir / "usr/local/bin/Xvnc",
+                                print_verbose_only=False)
+            self.create_symlink(self.install_dir / "bin/startxvnc", self.rootfs_dir / "usr/local/bin/startxvnc",
+                                print_verbose_only=False)
 
     def update(self):
         super().update()
