@@ -132,6 +132,8 @@ class LaunchQEMUBase(SimpleProject):
     _add_virtio_rng = True
     _enable_smbfs_support = True
     _cached_chosen_qemu = None  # type: typing.Optional[ChosenQEMU]
+    use_qemu: QEMUType
+    custom_qemu_path: Path
 
     @classmethod
     def setup_config_options(cls, default_ssh_port: int = None, **kwargs):

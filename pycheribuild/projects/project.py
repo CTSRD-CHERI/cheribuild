@@ -209,6 +209,7 @@ def _cached_get_homebrew_prefix(package: "typing.Optional[str]", config: CheriCo
 
 
 class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
+    _commandline_option_group = None
     _config_loader = None  # type: ConfigLoaderBase
 
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
