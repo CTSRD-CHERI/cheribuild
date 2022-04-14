@@ -12,7 +12,7 @@ from serial.tools.list_ports import comports  # noqa: E402
 from serial.tools.list_ports_common import ListPortInfo  # noqa: E402
 
 
-def find_morello_board_ttys(pretend: bool) -> "list[ListPortInfo]":
+def find_morello_board_ttys(pretend: bool, board_index: int = None) -> "list[ListPortInfo]":
     # find the serial port:
     # Run `ioreg -p IOUSB -l -w 0` on macOS to find the right VID/PID
     expected_vendor_id = 0x0403
@@ -23,12 +23,25 @@ def find_morello_board_ttys(pretend: bool) -> "list[ListPortInfo]":
         assert isinstance(portinfo, ListPortInfo)
         if portinfo.pid == expected_product_id and portinfo.vid == expected_vendor_id:
             ttys.append(portinfo)
-    if len(ttys) != 8:
-        if pretend:
-            return [ListPortInfo("/dev/fakeTTY")] * 8
+    if pretend:
+        for i in range(16):
+            port = ListPortInfo(f"/dev/fakeTTY{i:02d}")
+            port.location = str(90 + i // 8) + "-1.3." + str(2 if i % 8 < 4 else 1)
+            ttys.append(port)
+    if len(ttys) < 8:
         raise ValueError("Could not find 8 USB TTYs with VID", hex(expected_vendor_id), "PID", hex(expected_product_id))
     # Sort by location, then device name, since B0-3 actually are ports 0-3 and A0-3 are 4-7
     ttys = list(sorted(ttys, key=lambda x: (x.location, x.device)))
+    logging.debug("Found the following serial ports: %s", [x.device for x in ttys])
+    if len(ttys) > 8:
+        # Multiple boards attached, select the appropriate one
+        if len(ttys) % 8 != 0:
+            raise ValueError(f"Unexpected number of serial ports ({len(ttys)}), expected 8 per board!")
+        if board_index is None:
+            raise ValueError(f"Found more than 8 Morello serial ports ({len(ttys)}), please pass --board-index")
+        if board_index >= len(ttys) / 8:
+            raise ValueError(f"Board index {board_index} is too large, found {len(ttys) // 8} boards")
+        return ttys[8 * board_index:8 * board_index + 8]
     return ttys
 
 
@@ -126,7 +139,11 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--pretend", "-p", action="store_true", help="Don't actually do anything")
     parser.add_argument("--debug", action="store_true", help="Print debug output")
-    action_group = parser.add_mutually_exclusive_group()
+    parser.add_argument("--board-index", "-b", type=int,
+                        help="The Morello board to connect to (only needed if more than one is attached)")
+    action_group = parser.add_mutually_exclusive_group(required=True)
+    action_group.add_argument("--list-serial-ports", "--list", "-l", action="store_true",
+                              help="List all serial ports for the chosen board")
     action_group.add_argument("--tmux", action="store_true", help="Connect to all UARTS in a tmux session")
     action_group.add_argument("--uart", "-u", help="Connect to a single Morello board UART",
                               choices=[str(s) for s in range(8)] + [s.name for s in MorelloUART])
@@ -135,10 +152,12 @@ def main():
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
-    if not args.tmux and not args.uart:
-        sys.exit("Either --tmux or --uart is required.")
 
-    morello_ports = find_morello_board_ttys(pretend=args.pretend)
+    try:
+        morello_ports = find_morello_board_ttys(pretend=args.pretend, board_index=args.board_index)
+        assert len(morello_ports) == 8
+    except ValueError as e:
+        sys.exit(f"Fatal error: {e}")
     print("Found the following device nodes for the Morello UARTs:")
     print("\t", "\n\t".join(x.device for x in morello_ports), sep="")
     if args.tmux:
