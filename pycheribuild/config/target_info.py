@@ -719,7 +719,7 @@ class CrossCompileTarget(object):
         return result
 
     def is_native(self):
-        """returns true if we building for the curent host"""
+        """returns true if we are building for the curent host"""
         assert self.target_info_cls is not None
         return self.target_info_cls.is_native()
 
