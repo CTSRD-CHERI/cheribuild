@@ -1062,7 +1062,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         if not self.config.skip_world:
             if self.fast_rebuild:
-                if self.config.clean:
+                if self.with_clean:
                     self.info("Ignoring --", self.target, "/fast option since --clean was passed", sep="")
                 else:
                     build_args.set(WORLDFAST=True)
@@ -1086,7 +1086,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     self.run_cmd("chflags", "noschg", str(file))
 
     def _remove_old_rootfs(self):
-        assert self.config.clean or not self.keep_old_rootfs
+        assert self.with_clean or not self.keep_old_rootfs
         if self.config.skip_world:
             self.makedirs(self.install_dir)
         else:
@@ -1197,7 +1197,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.info("Skipping install step because freebsd-host-tools was set")
             return
         # keeping the old rootfs directory prior to install can sometimes cause the build to fail so delete by default
-        if self.config.clean or not self.keep_old_rootfs:
+        if self.with_clean or not self.keep_old_rootfs:
             self._remove_old_rootfs()
 
         if not self.config.skip_world or sysroot_only:
@@ -1331,7 +1331,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         is_lib = subdir.startswith("lib/") or "/lib/" in subdir or subdir.endswith("/lib")
         make_in_subdir = "make -C \"" + subdir + "\" "
         if skip_clean is None:
-            skip_clean = not self.config.clean
+            skip_clean = not self.with_clean
         if skip_install is None:
             skip_install = self.config.skip_install
         if self.config.pass_dash_k_to_make:
@@ -1791,7 +1791,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         if len(kernel_configs) == 0:
             self.fatal("No matching kernel configuration to build for", self.crosscompile_target)
 
-        if self.config.clean:
+        if self.with_clean:
             for kernconf in kernel_configs:
                 kernel_dir = self.kernel_objdir(kernconf)
                 if kernel_dir:
@@ -1900,7 +1900,7 @@ class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
         return None
 
     def process(self):
-        if self.config.clean:
+        if self.with_clean:
             release_objdir = self.release_objdir
             if release_objdir:
                 with self.async_clean_directory(release_objdir):

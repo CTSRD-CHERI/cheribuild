@@ -92,7 +92,7 @@ class InstallMorelloFVP(SimpleProject):
                 self.installer_path, url=self.base_url + self.installer_filename, sha256=self.installer_sha256)
 
         # Return early if we didn't download a new file or are running without --clean
-        if not downloaded_new_file and not self.config.clean:
+        if not downloaded_new_file and not self.with_clean:
             # Check if it is already installed:
             existing_version = self._get_version(result_if_invalid=(0, 0, 0))
             version_str = ".".join(map(str, existing_version))
@@ -147,7 +147,7 @@ VOLUME /diskimg
                 build_flags = []
                 if not self.config.skip_update:
                     build_flags.append("--pull")
-                if self.config.clean:
+                if self.with_clean:
                     build_flags.append("--no-cache")
                 image_latest = self.container_name + ":latest"
                 self.run_cmd(["docker", "build"] + build_flags + ["-t", image_latest, "."], cwd=td,

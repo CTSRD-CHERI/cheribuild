@@ -233,7 +233,7 @@ class BuildSailFromOpam(ProjectUsingOpam):
         if not self.skip_update:
             self.run_opam_cmd("update")
 
-        if self.config.clean or self.use_git_version:
+        if self.with_clean or self.use_git_version:
             self.run_opam_cmd("uninstall", "--verbose", "sail",
                               "--destdir=" + str(self.config.cheri_sdk_dir / "sailprefix"))
             self.run_opam_cmd("uninstall", "--verbose", "sail")

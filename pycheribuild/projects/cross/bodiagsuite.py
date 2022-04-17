@@ -153,7 +153,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             self.fatal("Could not find bmake")
         # Ensure the run directory exists
         self.makedirs(self.build_dir / "run")
-        if self.config.clean:
+        if self.with_clean:
             self.clean_directory(self.build_dir / "run", keep_root=False)
         testsuite_prefix = self.build_configuration_suffix()[1:]
         testsuite_prefix = testsuite_prefix.replace("-build", "")

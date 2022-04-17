@@ -753,6 +753,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self.target_info = self._xtarget.create_target_info(self)
         super().__init__(config)
         self.config = config
+        self.with_clean = self.config.clean
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
         assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
             self.__class__)
@@ -1171,7 +1172,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 else:
                     self.info("Will try to download again.")
                     should_download = True
-        elif self.config.clean:
+        elif self.with_clean:
             # Always download when using --clean and the SHA256 is not specified.
             should_download = True
         if should_download:
@@ -2885,7 +2886,7 @@ class Project(SimpleProject):
         self.run_cmd(git_clean_cmd, cwd=git_dir)
 
     def clean(self) -> ThreadJoiner:
-        assert self.config.clean or self._force_clean
+        assert self.with_clean or self._force_clean
         # TODO: never use the source dir as a build dir (unfortunately mibench and elftoolchain won't work)
         # will have to check how well binutils and qemu work there
         if (self.build_dir / ".git").is_dir():
@@ -2911,7 +2912,7 @@ class Project(SimpleProject):
     def should_run_configure(self):
         if self.config.force_configure or self.config.configure_only:
             return True
-        if self.config.clean:
+        if self.with_clean:
             return True
         return self.needs_configure()
 
@@ -3197,7 +3198,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         assert self._system_deps_checked, "self._system_deps_checked must be set by now!"
 
         last_build_file = self._last_build_kind_path()
-        if self.build_in_source_dir and not self.config.clean:
+        if self.build_in_source_dir and not self.with_clean:
             if not last_build_file.exists():
                 self._force_clean = True  # could be an old build prior to adding this check
             else:
@@ -3236,7 +3237,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     self._force_clean = True
 
         # run the rm -rf <build dir> in the background
-        cleaning_task = self.clean() if (self._force_clean or self.config.clean) else ThreadJoiner(None)
+        cleaning_task = self.clean() if (self._force_clean or self.with_clean) else ThreadJoiner(None)
         if cleaning_task is None:
             cleaning_task = ThreadJoiner(None)
         assert isinstance(cleaning_task, ThreadJoiner), ""
@@ -3580,7 +3581,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         self.add_cmake_options(CMAKE_AR=ar, CMAKE_RANLIB=ranlib)
 
     def needs_configure(self) -> bool:
-        if self.config.pretend and (self.config.force_configure or self.config.clean):
+        if self.config.pretend and (self.config.force_configure or self.with_clean):
             return True
         # CMake is smart enough to detect when it must be reconfigured -> skip configure if cache exists
         cmake_cache = self.build_dir / "CMakeCache.txt"
@@ -3884,7 +3885,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             # Recommended way to override compiler is using a native config file:
             self._toolchain_file = self.build_dir / "meson-native-file.ini"
             self.configure_args.extend(["--native-file", str(self._toolchain_file)])
-        if self.config.force_configure and not self.config.clean and (self.build_dir / "meson-info").exists():
+        if self.config.force_configure and not self.with_clean and (self.build_dir / "meson-info").exists():
             self.configure_args.append("--reconfigure")
         self.add_meson_options(**self.build_type.to_meson_args())
         if self.use_lto:

@@ -755,7 +755,7 @@ class BuildDiskImageBase(SimpleProject):
 
         if self.disk_image_path.is_file():
             # only show prompt if we can actually input something to stdin
-            if not self.config.clean and not self.force_overwrite:
+            if not self.with_clean and not self.force_overwrite:
                 # with --clean always delete the image
                 opt = self.get_config_option_name("force_overwrite")
                 self.info("An image already exists (" + str(self.disk_image_path) + "). ", end="")
