@@ -130,15 +130,18 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         deps = super().dependencies(config)
-        if cls.use_x11 and not cls.minimal:
+        if cls.minimal:
+            return deps
+        if cls.use_x11:
             # The system X11 libraries might be too old, so add the cheribuild-provided ones as a dependency
             deps.extend(["libx11", "libxcb", "libxkbcommon", "libxcb-cursor", "libxcb-util", "libxcb-image", "libice",
                          "libsm", "libxext", "libxtst", "libxcb-render-util", "libxcb-wm", "libxcb-keysyms"])
+        if not cls.get_crosscompile_target(config).is_native():
             # Assume that we can use system libraries for sqlite+libpng+fonts
-            if not cls.get_crosscompile_target(config).is_native():
-                deps.extend(["shared-mime-info", "dejavu-fonts", "fontconfig", "libpng", "libjpeg-turbo", "sqlite"])
-        if cls.use_opengl and not cls.get_crosscompile_target(config).is_native():
-            deps.append("libglvnd")
+            deps.extend(["shared-mime-info", "dejavu-fonts", "fontconfig", "libpng", "libjpeg-turbo", "sqlite",
+                         "libinput"])
+            if cls.use_opengl:
+                deps.append("libglvnd")
         return deps
 
     @classmethod
