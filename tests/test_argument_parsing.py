@@ -1019,8 +1019,8 @@ def test_mfs_root_kernel_config_options():
                               "add_debug_info_flag", "auto_var_init", "build_alternate_abi_kernels",
                               "build_bench_kernels", "build_dir", "build_fett_kernels", "build_fpga_kernels",
                               "build_type", "caprevoke_kernel", "debug_kernel", "default_kernel_abi",
-                              "extra_make_args", "fast_rebuild", "kernel_config", "mfs_root_image",
-                              "skip_update", "use_ccache", "use_lto", "with_clean"]
+                              "extra_make_args", "fast_rebuild", "force_configure", "kernel_config",
+                              "mfs_root_image", "skip_update", "use_ccache", "use_lto", "with_clean"]
 
 
 def test_mfs_root_kernel_inherits_defaults_from_cheribsd():

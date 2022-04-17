@@ -2354,6 +2354,12 @@ class Project(SimpleProject):
                                                                            "the value of the global --skip-update "
                                                                            "option"),
                                               help="Override --skip-update/--no-skip-update for this target only ")
+        cls.force_configure = cls.add_bool_option("reconfigure", altname="force-configure",
+                                                  default=ComputedDefaultValue(
+                                                      lambda config, proj: config.force_configure,
+                                                      "the value of the global --reconfigure/--force-configure option"),
+                                                  help="Override --(no-)reconfigure/--(no-)force-configure for this "
+                                                       "target only")
 
         if not install_directory_help:
             install_directory_help = "Override default install directory for " + cls.target
@@ -2920,7 +2926,7 @@ class Project(SimpleProject):
         return True
 
     def should_run_configure(self):
-        if self.config.force_configure or self.config.configure_only:
+        if self.force_configure or self.config.configure_only:
             return True
         if self.with_clean:
             return True
@@ -3591,7 +3597,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         self.add_cmake_options(CMAKE_AR=ar, CMAKE_RANLIB=ranlib)
 
     def needs_configure(self) -> bool:
-        if self.config.pretend and (self.config.force_configure or self.with_clean):
+        if self.config.pretend and (self.force_configure or self.with_clean):
             return True
         # CMake is smart enough to detect when it must be reconfigured -> skip configure if cache exists
         cmake_cache = self.build_dir / "CMakeCache.txt"
@@ -3675,7 +3681,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         self.configure_args.extend(self.cmake_options)
         # make sure we get a completely fresh cache when --reconfigure is passed:
         cmake_cache = self.build_dir / "CMakeCache.txt"
-        if self.config.force_configure:
+        if self.force_configure:
             self.delete_file(cmake_cache)
         super().configure(**kwargs)
         if self.config.copy_compilation_db_to_source_dir and (self.build_dir / "compile_commands.json").exists():
@@ -3895,7 +3901,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             # Recommended way to override compiler is using a native config file:
             self._toolchain_file = self.build_dir / "meson-native-file.ini"
             self.configure_args.extend(["--native-file", str(self._toolchain_file)])
-        if self.config.force_configure and not self.with_clean and (self.build_dir / "meson-info").exists():
+        if self.force_configure and not self.with_clean and (self.build_dir / "meson-info").exists():
             self.configure_args.append("--reconfigure")
         self.add_meson_options(**self.build_type.to_meson_args())
         if self.use_lto:
