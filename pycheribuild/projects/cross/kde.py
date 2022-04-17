@@ -882,11 +882,11 @@ class BuildLibKSysguard(KDECMakeProject):
     dependencies = ["kio"]
 
 
-# class BuildKQuickCharts(KDECMakeProject):
-#     # Needs openGL!
-#     target = "kquickcharts"
-#     repository = GitRepository("https://invent.kde.org/frameworks/kquickcharts.git")
-#     dependencies = ["qtquickcontrols2"]
+class BuildKQuickCharts(KDECMakeProject):
+    # NB: this needs openGL.
+    target = "kquickcharts"
+    repository = GitRepository("https://invent.kde.org/frameworks/kquickcharts.git")
+    dependencies = ["qtquickcontrols2"]
 
 
 class BuildPlasmaWorkspace(KDECMakeProject):
@@ -897,8 +897,7 @@ class BuildPlasmaWorkspace(KDECMakeProject):
     dependencies = ["xprop", "xsetroot", "plasma-framework", "kwin", "breeze", "kidletime", "kitemmodels", "kcmutils",
                     "knotifyconfig", "kded", "kinit", "kscreenlocker", "libkscreen", "libxft", "libxtst", "kpeople",
                     "kparts", "prison", "krunner", "kactivities-stats", "libksysguard", "kunitconversion", "kwallet",
-                    "ktexteditor", "kwayland", "layer-shell-qt"]
-    # needs OpenGL: "kquickcharts"
+                    "ktexteditor", "kwayland", "layer-shell-qt", "kquickcharts"]
 
     def setup(self):
         super().setup()
