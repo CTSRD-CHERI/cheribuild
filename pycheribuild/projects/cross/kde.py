@@ -260,7 +260,7 @@ class BuildKCoreAddons(KDECMakeProject):
             # TODO: should probably just install Qt and KDE files in the same directory
             install_prefix = self.install_prefix
             qt_dir = BuildQtBase.get_instance(self).install_prefix
-            self.write_file(self.rootfs_path / "usr/local/bin/kde-shell-x11", overwrite=True, mode=0o755,
+            self.write_file(self.rootfs_dir / "usr/local/bin/kde-shell-x11", overwrite=True, mode=0o755,
                             contents=f"""#!/bin/sh
 set -xe
 # QML disk caching is currently broken
@@ -317,7 +317,7 @@ printf "To get debug output from application you can run:\n\t export \\"QT_LOGGI
 export SHELL=/bin/sh
 exec sh
 """)
-            self.write_file(self.rootfs_path / "usr/local/bin/kde-shell-x11-smbfs", overwrite=True, mode=0o755,
+            self.write_file(self.rootfs_dir / "usr/local/bin/kde-shell-x11-smbfs", overwrite=True, mode=0o755,
                             contents=f"""#!/bin/sh
 set -xe
 if df -t smbfs,nfs "{install_prefix}" >/dev/null 2>/dev/null; then

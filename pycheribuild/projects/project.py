@@ -2578,15 +2578,14 @@ class Project(SimpleProject):
                     self._install_prefix = Path("/", self.target_info.sysroot_install_prefix_relative)
                     self.destdir = self._install_dir
             elif install_dir_kind in (DefaultInstallDir.ROOTFS_OPTBASE, DefaultInstallDir.KDE_PREFIX):
-                self.rootfs_path = self.target_info.get_rootfs_project().install_dir
-                relative_to_rootfs = os.path.relpath(str(self._install_dir), str(self.rootfs_path))
+                relative_to_rootfs = os.path.relpath(str(self._install_dir), str(self.rootfs_dir))
                 if relative_to_rootfs.startswith(os.path.pardir):
                     self.verbose_print("Custom install dir", self._install_dir, "-> using / as install prefix")
                     self._install_prefix = Path("/")
                     self.destdir = self._install_dir
                 else:
                     self._install_prefix = Path("/", relative_to_rootfs)
-                    self.destdir = self.rootfs_path
+                    self.destdir = self.rootfs_dir
             elif install_dir_kind in (None, DefaultInstallDir.DO_NOT_INSTALL, DefaultInstallDir.COMPILER_RESOURCE_DIR,
                                       DefaultInstallDir.IN_BUILD_DIRECTORY, DefaultInstallDir.CUSTOM_INSTALL_DIR):
                 self._install_prefix = self._install_dir
@@ -2762,10 +2761,9 @@ class Project(SimpleProject):
         self.info("Building with LTO")
         return True
 
-    @property
+    @cached_property
     def rootfs_dir(self):
-        assert self.get_default_install_dir_kind() == DefaultInstallDir.ROOTFS_OPTBASE
-        return self.rootfs_path
+        return self.target_info.get_rootfs_project().install_dir
 
     @property
     def _no_overwrite_allowed(self) -> "typing.Iterable[str]":
