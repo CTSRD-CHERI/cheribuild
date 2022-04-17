@@ -431,6 +431,7 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--cheribsd-sysroot/remote-sdk-path PATH] [--disk-image-minimal/extra-files DIR]
                      [--disk-image-minimal/path IMGPATH] [--disk-image-mfs-root/extra-files DIR]
                      [--disk-image-mfs-root/path IMGPATH] [--disk-image/extra-files DIR] [--disk-image/path IMGPATH]
+                     [--rootfs-tarball/extra-files DIR] [--rootfs-tarball/path IMGPATH]
                      [--disk-image-freebsd/extra-files DIR] [--disk-image-freebsd/path IMGPATH] [--freertos/demo DEMO]
                      [--freertos/prog PROG] [--freertos/bsp BSP] [--run/ssh-forwarding-port PORT]
                      [--run/ephemeral | --run/no-ephemeral] [--run/remote-kernel-path RUN/REMOTE-KERNEL-PATH]
@@ -603,7 +604,8 @@ Adjust flags used when compiling MIPS/CHERI projects:
 
 Configuration for running tests:
   --test-ssh-key TEST-SSH-KEY
-                        The SSH key to used to connect to the QEMU instance when running tests on CheriBSD.
+                        The SSH key to used to connect to the QEMU instance when running tests on CheriBSD. If not
+                        specified a key will be generated in the build-root directory on-demand.
   --use-minimal-benchmark-kernel, --no-use-minimal-benchmark-kernel
                         Use a CHERI BENCHMARK version of the cheribsd-mfs-root-kernel (without INVARIATES) for the run-
                         minimal target and for tests. This can speed up longer running tests. This is the default for
@@ -823,32 +825,40 @@ Options for target 'disk-image-minimal':
                         A directory with additional files that will be added to the image (default: '$SOURCE_ROOT/extra-
                         files-minimal')
   --disk-image-minimal/path IMGPATH
-                        The output path for the QEMU disk image (default: '$OUTPUT_ROOT/cheribsd-
-                        minimal-<TARGET>-disk.img depending on architecture')
+                        The output path for the disk image (default: '$OUTPUT_ROOT/cheribsd-minimal-<TARGET>-disk.img
+                        depending on architecture')
 
 Options for target 'disk-image-mfs-root':
   --disk-image-mfs-root/extra-files DIR
                         A directory with additional files that will be added to the image (default: '$SOURCE_ROOT/extra-
                         files-minimal')
   --disk-image-mfs-root/path IMGPATH
-                        The output path for the QEMU disk image (default: '$OUTPUT_ROOT/cheribsd-mfs-
-                        root-<TARGET>-disk.img depending on architecture')
+                        The output path for the disk image (default: '$OUTPUT_ROOT/cheribsd-mfs-root-<TARGET>-disk.img
+                        depending on architecture')
 
 Options for target 'disk-image':
   --disk-image/extra-files DIR
                         A directory with additional files that will be added to the image (default: '$SOURCE_ROOT/extra-
                         files')
   --disk-image/path IMGPATH
-                        The output path for the QEMU disk image (default: '$OUTPUT_ROOT/cheribsd-<TARGET>-disk.img
-                        depending on architecture')
+                        The output path for the disk image (default: '$OUTPUT_ROOT/cheribsd-<TARGET>-disk.img depending
+                        on architecture')
+
+Options for target 'rootfs-tarball':
+  --rootfs-tarball/extra-files DIR
+                        A directory with additional files that will be added to the image (default: '$SOURCE_ROOT/extra-
+                        files')
+  --rootfs-tarball/path IMGPATH
+                        The output path for the disk image (default: '$OUTPUT_ROOT/cheribsd-<TARGET>.tar.xz depending on
+                        architecture')
 
 Options for target 'disk-image-freebsd':
   --disk-image-freebsd/extra-files DIR
                         A directory with additional files that will be added to the image (default: '$SOURCE_ROOT/extra-
                         files')
   --disk-image-freebsd/path IMGPATH
-                        The output path for the QEMU disk image (default: '$OUTPUT_ROOT/freebsd-<TARGET>-disk.img
-                        depending on architecture')
+                        The output path for the disk image (default: '$OUTPUT_ROOT/freebsd-<TARGET>-disk.img depending
+                        on architecture')
 
 Options for target 'freertos':
   --freertos/demo DEMO  The FreeRTOS Demo build. (default: 'RISC-V-Generic')
