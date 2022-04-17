@@ -1020,7 +1020,7 @@ def test_mfs_root_kernel_config_options():
                               "build_bench_kernels", "build_dir", "build_fett_kernels", "build_fpga_kernels",
                               "build_type", "caprevoke_kernel", "debug_kernel", "default_kernel_abi",
                               "extra_make_args", "fast_rebuild", "kernel_config", "mfs_root_image",
-                              "skip_update", "use_ccache", "use_lto"]
+                              "skip_update", "use_ccache", "use_lto", "with_clean"]
 
 
 def test_mfs_root_kernel_inherits_defaults_from_cheribsd():

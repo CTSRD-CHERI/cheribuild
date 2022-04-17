@@ -748,12 +748,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # assert cls not in cls.__config_options_set, "Setup called twice?"
         cls.__config_options_set[cls] = True
 
+        cls.with_clean = cls.add_bool_option("clean",
+                                             default=ComputedDefaultValue(lambda config, proj: config.clean,
+                                                                          "the value of the global --clean option"),
+                                             help="Override --clean/--no-clean for this target only")
+
     def __init__(self, config: CheriConfig):
         assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
         self.target_info = self._xtarget.create_target_info(self)
         super().__init__(config)
         self.config = config
-        self.with_clean = self.config.clean
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
         assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
             self.__class__)
