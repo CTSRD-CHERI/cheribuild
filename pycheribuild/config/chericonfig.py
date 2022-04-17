@@ -562,9 +562,8 @@ class CheriConfig(ConfigBase):
         json_dict = OrderedDict()
         for v in self.loader.options.values():
             # noinspection PyProtectedMember
-            json_dict[v.full_option_name] = v.__get__(self,
-                                                      v._owning_class if v._owning_class else self)  # pytype:
-            # disable=attribute-error
+            json_dict[v.full_option_name] = v.__get__(
+                self, v._owning_class if v._owning_class else self)  # pytype: disable=attribute-error
         return json.dumps(json_dict, sort_keys=True, cls=MyJsonEncoder, indent=4)
 
     @classmethod

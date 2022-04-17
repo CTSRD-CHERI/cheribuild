@@ -78,7 +78,7 @@ def set_env(*, print_verbose_only=True, config: ConfigBase = None, **environ):
     False
 
     """
-    changed_values = dict()  # type: dict[str, str]
+    changed_values = dict()  # type: dict[str, typing.Optional[str]]
     if environ:
         if config is None:
             config = get_global_config()  # TODO: remove
@@ -346,7 +346,7 @@ def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, confi
                   print_verbose_only=print_verbose_only)
     if not run_in_pretend_mode and config.pretend:
         # noinspection PyTypeChecker
-        return FakePopen()
+        return FakePopen()  # pytype: disable=bad-return-type
     return popen_handle_noexec(cmdline, **kwargs)
 
 

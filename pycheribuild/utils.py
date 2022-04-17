@@ -74,12 +74,15 @@ class classproperty(object):
 
 
 # Placeholder until config has been initialized.
-class DoNotUseInIfStmt:
-    def __bool__(self):
-        raise ValueError("Should not be used")
+if typing.TYPE_CHECKING:
+    DoNotUseInIfStmt = bool
+else:
+    class DoNotUseInIfStmt:
+        def __bool__(self):
+            raise ValueError("Should not be used")
 
-    def __len__(self):
-        raise ValueError("Should not be used")
+        def __len__(self):
+            raise ValueError("Should not be used")
 
 
 class ConfigBase:

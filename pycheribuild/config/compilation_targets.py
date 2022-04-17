@@ -515,7 +515,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                     self.project.warning("Will copy a .dump file to the FPGA:", file)
 
         runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
-        qemu_ssh_socket = None  # type: typing.Optional[SocketAndPort]
+        qemu_ssh_socket: "typing.Optional[SocketAndPort]" = None
         basic_args = []
         if self.config.benchmark_with_qemu:
             from ..projects.build_qemu import BuildQEMU

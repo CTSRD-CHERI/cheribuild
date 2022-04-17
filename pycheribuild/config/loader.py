@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import argparse
+import builtins
 import collections.abc
 import json
 import os
@@ -111,6 +112,7 @@ class ComputedDefaultValue(typing.Generic[T]):
             # you need to use it yourself, rather than to avoid using an
             # inherited one not consistent with your as_string
             def inheriting_as_readme_string(cls):
+                assert callable(as_readme_string)
                 val = as_readme_string(cls)
                 if val is not None:
                     return val
@@ -224,6 +226,7 @@ def get_argcomplete_prefix():
             os.environ["COMP_LINE"] = "cheribuild.py foo --sq"  # return all options starting with --sq
         # os.environ["COMP_LINE"] = "cheribuild.py foo --no-s"  # return all options
         os.environ["COMP_POINT"] = str(len(os.environ["COMP_LINE"]))
+    assert argcomplete is not None
     comp_line = argcomplete.ensure_str(os.environ["COMP_LINE"])
     result = argcomplete.split_line(comp_line, int(os.environ["COMP_POINT"]))[1]
     if "_ARGCOMPLETE_BENCHMARK" in os.environ:
@@ -326,10 +329,6 @@ class ConfigLoaderBase(object):
         return self.add_option(*args, option_cls=CommandLineConfigOption, default=default,
                                negatable=kwargs.pop("negatable", False), type=bool, **kwargs)
 
-    @staticmethod
-    def __is_enum_type(value_type):
-        return isinstance(value_type, type) and issubclass(value_type, Enum)
-
     def is_needed_for_completion(self, name: str, shortname: str, option_type):
         comp_prefix = self._argcomplete_prefix
         while comp_prefix is not None:  # fake loop to allow early return
@@ -352,18 +351,18 @@ class ConfigLoaderBase(object):
         return True
 
     # noinspection PyShadowingBuiltins
-    def add_option(self, name: str, shortname=None, default=None,
+    def add_option(self, name: str, shortname=None, default: "typing.Optional[T]" = None,
                    type: "typing.Union[typing.Type[T], typing.Callable[[str], T]]" = str, group=None, help_hidden=False,
                    _owning_class: "typing.Type" = None, _fallback_names: "typing.List[str]" = None,
-                   option_cls: "typing.Type[ConfigOptionBase]" = None, **kwargs) -> T:
+                   option_cls: "typing.Type[CommandLineConfigOption]" = None, **kwargs) -> T:
         if not self.is_needed_for_completion(name, shortname, type):
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
-            return default
+            return default  # pytype: disable=bad-return-type
         if option_cls is None:
             option_cls = self.__option_cls
 
-        if self.__is_enum_type(type):
+        if isinstance(type, builtins.type) and issubclass(type, Enum):
             assert "action" not in kwargs or kwargs[
                 "action"] == "append", "action should be none or append for Enum options"
             assert "choices" not in kwargs, "for enum options choices are the enum names (or set enum_choices)!"
@@ -372,7 +371,8 @@ class ConfigLoaderBase(object):
                 del kwargs["enum_choices"]
             elif "enum_choice_strings" in kwargs:
                 # noinspection PyTypeChecker
-                assert len(kwargs["enum_choice_strings"]) == len(list(x for x in type))
+                assert len(kwargs["enum_choice_strings"]) == len(
+                    list(x for x in type))  # pytype: disable=bad-return-type
                 kwargs["choices"] = kwargs["enum_choice_strings"]
                 del kwargs["enum_choice_strings"]
             else:
@@ -380,13 +380,12 @@ class ConfigLoaderBase(object):
                 kwargs["choices"] = tuple(t.name.lower() for t in type)
             type = _EnumArgparseType(type)
 
-        # noinspection PyArgumentList
         result = option_cls(name, shortname, default, type, _owning_class, _loader=self, group=group,
                             help_hidden=help_hidden, _fallback_names=_fallback_names, **kwargs)
         assert name not in self.options  # make sure we don't add duplicate options
         self.options[name] = result
         # noinspection PyTypeChecker
-        return result
+        return result  # pytype: disable=bad-return-type
 
     def add_bool_option(self, name: str, shortname=None, default=False, **kwargs) -> bool:
         # noinspection PyTypeChecker
