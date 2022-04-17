@@ -660,13 +660,19 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return option.full_option_name
 
     @classmethod
-    def add_config_option(cls, name: str, *, show_help=False, shortname: str = None,
+    def add_config_option(cls, name: str, *, show_help=False, altname: str = None,
                           kind: "Union[typing.Type[Type_T], Callable[[str], Type_T]]" = str,
                           default: "Union[ComputedDefaultValue[Type_T], Type_T, Callable[[], Type_T]]" = None,
                           only_add_for_targets: "typing.List[CrossCompileTarget]" = None,
                           extra_fallback_config_names: "typing.List[str]" = None,
                           use_default_fallback_config_names=True, _allow_unknown_targets=False, **kwargs) -> Type_T:
         fullname = cls.target + "/" + name
+        # We abuse shortname to implement altname
+        if altname is not None:
+            shortname = "-" + cls.target + "/" + altname
+        else:
+            shortname = None
+
         if not cls._config_loader.is_needed_for_completion(fullname, shortname, kind):
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
@@ -730,15 +736,15 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                              _legacy_alias_names=legacy_alias_target_names, **kwargs)
 
     @classmethod
-    def add_bool_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None,
+    def add_bool_option(cls, name: str, *, altname=None, only_add_for_targets: list = None,
                         default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
         # noinspection PyTypeChecker
-        return cls.add_config_option(name, default=default, kind=bool, shortname=shortname,
+        return cls.add_config_option(name, default=default, kind=bool, altname=altname,
                                      only_add_for_targets=only_add_for_targets, **kwargs)
 
     @classmethod
-    def add_path_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None, **kwargs) -> Path:
-        return cls.add_config_option(name, kind=Path, shortname=shortname, only_add_for_targets=only_add_for_targets,
+    def add_path_option(cls, name: str, *, altname=None, only_add_for_targets: list = None, **kwargs) -> Path:
+        return cls.add_config_option(name, kind=Path, altname=altname, only_add_for_targets=only_add_for_targets,
                                      **kwargs)
 
     __config_options_set = dict()  # typing.Dict[Type, bool]
