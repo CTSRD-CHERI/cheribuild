@@ -41,7 +41,7 @@ from pathlib import Path
 from typing import Optional
 
 from .loader import ComputedDefaultValue, MyJsonEncoder
-from ..processutils import latest_system_clang_tool
+from ..processutils import latest_system_clang_tool, run_command
 from ..utils import (cached_property, ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, status_update,
                      warning_message)
 
@@ -326,9 +326,10 @@ class CheriConfig(ConfigBase):
                                                          "targets ignore this flag.")
 
         # Test options:
-        self.test_ssh_key = loader.add_path_option("test-ssh-key", default=None, group=loader.tests_group,
-                                                   help="The SSH key to used to connect to the QEMU instance when "
-                                                        "running tests on CheriBSD.")
+        self._test_ssh_key = loader.add_path_option("test-ssh-key", default=None, group=loader.tests_group,
+                                                    help="The SSH key to used to connect to the QEMU instance when "
+                                                         "running tests on CheriBSD. If not specified a key will be "
+                                                         "generated in the build-root directory on-demand.")
         self.use_minimal_benchmark_kernel = loader.add_bool_option("use-minimal-benchmark-kernel",
                                                                    help="Use a CHERI BENCHMARK version of the "
                                                                         "cheribsd-mfs-root-kernel (without "
@@ -513,6 +514,17 @@ class CheriConfig(ConfigBase):
     @property
     def morello_qemu_bindir(self):
         return self.morello_sdk_bindir
+
+    @property
+    def test_ssh_key(self) -> Path:
+        if self._test_ssh_key is not None:
+            return self._test_ssh_key
+        default_test_ssh_key_path = self.build_root / "insecure_test_ssh_key.pub"
+        if not default_test_ssh_key_path.exists():
+            status_update("Generating SSH key for testing:", default_test_ssh_key_path)
+            run_command(["ssh-keygen", "-t", "ed25519", "-N", "", "-f", default_test_ssh_key_path.with_suffix(""),
+                         "-C", "Test SSH key for cheribuild"], config=self)
+        return default_test_ssh_key_path
 
     def _ensure_required_properties_set(self) -> bool:
         for key in self.__dict__.keys():
