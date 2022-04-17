@@ -42,6 +42,7 @@ class BuildDBus(CrossCompileCMakeProject):
         self.add_cmake_options(DBUS_WITH_GLIB=False)
         if not self.compiling_for_host():
             self.add_cmake_options(DBUS_SESSION_SOCKET_DIR="/tmp")
+            self.add_cmake_options(TEST_SOCKET_DIR="/tmp")  # Don't try to create test sockets on SMBFS
             self.add_cmake_options(CMAKE_INSTALL_LOCALSTATEDIR="/var")  # don't use /usr/local/var/
 
         # Testing malloc failures makes the testsuite painfully slow.
@@ -55,3 +56,11 @@ class BuildDBus(CrossCompileCMakeProject):
             self.replace_in_file(self.install_dir / "etc/rc.d/dbus", {"%%PREFIX%%": str(self.install_prefix)})
             if not self.config.pretend:
                 (self.install_dir / "etc/rc.d/dbus").chmod(0o755)
+        if not self.compiling_for_host() and self.target_info.is_freebsd():
+            # See UIDs and GIDs in freebsd-ports
+            self.add_unique_line_to_file(self.rootfs_dir / "etc/rc.conf", "dbus_enable=\"YES\"")
+            self.add_unique_line_to_file(self.rootfs_dir / "etc/group", "messagebus:*:556:")
+            self.add_unique_line_to_file(self.rootfs_dir / "etc/passwd",
+                                         "messagebus:*:556:556:D-BUS Daemon User:/nonexistent:/usr/sbin/nologin")
+            # FIXME: or should we suggest post-install `pw groupadd -n messagebus -g 556` followed by
+            # `pw useradd -n messagebus -u 556 -c "D-BUS Daemon User" -d /nonexistent -s /usr/sbin/nologin -g 556`
