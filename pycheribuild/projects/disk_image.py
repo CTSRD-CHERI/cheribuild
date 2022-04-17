@@ -148,7 +148,7 @@ class BuildDiskImageBase(SimpleProject):
                                                        "'$SOURCE_ROOT/extra-files" + extra_files_suffix + "')",
                                                   metavar="DIR")
         cls.hostname = cls.add_config_option("hostname", show_help=False, default=default_hostname, metavar="HOSTNAME",
-                                             help="The hostname to use for the QEMU image")
+                                             help="The hostname to use for the disk image")
         if "use_qcow2" not in cls.__dict__:
             cls.use_qcow2 = cls.add_bool_option("use-qcow2",
                                                 help="Convert the disk image to QCOW2 format instead of raw")
@@ -164,7 +164,7 @@ class BuildDiskImageBase(SimpleProject):
                                                help="Include KGDB in the disk image (if it exists)")
         assert cls.default_disk_image_path is not None
         cls.disk_image_path = cls.add_path_option("path", default=cls.default_disk_image_path, metavar="IMGPATH",
-                                                  help="The output path for the QEMU disk image", show_help=True)
+                                                  help="The output path for the disk image", show_help=True)
         cls.force_overwrite = cls.add_bool_option("force-overwrite", default=True,
                                                   help="Overwrite an existing disk image without prompting")
         cls.no_autoboot = cls.add_bool_option("no-autoboot", default=False,
