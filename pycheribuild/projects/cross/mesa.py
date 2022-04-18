@@ -50,7 +50,7 @@ class BuildLibDrm(CrossCompileMesonProject):
 
 class BuildLibGlvnd(CrossCompileMesonProject):
     target = "libglvnd"
-    dependencies = ["libx11"]
+    dependencies = ["libx11", "libxext"]
     repository = GitRepository("https://gitlab.freedesktop.org/glvnd/libglvnd.git",
                                old_urls=[b"https://gitlab.freedesktop.org/arichardson/libglvnd.git"])
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
@@ -82,7 +82,7 @@ class BuildMesa(CrossCompileMesonProject):
         if cls.include_wayland:
             result.extend(["wayland", "wayland-protocols"])
         if cls.include_x11:
-            result.extend(["libx11", "libxshmfence", "libxxf86vm", "libxrandr"])
+            result.extend(["libx11", "libxshmfence", "libxxf86vm", "libxrandr", "libxfixes"])
         return result
 
     def check_system_dependencies(self):
