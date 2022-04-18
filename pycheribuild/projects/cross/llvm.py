@@ -39,7 +39,7 @@ from ...config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTa
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import CompilerType, CrossCompileTarget
 from ...processutils import CompilerInfo
-from ...utils import is_jenkins_build, OSInfo, ThreadJoiner
+from ...utils import is_jenkins_build, OSInfo, ThreadJoiner, remove_duplicates
 
 _true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
                                                   as_string="True unless build-everything is set")
@@ -465,8 +465,9 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     default_architecture = CompilationTargets.NATIVE
-    supported_architectures = (CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS +
-                               CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
+    # NB: remove_duplicates is needed for --enable-hybrid-for-purecap-rootfs targets.
+    supported_architectures = remove_duplicates(CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS +
+                                                CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -529,8 +530,10 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
     native_install_dir = DefaultInstallDir.MORELLO_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     default_architecture = CompilationTargets.NATIVE
-    supported_architectures = (CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS +
-                               CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
+
+    # NB: remove_duplicates is needed for --enable-hybrid-for-purecap-rootfs targets.
+    supported_architectures = remove_duplicates(CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS +
+                                                CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
 
     @property
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:

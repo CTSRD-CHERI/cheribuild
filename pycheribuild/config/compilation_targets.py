@@ -31,11 +31,12 @@ import copy
 import inspect
 import os
 import shlex
+import sys
 import typing
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
-from .loader import ConfigOptionBase
+from .loader import ConfigOptionBase, ConfigLoaderBase
 from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi,
                           TargetInfo)
 from ..processutils import commandline_to_str
@@ -1013,6 +1014,15 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
         return True
 
 
+def _enable_hybrid_for_purecap_rootfs_targets():
+    # Checking sys.argv here is rather ugly, but we can't make this depend on parsing arguments first since the list of
+    # command line options depends on the supported targets.
+    argv = sys.argv
+    if ConfigLoaderBase.is_completing_arguments:
+        argv = os.getenv("COMP_LINE", "").split()
+    return "--enable-hybrid-for-purecap-rootfs-targets" in argv
+
+
 class CompilationTargets(BasicCompilationTargets):
     CHERIBSD_RISCV_NO_CHERI = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDTargetInfo)
     CHERIBSD_RISCV_HYBRID = CrossCompileTarget("riscv64-hybrid", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
@@ -1125,9 +1135,6 @@ class CompilationTargets(BasicCompilationTargets):
                                       CHERIBSD_X86_64]  # does not include i386
     ALL_CHERIBSD_CHERI_TARGETS_WITH_HYBRID = list(
                 set(ALL_CHERIBSD_TARGETS_WITH_HYBRID) - set(ALL_CHERIBSD_NON_CHERI_TARGETS))
-    ALL_SUPPORTED_CHERIBSD_TARGETS = ALL_CHERIBSD_NON_CHERI_TARGETS + ALL_CHERIBSD_PURECAP_TARGETS
-    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + [BasicCompilationTargets.NATIVE]
-    ALL_FREEBSD_AND_CHERIBSD_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + ALL_SUPPORTED_FREEBSD_TARGETS
 
     # Special targets for specific uses only, not part of any of the above
     ALL_CHERIBSD_NON_CHERI_FOR_HYBRID_ROOTFS_TARGETS = [CHERIBSD_MORELLO_NO_CHERI_FOR_HYBRID_ROOTFS,
@@ -1138,6 +1145,12 @@ class CompilationTargets(BasicCompilationTargets):
                                                       CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS]
     ALL_CHERIBSD_PURECAP_FOR_HYBRID_ROOTFS_TARGETS = [CHERIBSD_MORELLO_PURECAP_FOR_HYBRID_ROOTFS,
                                                       CHERIBSD_RISCV_PURECAP_FOR_HYBRID_ROOTFS]
+
+    ALL_SUPPORTED_CHERIBSD_TARGETS = ALL_CHERIBSD_NON_CHERI_TARGETS + ALL_CHERIBSD_PURECAP_TARGETS
+    if _enable_hybrid_for_purecap_rootfs_targets():
+        ALL_SUPPORTED_CHERIBSD_TARGETS.extend(ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
+    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + [BasicCompilationTargets.NATIVE]
+    ALL_FREEBSD_AND_CHERIBSD_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + ALL_SUPPORTED_FREEBSD_TARGETS
 
     # Same as above, but the default is purecap RISC-V
     FETT_RISCV_NO_CHERI = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDFettTargetInfo)

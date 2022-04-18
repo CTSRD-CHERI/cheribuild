@@ -223,8 +223,8 @@ def get_argcomplete_prefix():
         os.environ["_ARGCOMPLETE_IFS"] = "\n"
         # os.environ["COMP_LINE"] = "cheribuild.py " # return all targets
         if "COMP_LINE" not in os.environ:
-            os.environ["COMP_LINE"] = "cheribuild.py foo --sq"  # return all options starting with --sq
-        # os.environ["COMP_LINE"] = "cheribuild.py foo --no-s"  # return all options
+            # return all options starting with --sq
+            os.environ["COMP_LINE"] = "cheribuild.py foo --enable-hybrid-for-purecap-rootfs-targets --sq"
         os.environ["COMP_POINT"] = str(len(os.environ["COMP_LINE"]))
     assert argcomplete is not None
     comp_line = argcomplete.ensure_str(os.environ["COMP_LINE"])

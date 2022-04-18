@@ -152,6 +152,10 @@ class DefaultCheriConfig(CheriConfig):
         self.sysroot_output_root = loader.add_path_option("sysroot-install-root", "-sysroot-install-dir",
                                                           default=lambda p, cls: p.tools_root, group=loader.path_group,
                                                           help="Sysroot prefix (default: '<TOOLS_ROOT>')")
+
+        # Hidden option to enable foo-hybrid-for-purecap-rootfs targets for all projects.
+        self.enable_hybrid_for_purecap_rootfs_targets = loader.add_commandline_only_bool_option(
+            "enable-hybrid-for-purecap-rootfs-targets", default=False, help_hidden=True)
         loader.finalize_options(available_targets)
 
     def load(self):
