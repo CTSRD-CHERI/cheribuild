@@ -773,8 +773,8 @@ class BuildKRunner(KDECMakeProject):
 
 class BuildKDecoration(KDECMakeProject):
     target = "kdecoration"
+    dependencies = ["kcoreaddons", "ki18n"]
     repository = GitRepository("https://invent.kde.org/plasma/kdecoration.git")
-    dependencies = ["ki18n"]
 
 
 class BuildKFrameworkIntegration(KDECMakeProject):
@@ -853,7 +853,8 @@ class BuildKWin(KDECMakeProject):
     @classmethod
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config) + ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker",
-                                                 "libinput", "qttools", "kwayland-server", "libepoxy"]
+                                                 "plasma-framework", "libinput", "qttools", "kwayland-server",
+                                                 "libepoxy"]
         # TODO: mesa for libgbm
         if cls.use_mesa:
             result.append("mesa")
