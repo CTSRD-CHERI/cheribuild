@@ -262,8 +262,8 @@ class BuildKCoreAddons(KDECMakeProject):
             install_prefix = self.install_prefix
             all_prefixes = " ".join(shlex.quote("/" + str(s.relative_to(self.rootfs_dir))) for s in
                                     self.dependency_install_prefixes)
-            self.write_file(self.rootfs_dir / "usr/local/bin/kde-shell-x11", overwrite=True, mode=0o755,
-                            contents=f"""#!/bin/sh
+            self.write_file(self.rootfs_dir / self.target_info.localbase / "bin/kde-shell-x11",
+                            overwrite=True, mode=0o755, contents=f"""#!/bin/sh
 set -xe
 # QML disk caching is currently broken
 export QML_DISABLE_DISK_CACHE=1
@@ -322,8 +322,8 @@ printf "To get debug output from application you can run:\n\t export \\"QT_LOGGI
 export SHELL=/bin/sh
 exec sh
 """)
-            self.write_file(self.rootfs_dir / "usr/local/bin/kde-shell-x11-smbfs", overwrite=True, mode=0o755,
-                            contents=f"""#!/bin/sh
+            self.write_file(self.rootfs_dir / self.target_info.localbase / "bin/kde-shell-x11-smbfs",
+                            overwrite=True, mode=0o755, contents=f"""#!/bin/sh
 set -xe
 if df -t smbfs,nfs "{install_prefix}" >/dev/null 2>/dev/null; then
     echo "{install_prefix} is already mounted from the host, skipping"

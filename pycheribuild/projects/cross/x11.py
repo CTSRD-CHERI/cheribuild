@@ -311,7 +311,7 @@ class BuildXAuth(X11AutotoolsProject):
 
     def install(self, **kwargs):
         super().install(**kwargs)
-        if not self.compiling_for_host() and self.target_info.is_cheribsd():
+        if not self.compiling_for_host() and not self.crosscompile_target.is_libcompat_target():
             # Ensure that xauth is in the default $PATH, so that ssh -X works
             self.create_symlink(self.install_dir / "bin/xauth", self.rootfs_dir / "usr/local/bin/xauth",
                                 print_verbose_only=False)
@@ -506,7 +506,7 @@ class BuildXVncServer(X11AutotoolsProject):
         # TODO: should we install a service that we can start with `service xvnc start`?
         self.write_file(self.install_dir / "bin/startxvnc", overwrite=True, mode=0o755,
                         contents="#!/bin/sh\nXvnc -geometry 1024x768 -SecurityTypes=None \"$@\"\n")
-        if not self.compiling_for_host():
+        if not self.compiling_for_host() and not self.crosscompile_target.is_libcompat_target():
             # Ensure that Xvnc is in the default $PATH
             self.create_symlink(self.install_dir / "bin/Xvnc", self.rootfs_dir / "usr/local/bin/Xvnc",
                                 print_verbose_only=False)

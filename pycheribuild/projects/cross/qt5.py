@@ -44,7 +44,11 @@ from ...processutils import set_env
 
 class InstallDejaVuFonts(SimpleProject):
     target = "dejavu-fonts"
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS
+
+    @property
+    def fonts_dir(self):
+        return self.target_info.sysroot_dir / self.target_info.localbase / "share/fonts"
 
     def process(self):
         version = (2, 37)
@@ -61,14 +65,6 @@ class InstallDejaVuFonts(SimpleProject):
         self.run_cmd("tar", "xvf", self.config.build_root / filename, "--strip-components=2",
                      "-C", fonts_dir, "dejavu-fonts-ttf-{}.{}/ttf".format(*version))
         self.run_cmd("find", fonts_dir)
-        # When not using fontconfig, the Qt platformsupport/fontdatabases/freetype/qfreetypefontdatabase.cpp code
-        # expects all .ttf files to be directly below QT_QPA_FONTDIR (by default <Qt install dir>/lib/fonts), so we
-        # need to add a symlink here (and ensure that the fonts are directly inside that dir).
-        qt_fonts_dir = BuildQtBase.get_install_dir(self) / "lib/fonts"
-        # remove old directories to replace them with a symlink
-        self.clean_directory(qt_fonts_dir, ensure_dir_exists=False)
-        self.makedirs(qt_fonts_dir.parent)
-        self.create_symlink(fonts_dir, qt_fonts_dir, print_verbose_only=False)
 
 
 class BuildSharedMimeInfo(CrossCompileMesonProject):
@@ -138,8 +134,10 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                          "libsm", "libxext", "libxtst", "libxcb-render-util", "libxcb-wm", "libxcb-keysyms"])
         if not cls.get_crosscompile_target(config).is_native():
             # Assume that we can use system libraries for sqlite+libpng+fonts
-            deps.extend(["shared-mime-info", "dejavu-fonts", "fontconfig", "libpng", "libjpeg-turbo", "sqlite",
-                         "libinput"])
+            rootfs_target = cls.get_crosscompile_target(config).get_rootfs_target()
+            deps.extend([BuildSharedMimeInfo.get_class_for_target(rootfs_target).target,
+                         InstallDejaVuFonts.get_class_for_target(rootfs_target).target,
+                         "fontconfig", "libpng", "libjpeg-turbo", "sqlite", "libinput"])
             if cls.use_opengl:
                 deps.append("libglvnd")
         return deps
@@ -513,6 +511,17 @@ for my $module (keys %modules) {
         super().install()
         for example in self._installed_examples:
             self.run_make_install(cwd=self.build_dir / example)
+        if self.target_info.is_freebsd() and not self.compiling_for_host():
+            # When not using fontconfig, the Qt platformsupport/fontdatabases/freetype/qfreetypefontdatabase.cpp code
+            # expects all .ttf files to be directly below QT_QPA_FONTDIR (by default <Qt install dir>/lib/fonts), so we
+            # need to add a symlink here (and ensure that the fonts are directly inside that dir).
+            qt_fonts_dir = self.install_dir / "lib/fonts"
+            # remove old directories to replace them with a symlink
+            self.clean_directory(qt_fonts_dir, ensure_dir_exists=False)
+            self.makedirs(qt_fonts_dir.parent)
+            dejavu_fonts = InstallDejaVuFonts.get_instance(self,
+                                                           cross_target=self.crosscompile_target.get_rootfs_target())
+            self.create_symlink(dejavu_fonts.fonts_dir, qt_fonts_dir, print_verbose_only=False)
 
     def _compile_relevant_tests(self):
         # generate the makefiles

@@ -235,6 +235,11 @@ class TargetInfo(ABC):
         return "lib"
 
     @property
+    def localbase(self):
+        """Relative path from the root to LOCALBASE (usr/local on FreeBSD)"""
+        raise NotImplementedError("Should only be called for FreeBSD targets")
+
+    @property
     @abstractmethod
     def c_preprocessor(self) -> Path:
         ...
@@ -787,6 +792,9 @@ class CrossCompileTarget(object):
         if self._rootfs_target is not None:
             return self._rootfs_target
         return self
+
+    def is_libcompat_target(self) -> bool:
+        return self._rootfs_target is not None
 
     def get_cheri_hybrid_target(self) -> "CrossCompileTarget":
         if self._is_cheri_hybrid and self._rootfs_target is None:

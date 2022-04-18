@@ -2648,6 +2648,8 @@ class Project(SimpleProject):
         if self.use_asan and not self.compiling_for_cheri():
             self.COMMON_FLAGS.append("-fsanitize=address")
             self.COMMON_LDFLAGS.append("-fsanitize=address")
+        if self.crosscompile_target.is_libcompat_target():
+            self.COMMON_LDFLAGS.append("-L" + str(self.sdk_sysroot / "usr" / self.target_info.default_libdir))
 
         self._lto_linker_flags = []  # type: typing.List[str]
         self._lto_compiler_flags = []  # type: typing.List[str]

@@ -325,6 +325,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
+        # FreeBSD uses /usr/libdata/pkgconfig for the native ABI.
         return [str(self.sysroot_dir / "usr/libdata/pkgconfig"),
                 str(self.sysroot_install_prefix_absolute / "lib/pkgconfig"),
                 str(self.sysroot_install_prefix_absolute / "share/pkgconfig"),
@@ -337,6 +338,26 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     @property
     def cmake_prefix_paths(self) -> "list[Path]":
         return [self.sysroot_install_prefix_absolute]
+
+    @property
+    def libcompat_suffix(self) -> str:
+        assert self.target.is_libcompat_target()
+        result = str(self.target.cpu_architecture.word_bits())
+        if self.target.is_cheri_purecap():
+            result += "c"
+        return result
+
+    @cached_property
+    def default_libdir(self):
+        if self.target.is_libcompat_target():
+            return "lib" + self.libcompat_suffix
+        return "lib"
+
+    @cached_property
+    def localbase(self) -> Path:
+        if self.target.is_libcompat_target():
+            return Path("usr/local" + self.libcompat_suffix)
+        return Path("usr/local")
 
     def _get_compiler_project(self) -> "typing.Type[Project]":
         from ..projects.cross.llvm import BuildUpstreamLLVM
@@ -607,18 +628,25 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def additional_rpath_directories(self) -> "list[str]":
         # /usr/local/<arch>/lib is not part of the default linker search path, add it here for build systems that
         # don't infer it automatically.
-        return [str(Path("/", self.sysroot_install_prefix_relative, "lib"))]
+        result = [str(Path("/", self.sysroot_install_prefix_relative, self.default_libdir))]
+        if self.default_libdir != "lib":
+            result.append(str(Path("/", self.sysroot_install_prefix_relative, "lib")))
+        return result
 
     @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
-        # For CheriBSD we install most packages to /usr/local/<arch>/, but some packages (e.g. the x11 libs
-        # need to be in the default search path under /usr/local
-        return super().pkgconfig_dirs + [
-            str(self.sysroot_dir / "usr/local/lib/pkgconfig"),
-            str(self.sysroot_dir / "usr/local/share/pkgconfig"),
-            str(self.sysroot_dir / "usr/local/libdata/pkgconfig"),
-        ]
+        # For CheriBSD we install most packages to /usr/local/<arch>/, but some packages installed by pkg
+        # need to be in the default search path under /usr/local or /usr/local64.
+        # NB: FreeBSD uses /usr/libdata/pkgconfig for the native ABI.
+        pkgconfig_dirname = self.default_libdir if self.target.is_libcompat_target() else "libdata"
+        return [str(self.sysroot_dir / f"usr/{pkgconfig_dirname}/pkgconfig"),
+                str(self.sysroot_install_prefix_absolute / "lib/pkgconfig"),
+                str(self.sysroot_install_prefix_absolute / "share/pkgconfig"),
+                str(self.sysroot_install_prefix_absolute / "libdata/pkgconfig"),
+                str(self.sysroot_dir / f"{self.localbase}/lib/pkgconfig"),
+                str(self.sysroot_dir / f"{self.localbase}/share/pkgconfig"),
+                str(self.sysroot_dir / f"{self.localbase}/libdata/pkgconfig")]
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         from ..projects.cross.cheribsd import BuildCHERIBSD
