@@ -101,11 +101,14 @@ class BuildMesa(CrossCompileMesonProject):
         if self.include_x11:
             platforms.append("x11")
         meson_args = {
-            "vulkan-drivers": [],  # TODO: swrast?
+            "vulkan-drivers": [],  # TODO: swrast needs LLVM
             "dri-drivers": [],
             "gallium-drivers": ["virgl", "swrast"],
             "egl-native-platform": platforms[0] if platforms else "",
         }
+        if self.compiling_for_aarch64(include_purecap=True):
+            meson_args["gallium-drivers"].append("panfrost")
+            # Does not compile yet: meson_args["vulkan-drivers"].append("panfrost")
         self.add_meson_options(gbm="enabled", egl="enabled", glvnd=True, llvm="disabled", osmesa=False,
                                platforms=platforms,
                                _include_empty_vars=True, _implicitly_convert_lists=True, **meson_args)
