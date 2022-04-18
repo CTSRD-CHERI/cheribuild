@@ -22,7 +22,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import CrossCompileCMakeProject, GitRepository
 
 
 class BuildDBus(CrossCompileCMakeProject):
@@ -31,12 +31,6 @@ class BuildDBus(CrossCompileCMakeProject):
                                temporary_url_override="https://gitlab.freedesktop.org/arichardson/dbus.git",
                                url_override_reason="Various fixes for FreeBSD and CHERI (most submitted as MRs)")
     dependencies = ["libexpat"]
-    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-
-    @property
-    def path_in_rootfs(self):
-        # Always install to /usr/local/share so that it's in the default search path
-        return "/" + str(self.target_info.localbase)
 
     def setup(self):
         super().setup()
@@ -55,11 +49,11 @@ class BuildDBus(CrossCompileCMakeProject):
     def install(self, **kwargs):
         super().install()
         if self.target_info.is_freebsd():
-            self.download_file(self.install_dir / "etc/rc.d/dbus",
-                               "https://cgit.freebsd.org/ports/plain/devel/dbus/files/dbus.in")
-            self.replace_in_file(self.install_dir / "etc/rc.d/dbus", {"%%PREFIX%%": str(self.install_prefix)})
+            rc_file = self.rootfs_dir / self.target_info.localbase / "etc/rc.d/dbus"
+            self.download_file(rc_file, "https://cgit.freebsd.org/ports/plain/devel/dbus/files/dbus.in")
+            self.replace_in_file(rc_file, {"%%PREFIX%%": str(self.install_prefix)})
             if not self.config.pretend:
-                (self.install_dir / "etc/rc.d/dbus").chmod(0o755)
+                rc_file.chmod(0o755)
         if not self.compiling_for_host() and self.target_info.is_freebsd():
             # See UIDs and GIDs in freebsd-ports
             self.write_file(self.rootfs_dir / "etc/rc.conf.d/dbus", contents="dbus_enable=\"YES\"\n",
