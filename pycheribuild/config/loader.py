@@ -227,7 +227,7 @@ def get_argcomplete_prefix():
             os.environ["COMP_LINE"] = "cheribuild.py foo --enable-hybrid-for-purecap-rootfs-targets --sq"
         os.environ["COMP_POINT"] = str(len(os.environ["COMP_LINE"]))
     assert argcomplete is not None
-    comp_line = argcomplete.ensure_str(os.environ["COMP_LINE"])
+    comp_line = os.environ["COMP_LINE"]
     result = argcomplete.split_line(comp_line, int(os.environ["COMP_POINT"]))[1]
     if "_ARGCOMPLETE_BENCHMARK" in os.environ:
         print("argcomplete_prefix =", result, file=sys.stderr)
@@ -276,7 +276,9 @@ class ConfigLoaderBase(object):
     def _load_command_line_args(self):
         if argcomplete and self.is_completing_arguments:
             if "_ARGCOMPLETE_BENCHMARK" in os.environ:
-                with open(os.getenv("_ARGCOMPLETE_OUTPUT_PATH", os.devnull), "wb") as output:
+                # Argcomplete < 2.0 needs the file in binary mode, >= 2.0 needs it in text mode.
+                output_mode = "wb" if hasattr(argcomplete, "ensure_str") else "w"
+                with open(os.getenv("_ARGCOMPLETE_OUTPUT_PATH", os.devnull), output_mode) as output:
                     # with open("/dev/stdout", "wb") as output:
                     # sys.stdout.buffer
                     argcomplete.autocomplete(
