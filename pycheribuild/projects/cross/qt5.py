@@ -34,7 +34,7 @@ from pathlib import Path
 
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
                                   CrossCompileCMakeProject, CrossCompileMesonProject, CrossCompileProject,
-                                  DefaultInstallDir, GitRepository, Linkage, MakeCommandKind)
+                                  DefaultInstallDir, GitRepository, MakeCommandKind)
 from .wayland import BuildWayland
 from .x11 import BuildLibXCB
 from ..project import SimpleProject
@@ -717,11 +717,6 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     needs_native_build_for_crosscompile = True
 
-    def linkage(self):
-        if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, self.config).force_static_linkage:
-            return Linkage.STATIC  # make sure it works with webkit
-        return super().linkage()
-
     def __init__(self, config):
         super().__init__(config)
         self.configure_command = self.source_dir / "icu4c/source/configure"
@@ -761,12 +756,6 @@ class BuildLibXml2(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/libxml2")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
-
-    def linkage(self):
-        if not self.compiling_for_host() and self.target_info.is_cheribsd() and \
-                BuildQtWebkit.get_instance(self, self.config).force_static_linkage:
-            return Linkage.STATIC  # make sure it works with webkit
-        return super().linkage()
 
     def setup(self):
         super().setup()
