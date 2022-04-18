@@ -267,6 +267,8 @@ class FileSystemUtils(object):
     def rewrite_file(self, file: Path, rewrite: typing.Callable[[typing.Iterable[str]], typing.Iterable[str]]):
         if self.config.pretend:
             return
+        if not file.is_absolute():
+            fatal_error("Input path", file, "is not an absolute path")
         if not file.exists():
             fatal_error("Required file", file, "does not exist")
         with file.open("r+", encoding="utf-8") as f:
