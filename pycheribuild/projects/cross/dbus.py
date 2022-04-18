@@ -32,7 +32,11 @@ class BuildDBus(CrossCompileCMakeProject):
                                url_override_reason="Various fixes for FreeBSD and CHERI (most submitted as MRs)")
     dependencies = ["libexpat"]
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    path_in_rootfs = "/usr/local"  # Always install to /usr/local/share so that it's in the default search path
+
+    @property
+    def path_in_rootfs(self):
+        # Always install to /usr/local/share so that it's in the default search path
+        return "/" + str(self.target_info.localbase)
 
     def setup(self):
         super().setup()
