@@ -253,3 +253,14 @@ class BuildWaylandProtocols(CrossCompileMesonProject):
         super().setup()
         # Tests depend on https://gitlab.freedesktop.org/wayland/wayland-protocols/-/merge_requests/119
         self.add_meson_options(tests=False)
+
+
+class BuildSeatd(CrossCompileMesonProject):
+    target = "seatd"
+    repository = GitRepository("https://git.sr.ht/~kennylevinsen/seatd")
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
+
+    def setup(self):
+        super().setup()
+        self.add_meson_options(**{"libseat-builtin": "enabled"})
