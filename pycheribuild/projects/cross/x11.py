@@ -325,7 +325,7 @@ class BuildXEyes(X11AutotoolsProject):
 
 class BuildLibXKBCommon(X11MesonProject):
     target = "libxkbcommon"
-    dependencies = ["libxcb"]
+    dependencies = ["libxcb", "xkeyboard-config"]
     repository = GitRepository("https://github.com/xkbcommon/libxkbcommon.git")
 
     def setup(self):
