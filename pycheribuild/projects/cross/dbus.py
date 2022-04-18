@@ -58,7 +58,8 @@ class BuildDBus(CrossCompileCMakeProject):
                 (self.install_dir / "etc/rc.d/dbus").chmod(0o755)
         if not self.compiling_for_host() and self.target_info.is_freebsd():
             # See UIDs and GIDs in freebsd-ports
-            self.add_unique_line_to_file(self.rootfs_dir / "etc/rc.conf", "dbus_enable=\"YES\"")
+            self.write_file(self.rootfs_dir / "etc/rc.conf.d/dbus", contents="dbus_enable=\"YES\"\n",
+                            overwrite=True, print_verbose_only=False)
             self.add_unique_line_to_file(self.rootfs_dir / "etc/group", "messagebus:*:556:")
             self.add_unique_line_to_file(self.rootfs_dir / "etc/passwd",
                                          "messagebus:*:556:556:D-BUS Daemon User:/nonexistent:/usr/sbin/nologin")
