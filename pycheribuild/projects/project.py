@@ -3672,6 +3672,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             # Use $ORIGIN in the build RPATH (this should make it easier to run tests without having the absolute
             # build directory mounted).
             self.add_cmake_options(CMAKE_BUILD_RPATH_USE_ORIGIN=True)
+            # Infer the RPATH needed for each executable.
+            self.add_cmake_options(CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
         if not self.compiling_for_host() and self.make_args.subkind == MakeCommandKind.Ninja:
             # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
             # Fixed in https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 (3.21.20210625)
