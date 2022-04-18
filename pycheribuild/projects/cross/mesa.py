@@ -86,8 +86,12 @@ class BuildMesa(CrossCompileMesonProject):
         return result
 
     def check_system_dependencies(self):
-        # TODO: check for python-mako
         super().check_system_dependencies()
+        try:
+            import mako
+            assert mako is not None  # silence flake8 "imported but unused" warning
+        except ImportError:
+            self.dependency_error("Missing python module mako", install_instructions="pip3 install --user mako")
 
     def setup(self):
         super().setup()
