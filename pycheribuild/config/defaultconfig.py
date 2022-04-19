@@ -153,7 +153,9 @@ class DefaultCheriConfig(CheriConfig):
                                                           default=lambda p, cls: p.tools_root, group=loader.path_group,
                                                           help="Sysroot prefix (default: '<TOOLS_ROOT>')")
 
-        # Hidden option to enable foo-hybrid-for-purecap-rootfs targets for all projects.
+        # Hidden option to enable foo-hybrid-for-purecap-rootfs targets for all projects. This option is not actually
+        # uses since we have to look at sys.argv[] directly due to depedency cycles. However, we do still need it since
+        # we would otherwise get an invalid command line argument error.
         self.enable_hybrid_for_purecap_rootfs_targets = loader.add_commandline_only_bool_option(
             "enable-hybrid-for-purecap-rootfs-targets", default=False, help_hidden=True)
         loader.finalize_options(available_targets)
