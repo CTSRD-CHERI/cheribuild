@@ -320,7 +320,12 @@ printf "To get debug output from application you can run:\n\t export \\"QT_LOGGI
 # Running with the default SHELL=/bin/csh breaks gdb since GDB start all programs with $SHELL
 # by default and csh "helpfully" decides to reset $PATH to the default.
 export SHELL=/bin/sh
-exec sh
+# If dbus is installed, launch a new DBus session
+if command -v dbus-run-session > /dev/null; then
+    exec dbus-run-session -- sh
+else
+    exec sh
+fi;
 """)
             self.write_file(self.rootfs_dir / self.target_info.localbase / "bin/kde-shell-x11-smbfs",
                             overwrite=True, mode=0o755, contents=f"""#!/bin/sh
