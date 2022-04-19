@@ -31,3 +31,9 @@ from .crosscompileproject import CrossCompileCMakeProject, GitRepository
 
 class BuildPcre2(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/PhilipHazel/pcre2.git")
+
+    def setup(self):
+        super().setup()
+        # PCRE2 defaults to building static libraries, this option is needed to link pcre2 into shared libraries
+        # such as libeditorconfig.so.
+        self.add_cmake_options(PCRE2_STATIC_PIC=True)
