@@ -71,7 +71,9 @@ class BuildMesa(CrossCompileMesonProject):
     target = "mesa"
     repository = GitRepository("https://gitlab.freedesktop.org/mesa/mesa.git",
                                temporary_url_override="https://gitlab.freedesktop.org/arichardson/mesa.git",
-                               url_override_reason="Various incorrect changes to allow purecap compilation")
+                               url_override_reason="Various incorrect changes to allow purecap compilation",
+                               # 21.3 appears to work on the Morello board, newer branches trigger assertions.
+                               force_branch=True, default_branch="21.3")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
     include_x11 = True
     include_wayland = True
@@ -103,7 +105,7 @@ class BuildMesa(CrossCompileMesonProject):
         meson_args = {
             "vulkan-drivers": [],  # TODO: swrast needs LLVM
             "dri-drivers": [],
-            "gallium-drivers": ["virgl", "swrast"],
+            "gallium-drivers": ["swrast"],
             "egl-native-platform": platforms[0] if platforms else "",
         }
         if self.compiling_for_aarch64(include_purecap=True):
@@ -117,7 +119,9 @@ class BuildMesa(CrossCompileMesonProject):
         # There are quite a lot of -Wcheri-capability-misuse warnings, but for now we just want the library to exist
         # and don't need to be functional.
         # TODO: actually look at those warnings and see which of them matter.
-        self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+        self.cross_warning_flags.append("-Werror=cheri-capability-misuse")
+        self.cross_warning_flags.append("-Werror=cheri-provenance")
+        self.cross_warning_flags.append("-Wshorten-cap-to-int")
 
 
 class BuildLibEpoxy(CrossCompileMesonProject):
