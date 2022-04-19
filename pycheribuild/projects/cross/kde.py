@@ -852,8 +852,7 @@ class BuildKWin(KDECMakeProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        is_purecap = cls._xtarget is not None and cls._xtarget.is_cheri_purecap()
-        cls.use_mesa = cls.add_bool_option("use-mesa", default=not is_purecap,
+        cls.use_mesa = cls.add_bool_option("use-mesa", default=True,
                                            help="Add a dependency on Mesa to build the wayland DRM backend")
 
     @classmethod
