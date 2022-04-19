@@ -35,7 +35,6 @@ from .freetype import BuildFreeType2
 from ..project import DefaultInstallDir, GitRepository, Project
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
-from ...config.target_info import CPUArchitecture
 from ...processutils import DoNoQuoteStr, get_program_version, set_env
 from ...utils import OSInfo
 
@@ -360,8 +359,9 @@ class BuildPixman(X11MesonProject):
 
     def setup(self):
         super().setup()
-        if self.compiling_for_cheri([CPUArchitecture.AARCH64]):
-            self.add_meson_options(**{"a64-neon": "disabled"})  # The assembly code is not compatible with Morello.
+        if self.compiling_for_aarch64(include_purecap=True):
+            # The assembly code is not compatible with Morello, and AArch64 clang generates an invalid operand error
+            self.add_meson_options(**{"a64-neon": "disabled"})
 
 
 class BuildLibFontenc(X11AutotoolsProject):
