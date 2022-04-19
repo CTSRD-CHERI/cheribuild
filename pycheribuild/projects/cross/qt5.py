@@ -137,7 +137,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             rootfs_target = cls.get_crosscompile_target(config).get_rootfs_target()
             deps.extend([BuildSharedMimeInfo.get_class_for_target(rootfs_target).target,
                          InstallDejaVuFonts.get_class_for_target(rootfs_target).target,
-                         "fontconfig", "libpng", "libjpeg-turbo", "sqlite", "libinput"])
+                         "dbus", "fontconfig", "libpng", "libjpeg-turbo", "sqlite", "libinput"])
             if cls.use_opengl:
                 deps.append("libglvnd")
         return deps
@@ -303,6 +303,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             ])
         else:
             self.configure_args.append("-dbus")  # we want to build QtDBus
+            if not self.compiling_for_host():
+                self.configure_args.append("-dbus-linked")  # link libdbus directly
             # Enable X11 support when cross-compiling by default
             if self.use_x11:
                 self.configure_args.extend(["-xcb", "-xkbcommon", "-xcb-xlib"])
