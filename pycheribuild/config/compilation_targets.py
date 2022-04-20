@@ -1021,6 +1021,8 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
 def _enable_hybrid_for_purecap_rootfs_targets():
     # Checking sys.argv here is rather ugly, but we can't make this depend on parsing arguments first since the list of
     # command line options depends on the supported targets.
+    if os.getenv("CHERIBUILD_ENABLE_HYBRID_FOR_PURECAP_ROOTFS_TARGETS", None) is not None:
+        return True
     argv = sys.argv
     if ConfigLoaderBase.is_completing_arguments:
         argv = os.getenv("COMP_LINE", "").split()
