@@ -3674,6 +3674,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             self.add_cmake_options(CMAKE_BUILD_RPATH_USE_ORIGIN=True)
             # Infer the RPATH needed for each executable.
             self.add_cmake_options(CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
+            # CMake does not add the install directory even if it's a non-default location, so add it manually.
+            self.add_cmake_options(CMAKE_INSTALL_RPATH="$ORIGIN/../lib")
         if not self.compiling_for_host() and self.make_args.subkind == MakeCommandKind.Ninja:
             # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
             # Fixed in https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 (3.21.20210625)
