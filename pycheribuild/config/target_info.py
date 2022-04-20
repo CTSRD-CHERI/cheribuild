@@ -235,7 +235,7 @@ class TargetInfo(ABC):
         return "lib"
 
     @property
-    def localbase(self):
+    def localbase(self) -> Path:
         """Relative path from the root to LOCALBASE (usr/local on FreeBSD)"""
         raise NotImplementedError("Should only be called for FreeBSD targets")
 

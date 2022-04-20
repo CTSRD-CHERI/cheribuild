@@ -27,41 +27,91 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import shutil
+import typing
 from pathlib import Path
 
 from .crosscompileproject import (BenchmarkMixin, BuildType, CompilationTargets, CrossCompileCMakeProject,
                                   DefaultInstallDir, GitRepository)
-from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
+from .llvm import BuildCheriLLVM, BuildUpstreamLLVM, BuildLLVMBase
 from ..project import ReuseOtherProjectRepository
+from ...utils import cached_property
+from ...config.compilation_targets import FreeBSDTargetInfo
 
 
-class BuildLLVMTestSuite(BenchmarkMixin, CrossCompileCMakeProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-test-suite.git")
-    dependencies = ["llvm-native"]
-    default_build_type = BuildType.RELWITHDEBINFO
-    target = "llvm-test-suite"
-    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
-    llvm_project = BuildCheriLLVM
+class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
+    do_not_add_to_targets = True
+    default_build_type = BuildType.RELEASE
+    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        return [cls.llvm_project(config).get_class_for_target(CompilationTargets.NATIVE).target]
+
+    @classmethod
+    def llvm_project(cls, config) -> typing.Type[BuildLLVMBase]:
+        target_info = cls.get_crosscompile_target(config).target_info_cls
+        if issubclass(target_info, FreeBSDTargetInfo):
+            # noinspection PyProtectedMember
+            return target_info._get_compiler_project()
+        else:
+            return BuildCheriLLVM
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.collect_stats = cls.add_bool_option("collect-stats", default=False,
+                                                help="Collect statistics from the compiler")
 
     def _find_in_sdk_or_llvm_build_dir(self, name) -> Path:
-        if (self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name).exists():
-            return self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name
-        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name
+        llvm_project = self.llvm_project(self.config).get_instance(self, cross_target=CompilationTargets.NATIVE)
+        if (llvm_project.build_dir / "bin" / name).exists():
+            return llvm_project.build_dir / "bin" / name
+        return llvm_project.install_dir / "bin" / name
 
-    def __init__(self, config):
-        super().__init__(config)
+    @cached_property
+    def llvm_lit(self):
+        return self._find_in_sdk_or_llvm_build_dir("llvm-lit")
+
+    def setup(self):
+        super().setup()
         self.add_cmake_options(
             TEST_SUITE_LLVM_SIZE=self._find_in_sdk_or_llvm_build_dir("llvm-size"),
             TEST_SUITE_LLVM_PROFDATA=self._find_in_sdk_or_llvm_build_dir("llvm-profdata"),
-            TEST_SUITE_LIT=self._find_in_sdk_or_llvm_build_dir("llvm-lit")
-            )
-        # TODO: fix these issues
-        self.cross_warning_flags += ["-Wno-error=format", "-Werror=cheri-prototypes"]
+            TEST_SUITE_LIT=self.llvm_lit,
+            TEST_SUITE_COLLECT_CODE_SIZE=self.collect_stats,
+            TEST_SUITE_COLLECT_COMPILE_TIME=self.collect_stats,
+            TEST_SUITE_COLLECT_STATS=self.collect_stats)
+        if self.compiling_for_host() and self.target_info.is_linux() and shutil.which("perf") is not None:
+            self.add_cmake_options(TEST_SUITE_USE_PERF=True)
+
         if not self.compiling_for_host():
-            self.add_cmake_options(TEST_SUITE_HOST_CC="/usr/bin/cc")
+            self.add_cmake_options(TEST_SUITE_HOST_CC=self.host_CC)
             # we want to link against libc++ not libstdc++ (and for some reason we need to specify libgcc_eh too
             self.add_cmake_options(TEST_SUITE_CXX_LIBRARY="-lc++;-lgcc_eh")
             self.add_cmake_options(BENCHMARK_USE_LIBCXX=True)
+            self.add_cmake_options(TEST_SUITE_RUN_BENCHMARKS=False)  # Would need to set up custom executor
+        if self.compiling_for_cheri():
+            # LLVM IR testcases do not work for purecap.
+            self.add_cmake_options(TEST_SUITE_ENABLE_BITCODE_TESTS=False)
+
+    def run_tests(self):
+        if self.collect_stats:
+            output_file = self.build_dir / "results.json"
+            self.delete_file(output_file)
+            self.run_cmd(self.llvm_lit, "-sv", "-o", output_file, ".", cwd=self.build_dir)
+        super().run_tests()
+
+
+class BuildLLVMTestSuite(BuildLLVMTestSuiteBase):
+    target = "llvm-test-suite"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-test-suite.git")
+    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+
+    def setup(self):
+        super().setup()
+        # TODO: fix these issues
+        self.cross_warning_flags += ["-Wno-error=format", "-Werror=cheri-prototypes"]
 
 
 class BuildLLVMTestSuiteCheriBSDUpstreamLLVM(BuildLLVMTestSuite):

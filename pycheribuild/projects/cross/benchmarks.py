@@ -34,13 +34,9 @@ import tempfile
 from pathlib import Path
 
 from .crosscompileproject import (BenchmarkMixin, CompilationTargets, CrossCompileAutotoolsProject,
-                                  CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
-                                  MakeCommandKind)
-from .llvm import BuildCheriLLVM
-from .llvm_test_suite import BuildLLVMTestSuite
+                                  CrossCompileProject, DefaultInstallDir, GitRepository, MakeCommandKind)
+from .llvm_test_suite import BuildLLVMTestSuite, BuildLLVMTestSuiteBase
 from ..project import ExternallyManagedSourceRepository, ReuseOtherProjectRepository
-from ...config.chericonfig import BuildType
-from ...config.compilation_targets import FreeBSDTargetInfo
 from ...config.target_info import CPUArchitecture
 from ...processutils import get_program_version
 from ...utils import is_jenkins_build, OSInfo
@@ -160,20 +156,14 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
                                                                        self.benchmark_version])
 
 
-class BuildMiBenchNew(BenchmarkMixin, CrossCompileCMakeProject):
+class BuildMiBenchNew(BuildLLVMTestSuiteBase):
     repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
-    default_build_type = BuildType.RELEASE
     target = "mibench-new"
-    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     def setup(self):
         super().setup()
-        # Only build MiBench
         self.add_cmake_options(TEST_SUITE_SUBDIRS="MultiSource/Benchmarks/MiBench",
-                               TEST_SUITE_COPY_DATA=True,
-                               TEST_SUITE_COLLECT_CODE_SIZE=False,
-                               TEST_SUITE_COLLECT_COMPILE_TIME=False,
-                               TEST_SUITE_COLLECT_STATS=False)
+                               TEST_SUITE_COPY_DATA=True)
 
     def install(self, **kwargs):
         root_dir = str(self.build_dir / "MultiSource/Benchmarks/MiBench")
@@ -548,10 +538,9 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
         super().process()
 
 
-class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
+class BuildSpec2006New(BuildLLVMTestSuiteBase):
     repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
     target = "spec2006-new"
-    cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -599,25 +588,12 @@ class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
             self.spec_iso_path = "/missing/spec2006.iso"
         super().setup()
         # Only build spec2006
-        if isinstance(self.target_info, FreeBSDTargetInfo):
-            # noinspection PyProtectedMember
-            llvm_project = self.target_info._get_compiler_project().get_instance(self,
-                                                                                 cross_target=CompilationTargets.NATIVE)
-        else:
-            llvm_project = BuildCheriLLVM.get_instance(self, cross_target=CompilationTargets.NATIVE)
-
+        # self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006;External/SPEC/CFP2006",
         self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006",
-                               TEST_SUITE_LIT=llvm_project.build_dir / "bin/llvm-lit",
                                TEST_SUITE_COPY_DATA=True,
-                               TEST_SUITE_COLLECT_CODE_SIZE=False,
-                               TEST_SUITE_COLLECT_COMPILE_TIME=False,
-                               TEST_SUITE_COLLECT_STATS=False,
+                               TEST_SUITE_RUN_BENCHMARKS=self.compiling_for_host(),
                                TEST_SUITE_RUN_TYPE='test',  # TODO: allow train+ref
                                TEST_SUITE_SPEC2006_ROOT=self.extracted_spec_sources)
-
-        if not self.compiling_for_host():
-            self.add_cmake_options(TEST_SUITE_LLVM_SIZE=self.sdk_bindir / "llvm-size",
-                                   TEST_SUITE_LLVM_PROFDATA=self.sdk_bindir / "llvm-profdata")
 
     def _check_broken_bsdtar(self, bsdtar: Path) -> "tuple[bool, tuple[int, int, int]]":
         if self.config.pretend and not bsdtar.exists():
@@ -652,7 +628,10 @@ class BuildSpec2006New(BenchmarkMixin, CrossCompileCMakeProject):
         super().configure(**kwargs)
 
     def install(self, **kwargs):
-        root_dir = str(self.build_dir / "External/SPEC/CINT2006")
+        self.install_benchmark_dir(str(self.build_dir / "External/SPEC/CINT2006"))
+        # self.install_benchmark_dir(str(self.build_dir / "External/SPEC/CFP2006"))
+
+    def install_benchmark_dir(self, root_dir: str):
         for curdir, dirnames, filenames in os.walk(root_dir):
             # We don't run some benchmarks (e.g. consumer-typeset or consumer-lame) yet
             for ignored_dirname in ('CMakeFiles', ):

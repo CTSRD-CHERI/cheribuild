@@ -46,6 +46,7 @@ if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine
     from ..projects.project import Project, SimpleProject  # no-combine
     from ..projects.run_qemu import AbstractLaunchFreeBSD  # no-combine
+    from ..projects.cross.llvm import BuildLLVMBase  # no-combine
 
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
@@ -360,7 +361,8 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             return Path("usr/local" + self.libcompat_suffix)
         return Path("usr/local")
 
-    def _get_compiler_project(self) -> "typing.Type[Project]":
+    @classmethod
+    def _get_compiler_project(self) -> "typing.Type[BuildLLVMBase]":
         from ..projects.cross.llvm import BuildUpstreamLLVM
         return BuildUpstreamLLVM
 
@@ -496,7 +498,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     os_prefix = ""  # CheriBSD is the default target, so we omit the OS prefix from target names
     FREEBSD_VERSION = 13
 
-    def _get_compiler_project(self) -> "typing.Type[Project]":
+    @classmethod
+    def _get_compiler_project(self) -> "typing.Type[BuildLLVMBase]":
         from ..projects.cross.llvm import BuildCheriLLVM
         return BuildCheriLLVM
 
@@ -672,7 +675,8 @@ class CheriBSDFettTargetInfo(CheriBSDTargetInfo):
 class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     shortname = "CheriBSD-Morello"
 
-    def _get_compiler_project(self) -> "typing.Type[Project]":
+    @classmethod
+    def _get_compiler_project(self) -> "typing.Type[BuildLLVMBase]":
         from ..projects.cross.llvm import BuildMorelloLLVM
         return BuildMorelloLLVM
 
