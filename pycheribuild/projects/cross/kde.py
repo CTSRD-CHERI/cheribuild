@@ -262,13 +262,11 @@ class BuildKCoreAddons(KDECMakeProject):
             install_prefix = self.install_prefix
             all_prefixes = " ".join(shlex.quote("/" + str(s.relative_to(self.rootfs_dir))) for s in
                                     self.dependency_install_prefixes)
-            self.write_file(self.rootfs_dir / self.target_info.localbase / "bin/kde-shell-x11",
+            self.write_file(self.rootfs_dir / self.target_info.localbase / "bin/kde-shell-common",
                             overwrite=True, mode=0o755, contents=f"""#!/bin/sh
 set -xe
 # QML disk caching is currently broken
 export QML_DISABLE_DISK_CACHE=1
-export DISPLAY=:0
-export QT_QPA_PLATFORM=xcb
 if [ ! -f "{shared_mime_info.install_prefix / "share/mime/mime.cache"}" ]; then
     echo "MIME database cache is missing, run cheribuild.py {shared_mime_info.target}!"
     false;
@@ -315,7 +313,7 @@ set +xe
 printf "To get debug output from application you can run:\n\t export \\"QT_LOGGING_RULES=%s%s%s%s\\"\\n" \
     "*.debug=true;qt.qpa.*.debug=false;qt.text.*.debug=false;qt.accessibility.*.debug=false;" \
     "qt.gui.shortcutmap=false;qt.quick.*.debug=false;qt.scenegraph.*.debug=false;qt.v4.*.debug=false;" \
-    "qt.qml.gc.*.debug=false;" \
+    "qt.qml.gc.*.debug=false;qt.widgets.gestures.*.debug=false;" \
     "kf.coreaddons.desktopparser.*.debug=false;"
 # Running with the default SHELL=/bin/csh breaks gdb since GDB start all programs with $SHELL
 # by default and csh "helpfully" decides to reset $PATH to the default.
@@ -327,6 +325,18 @@ else
     exec sh
 fi;
 """)
+            self.write_file(self.rootfs_dir / self.target_info.localbase / "bin/kde-shell-x11",
+                            overwrite=True, mode=0o755, contents=f"""#!/bin/sh
+export DISPLAY=:0
+export QT_QPA_PLATFORM=xcb
+exec "/{self.target_info.localbase / "bin/kde-shell-common"}"
+""")
+            self.write_file(self.rootfs_dir / self.target_info.localbase / "bin/kde-shell-wayland",
+                            overwrite=True, mode=0o755, contents=f"""#!/bin/sh
+export QT_QPA_PLATFORM=wayland
+exec "/{self.target_info.localbase / "bin/kde-shell-common"}"
+""")
+
             self.write_file(self.rootfs_dir / self.target_info.localbase / "bin/kde-shell-x11-smbfs",
                             overwrite=True, mode=0o755, contents=f"""#!/bin/sh
 set -xe
@@ -338,7 +348,7 @@ else
     ln -sfn "/nfsroot/{install_prefix}" "{install_prefix}"
 fi
 set +xe
-exec /usr/local/bin/kde-shell-x11
+exec "/{self.target_info.localbase / "bin/kde-shell-x11"}"
 """)
 
 
