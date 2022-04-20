@@ -123,7 +123,6 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = \
         CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
-    _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
 
     # Note: needs to be @classproperty since it is called before __init__
     @classproperty
@@ -131,6 +130,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         # Install compiler-rt to the sysroot to handle purecap and non-CHERI RTEMS
         if self._xtarget is CompilationTargets.RTEMS_RISCV64_PURECAP:
             return DefaultInstallDir.ROOTFS_LOCALBASE
+        elif self._xtarget is not None and self._xtarget.target_info_cls.is_baremetal():
+            # Conflicting file names for non-CHERI,hybrid, and purecap
+            return DefaultInstallDir.DO_NOT_INSTALL
         return DefaultInstallDir.COMPILER_RESOURCE_DIR
 
     def linkage(self):
