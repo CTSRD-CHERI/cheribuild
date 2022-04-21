@@ -187,7 +187,8 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
 
 
 def _default_ssh_port(c, p):
-    return LaunchCheriBSD.get_instance(p, c, cross_target=p.get_crosscompile_target(c)).ssh_forwarding_port
+    return LaunchCheriBSD.get_instance(p, c, cross_target=p.get_crosscompile_target(
+        c).get_rootfs_target()).ssh_forwarding_port
 
 
 class BuildLibCXX(_CxxRuntimeCMakeProject):
