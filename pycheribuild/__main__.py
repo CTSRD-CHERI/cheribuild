@@ -146,8 +146,8 @@ def real_main():
         # disable=attribute-error
         sys.exit()
 
-    assert any(x in cheri_config.action for x in (CheribuildAction.TEST, CheribuildAction.PRINT_CHOSEN_TARGETS,
-                                                  CheribuildAction.BUILD, CheribuildAction.BENCHMARK))
+    assert any(x in cheri_config.action for x in (CheribuildAction.TEST, CheribuildAction.BUILD,
+                                                  CheribuildAction.BENCHMARK))
 
     if cheri_config.docker:
         cheribuild_dir = str(Path(__file__).absolute().parent.parent)
@@ -232,16 +232,24 @@ def real_main():
             update_check(cheri_config)  # no-combine
         except Exception as e:  # no-combine
             print("Failed to check for updates:", e)  # no-combine
-    if CheribuildAction.PRINT_CHOSEN_TARGETS in cheri_config.action:
-        for target in target_manager.get_all_chosen_targets(cheri_config):
-            print("Would run", target)
+    chosen_targets = target_manager.get_all_chosen_targets(cheri_config)
+    if cheri_config.print_targets_only:
+        print("Will execute the following", len(chosen_targets), "targets:\n  ",
+              "\n   ".join(t.name for t in chosen_targets))
+        # If --verbose is passed, also print the dependencies for each target
+        if cheri_config.verbose:
+            for target in chosen_targets:
+                status_update("Will build target", coloured(AnsiColour.yellow, target.name))
+                print("    Dependencies for", target.name, "are",
+                      target.project_class.all_dependency_names(cheri_config))
+        return
     if CheribuildAction.BUILD in cheri_config.action:
-        target_manager.run(cheri_config)
+        target_manager.run(cheri_config, chosen_targets)
     if CheribuildAction.TEST in cheri_config.action:
-        for target in target_manager.get_all_chosen_targets(cheri_config):
+        for target in chosen_targets:
             target.run_tests(cheri_config)
     if CheribuildAction.BENCHMARK in cheri_config.action:
-        for target in target_manager.get_all_chosen_targets(cheri_config):
+        for target in chosen_targets:
             target.run_benchmarks(cheri_config)
 
 

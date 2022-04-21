@@ -126,10 +126,6 @@ class Target(object):
             # TODO: make this an error once I have a clean solution for the pseudo targets
             warning_message(self.name, "has already been executed!")
             return
-        if config.print_targets_only:
-            status_update("Will build target", coloured(AnsiColour.yellow, self.name))
-            print("    Dependencies for", self.name, "are", self.project_class.all_dependency_names(config))
-            return
         assert self.__project is not None, "Should have been initialized in check_system_deps()"
         # noinspection PyProtectedMember
         self._do_run(config, msg="Built", func=lambda project: project.process())
@@ -461,8 +457,9 @@ class TargetManager(object):
                 raise ValueError("selected target list is empty after --start-after/--start-with filtering")
         return sort
 
-    def run(self, config: CheriConfig):
-        chosen_targets = self.get_all_chosen_targets(config)
+    def run(self, config: CheriConfig, chosen_targets=None):
+        if chosen_targets is None:
+            chosen_targets = self.get_all_chosen_targets(config)
         with set_env(PATH=config.dollar_path_with_other_tools,
                      CLANG_FORCE_COLOR_DIAGNOSTICS="always" if config.clang_colour_diags else None,
                      config=config):
@@ -511,8 +508,6 @@ class TargetManager(object):
             disabled = self.target_disabled_reason(target, config)
             if disabled is not None:
                 sys.exit(coloured(AnsiColour.red, disabled))
-        print("Will execute the following", len(chosen_targets), "targets:\n  ",
-              "\n   ".join(t.name for t in chosen_targets))
         # now that the chosen targets have been resolved run them
         Target.instantiating_targets_should_warn = False  # Fine to instantiate Project() now
         return chosen_targets
