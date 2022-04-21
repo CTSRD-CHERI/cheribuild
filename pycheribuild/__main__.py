@@ -238,10 +238,19 @@ def real_main():
               "\n   ".join(t.name for t in chosen_targets))
         # If --verbose is passed, also print the dependencies for each target
         if cheri_config.verbose:
+            needed_by = {k.name: [] for k in chosen_targets}
+            direct_deps = dict()
+            for target in chosen_targets:
+                # noinspection PyProtectedMember
+                direct_deps[target.name] = [t.name for t in target.project_class._direct_dependencies(
+                    cheri_config, include_sdk_dependencies=True, include_toolchain_dependencies=True,
+                    explicit_dependencies_only=False)]
+                for dep in direct_deps[target.name]:
+                    needed_by[dep].append(target.name)
             for target in chosen_targets:
                 status_update("Will build target", coloured(AnsiColour.yellow, target.name))
-                print("    Dependencies for", target.name, "are",
-                      target.project_class.all_dependency_names(cheri_config))
+                print("    Needed by:", needed_by[target.name])
+                print("    Direct dependencies:", direct_deps[target.name])
         return
     if CheribuildAction.BUILD in cheri_config.action:
         target_manager.run(cheri_config, chosen_targets)
