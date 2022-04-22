@@ -91,6 +91,9 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
             self.add_cmake_options(TEST_SUITE_CXX_LIBRARY="-lc++;-lgcc_eh")
             self.add_cmake_options(BENCHMARK_USE_LIBCXX=True)
             self.add_cmake_options(TEST_SUITE_RUN_BENCHMARKS=False)  # Would need to set up custom executor
+            if self.crosscompile_target.is_any_x86():
+                # Have to set the X86CPU_ARCH otherwise the build fails
+                self.add_cmake_options(X86CPU_ARCH="unknown")
         if self.compiling_for_cheri():
             # LLVM IR testcases do not work for purecap.
             self.add_cmake_options(TEST_SUITE_ENABLE_BITCODE_TESTS=False)
