@@ -1054,13 +1054,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     if self.query_yes_no("Would you like to remove the old directory " + str(old_path)):
                         self._delete_directories(old_path)
 
-    def _dependency_message(self, *args, problem="missing",
-                            install_instructions: "typing.Union[str, typing.Callable[[], str]]" = None,
+    def _dependency_message(self, *args, problem="missing", install_instructions: InstallInstructions = None,
                             cheribuild_target: str = None, cheribuild_xtarget: CrossCompileTarget = None,
                             cheribuild_action: str = "install", fatal: bool):
         self._system_deps_checked = True  # make sure this is always set
-        if callable(install_instructions):
-            install_instructions = install_instructions()
+        if install_instructions is not None and isinstance(install_instructions, InstallInstructions):
+            install_instructions = install_instructions.fixit_hint()
         if cheribuild_target:
             self.warning("Dependency for", self.target, problem + ":", *args, fixit_hint=install_instructions)
             if self.query_yes_no("Would you like to " + cheribuild_action + " the dependency (" + cheribuild_target +
@@ -1073,8 +1072,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if fatal:
             self.fatal("Dependency for", self.target, problem + ":", *args, fixit_hint=install_instructions)
 
-    def dependency_error(self, *args, problem="missing",
-                         install_instructions: "typing.Union[str, typing.Callable[[], str]]" = None,
+    def dependency_error(self, *args, problem="missing", install_instructions: InstallInstructions = None,
                          cheribuild_target: str = None, cheribuild_xtarget: CrossCompileTarget = None,
                          cheribuild_action: str = "install"):
         self._dependency_message(*args, problem=problem, install_instructions=install_instructions,
@@ -1082,7 +1080,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                  cheribuild_xtarget=cheribuild_xtarget, fatal=True)
 
     def dependency_warning(self, *args, problem="missing",
-                           install_instructions: "typing.Union[str, typing.Callable[[], str]]" = None,
+                           install_instructions: "InstallInstructions" = None,
                            cheribuild_target: str = None, cheribuild_xtarget: CrossCompileTarget = None,
                            cheribuild_action: str = "install"):
         self._dependency_message(*args, problem=problem, install_instructions=install_instructions,
@@ -1098,8 +1096,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             assert isinstance(instructions, InstallInstructions)
             self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
             if not shutil.which(str(tool)):
-                self.dependency_error("Required program", tool, "is missing!",
-                                      install_instructions=instructions.fixit_hint(),
+                self.dependency_error("Required program", tool, "is missing!", install_instructions=instructions,
                                       cheribuild_target=instructions.cheribuild_target)
         for (package, instructions) in self.__required_pkg_config.items():
             assert isinstance(instructions, InstallInstructions)
@@ -1111,16 +1108,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             print_command(check_cmd, print_verbose_only=True)
             exit_code = subprocess.call(check_cmd)
             if exit_code != 0:
-                self.dependency_error("Required library", package, "is missing!",
-                                      install_instructions=instructions.fixit_hint(),
+                self.dependency_error("Required library", package, "is missing!", install_instructions=instructions,
                                       cheribuild_target=instructions.cheribuild_target)
         for (header, instructions) in self.__required_system_headers.items():
             assert isinstance(instructions, InstallInstructions)
             self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
             include_dirs = self.get_compiler_info(self.CC).get_include_dirs(self.essential_compiler_and_linker_flags)
             if not any(Path(d, header).exists() for d in include_dirs):
-                self.dependency_error("Required C header", header, "is missing!",
-                                      install_instructions=instructions.fixit_hint(),
+                self.dependency_error("Required C header", header, "is missing!", install_instructions=instructions,
                                       cheribuild_target=instructions.cheribuild_target)
         self._system_deps_checked = True
 
@@ -1128,7 +1123,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         prefix = _cached_get_homebrew_prefix(package, self.config)
         if not prefix:
             self.dependency_error("Could not find homebrew package", package,
-                                  install_instructions="Try running `brew install " + package + "`")
+                                  install_instructions=InstallInstructions(f"Try running `brew install {package}`"))
             prefix = Path("/fake/homebrew/prefix/when/pretending/opt") / package
         return prefix
 

@@ -187,9 +187,10 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
     def run_tests(self):
         runtest_cmd = shutil.which("runtest")
         if not runtest_cmd:
-            self.dependency_error(
-                OSInfo.install_instructions("runtest", False, default="dejagnu", apt="dejagnu", homebrew="deja-gnu"),
-                cheribuild_target="dejagnu")
+            self.dependency_error("DejaGNU is not installed.",
+                                  install_instructions=OSInfo.install_instructions("runtest", False, default="dejagnu",
+                                                                                   apt="dejagnu", homebrew="deja-gnu"),
+                                  cheribuild_target="dejagnu")
         if self.compiling_for_host():
             self.run_cmd("make", "check", "RUNTESTFLAGS=-a", cwd=self.build_dir,
                          env=dict(DEJAGNU=self.source_dir / ".ci/site.exp", BOARDSDIR=self.source_dir / ".ci"))

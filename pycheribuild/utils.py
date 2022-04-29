@@ -333,7 +333,7 @@ def is_case_sensitive_dir(d: Path):
 
 class InstallInstructions:
     def __init__(self, message: "typing.Union[str, typing.Callable[[], str]]",
-                 cheribuild_target: "typing.Optional[str]", alternative: str):
+                 cheribuild_target: "typing.Optional[str]" = None, alternative: str = None):
         self._message = message
         self.cheribuild_target = cheribuild_target
         self._alternative = alternative
