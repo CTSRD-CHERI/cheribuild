@@ -128,6 +128,7 @@ class Target(object):
             return
         assert self.__project is not None, "Should have been initialized in check_system_deps()"
         # noinspection PyProtectedMember
+        self.cache_dependencies(config)
         self._do_run(config, msg="Built", func=lambda project: project.process())
         self._completed = True
 
