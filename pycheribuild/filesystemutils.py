@@ -156,19 +156,37 @@ class FileSystemUtils(object):
         file.unlink()
 
     @staticmethod
-    def copy_remote_file(remote_path: str, target_file: Path):
+    def _transfer_to_from_remote(src: str, dest: str):
         # if we have rsync we can skip the copy if file is already up-to-date
         if shutil.which("rsync"):
             try:
-                run_command("rsync", "-aviu", "--progress", remote_path, target_file)
+                run_command("rsync", "-Havu", "--progress", src, dest)
             except subprocess.CalledProcessError as err:
                 if err.returncode == 127:
                     warning_message("rysnc doesn't seem to be installed on remote machine, trying scp")
-                    run_command("scp", remote_path, target_file)
+                    run_command("scp", src, dest)
                 else:
                     raise err
         else:
-            run_command("scp", remote_path, target_file)
+            run_command("scp", src, dest)
+
+    @classmethod
+    def copy_remote_file(cls, remote_path: str, target_file: Path):
+        return cls._transfer_to_from_remote(remote_path, str(target_file))
+
+    def upload_file(self, target_file: Path, remote_host: str, remote_path: str):
+        assert target_file.is_absolute(), target_file
+        assert (self.config.pretend and not target_file.exists()) or target_file.is_file()
+        return self._transfer_to_from_remote(str(target_file), remote_host + ":" + remote_path)
+
+    def upload_dir(self, target_dir: Path, remote_host: str, remote_path: str):
+        assert target_dir.is_absolute(), target_dir
+        assert (self.config.pretend and not target_dir.exists()) or target_dir.is_dir()
+        assert remote_path.startswith("/"), remote_path
+        run_command("ssh", remote_host, "--", "mkdir", "-p", remote_path, config=self.config)
+        if not remote_path.endswith("/"):
+            remote_path += "/"
+        return self._transfer_to_from_remote(str(target_dir) + "/", remote_host + ":" + remote_path)
 
     def read_file(self, file: Path) -> str:
         # just return an empty string in pretend mode
