@@ -348,10 +348,9 @@ I would also suggest using `set autolist` to display all options.
 <!-- BEGIN HELP OUTPUT -->
 ```
 usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build] [--test] [--benchmark]
-                     [--build-and-test] [--list-targets] [--print-chosen-targets] [--dump-configuration]
-                     [--print-targets-only] [--clang-path CLANG-PATH] [--clang++-path CLANG++-PATH]
-                     [--clang-cpp-path CLANG-CPP-PATH] [--pass-k-to-make]
-                     [--with-libstatcounters | --no-with-libstatcounters]
+                     [--build-and-test] [--list-targets] [--dump-configuration] [--print-targets-only]
+                     [--clang-path CLANG-PATH] [--clang++-path CLANG++-PATH] [--clang-cpp-path CLANG-CPP-PATH]
+                     [--pass-k-to-make] [--with-libstatcounters | --no-with-libstatcounters]
                      [--skip-world | --no-skip-world | --skip-buildworld | --no-skip-buildworld]
                      [--skip-kernel | --no-skip-kernel | --skip-buildkernel | --no-skip-buildkernel]
                      [--freebsd-subdir SUBDIRS] [--buildenv] [--libcompat-buildenv] [--debug-output]
@@ -522,8 +521,6 @@ Actions to be performed:
   --benchmark           Run tests for the passed targets instead of building them
   --build-and-test      Run chosen targets and then run any tests afterwards
   --list-targets        List all available targets and exit
-  --print-chosen-targets
-                        List all the targets that would be built
   --dump-configuration  Print the current configuration as JSON. This can be saved to ~/.config/cheribuild.json to make
                         it persistent
   --print-targets-only  Don't run the build but instead only print the targets that would be executed (default: 'False')
