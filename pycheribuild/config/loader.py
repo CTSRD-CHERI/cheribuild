@@ -59,7 +59,7 @@ class ComputedDefaultValue(typing.Generic[T]):
     def __init__(self, function: "typing.Callable[[CheriConfig, AnyProjectSubclass], T]",
                  as_string: "typing.Union[str, typing.Callable[[typing.Any], str]]",
                  as_readme_string: "typing.Union[str, typing.Callable[[typing.Any], str]]" = None,
-                 inherit: "ComputedDefaultValue" = None):
+                 inherit: "ComputedDefaultValue[T]" = None):
         if inherit is not None:
             def inheriting_function(config, project):
                 val = function(config, project)
@@ -324,11 +324,11 @@ class ConfigLoaderBase(object):
                 self._parser.error(errmsg)
         self._parsed_args.targets += trailing
 
-    def add_commandline_only_option(self, *args, **kwargs):
+    def add_commandline_only_option(self, *args, type: "typing.Callable[[str], T]" = str, **kwargs) -> T:
         """
         :return: A config option that is always loaded from the command line no matter what the default is
         """
-        return self.add_option(*args, option_cls=CommandLineConfigOption, **kwargs)
+        return self.add_option(*args, type=type, option_cls=CommandLineConfigOption, **kwargs)
 
     def add_commandline_only_bool_option(self, *args, default=False, **kwargs) -> bool:
         # noinspection PyTypeChecker
@@ -358,10 +358,11 @@ class ConfigLoaderBase(object):
         return True
 
     # noinspection PyShadowingBuiltins
-    def add_option(self, name: str, shortname=None, default: "typing.Optional[T]" = None,
-                   type: "typing.Union[typing.Type[T], typing.Callable[[str], T]]" = str, group=None, help_hidden=False,
+    def add_option(self, name: str, shortname=None,
+                   default: "typing.Optional[typing.Union[T, ComputedDefaultValue[T]]]" = None,
+                   type: "typing.Callable[[str], T]" = str, group=None, help_hidden=False,
                    _owning_class: "typing.Type" = None, _fallback_names: "typing.List[str]" = None,
-                   option_cls: "typing.Type[CommandLineConfigOption]" = None, **kwargs) -> T:
+                   option_cls: "typing.Type[CommandLineConfigOption[T]]" = None, **kwargs) -> T:
         if not self.is_needed_for_completion(name, shortname, type):
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
@@ -378,8 +379,7 @@ class ConfigLoaderBase(object):
                 del kwargs["enum_choices"]
             elif "enum_choice_strings" in kwargs:
                 # noinspection PyTypeChecker
-                assert len(kwargs["enum_choice_strings"]) == len(
-                    list(x for x in type))  # pytype: disable=bad-return-type
+                assert len(kwargs["enum_choice_strings"]) == len(list(x for x in type))
                 kwargs["choices"] = kwargs["enum_choice_strings"]
                 del kwargs["enum_choice_strings"]
             else:
@@ -428,8 +428,8 @@ class ConfigLoaderBase(object):
         return self._parsed_args.targets
 
 
-class ConfigOptionBase(object):
-    def __init__(self, name: str, shortname: typing.Optional[str], default, value_type: "typing.Type",
+class ConfigOptionBase(typing.Generic[T]):
+    def __init__(self, name: str, shortname: typing.Optional[str], default, value_type: "typing.Callable[[str], T]",
                  _owning_class=None, _loader: ConfigLoaderBase = None, _fallback_names: "typing.List[str]" = None,
                  _legacy_alias_names: "typing.List[str]" = None):
         self.name = name
@@ -467,7 +467,7 @@ class ConfigOptionBase(object):
 
     # noinspection PyUnusedLocal
     def load_option(self, config: "CheriConfig", instance: "typing.Optional[SimpleProject]", owner: "typing.Type",
-                    return_none_if_default=False):
+                    return_none_if_default=False) -> T:
         result = self._load_option_impl(config, self.full_option_name)
         # fall back from --qtbase-mips/foo to --qtbase/foo
         # Try aliases first:
@@ -638,10 +638,10 @@ class StoreActionWithPossibleAliases(argparse.Action):
         return ' | '.join(self.option_strings[:self.displayed_option_count])
 
 
-class CommandLineConfigOption(ConfigOptionBase):
+class CommandLineConfigOption(ConfigOptionBase[T]):
     # noinspection PyProtectedMember,PyUnresolvedReferences
-    def __init__(self, name: str, shortname: str, default, value_type: "typing.Type", _owning_class,
-                 _loader: ConfigLoaderBase, help_hidden: bool, group: "argparse._ArgumentGroup",
+    def __init__(self, name: str, shortname: str, default, value_type: "typing.Callable[[str], T]", _owning_class,
+                 _loader: ConfigLoaderBase, help_hidden: bool, group: "typing.Optional[argparse._ArgumentGroup]",
                  _fallback_names: "typing.List[str]" = None, _legacy_alias_names: "typing.List[str]" = None, **kwargs):
         super().__init__(name, shortname, default, value_type, _owning_class, _loader, _fallback_names,
                          _legacy_alias_names)
@@ -700,7 +700,7 @@ class CommandLineConfigOption(ConfigOptionBase):
 
 
 # noinspection PyProtectedMember
-class JsonAndCommandLineConfigOption(CommandLineConfigOption):
+class JsonAndCommandLineConfigOption(CommandLineConfigOption[T]):
     def __init__(self, *args, **kwargs):
         # Note: we ignore _legacy_alias_names for command line options and only load them from the JSON
         alias_names = kwargs.pop("_legacy_alias_names", tuple())
