@@ -51,6 +51,8 @@ class BuildQEMUBase(AutotoolsProject):
     default_targets = "some-invalid-target"
     default_build_type = BuildType.RELEASE
     lto_by_default = True
+    use_smbd: bool
+    qemu_targets: "str"
 
     @classmethod
     def is_toolchain_target(cls):
