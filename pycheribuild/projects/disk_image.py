@@ -652,12 +652,11 @@ class BuildDiskImageBase(SimpleProject):
         try:
             # For the minimal image 2m of free space and 1k inodes should be enough
             # BESSPIN images require at least 45m to support all the copied test cases
-            # For the larger images we need a lot more space (kyua needs around 400MB and the test might create
-            # big files requiring 1g total)
+            # For the larger images we need a lot more space (llvm-{cheri,morello} needs more than 1g)
             if self.is_minimal:
                 free_blocks = "45m" if self.is_besspin else "2m"
             else:
-                free_blocks = "1g"
+                free_blocks = "2g"
 
             extra_flags = []
             if self.is_x86:
