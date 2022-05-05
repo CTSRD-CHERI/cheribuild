@@ -579,8 +579,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             cls.linker_for_kernel = cls.add_config_option("linker-for-kernel", default="lld", choices=["bfd", "lld"],
                                                           help="The linker to use for the kernel")
 
-        cls.add_debug_info_flag = cls.add_bool_option("debug-info", default=debug_info_by_default, show_help=True,
-                                                      help="pass make flags for building with debug info")
+        cls.with_debug_info = cls.add_bool_option("debug-info", default=debug_info_by_default, show_help=True,
+                                                  help="pass make flags for building with debug info")
+        cls.with_debug_files = cls.add_bool_option("debug-files", default=True,
+                                                   help="Use split DWARF debug files if building with debug info")
         cls.fast_rebuild = cls.add_bool_option(
             "fast", help="Skip some (usually) unnecessary build steps to speed up rebuilds")
 
@@ -689,14 +691,19 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # external toolchain options:
         self._setup_cross_toolchain_config()
 
-        if self.add_debug_info_flag:
+        if self.with_debug_info and not self.with_debug_files:
             self.make_args.set(DEBUG_FLAGS="-g")
+
+        if not self.with_debug_info or not self.with_debug_files:
+            # Don't split the debug info from the binary, just keep it as part
+            # of the binary. This means we can just scp the file over to a
+            # cheribsd instace, run gdb and get symbols and sources. This also
+            # turns off giving DEBUG_FLAGS a separate value so if we don't
+            # provide one then debug info will be omitted.
+            self.make_args.set_with_options(DEBUG_FILES=False)
 
         if self.add_custom_make_options:
             self.make_args.set_with_options(PROFILE=False)  # PROFILE is useless and just slows down the build
-            # Don't split the debug info from the binary, just keep it as part of the binary
-            # This means we can just scp the file over to a cheribsd instace, run gdb and get symbols and sources.
-            self.make_args.set_with_options(DEBUG_FILES=False)
             # The OFED code is unlikely to be of any use to us and is also full of annoying warnings that flood the
             # build log. Moreover, these warnings indicat that it's very unlikely to work as purecap.
             self.make_args.set_with_options(OFED=False)
@@ -952,7 +959,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             drm_kmod = BuildDrmKMod.get_instance(self)
             kernel_options.set(LOCAL_MODULES=drm_kmod.source_dir.name, LOCAL_MODULES_DIR=drm_kmod.source_dir.parent)
         kernel_options.set(KERNCONF=kernconf)
-        if self.add_debug_info_flag:
+        if self.with_debug_info:
             kernel_options.set(DEBUG="-g")
         if extra_make_args:
             kernel_options.set(**extra_make_args)
@@ -1034,7 +1041,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # Also install all other kernels that were potentially built
         install_kernel_args.set(NO_INSTALLEXTRAKERNELS="no")
         # also install the debug files
-        if self.add_debug_info_flag:
+        if self.with_debug_info:
             install_kernel_args.set_with_options(KERNEL_SYMBOLS=True)
             install_kernel_args.set(INSTALL_KERNEL_DOT_FULL=True)
         install_kernel_args.set_env(DESTDIR=install_dir, METALOG=install_dir / "METALOG.kernel")
@@ -1280,8 +1287,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # links from /usr/bin/mail to /usr/bin/Mail won't work on case-insensitve fs
         self.make_args.set_with_options(MAIL=False)
 
-        # We don't want separate .debug for now
-        self.make_args.set_with_options(DEBUG_FILES=False)
         if self.crosscompile_target.is_any_x86():
             # seems to be missing some include paths which appears to work on freebsd
             self.make_args.set_with_options(BHYVE=False)
