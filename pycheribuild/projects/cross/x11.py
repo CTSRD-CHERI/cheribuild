@@ -414,8 +414,7 @@ class BuildLibXScrnSaver(X11AutotoolsProject):
 class BuildLibJpegTurbo(X11CMakeProject):
     target = "libjpeg-turbo"
     repository = GitRepository("https://github.com/libjpeg-turbo/libjpeg-turbo.git",
-                               temporary_url_override="https://github.com/arichardson/libjpeg-turbo.git",
-                               url_override_reason="https://github.com/libjpeg-turbo/libjpeg-turbo/pull/587")
+                               old_urls=[b"https://github.com/arichardson/libjpeg-turbo.git"])
 
     def setup(self):
         super().setup()
