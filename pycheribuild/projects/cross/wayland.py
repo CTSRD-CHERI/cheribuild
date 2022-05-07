@@ -87,7 +87,8 @@ class BuildLinux_Input_H(SimpleProject):
     def process(self):
         evdev_headers = ("input.h", "input-event-codes.h", "uinput.h")
         for header in evdev_headers:
-            dev_evdev_h = self.sdk_sysroot / "usr/include/dev/evdev" / header
+            src_headers = Path("/usr/include") if self.compiling_for_host() else self.sdk_sysroot / "usr/include"
+            dev_evdev_h = src_headers / "dev/evdev" / header
             if not dev_evdev_h.is_file():
                 self.fatal("Missing evdev header:", dev_evdev_h)
             self.write_file(self.include_install_dir / "linux" / header, contents=f"#include <dev/evdev/{header}>\n",
@@ -95,6 +96,8 @@ class BuildLinux_Input_H(SimpleProject):
 
     @property
     def include_install_dir(self) -> Path:
+        if self.compiling_for_host():
+            return self.config.other_tools_dir / "include"
         return self.sdk_sysroot / self.target_info.sysroot_install_prefix_relative / "include"
 
 
