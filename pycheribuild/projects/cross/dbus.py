@@ -50,7 +50,7 @@ class BuildDBus(CrossCompileCMakeProject):
 
     def install(self, **kwargs):
         super().install()
-        if self.target_info.is_freebsd():
+        if not self.compiling_for_host() and self.target_info.is_freebsd():
             rc_file = self.rootfs_dir / self.target_info.localbase / "etc/rc.d/dbus"
             self.download_file(rc_file, "https://cgit.freebsd.org/ports/plain/devel/dbus/files/dbus.in")
             self.replace_in_file(rc_file, {"%%PREFIX%%": str(self.install_prefix)})
