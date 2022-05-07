@@ -1898,7 +1898,7 @@ else:
 class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
     @property
     def release_objdir(self):
-        result = self.objdir.parent / "release"
+        result = self.objdir / "release"
         if result.exists() or self.config.pretend:
             return result
         self.warning("Could not infer release objdir")
@@ -1944,9 +1944,14 @@ class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
         # makes it through unscathed and works.
         release_args.add_flags("-Crelease")
 
-        # Release scripts seem to end up with OBJTOP not including
-        # TARGET.TARGET_ARCH, so manually set it here.
-        release_args.set_env(OBJTOP=self.objdir)
+        # Make sure we use in-tree sys.mk, especially src.sys.obj.mk, so the
+        # release Makefile ends up with the right OBJTOP that includes
+        # TARGET.TARGET_ARCH. Normally the top-level Makefile does this for us,
+        # but we bypass that for release/Makefile, and the recursive make calls
+        # have .MAKE.LEVEL > 0 so skip some build coordination logic and we end
+        # up with OBJTOP set to OBJROOT, missing TARGET.TARGET_ARCH, and it
+        # thus fails to find the prior build.
+        release_args.add_flags("-m", self.source_dir / "share/mk")
 
         # TODO: Fix build system to pick these up from PATH rather than override it.
         release_args.set_env(INSTALL="sh " + str(self.source_dir / "tools/install.sh"))
