@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2020 Alex Richardson
+# Copyright (c) 2022 Robert N. M. Watson
 #
 # This work was supported by Innovate UK project 105694, "Digital Security by
 # Design (DSbD) Technology Platform Prototype".
@@ -36,6 +37,15 @@ from ...config.target_info import CrossCompileTarget
 
 
 class BuildCheriExercises(CrossCompileProject):
+
+    """
+    Automatically build parts of cheri-exercises that demonstrate CHERI
+    properties or require dynamic debugging, such as those illustrating the
+    impact of a buffer overflow or pointer injection.  Do not build
+    development exercises such as general C and memory-allocator adaptation
+    tasks.
+    """
+
     target = "cheri-exercises"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-exercises.git")
     supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP,
@@ -69,23 +79,33 @@ class BuildCheriExercises(CrossCompileProject):
         self._compile_file(self.build_dir / "print-capability",
                            self.source_dir / "src/exercises/compile-and-run/print-capability.c")
 
-        # Exercise an inter-object buffer overflow (needs -G0)
+        # Exercise sundry inter-object buffer overflows (needs -G0)
         self._compile_for_cheri_and_non_cheri(
-            "buffer-overflow", self.source_dir / "src/exercises/buffer-overflow/buffer-overflow.c", "-G0")
+            "buffer-overflow-global",
+            self.source_dir / "src/exercises/buffer-overflow-global/buffer-overflow-global.c", "-G0")
+        self._compile_for_cheri_and_non_cheri(
+            "buffer-overflow-heap",
+            self.source_dir / "src/exercises/buffer-overflow-heap/buffer-overflow-heap.c", "-G0")
+        self._compile_for_cheri_and_non_cheri(
+            "buffer-overflow-stack",
+            self.source_dir / "src/exercises/buffer-overflow-stack/buffer-overflow-stack.c", "-G0")
 
         # Exercise a subobject buffer overflow
         self._compile_for_cheri_and_non_cheri(
-            "buffer-overflow-subobject",
-            self.source_dir / "src/exercises/buffer-overflow-subobject/buffer-overflow-subobject.c")
+            "subobject-bounds",
+            self.source_dir / "src/exercises/subobject-bounds/buffer-overflow-subobject.c")
         self._compile_file(
-            self.build_dir / "buffer-overflow-subobject-cheri-subobject-safe",
-            self.source_dir / "src/exercises/buffer-overflow-subobject/buffer-overflow-subobject.c",
+            self.build_dir / "subobject-bounds-cheri-subobject-safe",
+            self.source_dir / "src/exercises/subobject-bounds/buffer-overflow-subobject.c",
             "-Xclang", "-cheri-bounds=subobject-safe")  # compile another version with subobject bounds
+
+        # Corrupt a data pointer by improperly manipulating it.
+        self._compile_for_cheri_and_non_cheri(
+            "corrupt-pointer", self.source_dir / "src/exercises/cheri-tags/corrupt-pointer.c")
 
         # Corrupt a control-flow pointer using a subobject buffer overflow
         self._compile_for_cheri_and_non_cheri(
-            "buffer-overflow-fnptr",
-            self.source_dir / "src/exercises/control-flow-pointer/buffer-overflow-fnptr.c")
+            "buffer-overflow-fnptr", self.source_dir / "src/exercises/control-flow-pointer/buffer-overflow-fnptr.c")
 
         # Exercise integer-pointer type confusion bug
         self._compile_for_cheri_and_non_cheri(
@@ -96,6 +116,16 @@ class BuildCheriExercises(CrossCompileProject):
             "long-over-pipe", self.source_dir / "src/exercises/pointer-injection/long-over-pipe.c")
         self._compile_for_cheri_and_non_cheri(
             "ptr-over-pipe", self.source_dir / "src/exercises/pointer-injection/ptr-over-pipe.c")
+
+        # Demonstrate various CheriABI properties
+        self._compile_for_cheri_and_non_cheri(
+            "kern-read-over", self.source_dir / "src/exercises/cheriabi/kern-read-over.c")
+
+        self._compile_for_cheri_and_non_cheri(
+            "perm-vmem", self.source_dir / "src/exercises/cheriabi/perm-vmem.c")
+
+        self._compile_for_cheri_and_non_cheri(
+            "print-more", self.source_dir / "src/exercises/cheriabi/print-more.c")
 
         # TODO: Demonstrate pointer revocation (however that needs caprevoke)
 
