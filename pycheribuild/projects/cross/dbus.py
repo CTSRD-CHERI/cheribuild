@@ -36,6 +36,8 @@ class BuildDBus(CrossCompileCMakeProject):
         super().setup()
         # Disable documentation to reduce dependencies
         self.add_cmake_options(DBUS_ENABLE_DOXYGEN_DOCS=False, DBUS_ENABLE_XML_DOCS=False)
+        # Work around https://gitlab.freedesktop.org/pkg-config/pkg-config/-/issues/52:
+        self.add_cmake_options(DBUS_RELOCATABLE=False)
         # Skip glib support for now:
         self.add_cmake_options(DBUS_WITH_GLIB=False)
         if not self.compiling_for_host():
