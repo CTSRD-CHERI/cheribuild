@@ -49,10 +49,11 @@ class BuildOpenCV(CrossCompileCMakeProject):
         # cheribuild version ensures we have all the dependencies.
         self.add_cmake_options(BUILD_OPENJPEG=False, WITH_JPEG=True)
         # Webp cannot be built for Morello as it uses vector intrinsics in a way that triggers a compiler crash.
-        self.add_cmake_options(BUILD_WEBP=False, WITH_WEBP=False)  # doesn't compile for CHERI yet.
+        self.add_cmake_options(BUILD_WEBP=True, WITH_WEBP=True)  # doesn't compile for CHERI yet.
         self.add_cmake_options(WITH_PROTOBUF=False)  # doesn't compile for CHERI yet.
         self.add_cmake_options(WITH_ITT=False, BUILD_ITT=False)  # doesn't compile for CHERI yet.
         self.add_cmake_options(OPENCV_TEST_DATA_PATH=self.source_dir / "opencv_extra/testdata")
+        self.cross_warning_flags.append("-Werror")
 
     @property
     def optimization_flags(self):
