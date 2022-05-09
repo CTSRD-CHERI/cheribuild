@@ -852,6 +852,13 @@ class BuildKWaylandServer(KDECMakeProject):
             ]))
 
 
+class BuildKDECliTools(KDECMakeProject):
+    target = "kde-cli-tools"
+    repository = GitRepository("https://invent.kde.org/plasma/kde-cli-tools.git")
+    dependencies = ["kconfig", "kiconthemes", "ki18n", "kcmutils", "kio", "kservice", "kwindowsystem",
+                    "kactivities"]  # optional: "kdesu"
+
+
 class BuildKWin(KDECMakeProject):
     target = "kwin"
     repository = GitRepository("https://invent.kde.org/plasma/kwin.git",
