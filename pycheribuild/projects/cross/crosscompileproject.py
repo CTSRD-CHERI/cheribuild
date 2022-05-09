@@ -69,9 +69,8 @@ class CrossCompileMixin(_CrossCompileMixinBase):
 
 # We also build benchmarks for hybrid to see whether those compilation flags change the results
 class BenchmarkMixin(_BenchmarkMixinBase):
-    # We also allow building for AArch64 with the Morello compiler
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID + [
-        CompilationTargets.CHERIBSD_MORELLO_NO_CHERI_FOR_PURECAP_ROOTFS, CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID_FOR_PURECAP_ROOTFS + [
+        CompilationTargets.NATIVE]
     default_build_type = BuildType.RELEASE
     prefer_full_lto_over_thin_lto = True
 
