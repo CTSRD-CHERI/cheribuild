@@ -53,6 +53,7 @@ if typing.TYPE_CHECKING:  # no-combine
 
 T = typing.TypeVar('T')
 AnyProjectSubclass = typing.TypeVar('AnyProjectSubclass', bound='SimpleProject')
+_ConfigOptionTypeFn = typing.Callable[[typing.Union[str, typing.List[str]]], T]
 
 
 class ComputedDefaultValue(typing.Generic[T]):
@@ -360,7 +361,7 @@ class ConfigLoaderBase(object):
     # noinspection PyShadowingBuiltins
     def add_option(self, name: str, shortname=None,
                    default: "typing.Optional[typing.Union[T, ComputedDefaultValue[T]]]" = None,
-                   type: "typing.Callable[[str], T]" = str, group=None, help_hidden=False,
+                   type: _ConfigOptionTypeFn = str, group=None, help_hidden=False,
                    _owning_class: "typing.Type" = None, _fallback_names: "typing.List[str]" = None,
                    option_cls: "typing.Type[CommandLineConfigOption[T]]" = None, **kwargs) -> T:
         if not self.is_needed_for_completion(name, shortname, type):
@@ -429,7 +430,7 @@ class ConfigLoaderBase(object):
 
 
 class ConfigOptionBase(typing.Generic[T]):
-    def __init__(self, name: str, shortname: typing.Optional[str], default, value_type: "typing.Callable[[str], T]",
+    def __init__(self, name: str, shortname: typing.Optional[str], default, value_type: _ConfigOptionTypeFn,
                  _owning_class=None, _loader: ConfigLoaderBase = None, _fallback_names: "typing.List[str]" = None,
                  _legacy_alias_names: "typing.List[str]" = None):
         self.name = name
@@ -640,7 +641,7 @@ class StoreActionWithPossibleAliases(argparse.Action):
 
 class CommandLineConfigOption(ConfigOptionBase[T]):
     # noinspection PyProtectedMember,PyUnresolvedReferences
-    def __init__(self, name: str, shortname: str, default, value_type: "typing.Callable[[str], T]", _owning_class,
+    def __init__(self, name: str, shortname: str, default, value_type: _ConfigOptionTypeFn, _owning_class,
                  _loader: ConfigLoaderBase, help_hidden: bool, group: "typing.Optional[argparse._ArgumentGroup]",
                  _fallback_names: "typing.List[str]" = None, _legacy_alias_names: "typing.List[str]" = None, **kwargs):
         super().__init__(name, shortname, default, value_type, _owning_class, _loader, _fallback_names,
