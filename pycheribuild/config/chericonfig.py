@@ -411,7 +411,7 @@ class CheriConfig(ConfigBase):
             group=loader.path_group,
             help="Prefix for arm-none-eabi-gcc binaries (e.g. /usr/bin/arm-none-eabi-). Available at"
                  "https://developer.arm.com/tools-and-software/open-source-software/"
-                 "developer-tools/gnu-toolchain/gnu-rm/downloads")  # type: Path
+                 "developer-tools/gnu-toolchain/gnu-rm/downloads")
 
         self.build_morello_firmware_from_source = loader.add_bool_option(
             "build-morello-firmware-from-source", help_hidden=False,
