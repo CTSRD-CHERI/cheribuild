@@ -141,9 +141,8 @@ def real_main():
             fatal_error("Unknown config key", cheri_config.get_config_option)
         option = config_loader.options[cheri_config.get_config_option]
         # noinspection PyProtectedMember
-        print(option.__get__(cheri_config,
-                             option._owning_class if option._owning_class else cheri_config))  # pytype:
-        # disable=attribute-error
+        owning_class = option._owning_class if option._owning_class else cheri_config
+        print(option.__get__(cheri_config, owning_class))  # pytype: disable=attribute-error
         sys.exit()
 
     assert any(x in cheri_config.action for x in (CheribuildAction.TEST, CheribuildAction.BUILD,

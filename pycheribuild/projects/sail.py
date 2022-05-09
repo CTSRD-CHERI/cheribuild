@@ -53,8 +53,7 @@ class OpamMixin(_MixinBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_required_system_tool("opam", homebrew="opam",
-                                      cheribuild_target="opam-2.0")  # pytype: disable=attribute-error
+        self.add_required_system_tool("opam", homebrew="opam", cheribuild_target="opam-2.0")
         self.required_ocaml_version = "4.11.1"
         self.__using_correct_switch = False
         self.__ignore_switch_version = False
@@ -63,9 +62,8 @@ class OpamMixin(_MixinBase):
     def opamroot(self):
         return self.config.cheri_sdk_dir / "opamroot"
 
-    # noinspection PyUnresolvedReferences
     def check_system_dependencies(self):
-        super().check_system_dependencies()  # pytype: disable=attribute-error
+        super().check_system_dependencies()
         opam_path = shutil.which("opam")
         if opam_path:
             opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?",
@@ -118,8 +116,7 @@ class OpamMixin(_MixinBase):
 
     def _run_in_ocaml_env_prepare(self, cwd=None) -> "Tuple[Dict[Any, Union[Union[str, int], Any]], Union[str, Any]]":
         if cwd is None:
-            # noinspection PyUnresolvedReferences
-            cwd = self.source_dir if getattr(self, "source_dir") else "/"  # pytype: disable=attribute-error
+            cwd = self.source_dir if getattr(self, "source_dir") else "/"
 
         self._ensure_correct_switch()
         opam_env = dict(GIT_TEMPLATE_DIR="",  # see https://github.com/ocaml/opam/issues/3493
@@ -128,16 +125,14 @@ class OpamMixin(_MixinBase):
         if Path(self.opam_binary).is_absolute():
             opam_env["OPAM_USER_PATH_RO"] = Path(self.opam_binary).parent
         if not (self.opamroot / "opam-init").exists():
-            # noinspection PyUnresolvedReferences
             self.run_cmd(self.opam_binary, "init", "--disable-sandboxing", "--root=" + str(self.opamroot), "--no-setup",
-                         cwd="/", env=opam_env)  # pytype: disable=attribute-error
+                         cwd="/", env=opam_env)
         return opam_env, cwd
 
     def run_in_ocaml_env(self, command: str, cwd=None, print_verbose_only=False, **kwargs):
         opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         script = "eval `opam config env`\n" + command + "\n"
-        return self.run_shell_script(script, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env,
-                                     **kwargs)  # pytype: disable=attribute-error
+        return self.run_shell_script(script, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
 
     def run_command_in_ocaml_env(self, command: list, cwd=None, print_verbose_only=False, **kwargs):
         self._ensure_correct_switch()
@@ -146,8 +141,7 @@ class OpamMixin(_MixinBase):
         if command[0] != self.opam_binary:
             command = [self.opam_binary, "exec", "--root=" + str(self.opamroot), "--"] + command
         assert isinstance(self, SimpleProject)
-        return self.run_cmd(command, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env,
-                            **kwargs)  # pytype: disable=attribute-error
+        return self.run_cmd(command, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
 
 
 class Opam2(SimpleProject):
