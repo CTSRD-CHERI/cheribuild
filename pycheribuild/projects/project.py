@@ -2776,6 +2776,9 @@ class Project(SimpleProject):
                 assert ccinfo.compiler == "apple-clang"
                 thinlto_cache_flag = "-cache_path_lto,"
             self._lto_linker_flags.append("-Wl," + thinlto_cache_flag + str(self.build_dir / "thinlto-cache"))
+        if self.compiling_for_cheri_hybrid([CPUArchitecture.AARCH64]):
+            # Hybrid flags are not inferred from the input files, so we have to explicitly pass -mattr= to ld.lld.
+            self._lto_linker_flags.extend(["-Wl,-mllvm,-mattr=+morello"])
         self.info("Building with LTO")
         return True
 
