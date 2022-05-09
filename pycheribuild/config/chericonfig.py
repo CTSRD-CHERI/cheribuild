@@ -110,7 +110,7 @@ class CheriConfig(ConfigBase):
     def __init__(self, loader, action_class):
         # Work around circular dependencies
         from .loader import ConfigLoaderBase
-        from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage
+        from .target_info import CrossCompileTarget, MipsFloatAbi, AArch64FloatSimdOptions, Linkage
         # noinspection PyTypeChecker
         super().__init__(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt())
         self._cached_deps = collections.defaultdict(dict)
@@ -211,6 +211,10 @@ class CheriConfig(ConfigBase):
         self.mips_float_abi = loader.add_option("mips-float-abi", default=MipsFloatAbi.SOFT, type=MipsFloatAbi,
                                                 group=loader.cross_compile_options_group,
                                                 help="The floating point ABI to use for building MIPS+CHERI programs")
+        self.aarch64_fp_and_simd_options = loader.add_option(
+            "aarch64-fp-and-simd-options", default=AArch64FloatSimdOptions.DEFAULT, type=AArch64FloatSimdOptions,
+            group=loader.cross_compile_options_group,
+            help="The floating point/SIMD mode to use for building AArch64 programs")
         self.crosscompile_linkage = loader.add_option("cross-compile-linkage", default=Linkage.DEFAULT, type=Linkage,
                                                       group=loader.cross_compile_options_group,
                                                       enum_choices=(Linkage.DEFAULT, Linkage.DYNAMIC, Linkage.STATIC),

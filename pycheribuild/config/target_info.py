@@ -38,8 +38,8 @@ if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine    # pytype: disable=pyi-error
     from ..projects.project import SimpleProject, Project  # no-combine
 
-__all__ = ["AutoVarInit", "BasicCompilationTargets", "CPUArchitecture", "CrossCompileTarget",  # no-combine
-           "Linkage", "CompilerType", "MipsFloatAbi", "TargetInfo"]  # no-combine
+__all__ = ["AArch64FloatSimdOptions", "AutoVarInit", "BasicCompilationTargets", "CPUArchitecture",  # no-combine
+           "CrossCompileTarget", "Linkage", "CompilerType", "MipsFloatAbi", "TargetInfo"]  # no-combine
 
 
 class CPUArchitecture(Enum):
@@ -556,6 +556,19 @@ class MipsFloatAbi(Enum):
         return self.value[1]
 
 
+class AArch64FloatSimdOptions(Enum):
+    DEFAULT = ("", "")
+    NOSIMD = ("-nosimd", "+nosimd")
+    SOFT = ("-softfp", "+nofp+nosimd")
+    SOFT_SIMD = ("-softfp-with-simd", "+nofp")  # TODO: does it make sense to have this?
+
+    def config_suffix(self):
+        return self.value[0]
+
+    def clang_march_flag(self):
+        return self.value[1]
+
+
 class CrossCompileTarget(object):
     # Currently the same for all targets
     DEFAULT_SUBOBJECT_BOUNDS = "conservative"
@@ -719,6 +732,9 @@ class CrossCompileTarget(object):
                     result += "-subobject-nodebug"
         if self.is_mips(include_purecap=True) and config.mips_float_abi == MipsFloatAbi.HARD:
             result += "-hardfloat"
+        if self.is_aarch64(include_purecap=True):
+            if config.aarch64_fp_and_simd_options != AArch64FloatSimdOptions.DEFAULT:
+                result += config.aarch64_fp_and_simd_options.config_suffix()
         if config.cross_target_suffix:
             result += "-" + config.cross_target_suffix
         return result

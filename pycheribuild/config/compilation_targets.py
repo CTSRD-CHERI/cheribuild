@@ -38,7 +38,7 @@ from pathlib import Path
 
 from .loader import ConfigOptionBase, ConfigLoaderBase
 from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi,
-                          TargetInfo)
+                          TargetInfo, AArch64FloatSimdOptions)
 from ..processutils import commandline_to_str
 from ..utils import cached_property, find_free_port, is_jenkins_build, SocketAndPort
 
@@ -190,21 +190,23 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
                 result.append("-mcmodel=medium")
         elif xtarget.is_aarch64(include_purecap=True):
+            fp_simd_option = AArch64FloatSimdOptions.SOFT if softfloat else config.aarch64_fp_and_simd_options
+            march_suffix = fp_simd_option.clang_march_flag()
             if cls.uses_morello_llvm:
                 # When building with the Morello compiler, we use the Morello CPU as the basline.
                 # This makes a noticeable difference for plain aarch64 (v8.2 instead of v8.0) and also enables a few
                 # extensions that are not enabled by -march=morello (crypto+crc32)
                 result.append("-mcpu=rainier")
             if xtarget.is_cheri_hybrid():
-                result += ["-march=morello", "-mabi=aapcs"]
+                result += [f"-march=morello{march_suffix}", "-mabi=aapcs"]
             elif xtarget.is_cheri_purecap():
-                result += ["-march=morello+c64", "-mabi=purecap"]
+                result += [f"-march=morello+c64{march_suffix}", "-mabi=purecap"]
             else:
                 if cls.uses_morello_llvm:
                     # -mcpu=rainier enables capabilities unless -march=morello+noa64c is also passed
-                    result.append("-march=morello+noa64c")
+                    result.append(f"-march=morello+noa64c{march_suffix}")
                 else:
-                    result += ["-march=armv8"]
+                    result += [f"-march=armv8{march_suffix}"]
         elif xtarget.is_x86_64():
             pass  # No additional flags needed for x86_64.
         else:
