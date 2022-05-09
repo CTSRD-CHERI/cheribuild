@@ -54,7 +54,7 @@ from .utils import (ConfigBase, fatal_error, get_global_config, OSInfo, status_u
 __all__ = ["print_command", "get_compiler_info", "CompilerInfo", "popen", "popen_handle_noexec",  # no-combine
            "run_command", "latest_system_clang_tool", "commandline_to_str", "set_env", "extract_version",  # no-combine
            "get_program_version", "check_call_handle_noexec", "get_version_output", "keep_terminal_sane",  # no-combine
-           "run_and_kill_children_on_exit"]  # no-combine
+           "run_and_kill_children_on_exit", "ssh_host_accessible"]  # no-combine
 
 
 def __filter_env(env: dict) -> dict:
@@ -731,6 +731,18 @@ def extract_version(output: bytes, component_kind: "typing.Type[Type_T]" = int, 
     # noinspection PyTypeChecker
     # Python 3.7.0 includes None elements for unmatched optional groups, so we have to omit those.
     return tuple(component_kind(x) for x in match.groups() if x is not None)
+
+
+@functools.lru_cache(maxsize=20)
+def ssh_host_accessible(host: str) -> bool:
+    assert host, "Passed empty SSH hostname!"
+    try:
+        output = run_command("ssh", host, "--", "echo", "connection successful", capture_output=True,
+                             run_in_pretend_mode=True, raise_in_pretend_mode=True).stdout.decode("utf-8")
+        return output == "connection successful"
+    except subprocess.CalledProcessError as e:
+        warning_message(f"SSH host '{host}' is not accessible:", e)
+        return False
 
 
 def latest_system_clang_tool(config: ConfigBase, basename: str,

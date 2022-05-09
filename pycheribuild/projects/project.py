@@ -53,7 +53,7 @@ from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchi
 from ..filesystemutils import FileSystemUtils
 from ..processutils import (check_call_handle_noexec, commandline_to_str, CompilerInfo, get_compiler_info,
                             get_program_version, get_version_output, keep_terminal_sane, popen_handle_noexec,
-                            print_command, run_command, set_env)
+                            print_command, run_command, set_env, ssh_host_accessible)
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import (AnsiColour, cached_property, classproperty, coloured, fatal_error, include_local_file,
                      InstallInstructions, is_jenkins_build, OSInfo, remove_prefix, replace_one, status_update,
@@ -2287,8 +2287,9 @@ class Project(SimpleProject):
         return Project.__can_use_lld_map[command_str]
 
     def can_run_binaries_on_remote_morello_board(self):
-        return self.target_info.is_cheribsd() and self.compiling_for_aarch64(
-            include_purecap=True) and self.config.remote_morello_board
+        morello_ssh_hostname = self.config.remote_morello_board
+        return morello_ssh_hostname and self.target_info.is_cheribsd() and self.compiling_for_aarch64(
+            include_purecap=True) and ssh_host_accessible(morello_ssh_hostname)
 
     def can_use_lto(self, ccinfo: CompilerInfo):
         if ccinfo.compiler == "apple-clang":
