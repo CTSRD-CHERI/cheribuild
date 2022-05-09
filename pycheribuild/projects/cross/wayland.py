@@ -179,6 +179,8 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
         super().setup()
         if self.get_compiler_info(self.CC).supports_warning_flag("-Werror=shorten-cap-to-int"):
             self.cross_warning_flags.append("-Werror=shorten-cap-to-int")
+        if self.build_type.is_debug:
+            self.configure_args.append("--enable-debug")
 
     def configure(self, **kwargs):
         self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
