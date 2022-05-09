@@ -416,6 +416,10 @@ class CheriConfig(ConfigBase):
         self.list_kernels = loader.add_bool_option("list-kernels", group=loader.action_group,
                                                    help="List available kernel configs to run and exit")
 
+        self.remote_morello_board = loader.add_option(
+            "remote-morello-board", help="SSH hostname of a Morello board. When set, some projects will run their "
+                                         "test suites on the remote board instead of QEMU.")
+
         self.targets = None  # type: typing.Optional[typing.List[str]]
         self.__optional_properties = ["preferred_xtarget", "internet_connection_last_checked_at",
                                       "start_after", "start_with"]

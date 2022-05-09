@@ -2286,6 +2286,10 @@ class Project(SimpleProject):
                 Project.__can_use_lld_map[command_str] = False
         return Project.__can_use_lld_map[command_str]
 
+    def can_run_binaries_on_remote_morello_board(self):
+        return self.target_info.is_cheribsd() and self.compiling_for_aarch64(
+            include_purecap=True) and self.config.remote_morello_board
+
     def can_use_lto(self, ccinfo: CompilerInfo):
         if ccinfo.compiler == "apple-clang":
             return True
