@@ -73,6 +73,7 @@ class BenchmarkMixin(_BenchmarkMixinBase):
     supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID + [
         CompilationTargets.CHERIBSD_MORELLO_NO_CHERI_FOR_PURECAP_ROOTFS, CompilationTargets.NATIVE]
     default_build_type = BuildType.RELEASE
+    prefer_full_lto_over_thin_lto = True
 
     @property
     def optimization_flags(self):
