@@ -22,11 +22,12 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from .crosscompileproject import CrossCompileCMakeProject, GitRepository
+from .crosscompileproject import CrossCompileCMakeProject, GitRepository, CompilationTargets
 
 
 class BuildDBus(CrossCompileCMakeProject):
     target = "dbus"
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
     repository = GitRepository("https://gitlab.freedesktop.org/dbus/dbus.git",
                                temporary_url_override="https://gitlab.freedesktop.org/arichardson/dbus.git",
                                url_override_reason="Various fixes for FreeBSD and CHERI (most submitted as MRs)")

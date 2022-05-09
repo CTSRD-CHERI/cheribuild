@@ -484,7 +484,7 @@ class BuildXVncServer(X11AutotoolsProject):
     # The actual XVnc source code is part of TigerVNC and not included in the xserver repository.
     # It also depends on build artifacts from an existing tigervnc build
     dependencies = ["libx11", "xorg-font-util", "libxrender", "libxfont", "libxkbfile", "tigervnc", "xkeyboard-config",
-                    "xkbcomp"]
+                    "xkbcomp", "dbus"]
     # The tigervnc code requires the 1.20 release
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/xserver.git",
                                default_branch="server-1.20-branch", force_branch=True,
