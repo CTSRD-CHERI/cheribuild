@@ -90,7 +90,11 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
             # we want to link against libc++ not libstdc++ (and for some reason we need to specify libgcc_eh too
             self.add_cmake_options(TEST_SUITE_CXX_LIBRARY="-lc++;-lgcc_eh")
             self.add_cmake_options(BENCHMARK_USE_LIBCXX=True)
-            self.add_cmake_options(TEST_SUITE_RUN_BENCHMARKS=False)  # Would need to set up custom executor
+            if self.can_run_binaries_on_remote_morello_board():
+                self.add_cmake_options(TEST_SUITE_RUN_BENCHMARKS=True,
+                                       TEST_SUITE_REMOTE_HOST=self.config.remote_morello_board)
+            else:
+                self.add_cmake_options(TEST_SUITE_RUN_BENCHMARKS=False)  # Would need to set up custom executor
             if self.crosscompile_target.is_any_x86():
                 # Have to set the X86CPU_ARCH otherwise the build fails
                 self.add_cmake_options(X86CPU_ARCH="unknown")
@@ -99,8 +103,13 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
             self.add_cmake_options(TEST_SUITE_ENABLE_BITCODE_TESTS=False)
 
     def run_tests(self):
+        output_file = self.build_dir / "results.json"
+        if self.can_run_binaries_on_remote_morello_board():
+            self.run_make("rsync")  # Copy benchmark binaries over
+            self.run_cmd(self.llvm_lit, "-vv", "-j1", "-o", output_file, ".", cwd=self.build_dir)
+            self.copy_remote_file(f"{self.config.remote_morello_board}:{output_file}", output_file)
+            return
         if self.collect_stats:
-            output_file = self.build_dir / "results.json"
             self.delete_file(output_file)
             self.run_cmd(self.llvm_lit, "-sv", "-o", output_file, ".", cwd=self.build_dir)
         super().run_tests()
