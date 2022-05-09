@@ -34,7 +34,7 @@ from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import Linkage
 from ...utils import OSInfo
-from ...processutils import get_program_version
+from ...processutils import get_program_version, ssh_config_parameters
 
 
 class BuildEPollShim(CrossCompileCMakeProject):
@@ -201,9 +201,40 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
             if runtest_ver < (1, 6, 4):
                 self.dependency_error("DejaGnu version", runtest_ver, "cannot be used to run tests remotely,",
                                       "please install a newer version with cheribuild", cheribuild_target="dejagnu")
-            self.target_info.run_cheribsd_test_script("run_libffi_tests.py", "--test-timeout", str(120 * 60),
-                                                      mount_builddir=True, mount_sourcedir=True, mount_sysroot=False,
-                                                      use_full_disk_image=True)
+
+            if self.can_run_binaries_on_remote_morello_board():
+                Path(self.build_dir, "site.exp").write_text(f"""
+if ![info exists boards_dir] {{
+    set boards_dir {{}}
+}}
+lappend boards_dir "{self.build_dir}"
+verbose "Global Config File: target_triplet is $target_triplet" 2
+global target_list
+set target_list "remote-cheribsd"
+""")
+                ssh_options = "-o NoHostAuthenticationForLocalhost=yes"
+                ssh_port = ssh_config_parameters(self.config.remote_morello_board).get("port", "22")
+                ssh_user = ssh_config_parameters(self.config.remote_morello_board).get("user", "root")
+                Path(self.build_dir, "remote-cheribsd.exp").write_text(f"""
+load_generic_config "unix"
+set_board_info connect ssh
+set_board_info hostname {self.config.remote_morello_board}
+set_board_info username {ssh_user}
+set_board_info port {ssh_port}
+# Work around typo in ssh.exp, it checks for ssh_useropts, but then appends the value of ssh_opts
+set_board_info ssh_useropts "{ssh_options}"
+set_board_info ssh_opts "{ssh_options}"
+# set_board_info exec_shell "gdb-run-noninteractive.sh"
+# Build tests statically linked so they pick up the local libffi library
+set TOOL_OPTIONS -static
+""")
+                self.run_cmd(["make", "check", "RUNTESTFLAGS=-a --target-board remote-cheribsd --xml"],
+                             env=dict(BOARDSDIR=self.build_dir, DEJAGNU=self.build_dir / "site.exp"),
+                             cwd=str(self.build_dir))
+            else:
+                self.target_info.run_cheribsd_test_script("run_libffi_tests.py", "--test-timeout", str(120 * 60),
+                                                          mount_builddir=True, mount_sourcedir=True,
+                                                          mount_sysroot=False, use_full_disk_image=True)
 
 
 class BuildWayland(CrossCompileMesonProject):
