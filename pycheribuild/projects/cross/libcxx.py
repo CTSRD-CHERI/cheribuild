@@ -352,6 +352,12 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             return
         if self.compiling_for_host():
             self.run_make("check-cxx", cwd=self.build_dir)
+        elif self.can_run_binaries_on_remote_morello_board():
+            executor = [self.source_dir / "utils/ssh.py", "--host", self.config.remote_morello_board]
+            # The Morello board has 4 CPUs, so run 4 tests in parallel.
+            self.run_cmd([sys.executable, self.build_dir / "bin/llvm-lit", "-j4", "-vv",
+                          f"--xunit-xml-output={self.build_dir / 'test-results.xml'}",
+                          "-Dexecutor=" + self.commandline_to_str(executor), "test"], cwd=self.build_dir)
         else:
             # long running test -> speed up by using a kernel without invariants
             self.target_info.run_cheribsd_test_script("run_libcxx_tests.py", "--parallel-jobs", self.test_jobs,
