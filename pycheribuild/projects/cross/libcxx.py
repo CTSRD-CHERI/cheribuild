@@ -267,7 +267,6 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             self.add_cmake_options(LIBCXX_ENABLE_EXCEPTIONS=True, LIBCXX_ENABLE_RTTI=True)
         # TODO: remove this once stuff has been fixed:
         self.common_warning_flags.append("-Wno-ignored-attributes")
-        print(self.common_warning_flags)
 
     def add_cross_flags(self):
         # TODO: do I even need the toolchain file to cross compile?
@@ -282,7 +281,6 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         # We need to build with -G0 otherwise we get R_MIPS_GPREL16 out of range linker errors
         test_compile_flags = self.commandline_to_str(self.default_compiler_flags)
         test_linker_flags = self.commandline_to_str(self.default_ldflags)
-        print("test_compile_flags:", test_compile_flags)
 
         if self.target_info.is_baremetal():
             if self.compiling_for_mips(include_purecap=False):
