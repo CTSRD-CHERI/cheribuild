@@ -62,7 +62,7 @@ class BuildCheriExercises(CrossCompileProject):
         target_flags = self.target_info.get_essential_compiler_and_linker_flags(xtarget=target_override,
                                                                                 default_flags_only=True)
         warning_flags = ["-Wall", "-Wcheri"]
-        self.run_cmd([self.CC] + target_flags + warning_flags + ["-fuse-ld=lld", "-o", output, *args],
+        self.run_cmd([self.CC] + target_flags + warning_flags + ["-g", "-fuse-ld=lld", "-o", output, *args],
                      print_verbose_only=False)
         self.compiled_files.append(output)
 
