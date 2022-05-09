@@ -50,6 +50,8 @@ if typing.TYPE_CHECKING:  # no-combine
 
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
+    uses_morello_llvm = False
+
     def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
         super().__init__(target, project)
         self._sdk_root_dir = None  # type: typing.Optional[Path]
@@ -188,10 +190,21 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
                 result.append("-mcmodel=medium")
         elif xtarget.is_aarch64(include_purecap=True):
+            if cls.uses_morello_llvm:
+                # When building with the Morello compiler, we use the Morello CPU as the basline.
+                # This makes a noticeable difference for plain aarch64 (v8.2 instead of v8.0) and also enables a few
+                # extensions that are not enabled by -march=morello (crypto+crc32)
+                result.append("-mcpu=rainier")
             if xtarget.is_cheri_hybrid():
                 result += ["-march=morello", "-mabi=aapcs"]
             elif xtarget.is_cheri_purecap():
                 result += ["-march=morello+c64", "-mabi=purecap"]
+            else:
+                if cls.uses_morello_llvm:
+                    # -mcpu=rainier enables capabilities unless -march=morello+noa64c is also passed
+                    result.append("-march=morello+noa64c")
+                else:
+                    result += ["-march=armv8"]
         elif xtarget.is_x86_64():
             pass  # No additional flags needed for x86_64.
         else:
@@ -674,6 +687,7 @@ class CheriBSDFettTargetInfo(CheriBSDTargetInfo):
 
 class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     shortname = "CheriBSD-Morello"
+    uses_morello_llvm = True
 
     @classmethod
     def _get_compiler_project(self) -> "typing.Type[BuildLLVMBase]":
@@ -705,14 +719,6 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
         if xtarget.is_cheri_purecap([CPUArchitecture.AARCH64]):
             # emulated TLS is currently required for purecap, but breaks hybrid
             result.append("-femulated-tls")
-        if xtarget.is_aarch64(include_purecap=True):
-            # When building with the Morello compiler, we use the Morello CPU as the basline.
-            # This makes a noticeable difference for plain aarch64 (v8.2 instead of v8.0) and also enables a few
-            # extensions that are not enabled by -march=morello (crypto+crc32
-            result.append("-mcpu=rainier")
-            if not xtarget.is_hybrid_or_purecap_cheri():
-                # -mcpu=rainier enables capabilities unless -march=morello+noa64c is also passed
-                result.append("-march=morello+noa64c")
         return result
 
 
@@ -892,6 +898,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
     shortname = "Morello-Baremetal"
     os_prefix = "baremetal-"
+    uses_morello_llvm = True
 
     @property
     def cmake_system_name(self) -> str:
