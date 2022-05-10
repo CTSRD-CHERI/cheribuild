@@ -614,13 +614,9 @@ class BuildKXMLGUI(KDECMakeProject):
 
 class BuildKDeclarative(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/frameworks/kdeclarative.git")
-    dependencies = ["kpackage", "kpackage-native", "kio", "kiconthemes", "knotifications", "qtdeclarative", "kio"]
+    dependencies = ["kpackage", "kpackage-native", "kio", "kiconthemes", "knotifications", "qtdeclarative", "kio",
+                    "libepoxy"]
     _has_qt_designer_plugin = True
-
-    def setup(self):
-        super().setup()
-        # We build Qt wihtout OpenGL support, so we shouldn't build the OpenGL code.
-        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_epoxy=True)
 
 
 class BuildKInit(KDECMakeProject):
