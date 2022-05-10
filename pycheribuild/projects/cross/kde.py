@@ -802,7 +802,7 @@ class BuildBreezeStyle(KDECMakeProject):
     target = "breeze"
     repository = GitRepository("https://invent.kde.org/plasma/breeze.git")
     dependencies = ["kdecoration", "kconfig", "kcoreaddons", "kguiaddons", "kiconthemes", "kconfigwidgets",
-                    "kwindowsystem", "kframeworkintegration"]
+                    "kwindowsystem", "kcmutils", "kframeworkintegration"]
 
 
 class BuildKIdleTime(KDECMakeProject):
@@ -828,7 +828,8 @@ class BuildKScreenLocker(KDECMakeProject):
     target = "kscreenlocker"
     repository = GitRepository("https://invent.kde.org/plasma/kscreenlocker.git",
                                old_urls=[b"https://invent.kde.org/arichardson/kscreenlocker.git"])
-    dependencies = ["kwindowsystem", "kxmlgui", "kwindowsystem", "kidletime", "libxcb", "kwayland", "layer-shell-qt"]
+    dependencies = ["kwindowsystem", "kcmutils", "kxmlgui", "kwindowsystem", "kidletime", "libxcb", "kwayland",
+                    "layer-shell-qt"]
     _uses_wayland_scanner = True
 
 
