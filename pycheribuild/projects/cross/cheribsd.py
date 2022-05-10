@@ -1821,9 +1821,9 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
 
     def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "typing.List[str]":
         if self.kernel_config is not None:
-            return [self.kernel_config]
+            return [self.kernel_config] + self.extra_configs
         configs = self._get_all_kernel_configs()
-        return [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kABI=None)]
+        return [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kABI=None)] + self.extra_configs
 
     def get_kernel_install_path(self, kernconf: str = None) -> Path:
         """ Get the installed kernel path for an MFS kernel config that has been built. """
