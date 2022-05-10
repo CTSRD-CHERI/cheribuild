@@ -128,12 +128,13 @@ class BuildLibEpoxy(CrossCompileMesonProject):
     target = "libepoxy"
     dependencies = ["libglvnd"]
     repository = GitRepository("https://github.com/anholt/libepoxy",
-                               temporary_url_override="https://github.com/arichardson/libepoxy",
-                               url_override_reason="https://github.com/anholt/libepoxy/pull/261")
+                               old_urls=[b"https://github.com/arichardson/libepoxy"])
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def setup(self):
         super().setup()
+        self.add_meson_options(egl="yes")  # needed by KWin
+        self.add_meson_options(x11=True, glx="yes")  # Keep this until we go wayland-only.
 
 
 class BuildVirglRenderer(CrossCompileMesonProject):
