@@ -1753,25 +1753,27 @@ class GitRepository(SourceRepository):
         if not src_dir.exists():
             return
 
-        # handle repositories that have moved:
-        if src_dir.exists() and self.old_urls:
+        def get_remote_name():
             # Try to get the name of the default remote from the configured upstream branch
-            remote_name = None
             try:
-                revparse = run_command(
-                    ["git", "-C", base_project_source_dir, "rev-parse", "--symbolic-full-name",
-                     "@{upstream}"], capture_output=True, capture_error=True).stdout.decode("utf-8")  # type: str
+                revparse = run_command(["git", "-C", base_project_source_dir, "rev-parse", "--symbolic-full-name",
+                                        "@{upstream}"], run_in_pretend_mode=True, capture_output=True,
+                                       capture_error=True).stdout.decode("utf-8")
                 if revparse.startswith("refs/remotes") and len(revparse.split("/")) > 3:
-                    remote_name = revparse.split("/")[2]
+                    return revparse.split("/")[2]
                 else:
                     current_project.warning("Could not parse git rev-parse output. ",
                                             "Output was", revparse, "-- will not attempt to update remote URLs.")
             except subprocess.CalledProcessError as e:
                 if b"no upstream configured" in e.stderr:
-                    remote_name = None
+                    return None
                 else:
                     current_project.warning("git rev-parse failed, will not attempt to update remote URLs:", e)
+            return None
 
+        # handle repositories that have moved:
+        if src_dir.exists() and self.old_urls:
+            remote_name = get_remote_name()
             if remote_name is not None:
                 remote_url = run_command("git", "remote", "get-url", remote_name, capture_output=True,
                                          cwd=src_dir).stdout.strip()
@@ -1818,7 +1820,9 @@ class GitRepository(SourceRepository):
                 current_project.warning("You are trying to build the", current_branch,
                                         "branch. You should be using", default_branch)
                 if current_project.query_yes_no("Would you like to change to the " + default_branch + " branch?"):
-                    run_command("git", "checkout", default_branch, cwd=src_dir)
+                    remote_name = get_remote_name()
+                    checkout_args = ["--track", f"{remote_name}/{default_branch}"] if remote_name else [default_branch]
+                    run_command("git", "checkout", *checkout_args, cwd=src_dir)
                 else:
                     current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
                                                          error_message="Wrong branch: " + current_branch)
