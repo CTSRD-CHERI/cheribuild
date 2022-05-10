@@ -833,26 +833,6 @@ class BuildKScreenLocker(KDECMakeProject):
     _uses_wayland_scanner = True
 
 
-class BuildKWaylandServer(KDECMakeProject):
-    target = "kwayland-server"
-    repository = GitRepository("https://invent.kde.org/plasma/kwayland-server.git",
-                               temporary_url_override="https://invent.kde.org/arichardson/kwayland-server.git",
-                               url_override_reason="https://invent.kde.org/plasma/kwayland-server/-/merge_requests/302")
-
-    @classmethod
-    def dependencies(cls, config) -> "list[str]":
-        return super().dependencies(config) + ["kwayland", "libinput"]
-
-    def setup(self):
-        super().setup()
-        if not self.compiling_for_host():
-            # We need to find the host Qt libraries for qwaylandscanner_kde
-            self.add_cmake_options(NATIVE_PREFIX=";".join([
-                str(BuildQtBase.get_install_dir(self, cross_target=CompilationTargets.NATIVE)),
-                str(BuildKCoreAddons.get_install_dir(self, cross_target=CompilationTargets.NATIVE)),
-            ]))
-
-
 class BuildKDECliTools(KDECMakeProject):
     target = "kde-cli-tools"
     repository = GitRepository("https://invent.kde.org/plasma/kde-cli-tools.git")
@@ -876,8 +856,7 @@ class BuildKWin(KDECMakeProject):
     @classmethod
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config) + ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker",
-                                                 "plasma-framework", "libinput", "qttools", "kwayland-server",
-                                                 "libepoxy"]
+                                                 "plasma-framework", "libinput", "qttools", "libepoxy"]
         # TODO: mesa for libgbm
         if cls.use_mesa:
             result.append("mesa")
@@ -890,6 +869,12 @@ class BuildKWin(KDECMakeProject):
         # The DRM and wayland EGL backends need libdrm and libgbm, since we don't use those right now make them
         # optional to avoid having to build mesa+dependencies.
         self.add_cmake_options(KWIN_BUILD_DRM_BACKEND=self.use_mesa, KWIN_BUILD_WAYLAND_EGL=self.use_mesa)
+        if not self.compiling_for_host():
+            # We need to find the host Qt libraries for qwaylandscanner_kde.
+            self.add_cmake_options(NATIVE_PREFIX=";".join([
+                str(BuildQtBase.get_install_dir(self, cross_target=CompilationTargets.NATIVE)),
+                str(BuildKCoreAddons.get_install_dir(self, cross_target=CompilationTargets.NATIVE)),
+            ]))
 
 
 class BuildLibKScreen(KDECMakeProject):
