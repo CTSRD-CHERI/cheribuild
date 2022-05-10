@@ -852,8 +852,8 @@ class BuildKWin(KDECMakeProject):
     @classmethod
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config) + ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker",
-                                                 "plasma-framework", "libinput", "qttools", "libepoxy", "libxcvt"]
-        # TODO: mesa for libgbm
+                                                 "plasma-framework", "libinput", "qttools", "libepoxy", "libxcvt",
+                                                 "lcms2"]
         if cls.use_mesa:
             result.append("mesa")
         if cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
