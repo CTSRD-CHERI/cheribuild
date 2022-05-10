@@ -3981,6 +3981,11 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             self.add_meson_options(prefix=self.install_prefix)
         else:
             self.add_meson_options(prefix=self.install_dir)
+        # Meson setup --reconfigure does not update cached dependencies, we have to manually run
+        # `meson configure --clearcache` (https://github.com/mesonbuild/meson/issues/6180).
+        if self.force_configure and not self.with_clean and (self.build_dir / "meson-info").exists():
+            self.configure_args.append("--reconfigure")
+            self.run_cmd(self.configure_command, "configure", "--clearcache", cwd=self.build_dir)
         self.configure_args.append(str(self.source_dir))
         self.configure_args.append(str(self.build_dir))
         super().configure(**kwargs)
