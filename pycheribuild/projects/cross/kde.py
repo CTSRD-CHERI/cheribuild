@@ -852,7 +852,7 @@ class BuildKWin(KDECMakeProject):
     @classmethod
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config) + ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker",
-                                                 "plasma-framework", "libinput", "qttools", "libepoxy"]
+                                                 "plasma-framework", "libinput", "qttools", "libepoxy", "libxcvt"]
         # TODO: mesa for libgbm
         if cls.use_mesa:
             result.append("mesa")

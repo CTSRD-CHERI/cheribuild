@@ -381,6 +381,11 @@ class BuildLibXFont(X11AutotoolsProject):
             self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
 
 
+class BuildLibcvt(X11MesonProject):
+    target = "libxcvt"
+    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcvt.git")
+
+
 class BuildLibXFt(X11AutotoolsProject):
     target = "libxft"
     dependencies = ["fontconfig", "freetype2", "libxrender"]
