@@ -30,6 +30,7 @@
 import copy
 import inspect
 import os
+import re
 import shlex
 import sys
 import typing
@@ -671,6 +672,18 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         from ..projects.cross.cheribsd import BuildCHERIBSD
         return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
 
+    def cheribsd_version(self):
+        pattern = re.compile(r"#define\s+__CheriBSD_version\s+([0-9]+)")
+        try:
+            with open(self.sysroot_dir / "usr/include/sys/param.h") as f:
+                for line in f:
+                    match = pattern.match(line)
+                    if match:
+                        return int(match.groups()[0])
+        except FileNotFoundError:
+            pass
+        return 0
+
 
 # Custom target info for FETT projects to ensure
 class CheriBSDFettTargetInfo(CheriBSDTargetInfo):
@@ -716,11 +729,16 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
         return ["morello-llvm-native"]
 
     @classmethod
-    def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs):
-        result = super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs)
+    def essential_compiler_and_linker_flags_impl(cls, instance: "CheriBSDTargetInfo", *args, xtarget, **kwargs):
+        result = super().essential_compiler_and_linker_flags_impl(instance, *args, xtarget=xtarget, **kwargs)
+        version = instance.cheribsd_version()
+        if version >= 20220511:
+            # Use new var-args ABI
+            result.extend(["-Xclang", "-morello-vararg=new"])
         if xtarget.is_cheri_purecap([CPUArchitecture.AARCH64]):
-            # emulated TLS is currently required for purecap, but breaks hybrid
-            result.append("-femulated-tls")
+            if version < 20220511:
+                # Use emulated TLS on older purecap
+                result.append("-femulated-tls")
         return result
 
 
