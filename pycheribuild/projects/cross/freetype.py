@@ -41,7 +41,7 @@ class BuildFreeType2(CrossCompileMesonProject):
 
     def setup(self):
         super().setup()
-        self.add_meson_options(tests="enabled")
+        self.add_meson_options(tests="enabled", png="enabled", zlib="enabled", bzip2="enabled")
 
     def run_tests(self):
         self.run_cmd(self.source_dir / "tests/scripts/download-test-fonts.py", cwd=self.source_dir / "tests")
