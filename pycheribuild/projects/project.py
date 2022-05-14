@@ -3916,6 +3916,8 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             self.configure_args.extend(["--native-file", str(self._toolchain_file)])
         if self.force_configure and not self.with_clean and (self.build_dir / "meson-info").exists():
             self.configure_args.append("--reconfigure")
+        # Don't use bundled fallback dependencies, we always want to use the (potentially patched) system packages.
+        self.configure_args.append("--wrap-mode=nofallback")
         self.add_meson_options(**self.build_type.to_meson_args())
         if self.use_lto:
             self.add_meson_options(b_lto=True, b_lto_threads=self.config.make_jobs,
