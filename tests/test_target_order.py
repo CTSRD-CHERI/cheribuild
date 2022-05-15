@@ -203,7 +203,7 @@ def _qtbase_x11_deps(suffix):
                                    "libxcb-keysyms-", "shared-mime-info-", "dejavu-fonts-", "libexpat-", "dbus-",
                                    "libpng-", "freetype2-", "fontconfig-", "libjpeg-turbo-", "sqlite-",
                                    "linux-input-h-", "mtdev-", "libevdev-", "libudev-devd-", "epoll-shim-",
-                                   "libinput-", "libglvnd-")]
+                                   "libinput-", "libglvnd-", "libpciaccess-", "libdrm-")]
     if suffix != "native":
         result.insert(result.index("shared-mime-info-" + suffix), "shared-mime-info-native")
     return result

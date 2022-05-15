@@ -139,7 +139,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                          InstallDejaVuFonts.get_class_for_target(rootfs_target).target,
                          "dbus", "fontconfig", "libpng", "libjpeg-turbo", "sqlite", "libinput"])
             if cls.use_opengl:
-                deps.append("libglvnd")
+                deps.extend(["libglvnd", "libdrm"])
         return deps
 
     @classmethod
