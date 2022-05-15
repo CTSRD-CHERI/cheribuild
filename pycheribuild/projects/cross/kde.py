@@ -902,9 +902,10 @@ class BuildKActivityManagerD(KDECMakeProject):
 
 class BuildPlasmaWorkspace(KDECMakeProject):
     target = "plasma-workspace"
-    repository = GitRepository("https://invent.kde.org/plasma/plasma-workspace.git",
-                               temporary_url_override="https://invent.kde.org/arichardson/plasma-workspace.git",
-                               url_override_reason="Lots of changes to support running without DBus")
+    repository = GitRepository(
+        "https://invent.kde.org/plasma/plasma-workspace.git",
+        temporary_url_override="https://invent.kde.org/arichardson/plasma-workspace.git",
+        url_override_reason="https://invent.kde.org/plasma/plasma-workspace/-/merge_requests/1727")
     dependencies = ["xprop", "xsetroot", "plasma-framework", "kwin", "breeze", "kidletime", "kitemmodels", "kcmutils",
                     "knotifyconfig", "kded", "kinit", "kscreenlocker", "libkscreen", "libxft", "libxtst", "kpeople",
                     "kparts", "prison", "krunner", "kactivities-stats", "libksysguard", "kunitconversion", "kwallet",
@@ -912,7 +913,8 @@ class BuildPlasmaWorkspace(KDECMakeProject):
 
     def setup(self):
         super().setup()
-        self.add_cmake_options(CHERI_DEMO=True)  # TODO: build everything
+        # Qalculate is only needed for the calculator runner, skip that for now
+        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_Qalculate=True)
 
 
 class BuildQQC2DesktopStyle(KDECMakeProject):
