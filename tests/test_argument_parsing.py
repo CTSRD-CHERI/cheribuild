@@ -58,6 +58,7 @@ def _parse_arguments(args: typing.List[str], *, config_file=Path("/this/does/not
     ConfigLoaderBase._cheri_config.loader.unknown_config_option_is_error = not allow_unknown_options
     ConfigLoaderBase._cheri_config.load()
     # pprint.pprint(vars(ret))
+    assert isinstance(ConfigLoaderBase._cheri_config, DefaultCheriConfig)
     return ConfigLoaderBase._cheri_config
 
 
@@ -108,7 +109,7 @@ def test_skip_update():
                  ["disk-image-riscv64-purecap", "run-riscv64-purecap"],
                  id="run-start-after"),
 ])
-def test_target_subsets(args, expected):
+def test_target_subsets(args: "list[str]", expected):
     config = _parse_arguments(args)
     selected = list(x.name for x in target_manager.get_all_chosen_targets(config))
     assert selected == expected
@@ -143,7 +144,7 @@ def test_target_subsets(args, expected):
                   "kauth-amd64"],
                  id="kauth-amd64-without-qt-without-x11"),  # skips most dependencies but includes kcoreaddons-native
 ])
-def test_skip_dependency_regex(args, expected):
+def test_skip_dependency_regex(args: "list[str]", expected):
     config = _parse_arguments(args)
     selected = list(x.name for x in target_manager.get_all_chosen_targets(config))
     assert selected == expected
@@ -165,7 +166,7 @@ def test_invalid_skip_dependency_regex():
                  ValueError, "selected target list is empty after --start-after/--start-with filtering",
                  id="run-start-after-empty"),
 ])
-def test_target_subsets_bad(args, exception_type, errmessage):
+def test_target_subsets_bad(args: "list[str]", exception_type, errmessage: str):
     with pytest.raises(exception_type, match=errmessage):
         target_manager.get_all_chosen_targets(_parse_arguments(args))
 
@@ -202,7 +203,7 @@ def test_per_project_override():
     pytest.param("upstream-llvm", "upstream-llvm"),  # no -native target for upstream-llvm
     pytest.param("qemu", "qemu"),  # same for QEMU
 
-    # These used to have defaults but that is confusing now. So check that they no longe rhave default values
+    # These used to have defaults but that is confusing now. So check that they no longer have default values
     pytest.param("cheribsd", None),
     pytest.param("disk-image", None),
     pytest.param("run", None),
@@ -268,7 +269,7 @@ def test_cross_compile_project_inherits():
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_riscv.build_tests, "qtbase-mips should have a false override for build-tests"
 
-    # Check that we hav ethe same behaviour when loading from json:
+    # Check that we have the same behaviour when loading from json:
     _parse_config_file_and_args(b'{"qtbase-native/build-tests": true }')
     assert qtbase_native.build_tests, "qtbase-native build-tests should be set on cmdline"
     assert not qtbase_riscv.build_tests, "qtbase-mips build-tests should default to false"
@@ -369,7 +370,7 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assert cheribsd_riscv_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
     assert not cheribsd_riscv_hybrid.debug_kernel, "riscv64-hybrid should have a false override for debug-kernel"
 
-    # Check that we hav ethe same behaviour when loading from json:
+    # Check that we have the same behaviour when loading from json:
     _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true }')
     assert cheribsd_riscv_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
     assert cheribsd_riscv_hybrid.debug_kernel, "riscv64-hybrid should inherit debug-kernel from cheribsd(default)"
@@ -580,7 +581,7 @@ class SystemClangIfExistsElse:
     pytest.param("cheribsd-riscv64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
                  ["--cheribsd-riscv64/toolchain-path", "/path/to/custom/toolchain"]),
 ])
-def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, extra_args):
+def test_freebsd_toolchains(target: str, expected_path, kind: FreeBSDToolchainKind, extra_args):
     # Avoid querying bmake for the objdir
     args = ["--" + target + "/toolchain", kind.value, "--build-root=/some/path/that/does/not/exist", "--pretend"]
     args.extend(extra_args)
@@ -751,7 +752,7 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
                   "--cheribsd-mfs-root-kernel-riscv64-purecap/kernel-config=CHERI-QEMU-MFS-ROOT"],
                  ["CHERI-QEMU-MFS-ROOT"]),
 ])
-def test_mfsroot_kernel_configs(target, config_options: "list[str]", expected_kernels):
+def test_mfsroot_kernel_configs(target: str, config_options: "list[str]", expected_kernels: "list[str]"):
     config = _parse_arguments(config_options)
     project = _get_target_instance(target, config, BuildCheriBsdMfsKernel)
     assert project.get_kernel_configs() == expected_kernels
@@ -974,7 +975,7 @@ def test_expand_tilde_and_env_vars(monkeypatch):
 
 def test_source_dir_option_when_reusing_git_repo(monkeypatch):
     """Passing the --foo/source-dir=/some/path should also work if the target reuses another target's source dir"""
-    # By default compiler-rt-native should reuse the LLVM source dir
+    # By default, compiler-rt-native should reuse the LLVM source dir.
     config = _parse_config_file_and_args(b'{ "llvm/source-directory": "/custom/llvm/dir" }', )
     assert str(_get_target_instance("llvm-native", config).source_dir) == "/custom/llvm/dir"
     assert str(_get_target_instance("compiler-rt-native", config).source_dir) == "/custom/llvm/dir/compiler-rt"
