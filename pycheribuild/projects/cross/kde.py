@@ -1066,16 +1066,41 @@ class BuildKonsole(KDECMakeProject):
                     "kwindowsystem", "kxmlgui", "qtbase"]
 
 
+# TODO: fails to build due to exiv2 usage of auto_ptr
+# class BuildLibKExiv2(KDECMakeProject):
+#     target = "libkexiv2"
+#     repository = GitRepository("https://invent.kde.org/graphics/libkexiv2.git")
+#
+#     @classmethod
+#     def dependencies(cls, config) -> "list[str]":
+#         return super().dependencies(config) + ["exiv2"]
+
+
 class BuildOkular(KDECMakeProject):
     target = "okular"
-    dependencies = ["poppler", "threadweaver", "kparts", "kio", "kiconthemes"]  # ktpy
+    dependencies = ["poppler", "threadweaver", "kparts", "kio", "kiconthemes", "kpty", "kwallet"]
+    # TODO: after the next exiv2 release add "libkexiv2" (currently fails to build due to auto_ptr).
     repository = GitRepository("https://invent.kde.org/graphics/okular.git",
-                               temporary_url_override="https://invent.kde.org/arichardson/okular.git",
-                               url_override_reason="https://invent.kde.org/graphics/okular/-/merge_requests/456")
+                               old_urls=[b"https://invent.kde.org/arichardson/okular.git"])
 
     def setup(self):
         super().setup()
-        self.add_cmake_options(ALLOW_OPTIONAL_DEPENDENCIES=True)
+        # Disable dependencies for various file formats that we don't need yet. PDF should be sufficient for now.
+        disabled_dependencies = [
+            "KF5DocTools",  # This doesn't work when cross-compiling.
+            "KF5JS",  # JS in PDF documents would be nice but this is almost certainly broken for CHERI...
+            "KF5Purpose",  # Could add this framework (only required for enabling the share menu).
+            "Qt5TextToSpeech",  # We don't need speech features.
+            "LibSpectre",  # We don't need postscript support.
+            "CHM", "LibZip",  # We don't need CHM support.
+            "DjVuLibre",  # We don't need DjVu support.
+            "Discount",  # We don't need markdown support.
+            "EPub",  # We don't need EPub support.
+            "QMobipocket",  # We don't need Mobipocket support.
+            "KF5KHtml",  # no need for HTML support, also KHtml is almost certainly broken for CHERI.
+            "KF5KExiv2",  # Doesn't build against the current version of exiv2.
+        ]
+        self.add_cmake_options(BUILD_DESKTOP=True, FORCE_NOT_REQUIRED_DEPENDENCIES=";".join(disabled_dependencies))
 
 
 class BuildKTextEditor(KDECMakeProject):
