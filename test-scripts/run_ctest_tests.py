@@ -56,12 +56,14 @@ def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
                     host_cmake_path = line[len(b"CMAKE_COMMAND:INTERNAL="):].strip()
                     boot_cheribsd.info("Host CMake path is ", host_cmake_path)
                     break
-    ctest_file = Path(args.build_dir, "CTestTestfile.cmake")
-    if host_cmake_path and ctest_file.exists():
+    for ctest_file in Path(args.build_dir).rglob("CTestTestfile.cmake"):
         boot_cheribsd.info("Updating references to ${CMAKE_COMMAND} in ", ctest_file)
         ctest_contents = ctest_file.read_bytes()
         num_host_paths = ctest_contents.count(host_cmake_path)
         if num_host_paths > 0:
+            if not host_cmake_path:
+                boot_cheribsd.failure("Cannot update host CMake path in ", ctest_file, exit=True)
+                continue
             new_contents = ctest_contents.replace(host_cmake_path, b"/cmake/bin/cmake")
             if not boot_cheribsd.PRETEND:
                 ctest_file.write_bytes(new_contents)
