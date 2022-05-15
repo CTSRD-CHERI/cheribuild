@@ -243,6 +243,7 @@ class ConfigLoaderBase(object):
     _json = {}  # type: typing.Dict[str, _LoadedConfigValue]
     is_completing_arguments = "_ARGCOMPLETE" in os.environ
     is_generating_readme = "_GENERATING_README" in os.environ
+    is_running_unit_tests = False
     _argcomplete_prefix = get_argcomplete_prefix() if is_completing_arguments else None
     _argcomplete_prefix_includes_slash = "/" in _argcomplete_prefix if _argcomplete_prefix else None
 
@@ -312,7 +313,11 @@ class ConfigLoaderBase(object):
                 if not all_options:
                     error_message("Internal argparse API change, cannot detect available command line options.")
                     all_options = ["--" + opt for opt in self.options.keys()]
-                suggestions = difflib.get_close_matches(x, all_options)
+                # Suggesting the correct config option is quite expensive (currently we have to scan over ~64K
+                # options), so we only do this when not running tests.
+                suggestions = None
+                if not self.is_running_unit_tests:
+                    suggestions = difflib.get_close_matches(x, all_options)
                 errmsg = "unknown argument '" + x + "'"
                 if suggestions:
                     errmsg += ". Did you mean " + " or ".join(suggestions) + "?"
