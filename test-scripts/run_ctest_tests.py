@@ -68,6 +68,8 @@ def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
             if not boot_cheribsd.PRETEND:
                 ctest_file.write_bytes(new_contents)
             boot_cheribsd.info("Updated ", num_host_paths, " references to ${CMAKE_COMMAND} in ", ctest_file)
+    # Add CMake/CTest to $PATH
+    qemu.checked_run("export PATH=$PATH:/cmake/bin")
 
 
 def run_ctest_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
