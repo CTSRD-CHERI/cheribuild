@@ -23,6 +23,7 @@ from pycheribuild.projects.run_qemu import BuildAll, BuildAndRunCheriBSD, Launch
 from pycheribuild.projects.sdk import BuildCheriBSDSdk, BuildSdk
 from pycheribuild.projects.spike import RunCheriSpikeBase
 from pycheribuild.targets import Target, target_manager
+from pycheribuild.config.compilation_targets import enable_hybrid_for_purecap_rootfs_targets
 from .setup_mock_chericonfig import setup_mock_chericonfig
 
 
@@ -354,6 +355,11 @@ def test_hybrid_targets(enable_hybrid_targets):
         if not enable_hybrid_targets and xtarget.get_rootfs_target().is_cheri_hybrid():
             return True
 
+        # Ignore explicitly requested hybrid-for-purecap-rootfs targets
+        if enable_hybrid_for_purecap_rootfs_targets() and xtarget.get_rootfs_target().is_cheri_purecap():
+            if target.name not in expected_hybrid_targets:
+                return False
+
         # We expect certain tagets to be built hybrid: CheriBSD/disk image/GDB/LLVM/run
         if issubclass(cls, (BuildCHERIBSD, LaunchCheriBSD, BuildCheriBsdSysrootArchive, BuildDiskImageBase,
                             BuildGDBBase, BuildCheriLLVM, BuildMorelloLLVM, LaunchFVPBase, RunCheriSpikeBase)):
@@ -379,4 +385,5 @@ def test_hybrid_targets(enable_hybrid_targets):
 
     unexpected_hybrid_targets = filter(should_include_target, all_hybrid_targets)
     # Currently this list should only include the Syzkaller targets:
-    assert [t.name for t in unexpected_hybrid_targets] == ["cheri-syzkaller", "run-syzkaller"]
+    expected_hybrid_targets = ["cheri-syzkaller", "run-syzkaller"]
+    assert [t.name for t in unexpected_hybrid_targets] == expected_hybrid_targets

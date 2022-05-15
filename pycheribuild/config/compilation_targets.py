@@ -1045,7 +1045,7 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
         return True
 
 
-def _enable_hybrid_for_purecap_rootfs_targets():
+def enable_hybrid_for_purecap_rootfs_targets():
     # Checking sys.argv here is rather ugly, but we can't make this depend on parsing arguments first since the list of
     # command line options depends on the supported targets.
     if os.getenv("CHERIBUILD_ENABLE_HYBRID_FOR_PURECAP_ROOTFS_TARGETS", None) is not None:
@@ -1182,7 +1182,7 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_SUPPORTED_CHERIBSD_TARGETS = ALL_CHERIBSD_NON_CHERI_TARGETS + ALL_CHERIBSD_PURECAP_TARGETS
     ALL_CHERIBSD_TARGETS_WITH_HYBRID_FOR_PURECAP_ROOTFS = (ALL_SUPPORTED_CHERIBSD_TARGETS +
                                                            ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
-    if _enable_hybrid_for_purecap_rootfs_targets():
+    if enable_hybrid_for_purecap_rootfs_targets():
         ALL_SUPPORTED_CHERIBSD_TARGETS.extend(ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
     ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + [BasicCompilationTargets.NATIVE]
     ALL_FREEBSD_AND_CHERIBSD_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + ALL_SUPPORTED_FREEBSD_TARGETS
