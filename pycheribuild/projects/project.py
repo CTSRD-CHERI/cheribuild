@@ -1820,9 +1820,17 @@ class GitRepository(SourceRepository):
                 current_project.warning("You are trying to build the", current_branch,
                                         "branch. You should be using", default_branch)
                 if current_project.query_yes_no("Would you like to change to the " + default_branch + " branch?"):
-                    remote_name = get_remote_name()
-                    checkout_args = ["--track", f"{remote_name}/{default_branch}"] if remote_name else [default_branch]
-                    run_command("git", "checkout", *checkout_args, cwd=src_dir)
+                    try:
+                        run_command("git", "checkout", default_branch, cwd=src_dir, capture_error=True)
+                    except subprocess.CalledProcessError as e:
+                        # If the branch doesn't exist and there are multiple upstreams with that branch, use --track
+                        # to create a new branch that follows the upstream one
+                        if e.stderr.strip().endswith(b") remote tracking branches"):
+                            run_command("git", "checkout", "--track", f"{get_remote_name()}/{default_branch}",
+                                        cwd=src_dir, capture_error=True)
+                        else:
+                            raise e
+
                 else:
                     current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
                                                          error_message="Wrong branch: " + current_branch)
