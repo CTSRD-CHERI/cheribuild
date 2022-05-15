@@ -894,6 +894,12 @@ class BuildKQuickCharts(KDECMakeProject):
     dependencies = ["qtquickcontrols2"]
 
 
+class BuildKActivityManagerD(KDECMakeProject):
+    target = "kactivitymanagerd"
+    repository = GitRepository("https://invent.kde.org/plasma/kactivitymanagerd.git")
+    dependencies = ["kcrash", "kdbusaddons", "ki18n", "kio", "kxmlgui", "kglobalaccel", "boost"]
+
+
 class BuildPlasmaWorkspace(KDECMakeProject):
     target = "plasma-workspace"
     repository = GitRepository("https://invent.kde.org/plasma/plasma-workspace.git",
@@ -902,7 +908,7 @@ class BuildPlasmaWorkspace(KDECMakeProject):
     dependencies = ["xprop", "xsetroot", "plasma-framework", "kwin", "breeze", "kidletime", "kitemmodels", "kcmutils",
                     "knotifyconfig", "kded", "kinit", "kscreenlocker", "libkscreen", "libxft", "libxtst", "kpeople",
                     "kparts", "prison", "krunner", "kactivities-stats", "libksysguard", "kunitconversion", "kwallet",
-                    "ktexteditor", "kwayland", "layer-shell-qt", "kquickcharts"]
+                    "ktexteditor", "kwayland", "layer-shell-qt", "kquickcharts", "kactivitymanagerd"]
 
     def setup(self):
         super().setup()
