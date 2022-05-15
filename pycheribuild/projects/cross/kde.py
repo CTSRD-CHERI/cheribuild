@@ -1023,6 +1023,7 @@ class BuildPoppler(CrossCompileCMakeProject):
         super().setup()
         # Avoid boost dependency:
         self.add_cmake_options(ENABLE_BOOST=False)
+        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_Boost=True)
         self.add_cmake_options(TESTDATADIR=self.source_dir / "testdata")
 
     def update(self):
