@@ -932,8 +932,13 @@ class BuildPlasmaDesktop(KDECMakeProject):
     repository = GitRepository(
         "https://invent.kde.org/plasma/plasma-desktop.git",
         temporary_url_override="https://invent.kde.org/arichardson/plasma-desktop.git",
-        url_override_reason="needs e.g. https://invent.kde.org/plasma/plasma-desktop/-/merge_requests/532")
-    dependencies = ["plasma-workspace", "qqc2-desktop-style", "libxkbfile", "xkeyboard-config"]
+        url_override_reason="https://invent.kde.org/plasma/plasma-desktop/-/merge_requests/944")
+    dependencies = ["plasma-workspace", "kirigami", "krunner", "kwallet", "qqc2-desktop-style",
+                    "libxkbfile", "xkeyboard-config"]
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_KF5KDELibs4Support=True)
 
 
 class BuildSystemSettings(KDECMakeProject):
