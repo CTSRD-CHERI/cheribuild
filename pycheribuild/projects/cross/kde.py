@@ -946,8 +946,7 @@ class BuildPlasmaDesktop(KDECMakeProject):
 class BuildSystemSettings(KDECMakeProject):
     target = "systemsettings"
     repository = GitRepository("https://invent.kde.org/plasma/systemsettings.git",
-                               temporary_url_override="https://invent.kde.org/arichardson/systemsettings.git",
-                               url_override_reason="Allow starting systemsettings without DBus",
+                               old_urls=[b"https://invent.kde.org/arichardson/systemsettings.git"],
                                default_branch="master", force_branch=True)
     dependencies = ["plasma-workspace"]
 
