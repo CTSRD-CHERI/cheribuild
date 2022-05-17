@@ -1896,6 +1896,10 @@ else:
 
 
 class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.add_required_system_tool("bsdtar", apt="libarchive-tools")
+
     @property
     def release_objdir(self):
         result = self.objdir / "release"
