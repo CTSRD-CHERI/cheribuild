@@ -160,12 +160,14 @@ class KernelConfigFactory:
             assert False, "Should not be reached..."
         return self.platform_name_map[platform]
 
-    def get_flag_names(self, platform, kABI, mfsroot=False, fuzzing=False):
+    def get_flag_names(self, platform, kABI, mfsroot=False, fuzzing=False, benchmark=False):
         flags = []
         if mfsroot:
             flags.append("MFS{sep}ROOT".format(sep=self.separator))
         if fuzzing:
             flags.append("FUZZ")
+        if benchmark:
+            flags.append("NODEBUG")
         return flags
 
     def _prepare_kernconf_context(self, platform, kABI, base_context=None, **kwargs):
@@ -207,9 +209,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         flags = []
         if fett:
             flags.append("FETT")
-        flags += super().get_flag_names(platform, kABI, mfsroot=mfsroot, fuzzing=fuzzing)
-        if benchmark:
-            flags.append("NODEBUG")
+        flags += super().get_flag_names(platform, kABI, mfsroot=mfsroot, fuzzing=fuzzing, benchmark=benchmark)
         return flags
 
     def _prepare_kernconf_context(self, platform, kABI, **kwargs):
@@ -265,16 +265,16 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
         elif kABI == KernelABI.PURECAP:
             return "MORELLO{sep}PURECAP".format(sep=self.separator)
 
-    def get_flag_names(self, platform, kABI, default=False, mfsroot=False):
-        flags = []
-        flags += super().get_flag_names(platform, kABI, mfsroot=mfsroot)
-        return flags
+    def get_flag_names(self, platform, kABI, default=False, **kwargs):
+        return super().get_flag_names(platform, kABI, **kwargs)
 
     def make_all(self):
         configs = []
         # Generate QEMU/FVP kernels
         for kABI in KernelABI:
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True))
+            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
+                                            benchmark=True))
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
                                             mfsroot=True))
 
