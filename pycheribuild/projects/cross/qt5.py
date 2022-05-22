@@ -188,9 +188,12 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 # Use my (rejected) patch to add additional data directories for macos
                 # (https://codereview.qt-project.org/c/qt/qtbase/+/238640), so that we can find shared data and run
                 # KDE unit tests/applications correctly
-                from .kde import BuildKCoreAddons
                 self.configure_args.extend(["-additional-datadir", self.install_dir / "share"])
-                kde_install_dir = BuildKCoreAddons.get_install_dir(self)
+                # Ideally we would check the KCoreAddons install dir here, but that creates a cyclic dependency.
+                # Instead, we use BuildSharedMimeInfo since we know that it installs to the KDE_PREFIX.
+                smi_instance = BuildSharedMimeInfo.get_instance(self)
+                kde_install_dir = smi_instance.install_dir
+                assert smi_instance.get_default_install_dir_kind() == DefaultInstallDir.KDE_PREFIX
                 if kde_install_dir != self.install_dir:
                     self.configure_args.extend(["-additional-datadir", kde_install_dir / "share"])
                 # 5.15 hard-codes QMAKE_APPLE_DEVICE_ARCHS as x86_64
