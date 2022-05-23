@@ -1084,7 +1084,7 @@ class BuildKonsole(KDECMakeProject):
 
 class BuildOkular(KDECMakeProject):
     target = "okular"
-    dependencies = ["poppler", "threadweaver", "kparts", "kio", "kiconthemes", "kpty", "kwallet"]
+    dependencies = ["poppler", "threadweaver", "kparts", "kio", "kiconthemes", "kpty", "kwallet", "libtiff"]
     # TODO: after the next exiv2 release add "libkexiv2" (currently fails to build due to auto_ptr).
     repository = GitRepository("https://invent.kde.org/graphics/okular.git",
                                old_urls=[b"https://invent.kde.org/arichardson/okular.git"])
