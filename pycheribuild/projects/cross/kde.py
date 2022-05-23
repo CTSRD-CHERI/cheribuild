@@ -902,6 +902,12 @@ class BuildKActivityManagerD(KDECMakeProject):
 
 class BuildPlasmaWorkspace(KDECMakeProject):
     target = "plasma-workspace"
+    # https://gitlab.kitware.com/cmake/cmake/-/issues/21977#note_1101186
+    # Workaround for ninja: error: dependency cycle: libkworkspace/kworkspace_autogen/timestamp ->
+    # libkworkspace/login1_manager_interface.moc -> libkworkspace/login1_manager_interface.h ->
+    # libkworkspace/kworkspace_autogen -> libkworkspace/CMakeFiles/kworkspace_autogen ->
+    # libkworkspace/kworkspace_autogen/timestamp
+    _default_cmake_generator_arg = "-GUnix Makefiles"
     repository = GitRepository(
         "https://invent.kde.org/plasma/plasma-workspace.git",
         temporary_url_override="https://invent.kde.org/arichardson/plasma-workspace.git",
