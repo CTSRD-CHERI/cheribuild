@@ -52,17 +52,55 @@ class BuildDBus(CrossCompileCMakeProject):
     def install(self, **kwargs):
         super().install()
         if not self.compiling_for_host() and self.target_info.is_freebsd():
-            rc_file = self.rootfs_dir / self.target_info.localbase / "etc/rc.d/dbus"
-            self.download_file(rc_file, "https://cgit.freebsd.org/ports/plain/devel/dbus/files/dbus.in")
-            self.replace_in_file(rc_file, {"%%PREFIX%%": str(self.install_prefix)})
-            if not self.config.pretend:
-                rc_file.chmod(0o755)
-        if not self.compiling_for_host() and self.target_info.is_freebsd():
-            # See UIDs and GIDs in freebsd-ports
             self.write_file(self.rootfs_dir / "etc/rc.conf.d/dbus", contents="dbus_enable=\"YES\"\n",
                             overwrite=True, print_verbose_only=False)
-            self.add_unique_line_to_file(self.rootfs_dir / "etc/group", "messagebus:*:556:")
-            self.add_unique_line_to_file(self.rootfs_dir / "etc/passwd",
-                                         "messagebus:*:556:556:D-BUS Daemon User:/nonexistent:/usr/sbin/nologin")
-            # FIXME: or should we suggest post-install `pw groupadd -n messagebus -g 556` followed by
-            # `pw useradd -n messagebus -u 556 -c "D-BUS Daemon User" -d /nonexistent -s /usr/sbin/nologin -g 556`
+            # Slightly modified version of https://cgit.freebsd.org/ports/plain/devel/dbus/files/dbus.in
+            # to add the necessary users on-demand and chmod/chown the rsync'd files
+            self.write_file(self.rootfs_dir / self.target_info.localbase / "etc/rc.d/dbus", contents=f"""#!/bin/sh
+
+# PROVIDE: dbus
+# REQUIRE: DAEMON ldconfig
+#
+# Add the following lines to /etc/rc.conf to enable the D-BUS messaging system:
+#
+# dbus_enable="YES"
+#
+
+. /etc/rc.subr
+
+: ${{dbus_enable=${{gnome_enable-NO}}}} ${{dbus_flags="--system"}}
+
+name=dbus
+rcvar=dbus_enable
+
+command="{self.install_prefix}/bin/dbus-daemon"
+pidfile="/var/run/dbus/pid"
+
+start_precmd="dbus_prestart"
+stop_postcmd="dbus_poststop"
+
+dbus_prestart()
+{{
+    # See UIDs and GIDs in freebsd-ports
+    if ! pw group show messagebus > /dev/null ; then
+        pw groupadd -n messagebus -g 556
+    fi
+    if ! pw user show messagebus > /dev/null ; then
+        pw useradd -n messagebus -u 556 -c "D-BUS Daemon User" -d /nonexistent -s /usr/sbin/nologin -g 556
+    fi
+    chown root:messagebus {self.install_prefix}/libexec/dbus-daemon-launch-helper
+    chmod 4750 {self.install_prefix}/libexec/dbus-daemon-launch-helper
+    chmod -R u+rwX,go+rX,go-w {self.install_prefix}/share/dbus-1 {self.install_prefix}/etc/dbus-1
+    mkdir -p /var/lib/dbus
+    {self.install_prefix}/bin/dbus-uuidgen --ensure
+    mkdir -p /var/run/dbus
+}}
+
+dbus_poststop()
+{{
+    rm -f $pidfile
+}}
+
+load_rc_config ${{name}}
+run_rc_command "$1"
+""", overwrite=True, mode=0o755)
