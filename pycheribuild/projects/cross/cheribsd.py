@@ -361,7 +361,7 @@ class BuildFreeBSDBase(Project):
     make_kind: MakeCommandKind = MakeCommandKind.BsdMake
     skip_world: bool = False
     is_large_source_repository: bool = True
-    include_os_in_target_suffix: bool = False  # Avoid addding target_info.os_prefix to the target name.
+    include_os_in_target_suffix: bool = False  # Avoid adding target_info.os_prefix to the target name.
     has_installsysroot_target: bool = False
     default_extra_make_options: "list[str]" = [
         # "-DWITHOUT_HTML",  # should not be needed
