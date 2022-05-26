@@ -257,7 +257,7 @@ class BuildQEMUBase(AutotoolsProject):
 
     def process(self) -> None:
         if self.use_smbd and self.smbd_path is not None:
-            self.check_required_system_tool(str(self.smbd_path), cheribuild_target="samba", freebsd="samba48",
+            self.check_required_system_tool(str(self.smbd_path), cheribuild_target="samba", freebsd="samba416",
                                             apt="samba", homebrew="samba")
         super().process()
 
