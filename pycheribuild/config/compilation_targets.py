@@ -919,7 +919,7 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
 
     @classmethod
     def is_baremetal(cls) -> bool:
-        return False
+        return True
 
     def must_link_statically(self) -> bool:
         return True
