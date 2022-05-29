@@ -32,6 +32,7 @@ class BuildDBus(CrossCompileCMakeProject):
                                temporary_url_override="https://gitlab.freedesktop.org/arichardson/dbus.git",
                                url_override_reason="Various fixes for FreeBSD and CHERI (most submitted as MRs)")
     dependencies = ["libexpat"]
+    ctest_script_extra_args = ["--test-timeout", str(120 * 60)]  # Tests can take a long time to run
 
     def setup(self):
         super().setup()
