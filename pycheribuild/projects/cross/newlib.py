@@ -70,13 +70,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         self._install_dir = self._install_dir.parent  # newlib install already appends the triple
         self.verbose_print("install_dir=", self.install_dir, "_install_prefix=", self._install_prefix, "_install_dir=",
                            self._install_dir, "dest=", self.destdir, "real=", self.real_install_root_dir)
-        # self.configure_command = Path("/this/path/does/not/exist")
         self.configure_command = self.source_dir / "configure"
-        # FIXME: how can I force it to run a full configure step (this is needed because it runs the newlib configure
-        # step during make all rather than during ./configure
-        self.make_args.env_vars["newlib_cv_ldbl_eq_dbl"] = "yes"
-        # ensure that we don't fall back to system headers (but do use stddef.h from clang...)
-        self.COMMON_FLAGS.extend(["--sysroot", "/this/path/does/not/exist"])
 
     # def install(self, **kwargs):
     #     # self.run_make_install(cwd=self.build_dir / "newlib")
@@ -101,10 +95,15 @@ class BuildNewlib(CrossCompileAutotoolsProject):
                 self.add_configure_env_arg(k2, v)
                 # self.make_args.env_vars[k2] = str(v)
 
-    def configure(self):
+    def setup(self):
+        # FIXME: how can I force it to run a full configure step (this is needed because it runs the newlib configure
+        # step during make all rather than during ./configure
+        super().setup()
+        # ensure that we don't fall back to system headers (but do use stddef.h from clang...)
+        self.COMMON_FLAGS.extend(["--sysroot", "/this/path/does/not/exist"])
+
         target_cflags = self.commandline_to_str(self.essential_compiler_and_linker_flags + self.COMMON_FLAGS)
         bindir = self.sdk_bindir
-
         self.add_configure_vars(
             AS_FOR_TARGET=str(self.CC),  # + target_cflags,
             CC_FOR_TARGET=str(self.CC),  # + target_cflags,
@@ -121,16 +120,18 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             CC_FOR_BUILD=self.host_CC,
             CXX_FOR_BUILD=self.host_CXX,
             CPP_FOR_BUILD=self.host_CPP,
-            # long double is the same as double
-            newlib_cv_ldbl_eq_dbl="yes",
             LD_FOR_TARGET=str(self.target_info.linker),
             LDFLAGS_FOR_TARGET=commandline_to_str(self.default_ldflags),
             )
 
+        if self.compiling_for_mips(include_purecap=True):
+            # long double is the same as double for MIPS
+            self.make_args.env_vars["newlib_cv_ldbl_eq_dbl"] = "yes"
+            self.add_configure_vars(newlib_cv_ldbl_eq_dbl="yes")
+
         if self.target_info.target.is_riscv(include_purecap=True):
-            self.configure_args.extend([
-                "--disable-libgloss"
-                ])
+            # libgloss only has semihosting support
+            self.configure_args.append("--disable-libgloss")
 
         if self.target_info.is_baremetal():
             self.configure_args.extend([
@@ -176,7 +177,6 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         self.configure_args.append("--target=" + self.target_info.target_triple)
         self.configure_args.append("--disable-multilib")
         self.configure_args.append("--with-newlib")
-        super().configure()
 
     def install(self, **kwargs):
         super().install(**kwargs)
