@@ -107,11 +107,11 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
         if self.can_run_binaries_on_remote_morello_board():
             self.run_make("rsync")  # Copy benchmark binaries over
             self.run_cmd(self.llvm_lit, "-vv", "-j1", "-o", output_file, ".", cwd=self.build_dir)
-            self.copy_remote_file(f"{self.config.remote_morello_board}:{output_file}", output_file)
             return
-        if self.collect_stats:
+        if self.collect_stats or self.compiling_for_host():
             self.delete_file(output_file)
             self.run_cmd(self.llvm_lit, "-sv", "-o", output_file, ".", cwd=self.build_dir)
+            return
         super().run_tests()
 
 
