@@ -35,6 +35,7 @@ from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CPUArchitec
                        MakeCommandKind, Project, ReuseOtherProjectRepository)
 from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty, OSInfo
+from ...qemu_utils import QemuOptions
 
 
 def opensbi_install_dir(config: CheriConfig, project: "Project") -> Path:
@@ -160,3 +161,19 @@ class BuildOpenSBIGFE(BuildOpenSBI):
     def setup(self):
         super().setup()
         self.make_args.set(FW_TEXT_START=0xc0000000)
+
+
+class BuildUpstreamOpenSBI(BuildOpenSBI):
+    target = "upstream-opensbi"
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, p: config.cheri_sdk_dir / "upstream-opensbi/riscv64",
+        as_string="$SDK_ROOT/upstream-opensbi/riscv64")
+    repository = GitRepository("https://github.com/riscv-software-src/opensbi.git")
+    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
+
+    def run_tests(self):
+        options = QemuOptions(self.crosscompile_target)
+        self.run_cmd(options.get_commandline(
+            qemu_command=BuildQEMU.qemu_binary(self), add_network_device=False,
+            bios_args=["-bios", self.install_dir / "share/opensbi/lp64/generic/firmware//fw_payload.elf"]),
+            give_tty_control=True, cwd="/")
