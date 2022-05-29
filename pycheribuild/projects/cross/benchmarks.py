@@ -165,6 +165,11 @@ class BuildMiBenchNew(BuildLLVMTestSuiteBase):
         self.add_cmake_options(TEST_SUITE_SUBDIRS="MultiSource/Benchmarks/MiBench",
                                TEST_SUITE_COPY_DATA=True)
 
+    def compile(self, **kwargs):
+        super().compile(**kwargs)
+        self.install_file(self.source_dir / "MultiSource/lit.local.cfg",
+                          self.build_dir / "MultiSource/lit.local.cfg", force=True)
+
     def install(self, **kwargs):
         root_dir = str(self.build_dir / "MultiSource/Benchmarks/MiBench")
         for curdir, dirnames, filenames in os.walk(root_dir):
@@ -591,7 +596,6 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
         # self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006;External/SPEC/CFP2006",
         self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006",
                                TEST_SUITE_COPY_DATA=True,
-                               TEST_SUITE_RUN_BENCHMARKS=self.compiling_for_host(),
                                TEST_SUITE_RUN_TYPE='test',  # TODO: allow train+ref
                                TEST_SUITE_SPEC2006_ROOT=self.extracted_spec_sources)
 
