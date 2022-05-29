@@ -40,7 +40,7 @@ from pathlib import Path
 
 from .crosscompileproject import CrossCompileProject
 from .llvm import BuildLLVMMonoRepoBase
-from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
+from ..project import (BuildType, CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
                        MakeCommandKind, MakeOptions, Project, ReuseOtherProjectRepository, SimpleProject,
                        TargetAliasWithDependencies)
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
@@ -404,6 +404,7 @@ class BuildFreeBSDBase(Project):
     ]
     has_optional_tests = True
     default_build_tests = True
+    default_build_type = BuildType.RELWITHDEBINFO
 
     @classmethod
     def can_build_with_ccache(cls):
@@ -718,6 +719,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # bootstrapped on FreeBSD)
             # TODO: upstream a patch to bootstrap them by default
             self.make_args.set(LOCAL_XTOOL_DIRS="lib/libnetbsd usr.sbin/makefs usr.bin/mkimg")
+            # Enable MALLOC_PRODUCTION by default unless --<tgt>/build-type=Debug is passed.
+            self.make_args.set_with_options(MALLOC_PRODUCTION=self.build_type.is_release)
 
         self._setup_make_args_called = True
 
