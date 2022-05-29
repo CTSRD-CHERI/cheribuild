@@ -306,7 +306,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             ])
         else:
             self.configure_args.append("-dbus")  # we want to build QtDBus
-            if not self.compiling_for_host():
+            if not self.target_info.is_macos():
                 self.configure_args.append("-dbus-linked")  # link libdbus directly
             # Enable X11 support when cross-compiling by default
             if self.use_x11:
