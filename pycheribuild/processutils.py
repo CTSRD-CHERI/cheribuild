@@ -745,7 +745,7 @@ def ssh_host_accessible(host: str) -> bool:
     assert host, "Passed empty SSH hostname!"
     try:
         output = run_command("ssh", host, "--", "echo", "connection successful", capture_output=True,
-                             run_in_pretend_mode=True, raise_in_pretend_mode=True).stdout.decode("utf-8")
+                             run_in_pretend_mode=True, raise_in_pretend_mode=True).stdout.decode("utf-8").strip()
         return output == "connection successful"
     except subprocess.CalledProcessError as e:
         warning_message(f"SSH host '{host}' is not accessible:", e)
