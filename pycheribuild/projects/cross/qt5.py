@@ -132,12 +132,17 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # The system X11 libraries might be too old, so add the cheribuild-provided ones as a dependency
             deps.extend(["libx11", "libxcb", "libxkbcommon", "libxcb-cursor", "libxcb-util", "libxcb-image", "libice",
                          "libsm", "libxext", "libxtst", "libxcb-render-util", "libxcb-wm", "libxcb-keysyms"])
+        # Always use our patched image/sql libraries instead of the host ones:
+        deps.extend(["libpng", "libjpeg-turbo", "sqlite"])
+        rootfs_target = cls.get_crosscompile_target(config).get_rootfs_target()
+        deps.append(BuildSharedMimeInfo.get_class_for_target(rootfs_target).target)
         if not cls.get_crosscompile_target(config).is_native():
-            # Assume that we can use system libraries for sqlite+libpng+fonts
-            rootfs_target = cls.get_crosscompile_target(config).get_rootfs_target()
-            deps.extend([BuildSharedMimeInfo.get_class_for_target(rootfs_target).target,
-                         InstallDejaVuFonts.get_class_for_target(rootfs_target).target,
-                         "dbus", "fontconfig", "libpng", "libjpeg-turbo", "sqlite", "libinput"])
+            # We can only depend on fonts when installing to a rootfs, as those need to be installed to a directory
+            # that is only writable by root.
+            deps.extend([InstallDejaVuFonts.get_class_for_target(rootfs_target).target])
+        # For non-macOS we need additional libraries for GUI and openGL parts.
+        if not cls.get_crosscompile_target(config).target_info_cls.is_macos():
+            deps.extend(["dbus", "fontconfig", "libinput"])
             if cls.use_opengl:
                 deps.extend(["libglvnd", "libdrm"])
         return deps

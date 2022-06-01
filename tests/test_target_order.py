@@ -202,8 +202,8 @@ def _qtbase_x11_deps(suffix):
                                    "libxcb-", "libxtrans-", "libx11-", "xkeyboard-config-", "libxkbcommon-",
                                    "libxcb-render-util-", "libxcb-util-", "libxcb-image-", "libxcb-cursor-", "libice-",
                                    "libsm-", "libxext-", "libxfixes-", "libxi-", "libxtst-", "libxcb-wm-",
-                                   "libxcb-keysyms-", "shared-mime-info-", "dejavu-fonts-", "libexpat-", "dbus-",
-                                   "libpng-", "freetype2-", "fontconfig-", "libjpeg-turbo-", "sqlite-",
+                                   "libxcb-keysyms-", "libpng-", "libjpeg-turbo-", "sqlite-", "shared-mime-info-",
+                                   "dejavu-fonts-", "libexpat-", "dbus-", "freetype2-", "fontconfig-",
                                    "linux-input-h-", "mtdev-", "libevdev-", "libudev-devd-", "epoll-shim-",
                                    "libinput-", "libglvnd-", "libpciaccess-", "libdrm-")]
     if suffix != "native":
@@ -258,7 +258,8 @@ def test_webkit_cached_deps():
     _check_deps_not_cached([webkit_native])
 
     native_target_names = list(sorted(webkit_native.all_dependency_names(config)))
-    assert native_target_names == ["icu4c-native", "libxml2-native", "qtbase-native", "sqlite-native"]
+    assert native_target_names == ["icu4c-native", "libjpeg-turbo-native", "libpng-native", "libxml2-native",
+                                   "qtbase-native", "shared-mime-info-native", "sqlite-native"]
     _check_deps_cached([webkit_purecap, webkit_riscv, webkit_native])
     assert inspect.getattr_static(webkit_native, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
     assert inspect.getattr_static(webkit_purecap, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
@@ -270,9 +271,11 @@ def test_webkit_deps_2():
 
     # SDK should not add new targets
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=False) == [
-        "qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
+        "libpng-native", "libjpeg-turbo-native", "sqlite-native", "shared-mime-info-native", "qtbase-native",
+        "icu4c-native", "libxml2-native", "qtwebkit-native"]
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=True) == [
-        "qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
+        "libpng-native", "libjpeg-turbo-native", "sqlite-native", "shared-mime-info-native", "qtbase-native",
+        "icu4c-native", "libxml2-native", "qtwebkit-native"]
 
     assert _sort_targets(["qtwebkit-riscv64"], add_dependencies=True, skip_sdk=True) == _qtbase_x11_deps(
         "riscv64") + ["qtbase-riscv64", "icu4c-native", "icu4c-riscv64", "libxml2-riscv64", "qtwebkit-riscv64"]
