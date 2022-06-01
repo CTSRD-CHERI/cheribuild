@@ -39,7 +39,6 @@ from ...processutils import get_program_version, ssh_config_parameters
 
 class BuildEPollShim(CrossCompileCMakeProject):
     target = "epoll-shim"
-    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     repository = GitRepository("https://github.com/jiixyj/epoll-shim")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
@@ -242,7 +241,6 @@ set TOOL_OPTIONS -static
 class BuildWayland(CrossCompileMesonProject):
     # We need a native wayland-scanner during the build
     needs_native_build_for_crosscompile = True
-    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
@@ -284,7 +282,6 @@ class BuildWaylandProtocols(CrossCompileMesonProject):
     dependencies = ["wayland", "wayland-native"]  # native wayland-scanner is needed for tests
     repository = GitRepository("https://gitlab.freedesktop.org/wayland/wayland-protocols.git")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
-    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def setup(self):
         super().setup()
@@ -296,7 +293,6 @@ class BuildSeatd(CrossCompileMesonProject):
     target = "seatd"
     repository = GitRepository("https://git.sr.ht/~kennylevinsen/seatd")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
-    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def setup(self):
         super().setup()

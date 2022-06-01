@@ -568,6 +568,7 @@ for my $module (keys %modules) {
 
 # This class is used to build individual Qt Modules instead of using the qt5 project
 class BuildQtModuleWithQMake(CrossCompileProject):
+    native_install_dir = BuildQtBase.native_install_dir
     do_not_add_to_targets = True
     can_run_parallel_install = True
     dependencies = ["qtbase"]

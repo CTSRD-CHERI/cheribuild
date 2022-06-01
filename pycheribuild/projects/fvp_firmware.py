@@ -84,7 +84,7 @@ class ArmNoneEabiToolchain(SimpleProject):
 class MorelloFirmwareBase(CrossCompileMakefileProject):
     do_not_add_to_targets = True
     supported_architectures = [CompilationTargets.MORELLO_BAREMETAL_HYBRID]
-    cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY  # TODO: install it
+    cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR  # TODO: install it
     needs_sysroot = False  # We don't need a complete sysroot
     default_build_type = BuildType.RELEASE
     _default_install_dir_fn = ComputedDefaultValue(function=_morello_firmware_build_outputs_dir,

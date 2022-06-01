@@ -61,8 +61,8 @@ class CrossCompileMixin(_CrossCompileMixinBase):
     add_build_dir_suffix_for_native = True  # Add the suffix for the native build
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     _should_not_be_instantiated = True
-    # Add a (mostly) resonable default for installation directories:
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    # Add a (mostly) reasonable default for installation directories:
+    native_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
 

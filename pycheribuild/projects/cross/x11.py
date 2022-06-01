@@ -30,7 +30,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
+from .crosscompileproject import CrossCompileAutotoolsProject, \
+    CrossCompileCMakeProject, CrossCompileMesonProject
 from .freetype import BuildFreeType2
 from ..project import DefaultInstallDir, GitRepository, Project
 from ...config.chericonfig import BuildType
@@ -43,7 +44,7 @@ class X11Mixin:
     do_not_add_to_targets = True
     default_build_type = BuildType.RELWITHDEBINFO
     # Don't override the native installation, only use it when paths are explicitly added
-    native_install_dir = DefaultInstallDir.KDE_PREFIX  # TODO: should use a separate prefix but for now this works.
+    native_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def setup(self):

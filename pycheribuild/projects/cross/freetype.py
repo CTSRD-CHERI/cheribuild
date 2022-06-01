@@ -27,7 +27,6 @@
 #
 
 from .crosscompileproject import CrossCompileMesonProject, GitRepository, CompilationTargets
-from ..project import DefaultInstallDir
 
 
 # Prefer the CMake build over autotools since autotools does not work out-of-the-box
@@ -36,7 +35,6 @@ class BuildFreeType2(CrossCompileMesonProject):
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
     repository = GitRepository("https://gitlab.freedesktop.org/freetype/freetype",
                                old_urls=[b"https://github.com/freetype/freetype2.git"])
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     dependencies = ["libpng"]
 
     def setup(self):

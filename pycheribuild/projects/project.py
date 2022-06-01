@@ -2120,10 +2120,10 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
             compiler_for_resource_dir = config.cheri_sdk_bindir / "clang"
         return get_compiler_info(compiler_for_resource_dir, config=config).get_resource_dir()
     elif install_dir == DefaultInstallDir.ROOTFS_LOCALBASE:
+        if project.compiling_for_host():
+            return config.output_root / "local"
         assert getattr(project, "path_in_rootfs", None) is None, \
             "path_in_rootfs only applies to ROOTFS_OPTBASE: " + str(project)
-        assert not project.compiling_for_host(), "ROOTFS_LOCALBASE is only a valid install dir for cross-builds, " \
-                                                 "use BOOTSTRAP_TOOLS/CUSTOM_INSTALL_DIR/IN_BUILD_DIRECTORY for native"
         return project.sdk_sysroot
     elif install_dir == DefaultInstallDir.CHERI_SDK:
         assert project.compiling_for_host(), "CHERI_SDK is only a valid install dir for native, " \

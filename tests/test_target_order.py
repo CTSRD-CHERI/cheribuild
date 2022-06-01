@@ -18,13 +18,15 @@ from pycheribuild.projects.cross.gmp import BuildGmp
 from pycheribuild.projects.cross.llvm import BuildCheriLLVM, BuildMorelloLLVM
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 from pycheribuild.projects.disk_image import BuildDiskImageBase
+from pycheribuild.projects.project import DefaultInstallDir, Project, \
+    SimpleProject
 from pycheribuild.projects.run_fvp import LaunchFVPBase
 from pycheribuild.projects.run_qemu import BuildAll, BuildAndRunCheriBSD, LaunchCheriBSD
 from pycheribuild.projects.sdk import BuildCheriBSDSdk, BuildSdk
 from pycheribuild.projects.spike import RunCheriSpikeBase
 from pycheribuild.targets import Target, target_manager
 from pycheribuild.config.compilation_targets import enable_hybrid_for_purecap_rootfs_targets
-from .setup_mock_chericonfig import setup_mock_chericonfig
+from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
 
 
 # noinspection PyProtectedMember
@@ -386,3 +388,30 @@ def test_hybrid_targets(enable_hybrid_targets):
     # Currently this list should only include the Syzkaller targets:
     expected_hybrid_targets = ["cheri-syzkaller", "run-syzkaller"]
     assert [t.name for t in unexpected_hybrid_targets] == expected_hybrid_targets
+
+
+def _get_native_targets():
+    config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+    for target in target_manager.targets(config):
+        if target.xtarget.is_native():
+            yield pytest.param(config, target, id=target.name)
+
+
+@pytest.mark.parametrize("config,native_target", list(_get_native_targets()))
+def test_no_dependencies_in_build_dir(config: CheriConfig, native_target: Target):
+    # Ensure that native targets do not depend on other targets that do not install their libraries, etc.
+    assert native_target.xtarget.is_native()
+    proj = native_target.get_or_create_project(native_target.xtarget, config)
+    if isinstance(proj, Project) and proj.get_default_install_dir_kind() in (DefaultInstallDir.IN_BUILD_DIRECTORY,
+                                                                             DefaultInstallDir.DO_NOT_INSTALL):
+        # Also not installed, we can ignore this target
+        pytest.skip(f"Skipping {proj.target}: {proj.get_default_install_dir_kind()}")
+    for dep in proj.all_dependency_names(config):
+        dep_project = target_manager.get_target(dep, native_target.xtarget, config, "test").project_class
+        assert issubclass(dep_project, SimpleProject)
+        if not issubclass(dep_project, Project):
+            continue
+        assert dep_project.get_default_install_dir_kind() != DefaultInstallDir.IN_BUILD_DIRECTORY, \
+            f"{proj.target} depends on {dep_project.target} which is installed to the build dir!"
+        assert dep_project.get_default_install_dir_kind() != DefaultInstallDir.DO_NOT_INSTALL, \
+            f"{proj.target} depends on {dep_project.target} which is not installed!"
