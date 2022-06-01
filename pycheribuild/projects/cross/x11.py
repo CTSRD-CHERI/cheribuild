@@ -54,7 +54,7 @@ class X11Mixin:
         # The build systems does not seem to add the fontconfig dependency
         rpath_dirs = self.target_info.additional_rpath_directories
         if rpath_dirs:
-            self.COMMON_LDFLAGS.append("-Wl,-rpath," + ":".join(rpath_dirs))
+            self.COMMON_LDFLAGS.append("-Wl,-rpath=" + ":".join(rpath_dirs))
 
 
 class X11AutotoolsProjectBase(X11Mixin, CrossCompileAutotoolsProject):
@@ -97,7 +97,7 @@ class X11AutotoolsProject(X11AutotoolsProjectBase):
     @property
     def default_ldflags(self):
         result = super().default_ldflags
-        if not self.compiling_for_host():
+        if not self.target_info.is_macos():
             result.append(DoNoQuoteStr("-Wl,--enable-new-dtags,-rpath,'$$ORIGIN/../lib'"))
         return result
 

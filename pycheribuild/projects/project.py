@@ -3944,7 +3944,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             pass  # If there isn't a rootfs, we use the absolute paths instead.
         rpath_dirs = remove_duplicates(self.target_info.additional_rpath_directories + extra_libdirs)
         if rpath_dirs:
-            self.COMMON_LDFLAGS.append("-Wl,-rpath," + ":".join(map(str, rpath_dirs)))
+            self.COMMON_LDFLAGS.append("-Wl,-rpath=" + ":".join(map(str, rpath_dirs)))
 
     def needs_configure(self) -> bool:
         return not (self.build_dir / "build.ninja").exists()
