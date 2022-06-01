@@ -33,7 +33,6 @@ from .crosscompileproject import (CrossCompileAutotoolsProject, GitRepository)
 class BuildSQLite(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
                                default_branch="3.22.0-cheri", force_branch=True)
-    _needed_for_webkit = True
 
     def setup(self):
         super().setup()
