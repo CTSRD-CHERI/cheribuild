@@ -74,7 +74,7 @@ class MorelloUART(Enum):
                 "--databits=8", "--flow=none"]
 
 
-def open_tmux_windows(morello_ports: "list[ListPortInfo]", force: bool, pretend: bool):
+def open_tmux_windows(morello_ports: "list[ListPortInfo]", force: bool, pretend: bool, minimal: bool):
     try:
         import libtmux
         import libtmux.exc
@@ -92,34 +92,39 @@ def open_tmux_windows(morello_ports: "list[ListPortInfo]", force: bool, pretend:
     # ensure we get advanced colour/font features
     session.set_option("default-terminal", "tmux-256color", _global=True)
 
-    # We need 8 panes, create 2 windows with 4 80x24 panes -> 161x81 total tmux window size:
-    session.new_window(attach=False, window_name="tty4-7", start_directory="/")
+    # We need 2 or 8 panes, create 1 or 2 windows with 4 80x24 panes -> 161x81 total tmux window size:
+    if not minimal:
+        session.new_window(attach=False, window_name="tty4-7", start_directory="/")
     for window in session.windows:
         window.cmd("resize-window", "-x", "161", "-y", "81")
     # refresh window properties after resize (libtmux does not do this automatically
     win1 = session.windows[0]
-    win2 = session.windows[1]
-    win1.rename_window("tty0-3")
-    win2.rename_window("tty4-7")
-
     logging.debug("Tmux window 1 size: %sx%s", win1.width, win1.height)
-    logging.debug("Tmux window 2 size: %sx%s", win2.width, win2.height)
 
-    win1_0 = win1.attached_pane
-    win1_1 = win1_0.split_window(vertical=False, start_directory="/")
-    win1_2 = win1_0.split_window(vertical=True, start_directory="/")
-    win1_3 = win1_1.split_window(vertical=True, start_directory="/")
-    win2_0 = win2.attached_pane
-    win2_1 = win2_0.split_window(vertical=False, start_directory="/")
-    win2_2 = win2_0.split_window(vertical=True, start_directory="/")
-    win2_3 = win2_1.split_window(vertical=True, start_directory="/")
+    if minimal:
+        pane1 = win1.attached_pane
+        pane2 = pane1.split_window(vertical=True, start_directory="/")
+        uarts_and_panes = ((MorelloUART.MCC, pane1), (MorelloUART.AP, pane2))
+    else:
+        win2 = session.windows[1]
+        win1.rename_window("tty0-3")
+        win2.rename_window("tty4-7")
 
-    all_panes = [win1_0, win1_1, win1_2, win1_3,
-                 win2_0, win2_1, win2_2, win2_3]  # type: list[libtmux.Pane]
+        logging.debug("Tmux window 2 size: %sx%s", win2.width, win2.height)
+        win1_0 = win1.attached_pane
+        win1_1 = win1_0.split_window(vertical=False, start_directory="/")
+        win1_2 = win1_0.split_window(vertical=True, start_directory="/")
+        win1_3 = win1_1.split_window(vertical=True, start_directory="/")
+        win2_0 = win2.attached_pane
+        win2_1 = win2_0.split_window(vertical=False, start_directory="/")
+        win2_2 = win2_0.split_window(vertical=True, start_directory="/")
+        win2_3 = win2_1.split_window(vertical=True, start_directory="/")
+
+        uarts_and_panes = zip(MorelloUART, [win1_0, win1_1, win1_2, win1_3, win2_0, win2_1, win2_2, win2_3])
+
     ap_pane = None
-    for i, pane in enumerate(all_panes):
-        uart = MorelloUART.get(i)
-        pane.send_keys(f"echo 'Attaching to UART{i}, which should be the {uart.value}'")
+    for uart, pane in uarts_and_panes:
+        pane.send_keys(f"echo 'Attaching to UART{uart.index}, which should be the {uart.value}'")
         cmd = uart.serial_command(morello_ports)
         cmd_str = " ".join(map(shlex.quote, cmd))
         print("Running `", cmd_str, "`", sep="")
@@ -145,6 +150,8 @@ def main():
     action_group.add_argument("--list-serial-ports", "--list", "-l", action="store_true",
                               help="List all serial ports for the chosen board")
     action_group.add_argument("--tmux", action="store_true", help="Connect to all UARTS in a tmux session")
+    action_group.add_argument("--tmux-minimal", action="store_true",
+                              help="Connect to AP and MCC UARTS in a tmux session")
     action_group.add_argument("--uart", "-u", help="Connect to a single Morello board UART",
                               choices=[str(s) for s in range(8)] + [s.name for s in MorelloUART])
     parser.add_argument("--force", "-f", action="store_true",
@@ -160,8 +167,8 @@ def main():
         sys.exit(f"Fatal error: {e}")
     print("Found the following device nodes for the Morello UARTs:")
     print("\t", "\n\t".join(x.device for x in morello_ports), sep="")
-    if args.tmux:
-        open_tmux_windows(morello_ports, force=args.force, pretend=args.pretend)
+    if args.tmux or args.tmux_minimal:
+        open_tmux_windows(morello_ports, force=args.force, pretend=args.pretend, minimal=args.tmux_minimal)
         print("Created tmux session connecting to the morello board UART.")
         print("Run `tmux a -t morello-serial-ports` to connect.")
         print("Or if you are using iTerm2, attach using tmux integration with: `tmux -CC a -t morello-serial-ports`")
