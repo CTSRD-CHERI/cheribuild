@@ -168,9 +168,6 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
     def install(self, **kwargs):
         self.install_file(self.build_dir / "lib/libcxxrt.a", self.install_dir / "lib" / "libcxxrt.a", force=True)
         self.install_file(self.build_dir / "lib/libcxxrt.so", self.install_dir / "lib" / "libcxxrt.soa", force=True)
-        # self.install_file(self.build_dir / "lib/libcxxrt.a", libdir / "libcxxrt.so", force=True)
-        # self.install_file(self.build_dir / "lib/libcxxrt.so", self.install_dir / "usr/lib64c/libcxxrt.so",
-        # force=True)
 
     def run_tests(self):
         if self.target_info.is_baremetal():
