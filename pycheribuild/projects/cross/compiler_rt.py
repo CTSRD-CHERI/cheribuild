@@ -33,6 +33,7 @@ from pathlib import Path
 from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
 from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository, Linkage
+from ...config.target_info import CPUArchitecture
 from ...utils import classproperty, is_jenkins_build
 
 
@@ -83,7 +84,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
 
     def install(self, **kwargs):
         super().install(**kwargs)
-        if self.compiling_for_cheri():
+        if self.compiling_for_cheri([CPUArchitecture.MIPS64]):
             # HACK: we don't really need the ubsan runtime but the toolchain pulls it in automatically
             # TODO: is there an easier way to create an empty archive?
             ubsan_runtime_path = self.install_dir / (

@@ -2710,7 +2710,7 @@ class Project(SimpleProject):
                 if shutil.which("pkg-config") == "/usr/local64/bin/pkg-config":
                     # When building natively on CheriBSD with pkg-config installed using pkg64, the default pkg-config
                     # search path will use the non-CHERI libraries in /usr/local64.
-                    # TODO: assert self.compiling_for_cheri() once we implement that for native
+                    assert self.compiling_for_cheri()
                     pkg_config_args["PKG_CONFIG_LIBDIR"] = "/usr/local/libdata/pkgconfig:/usr/libdata/pkgconfig"
             elif self.needs_sysroot:
                 # We need to set the PKG_CONFIG variables both when configuring and when running make since some

@@ -27,12 +27,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import platform
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
-from ..utils import cached_property, final, OSInfo
+from ..utils import cached_property, final, OSInfo, warning_message
 
 if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine    # pytype: disable=pyi-error
@@ -892,11 +893,29 @@ class CrossCompileTarget(object):
     #     raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")
 
 
+def _native_cpu_arch() -> CPUArchitecture:
+    machine = platform.machine()
+    if machine in ("amd64", "x64_64"):
+        return CPUArchitecture.X86_64
+    elif machine in ("arm64", "aarch64"):
+        return CPUArchitecture.AARCH64
+    else:
+        warning_message("Could not infer native CPU architecture from platform.machine()==", machine)
+        # Just pretend we are targeting x86, to avoid a fatal error
+        return CPUArchitecture.X86_64
+
+
+def _native_target_kwargs() -> dict:
+    if OSInfo.is_cheribsd() and platform.processor() in ("aarch64c", "riscv64c"):
+        # TODO: should we check if `cc -E -dM -xc /dev/null` contains __CHERI_PURE_CAPABILITY__ instead?
+        return dict(is_cheri_purecap=True)
+    return dict()
+
+
 # This is a separate class to avoid cyclic dependencies.
 # The real list is in CompilationTargets in compilation_targets.py
 class BasicCompilationTargets:
-    # XXX: should probably not harcode x86_64 for native
-    NATIVE = CrossCompileTarget("native", CPUArchitecture.X86_64, NativeTargetInfo)
+    NATIVE = CrossCompileTarget("native", _native_cpu_arch(), NativeTargetInfo, **_native_target_kwargs())
     NATIVE_IF_FREEBSD = [NATIVE] if OSInfo.IS_FREEBSD else []
     NATIVE_IF_LINUX = [NATIVE] if OSInfo.IS_LINUX else []
     NATIVE_IF_MACOS = [NATIVE] if OSInfo.IS_MAC else []
