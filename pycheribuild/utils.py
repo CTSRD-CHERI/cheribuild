@@ -374,6 +374,10 @@ class OSInfo(object):
         return cls.__is_linux_distribution("debian")
 
     @classmethod
+    def is_cheribsd(cls):
+        return cls.IS_FREEBSD and cls.etc_os_release().get("ID", "") == "cheribsd"
+
+    @classmethod
     def __is_linux_distribution(cls, kind):
         if not cls.IS_LINUX:
             return False

@@ -482,6 +482,10 @@ class NativeTargetInfo(TargetInfo):
         return OSInfo.IS_FREEBSD
 
     @classmethod
+    def is_cheribsd(cls):
+        return OSInfo.is_cheribsd()
+
+    @classmethod
     def is_macos(cls):
         return OSInfo.IS_MAC
 
