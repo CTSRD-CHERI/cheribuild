@@ -115,6 +115,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.configure_command = self.source_dir / "configure"
+        self.add_required_system_tool("perl", freebsd="perl5")
 
     @property
     def qt_host_tools_path(self):
