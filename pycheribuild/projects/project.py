@@ -2707,6 +2707,11 @@ class Project(SimpleProject):
                 # addition to the default paths. Note: We do not set PKG_CONFIG_LIBDIR since that overrides the default.
                 pkg_config_args = dict(
                     PKG_CONFIG_PATH=":".join(self.pkgconfig_dirs + [os.getenv("PKG_CONFIG_PATH", "")]))
+                if shutil.which("pkg-config") == "/usr/local64/bin/pkg-config":
+                    # When building natively on CheriBSD with pkg-config installed using pkg64, the default pkg-config
+                    # search path will use the non-CHERI libraries in /usr/local64.
+                    # TODO: assert self.compiling_for_cheri() once we implement that for native
+                    pkg_config_args["PKG_CONFIG_LIBDIR"] = "/usr/local/libdata/pkgconfig:/usr/libdata/pkgconfig"
             elif self.needs_sysroot:
                 # We need to set the PKG_CONFIG variables both when configuring and when running make since some
                 # projects (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set
