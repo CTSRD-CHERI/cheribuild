@@ -39,7 +39,9 @@ from ...processutils import get_program_version, ssh_config_parameters
 
 class BuildEPollShim(CrossCompileCMakeProject):
     target = "epoll-shim"
-    repository = GitRepository("https://github.com/jiixyj/epoll-shim")
+    repository = GitRepository("https://github.com/jiixyj/epoll-shim",
+                               temporary_url_override="https://github.com/arichardson/epoll-shim",
+                               url_override_reason="https://github.com/jiixyj/epoll-shim/pull/36")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def configure(self, **kwargs):
