@@ -895,7 +895,7 @@ class CrossCompileTarget(object):
 
 def _native_cpu_arch() -> CPUArchitecture:
     machine = platform.machine()
-    if machine in ("amd64", "x64_64"):
+    if machine in ("amd64", "x86_64"):
         return CPUArchitecture.X86_64
     elif machine in ("arm64", "aarch64"):
         return CPUArchitecture.AARCH64
