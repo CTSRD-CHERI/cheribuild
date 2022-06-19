@@ -2698,6 +2698,20 @@ class Project(SimpleProject):
         """:return: a list of directories that might contain this projects installed .pc files"""
         return self.target_info.pkgconfig_candidates(self.install_dir)
 
+    __cached_native_pkg_config_libdir = None
+
+    @classmethod
+    def _native_pkg_config_libdir(cls):
+        if cls.__cached_native_pkg_config_libdir is not None:
+            return cls.__cached_native_pkg_config_libdir
+        if OSInfo.is_cheribsd() and shutil.which("pkg-config") == "/usr/local64/bin/pkg-config":
+            # When building natively on CheriBSD with pkg-config installed using pkg64, the default pkg-config
+            # search path will use the non-CHERI libraries in /usr/local64.
+            cls.__cached_native_pkg_config_libdir = "/usr/local/libdata/pkgconfig:/usr/libdata/pkgconfig"
+        else:
+            cls.__cached_native_pkg_config_libdir = ""
+        return cls.__cached_native_pkg_config_libdir
+
     def setup(self):
         super().setup()
         if self.set_pkg_config_path:
@@ -2707,11 +2721,8 @@ class Project(SimpleProject):
                 # addition to the default paths. Note: We do not set PKG_CONFIG_LIBDIR since that overrides the default.
                 pkg_config_args = dict(
                     PKG_CONFIG_PATH=":".join(self.pkgconfig_dirs + [os.getenv("PKG_CONFIG_PATH", "")]))
-                if shutil.which("pkg-config") == "/usr/local64/bin/pkg-config":
-                    # When building natively on CheriBSD with pkg-config installed using pkg64, the default pkg-config
-                    # search path will use the non-CHERI libraries in /usr/local64.
-                    assert self.compiling_for_cheri()
-                    pkg_config_args["PKG_CONFIG_LIBDIR"] = "/usr/local/libdata/pkgconfig:/usr/libdata/pkgconfig"
+                if self._native_pkg_config_libdir():
+                    pkg_config_args["PKG_CONFIG_LIBDIR"] = self._native_pkg_config_libdir()
             elif self.needs_sysroot:
                 # We need to set the PKG_CONFIG variables both when configuring and when running make since some
                 # projects (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set
@@ -3941,6 +3952,11 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             # Recommended way to override compiler is using a native config file:
             self._toolchain_file = self.build_dir / "meson-native-file.ini"
             self.configure_args.extend(["--native-file", str(self._toolchain_file)])
+            # PKG_CONFIG_LIBDIR can only be set in the toolchain file when cross-compiling, set it in the environment
+            # for CheriBSD with pkg-config installed via pkg64.
+            if self._native_pkg_config_libdir():
+                self.configure_environment.update(PKG_CONFIG_LIBDIR=self._native_pkg_config_libdir())
+                self.make_args.set_env(PKG_CONFIG_LIBDIR=self._native_pkg_config_libdir())
         if self.force_configure and not self.with_clean and (self.build_dir / "meson-info").exists():
             self.configure_args.append("--reconfigure")
         # Don't use bundled fallback dependencies, we always want to use the (potentially patched) system packages.
