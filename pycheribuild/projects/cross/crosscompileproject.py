@@ -103,24 +103,11 @@ class CrossCompileMesonProject(CrossCompileMixin, MesonProject):
 class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     do_not_add_to_targets = True  # only used as base class
 
-    add_host_target_build_config_options = True
     _autotools_add_default_compiler_args = True
     _configure_supports_libdir = True  # override in nginx
     _configure_supports_variables_on_cmdline = True  # override in nginx
     _configure_understands_enable_static = True
     _define_ld = True  # override to not define LD
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        buildhost = self.get_host_triple()
-        if not self.compiling_for_host() and self.add_host_target_build_config_options:
-            autotools_triple = self.target_info.target_triple
-            # Most scripts don't like the final -purecap component:
-            autotools_triple = autotools_triple.replace("-purecap", "")
-            # TODO: do we have to remove these too?
-            # autotools_triple = autotools_triple.replace("mips64c128-", "cheri-")
-            self.configure_args.extend(["--host=" + autotools_triple, "--target=" + autotools_triple,
-                                        "--build=" + buildhost])
 
     def add_configure_and_make_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
         self.add_configure_env_arg(arg, value)

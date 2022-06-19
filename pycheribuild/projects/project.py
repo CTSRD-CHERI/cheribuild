@@ -3772,6 +3772,7 @@ class AutotoolsProject(Project):
     do_not_add_to_targets = True
     _configure_supports_prefix = True
     make_kind = MakeCommandKind.GnuMake
+    add_host_target_build_config_options = True
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -3783,13 +3784,26 @@ class AutotoolsProject(Project):
     Like Project but automatically sets up the defaults for autotools like projects
     Sets configure command to ./configure, adds --prefix=installdir
     """
-
     def __init__(self, config, configure_script="configure"):
         super().__init__(config)
         self.configure_command = self.source_dir / configure_script
 
     def setup(self):
         super().setup()
+        buildhost = self.get_host_triple()
+        if self.add_host_target_build_config_options:
+            if not self.compiling_for_host():
+                autotools_triple = self.target_info.target_triple
+                # Most scripts don't like the final -purecap component:
+                autotools_triple = autotools_triple.replace("-purecap", "")
+                # TODO: do we have to remove these too?
+                # autotools_triple = autotools_triple.replace("mips64c128-", "cheri-")
+                self.configure_args.extend(["--host=" + autotools_triple, "--target=" + autotools_triple,
+                                            "--build=" + buildhost])
+            elif self.compiling_for_cheri():
+                # When compiling natively on CheriBSD, most autotools projects don't like the inferred config.guess
+                # value of aarch64c-unknown-freebsd14.0. Override it to make this work in most cases.
+                self.configure_args.extend(["--build=" + buildhost])
         if self.config.verbose:
             # Most autotools-base projects enable verbose output by setting V=1
             self.make_args.set_env(V=1)
