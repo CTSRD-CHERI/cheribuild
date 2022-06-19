@@ -43,6 +43,7 @@ class BuildEPollShim(CrossCompileCMakeProject):
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
     def configure(self, **kwargs):
+        self.add_cmake_options(ENABLE_COMPILER_WARNINGS=True)
         if not self.compiling_for_host():
             # external/microatf/cmake/ATFTestAddTests.cmake breaks cross-compilation
             self.add_cmake_options(BUILD_TESTING=False)
