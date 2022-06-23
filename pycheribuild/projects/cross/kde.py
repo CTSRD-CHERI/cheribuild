@@ -979,6 +979,7 @@ class BuildLibPng(CrossCompileCMakeProject):
             self.add_cmake_options(TEST_CMAKE_COMMAND="/cmake/bin/cmake")
         if self.compiling_for_aarch64(include_purecap=True):
             # work around:  undefined reference to png_do_expand_palette_rgb8_neon [--no-allow-shlib-undefined]
+            self.COMMON_FLAGS.append("-DPNG_ARM_NEON_OPT=0")
             self.add_cmake_options(PNG_ARM_NEON="off")
 
 
