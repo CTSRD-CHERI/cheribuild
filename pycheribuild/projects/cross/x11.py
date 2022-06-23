@@ -435,12 +435,12 @@ class BuildTigerVNC(X11CMakeProject):
 
     def __init__(self, config):
         super().__init__(config)
-        if self.compiling_for_host():
+        if self.compiling_for_host() and not self.compiling_for_cheri():
             self.add_required_system_tool("fltk-config", homebrew="ftlk", apt="libfltk1.3-dev")
 
     def setup(self):
         super().setup()
-        if not self.compiling_for_host():
+        if not self.compiling_for_host() or self.compiling_for_cheri():
             self.add_cmake_options(INSTALL_SYSTEMD_UNITS=False, ENABLE_NLS=False, BUILD_VIEWER=False)
 
 
