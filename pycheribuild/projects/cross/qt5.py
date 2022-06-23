@@ -40,6 +40,7 @@ from .x11 import BuildLibXCB
 from ..project import SimpleProject
 from ...config.loader import ComputedDefaultValue
 from ...processutils import set_env
+from ...utils import InstallInstructions
 
 
 class InstallDejaVuFonts(SimpleProject):
@@ -78,6 +79,28 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
     needs_native_build_for_crosscompile = True
     builds_docbook_xml = True
 
+    @classmethod
+    def get_update_mime_database_path(cls, caller: SimpleProject) -> Path:
+        native_instance = cls.get_instance(caller, cross_target=CompilationTargets.NATIVE)
+        if native_instance._can_build_tools:
+            result = native_instance.install_dir / "bin/update-mime-database"
+            if not result.exists():
+                native_instance.dependency_error(
+                    "Cannot find native update-mime-database", cheribuild_target=cls.target,
+                    cheribuild_xtarget=CompilationTargets.NATIVE)
+            return result
+        else:
+            result = shutil.which("update-mime-database")
+            if not result:
+                native_instance.dependency_error(
+                    "Cannot find native update-mime-database and can't build it for purecap yet",
+                    install_instructions=InstallInstructions("pkg64 install shared-mime-info"))
+            return Path(result)
+
+    @property
+    def _can_build_tools(self):
+        return self.compiling_for_host() and not self.compiling_for_cheri()  # Missing purecap glib2
+
     def __init__(self, config):
         super().__init__(config)
         self.add_required_system_tool("xmlto", homebrew="xmlto", apt="xmlto")
@@ -89,8 +112,10 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
         super().setup()
         self.add_meson_options(**{
             "update-mimedb": True,
-            "build-tools": self.compiling_for_host(),
+            "build-tools": self._can_build_tools
         })
+        # Ensure that we have update-mime-database available as it will be used in a post-install action.
+        self.get_update_mime_database_path(self)
 
     def configure(self, **kwargs):
         if not self.compiling_for_host():
@@ -800,8 +825,6 @@ class BuildQtWebkit(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.add_required_system_tool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info",
-                                      cheribuild_target="shared-mime-info-native")
         self.add_required_system_tool("ruby", apt="ruby")
 
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations",
@@ -866,8 +889,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     def compile(self, **kwargs):
         # Generate the shared mime info cache to MASSIVELY speed up tests
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
-            smi_install = BuildSharedMimeInfo.get_instance(self, cross_target=CompilationTargets.NATIVE).install_dir
-            update_mime = shutil.which("update-mime-database") or smi_install / "bin/update-mime-database"
+            update_mime = BuildSharedMimeInfo.get_update_mime_database_path(self)
             mime_info_src = BuildQtBase.get_source_dir(self) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
             self.install_file(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True,
                               print_verbose_only=False)

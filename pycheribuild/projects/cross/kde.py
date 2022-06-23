@@ -246,17 +246,16 @@ class BuildKCoreAddons(KDECMakeProject):
         super().setup()
         # Install prefix.sh for KCoreAddons only (could do it for all projects but there is no point overwriting it)
         self.add_cmake_options(KDE_INSTALL_PREFIX_SCRIPT=True)
-        shared_mime_install_dir = BuildSharedMimeInfo.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
-        self.add_cmake_options(UPDATE_MIME_DATABASE_EXECUTABLE=shared_mime_install_dir / "bin/update-mime-database")
-        self.make_args.set_env(UPDATE_MIME_DATABASE_EXECUTABLE=shared_mime_install_dir / "bin/update-mime-database")
+        update_mime_database = BuildSharedMimeInfo.get_update_mime_database_path(self)
+        self.add_cmake_options(UPDATE_MIME_DATABASE_EXECUTABLE=update_mime_database)
+        self.make_args.set_env(UPDATE_MIME_DATABASE_EXECUTABLE=update_mime_database)
 
     def install(self, **kwargs):
         super().install(**kwargs)
         # update_xdg_mimetypes() is not run if DESTDIR is set.
         # See https://invent.kde.org/frameworks/extra-cmake-modules/-/merge_requests/151
         shared_mime_info = BuildSharedMimeInfo.get_instance(self)
-        native_smi_dir = BuildSharedMimeInfo.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
-        self.run_cmd(native_smi_dir / "bin/update-mime-database", "-V", self.install_dir / "share/mime")
+        self.run_cmd(shared_mime_info.get_update_mime_database_path(self), "-V", self.install_dir / "share/mime")
         if not self.compiling_for_host():
             # TODO: should probably just install Qt and KDE files in the same directory
             install_prefix = self.install_prefix
