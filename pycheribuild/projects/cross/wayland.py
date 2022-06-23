@@ -183,6 +183,7 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
             self.cross_warning_flags.append("-Werror=shorten-cap-to-int")
         if self.build_type.is_debug:
             self.configure_args.append("--enable-debug")
+        self.configure_args.append("--disable-docs")  # avoid dependency on makeinfo
 
     def configure(self, **kwargs):
         self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
