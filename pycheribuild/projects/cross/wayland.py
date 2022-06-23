@@ -250,8 +250,8 @@ class BuildWayland(CrossCompileMesonProject):
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         deps = super().dependencies(config)
         target = cls.get_crosscompile_target(config)
-        if not target.is_native():
-            # For native builds we use the host libraries
+        if not target.is_native() or target.target_info_cls.is_cheribsd():
+            # For native (non-CheriBSD) builds we use the host libraries
             deps.extend(["libexpat", "libffi", "libxml2"])
         if target.target_info_cls.is_freebsd():
             deps += ["epoll-shim"]
