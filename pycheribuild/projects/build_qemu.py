@@ -253,9 +253,8 @@ class BuildUpstreamQEMU(BuildQEMUBase):
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.output_root / "upstream-qemu",
         as_string="$INSTALL_ROOT/upstream-qemu")
-    default_targets = "aarch64-softmmu,mips64-softmmu," \
-                      "riscv64-softmmu,riscv32-softmmu," \
-                      "x86_64-softmmu"
+    default_targets = "arm-softmmu,aarch64-softmmu,mips64-softmmu," \
+                      "riscv64-softmmu,riscv32-softmmu,x86_64-softmmu"
 
     @classmethod
     def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
@@ -263,6 +262,8 @@ class BuildUpstreamQEMU(BuildQEMUBase):
             raise ValueError("Upstream QEMU does not support CHERI")
         if xtarget.is_aarch64():
             binary_name = "qemu-system-aarch64"
+        elif xtarget.cpu_architecture == CPUArchitecture.ARM32:
+            binary_name = "qemu-system-arm"
         elif xtarget.is_mips():
             binary_name = "qemu-system-mips64"
         elif xtarget.is_riscv32():
