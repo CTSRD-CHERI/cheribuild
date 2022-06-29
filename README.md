@@ -354,7 +354,8 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--skip-world | --no-skip-world | --skip-buildworld | --no-skip-buildworld]
                      [--skip-kernel | --no-skip-kernel | --skip-buildkernel | --no-skip-buildkernel]
                      [--freebsd-subdir SUBDIRS] [--buildenv] [--libcompat-buildenv] [--debug-output]
-                     [--mips-float-abi {soft,hard}] [--cross-compile-linkage {default,dynamic,static}]
+                     [--mips-float-abi {soft,hard}] [--aarch64-fp-and-simd-options {default,nosimd,soft,soft_simd}]
+                     [--cross-compile-linkage {default,dynamic,static}]
                      [--subobject-bounds {conservative,subobject-safe,aggressive,very-aggressive,everywhere-unsafe}]
                      [--use-cheri-ubsan | --no-use-cheri-ubsan]
                      [--use-cheri-ubsan-runtime | --no-use-cheri-ubsan-runtime]
@@ -382,10 +383,11 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--shallow-clone | --no-shallow-clone] [--beri-fpga-env-setup-script BERI-FPGA-ENV-SETUP-SCRIPT]
                      [--arm-none-eabi-prefix ARM-NONE-EABI-PREFIX]
                      [--build-morello-firmware-from-source | --no-build-morello-firmware-from-source]
-                     [--list-kernels | --no-list-kernels] [--get-config-option KEY] [--quiet | --no-quiet | -q]
-                     [--verbose | --no-verbose | -v] [--clean | --no-clean | -c] [--force | --no-force | -f]
-                     [--logfile | --no-logfile] [--skip-update | --no-skip-update]
-                     [--confirm-clone | --no-confirm-clone] [--force-update | --no-force-update]
+                     [--list-kernels | --no-list-kernels] [--remote-morello-board REMOTE-MORELLO-BOARD]
+                     [--get-config-option KEY] [--quiet | --no-quiet | -q] [--verbose | --no-verbose | -v]
+                     [--clean | --no-clean | -c] [--force | --no-force | -f] [--logfile | --no-logfile]
+                     [--skip-update | --no-skip-update] [--confirm-clone | --no-confirm-clone]
+                     [--force-update | --no-force-update]
                      [--skip-configure | --no-skip-configure | --reconfigure | --no-reconfigure | --force-configure | --no-force-configure]
                      [--include-dependencies] [--include-toolchain-dependencies | --no-include-toolchain-dependencies]
                      [--start-with TARGET | --start-after TARGET] [--compilation-db-in-source-dir]
@@ -485,6 +487,9 @@ optional arguments:
                         shallow clone (default: 'True')
   --build-morello-firmware-from-source, --no-build-morello-firmware-from-source
                         Build the firmware from source instead of downloading the latest release. (default: 'False')
+  --remote-morello-board REMOTE-MORELLO-BOARD
+                        SSH hostname of a Morello board. When set, some projects will run their test suites on the
+                        remote board instead of QEMU.
   --quiet, --no-quiet, -q
                         Don't show stdout of the commands that are executed (default: 'False')
   --verbose, --no-verbose, -v
@@ -583,6 +588,8 @@ Adjust flags used when compiling MIPS/CHERI projects:
                         Link cross compiled CHERI project with libstatcounters. (default: 'False')
   --mips-float-abi {soft,hard}
                         The floating point ABI to use for building MIPS+CHERI programs (default: 'soft')
+  --aarch64-fp-and-simd-options {default,nosimd,soft,soft_simd}
+                        The floating point/SIMD mode to use for building AArch64 programs (default: 'default')
   --cross-compile-linkage {default,dynamic,static}
                         Whether to link cross-compile projects static or dynamic by default (default: 'default')
   --subobject-bounds {conservative,subobject-safe,aggressive,very-aggressive,everywhere-unsafe}
@@ -690,13 +697,13 @@ Options controlling the use of docker for building:
 Options for target 'upstream-qemu':
   --upstream-qemu/targets UPSTREAM-QEMU/TARGETS
                         Build QEMU for the following targets (default:
-                        'mips64-softmmu,riscv64-softmmu,riscv32-softmmu,x86_64-softmmu,aarch64-softmmu')
+                        'aarch64-softmmu,mips64-softmmu,riscv64-softmmu,riscv32-softmmu,x86_64-softmmu')
 
 Options for target 'qemu':
   --qemu/targets QEMU/TARGETS
-                        Build QEMU for the following targets (default:
-                        'mips64-softmmu,mips64cheri128-softmmu,riscv64-softmmu,riscv64cheri-
-                        softmmu,riscv32-softmmu,riscv32cheri-softmmu,x86_64-softmmu,aarch64-softmmu')
+                        Build QEMU for the following targets (default: 'aarch64-softmmu,morello-
+                        softmmu,mips64-softmmu,mips64cheri128-softmmu,riscv64-softmmu,riscv64cheri-
+                        softmmu,riscv32-softmmu,riscv32cheri-softmmu,x86_64-softmmu')
   --qemu/statistics, --qemu/no-statistics
                         Collect statistics on out-of-bounds capability creation. (default: 'False')
 
