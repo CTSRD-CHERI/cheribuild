@@ -275,9 +275,10 @@ class BuildUpstreamQEMU(BuildQEMUBase):
 class BuildQEMU(BuildQEMUBase):
     target = "qemu"
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri")
-    default_targets = "mips64-softmmu,mips64cheri128-softmmu," \
+    default_targets = "aarch64-softmmu,morello-softmmu," \
+                      "mips64-softmmu,mips64cheri128-softmmu," \
                       "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu," \
-                      "x86_64-softmmu,aarch64-softmmu"
+                      "x86_64-softmmu"
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -320,13 +321,6 @@ class BuildQEMU(BuildQEMUBase):
             self.COMMON_FLAGS.append("-DDO_CHERI_STATISTICS=1")
 
     def setup(self):
-        # Build Morello by default if we are building a commit that has morello support merged.
-        if "morello-softmmu" not in self.qemu_targets and (
-                self.source_dir / "default-configs/targets/morello-softmmu.mak").exists():
-            targets = inspect.getattr_static(self, "qemu_targets")
-            assert isinstance(targets, ConfigOptionBase)
-            if targets.is_default_value:
-                self.qemu_targets += ",morello-softmmu"
         super().setup()
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DENABLE_CHERI_SANITIY_CHECKS=1")
