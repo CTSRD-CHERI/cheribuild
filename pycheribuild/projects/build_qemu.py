@@ -249,9 +249,9 @@ class BuildUpstreamQEMU(BuildQEMUBase):
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.output_root / "upstream-qemu",
         as_string="$INSTALL_ROOT/upstream-qemu")
-    default_targets = "mips64-softmmu," \
+    default_targets = "aarch64-softmmu,mips64-softmmu," \
                       "riscv64-softmmu,riscv32-softmmu," \
-                      "x86_64-softmmu,aarch64-softmmu"
+                      "x86_64-softmmu"
 
     @classmethod
     def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
