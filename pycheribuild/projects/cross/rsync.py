@@ -35,7 +35,6 @@ class BuildRsync(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/rsync.git")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    build_in_source_dir = True  # Cannot build out-of-source
 
     def configure(self, **kwargs):
         # The rsync check for gettimeofday timzeone argument fails because the prototype for exit is missing (-Werror)
