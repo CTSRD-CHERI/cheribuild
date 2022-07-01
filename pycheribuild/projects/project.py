@@ -2844,7 +2844,7 @@ class Project(SimpleProject):
             assert self._compiledb_tool is not None
             compdb_extra_args = []
             if self._compiledb_tool == "bear":
-                compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "--", make_command]
+                compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "--append", "--", make_command]
             elif self._compiledb_tool == "compiledb":
                 compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "make", "--cmd", make_command]
             else:
