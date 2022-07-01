@@ -45,11 +45,21 @@ class BuildBluespecCompiler(Project):
         self.add_required_system_tool("cabal", apt="cabal-install", homebrew="cabal-install")
         for i in ("autoconf", "gperf", "bison", "flex"):
             self.add_required_system_tool(i, homebrew=i)
+        self.add_required_system_header("tcl/tcl.h", apt="tcl-dev")
         self.make_args.set(PREFIX=self.install_dir)
+
+    def clean(self, **kwargs):
+        try:
+            self.run_make("full_clean")
+        except Exception:
+            self.info("Cleaning failed, continuing anyway");
+
 
     def compile(self, **kwargs):
         try:
-            self.run_make("all")
+            # a full install includes documentation which drags in
+            # lots of Latex dependencies, so just build the tools
+            self.run_make("install-src")
         except Exception:
             self.info("Compilation failed. If it complains about missing packages try running:\n"
                       "\tcabal install regex-compat syb old-time split\n"
@@ -61,3 +71,6 @@ class BuildBluespecCompiler(Project):
                 self.info("Alternatively, try running:",
                           self.source_dir / ".github/workflows/install_dependencies_ubuntu.sh")
             raise
+
+    def install(self, **kwargs):
+        pass  # compile and install is a single target in toplevel GNUmakefile
