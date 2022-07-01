@@ -198,11 +198,11 @@ def _check_deps_cached(classes):
 
 
 def _qtbase_x11_deps(suffix):
-    result = [x + suffix for x in ("xorg-macros-", "xorgproto-", "xcbproto-", "libxau-", "xorg-pthread-stubs-",
-                                   "libxcb-", "libxtrans-", "libx11-", "xkeyboard-config-", "libxkbcommon-",
-                                   "libxcb-render-util-", "libxcb-util-", "libxcb-image-", "libxcb-cursor-", "libice-",
-                                   "libsm-", "libxext-", "libxfixes-", "libxi-", "libxtst-", "libxcb-wm-",
-                                   "libxcb-keysyms-", "libpng-", "libjpeg-turbo-", "sqlite-", "shared-mime-info-",
+    result = [x + suffix for x in ("shared-mime-info-", "sqlite-", "xorg-macros-", "xorgproto-", "xcbproto-", "libxau-",
+                                   "xorg-pthread-stubs-", "libxcb-", "libxtrans-", "libx11-", "xkeyboard-config-",
+                                   "libxkbcommon-", "libxcb-render-util-", "libxcb-util-", "libxcb-image-",
+                                   "libxcb-cursor-", "libice-", "libsm-", "libxext-", "libxfixes-", "libxi-",
+                                   "libxtst-", "libxcb-wm-", "libxcb-keysyms-", "libpng-", "libjpeg-turbo-",
                                    "dejavu-fonts-", "libexpat-", "dbus-", "freetype2-", "fontconfig-",
                                    "linux-input-h-", "mtdev-", "libevdev-", "libudev-devd-", "epoll-shim-",
                                    "libinput-", "libglvnd-", "libpciaccess-", "libdrm-")]
@@ -219,6 +219,8 @@ def _avoid_native_qtbase_x11_deps():
     qtbase_native = target_manager.get_target_raw("qtbase-native").project_class
     assert issubclass(qtbase_native, BuildQtBase)
     qtbase_native.use_x11 = False
+    qtbase_native.use_opengl = False  # also pulls in some X11 deps right now
+    qtbase_native.minimal = True  # avoid all non-core deps to keep them the same across operating systems
 
 
 def test_ksyntaxhighlighting_includes_native_dependency():
@@ -258,8 +260,8 @@ def test_webkit_cached_deps():
     _check_deps_not_cached([webkit_native])
 
     native_target_names = list(sorted(webkit_native.all_dependency_names(config)))
-    assert native_target_names == ["icu4c-native", "libjpeg-turbo-native", "libpng-native", "libxml2-native",
-                                   "qtbase-native", "shared-mime-info-native", "sqlite-native"]
+    assert native_target_names == ["icu4c-native", "libxml2-native", "qtbase-native", "shared-mime-info-native",
+                                   "sqlite-native"]
     _check_deps_cached([webkit_purecap, webkit_riscv, webkit_native])
     assert inspect.getattr_static(webkit_native, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
     assert inspect.getattr_static(webkit_purecap, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
@@ -271,11 +273,11 @@ def test_webkit_deps_2():
 
     # SDK should not add new targets
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=False) == [
-        "libpng-native", "libjpeg-turbo-native", "sqlite-native", "shared-mime-info-native", "qtbase-native",
-        "icu4c-native", "libxml2-native", "qtwebkit-native"]
+        "shared-mime-info-native", "sqlite-native", "qtbase-native", "icu4c-native", "libxml2-native",
+        "qtwebkit-native"]
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=True) == [
-        "libpng-native", "libjpeg-turbo-native", "sqlite-native", "shared-mime-info-native", "qtbase-native",
-        "icu4c-native", "libxml2-native", "qtwebkit-native"]
+        "shared-mime-info-native", "sqlite-native", "qtbase-native", "icu4c-native", "libxml2-native",
+        "qtwebkit-native"]
 
     assert _sort_targets(["qtwebkit-riscv64"], add_dependencies=True, skip_sdk=True) == _qtbase_x11_deps(
         "riscv64") + ["qtbase-riscv64", "icu4c-native", "icu4c-riscv64", "libxml2-riscv64", "qtwebkit-riscv64"]
