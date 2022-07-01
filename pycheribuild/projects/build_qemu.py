@@ -27,7 +27,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import inspect
 import os
 import sys
 from pathlib import Path
@@ -36,7 +35,7 @@ from types import SimpleNamespace
 from .project import (_cached_get_homebrew_prefix, AutotoolsProject, BuildType, CheriConfig, CPUArchitecture,
                       CrossCompileTarget, DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
-from ..config.loader import ComputedDefaultValue, ConfigOptionBase
+from ..config.loader import ComputedDefaultValue
 
 
 class BuildQEMUBase(AutotoolsProject):
