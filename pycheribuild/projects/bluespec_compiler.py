@@ -52,8 +52,7 @@ class BuildBluespecCompiler(Project):
         try:
             self.run_make("full_clean")
         except Exception:
-            self.info("Cleaning failed, continuing anyway");
-
+            self.info("Cleaning failed, continuing anyway")
 
     def compile(self, **kwargs):
         try:
