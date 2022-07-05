@@ -536,7 +536,10 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
     # The makefiles here can't support any other tagets:
     supported_architectures = [CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
                                CompilationTargets.CHERIBSD_RISCV_HYBRID,
-                               CompilationTargets.CHERIBSD_RISCV_PURECAP]
+                               CompilationTargets.CHERIBSD_RISCV_PURECAP,
+                               CompilationTargets.CHERIBSD_AARCH64,
+                               CompilationTargets.CHERIBSD_MORELLO_HYBRID,
+                               CompilationTargets.CHERIBSD_MORELLO_PURECAP]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
