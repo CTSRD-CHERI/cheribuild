@@ -555,10 +555,6 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
         super().configure(**kwargs)
 
     def process(self):
-        if (self.compiling_for_riscv(include_purecap=True) and
-                self.hw_counters == "pmc"):
-            self.fatal("hwpmc not supported on riscv")
-            return
         super().process()
 
     def install(self, **kwargs):
