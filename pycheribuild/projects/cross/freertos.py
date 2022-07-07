@@ -199,6 +199,12 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                  "platform, RISC-V arch and RISC-V abi in the "
                  "$platform-$arch-$abi format. See RISC-V-Generic/README for more details")
 
+        cls.network_driver = cls.add_config_option(
+            "network_driver",
+            show_help=True,
+            default="xilinx",
+            help="Which network drivers to use (xilinx/virtio)")
+
     def default_demo_bsp(self):
         return "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True) + "-" + \
                self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
@@ -286,6 +292,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
             if self.log_udp:
               config_options += ["--log_udp"]
+
+            config_options += ["--network_driver", self.network_driver]
 
             self._run_waf("distclean", "configure", *config_options)
 
