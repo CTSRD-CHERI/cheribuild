@@ -33,7 +33,7 @@ from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
-from .wayland import BuildWayland
+from .wayland import BuildWayland, BuildLinux_Input_H
 from .x11 import BuildLibXCB
 from ..project import (DefaultInstallDir, GitRepository, MakeCommandKind, TargetAliasWithDependencies)
 from ...colour import AnsiColour, coloured
@@ -219,6 +219,11 @@ class BuildKWayland(KDECMakeProject):
         if cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
             result.append("linux-input-h")
         return result
+
+    def setup(self):
+        super().setup()
+        if self.target_info.is_freebsd():
+            self.CFLAGS.append("-I" + str(BuildLinux_Input_H.get_instance(self).include_install_dir))
 
 
 class BuildBreezeIcons(KDECMakeProject):
