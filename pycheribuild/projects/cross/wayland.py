@@ -99,7 +99,7 @@ class BuildLinux_Input_H(SimpleProject):
     @property
     def include_install_dir(self) -> Path:
         if self.compiling_for_host():
-            return self.config.other_tools_dir / "include"
+            return BuildMtdev.get_install_dir(self) / "include"
         return self.sdk_sysroot / self.target_info.sysroot_install_prefix_relative / "include"
 
 
