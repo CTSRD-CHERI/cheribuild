@@ -733,11 +733,9 @@ class BuildQtQuickControls(BuildQtModuleWithQMake):
 class BuildQtGraphicalEffects(BuildQtModuleWithQMake):
     target = "qtgraphicaleffects"
     dependencies = ["qtdeclarative"]
-    # Depends on OpenGL to be useful, I've got a version that allows compiling without OpenGL
+    # Depends on OpenGL to be useful, https://github.com/CTSRD-CHERI/qtgraphicaleffects allows compiling without OpenGL
     repository = GitRepository("https://code.qt.io/qt/qtgraphicaleffects.git",
-                               # "https://invent.kde.org/qt/qt/qtgraphicaleffects.git"
-                               temporary_url_override="https://github.com/CTSRD-CHERI/qtgraphicaleffects",
-                               url_override_reason="Includes some workarounds to compile it for -no-opengl",
+                               old_urls=[b"https://github.com/CTSRD-CHERI/qtgraphicaleffects"],
                                default_branch="5.15", force_branch=True)
 
     def compile(self, **kwargs):
