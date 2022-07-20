@@ -31,6 +31,7 @@
 
 import json
 import os
+from enum import Enum
 
 from .build_qemu import BuildQEMU
 from .cross.cheribsd import BuildCHERIBSD, ConfigPlatform, CheriBSDConfigTable
@@ -41,6 +42,10 @@ from ..processutils import commandline_to_str
 from ..qemu_utils import QemuOptions
 from ..utils import ThreadJoiner
 
+class GOROOTOptions(Enum):
+    DEFAULT = "system"
+    UPSTREAM = "upstream"
+    SYSTEM = "system"
 
 class BuildSyzkaller(CrossCompileProject):
     dependencies = ["go"]
@@ -62,6 +67,9 @@ class BuildSyzkaller(CrossCompileProject):
             "run-sysgen", show_help=True,
             help="Rerun syz-extract and syz-sysgen to rebuild generated Go "
                  "syscall descriptions.")
+        cls.use_go = cls.add_config_option("use-go", kind=GOROOTOptions, default=GOROOTOptions.DEFAULT,
+                                             enum_choice_strings=[t.value for t in GOROOTOptions],
+                                             help="Specify GOROOT default is system")
 
     def __init__(self, config):
         self._install_prefix = config.cheri_sdk_dir
@@ -95,15 +103,17 @@ class BuildSyzkaller(CrossCompileProject):
 
     def compile(self, **kwargs):
         cflags = self.default_compiler_flags + self.default_ldflags
-
-        self.make_args.set_env(
-            HOSTARCH="amd64",
-            TARGETARCH="arm64" if self.crosscompile_target.cpu_architecture.value == "aarch64" else self.crosscompile_target.cpu_architecture.value,
-            TARGETOS="freebsd",
-            GOROOT=self.goroot.expanduser(),
-            GOPATH=self.gopath.expanduser(),
-            CC=self.CC, CXX=self.CXX,
-            PATH=self._new_path)
+        args = {
+            "HOSTARCH":"amd64",
+            "TARGETARCH":"arm64" if self.crosscompile_target.cpu_architecture.value == "aarch64"
+                else self.crosscompile_target.cpu_architecture.value,
+            "TARGETOS":"freebsd",
+            "CC":self.CC, "CXX":self.CXX,
+            "PATH":self._new_path}
+        if self.use_go == GOROOTOptions.UPSTREAM:
+            args["GOROOT"] = self.goroot.expanduser()
+            args["GOPATH"] = self.gopath.expanduser()
+        self.make_args.set_env(**args)
         if self.sysgen:
             self.generate()
 
@@ -134,14 +144,17 @@ class BuildSyzkaller(CrossCompileProject):
 
     def clean(self) -> ThreadJoiner:
         self.run_cmd(["chmod", "-R", "u+w", self.build_dir])
-        self.make_args.set_env(
-            HOSTARCH="amd64",
-            TARGETARCH="arm64" if self.crosscompile_target.cpu_architecture.value == "aarch64" else self.crosscompile_target.cpu_architecture.value,
-            TARGETOS="freebsd",
-            GOROOT=self.goroot.expanduser(),
-            GOPATH=self.gopath.expanduser(),
-            CC=self.CC, CXX=self.CXX,
-            PATH=self._new_path)
+        args = {
+            "HOSTARCH":"amd64",
+            "TARGETARCH":"arm64" if self.crosscompile_target.cpu_architecture.value == "aarch64"
+                else self.crosscompile_target.cpu_architecture.value,
+            "TARGETOS":"freebsd",
+            "CC":self.CC, "CXX":self.CXX,
+            "PATH":self._new_path}
+        if self.use_go == GOROOTOptions.UPSTREAM:
+            args["GOROOT"] = self.goroot.expanduser()
+            args["GOPATH"] = self.gopath.expanduser()
+        self.make_args.set_env(**args)
 
         self.run_make("clean", parallel=False, cwd=self.gosrc)
         joiner = super().clean()
