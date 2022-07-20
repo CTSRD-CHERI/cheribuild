@@ -160,6 +160,12 @@ class BuildSyzkaller(CrossCompileProject):
         joiner = super().clean()
         return joiner
 
+class BuildMorelloSyzkaller(BuildSyzkaller):
+    target = "morello-syzkaller"
+    github_base_url = "https://github.com/CTSRD-CHERI/"
+    repository = GitRepository(github_base_url + "cheri-syzkaller.git", force_branch=True,
+        default_branch="morello-syzkaller")
+
 
 class RunSyzkaller(SimpleProject):
     target = "run-syzkaller"
