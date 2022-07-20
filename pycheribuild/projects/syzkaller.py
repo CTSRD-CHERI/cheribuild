@@ -98,7 +98,7 @@ class BuildSyzkaller(CrossCompileProject):
 
         self.make_args.set_env(
             HOSTARCH="amd64",
-            TARGETARCH=self.crosscompile_target.cpu_architecture.value,
+            TARGETARCH="arm64" if self.crosscompile_target.cpu_architecture.value == "aarch64" else self.crosscompile_target.cpu_architecture.value,
             TARGETOS="freebsd",
             GOROOT=self.goroot.expanduser(),
             GOPATH=self.gopath.expanduser(),
@@ -136,7 +136,7 @@ class BuildSyzkaller(CrossCompileProject):
         self.run_cmd(["chmod", "-R", "u+w", self.build_dir])
         self.make_args.set_env(
             HOSTARCH="amd64",
-            TARGETARCH=self.crosscompile_target.cpu_architecture.value,
+            TARGETARCH="arm64" if self.crosscompile_target.cpu_architecture.value == "aarch64" else self.crosscompile_target.cpu_architecture.value,
             TARGETOS="freebsd",
             GOROOT=self.goroot.expanduser(),
             GOPATH=self.gopath.expanduser(),
