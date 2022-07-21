@@ -67,9 +67,13 @@ class BuildSyzkaller(CrossCompileProject):
             "run-sysgen", show_help=True,
             help="Rerun syz-extract and syz-sysgen to rebuild generated Go "
                  "syscall descriptions.")
-        cls.use_go = cls.add_config_option("use-go", kind=GOROOTOptions, default=GOROOTOptions.DEFAULT,
-                                             enum_choice_strings=[t.value for t in GOROOTOptions],
-                                             help="Specify GOROOT default is system")
+        cls.use_go = cls.add_config_option("use-go", kind=GOROOTOptions,
+            default=GOROOTOptions.DEFAULT, enum_choice_strings=[t.value for t in GOROOTOptions],
+            help="Specify GOROOT default is system")
+
+    def create_new_path(self, config):
+        self._new_path = (str(self.config.cheri_sdk_dir / "bin") + ":" +
+                          str(self.config.dollar_path_with_other_tools))
 
     def __init__(self, config):
         self._install_prefix = config.cheri_sdk_dir
@@ -86,8 +90,7 @@ class BuildSyzkaller(CrossCompileProject):
         self.gopath = self.build_dir
         self.gosrc = self.source_dir
 
-        self._new_path = (str(self.config.cheri_sdk_dir / "bin") + ":" +
-                          str(self.config.dollar_path_with_other_tools))
+        self.create_new_path(config)
 
         cheribsd_target = self.get_crosscompile_target(config).get_rootfs_target()
         self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self, cross_target=cheribsd_target)
@@ -103,13 +106,15 @@ class BuildSyzkaller(CrossCompileProject):
 
     def compile(self, **kwargs):
         cflags = self.default_compiler_flags + self.default_ldflags
+        print(self._new_path)
         args = {
             "HOSTARCH":"amd64",
             "TARGETARCH":"arm64" if self.crosscompile_target.cpu_architecture.value == "aarch64"
                 else self.crosscompile_target.cpu_architecture.value,
             "TARGETOS":"freebsd",
             "CC":self.CC, "CXX":self.CXX,
-            "PATH":self._new_path}
+            "PATH":self._new_path
+        }
         if self.use_go == GOROOTOptions.UPSTREAM:
             args["GOROOT"] = self.goroot.expanduser()
             args["GOPATH"] = self.gopath.expanduser()
@@ -150,7 +155,8 @@ class BuildSyzkaller(CrossCompileProject):
                 else self.crosscompile_target.cpu_architecture.value,
             "TARGETOS":"freebsd",
             "CC":self.CC, "CXX":self.CXX,
-            "PATH":self._new_path}
+            "PATH":self._new_path
+        }
         if self.use_go == GOROOTOptions.UPSTREAM:
             args["GOROOT"] = self.goroot.expanduser()
             args["GOPATH"] = self.gopath.expanduser()
@@ -165,6 +171,11 @@ class BuildMorelloSyzkaller(BuildSyzkaller):
     github_base_url = "https://github.com/CTSRD-CHERI/"
     repository = GitRepository(github_base_url + "cheri-syzkaller.git", force_branch=True,
         default_branch="morello-syzkaller")
+
+    def create_new_path(self, config):
+        # Replace sdk with morello-sdk:
+        self._new_path = (str(self.config.cheri_sdk_dir)[0:-3] + "morello-sdk/bin" + ":" +
+                          str(self.config.dollar_path_with_other_tools))
 
 
 class RunSyzkaller(SimpleProject):
