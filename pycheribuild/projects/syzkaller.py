@@ -42,6 +42,7 @@ from ..processutils import commandline_to_str
 from ..qemu_utils import QemuOptions
 from ..utils import ThreadJoiner
 
+
 class GOROOTOptions(Enum):
     DEFAULT = "system"
     UPSTREAM = "upstream"
