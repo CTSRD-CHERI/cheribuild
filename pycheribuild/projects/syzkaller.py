@@ -98,6 +98,10 @@ class BuildSyzkaller(CrossCompileProject):
         self.gopath = self.build_dir
         self.gosrc = self.source_dir
 
+        self.targetarch = self.crosscompile_target.cpu_architecture.value
+        if self.targetarch == "aarch64":
+            self.targetarch = "arm64"
+
         self.get_path()
 
         cheribsd_target = self.get_crosscompile_target(config).get_rootfs_target()
@@ -115,8 +119,7 @@ class BuildSyzkaller(CrossCompileProject):
     def _setup_make_args(self):
         args = {
             "HOSTARCH": "amd64",
-            "TARGETARCH": "arm64" if self.crosscompile_target.cpu_architecture.value == "aarch64"
-                          else self.crosscompile_target.cpu_architecture.value,
+            "TARGETARCH": self.targetarch,
             "TARGETOS": "freebsd",
             "CC": self.CC,
             "CXX": self.CXX,
@@ -146,17 +149,17 @@ class BuildSyzkaller(CrossCompileProject):
     def install(self, **kwargs):
         # XXX-AM: should have a propert install dir configuration
         native_build = self.source_dir / "bin"
-        mips64_build = native_build / "freebsd_mips64"
-        syz_remote_install = self.syzkaller_install_path() / "freebsd_mips64"
+        build = native_build / ("freebsd_" + self.targetarch)
+        syz_remote_install = self.syzkaller_install_path() / ("freebsd_" + self.targetarch)
 
         self.makedirs(syz_remote_install)
 
         self.install_file(native_build / "syz-manager", self.syzkaller_binary(), mode=0o755)
 
         if not self.config.pretend:
-            # mips64_build does not exist if we preted, so skip
-            for fname in os.listdir(str(mips64_build)):
-                fpath = mips64_build / fname
+            # build does not exist if we preted, so skip
+            for fname in os.listdir(str(build)):
+                fpath = build / fname
                 if os.path.isfile(fpath):
                     self.install_file(fpath, syz_remote_install / fname, mode=0o755)
 
