@@ -108,7 +108,7 @@ class BuildSyzkaller(CrossCompileProject):
         self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self, cross_target=cheribsd_target)
 
     def syzkaller_install_path(self):
-        return self.get_sdk_bindir()
+        return self.get_sdk_dir(self.config) / "syzkaller"
 
     def syzkaller_binary(self):
         return self.get_sdk_bindir() / "syz-manager"
@@ -149,8 +149,8 @@ class BuildSyzkaller(CrossCompileProject):
     def install(self, **kwargs):
         # XXX-AM: should have a propert install dir configuration
         native_build = self.source_dir / "bin"
-        build = native_build / ("freebsd_" + self.targetarch)
-        syz_remote_install = self.syzkaller_install_path() / ("freebsd_" + self.targetarch)
+        build = native_build
+        syz_remote_install = self.syzkaller_install_path()
 
         self.makedirs(syz_remote_install)
 
