@@ -146,6 +146,19 @@ class BuildSyzkaller(CrossCompileProject):
             self.run_make("extract", parallel=False, cwd=self.gosrc)
             self.run_make("generate", parallel=False, cwd=self.gosrc)
 
+    def get_every_file_path(self, dir):
+        file_paths = []
+        for path in dir.iterdir():
+            if path.is_dir():
+                sub_files = self.get_every_file_path(path)
+                dir_name = path.parts[-1]
+                for s in sub_files:
+                    s[1] = dir_name + "/" + s[1]
+                    file_paths.append(s)
+            else:
+                file_paths.append([path, path.parts[-1]])
+        return file_paths
+
     def install(self, **kwargs):
         # XXX-AM: should have a propert install dir configuration
         native_build = self.source_dir / "bin"
@@ -158,10 +171,9 @@ class BuildSyzkaller(CrossCompileProject):
 
         if not self.config.pretend:
             # build does not exist if we preted, so skip
-            for fname in os.listdir(str(build)):
-                fpath = build / fname
-                if os.path.isfile(fpath):
-                    self.install_file(fpath, syz_remote_install / fname, mode=0o755)
+            for fpath in self.get_every_file_path(build):
+                if os.path.isfile(fpath[0]):
+                    self.install_file(fpath[0], syz_remote_install / fpath[1], mode=0o755)
 
     def clean(self) -> ThreadJoiner:
         self.run_cmd(["chmod", "-R", "u+w", self.build_dir])
