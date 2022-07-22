@@ -74,17 +74,23 @@ class BuildSyzkaller(CrossCompileProject):
                                            help="The Go type to run with.")
 
     def get_path(self):
-        return (str(self.config.cheri_sdk_bindir) + ":" +
+        return (str(self.get_sdk_bindir()) + ":" +
                 str(self.config.dollar_path_with_other_tools))
 
+    def get_sdk_dir(self, config):
+        return config.cheri_sdk_dir
+
+    def get_sdk_bindir(self):
+        return self.config.cheri_sdk_bindir
+
     def __init__(self, config):
-        self._install_prefix = config.cheri_sdk_dir
-        self._install_dir = config.cheri_sdk_dir
+        self._install_prefix = self.get_sdk_dir(config)
+        self._install_dir = self.get_sdk_dir(config)
         self.destdir = ""
         super().__init__(config)
 
         # self.gopath = source_base / gohome
-        self.goroot = config.cheri_sdk_dir / "go"
+        self.goroot = self.get_sdk_dir(config) / "go"
 
         # repo_url = urlparse(self.repository.url)
         # repo_path = repo_url.path.split(".")[0]
@@ -98,10 +104,10 @@ class BuildSyzkaller(CrossCompileProject):
         self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self, cross_target=cheribsd_target)
 
     def syzkaller_install_path(self):
-        return self.config.cheri_sdk_bindir
+        return self.get_sdk_bindir()
 
     def syzkaller_binary(self):
-        return self.config.cheri_sdk_bindir / "syz-manager"
+        return self.get_sdk_bindir() / "syz-manager"
 
     def needs_configure(self) -> bool:
         return False
@@ -170,10 +176,11 @@ class BuildMorelloSyzkaller(BuildSyzkaller):
     repository = GitRepository(github_base_url + "cheri-syzkaller.git", force_branch=True,
                                default_branch="morello-syzkaller")
 
-    def get_path(self):
-        # Replace sdk with morello-sdk:
-        return (str(self.config.morello_sdk_bindir) + ":" +
-                str(self.config.dollar_path_with_other_tools))
+    def get_sdk_dir(self, config):
+        return config.morello_sdk_dir
+
+    def get_sdk_bindir(self):
+        return self.config.morello_sdk_bindir
 
 
 class RunSyzkaller(SimpleProject):
