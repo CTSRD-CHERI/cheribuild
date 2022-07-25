@@ -151,8 +151,7 @@ class BuildSyzkaller(CrossCompileProject):
         for path in dir.iterdir():
             if path.is_dir():
                 sub_files = self.get_install_files(path)
-                for s in sub_files:
-                    file_paths.append(s)
+                file_paths.extend(sub_files)
             else:
                 file_paths.append(path)
         return file_paths
