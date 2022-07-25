@@ -104,8 +104,6 @@ class BuildSyzkaller(CrossCompileProject):
         cheribsd_target = self.get_crosscompile_target(config).get_rootfs_target()
         self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self, cross_target=cheribsd_target)
 
-        self._setup_make_args()
-
     def syzkaller_install_path(self):
         return self.get_sdk_dir() / "syzkaller"
 
@@ -115,7 +113,8 @@ class BuildSyzkaller(CrossCompileProject):
     def needs_configure(self) -> bool:
         return False
 
-    def _setup_make_args(self):
+    def setup(self):
+        super().setup()
         args = {
             "HOSTARCH": "amd64",
             "TARGETARCH": self.targetarch,
