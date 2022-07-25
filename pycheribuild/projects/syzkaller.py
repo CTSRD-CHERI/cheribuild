@@ -32,6 +32,7 @@
 import json
 import os
 from enum import Enum
+from pathlib import Path
 
 from .build_qemu import BuildQEMU
 from .cross.cheribsd import BuildCHERIBSD, ConfigPlatform, CheriBSDConfigTable
@@ -77,20 +78,20 @@ class BuildSyzkaller(CrossCompileProject):
         return (str(self.get_sdk_bindir()) + ":" +
                 str(self.config.dollar_path_with_other_tools))
 
-    def get_sdk_dir(self, config):
-        return config.cheri_sdk_dir
+    def get_sdk_dir(self):
+        return self.config.cheri_sdk_dir
 
     def get_sdk_bindir(self):
         return self.config.cheri_sdk_bindir
 
     def __init__(self, config):
-        self._install_prefix = self.get_sdk_dir(config)
-        self._install_dir = self.get_sdk_dir(config)
-        self.destdir = ""
         super().__init__(config)
+        self._install_prefix = self.get_sdk_dir()
+        self._install_dir = self.get_sdk_dir()
+        self.destdir = ""
 
         # self.gopath = source_base / gohome
-        self.goroot = self.get_sdk_dir(config) / "go"
+        self.goroot = self.get_sdk_dir() / "go"
 
         # repo_url = urlparse(self.repository.url)
         # repo_path = repo_url.path.split(".")[0]
@@ -108,7 +109,7 @@ class BuildSyzkaller(CrossCompileProject):
         self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self, cross_target=cheribsd_target)
 
     def syzkaller_install_path(self):
-        return self.get_sdk_dir(self.config) / "syzkaller"
+        return self.get_sdk_dir() / "syzkaller"
 
     def syzkaller_binary(self):
         return self.get_sdk_bindir() / "syz-manager"
@@ -146,32 +147,31 @@ class BuildSyzkaller(CrossCompileProject):
             self.run_make("extract", parallel=False, cwd=self.gosrc)
             self.run_make("generate", parallel=False, cwd=self.gosrc)
 
-    def get_every_file_path(self, dir):
+    def get_install_files(self, dir):
         file_paths = []
         for path in dir.iterdir():
             if path.is_dir():
-                sub_files = self.get_every_file_path(path)
-                dir_name = path.parts[-1]
+                sub_files = self.get_install_files(path)
+                dir_name = path.name
                 for s in sub_files:
-                    s[1] = dir_name + "/" + s[1]
+                    s[1] = Path(dir_name) / s[1]
                     file_paths.append(s)
             else:
-                file_paths.append([path, path.parts[-1]])
+                file_paths.append([path, path.name])
         return file_paths
 
     def install(self, **kwargs):
         # XXX-AM: should have a propert install dir configuration
-        native_build = self.source_dir / "bin"
-        build = native_build
+        build_output_path = self.source_dir / "bin"
         syz_remote_install = self.syzkaller_install_path()
 
         self.makedirs(syz_remote_install)
 
-        self.install_file(native_build / "syz-manager", self.syzkaller_binary(), mode=0o755)
+        self.install_file(build_output_path / "syz-manager", self.syzkaller_binary(), mode=0o755)
 
         if not self.config.pretend:
             # build does not exist if we preted, so skip
-            for fpath in self.get_every_file_path(build):
+            for fpath in self.get_install_files(build_output_path):
                 if os.path.isfile(fpath[0]):
                     self.install_file(fpath[0], syz_remote_install / fpath[1], mode=0o755)
 
@@ -191,8 +191,8 @@ class BuildMorelloSyzkaller(BuildSyzkaller):
     repository = GitRepository(github_base_url + "cheri-syzkaller.git", force_branch=True,
                                default_branch="morello-syzkaller")
 
-    def get_sdk_dir(self, config):
-        return config.morello_sdk_dir
+    def get_sdk_dir(self):
+        return self.config.morello_sdk_dir
 
     def get_sdk_bindir(self):
         return self.config.morello_sdk_bindir
