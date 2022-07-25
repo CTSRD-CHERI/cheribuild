@@ -44,7 +44,6 @@ from ..utils import ThreadJoiner
 
 
 class GoType(Enum):
-    DEFAULT = "system"
     UPSTREAM = "upstream"
     SYSTEM = "system"
 
@@ -69,7 +68,7 @@ class BuildSyzkaller(CrossCompileProject):
             "run-sysgen", show_help=True,
             help="Rerun syz-extract and syz-sysgen to rebuild generated Go "
                  "syscall descriptions.")
-        cls.use_go = cls.add_config_option("use-go", kind=GoType, default=GoType.DEFAULT,
+        cls.use_go = cls.add_config_option("use-go", kind=GoType, default=GoType.SYSTEM,
                                            enum_choice_strings=[t.value for t in GoType],
                                            help="The Go type to run with.")
 
