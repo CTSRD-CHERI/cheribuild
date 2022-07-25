@@ -101,10 +101,10 @@ class BuildSyzkaller(CrossCompileProject):
         if self.targetarch == "aarch64":
             self.targetarch = "arm64"
 
-        self.get_path()
-
         cheribsd_target = self.get_crosscompile_target(config).get_rootfs_target()
         self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self, cross_target=cheribsd_target)
+
+        self._setup_make_args()
 
     def syzkaller_install_path(self):
         return self.get_sdk_dir() / "syzkaller"
@@ -131,8 +131,6 @@ class BuildSyzkaller(CrossCompileProject):
 
     def compile(self, **kwargs):
         cflags = self.default_compiler_flags + self.default_ldflags
-
-        self._setup_make_args()
 
         if self.sysgen:
             self.generate()
@@ -173,8 +171,6 @@ class BuildSyzkaller(CrossCompileProject):
 
     def clean(self) -> ThreadJoiner:
         self.run_cmd(["chmod", "-R", "u+w", self.build_dir])
-
-        self._setup_make_args()
 
         self.run_make("clean", parallel=False, cwd=self.gosrc)
         joiner = super().clean()
