@@ -32,7 +32,6 @@
 import json
 import os
 from enum import Enum
-from pathlib import Path
 
 from .build_qemu import BuildQEMU
 from .cross.cheribsd import BuildCHERIBSD, ConfigPlatform, CheriBSDConfigTable
@@ -152,12 +151,10 @@ class BuildSyzkaller(CrossCompileProject):
         for path in dir.iterdir():
             if path.is_dir():
                 sub_files = self.get_install_files(path)
-                dir_name = path.name
                 for s in sub_files:
-                    s[1] = Path(dir_name) / s[1]
                     file_paths.append(s)
             else:
-                file_paths.append([path, path.name])
+                file_paths.append(path)
         return file_paths
 
     def install(self, **kwargs):
@@ -172,8 +169,9 @@ class BuildSyzkaller(CrossCompileProject):
         if not self.config.pretend:
             # build does not exist if we preted, so skip
             for fpath in self.get_install_files(build_output_path):
-                if os.path.isfile(fpath[0]):
-                    self.install_file(fpath[0], syz_remote_install / fpath[1], mode=0o755)
+                if os.path.isfile(fpath):
+                    self.install_file(fpath, syz_remote_install / fpath.relative_to(build_output_path),
+                                      mode=0o755)
 
     def clean(self) -> ThreadJoiner:
         self.run_cmd(["chmod", "-R", "u+w", self.build_dir])
