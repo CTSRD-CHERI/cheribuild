@@ -105,7 +105,7 @@ class BuildSyzkaller(CrossCompileProject):
         self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self, cross_target=cheribsd_target)
 
     def syzkaller_install_path(self):
-        return self.get_sdk_dir() / "syzkaller"
+        return self.get_sdk_dir() / "syzkaller" / "bin"
 
     def syzkaller_binary(self):
         return self.get_sdk_bindir() / "syz-manager"
@@ -155,9 +155,9 @@ class BuildSyzkaller(CrossCompileProject):
     def install(self, **kwargs):
         # XXX-AM: should have a propert install dir configuration
         build_output_path = self.source_dir / "bin"
-        syz_remote_install = self.syzkaller_install_path()
+        sdk_install_path = self.syzkaller_install_path()
 
-        self.makedirs(syz_remote_install)
+        self.makedirs(sdk_install_path)
 
         self.install_file(build_output_path / "syz-manager", self.syzkaller_binary(), mode=0o755)
 
@@ -165,7 +165,7 @@ class BuildSyzkaller(CrossCompileProject):
             # build does not exist if we preted, so skip
             for fpath in self.get_install_files(build_output_path):
                 if os.path.isfile(fpath):
-                    self.install_file(fpath, syz_remote_install / fpath.relative_to(build_output_path),
+                    self.install_file(fpath, sdk_install_path / fpath.relative_to(build_output_path),
                                       mode=0o755)
 
     def clean(self) -> ThreadJoiner:
