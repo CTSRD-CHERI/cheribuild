@@ -35,11 +35,11 @@ from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMake
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
 from .wayland import BuildWayland, BuildLinux_Input_H
 from .x11 import BuildLibXCB
-from ..project import (DefaultInstallDir, GitRepository, MakeCommandKind, TargetAliasWithDependencies)
+from ..project import (DefaultInstallDir, GitRepository, MakeCommandKind, TargetAliasWithDependencies,
+                       default_source_dir_in_subdir)
 from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
-from ...config.loader import ComputedDefaultValue
 from ...processutils import set_env
 from ...utils import is_case_sensitive_dir, OSInfo
 
@@ -50,9 +50,7 @@ class KDECMakeProject(CrossCompileCMakeProject):
     default_build_type = BuildType.RELWITHDEBINFO
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     # Group all the frameworks source directories together
-    default_source_dir = ComputedDefaultValue(
-        function=lambda config, project: config.source_root / "kde-frameworks" / project.default_directory_basename,
-        as_string=lambda cls: "$SOURCE_ROOT/kde-frameworks" + cls.default_directory_basename)
+    default_source_dir = default_source_dir_in_subdir(Path("kde-frameworks"))
 
     tests_need_full_disk_image = False  # default to running with the full disk image
     _has_qt_designer_plugin = False

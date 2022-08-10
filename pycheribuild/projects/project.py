@@ -65,7 +65,7 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
            "ReuseOtherProjectDefaultTargetRepository", "MakefileProject", "MesonProject",  # no-combine
            "TargetBranchInfo", "Linkage", "BasicCompilationTargets", "DefaultInstallDir", "BuildType",  # no-combine
-           "SubversionRepository", "_cached_get_homebrew_prefix"]  # no-combine
+           "SubversionRepository", "default_source_dir_in_subdir", "_cached_get_homebrew_prefix"]  # no-combine
 
 Type_T = typing.TypeVar("Type_T")
 
@@ -2148,13 +2148,23 @@ def _default_install_dir_str(project: "Project") -> str:
     # fatal_error("Unknown install dir for", project.target)
 
 
-def _default_source_dir(config: CheriConfig, project: "Project") -> Path:
+def _default_source_dir(config: CheriConfig, project: "Project", subdir: Path = Path()) -> "typing.Optional[Path]":
     if project.repository is not None and isinstance(project.repository, ReuseOtherProjectRepository):
-        # For projects that reuse other source directories, we have to return the default for the source project.
-        return project.repository.get_real_source_dir(project, None)
+        # For projects that reuse other source directories, we return None to use the default for the source project.
+        return None
     if project.default_directory_basename:
-        return Path(config.source_root / project.default_directory_basename)
-    return Path(config.source_root / project.target)
+        return Path(config.source_root / subdir / project.default_directory_basename)
+    return Path(config.source_root / subdir / project.target)
+
+
+def default_source_dir_in_subdir(subdir: Path) -> ComputedDefaultValue:
+    """
+    :param subdir: the subdirectory below the source root (e.g. qt5 or kde-frameworks)
+    :return: A ComputedDefaultValue for projects that build in a subdirectory below the source root.
+    """
+    return ComputedDefaultValue(
+        function=lambda config, project: _default_source_dir(config, project, subdir),
+        as_string=lambda cls: f"$SOURCE_ROOT/{subdir}/{(cls.default_directory_basename or cls.target)}")
 
 
 class Project(SimpleProject):
@@ -2559,7 +2569,12 @@ class Project(SimpleProject):
 
         if isinstance(self.default_directory_basename, ComputedDefaultValue):
             self.default_directory_basename = self.default_directory_basename(config, self)
-
+        if isinstance(self.repository, ReuseOtherProjectRepository):
+            initial_source_dir = inspect.getattr_static(self, "_initial_source_dir")
+            assert isinstance(initial_source_dir, ConfigOptionBase)
+            # noinspection PyProtectedMember
+            assert initial_source_dir._get_default_value(config, self) is None, \
+                "initial source dir != None for ReuseOtherProjectRepository"
         if self.source_dir is None:
             self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
         else:

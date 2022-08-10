@@ -37,8 +37,7 @@ from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, Cr
                                   DefaultInstallDir, GitRepository, MakeCommandKind)
 from .wayland import BuildWayland
 from .x11 import BuildLibXCB
-from ..project import SimpleProject
-from ...config.loader import ComputedDefaultValue
+from ..project import SimpleProject, default_source_dir_in_subdir
 from ...processutils import set_env
 from ...utils import InstallInstructions
 
@@ -365,9 +364,7 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
     target = "qtbase-dev"
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="dev-cheri", force_branch=True)
     is_large_source_repository = True
-    default_source_dir = ComputedDefaultValue(
-        function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
-        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.default_directory_basename)
+    default_source_dir = default_source_dir_in_subdir(Path("qt5"))
     # native_install_dir = DefaultInstallDir.CHERI_SDK
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     # default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
@@ -509,10 +506,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="5.15", force_branch=True)
     is_large_source_repository = True
     can_run_parallel_install = True
-    default_source_dir = ComputedDefaultValue(
-        function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
-        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.default_directory_basename)
-
+    default_source_dir = default_source_dir_in_subdir(Path("qt5"))
     _installed_examples = ("examples/corelib/mimetypes", "examples/widgets/widgets/tetrix")
 
     def compile(self, **kwargs):
@@ -605,9 +599,7 @@ class BuildQtModuleWithQMake(CrossCompileProject):
     do_not_add_to_targets = True
     can_run_parallel_install = True
     dependencies = ["qtbase"]
-    default_source_dir = ComputedDefaultValue(
-        function=lambda config, project: BuildQt5.get_source_dir(project, config) / project.default_directory_basename,
-        as_string=lambda cls: "$SOURCE_ROOT/qt5/" + cls.default_directory_basename)
+    default_source_dir = default_source_dir_in_subdir(Path("qt5"))
 
     def __init__(self, config):
         super().__init__(config)
@@ -810,9 +802,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     default_build_type = BuildType.RELWITHDEBINFO
 
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    default_source_dir = ComputedDefaultValue(
-        function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtwebkit",
-        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.default_directory_basename)
+    default_source_dir = default_source_dir_in_subdir(Path("qt5"))
     needs_mxcaptable_static = True  # Currently way over the limit
     needs_mxcaptable_dynamic = True  # Currently way over the limit
 
