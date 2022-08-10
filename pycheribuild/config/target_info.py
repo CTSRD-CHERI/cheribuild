@@ -516,6 +516,10 @@ class NativeTargetInfo(TargetInfo):
         # Note: some packages also install to libdata/pkgconfig or share/pkgconfig
         return self.pkgconfig_candidates(self.config.other_tools_dir)
 
+    @property
+    def cmake_prefix_paths(self) -> "list[Path]":
+        return [self.config.other_tools_dir]
+
     def pkgconfig_candidates(self, prefix: Path) -> "list[str]":
         result = super().pkgconfig_candidates(prefix)
         if self.default_libdir != "lib":
