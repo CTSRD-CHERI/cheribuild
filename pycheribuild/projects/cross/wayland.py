@@ -146,6 +146,11 @@ class BuildLibInput(CrossCompileMesonProject):
     repository = GitRepository("https://gitlab.freedesktop.org/libinput/libinput.git")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.target_info.is_linux():
+            self.add_required_pkg_config("libudev", apt="libudev-dev")
+
     @classmethod
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config) + ["mtdev", "libevdev"]
