@@ -139,7 +139,7 @@ class CheriBSDConfig:
 
 class KernelConfigFactory:
     kernconf_components = OrderedDict([(k, None) for k in (
-        "kabi_name", "platform_name", "flags")])
+        "kabi_name", "caprevoke", "platform_name", "flags")])
     separator = "_"
     platform_name_map = {}
 
@@ -178,6 +178,8 @@ class KernelConfigFactory:
             ctx["kabi_name"] = self.get_kabi_name(platform, kABI)
         if "platform_name" in ctx:
             ctx["platform_name"] = self.get_platform_name(platform)
+        if "caprevoke" in ctx and kwargs.get("caprevoke", False):
+            ctx["caprevoke"] = "CAPREVOKE"
         if "flags" in ctx:
             flag_list = self.get_flag_names(platform, kABI, **kwargs)
             if flag_list:
@@ -212,12 +214,6 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         flags += super().get_flag_names(platform, kABI, mfsroot=mfsroot, fuzzing=fuzzing, benchmark=benchmark)
         return flags
 
-    def _prepare_kernconf_context(self, platform, kABI, **kwargs):
-        ctx = super()._prepare_kernconf_context(platform, kABI, **kwargs)
-        if kwargs.get("caprevoke", False):
-            ctx["caprevoke"] = "CAPREVOKE"
-        return ctx
-
     def make_all(self):
         configs = []
         # Generate QEMU kernels
@@ -233,24 +229,22 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
             configs.append(self.make_config(ConfigPlatform.AWS, kABI, fett=True))
             configs.append(self.make_config(ConfigPlatform.AWS, kABI, fett=True, benchmark=True))
 
-        # Generate default FETT and caprevoke kernels
-        configs.append(self.make_config(ConfigPlatform.QEMU, KernelABI.HYBRID,
-                                        fett=True, caprevoke=True, default=True))
+        # Generate default FETT kernels
         configs.append(self.make_config(ConfigPlatform.QEMU, KernelABI.HYBRID,
                                         fett=True, default=True))
-        configs.append(self.make_config(ConfigPlatform.GFE, KernelABI.HYBRID,
-                                        caprevoke=True, mfsroot=True, default=True))
 
-        # Generate extra caprevoke kernels
-        configs.append(self.make_config(ConfigPlatform.AWS, KernelABI.HYBRID, fett=True, caprevoke=True))
-        configs.append(self.make_config(ConfigPlatform.QEMU, KernelABI.HYBRID, fett=True, caprevoke=True))
+        # Caprevoke kernels
+        for kABI in KernelABI:
+            configs.append(self.make_config(ConfigPlatform.QEMU, kABI, caprevoke=True, default=True))
+            configs.append(self.make_config(ConfigPlatform.GFE, kABI, caprevoke=True, mfsroot=True))
+            configs.append(self.make_config(ConfigPlatform.AWS, kABI, fett=True, caprevoke=True))
 
         return configs
 
 
 class AArch64KernelConfigFactory(KernelConfigFactory):
     kernconf_components = OrderedDict([(k, None) for k in (
-        "platform_name", "kabi_name", "flags")])
+        "platform_name", "kabi_name", "caprevoke", "flags")])
     separator = "-"
     platform_name_map = {
         ConfigPlatform.QEMU: "GENERIC",
@@ -265,7 +259,7 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
         elif kABI == KernelABI.PURECAP:
             return "MORELLO{sep}PURECAP".format(sep=self.separator)
 
-    def get_flag_names(self, platform, kABI, default=False, **kwargs):
+    def get_flag_names(self, platform, kABI, default=False, caprevoke=False, **kwargs):
         return super().get_flag_names(platform, kABI, **kwargs)
 
     def make_all(self):
@@ -277,6 +271,10 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
                                             benchmark=True))
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
                                             mfsroot=True))
+        # Caprevoke kernels
+        for kABI in KernelABI:
+            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
+                                            caprevoke=True))
 
         return configs
 
