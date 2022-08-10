@@ -4027,13 +4027,19 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             native_toolchain_template = include_local_file("files/meson-cross-file-native-env.ini.in")
             from .cmake import BuildCMake  # Could also use any other native project
             native_target_info = BuildCMake.get_instance(self, cross_target=BasicCompilationTargets.NATIVE).target_info
+            native_pkg_config_dirs = native_target_info.pkgconfig_dirs
+            native_cmake_prefix_paths = native_target_info.cmake_prefix_paths
+            if self.needs_native_build_for_crosscompile:
+                native_project = self.get_instance_for_cross_target(BasicCompilationTargets.NATIVE, self.config, self)
+                native_pkg_config_dirs = native_project.installed_pkgconfig_dirs() + native_pkg_config_dirs
+                native_cmake_prefix_paths.insert(0, native_project.install_dir)
             self._replace_values_in_toolchain_file(
                 native_toolchain_template, self._native_toolchain_file,
                 NATIVE_C_COMPILER=self.host_CC, NATIVE_CXX_COMPILER=self.host_CXX,
                 TOOLCHAIN_PKGCONFIG_BINARY=pkg_config_bin, TOOLCHAIN_CMAKE_BINARY=cmake_bin,
                 # To find native packages we have to add the bootstrap tools to PKG_CONFIG_PATH and CMAKE_PREFIX_PATH.
-                NATIVE_PKG_CONFIG_PATH=native_target_info.pkgconfig_dirs,
-                NATIVE_CMAKE_PREFIX_PATH=[self.config.other_tools_dir],
+                NATIVE_PKG_CONFIG_PATH=remove_duplicates(native_pkg_config_dirs),
+                NATIVE_CMAKE_PREFIX_PATH=remove_duplicates(native_cmake_prefix_paths)
             )
 
         if self.install_prefix != self.install_dir:
