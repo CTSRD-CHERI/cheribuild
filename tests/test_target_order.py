@@ -391,7 +391,8 @@ def test_hybrid_targets(enable_hybrid_targets):
 
     unexpected_hybrid_targets = filter(should_include_target, all_hybrid_targets)
     # Currently this list should only include the Syzkaller targets:
-    expected_hybrid_targets = ["cheri-syzkaller", "morello-syzkaller", "run-syzkaller"]
+    expected_hybrid_targets = ["cheri-syzkaller", "morello-syzkaller", "run-syzkaller",
+                               "run-morello-qemu-syzkaller", "run-morello-baremetal-syzkaller"]
     assert [t.name for t in unexpected_hybrid_targets] == expected_hybrid_targets
 
 

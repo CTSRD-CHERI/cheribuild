@@ -189,9 +189,40 @@ class BuildMorelloSyzkaller(BuildSyzkaller):
         return self.config.morello_sdk_bindir
 
 
-class RunSyzkaller(SimpleProject):
-    target = "run-syzkaller"
+class VMSetting(Enum):
+    NONE = {"type": "none",
+            "vm": {}
+            }
+    QEMU = {
+            "type": "qemu",
+            "vm": {
+                "qemu": "",
+                "qemu_args": "",
+                "kernel": "",
+                "image_device": "drive index=0,media=disk,format=raw,file=",
+                "count": 1,
+                "cpu": 1,
+                "mem": 2048,
+                    }
+            }
+    MORELLO = {
+            "type": "morello",
+            "vm": {
+                "mbox_address": "morello7-dev.sec.cl.cam.ac.uk",
+                "bbb_address": "morello7-bbb.sec.cl.cam.ac.uk",
+                "reboot_command": "~/reboot_morello.sh",
+                "mbox_workdir": "/syz/"
+                    }
+                }
+
+
+class RunSyzkallerBase(SimpleProject):
+    # Generally to generate a new type of config, the new class should
+    # override costumize_config and get_syzkaller
+    # also set do_not_add_to_targets to false
+    do_not_add_to_targets = True
     supported_architectures = [CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS]
+    vm_type = VMSetting.NONE
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -202,7 +233,7 @@ class RunSyzkaller(SimpleProject):
         cls.syz_ssh_key = cls.add_path_option("ssh-privkey", show_help=True,
                                               default=lambda config, project: (
                                                       config.source_root / "extra-files" / "syzkaller_id_rsa"),
-                                              help="A directory with additional files that will be added to the image "
+                                              help="Path to the private key used for ssh connections with the VM(s) "
                                                    "(default: '$SOURCE_ROOT/extra-files/syzkaller_id_rsa')",
                                               metavar="syzkaller_id_rsa")
         cls.syz_workdir = cls.add_path_option("workdir", show_help=True,
@@ -212,20 +243,13 @@ class RunSyzkaller(SimpleProject):
         cls.syz_debug = cls.add_bool_option("debug",
                                             help="Run syz-manager in debug mode, requires manual startup of the VM.")
 
-    def syzkaller_config(self, syzkaller: BuildSyzkaller):
+    def syzkaller_config(self):
         """ Get path of syzkaller configuration file to use. """
         if self.syz_config:
             return self.syz_config
         else:
-            xtarget = syzkaller.crosscompile_target.get_cheri_purecap_target()
-            qemu_binary = BuildQEMU.qemu_binary(self, xtarget=xtarget)
+            xtarget = self.syzkaller.crosscompile_target.get_cheri_purecap_target()
             kernel_project = BuildCHERIBSD.get_instance(self, cross_target=xtarget)
-            kernel_config = CheriBSDConfigTable.get_configs(xtarget, ConfigPlatform.QEMU,
-                                                            kernel_project.get_default_kernel_abi(), fuzzing=True)
-            if len(kernel_config) == 0:
-                self.fatal("No kcov kernel configuration found")
-                return
-            kernel_path = kernel_project.get_kernel_install_path(kernel_config[0].kernconf)
 
             kernel_src_path = kernel_project.source_dir
             kernel_build_path = kernel_project.build_dir
@@ -233,22 +257,17 @@ class RunSyzkaller(SimpleProject):
 
             self.makedirs(self.syz_workdir)
             syz_config = self.syz_workdir / "syzkaller-config.json"
-            vm_type = "qemu"
-            if self.syz_debug:
-                # Run in debug mode
-                vm_type = "none"
 
-            qemu_opts = QemuOptions(self.crosscompile_target)
             template = {
                 "name": "cheribsd-n64",
                 "target": "freebsd/" + self.crosscompile_target.cpu_architecture.value,
                 "http": ":10000",
                 "rpc": ":10001",
                 "workdir": str(self.syz_workdir),
-                "syzkaller": str(syzkaller.syzkaller_install_path().parent),
+                "syzkaller": str(self.syzkaller.syzkaller_install_path().parent),
                 "sshkey": str(self.syz_ssh_key),
                 # (used for report symbolization and coverage reports, optional).
-                "kernel_obj": str(kernel_path),
+                "kernel_obj": "",  # has to be provided by costumize_config
                 # Kernel source directory (if not set defaults to KernelObj)
                 "kernel_src": str(kernel_src_path),
                 # Location of the driectory where the kernel was built (if not set defaults to KernelSrc)
@@ -256,20 +275,17 @@ class RunSyzkaller(SimpleProject):
                 "sandbox": "none",
                 "procs": 1,
                 "image": str(disk_image),
-                "type": vm_type,
-                "vm": {
-                    "qemu": str(qemu_binary),
-                    "qemu_args": commandline_to_str(qemu_opts.machine_flags +
-                                                    ["-device", "virtio-rng-pci",
-                                                     "-D", "syz-trace.log"]),
-                    "kernel": str(kernel_path),
-                    "image_device": "drive index=0,media=disk,format=raw,file=",
-                    "count": 1,
-                    "cpu": 1,
-                    "mem": 2048,
-                    "timeout": 60
-                    }
+                "type": "",
+                "vm": {}
                 }
+
+            for item in self.vm_type.value.keys():
+                template[item] = self.vm_type.value[item]
+
+            template = self.costumize_config(kernel_project, template)
+            if self.syz_debug:
+                # Run in debug mode
+                template["type"] = "none"
             self.verbose_print("Using syzkaller configuration", template)
             if not self.config.pretend:
                 with syz_config.open("w+") as fp:
@@ -278,9 +294,126 @@ class RunSyzkaller(SimpleProject):
 
             return syz_config
 
+    def costumize_config(self, kernel_project, template):
+        return template
+
+    def set_syzkaller(self):
+        self.syzkaller = BuildSyzkaller.get_instance(self)
+
     def process(self):
-        syzkaller = BuildSyzkaller.get_instance(self)
-        syz_args = [syzkaller.syzkaller_binary(), "-config", self.syzkaller_config(syzkaller)]
+        self.set_syzkaller()
+        syz_args = [self.syzkaller.syzkaller_binary(), "-config", self.syzkaller_config()]
         if self.config.verbose:
             syz_args += ["-debug"]
         self.run_cmd(*syz_args)
+
+
+class RunSyzkaller(RunSyzkallerBase):
+    target = "run-syzkaller"
+    vm_type = VMSetting.QEMU
+
+    def costumize_config(self, kernel_project, template):
+        xtarget = self.syzkaller.crosscompile_target.get_cheri_purecap_target()
+        qemu_binary = BuildQEMU.qemu_binary(self, xtarget=xtarget)
+        kernel_config = CheriBSDConfigTable.get_configs(xtarget, ConfigPlatform.QEMU,
+                                                        kernel_project.get_default_kernel_abi(), fuzzing=True)
+        if len(kernel_config) == 0:
+            self.fatal("No kcov kernel configuration found")
+            return
+        kernel_path = kernel_project.get_kernel_install_path(kernel_config[0].kernconf)
+        qemu_opts = QemuOptions(self.crosscompile_target)
+
+        template["kernel_obj"] = str(kernel_path)
+        template["vm"]["qemu"] = str(qemu_binary)
+        template["vm"]["qemu_args"] = commandline_to_str(qemu_opts.machine_flags +
+                                                         ["-device", "virtio-rng-pci",
+                                                          "-D", "syz-trace.log"])
+        template["vm"]["kernel"] = str(kernel_path)
+        template["vm"]["timeout"] = 60
+
+        return template
+
+
+class RunMorelloQemuSyzkaller(RunSyzkallerBase):
+    target = "run-morello-qemu-syzkaller"
+    vm_type = VMSetting.QEMU
+
+    def costumize_config(self, kernel_project, template):
+        qemu_binary = BuildQEMU.qemu_binary(self)
+        kernel_config = kernel_project.default_kernel_config(ConfigPlatform.QEMU)
+        if len(kernel_config) == 0:
+            self.fatal("No kcov kernel configuration found")
+            return
+        kernel_path = kernel_project.get_kernel_install_path(kernel_config)
+        qemu_opts = QemuOptions(self.crosscompile_target)
+
+        template["kernel_obj"] = str(kernel_path)
+        template["vm"]["qemu"] = str(qemu_binary)
+        template["vm"]["qemu_args"] = commandline_to_str(qemu_opts.machine_flags +
+                                                         ["-D", "syz-trace.log"])
+        template["vm"]["kernel"] = str(kernel_path)
+
+        target_arch = self.crosscompile_target.cpu_architecture.value
+        if target_arch == "aarch64":
+            target_arch = "arm64"
+        template["target"] = "freebsd/" + target_arch
+
+        return template
+
+    def set_syzkaller(self):
+        self.syzkaller = BuildMorelloSyzkaller.get_instance(self)
+
+
+class RunMorelloBaremetalSyzkaller(RunSyzkallerBase):
+    target = "run-morello-baremetal-syzkaller"
+    vm_type = VMSetting.MORELLO
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+
+        cls.syz_ssh_user = cls.add_config_option("ssh-user", show_help=True,
+                                                 help="The username of the default ssh user")
+        cls.syz_morellobox_ssh_user = cls.add_config_option("morellobox-ssh-user", show_help=True,
+                                                            help="The username of the morellobox ssh user, default "
+                                                                 "value: --run-morello-baremetal-syzkaller/ssh-user")
+        cls.syz_bbb_ssh_user = cls.add_config_option("bbb-ssh-user", show_help=True,
+                                                     help="The username of the bbb ssh user, default: value: "
+                                                          "--run-morello-baremetal-syzkaller/ssh-user")
+        cls.syz_morellobox_ssh_key = cls.add_path_option("morellobox-ssh-privkey", show_help=True,
+                                                         help="Path to the private key used to communicate "
+                                                              "with the morellobox")
+        cls.syz_bbb_ssh_key = cls.add_path_option("bbb-ssh-privkey", show_help=True,
+                                                  help="Path to the private key used to communicate with the bbb")
+
+    def costumize_config(self, kernel_project, template):
+        kernel_config = kernel_project.default_kernel_config(ConfigPlatform.QEMU)
+        if len(kernel_config) == 0:
+            self.fatal("No kcov kernel configuration found")
+            return
+        if self.syz_ssh_user is None:
+            self.fatal("No ssh user name provided, use the flag --run-morello-baremetal-syzkaller/ssh-user USERNAME")
+            return
+        kernel_path = kernel_project.get_kernel_install_path(kernel_config)
+
+        template["kernel_obj"] = str(kernel_path)
+        template["ssh_user"] = str(self.syz_ssh_user)
+        template["sshkey"] = str(self.syz_ssh_key)
+        if self.syz_morellobox_ssh_user is not None:
+            template["vm"]["mbox_username"] = str(self.syz_morellobox_ssh_user)
+        if self.syz_bbb_ssh_user is not None:
+            template["vm"]["bbb_username"] = str(self.syz_bbb_ssh_user)
+        if self.syz_morellobox_ssh_key is not None:
+            template["vm"]["mbox_sshkey"] = str(self.syz_morellobox_ssh_key)
+        if self.syz_bbb_ssh_key is not None:
+            template["vm"]["bbb_sshkey"] = str(self.syz_bbb_ssh_key)
+
+        target_arch = self.crosscompile_target.cpu_architecture.value
+        if target_arch == "aarch64":
+            target_arch = "arm64"
+        template["target"] = "freebsd/" + target_arch
+
+        return template
+
+    def set_syzkaller(self):
+        self.syzkaller = BuildMorelloSyzkaller.get_instance(self)
