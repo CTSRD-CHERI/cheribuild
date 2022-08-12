@@ -371,7 +371,8 @@ class TargetManager(object):
         if not config.enable_hybrid_targets:
             xtarget = target.xtarget
             # NB: We allow hybrid for baremetal targets (for now...)
-            if xtarget.get_rootfs_target().is_cheri_hybrid() and not xtarget.target_info_cls.is_baremetal():
+            if (xtarget.get_rootfs_target().is_cheri_hybrid() and not xtarget.target_info_cls.is_baremetal()
+                    and not xtarget.is_native()):
                 return target.name + " is a hybrid target, which should not be used unless you know what you're " + \
                        "doing. If you are still sure you want to build this, use --enable-hybrid-targets."
         return None

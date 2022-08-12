@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import functools
 import platform
 import typing
 from abc import ABC, abstractmethod
@@ -332,6 +333,10 @@ class TargetInfo(ABC):
         return []  # whatever the default is
 
     @property
+    def pkg_config_libdir_override(self) -> "typing.Optional[str]":
+        raise ValueError("Should only be called for native")
+
+    @property
     def install_prefix_dirname(self) -> str:
         """The name of the root directory to install to: i.e. for CheriBSD /usr/local/mips64-purecap or
         /usr/local/riscv64-hybrid"""
@@ -552,10 +557,42 @@ class NativeTargetInfo(TargetInfo):
             return "lib64"
         return "lib"
 
+    @cached_property
+    def _compat_abi_suffix(self) -> str:
+        assert self.is_freebsd()
+        # Directory suffix for compat ABI (currently only "64"/"" should be valid)
+        if _is_native_purecap() and not self.target.is_cheri_purecap():
+            return "64"
+        assert _is_native_purecap() == self.target.is_cheri_purecap(), \
+            "Building purecap natively is only supported on purecap installations"
+        return ""
+
+    @property
+    def localbase(self) -> Path:
+        if self.is_freebsd():
+            # Use /usr/local64 for hybrid/non-CHERI targets on purecap CheriBSD.
+            return Path(f"/usr/local{self._compat_abi_suffix}")
+        raise NotImplementedError("Should only be called for FreeBSD targets")
+
+    @cached_property
+    def pkg_config_libdir_override(self) -> "typing.Optional[str]":
+        if OSInfo.is_cheribsd():
+            # When building natively on CheriBSD with pkg-config installed using pkg64, the default pkg-config
+            # search path will use the non-CHERI libraries in /usr/local64. We could avoid this override in cases
+            # where the pkg-config localbase matches the current localbase, but always overriding it is simpler (and
+            # also handles cases such as a self-built pkg-config).
+            if self._compat_abi_suffix:
+                return f"{self.localbase}/libdata/pkgconfig:/usr/lib{self._compat_abi_suffix}/pkgconfig"
+            return "/usr/local/libdata/pkgconfig:/usr/libdata/pkgconfig"
+        return None  # use the default value for non-CheriBSD
+
     @property
     def pkgconfig_dirs(self) -> "typing.List[str]":
         # We need to add the bootstrap tools pkgconfig dirs to PKG_CONFIG_PATH to find e.g. libxml2, etc.
         # Note: some packages also install to libdata/pkgconfig or share/pkgconfig
+        # NB: We don't want to look in this directory when building forced hybrid targets such as GDB:
+        if _is_native_purecap() and not self.target.is_cheri_purecap():
+            return []
         return self.pkgconfig_candidates(self.config.other_tools_dir)
 
     def cmake_prefix_paths(self, config: "CheriConfig") -> "list[Path]":
@@ -586,6 +623,11 @@ class NativeTargetInfo(TargetInfo):
             else:
                 instance.project.fatal("Requested automatic variable initialization, but don't know how to for",
                                        compiler)
+        if xtarget.is_cheri_hybrid():
+            if xtarget.is_aarch64(include_purecap=True):
+                result.append("-mabi=aapcs")
+            else:
+                instance.project.fatal("-native-hybrid not supported yet for non-Morello targets")
         return result  # default host compiler should not need any extra flags
 
 
@@ -886,6 +928,7 @@ class CrossCompileTarget(object):
     #     raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")
 
 
+@functools.lru_cache(maxsize=1)
 def _native_cpu_arch() -> CPUArchitecture:
     machine = platform.machine()
     if machine in ("amd64", "x86_64"):
@@ -898,17 +941,24 @@ def _native_cpu_arch() -> CPUArchitecture:
         return CPUArchitecture.X86_64
 
 
-def _native_target_kwargs() -> dict:
-    if OSInfo.is_cheribsd() and platform.processor() in ("aarch64c", "riscv64c"):
-        # TODO: should we check if `cc -E -dM -xc /dev/null` contains __CHERI_PURE_CAPABILITY__ instead?
-        return dict(is_cheri_purecap=True)
-    return dict()
+@functools.lru_cache(maxsize=1)
+def _is_native_purecap():
+    # TODO: should we check if `cc -E -dM -xc /dev/null` contains __CHERI_PURE_CAPABILITY__ instead?
+    return OSInfo.is_cheribsd() and platform.processor() in ("aarch64c", "riscv64c")
 
 
 # This is a separate class to avoid cyclic dependencies.
 # The real list is in CompilationTargets in compilation_targets.py
 class BasicCompilationTargets:
-    NATIVE = CrossCompileTarget("native", _native_cpu_arch(), NativeTargetInfo, **_native_target_kwargs())
+    # Some projects (LLVM, QEMU, GDB, etc.) don't build as purecap binaries, so we have to build them hybrid instead.
+    if _is_native_purecap():
+        NATIVE = CrossCompileTarget("native", _native_cpu_arch(), NativeTargetInfo, is_cheri_purecap=True)
+        NATIVE_HYBRID = CrossCompileTarget("native-hybrid", _native_cpu_arch(), NativeTargetInfo, is_cheri_hybrid=True,
+                                           purecap_target=NATIVE, check_conflict_with=NATIVE)
+        NATIVE_NON_PURECAP = NATIVE_HYBRID
+    else:
+        NATIVE = CrossCompileTarget("native", _native_cpu_arch(), NativeTargetInfo)
+        NATIVE_NON_PURECAP = NATIVE
     NATIVE_IF_FREEBSD = [NATIVE] if OSInfo.IS_FREEBSD else []
     NATIVE_IF_LINUX = [NATIVE] if OSInfo.IS_LINUX else []
     NATIVE_IF_MACOS = [NATIVE] if OSInfo.IS_MAC else []

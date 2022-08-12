@@ -72,10 +72,18 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
     supported_architectures = (CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS +
                                CompilationTargets.ALL_CHERIBSD_HYBRID_TARGETS +
                                CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS +
-                               CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS + [CompilationTargets.NATIVE])
-    default_architecture = CompilationTargets.NATIVE
+                               CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS +
+                               [CompilationTargets.NATIVE_NON_PURECAP])
+    default_architecture = CompilationTargets.NATIVE_NON_PURECAP
     prefer_full_lto_over_thin_lto = True
-    dependencies = ["gmp"]
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
+        deps = super().dependencies(config)
+        # For the native-hybrid build gmp must be installed via ports.
+        if not cls.get_crosscompile_target().is_cheri_hybrid():
+            deps.append("gmp")
+        return deps
 
     @classmethod
     def is_toolchain_target(cls):
@@ -90,8 +98,11 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
     def __init__(self, config: CheriConfig):
         self._compile_status_message = None
         super().__init__(config)
+        if self.compiling_for_host() and self.target_info.is_cheribsd():
+            self.add_required_pkg_config("gmp", freebsd="gmp")
+            self.add_required_pkg_config("expat", freebsd="expat")
 
-    def setup(self):
+    def setup(self) -> None:
         super().setup()
         install_root = self.install_dir if self.compiling_for_host() else self.install_prefix
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
@@ -136,7 +147,8 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         self.cross_warning_flags.append("-Wno-error=incompatible-pointer-types")
         self.configure_args.append("--enable-targets=all")
         if self.compiling_for_host():
-            self.LDFLAGS.append("-L/usr/local/lib")
+            if self.target_info.is_freebsd():
+                self.LDFLAGS.append(f"-L{self.target_info.localbase}/lib")  # Expat/GMP are in $LOCALBASE
             self.configure_args.append("--with-expat")
         else:
             self.configure_args.extend(["--without-python", "--without-expat", "--without-libunwind-ia64"])
@@ -149,7 +161,7 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
                                               MAKEINFO="/bin/false"
                                               )
             # TODO: Make unconditional once CHERI-GDB is updated to 11.1
-            if "gmp" in self.dependencies:
+            if "gmp" in self.cached_full_dependencies():
                 self.COMMON_FLAGS.append("-I" + str(BuildGmp.get_install_dir(self) / "include"))
                 self.LDFLAGS.append("-L" + str(BuildGmp.get_install_dir(self) / "lib"))
                 # Autoconf stupidly decides which to use based on file existence
@@ -172,13 +184,13 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
             self.configure_environment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
             # Look in /usr/lib not /usr/local/lib
             self.configure_args.append("--with-separate-debug-dir=/usr/lib/debug")
+            self.configure_environment["CC_FOR_BUILD"] = str(self.host_CC)
+            self.configure_environment["CXX_FOR_BUILD"] = str(self.host_CXX)
+            self.configure_environment["CFLAGS_FOR_BUILD"] = "-g -fcommon"
+            self.configure_environment["CXXFLAGS_FOR_BUILD"] = "-g -fcommon"
+
         if self.make_args.command == "gmake":
             self.configure_environment["MAKE"] = "gmake"
-
-        self.configure_environment["CC_FOR_BUILD"] = str(self.host_CC)
-        self.configure_environment["CXX_FOR_BUILD"] = str(self.host_CXX)
-        self.configure_environment["CFLAGS_FOR_BUILD"] = "-g -fcommon"
-        self.configure_environment["CXXFLAGS_FOR_BUILD"] = "-g -fcommon"
 
         if not self.compiling_for_host():
             self.add_configure_env_arg("AR", self.target_info.ar)

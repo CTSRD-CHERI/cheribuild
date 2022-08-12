@@ -107,9 +107,9 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             self.configure_args.extend(["--native-file", str(self._toolchain_file)])
             # PKG_CONFIG_LIBDIR can only be set in the toolchain file when cross-compiling, set it in the environment
             # for CheriBSD with pkg-config installed via pkg64.
-            if self._native_pkg_config_libdir():
-                self.configure_environment.update(PKG_CONFIG_LIBDIR=self._native_pkg_config_libdir())
-                self.make_args.set_env(PKG_CONFIG_LIBDIR=self._native_pkg_config_libdir())
+            if self.target_info.pkg_config_libdir_override is not None:
+                self.configure_environment.update(PKG_CONFIG_LIBDIR=self.target_info.pkg_config_libdir_override)
+                self.make_args.set_env(PKG_CONFIG_LIBDIR=self.target_info.pkg_config_libdir_override)
         if self.force_configure and not self.with_clean and (self.build_dir / "meson-info").exists():
             self.configure_args.append("--reconfigure")
         # Don't use bundled fallback dependencies, we always want to use the (potentially patched) system packages.

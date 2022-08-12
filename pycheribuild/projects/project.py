@@ -979,21 +979,7 @@ class Project(SimpleProject):
         result[self.config.other_tools_dir] = True
         return list(result.keys())
 
-    __cached_native_pkg_config_libdir: Optional[str] = None
-
-    @classmethod
-    def _native_pkg_config_libdir(cls) -> str:
-        if cls.__cached_native_pkg_config_libdir is not None:
-            return cls.__cached_native_pkg_config_libdir
-        if OSInfo.is_cheribsd() and shutil.which("pkg-config") == "/usr/local64/bin/pkg-config":
-            # When building natively on CheriBSD with pkg-config installed using pkg64, the default pkg-config
-            # search path will use the non-CHERI libraries in /usr/local64.
-            cls.__cached_native_pkg_config_libdir = "/usr/local/libdata/pkgconfig:/usr/libdata/pkgconfig"
-        else:
-            cls.__cached_native_pkg_config_libdir = ""
-        return cls.__cached_native_pkg_config_libdir
-
-    def setup(self) -> None:
+    def setup(self):
         super().setup()
         if self.set_pkg_config_path:
             pkg_config_args = dict()
@@ -1002,8 +988,8 @@ class Project(SimpleProject):
                 # addition to the default paths. Note: We do not set PKG_CONFIG_LIBDIR since that overrides the default.
                 pkg_config_args = dict(
                     PKG_CONFIG_PATH=":".join(self.pkgconfig_dirs + [os.getenv("PKG_CONFIG_PATH", "")]))
-                if self._native_pkg_config_libdir():
-                    pkg_config_args["PKG_CONFIG_LIBDIR"] = self._native_pkg_config_libdir()
+                if self.target_info.pkg_config_libdir_override is not None:
+                    pkg_config_args["PKG_CONFIG_LIBDIR"] = self.target_info.pkg_config_libdir_override
             elif self.needs_sysroot:
                 # We need to set the PKG_CONFIG variables both when configuring and when running make since some
                 # projects (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set
@@ -1815,7 +1801,7 @@ class AutotoolsProject(Project):
                 # autotools_triple = autotools_triple.replace("mips64c128-", "cheri-")
                 self.configure_args.extend(["--host=" + autotools_triple, "--target=" + autotools_triple,
                                             "--build=" + buildhost])
-            elif self.compiling_for_cheri():
+            elif self.crosscompile_target.is_hybrid_or_purecap_cheri():
                 # When compiling natively on CheriBSD, most autotools projects don't like the inferred config.guess
                 # value of aarch64c-unknown-freebsd14.0. Override it to make this work in most cases.
                 self.configure_args.extend(["--build=" + buildhost])
