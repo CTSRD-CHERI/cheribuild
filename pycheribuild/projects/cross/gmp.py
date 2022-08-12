@@ -35,6 +35,12 @@ class BuildGmp(CrossCompileAutotoolsProject):
                                CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS + [CompilationTargets.NATIVE])
     native_install_dir = DefaultInstallDir.CHERI_SDK
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # It would be nice if we could just disable building documentation, but until we can do so, missing makeinfo
+        # results in failing build
+        self.add_required_system_tool("makeinfo", freebsd="texinfo")
+
     def setup(self):
         super().setup()
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
