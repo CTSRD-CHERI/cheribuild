@@ -29,6 +29,7 @@
 #
 import copy
 import datetime
+import itertools
 import errno
 import functools
 import inspect
@@ -2709,9 +2710,18 @@ class Project(SimpleProject):
             dependency_pkgconfig_dirs.extend(self.target_info.pkgconfig_candidates(d))
         return remove_duplicates(dependency_pkgconfig_dirs)
 
-    def installed_pkgconfig_dirs(self) -> "list[str]":
-        """:return: a list of directories that might contain this projects installed .pc files"""
-        return self.target_info.pkgconfig_candidates(self.install_dir)
+    @property
+    def host_dependency_prefixes(self) -> "list[Path]":
+        """:return: a list of prefixes for native dependencies (only for cross-compilation)"""
+        assert not self.compiling_for_host()
+        result = dict()  # Use a dict to ensure reproducible order (guaranteed since Python 3.6)
+        if self.needs_native_build_for_crosscompile:
+            result[self.get_install_dir(self, self.config, cross_target=BasicCompilationTargets.NATIVE)] = True
+        for d in self.cached_full_dependencies():
+            if d.xtarget.is_native() and not d.project_class.is_toolchain_target():
+                result[d.get_or_create_project(d.xtarget, self.config).install_dir] = True
+        result[self.config.other_tools_dir] = True
+        return list(result.keys())
 
     __cached_native_pkg_config_libdir = None
 
@@ -4025,21 +4035,22 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         )
         if not self.compiling_for_host():
             native_toolchain_template = include_local_file("files/meson-cross-file-native-env.ini.in")
-            from .cmake import BuildCMake  # Could also use any other native project
-            native_target_info = BuildCMake.get_instance(self, cross_target=BasicCompilationTargets.NATIVE).target_info
-            native_pkg_config_dirs = native_target_info.pkgconfig_dirs
-            native_cmake_prefix_paths = native_target_info.cmake_prefix_paths
-            if self.needs_native_build_for_crosscompile:
-                native_project = self.get_instance_for_cross_target(BasicCompilationTargets.NATIVE, self.config, self)
-                native_pkg_config_dirs = native_project.installed_pkgconfig_dirs() + native_pkg_config_dirs
-                native_cmake_prefix_paths.insert(0, native_project.install_dir)
+            if BasicCompilationTargets.NATIVE in self.supported_architectures:
+                host_target_info = self.get_instance(self, cross_target=BasicCompilationTargets.NATIVE).target_info
+            else:
+                from .cmake import BuildCMake  # Could also use any other native project
+                host_target_info = BuildCMake.get_instance(self,
+                                                           cross_target=BasicCompilationTargets.NATIVE).target_info
+            host_prefixes = self.host_dependency_prefixes
+            host_pkg_config_dirs = list(itertools.chain.from_iterable(
+                host_target_info.pkgconfig_candidates(x) for x in host_prefixes))
             self._replace_values_in_toolchain_file(
                 native_toolchain_template, self._native_toolchain_file,
                 NATIVE_C_COMPILER=self.host_CC, NATIVE_CXX_COMPILER=self.host_CXX,
                 TOOLCHAIN_PKGCONFIG_BINARY=pkg_config_bin, TOOLCHAIN_CMAKE_BINARY=cmake_bin,
                 # To find native packages we have to add the bootstrap tools to PKG_CONFIG_PATH and CMAKE_PREFIX_PATH.
-                NATIVE_PKG_CONFIG_PATH=remove_duplicates(native_pkg_config_dirs),
-                NATIVE_CMAKE_PREFIX_PATH=remove_duplicates(native_cmake_prefix_paths)
+                NATIVE_PKG_CONFIG_PATH=remove_duplicates(host_pkg_config_dirs + host_target_info.pkgconfig_dirs),
+                NATIVE_CMAKE_PREFIX_PATH=remove_duplicates(host_prefixes + host_target_info.cmake_prefix_paths)
             )
 
         if self.install_prefix != self.install_dir:
