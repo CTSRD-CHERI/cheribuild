@@ -36,7 +36,7 @@ from .qt5 import BuildQtBase, BuildSharedMimeInfo
 from .wayland import BuildWayland, BuildLinux_Input_H
 from .x11 import BuildLibXCB
 from ..project import (DefaultInstallDir, GitRepository, MakeCommandKind, TargetAliasWithDependencies,
-                       default_source_dir_in_subdir)
+                       default_source_dir_in_subdir, ReuseOtherProjectRepository)
 from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
@@ -543,8 +543,19 @@ class BuildKBookmarks(KDECMakeProject):
 
 
 class BuildKCMUtils(KDECMakeProject):
-    dependencies = ["kitemviews", "kconfigwidgets", "kservice", "kxmlgui", "kdeclarative", "kauth"]
+    dependencies = ["kitemviews", "kconfigwidgets", "kservice", "kxmlgui", "kdeclarative", "kauth", "kcmutils-tools"]
     repository = GitRepository("https://invent.kde.org/frameworks/kcmutils.git")
+
+
+class BuildKCMUtilsTools(KDECMakeProject):
+    target = "kcmutils-tools"
+    dependencies = ["kitemviews", "kconfigwidgets", "kservice", "kxmlgui", "kdeclarative", "kauth"]
+    supported_architectures = [CompilationTargets.NATIVE]
+    repository = ReuseOtherProjectRepository(source_project=BuildKCMUtils, do_update=True)
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(TOOLS_ONLY=True)
 
 
 class BuildKConfigWidgets(KDECMakeProject):
