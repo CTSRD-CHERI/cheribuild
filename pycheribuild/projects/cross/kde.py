@@ -843,6 +843,7 @@ class BuildKWin(KDECMakeProject):
     repository = GitRepository("https://invent.kde.org/plasma/kwin.git",
                                temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
                                url_override_reason="Avoid libdrm/libgbm dependency+a few minor fixes")
+    _uses_wayland_scanner = True
     use_mesa: bool
 
     @classmethod
@@ -910,6 +911,7 @@ class BuildPlasmaWorkspace(KDECMakeProject):
     # libkworkspace/kworkspace_autogen -> libkworkspace/CMakeFiles/kworkspace_autogen ->
     # libkworkspace/kworkspace_autogen/timestamp
     _default_cmake_generator_arg = "-GUnix Makefiles"
+    _uses_wayland_scanner = True
     repository = GitRepository(
         "https://invent.kde.org/plasma/plasma-workspace.git",
         old_urls=[b"https://invent.kde.org/arichardson/plasma-workspace.git"])
