@@ -520,10 +520,6 @@ class CheriConfig(ConfigBase):
         return self.cheri_sdk_bindir
 
     @property
-    def morello_qemu_bindir(self):
-        return self.morello_sdk_bindir
-
-    @property
     def test_ssh_key(self) -> Path:
         if self._test_ssh_key is not None:
             return self._test_ssh_key

@@ -347,29 +347,16 @@ class BuildQEMU(BuildQEMUBase):
                     tgt_info_riscv64.get_essential_compiler_and_linker_flags()).replace("=", " ")
             ])
 
-
-class BuildMorelloQEMU(BuildQEMU):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-morello-merged",
-                               force_branch=True,
-                               old_urls=[
-                                   b"https://github.com/LawrenceEsswood/qemu.git",
-                                   # None of these were provided by cheribuild, but try and handle common
-                                   # insteadOf/pushInsteadOf configs that will otherwise confuse cheribuild as they
-                                   # affect the output of git remote.
-                                   b"ssh://git@github.com/LawrenceEsswood/qemu.git",
-                                   b"ssh://github.com/LawrenceEsswood/qemu.git",
-                                   b"git@github.com:LawrenceEsswood/qemu.git"
-                               ])
-    native_install_dir = DefaultInstallDir.MORELLO_SDK
-    default_targets = "aarch64-softmmu,morello-softmmu"
-    target = "morello-qemu"
-    hide_options_from_help = True
-
-    @classmethod
-    def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
-        if xtarget.is_aarch64(include_purecap=True):
-            # Always use the Morello qemu even for plain AArch64:
-            binary_name = "qemu-system-morello"
-        else:
-            raise ValueError("Invalid xtarget" + str(xtarget))
-        return config.morello_qemu_bindir / os.getenv("QEMU_MORELLO_PATH", binary_name)
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        # Delete the old Morello-QEMU files
+        self._cleanup_old_files(self.config.morello_sdk_dir / "share/qemu",
+                                self.config.morello_sdk_dir / "share/applications/qemu.desktop",
+                                self.config.morello_sdk_dir / "libexec/qemu-bridge-helper",
+                                self.config.morello_sdk_dir / "libexec/virtfs-proxy-helper",
+                                self.config.morello_sdk_dir / "bin/elf2dmp",
+                                self.config.morello_sdk_dir / "bin/symbolize-cheri-trace.py",
+                                *(self.config.morello_sdk_dir / "bin").glob("qemu-*"),
+                                *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.png"),
+                                *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.bmp"),
+                                *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.svg"))

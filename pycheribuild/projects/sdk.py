@@ -102,7 +102,7 @@ class BuildFreestandingSdk(SimpleProject):
 
 class BuildFreestandingMorelloSdk(TargetAliasWithDependencies):
     target = "freestanding-morello-sdk"
-    dependencies = ["morello-llvm-native", "morello-qemu"]  # "morello-gdb-native" does not exist
+    dependencies = ["morello-llvm-native", "qemu"]  # "morello-gdb-native" does not exist
     dependencies_must_be_built = True
     is_sdk_target = True
 

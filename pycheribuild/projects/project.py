@@ -1033,7 +1033,19 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             return False
         return True
 
-    def _cleanup_old_files(self, current_path: Path, current_suffix: str, old_suffixes: typing.List[str]):
+    def _cleanup_old_files(self, *old_paths: Path, default_delete=True):
+        for p in old_paths:
+            if not p.exists():
+                continue
+            filetype = "directory" if p.is_dir() else "file"
+            self.warning(f"Found old {filetype} {p} that is now obsolete.")
+            if self.query_yes_no(f"Would you like to remove the old {filetype} {p}", default_result=default_delete):
+                if p.is_dir():
+                    self._delete_directories(p)
+                else:
+                    self.delete_file(p)
+
+    def _cleanup_renamed_files(self, current_path: Path, current_suffix: str, old_suffixes: typing.List[str]):
         """Remove old build directories/disk-images, etc. to avoid wasted disk space after renaming targets"""
         if not old_suffixes:
             return

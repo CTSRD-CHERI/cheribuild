@@ -36,7 +36,7 @@ import typing
 from enum import Enum
 from pathlib import Path
 
-from .build_qemu import BuildMorelloQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
+from .build_qemu import BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
 from .cherios import BuildCheriOS
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.freertos import BuildFreeRTOS
@@ -210,25 +210,15 @@ class LaunchQEMUBase(SimpleProject):
         xtarget = cls.get_crosscompile_target(config)
         can_provide_src_via_smb = False
         supported_qemu_classes = []
-        if (xtarget.is_mips(include_purecap=True) or
-                xtarget.is_riscv(include_purecap=True)):
-            can_provide_src_via_smb = True
-            supported_qemu_classes += [BuildQEMU]
-            if not xtarget.is_hybrid_or_purecap_cheri():
-                supported_qemu_classes += [BuildUpstreamQEMU, None]
+        if xtarget.is_mips(include_purecap=True) or xtarget.is_riscv(include_purecap=True):
             can_provide_src_via_smb = True
             supported_qemu_classes += [BuildQEMU]
             if not xtarget.is_hybrid_or_purecap_cheri():
                 supported_qemu_classes += [BuildUpstreamQEMU, None]
         elif xtarget.is_aarch64(include_purecap=True):
             can_provide_src_via_smb = True
-            # Default to Morello QEMU for Morello, since CHERI QEMU builds may
-            # not be up to date, but prefer CHERI QEMU for AArch64 like other
-            # architectures.
-            if xtarget.is_hybrid_or_purecap_cheri():
-                supported_qemu_classes += [BuildMorelloQEMU, BuildQEMU]
-            else:
-                supported_qemu_classes += [BuildQEMU, BuildMorelloQEMU]
+            # Prefer CHERI QEMU for AArch64 like other architectures.
+            supported_qemu_classes += [BuildQEMU]
             if not xtarget.is_hybrid_or_purecap_cheri():
                 supported_qemu_classes += [BuildUpstreamQEMU, None]
         elif xtarget.is_any_x86() or xtarget.is_aarch64(include_purecap=False):
@@ -257,7 +247,6 @@ class LaunchQEMUBase(SimpleProject):
             elif cls.use_qemu in (QEMUType.CHERI, QEMUType.MORELLO, QEMUType.UPSTREAM):
                 qemu_class = {
                     QEMUType.CHERI: BuildQEMU,
-                    QEMUType.MORELLO: BuildMorelloQEMU,
                     QEMUType.UPSTREAM: BuildUpstreamQEMU
                 }[cls.use_qemu]
                 if qemu_class not in supported_qemu_classes:
@@ -282,7 +271,7 @@ class LaunchQEMUBase(SimpleProject):
                     qemu_binary = None
                 else:
                     # Only CHERI QEMU supports more than one SMB share
-                    can_provide_src_via_smb = qemu_class in [BuildQEMU, BuildMorelloQEMU]
+                    can_provide_src_via_smb = qemu_class == BuildQEMU
                     qemu_binary = qemu_class.qemu_binary(cls, xtarget=xtarget, config=config)
 
         cls._cached_chosen_qemu = ChosenQEMU(qemu_class, qemu_binary, can_provide_src_via_smb)

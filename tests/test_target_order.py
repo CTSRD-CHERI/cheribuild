@@ -62,7 +62,7 @@ cheribsd_sdk_deps = freestanding_deps + ["cheribsd-riscv64-hybrid", "cheribsd-sd
     # Ensure that cheribsd is added to deps even on Linux/Mac
     pytest.param("cheribsd-sdk-riscv64-hybrid", cheribsd_sdk_deps, id="cheribsd-sdk"),
     pytest.param("sdk-riscv64-hybrid", cheribsd_sdk_deps + ["sdk-riscv64-hybrid"], id="sdk"),
-    pytest.param("sdk-morello-purecap", ["morello-llvm-native", "morello-qemu", "freestanding-morello-sdk",
+    pytest.param("sdk-morello-purecap", ["morello-llvm-native", "qemu", "freestanding-morello-sdk",
                                          "cheribsd-morello-purecap", "cheribsd-sdk-morello-purecap",
                                          "sdk-morello-purecap"], id="morello-purecap"),
 ])
@@ -131,10 +131,10 @@ def test_build_and_run(target_name, expected_list):
     # Note: For architectures that CHERI QEMU builds by default we currently
     # explicitly default to using that rather than the system QEMU.
     pytest.param("run-morello-hybrid", True,
-                 ["morello-qemu", "morello-llvm-native", "cheribsd-morello-hybrid", "gdb-morello-hybrid",
+                 ["qemu", "morello-llvm-native", "cheribsd-morello-hybrid", "gdb-morello-hybrid",
                   "disk-image-morello-hybrid"]),
     pytest.param("run-morello-purecap", True,
-                 ["morello-qemu", "morello-llvm-native", "cheribsd-morello-purecap",
+                 ["qemu", "morello-llvm-native", "cheribsd-morello-purecap",
                   "gdb-morello-hybrid-for-purecap-rootfs", "disk-image-morello-purecap"]),
     pytest.param("run-riscv64", True,
                  ["qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64"]),
