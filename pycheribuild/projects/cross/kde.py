@@ -912,8 +912,7 @@ class BuildPlasmaWorkspace(KDECMakeProject):
     _default_cmake_generator_arg = "-GUnix Makefiles"
     repository = GitRepository(
         "https://invent.kde.org/plasma/plasma-workspace.git",
-        temporary_url_override="https://invent.kde.org/arichardson/plasma-workspace.git",
-        url_override_reason="https://invent.kde.org/plasma/plasma-workspace/-/merge_requests/1727")
+        old_urls=[b"https://invent.kde.org/arichardson/plasma-workspace.git"])
     dependencies = ["xprop", "xsetroot", "plasma-framework", "kwin", "breeze", "kidletime", "kitemmodels", "kcmutils",
                     "knotifyconfig", "kded", "kinit", "kscreenlocker", "libkscreen", "libxft", "libxtst", "kpeople",
                     "kparts", "prison", "krunner", "kactivities-stats", "libksysguard", "kunitconversion", "kwallet",
