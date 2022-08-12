@@ -1030,7 +1030,7 @@ class BuildGwenview(KDECMakeProject):
 
 class BuildOpenJPEG(CrossCompileCMakeProject):
     target = "openjpeg"
-    dependencies = ["lcms2", "libpng"]
+    dependencies = ["lcms2", "libpng", "libtiff"]
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     repository = GitRepository("https://github.com/uclouvain/openjpeg.git")
 
@@ -1042,7 +1042,7 @@ class BuildOpenJPEG(CrossCompileCMakeProject):
 
 class BuildPoppler(CrossCompileCMakeProject):
     target = "poppler"
-    dependencies = ["freetype2", "fontconfig", "openjpeg", "qtbase"]
+    dependencies = ["freetype2", "fontconfig", "qtbase", "libtiff"]
     repository = GitRepository("https://gitlab.freedesktop.org/poppler/poppler.git",
                                old_urls=[b"https://gitlab.freedesktop.org/arichardson/poppler.git"])
 
