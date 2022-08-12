@@ -1010,9 +1010,21 @@ class BuildExiv2(CrossCompileCMakeProject):
     dependencies = ["libexpat"]
 
 
+class BuildKColorPicker(KDECMakeProject):
+    target = "kcolorpicker"
+    repository = GitRepository("https://github.com/ksnip/kColorPicker.git")
+
+
+class BuildKImageAnnotator(KDECMakeProject):
+    target = "kimageannotator"
+    dependencies = ["kcolorpicker", "qttools"]
+    repository = GitRepository("https://github.com/ksnip/kImageAnnotator.git")
+
+
 class BuildGwenview(KDECMakeProject):
     target = "gwenview"
-    dependencies = ["qtsvg", "kitemmodels", "kimageformats", "kio", "kparts", "lcms2", "libpng", "exiv2"]
+    dependencies = ["qtsvg", "kitemmodels", "kimageformats", "kio", "kparts", "lcms2", "libpng", "exiv2",
+                    "kimageannotator"]
     repository = GitRepository("https://invent.kde.org/graphics/gwenview.git")
 
 
