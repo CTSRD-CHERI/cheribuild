@@ -681,7 +681,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                     if match:
                         return int(match.groups()[0])
         except FileNotFoundError:
-            pass
+            return None
         return 0
 
 
@@ -717,11 +717,15 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     def essential_compiler_and_linker_flags_impl(cls, instance: "CheriBSDTargetInfo", *args, xtarget, **kwargs):
         result = super().essential_compiler_and_linker_flags_impl(instance, *args, xtarget=xtarget, **kwargs)
         version = instance.cheribsd_version()
-        if version >= 20220511:
+        # NB: If version is None, no CheriBSD tree exists, so we assume the new
+        # ABI will be used when CheriBSD is eventually built. This ensures the
+        # LLVM config files for the SDK utilities get the right flags in the
+        # common case as otherwise there is a circular dependency.
+        if version is None or version >= 20220511:
             # Use new var-args ABI
             result.extend(["-Xclang", "-morello-vararg=new"])
         if xtarget.is_cheri_purecap([CPUArchitecture.AARCH64]):
-            if version < 20220511:
+            if version is not None and version < 20220511:
                 # Use emulated TLS on older purecap
                 result.append("-femulated-tls")
         return result
