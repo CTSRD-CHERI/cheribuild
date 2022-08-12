@@ -671,7 +671,8 @@ class BuildQtTools(BuildQtModuleWithQMake):
             # Some KDE programs/libraries install designer plugins, so for now we install it by default.
             # This avoids having to patch those projects to make the feature optional.
             # "-no-feature-designer",
-            "-no-feature-linguist",
+            # kColorPicker (which is used by Gwenview needs linguist, so we build this too).
+            # "-no-feature-linguist",
         ])
 
 
