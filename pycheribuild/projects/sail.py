@@ -53,7 +53,7 @@ class OpamMixin(_MixinBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_required_system_tool("opam", homebrew="opam", cheribuild_target="opam-2.0")
+        self.add_required_system_tool("opam", homebrew="opam", apt="opam", cheribuild_target="opam-2.0")
         self.required_ocaml_version = "4.11.1"
         self.__using_correct_switch = False
         self.__ignore_switch_version = False
@@ -68,11 +68,12 @@ class OpamMixin(_MixinBase):
         if opam_path:
             opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?",
                                                config=self.config)
-            if opam_version < (2, 0, 0):
-                self.dependency_error("Opam version", opam_version, "is too old. Need at least 2.0.0",
-                                      install_instructions="Install opam 2.0 with your system package manager or run "
-                                                           "`cheribuild.py opam-2.0` (Linux-only)",
-                                      cheribuild_target="opam-2.0" if OSInfo.IS_LINUX else None)
+            min_version = (2, 0, 8)
+            if opam_version < min_version:
+                install_inst = OSInfo.install_instructions("opam", False, apt="opam",
+                                                           cheribuild_target="opam-2.0" if OSInfo.IS_LINUX else None)
+                self.dependency_error("Opam version", ".".join(map(str, opam_version)), "is too old. Need at least",
+                                      ".".join(map(str, min_version)), install_instructions=install_inst)
 
     @property
     def opam_binary(self):
