@@ -228,31 +228,23 @@ class BuildSailFromOpam(ProjectUsingOpam):
         if not self.skip_update:
             self.run_opam_cmd("update")
 
-        if self.with_clean or self.use_git_version:
-            self.run_opam_cmd("uninstall", "--verbose", "sail",
-                              "--destdir=" + str(self.config.cheri_sdk_dir / "sailprefix"))
-            self.run_opam_cmd("uninstall", "--verbose", "sail")
+        destdir_flag = "--destdir=" + str(self.install_dir / "sailprefix")
+        # Remove the old sail installation
+        self.run_opam_cmd("uninstall", "--verbose", "sail", destdir_flag)
+        self.run_opam_cmd("uninstall", "--verbose", "sail")
 
         # ensure sail isn't pinned
         self.run_opam_cmd("pin", "remove", "sail", "--no-action")
+        install_flags = ["-y", "--verbose", "--working-dir", "--keep-build-dir", "--with-test", destdir_flag]
+        if not self.with_clean:
+            install_flags.append("--reuse-build-dir")
         if self.use_git_version:
-            # Force installation from latest git (pin repo now, but pass --no-action since we need to install with
-            # --destdir)
-            self.run_opam_cmd("pin", "add", "-y", "sail", self.source_dir, "--no-action")
-        try:
-            self.run_opam_cmd("install", "-y", "--verbose", "sail")
-            # I bet this will not work as intended... Probably better to just uninstall and reinstall
-            self.run_opam_cmd("upgrade", "-y", "--verbose", "sail")  # "--destdir=" + str(self.config.cheri_sdk_dir))
-        finally:
-            # reset the pin status even if the pinning failed
-            self.run_opam_cmd("pin", "remove", "sail", "--no-action")
-
-        # noinspection PyUnreachableCode
-        if False:
-            self.run_opam_cmd("install", "-y", "--verbose", "sail")
-            opamroot_sail_binary = self.opamroot / self.required_ocaml_version / "bin/sail"
-            self.run_cmd(opamroot_sail_binary, "-v")
-            self.create_symlink(opamroot_sail_binary, self.config.cheri_sdk_bindir / opamroot_sail_binary.name)
+            self.run_opam_cmd("install", *install_flags, ".")  # Force installation from latest git
+        else:
+            self.run_opam_cmd("install", *install_flags, "sail")
+        opamroot_sail_binary = self.opamroot / self.required_ocaml_version / "bin/sail"
+        self.run_cmd(opamroot_sail_binary, "-v")
+        self.create_symlink(opamroot_sail_binary, self.config.cheri_sdk_bindir / opamroot_sail_binary.name)
 
 
 target_manager.add_target_alias("sail-from-opam", "sail", deprecated=True)
