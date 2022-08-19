@@ -411,9 +411,7 @@ class BuildSailFromSource(OcamlProject):
         pass
 
     def install(self, **kwargs):
-        # Use ./opam to just build sail, not coq-sail.  Using '.' will try to
-        # build both and we probably don't need all of coq installed just now
-        self.run_in_ocaml_env("opam install -y ./opam")
+        self.run_in_ocaml_env("opam install -y ./*.opam")
 
     def process(self):
         lemdir = BuildLem.get_source_dir(self)
