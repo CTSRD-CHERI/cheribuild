@@ -44,9 +44,12 @@ class BuildOpenSSH(CrossCompileAutotoolsProject):
         super().__init__(config)
         self.add_required_system_tool("autoreconf", default="autoconf")
 
-    def configure(self, **kwargs):
+    def setup(self):
+        super().setup()
         self.add_configure_env_arg("AR", self.target_info.ar)
         self.add_configure_env_arg("ac_cv_have_control_in_msghdr", "yes")
-        self.run_cmd("autoreconf", str(self.source_dir), cwd=self.build_dir)
         self.make_args.set(DESTDIR=str(self.destdir))
+
+    def configure(self, **kwargs):
+        self.run_cmd("autoreconf", str(self.source_dir), cwd=self.build_dir)
         super().configure(**kwargs)
