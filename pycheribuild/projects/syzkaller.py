@@ -208,7 +208,7 @@ class VMSetting(Enum):
     MORELLO = {
             "type": "morello",
             "vm": {
-                "reboot_command": "~/reboot_morello.sh",
+                "reboot_command": "timeout 1m /home/zalan/reboot_morello.sh",
                 "mbox_workdir": "/syz/"
                     }
                 }
@@ -376,18 +376,11 @@ class RunMorelloBaremetalSyzkaller(RunSyzkallerBase):
                                                             help="The username of the morellobox ssh user "
                                                                  "(default value: "
                                                                  "--run-morello-baremetal-syzkaller/ssh-user)")
-        cls.syz_bbb_ssh_user = cls.add_config_option("bbb-ssh-user", show_help=True,
-                                                     help="The username of the bbb ssh user (default value: "
-                                                          "--run-morello-baremetal-syzkaller/ssh-user)")
         cls.syz_morellobox_ssh_key = cls.add_path_option("morellobox-ssh-privkey", show_help=True,
                                                          help="Path to the private key used to communicate "
                                                               "with the morellobox")
-        cls.syz_bbb_ssh_key = cls.add_path_option("bbb-ssh-privkey", show_help=True,
-                                                  help="Path to the private key used to communicate with the bbb")
         cls.syz_morellobox_address = cls.add_config_option("morellobox-address", show_help=True,
                                                            help="The address of the morellobox")
-        cls.syz_bbb_address = cls.add_config_option("bbb-address", show_help=True,
-                                                    help="The address of the bbb server")
         def_comm = VMSetting.MORELLO.value["vm"]["reboot_command"]
         cls.syz_reboot_command = cls.add_config_option("reboot-command", show_help=True,
                                                        help="The command to restart the morellobox "
@@ -410,25 +403,16 @@ class RunMorelloBaremetalSyzkaller(RunSyzkallerBase):
             self.fatal("No morello box address provided, use --run-morello-baremetal-syzkaller/"
                        "morellobox-address ADDRESS")
             return
-        if self.syz_bbb_address is None:
-            self.fatal("No bbb address provided, use --run-morello-baremetal-syzkaller/"
-                       "bbb-address ADDRESS")
-            return
         kernel_path = kernel_project.get_kernel_install_path(kernel_config)
 
         template["kernel_obj"] = str(kernel_path)
         template["ssh_user"] = str(self.syz_ssh_user)
         template["sshkey"] = str(self.syz_ssh_key)
         template["vm"]["mbox_address"] = str(self.syz_morellobox_address)
-        template["vm"]["bbb_address"] = str(self.syz_bbb_address)
         if self.syz_morellobox_ssh_user is not None:
             template["vm"]["mbox_username"] = str(self.syz_morellobox_ssh_user)
-        if self.syz_bbb_ssh_user is not None:
-            template["vm"]["bbb_username"] = str(self.syz_bbb_ssh_user)
         if self.syz_morellobox_ssh_key is not None:
             template["vm"]["mbox_sshkey"] = str(self.syz_morellobox_ssh_key)
-        if self.syz_bbb_ssh_key is not None:
-            template["vm"]["bbb_sshkey"] = str(self.syz_bbb_ssh_key)
         if self.syz_reboot_command is not None:
             template["vm"]["reboot_command"] = str(self.syz_reboot_command)
         if self.syz_morellobox_workdir is not None:
