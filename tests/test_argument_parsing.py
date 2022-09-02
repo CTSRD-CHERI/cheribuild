@@ -747,7 +747,7 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
 def test_mfsroot_kernel_configs(target: str, config_options: "list[str]", expected_kernels: "list[str]"):
     config = _parse_arguments(config_options)
     project = _get_target_instance(target, config, BuildCheriBsdMfsKernel)
-    assert project.get_kernel_configs() == expected_kernels
+    assert project.get_kernel_configs(None) == expected_kernels
 
 
 # noinspection PyTypeChecker

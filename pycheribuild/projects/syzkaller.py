@@ -179,8 +179,9 @@ class RunSyzkaller(SimpleProject):
             xtarget = syzkaller.crosscompile_target.get_cheri_purecap_target()
             qemu_binary = BuildQEMU.qemu_binary(self, xtarget=xtarget)
             kernel_project = BuildCHERIBSD.get_instance(self, cross_target=xtarget)
-            kernel_config = CheriBSDConfigTable.get_configs(xtarget, ConfigPlatform.QEMU,
-                                                            kernel_project.get_default_kernel_abi(), fuzzing=True)
+            kernel_config = CheriBSDConfigTable.get_configs(xtarget, platform=ConfigPlatform.QEMU,
+                                                            kABI=kernel_project.get_default_kernel_abi(),
+                                                            fuzzing=True)
             if len(kernel_config) == 0:
                 self.fatal("No kcov kernel configuration found")
                 return
