@@ -42,8 +42,8 @@ from typing import Optional
 
 from .loader import ComputedDefaultValue, MyJsonEncoder
 from ..processutils import latest_system_clang_tool, run_command
-from ..utils import (cached_property, ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, status_update,
-                     warning_message)
+from ..utils import (cached_property, ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, is_jenkins_build,
+                     status_update, warning_message)
 
 
 class BuildType(Enum):
@@ -246,6 +246,7 @@ class CheriConfig(ConfigBase):
         self.clang_colour_diags = loader.add_bool_option("clang-colour-diags", "-clang-color-diags", default=True,
                                                          help="Force CHERI clang to emit coloured diagnostics")
         self.use_sdk_clang_for_native_xbuild = loader.add_bool_option("use-sdk-clang-for-native-xbuild",
+                                                                      default=is_jenkins_build(),
                                                                       group=loader.cross_compile_options_group,
                                                                       help="Compile cross-compile project with CHERI "
                                                                            "clang from the SDK instead of host "
