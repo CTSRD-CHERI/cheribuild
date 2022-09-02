@@ -2497,14 +2497,14 @@ class Project(SimpleProject):
     needs_mxcaptable_dynamic = False  # This might be true for Qt/QtWebkit
 
     @property
-    def compiler_warning_flags(self):
+    def compiler_warning_flags(self) -> "list[str]":
         if self.compiling_for_host():
             return self.common_warning_flags + self.host_warning_flags
         else:
             return self.common_warning_flags + self.cross_warning_flags
 
     @property
-    def default_compiler_flags(self):
+    def default_compiler_flags(self) -> "list[str]":
         assert self._setup_called
         result = []
         if self.use_lto:
@@ -2540,7 +2540,7 @@ class Project(SimpleProject):
         return result
 
     @property
-    def default_ldflags(self):
+    def default_ldflags(self) -> "list[str]":
         result = list(self.COMMON_LDFLAGS)
         if self.use_lto:
             result.extend(self._lto_linker_flags)
