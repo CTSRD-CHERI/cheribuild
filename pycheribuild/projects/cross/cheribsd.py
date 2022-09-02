@@ -317,28 +317,19 @@ class CheriBSDConfigTable:
     MIPS_CONFIGS = [
         CheriBSDConfig("MALTA64", ConfigPlatform.QEMU, default=True)
     ]
-    RISCV_CONFIGS = []
-    AARCH64_CONFIGS = []
 
     @classmethod
-    def get_target_configs(cls, xtarget):
+    def get_target_configs(cls, xtarget: CrossCompileTarget):
         if xtarget.is_any_x86():
-            factory = None
-            config_list = cls.X86_CONFIGS
+            return cls.X86_CONFIGS
         elif xtarget.is_mips(include_purecap=False):
-            factory = None
-            config_list = cls.MIPS_CONFIGS
+            return cls.MIPS_CONFIGS
         elif xtarget.is_riscv(include_purecap=True):
-            factory = RISCVKernelConfigFactory()
-            config_list = cls.RISCV_CONFIGS
+            return RISCVKernelConfigFactory().make_all()
         elif xtarget.is_aarch64(include_purecap=True):
-            factory = AArch64KernelConfigFactory()
-            config_list = cls.AARCH64_CONFIGS
+            return AArch64KernelConfigFactory().make_all()
         else:
-            assert False, "Invalid target architecture"
-        if len(config_list) == 0:
-            config_list.extend(factory.make_all())
-        return config_list
+            raise ValueError("Invalid target architecture")
 
     @classmethod
     def get_entry(cls, xtarget, name: str):
