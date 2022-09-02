@@ -494,6 +494,8 @@ class CompilerInfo(object):
     def get_include_dirs(self, basic_flags: "list[str]") -> "list[Path]":
         include_dirs = self._include_dirs.get(tuple(basic_flags), None)
         if include_dirs is None:
+            if not self.path.exists():
+                return [Path("/unknown/include/dir")]  # avoid failing in jenkins
             # pretend to compile an existing source file and capture the -resource-dir output
             output = run_command(self.path, "-E", "-Wp,-v", "-xc", "/dev/null", config=self.config,
                                  stdout=subprocess.DEVNULL, capture_error=True, print_verbose_only=True,
