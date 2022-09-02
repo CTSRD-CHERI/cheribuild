@@ -813,8 +813,14 @@ def run_and_kill_children_on_exit(fn: "typing.Callable[[], typing.Any]"):
         extra_msg = (". Working directory was ", err.cwd) if hasattr(err, "cwd") else ()
         if err.stderr is not None:
             extra_msg += ("\nStandard error was:\n", err.stderr.decode("utf-8"))
-        fatal_error("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
-                    err.returncode, *extra_msg, fatal_when_pretending=True, sep="", exit_code=err.returncode)
+        # If we are currently debugging, raise the exception to allow e.g. PyCharm's
+        # "break on exception that terminates execution" feature works.
+        debugger_attached = getattr(sys, 'gettrace', lambda: None)() is not None
+        if debugger_attached:
+            raise err
+        else:
+            fatal_error("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
+                        err.returncode, *extra_msg, fatal_when_pretending=True, sep="", exit_code=err.returncode)
     finally:
         if error:
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
