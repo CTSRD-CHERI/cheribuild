@@ -41,11 +41,12 @@ from .chericonfig import CheriConfig
 from .loader import ConfigOptionBase, ConfigLoaderBase
 from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi,
                           TargetInfo, AArch64FloatSimdOptions)
+from ..projects.project import Project
 from ..processutils import commandline_to_str
 from ..utils import cached_property, find_free_port, is_jenkins_build, SocketAndPort
 
+
 if typing.TYPE_CHECKING:  # no-combine
-    from ..projects.project import Project, SimpleProject  # no-combine
     from ..projects.run_qemu import AbstractLaunchFreeBSD  # no-combine
     from ..projects.cross.llvm import BuildLLVMBase  # no-combine
 
@@ -53,9 +54,9 @@ if typing.TYPE_CHECKING:  # no-combine
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     uses_morello_llvm = False
 
-    def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
+    def __init__(self, target, project):
         super().__init__(target, project)
-        self._sdk_root_dir = None  # type: typing.Optional[Path]
+        self._sdk_root_dir: typing.Optional[Path] = None
 
     @property
     def _compiler_dir(self) -> Path:
@@ -286,8 +287,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             # Jenkins builds compile against a sysroot that was extracted to sdk/sysroot directory and not the
             # full rootfs
             return self.get_non_rootfs_sysroot_dir()
-        return self.get_rootfs_project().get_install_dir(caller=self.project, config=self.config,
-                                                         cross_target=self.target.get_rootfs_target())
+        return self.get_rootfs_project(t=Project).install_dir
 
     def get_non_rootfs_sysroot_dir(self) -> Path:
         if is_jenkins_build():

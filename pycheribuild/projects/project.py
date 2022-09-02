@@ -49,16 +49,15 @@ from typing import Callable, Tuple, Union
 
 from ..config.chericonfig import BuildType, CheriConfig, Linkage, supported_build_type_strings
 from ..config.loader import (ComputedDefaultValue, ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption)
-from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget,
-                                  TargetInfo)
-from ..filesystemutils import FileSystemUtils
+from ..config.target_info import (AbstractProject, AutoVarInit, BasicCompilationTargets, CPUArchitecture,
+                                  CrossCompileTarget, TargetInfo)
 from ..processutils import (check_call_handle_noexec, commandline_to_str, CompilerInfo, get_compiler_info,
                             get_program_version, get_version_output, keep_terminal_sane, popen_handle_noexec,
                             print_command, run_command, set_env, ssh_host_accessible)
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import (AnsiColour, cached_property, classproperty, coloured, fatal_error, include_local_file,
                      InstallInstructions, is_jenkins_build, OSInfo, remove_prefix, replace_one, status_update,
-                     ThreadJoiner, warning_message, remove_duplicates)
+                     ThreadJoiner, remove_duplicates)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
@@ -209,12 +208,10 @@ def _cached_get_homebrew_prefix(package: "typing.Optional[str]", config: CheriCo
     return prefix
 
 
-class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
+class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
     _commandline_option_group = None
     _config_loader = None  # type: ConfigLoaderBase
 
-    # These two class variables can be defined in subclasses to customize dependency ordering of targets
-    target = ""  # type: str
     # The source dir/build dir names will be inferred from the target name unless default_directory_basename is set.
     # Note that this is not inherited by default unless you set inherit_default_directory_basename (which itself is
     # inherited as normal, so can be set in a base class).
@@ -258,17 +255,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # The architecture to build for the unsuffixed target name (defaults to supported_architectures[0] if no match)
     _default_architecture = None  # type: typing.Optional[CrossCompileTarget]
 
-    _xtarget = None  # type: typing.Optional[CrossCompileTarget]
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     # To check that we don't create an crosscompile targets without a fixed target
     _should_not_be_instantiated = True
     # To prevent non-suffixed targets in case the only target is not NATIVE
     _always_add_suffixed_targets = False  # add a suffixed target only if more than one variant is supported
 
-    # Allow overides for libc++/llvm-test-suite
-    custom_c_preprocessor = None  # type: typing.Optional[Path]
-    custom_c_compiler = None  # type: typing.Optional[Path]
-    custom_cxx_compiler = None  # type: typing.Optional[Path]
     custom_target_name = None  # type: typing.Optional[typing.Callable[[str, CrossCompileTarget], str]]
 
     @classmethod
@@ -448,7 +440,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                                                  include_sdk_dependencies=True)
 
     @classmethod
-    def get_instance(cls: typing.Type[Type_T], caller: "typing.Optional[SimpleProject]",
+    def get_instance(cls: typing.Type[Type_T], caller: "typing.Optional[AbstractProject]",
                      config: CheriConfig = None, cross_target: typing.Optional[CrossCompileTarget] = None) -> Type_T:
         # TODO: assert that target manager has been initialized
         if caller is not None:
@@ -464,7 +456,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def get_instance_for_cross_target(cls: typing.Type[Type_T], cross_target: CrossCompileTarget,
-                                      config: CheriConfig, caller: "SimpleProject" = None) -> Type_T:
+                                      config: CheriConfig, caller: AbstractProject = None) -> Type_T:
         # Also need to handle calling self.get_instance_for_cross_target() on a target-specific instance
         # In that case cls.target returns e.g. foo-mips, etc and target_manager will always return the MIPS version
         root_class = getattr(cls, "synthetic_base", cls)
@@ -477,16 +469,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if cross_target is not None:
             assert found_target is cross_target, "Didn't find right instance of " + str(cls) + ": " + str(
                 found_target) + " vs. " + str(cross_target) + ", caller was " + repr(caller)
-        return result
-
-    @classmethod
-    def get_crosscompile_target(cls, config: CheriConfig) -> CrossCompileTarget:
-        target = cls._xtarget
-        if target is not None:
-            return target
-        # otherwise fall back to the default specified in the class
-        result = cls.default_architecture
-        assert result is not None
         return result
 
     @classproperty
@@ -1196,9 +1178,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 self.ask_for_confirmation("Continue with unexpected file?", default_result=False)
         return should_download
 
-    def get_compiler_info(self, compiler: Path):
-        return get_compiler_info(compiler, config=self.config)
-
     def print(self, *args, **kwargs):
         if not self.config.quiet:
             print(*args, **kwargs)
@@ -1206,19 +1185,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def verbose_print(self, *args, **kwargs):
         if self.config.verbose:
             print(*args, **kwargs)
-
-    @staticmethod
-    def info(*args, **kwargs):
-        # TODO: move all those methods here
-        status_update(*args, **kwargs)
-
-    @staticmethod
-    def warning(*args, **kwargs):
-        warning_message(*args, **kwargs)
-
-    @staticmethod
-    def fatal(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False):
-        fatal_error(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending)
 
     @classmethod
     def targets_reset(cls):
@@ -2106,19 +2072,16 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         return project.build_dir / "test-install-prefix"
     elif install_dir == DefaultInstallDir.ROOTFS_OPTBASE:
         assert not project.compiling_for_host(), "Should not use DefaultInstallDir.ROOTFS_OPTBASE for native builds!"
-        rootfs_target = project.target_info.get_rootfs_project()
         if hasattr(project, "path_in_rootfs"):
             assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
-            return rootfs_target.install_dir / project.path_in_rootfs[1:]
+            return project.rootfs_dir / project.path_in_rootfs[1:]
         return Path(
-            rootfs_target.install_dir / "opt" / project.target_info.install_prefix_dirname /
-            project._rootfs_install_dir_name)
+            project.rootfs_dir / "opt" / project.target_info.install_prefix_dirname / project._rootfs_install_dir_name)
     elif install_dir == DefaultInstallDir.KDE_PREFIX:
         if project.compiling_for_host():
             return config.output_root / "kde"
         else:
-            rootfs_target = project.target_info.get_rootfs_project()
-            return Path(rootfs_target.install_dir, "opt", project.target_info.install_prefix_dirname, "kde")
+            return Path(project.rootfs_dir, "opt", project.target_info.install_prefix_dirname, "kde")
     elif install_dir == DefaultInstallDir.COMPILER_RESOURCE_DIR:
         compiler_for_resource_dir = project.CC
         # For the NATIVE variant we want to install to CHERI clang:
@@ -2237,12 +2200,12 @@ class Project(SimpleProject):
         return cls.get_instance(caller, config, cross_target).source_dir
 
     @classmethod
-    def get_build_dir(cls, caller: "SimpleProject", config: CheriConfig = None,
+    def get_build_dir(cls, caller: "AbstractProject", config: CheriConfig = None,
                       cross_target: CrossCompileTarget = None):
         return cls.get_instance(caller, config, cross_target).build_dir
 
     @classmethod
-    def get_install_dir(cls, caller: "SimpleProject", config: CheriConfig = None,
+    def get_install_dir(cls, caller: "AbstractProject", config: CheriConfig = None,
                         cross_target: CrossCompileTarget = None):
         return cls.get_instance(caller, config, cross_target).real_install_root_dir
 
@@ -2702,8 +2665,7 @@ class Project(SimpleProject):
         try:
             # Don't add the rootfs directory, since e.g. target_info.pkgconfig_candidates(<rootfs>) will not return the
             # correct values. For the root directory we rely on the methods in target_info instead.
-            rootfs_project = self.target_info.get_rootfs_project()
-            all_install_dirs.pop(rootfs_project.install_dir, None)
+            all_install_dirs.pop(self.rootfs_dir, None)
         except NotImplementedError:
             pass  # If there isn't a rootfs, there is no need to skip that project.
         return list(all_install_dirs.keys())
@@ -2842,7 +2804,7 @@ class Project(SimpleProject):
 
     @cached_property
     def rootfs_dir(self):
-        return self.target_info.get_rootfs_project().install_dir
+        return self.target_info.get_rootfs_project(t=Project).install_dir
 
     @property
     def _no_overwrite_allowed(self) -> "typing.Iterable[str]":
@@ -4003,8 +3965,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         extra_libdirs = [s / self.target_info.default_libdir for s in self.dependency_install_prefixes]
         try:
             # If we are installing into a rootfs, remove the rootfs prefix from the RPATH
-            rootfs_project = self.target_info.get_rootfs_project()
-            extra_libdirs = ["/" + str(s.relative_to(rootfs_project.install_dir)) for s in extra_libdirs]
+            extra_libdirs = ["/" + str(s.relative_to(self.rootfs_dir)) for s in extra_libdirs]
         except NotImplementedError:
             pass  # If there isn't a rootfs, we use the absolute paths instead.
         rpath_dirs = remove_duplicates(self.target_info.additional_rpath_directories + extra_libdirs)
