@@ -32,15 +32,16 @@ import typing
 from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
+from typing import Optional, ClassVar
 
 from .chericonfig import CheriConfig, AArch64FloatSimdOptions, MipsFloatAbi
-from ..utils import cached_property, final, OSInfo, warning_message
+from ..utils import cached_property, final, OSInfo, warning_message, status_update, fatal_error, Type_T
+from ..filesystemutils import FileSystemUtils
+from ..processutils import get_compiler_info
 
-if typing.TYPE_CHECKING:  # no-combine
-    from ..projects.project import SimpleProject, Project  # no-combine
 
-__all__ = ["AArch64FloatSimdOptions", "AutoVarInit", "BasicCompilationTargets", "CPUArchitecture",  # no-combine
-           "CrossCompileTarget", "CompilerType", "MipsFloatAbi", "TargetInfo"]  # no-combine
+__all__ = ["AbstractProject", "AArch64FloatSimdOptions", "AutoVarInit", "BasicCompilationTargets",  # no-combine
+           "CPUArchitecture",  "CrossCompileTarget", "CompilerType", "MipsFloatAbi", "TargetInfo"]  # no-combine
 
 
 class CPUArchitecture(Enum):
@@ -99,12 +100,73 @@ class CompilerType(Enum):
     CUSTOM = "custom"  # Custom compiler specific in config file/command line
 
 
+# https://reviews.llvm.org/rG14daa20be1ad89639ec209d969232d19cf698845
+class AutoVarInit(Enum):
+    NONE = "none"
+    ZERO = "zero"
+    PATTERN = "pattern"
+
+    def clang_flags(self) -> "list[str]":
+        if self is None:
+            return []  # Equivalent to -ftrivial-auto-var-init=uninitialized
+        elif self is AutoVarInit.ZERO:
+            return ["-ftrivial-auto-var-init=zero",
+                    "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang"]
+        elif self is AutoVarInit.PATTERN:
+            return ["-ftrivial-auto-var-init=pattern"]
+        else:
+            raise NotImplementedError()
+
+
+class AbstractProject(FileSystemUtils):
+    """A base class for (Simple)Project that exposes only the fields/methods needed in target_info."""
+    config: CheriConfig
+    target: str
+    _setup_called: bool
+    _xtarget: "Optional[CrossCompileTarget]" = None
+
+    auto_var_init: AutoVarInit  # Needed for essential_compiler_flags
+    default_architecture: "ClassVar[Optional[CrossCompileTarget]]"
+    needs_sysroot: "ClassVar[bool]"
+
+    # Allow overrides for libc++/llvm-test-suite
+    custom_c_preprocessor: Optional[Path] = None
+    custom_c_compiler: Optional[Path] = None
+    custom_cxx_compiler: Optional[Path] = None
+
+    def get_compiler_info(self, compiler: Path):
+        return get_compiler_info(compiler, config=self.config)
+
+    @staticmethod
+    def info(*args, **kwargs):
+        # TODO: move all those methods here
+        status_update(*args, **kwargs)
+
+    @staticmethod
+    def warning(*args, **kwargs):
+        warning_message(*args, **kwargs)
+
+    @staticmethod
+    def fatal(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False):
+        fatal_error(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending)
+
+    @classmethod
+    def get_crosscompile_target(cls, config: CheriConfig) -> "CrossCompileTarget":
+        target = cls._xtarget
+        if target is not None:
+            return target
+        # otherwise fall back to the default specified in the class
+        result = cls.default_architecture
+        assert result is not None
+        return result
+
+
 class TargetInfo(ABC):
     shortname = "INVALID"  # type: str
     # os_prefix defaults to shortname.lower() if not set
     os_prefix = None  # type: typing.Optional[str]
 
-    def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
+    def __init__(self, target: "CrossCompileTarget", project: AbstractProject):
         self.target = target
         self.project = project
 
@@ -288,12 +350,14 @@ class TargetInfo(ABC):
         return False
 
     @final
-    def get_rootfs_project(self, xtarget: "CrossCompileTarget" = None) -> "Project":
+    def get_rootfs_project(self, *, t: "typing.Type[Type_T]", xtarget: "CrossCompileTarget" = None) -> Type_T:
         if xtarget is None:
             xtarget = self.target
-        return self._get_rootfs_project(xtarget.get_rootfs_target())
+        result = self._get_rootfs_project(xtarget.get_rootfs_target())
+        assert isinstance(result, t)
+        return result
 
-    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget"):
         raise NotImplementedError("Should not be called for " + self.project.target)
 
     @classmethod
@@ -390,24 +454,6 @@ class TargetInfo(ABC):
         """:return: a list of potential candidates for pkgconfig .pc files inside prefix"""
         return [str(prefix / self.default_libdir / "pkgconfig"), str(prefix / "share/pkgconfig"),
                 str(prefix / "libdata/pkgconfig")]
-
-
-# https://reviews.llvm.org/rG14daa20be1ad89639ec209d969232d19cf698845
-class AutoVarInit(Enum):
-    NONE = "none"
-    ZERO = "zero"
-    PATTERN = "pattern"
-
-    def clang_flags(self) -> "typing.List[str]":
-        if self is None:
-            return []  # Equivalent to -ftrivial-auto-var-init=uninitialized
-        elif self is AutoVarInit.ZERO:
-            return ["-ftrivial-auto-var-init=zero",
-                    "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang"]
-        elif self is AutoVarInit.PATTERN:
-            return ["-ftrivial-auto-var-init=pattern"]
-        else:
-            raise NotImplementedError()
 
 
 class NativeTargetInfo(TargetInfo):
@@ -686,7 +732,7 @@ class CrossCompileTarget(object):
                 other_target._set_for(self, also_set_other=False)
             other_target._set_from(self)
 
-    def create_target_info(self, project: "SimpleProject") -> TargetInfo:
+    def create_target_info(self, project: AbstractProject) -> TargetInfo:
         return self.target_info_cls(self, project)
 
     def build_suffix(self, config: CheriConfig, *, include_os: bool):

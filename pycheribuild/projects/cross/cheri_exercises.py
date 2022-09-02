@@ -29,9 +29,8 @@
 import typing
 from pathlib import Path
 
-from .crosscompileproject import (CompilationTargets, CrossCompileProject,
-                                  GitRepository)
-from ..project import DefaultInstallDir
+from .crosscompileproject import CompilationTargets, CrossCompileProject, GitRepository
+from ..project import DefaultInstallDir, Project
 from ...config.compilation_targets import CheriBSDTargetInfo
 from ...config.target_info import CrossCompileTarget
 
@@ -139,7 +138,7 @@ class BuildCheriExercises(CrossCompileProject):
             self.install_file(i, self.install_dir / i.name, print_verbose_only=False)
         # Also install them to the hybrid rootfs:
         hybrid_target = self.crosscompile_target.get_cheri_hybrid_target()
-        hybrid_rootfs_project = self.target_info.get_rootfs_project(xtarget=hybrid_target)
+        hybrid_rootfs_project = self.target_info.get_rootfs_project(t=Project, xtarget=hybrid_target)
         hybrid_install_dir = hybrid_rootfs_project.install_dir / self.path_in_rootfs[1:]
         self.makedirs(hybrid_install_dir)
         if self.with_clean:

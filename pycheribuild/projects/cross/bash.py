@@ -25,6 +25,7 @@
 
 from pathlib import Path
 
+from .cheribsd import BuildFreeBSD
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
 
 
@@ -74,7 +75,7 @@ class BuildBash(CrossCompileAutotoolsProject):
                         new.append(line)
                     return new
 
-                freebsd_builddir = self.target_info.get_rootfs_project().objdir
+                freebsd_builddir = self.target_info.get_rootfs_project(t=BuildFreeBSD).objdir
                 pwd_mkdb_cmd = freebsd_builddir / "tmp/legacy/usr/sbin/pwd_mkdb"
                 self.rewrite_file(self.destdir / "etc/master.passwd", rewrite)
                 self.run_cmd([pwd_mkdb_cmd, "-p", "-d", self.destdir / "etc", self.destdir / "etc/master.passwd"])
