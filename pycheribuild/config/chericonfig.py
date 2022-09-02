@@ -86,6 +86,36 @@ class BuildType(Enum):
 supported_build_type_strings = [t.value for t in BuildType]
 
 
+class Linkage(Enum):
+    DEFAULT = "default"
+    STATIC = "static"
+    DYNAMIC = "dynamic"
+
+
+class MipsFloatAbi(Enum):
+    SOFT = ("mips64", "-msoft-float")
+    HARD = ("mips64hf", "-mhard-float")
+
+    def freebsd_target_arch(self):
+        return self.value[0]
+
+    def clang_float_flag(self):
+        return self.value[1]
+
+
+class AArch64FloatSimdOptions(Enum):
+    DEFAULT = ("", "")
+    NOSIMD = ("-nosimd", "+nosimd")
+    SOFT = ("-softfp", "+nofp+nosimd")
+    SOFT_SIMD = ("-softfp-with-simd", "+nofp")  # TODO: does it make sense to have this?
+
+    def config_suffix(self):
+        return self.value[0]
+
+    def clang_march_flag(self):
+        return self.value[1]
+
+
 def _default_arm_none_eabi_prefix(c: "CheriConfig", _):
     # see if the local install exists:
     default_path = c.output_root / c.local_arm_none_eabi_toolchain_relpath
@@ -110,7 +140,6 @@ class CheriConfig(ConfigBase):
     def __init__(self, loader, action_class):
         # Work around circular dependencies
         from .loader import ConfigLoaderBase
-        from .target_info import MipsFloatAbi, AArch64FloatSimdOptions, Linkage
         # noinspection PyTypeChecker
         super().__init__(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt())
         self._cached_deps = collections.defaultdict(dict)

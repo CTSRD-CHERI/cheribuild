@@ -37,6 +37,7 @@ import typing
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
+from .chericonfig import CheriConfig
 from .loader import ConfigOptionBase, ConfigLoaderBase
 from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi,
                           TargetInfo, AArch64FloatSimdOptions)
@@ -44,7 +45,6 @@ from ..processutils import commandline_to_str
 from ..utils import cached_property, find_free_port, is_jenkins_build, SocketAndPort
 
 if typing.TYPE_CHECKING:  # no-combine
-    from .chericonfig import CheriConfig  # no-combine
     from ..projects.project import Project, SimpleProject  # no-combine
     from ..projects.run_qemu import AbstractLaunchFreeBSD  # no-combine
     from ..projects.cross.llvm import BuildLLVMBase  # no-combine

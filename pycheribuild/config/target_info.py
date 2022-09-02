@@ -33,14 +33,14 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
+from .chericonfig import CheriConfig, AArch64FloatSimdOptions, MipsFloatAbi
 from ..utils import cached_property, final, OSInfo, warning_message
 
 if typing.TYPE_CHECKING:  # no-combine
-    from .chericonfig import CheriConfig  # no-combine    # pytype: disable=pyi-error
     from ..projects.project import SimpleProject, Project  # no-combine
 
 __all__ = ["AArch64FloatSimdOptions", "AutoVarInit", "BasicCompilationTargets", "CPUArchitecture",  # no-combine
-           "CrossCompileTarget", "Linkage", "CompilerType", "MipsFloatAbi", "TargetInfo"]  # no-combine
+           "CrossCompileTarget", "CompilerType", "MipsFloatAbi", "TargetInfo"]  # no-combine
 
 
 class CPUArchitecture(Enum):
@@ -247,12 +247,12 @@ class TargetInfo(ABC):
 
     @classmethod
     @abstractmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: CheriConfig) -> typing.List[str]:
         """returns e.g. [llvm]/[upstream-llvm], or an empty list"""
         ...
 
     @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: CheriConfig) -> typing.List[str]:
         """returns a list of targets that need to be built for a minimal sysroot"""
         return []
 
@@ -279,7 +279,7 @@ class TargetInfo(ABC):
         return result
 
     @property
-    def config(self) -> "CheriConfig":
+    def config(self) -> CheriConfig:
         return self.project.config
 
     @property
@@ -366,21 +366,21 @@ class TargetInfo(ABC):
         return self.capability_size * 8
 
     @staticmethod
-    def host_c_compiler(config: "CheriConfig") -> Path:
+    def host_c_compiler(config: CheriConfig) -> Path:
         if config.use_sdk_clang_for_native_xbuild and not OSInfo.IS_MAC:
             # SDK clang doesn't work for native builds on macos
             return config.cheri_sdk_bindir / "clang"
         return config.clang_path
 
     @staticmethod
-    def host_cxx_compiler(config: "CheriConfig") -> Path:
+    def host_cxx_compiler(config: CheriConfig) -> Path:
         if config.use_sdk_clang_for_native_xbuild and not OSInfo.IS_MAC:
             # SDK clang doesn't work for native builds on macos
             return config.cheri_sdk_bindir / "clang++"
         return config.clang_plusplus_path
 
     @staticmethod
-    def host_c_preprocessor(config: "CheriConfig") -> Path:
+    def host_c_preprocessor(config: CheriConfig) -> Path:
         if config.use_sdk_clang_for_native_xbuild and not OSInfo.IS_MAC:
             # SDK clang doesn't work for native builds on macos
             return config.cheri_sdk_bindir / "clang-cpp"
@@ -427,11 +427,11 @@ class NativeTargetInfo(TargetInfo):
         raise ValueError("Should not be called for native")
 
     @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: CheriConfig) -> typing.List[str]:
         raise ValueError("Should not be called for native")
 
     @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: CheriConfig) -> typing.List[str]:
         if config.use_sdk_clang_for_native_xbuild:
             return ["llvm-native"]
         return []  # use host tools -> no target needed
@@ -546,36 +546,6 @@ class NativeTargetInfo(TargetInfo):
                 instance.project.fatal("Requested automatic variable initialization, but don't know how to for",
                                        compiler)
         return result  # default host compiler should not need any extra flags
-
-
-class Linkage(Enum):
-    DEFAULT = "default"
-    STATIC = "static"
-    DYNAMIC = "dynamic"
-
-
-class MipsFloatAbi(Enum):
-    SOFT = ("mips64", "-msoft-float")
-    HARD = ("mips64hf", "-mhard-float")
-
-    def freebsd_target_arch(self):
-        return self.value[0]
-
-    def clang_float_flag(self):
-        return self.value[1]
-
-
-class AArch64FloatSimdOptions(Enum):
-    DEFAULT = ("", "")
-    NOSIMD = ("-nosimd", "+nosimd")
-    SOFT = ("-softfp", "+nofp+nosimd")
-    SOFT_SIMD = ("-softfp-with-simd", "+nofp")  # TODO: does it make sense to have this?
-
-    def config_suffix(self):
-        return self.value[0]
-
-    def clang_march_flag(self):
-        return self.value[1]
 
 
 class CrossCompileTarget(object):
@@ -719,13 +689,13 @@ class CrossCompileTarget(object):
     def create_target_info(self, project: "SimpleProject") -> TargetInfo:
         return self.target_info_cls(self, project)
 
-    def build_suffix(self, config: "CheriConfig", *, include_os: bool):
+    def build_suffix(self, config: CheriConfig, *, include_os: bool):
         assert self.target_info_cls is not None
         target_suffix = self.generic_target_suffix if include_os else self.base_target_suffix
         result = "-" + target_suffix + self.cheri_config_suffix(config)
         return result
 
-    def cheri_config_suffix(self, config: "CheriConfig"):
+    def cheri_config_suffix(self, config: CheriConfig):
         """
         :return: a string such as "-subobject-safe"/"128"/"128-plt" to ensure different build/install dirs for config
         options

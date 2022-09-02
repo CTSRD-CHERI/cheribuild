@@ -30,9 +30,8 @@ from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
 from ..project import DefaultInstallDir, GitRepository, SimpleProject, AutotoolsProject
-from ...config.chericonfig import CheriConfig
+from ...config.chericonfig import CheriConfig, Linkage
 from ...config.compilation_targets import CompilationTargets
-from ...config.target_info import Linkage
 from ...utils import OSInfo
 from ...processutils import get_program_version, ssh_config_parameters
 
