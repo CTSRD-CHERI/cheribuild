@@ -35,7 +35,7 @@ from .crosscompileproject import (BenchmarkMixin, BuildType, CompilationTargets,
                                   DefaultInstallDir, GitRepository)
 from .llvm import BuildCheriLLVM, BuildUpstreamLLVM, BuildLLVMBase
 from ..project import ReuseOtherProjectRepository
-from ...utils import cached_property
+from ...utils import cached_property, is_jenkins_build
 from ...config.compilation_targets import FreeBSDTargetInfo
 
 
@@ -63,21 +63,31 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
         cls.collect_stats = cls.add_bool_option("collect-stats", default=False,
                                                 help="Collect statistics from the compiler")
 
-    def _find_in_sdk_or_llvm_build_dir(self, name) -> Path:
+    def __find_in_sdk_or_llvm_build_dir(self, name) -> Path:
         llvm_project = self.llvm_project(self.config).get_instance(self, cross_target=CompilationTargets.NATIVE)
         if (llvm_project.build_dir / "bin" / name).exists():
             return llvm_project.build_dir / "bin" / name
+        if is_jenkins_build():
+            return self.sdk_bindir / name
         return llvm_project.install_dir / "bin" / name
+
+    def find_in_sdk_or_llvm_build_dir(self, name):
+        result = self.__find_in_sdk_or_llvm_build_dir(name)
+        # Warn if the tool could not be found. Depending on other CMake flags this may not be an error, but printing
+        # this message is useful to debug build failures.
+        if not result.exists():
+            self.dependency_warning("Could not find LLVM tool", name, "at", result)
+        return result
 
     @cached_property
     def llvm_lit(self):
-        return self._find_in_sdk_or_llvm_build_dir("llvm-lit")
+        return self.find_in_sdk_or_llvm_build_dir("llvm-lit")
 
     def setup(self):
         super().setup()
         self.add_cmake_options(
-            TEST_SUITE_LLVM_SIZE=self._find_in_sdk_or_llvm_build_dir("llvm-size"),
-            TEST_SUITE_LLVM_PROFDATA=self._find_in_sdk_or_llvm_build_dir("llvm-profdata"),
+            TEST_SUITE_LLVM_SIZE=self.find_in_sdk_or_llvm_build_dir("llvm-size"),
+            TEST_SUITE_LLVM_PROFDATA=self.find_in_sdk_or_llvm_build_dir("llvm-profdata"),
             TEST_SUITE_LIT=self.llvm_lit,
             TEST_SUITE_COLLECT_CODE_SIZE=self.collect_stats,
             TEST_SUITE_COLLECT_COMPILE_TIME=self.collect_stats,
