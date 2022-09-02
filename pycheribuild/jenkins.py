@@ -47,7 +47,7 @@ from .projects import *  # noqa: F401,F403
 from .projects.cross import *  # noqa: F401,F403
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project, SimpleProject
-from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
+from .targets import SimpleTargetAlias, Target, target_manager
 from .processutils import get_program_version, run_and_kill_children_on_exit, run_command
 from .utils import fatal_error, init_global_config, OSInfo, status_update, ThreadJoiner, warning_message
 
@@ -284,14 +284,9 @@ def build_target(cheri_config, target: Target):
     if True:
         target.check_system_deps(cheri_config)
         # need to set destdir after check_system_deps:
-        project = target.get_or_create_project(cheri_config.preferred_xtarget, cheri_config)
+        project = target.get_or_create_project(None, cheri_config)
         assert project
         _ = project.all_dependency_names(cheri_config)  # Ensure dependencies are cached.
-        cross_target = project.get_crosscompile_target(cheri_config)
-        if isinstance(target, MultiArchTargetAlias) and cross_target is not None and \
-                cross_target != cheri_config.preferred_xtarget and cheri_config.preferred_xtarget is not None:
-            fatal_error("Cannot build project", project.target, "with cross compile target", cross_target.name,
-                        "when --cpu is set to", cheri_config.preferred_xtarget.name, fatal_when_pretending=True)
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheri_config.output_root
             project._install_prefix = cheri_config.installation_prefix
@@ -347,7 +342,7 @@ def create_tarball(cheri_config):
             assert len(cheri_config.targets) == 1, "--create-tarball only accepts one target name"
             target = target_manager.get_target_raw(cheri_config.targets[0])
             Target.instantiating_targets_should_warn = False
-            project = target.get_or_create_project(cheri_config.preferred_xtarget, cheri_config)
+            project = target.get_or_create_project(None, cheri_config)
             strip_binaries(cheri_config, project, cheri_config.workspace / "tarball")
         run_command(
             [tar_cmd, "--create", "--xz"] + tar_flags + ["-f", cheri_config.tarball_name, "-C", "tarball", "."],

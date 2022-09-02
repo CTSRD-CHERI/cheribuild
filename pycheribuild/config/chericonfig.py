@@ -110,7 +110,7 @@ class CheriConfig(ConfigBase):
     def __init__(self, loader, action_class):
         # Work around circular dependencies
         from .loader import ConfigLoaderBase
-        from .target_info import CrossCompileTarget, MipsFloatAbi, AArch64FloatSimdOptions, Linkage
+        from .target_info import MipsFloatAbi, AArch64FloatSimdOptions, Linkage
         # noinspection PyTypeChecker
         super().__init__(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt())
         self._cached_deps = collections.defaultdict(dict)
@@ -283,7 +283,6 @@ class CheriConfig(ConfigBase):
                                                              "not the targets themselves")
         self.start_with = None  # type: Optional[str]
         self.start_after = None  # type: Optional[str]
-        self.preferred_xtarget = None  # type: Optional[CrossCompileTarget]
         self.make_without_nice = None  # type: Optional[bool]
 
         self.mips_cheri_bits = 128  # Backwards compat
@@ -425,8 +424,7 @@ class CheriConfig(ConfigBase):
                                          "test suites on the remote board instead of QEMU.")
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
-        self.__optional_properties = ["preferred_xtarget", "internet_connection_last_checked_at",
-                                      "start_after", "start_with"]
+        self.__optional_properties = ["internet_connection_last_checked_at", "start_after", "start_with"]
 
     def load(self):
         self.loader.load()

@@ -34,7 +34,6 @@ from enum import Enum
 from pathlib import Path
 
 from .chericonfig import CheriConfig
-from .compilation_targets import CrossCompileTarget
 from .loader import ComputedDefaultValue, ConfigLoaderBase
 from .target_info import CompilerType
 from ..filesystemutils import FileSystemUtils
@@ -246,7 +245,6 @@ class JenkinsConfig(CheriConfig):
         else:
             self.morello_sdk_dir = self.workspace / self.default_morello_sdk_directory_name
 
-        self.preferred_xtarget = None  # type: typing.Optional[CrossCompileTarget]
         if self.cpu != "default":
             warning_message("--cpu parameter passed(", self.cpu, "), this is deprecated!", sep="")
 
