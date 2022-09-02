@@ -484,13 +484,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         target = cls._xtarget
         if target is not None:
             return target
-        # Find the best match based on config.preferred_xtarget
-        default_target = config.preferred_xtarget
-        assert cls.supported_architectures, "Must not be empty"
-        # if we can build the default target (--xmips/--xhost) chose that
-        if default_target in cls.supported_architectures:
-            assert default_target is not None
-            return default_target
         # otherwise fall back to the default specified in the class
         result = cls.default_architecture
         assert result is not None
