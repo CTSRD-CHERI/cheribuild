@@ -39,9 +39,7 @@ from pathlib import Path
 from .build_qemu import BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
 from .cherios import BuildCheriOS
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
-from .cross.freertos import BuildFreeRTOS
 from .cross.gdb import BuildGDB
-from .cross.rtems import BuildRtems
 from .cross.u_boot import BuildUBoot
 from .disk_image import (BuildCheriBSDDiskImage, BuildDiskImageBase, BuildFreeBSDImage,
                          BuildFreeBSDWithDefaultOptionsDiskImage, BuildMinimalCheriBSDDiskImage)
@@ -768,27 +766,6 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         return ["-bios", "none"]
 
 
-class LaunchRtemsQEMU(LaunchQEMUBase):
-    target = "run-rtems"
-    dependencies = ["rtems"]
-    supported_architectures = [CompilationTargets.RTEMS_RISCV64_PURECAP]
-    forward_ssh_port = False
-    qemu_user_networking = False
-    _enable_smbfs_support = False
-    _add_virtio_rng = False
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(default_ssh_port=None, **kwargs)
-
-    def get_riscv_bios_args(self) -> typing.List[str]:
-        # Run a simple RTEMS shell application (run in machine mode using the -bios QEMU argument)
-        return ["-bios", str(BuildRtems.get_build_dir(self) / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe")]
-
-    def process(self):
-        super().process()
-
-
 class LaunchDmQEMU(LaunchCheriBSD):
     target = "run-dm"
     forward_ssh_port = False
@@ -799,55 +776,6 @@ class LaunchDmQEMU(LaunchCheriBSD):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.qemu_user_networking = False
-
-    def process(self):
-        super().process()
-
-
-class LaunchFreeRTOSQEMU(LaunchQEMUBase):
-    target = "run-freertos"
-    dependencies = ["freertos"]
-    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
-                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
-    forward_ssh_port = False
-    qemu_user_networking = False
-    _enable_smbfs_support = False
-    _add_virtio_rng = False
-
-    default_demo = "RISC-V-Generic"
-    default_demo_app = "main_blinky"
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(defaultSshPort=None, **kwargs)
-
-        cls.demo = cls.add_config_option(
-            "demo", metavar="DEMO", show_help=True,
-            default=cls.default_demo,
-            help="The FreeRTOS Demo to run.")  # type: str
-
-        cls.demo_app = cls.add_config_option(
-            "prog", metavar="PROG", show_help=True,
-            default=cls.default_demo_app,
-            help="The FreeRTOS program to run.")  # type: str
-
-        cls.demo_bsp = cls.add_config_option(
-            "bsp", metavar="BSP", show_help=True,
-            default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
-                                         as_string="target-dependent default"),
-            help="The FreeRTOS BSP to run. This is only valid for the "
-                 "paramterized RISC-V-Generic. The BSP option chooses "
-                 "platform, RISC-V arch and RISC-V abi in the "
-                 "$platform-$arch-$abi format. See RISC-V-Generic/README for more details")
-
-    def default_demo_bsp(self):
-        return "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True) + "-" + \
-               self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
-
-    def get_riscv_bios_args(self) -> typing.List[str]:
-        # Run a FreeRTOS demo application (run in machine mode using the -bios QEMU argument)
-        return ["-bios", str(BuildFreeRTOS.get_install_dir(self)) + "/FreeRTOS/Demo/" +
-                self.demo + "_" + self.demo_app + ".elf"]
 
     def process(self):
         super().process()
