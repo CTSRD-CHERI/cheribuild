@@ -30,6 +30,7 @@
 #
 import tempfile
 from pathlib import Path
+from typing import ClassVar
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, GitRepository,
                                   MakeCommandKind)
@@ -57,6 +58,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
          CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID,
          CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP] + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
 
+    locale_support: "ClassVar[bool]"
     # build_in_source_dir = True  # we have to build in the source directory
 
     @classmethod
