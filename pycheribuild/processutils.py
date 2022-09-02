@@ -408,6 +408,7 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
     # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
     with keep_terminal_sane(give_tty_control, command=cmdline):
         with popen_handle_noexec(cmdline, **kwargs) as process:
+            exc = None
             try:
                 stdout, stderr = process.communicate(input, timeout=timeout)
             except KeyboardInterrupt:
@@ -416,25 +417,26 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
                 process.kill()
                 stdout, stderr = process.communicate()
                 assert timeout is not None
-                raise subprocess.TimeoutExpired(process.args, timeout, output=stdout, stderr=stderr)
+                exc = subprocess.TimeoutExpired(process.args, timeout, output=stdout, stderr=stderr)
             except BrokenPipeError:
                 # just return the exit code
                 process.kill()
                 retcode = process.wait()
-                raise _make_called_process_error(retcode, process.args, stdout=b"", cwd=kwargs["cwd"])
-            except Exception:
+                exc = _make_called_process_error(retcode, process.args, stdout=b"", cwd=kwargs["cwd"])
+            except Exception as e:
                 process.kill()
                 process.wait()
-                raise
+                exc = e
             retcode = process.poll()
             if retcode != expected_exit_code and not allow_unexpected_returncode:
+                exc = _make_called_process_error(retcode, process.args, stdout=stdout, stderr=stderr, cwd=kwargs["cwd"])
+            if exc is not None:
                 if config.pretend and not raise_in_pretend_mode:
                     cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
                     fatal_error("Command ", "`" + commandline_to_str(process.args) +
                                 "` failed with unexpected exit code ", retcode, *cwd, sep="", pretend=config.pretend)
                 else:
-                    raise _make_called_process_error(retcode, process.args, stdout=stdout, stderr=stderr,
-                                                     cwd=kwargs["cwd"])
+                    raise exc
             return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
