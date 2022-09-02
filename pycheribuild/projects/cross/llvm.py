@@ -29,8 +29,8 @@
 #
 import os
 import sys
-import typing
 from pathlib import Path
+from typing import ClassVar, Iterable
 
 from ..project import BuildType, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject
 from ...config.chericonfig import CheriConfig
@@ -39,7 +39,7 @@ from ...config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTa
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import CompilerType, CrossCompileTarget
 from ...processutils import CompilerInfo
-from ...utils import is_jenkins_build, OSInfo, ThreadJoiner, remove_duplicates
+from ...utils import is_jenkins_build, OSInfo, ThreadJoiner, remove_duplicates, InstallInstructions
 
 _true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
                                                   as_string="True unless build-everything is set")
@@ -57,6 +57,18 @@ class BuildLLVMBase(CMakeProject):
     is_large_source_repository = True
     # Linking all the debug info takes forever
     default_build_type = BuildType.RELEASE
+
+    included_projects: "ClassVar[list[str]]"
+    add_default_sysroot: "ClassVar[bool]"
+    enable_assertions: "ClassVar[bool]"
+    skip_static_analyzer: "ClassVar[bool]"
+    skip_misc_llvm_tools: "ClassVar[bool]"
+    build_everything: "ClassVar[bool]"
+    use_llvm_cxx: "ClassVar[bool]"
+    use_modules_build: "ClassVar[bool]"
+    dylib: "ClassVar[bool]"
+    install_toolchain_only: "ClassVar[bool]"
+    build_minimal_toolchain: "ClassVar[bool]"
 
     @classmethod
     def is_toolchain_target(cls):
@@ -252,22 +264,21 @@ class BuildLLVMBase(CMakeProject):
         return super().clean()
 
     @staticmethod
-    def clang_install_hint():
-        if OSInfo.IS_FREEBSD:
-            return "Try running `pkg install llvm`"
+    def clang_install_hint() -> InstallInstructions:
+        alternative = None
         if OSInfo.is_ubuntu() or OSInfo.is_debian():
-            return """Try running:
+            alternative = """if the repository version is too old, try running:
 sudo apt install software-properties-common
 sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 """
-        return "Try installing clang 3.8 or newer using your system package manager"
+        return OSInfo.install_instructions("clang", is_lib=False, freebsd="llvm", apt="clang", alternative=alternative)
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
         # make sure we have at least version 3.8
-        self.check_compiler_version(3, 8, install_instructions=self.clang_install_hint())
+        self.check_compiler_version(3, 8)
 
-    def check_compiler_version(self, major: int, minor: int, patch=0, install_instructions=None):
+    def check_compiler_version(self, major: int, minor: int, patch=0):
         info = self.get_compiler_info(self.CC)
         # noinspection PyTypeChecker
         version_str = ".".join(map(str, info.version))
@@ -280,7 +291,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         elif info.compiler != "clang" or info.version < (major, minor, patch):
             self.dependency_error(self.CC, "version", version_str,
                                   "is not supported. Clang version %d.%d or newer is required." % (major, minor),
-                                  install_instructions=install_instructions)
+                                  install_instructions=self.clang_install_hint())
 
     def compile(self, **kwargs):
         if self.build_minimal_toolchain:
@@ -395,10 +406,6 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
     do_not_add_to_targets = True
     root_cmakelists_subdirectory = Path("llvm")
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-
     def configure(self, **kwargs):
         if (self.source_dir / "tools/clang/.git").exists():
             self.fatal("Attempting to build LLVM Monorepo but the checkout is from the split repos!")
@@ -419,7 +426,7 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
         prefix += target.build_suffix(self.config, include_os=False)
         # Instantiate the target_info using the mock project:
         # noinspection PyTypeChecker
-        target_info = target.target_info_cls(target, MockProject())
+        target_info = target.target_info_cls(target, MockProject())  # pytype: disable=wrong-arg-types,not-instantiable
         assert isinstance(target_info, FreeBSDTargetInfo)
         # We only want the compiler flags, don't check whether required files exist
         flags = target_info.get_essential_compiler_and_linker_flags(perform_sanity_checks=False,
@@ -468,6 +475,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     # NB: remove_duplicates is needed for --enable-hybrid-for-purecap-rootfs targets.
     supported_architectures = remove_duplicates(CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS +
                                                 CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
+    build_all_targets: "ClassVar[bool]"
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -505,7 +513,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
                         overwrite=True, mode=0o755)
 
     @property
-    def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
+    def triple_prefixes_for_binaries(self) -> "Iterable[str]":
         triples = [
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config,
                                                  include_version=False),
@@ -536,7 +544,7 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
                                                 CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
 
     @property
-    def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
+    def triple_prefixes_for_binaries(self) -> "Iterable[str]":
         triples = [
             CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config,
                                                         include_version=False),
