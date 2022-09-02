@@ -37,6 +37,7 @@ import typing
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
+from typing import Optional, ClassVar
 
 from .crosscompileproject import CrossCompileProject
 from .llvm import BuildLLVMMonoRepoBase
@@ -405,6 +406,10 @@ class BuildFreeBSDBase(Project):
     has_optional_tests = True
     default_build_tests = True
     default_build_type = BuildType.RELWITHDEBINFO
+    # Define the command line arguments here to make type checkers happy.
+    minimal: "ClassVar[bool]"
+    build_tests: "ClassVar[bool]"
+    extra_make_args: "ClassVar[list[str]]"
 
     @classmethod
     def can_build_with_ccache(cls):
@@ -782,7 +787,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.make_args.set(SUBDIR_OVERRIDE=self.subdir_override)
 
     @cached_property
-    def build_toolchain_root_dir(self) -> "typing.Optional[Path]":
+    def build_toolchain_root_dir(self) -> "Optional[Path]":
         if self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAPPED:
             return self.objdir / "tmp/usr"
         elif self.build_toolchain in (FreeBSDToolchainKind.UPSTREAM_LLVM, FreeBSDToolchainKind.CHERI_LLVM,
@@ -1093,7 +1098,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 all_kernel_configs = self.kernel_config
             self._buildkernel(kernconf=all_kernel_configs, mfs_root_image=mfs_root_image)
 
-    def _remove_schg_flag(self, *paths: "typing.Iterable[str]"):
+    def _remove_schg_flag(self, *paths: "str"):
         if shutil.which("chflags"):
             for i in paths:
                 file = self.install_dir / i
@@ -1408,7 +1413,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kerndir = "kernel." + kernconf
         return self.install_dir / "boot" / kerndir / "kernel"
 
-    def get_kern_module_path(self, kernconf: str = None) -> "typing.Optional[str]":
+    def get_kern_module_path(self, kernconf: str = None) -> "Optional[str]":
         """
         Get the path to provide to kern.module_path for the given kernel
         configuration if needed (i.e. the kernel is not the default one).
@@ -1417,7 +1422,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return None
         return "/boot/kernel." + kernconf
 
-    def get_kern_module_path_arg(self, kernconf: str = None) -> "typing.Optional[str]":
+    def get_kern_module_path_arg(self, kernconf: str = None) -> "Optional[str]":
         """
         Get the tunable env var to set kern.module_path for the given kernel
         configuration if needed (i.e. the kernel is not the default one).
@@ -2081,6 +2086,9 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
     target = "cheribsd-sysroot"
     is_sdk_target = True
     rootfs_source_class = BuildCHERIBSD  # type: typing.Type[BuildCHERIBSD]
+    copy_remote_sysroot: "ClassVar[bool]"
+    remote_path: "ClassVar[str]"
+    install_dir_override: "ClassVar[Path]"
 
     @classproperty
     def supported_architectures(self):
