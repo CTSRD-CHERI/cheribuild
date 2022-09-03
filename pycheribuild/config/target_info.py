@@ -416,8 +416,6 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def sdk_root_dir(self):
-        if self.config.use_sdk_clang_for_native_xbuild:
-            return self.config.cheri_sdk_dir
         raise ValueError("Should not be called for native")
 
     @property
