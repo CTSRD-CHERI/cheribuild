@@ -1313,14 +1313,7 @@ class MakeOptions(object):
                 self.__project.add_required_system_tool("gmake", homebrew="make")
                 return "gmake"
         elif self.kind == MakeCommandKind.BsdMake:
-            if OSInfo.IS_FREEBSD:
-                return "make"
-            else:
-                from .cross.cheribsd import BuildFreeBSDBase
-                if not isinstance(self.__project, BuildFreeBSDBase):
-                    # When building FreeBSD we can bootstrap bmake
-                    self.__project.add_required_system_tool("bmake", homebrew="bmake", cheribuild_target="bmake")
-                return "bmake"
+            return "make" if OSInfo.IS_FREEBSD else "bmake"
         elif self.kind == MakeCommandKind.Ninja:
             self.__project.add_required_system_tool("ninja", homebrew="ninja", apt="ninja-build")
             return "ninja"
