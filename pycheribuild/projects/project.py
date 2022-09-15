@@ -89,10 +89,10 @@ def _default_stdout_filter(_: bytes):
 
 class ProjectSubclassDefinitionHook(type):
     # noinspection PyProtectedMember
-    def __init__(cls: "typing.Type[SimpleProject]", name: str, bases, clsdict):
+    def __init__(cls, name: str, bases, clsdict):
         super().__init__(name, bases, clsdict)
-        if typing.TYPE_CHECKING:  # no-combine
-            assert issubclass(cls, SimpleProject)  # no-combine
+        if typing.TYPE_CHECKING:
+            assert issubclass(cls, SimpleProject)  # pytype: disable=name-error
         if clsdict.get("do_not_add_to_targets") is not None:
             if clsdict.get("do_not_add_to_targets") is True:
                 return  # if do_not_add_to_targets is defined within the class we skip it
@@ -163,7 +163,7 @@ class ProjectSubclassDefinitionHook(type):
                 new_dict["synthetic_base"] = cls  # We are already adding it here
                 # noinspection PyTypeChecker
                 new_cls = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
-                assert issubclass(new_cls, SimpleProject)
+                assert issubclass(new_cls, SimpleProject)  # pytype: disable=name-error
                 target_manager.add_target(MultiArchTarget(new_name, new_cls, arch, base_target))
                 # Handle old names for FreeBSD/CheriBSD targets in the config file:
                 if arch.target_info_cls.is_freebsd() and not arch.target_info_cls.is_native():
@@ -368,7 +368,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         is filtered based on various parameters such as config.include_dependencies.
         """
         # look only in __dict__ to avoid parent class lookup
-        result = cls.__dict__.get("_cached_filtered_deps", None)
+        result: "typing.Optional[list[Target]]" = cls.__dict__.get("_cached_filtered_deps", None)
         if result is None:
             with_toolchain_deps = config.include_toolchain_dependencies and not cls.skip_toolchain_dependencies
             with_sdk_deps = not config.skip_sdk
@@ -427,7 +427,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
     @classmethod
     def cached_full_dependencies(cls) -> "typing.List[Target]":
         # look only in __dict__ to avoid parent class lookup
-        _cached = cls.__dict__.get("_cached_full_deps", None)
+        _cached: "list[Target]" = cls.__dict__.get("_cached_full_deps", None)
         if _cached is None:
             raise ValueError("cached_full_dependencies called before value was cached")
         return _cached
@@ -652,7 +652,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         if not cls._config_loader.is_needed_for_completion(fullname, shortname, kind):
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
-            return default
+            return default  # pytype: disable=bad-return-type
         # Hide stuff like --foo/install-directory from --help
         help_hidden = not show_help
 
@@ -681,7 +681,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
                     assert t in cls.supported_architectures, \
                         cls.__name__ + ": some of " + str(only_add_for_targets) + " not in " + str(
                             cls.supported_architectures)
-            if target is not None and target not in only_add_for_targets:
+            if target is not None and target not in only_add_for_targets and not typing.TYPE_CHECKING:
                 kwargs["option_cls"] = DefaultValueOnlyConfigOption
 
         # We don't want to inherit certain options from the non-target specific class since they should always be
@@ -874,12 +874,11 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         """
         print_command(args, cwd=cwd, env=env)
         # make sure that env is either None or a os.environ with the updated entries entries
+        new_env: "typing.Optional[dict[str, str]]" = None
         if env:
-            new_env = os.environ.copy()  # type: typing.Optional[typing.Dict[str, str]]
+            new_env = os.environ.copy()
             env = {k: str(v) for k, v in env.items()}  # make sure everything is a string
             new_env.update(env)
-        else:
-            new_env = None
         assert not logfile_name.startswith("/")
         if self.config.write_logfile:
             logfile_path = self.build_dir / (logfile_name + ".log")
@@ -1577,7 +1576,7 @@ class GitRepository(SourceRepository):
         else:
             current_project.warning("Unknown return code", is_ancestor)
             # some other error -> raise so that I can see what went wrong
-            raise subprocess.CalledProcessError(is_ancestor.retcode, is_ancestor.args, output=is_ancestor.stdout,
+            raise subprocess.CalledProcessError(is_ancestor.returncode, is_ancestor.args, output=is_ancestor.stdout,
                                                 stderr=is_ancestor.stderr)
 
     def ensure_cloned(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path,
@@ -1632,7 +1631,7 @@ class GitRepository(SourceRepository):
         per_target_url = target_override.url if target_override.url else self.url
         matching_remote = None
         remotes = run_command(["git", "-C", base_project_source_dir, "remote", "-v"],
-                              capture_output=True).stdout.decode("utf-8")  # type: str
+                              capture_output=True).stdout.decode("utf-8")
         for r in remotes.splitlines():
             remote_name = r.split()[0].strip()
             if per_target_url in r:
@@ -1854,7 +1853,7 @@ class MercurialRepository(SourceRepository):
         self.force_branch = force_branch
 
     @staticmethod
-    def run_hg(src_dir: Path, *args, **kwargs):
+    def run_hg(src_dir: "typing.Optional[Path]", *args, **kwargs):
         assert src_dir is None or isinstance(src_dir, Path)
         command = ["hg"]
         if src_dir:
@@ -1943,7 +1942,7 @@ class MercurialRepository(SourceRepository):
         if src_dir.exists() and self.force_branch:
             assert self.default_branch, "default_branch must be set if force_branch is true!"
             branch = self.run_hg(src_dir, "branch", capture_output=True, print_verbose_only=True)
-            current_branch = branch.decode("utf-8")
+            current_branch = branch.stdout.decode("utf-8")
             if current_branch != self.force_branch:
                 current_project.warning("You are trying to build the", current_branch,
                                         "branch. You should be using", self.default_branch)
@@ -2082,7 +2081,7 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         return config.other_tools_dir
     elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
         return _INVALID_INSTALL_DIR
-    project.fatal("Unknown install dir for", project.target)
+    raise ValueError(f"Unknown install dir for {project.target}")
 
 
 def _default_install_dir_str(project: "Project") -> str:
@@ -2700,7 +2699,7 @@ class Project(SimpleProject):
                 pkg_config_args = dict(
                     PKG_CONFIG_PATH=pkgconfig_dirs,
                     PKG_CONFIG_LIBDIR=pkgconfig_dirs,
-                    PKG_CONFIG_SYSROOT_DIR=self.target_info.sysroot_dir
+                    PKG_CONFIG_SYSROOT_DIR=str(self.target_info.sysroot_dir)
                 )
             if pkg_config_args:
                 self.configure_environment.update(pkg_config_args)
@@ -3467,7 +3466,7 @@ class _CMakeAndMesonSharedLogic(Project):
                 tool = self._configure_tool_name
                 install_instrs = self._configure_tool_install_instructions()
                 self.dependency_error(tool, "version", version_str, "is too old (need at least", expected_str + ")",
-                                      install_instructions=install_instrs.fixit_hint(),
+                                      install_instructions=install_instrs,
                                       cheribuild_target=install_instrs.cheribuild_target)
 
 
@@ -3980,7 +3979,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             # Create a stub NativeTargetInfo to obtain the host {CMAKE_PREFIX,PKG_CONFIG}_PATH.
             # NB: we pass None as the project argument here to ensure the results do not different between projects.
             # noinspection PyTypeChecker
-            host_target_info = NativeTargetInfo(BasicCompilationTargets.NATIVE, None)
+            host_target_info = NativeTargetInfo(BasicCompilationTargets.NATIVE, None)  # pytype: disable=wrong-arg-types
             host_prefixes = self.host_dependency_prefixes
             assert self.config.other_tools_dir in host_prefixes
             host_pkg_config_dirs = list(itertools.chain.from_iterable(
