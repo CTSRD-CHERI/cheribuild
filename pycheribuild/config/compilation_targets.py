@@ -353,8 +353,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def sysroot_install_prefix_relative(self) -> Path:
         return Path("usr/local")
 
-    @property
-    def cmake_prefix_paths(self) -> "list[Path]":
+    def cmake_prefix_paths(self, config: "CheriConfig") -> "list[Path]":
         return [self.sysroot_install_prefix_absolute]
 
     @property
