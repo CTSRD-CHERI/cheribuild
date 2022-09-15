@@ -652,7 +652,6 @@ class CrossCompileTarget(object):
         self._set_for(hybrid_for_purecap_rootfs_target)
         self._set_for(purecap_for_hybrid_rootfs_target)
 
-    # noinspection PyProtectedMember
     def _set_from(self, other_target: "CrossCompileTarget"):
         if self is other_target:
             return
