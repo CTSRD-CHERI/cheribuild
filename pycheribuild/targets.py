@@ -36,7 +36,7 @@ from collections import OrderedDict
 from .config.chericonfig import CheriConfig
 from .config.target_info import CrossCompileTarget
 from .processutils import set_env
-from .utils import add_error_context, AnsiColour, coloured, fatal_error, status_update, warning_message
+from .utils import add_error_context, AnsiColour, coloured, fatal_error, status_update, warning_message, query_yes_no
 
 if typing.TYPE_CHECKING:  # no-combine
     from .projects.project import SimpleProject  # no-combine
@@ -327,9 +327,7 @@ class DeprecatedTargetAlias(SimpleTargetAlias):
                         coloured(AnsiColour.magenta, ". Please use "),
                         coloured(AnsiColour.yellow, self.real_target_name),
                         coloured(AnsiColour.magenta, " instead."), sep="")
-        from .projects.project import SimpleProject
-        # noinspection PyProtectedMember
-        if not SimpleProject._query_yes_no(config, "Continue?", default_result=True):
+        if not query_yes_no(config, "Continue?", default_result=True):
             fatal_error("Cannot continue.")
         return self._real_target
 

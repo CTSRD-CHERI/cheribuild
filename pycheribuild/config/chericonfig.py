@@ -220,7 +220,8 @@ class CheriConfig(ConfigBase):
         # Work around circular dependencies
         from .loader import ConfigLoaderBase
         # noinspection PyTypeChecker
-        super().__init__(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt())
+        super().__init__(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt(),
+                         force=DoNotUseInIfStmt())
         self._cached_deps = collections.defaultdict(dict)
 
         assert isinstance(loader, ConfigLoaderBase)
