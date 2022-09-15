@@ -67,7 +67,7 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
         llvm_project = self.llvm_project(self.config).get_instance(self, cross_target=CompilationTargets.NATIVE)
         if (llvm_project.build_dir / "bin" / name).exists():
             return llvm_project.build_dir / "bin" / name
-        if is_jenkins_build():
+        if is_jenkins_build() and not self.compiling_for_host():
             return self.sdk_bindir / name
         return llvm_project.install_dir / "bin" / name
 
