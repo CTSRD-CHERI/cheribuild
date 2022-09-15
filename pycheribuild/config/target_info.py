@@ -635,6 +635,10 @@ class CrossCompileTarget(object):
         self._non_cheri_for_purecap_rootfs_target = non_cheri_for_purecap_rootfs_target
         self._hybrid_for_purecap_rootfs_target = hybrid_for_purecap_rootfs_target
         self._purecap_for_hybrid_rootfs_target = purecap_for_hybrid_rootfs_target
+        if typing.TYPE_CHECKING:
+            # Inferring what these function calls do takes a very long time in pytype, and since they don't add any
+            # instance variables (or change the type of them) we can skip over these calls.
+            return
         self._set_for(non_cheri_target)
         self._set_for(hybrid_target)
         self._set_for(purecap_target)
@@ -643,7 +647,7 @@ class CrossCompileTarget(object):
         self._set_for(hybrid_for_purecap_rootfs_target)
         self._set_for(purecap_for_hybrid_rootfs_target)
 
-    def _set_from(self, other_target: "CrossCompileTarget"):
+    def _set_from(self, other_target: "CrossCompileTarget") -> None:
         if self is other_target:
             return
         if self._hybrid_target is None and other_target._hybrid_target is not None:
@@ -673,7 +677,7 @@ class CrossCompileTarget(object):
             other_target._purecap_for_hybrid_rootfs_target._set_from(self)
 
     # Set the related targets:
-    def _set_for(self, other_target: "typing.Optional[CrossCompileTarget]", also_set_other=True):
+    def _set_for(self, other_target: "typing.Optional[CrossCompileTarget]", also_set_other=True) -> None:
         if other_target is not None and self is not other_target:
             if self._is_cheri_hybrid:
                 if self._rootfs_target is not None:
