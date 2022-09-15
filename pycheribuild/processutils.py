@@ -354,7 +354,7 @@ def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, confi
 def run_command(*args, capture_output=False, capture_error=False, input: "typing.Union[str, bytes]" = None,
                 timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
                 no_print=False, replace_env=False, give_tty_control=False, expected_exit_code=0,
-                allow_unexpected_returncode=False, config: ConfigBase = None, **kwargs):
+                allow_unexpected_returncode=False, config: ConfigBase = None, **kwargs) -> "CompletedProcess[bytes]":
     if config is None:
         config = get_global_config()  # TODO: remove
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
@@ -403,8 +403,8 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
             kwargs["env"] = dict((k, str(v)) for k, v in env_arg.items())
     if give_tty_control:
         kwargs["preexec_fn"] = _new_tty_foreground_process_group
-    stdout = b""
-    stderr = b""
+    stdout: bytes = b""
+    stderr: bytes = b""
     # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
     with keep_terminal_sane(give_tty_control, command=cmdline):
         with popen_handle_noexec(cmdline, **kwargs) as process:
@@ -437,6 +437,8 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
                                 "` failed with unexpected exit code ", retcode, *cwd, sep="", pretend=config.pretend)
                 else:
                     raise exc
+            stdout = typing.cast(bytes, stdout)
+            stderr = typing.cast(bytes, stderr)
             return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
