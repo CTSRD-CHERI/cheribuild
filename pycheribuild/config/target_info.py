@@ -596,8 +596,8 @@ class CrossCompileTarget(object):
     # Currently the same for all targets
     DEFAULT_SUBOBJECT_BOUNDS = "conservative"
 
-    def __init__(self, suffix: "typing.Union[str, typing.Tuple[str, str]]", cpu_architecture: CPUArchitecture,
-                 target_info_cls: "typing.Type[TargetInfo]", *, is_cheri_purecap=False, is_cheri_hybrid=False,
+    def __init__(self, arch_suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[TargetInfo]",
+                 *, is_cheri_purecap=False, is_cheri_hybrid=False, extra_target_suffix: str = "",
                  check_conflict_with: "CrossCompileTarget" = None, rootfs_target: "CrossCompileTarget" = None,
                  non_cheri_target: "CrossCompileTarget" = None, hybrid_target: "CrossCompileTarget" = None,
                  purecap_target: "CrossCompileTarget" = None,
@@ -605,15 +605,8 @@ class CrossCompileTarget(object):
                  non_cheri_for_purecap_rootfs_target: "CrossCompileTarget" = None,
                  hybrid_for_purecap_rootfs_target: "CrossCompileTarget" = None,
                  purecap_for_hybrid_rootfs_target: "CrossCompileTarget" = None):
-        if isinstance(suffix, tuple):
-            assert len(suffix) == 2
-            arch_suffix = suffix[0]
-            extra_target_suffix = "-" + suffix[1] if suffix[1] else ""
-        else:
-            arch_suffix = suffix
-            extra_target_suffix = ""
         assert not arch_suffix.startswith("-"), arch_suffix
-
+        assert not extra_target_suffix or extra_target_suffix.startswith("-"), extra_target_suffix
         name_prefix = target_info_cls.shortname
         if target_info_cls.os_prefix is not None:
             self.os_prefix = target_info_cls.os_prefix

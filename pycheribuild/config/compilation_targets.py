@@ -1051,18 +1051,22 @@ class CompilationTargets(BasicCompilationTargets):
     CHERIBSD_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
                                                 is_cheri_purecap=True, hybrid_target=CHERIBSD_RISCV_HYBRID)
     CHERIBSD_RISCV_NO_CHERI_FOR_HYBRID_ROOTFS = \
-        CrossCompileTarget(("riscv64", "for-hybrid-rootfs"), CPUArchitecture.RISCV64, CheriBSDTargetInfo,
-                           rootfs_target=CHERIBSD_RISCV_HYBRID, non_cheri_target=CHERIBSD_RISCV_NO_CHERI)
+        CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
+                           extra_target_suffix="-for-hybrid-rootfs", rootfs_target=CHERIBSD_RISCV_HYBRID,
+                           non_cheri_target=CHERIBSD_RISCV_NO_CHERI)
     CHERIBSD_RISCV_NO_CHERI_FOR_PURECAP_ROOTFS = \
-        CrossCompileTarget(("riscv64", "for-purecap-rootfs"), CPUArchitecture.RISCV64, CheriBSDTargetInfo,
-                           rootfs_target=CHERIBSD_RISCV_PURECAP, non_cheri_target=CHERIBSD_RISCV_NO_CHERI)
+        CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
+                           extra_target_suffix="-for-purecap-rootfs", rootfs_target=CHERIBSD_RISCV_PURECAP,
+                           non_cheri_target=CHERIBSD_RISCV_NO_CHERI)
     CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS = \
-        CrossCompileTarget(("riscv64-hybrid", "for-purecap-rootfs"), CPUArchitecture.RISCV64, CheriBSDTargetInfo,
-                           is_cheri_hybrid=True, rootfs_target=CHERIBSD_RISCV_PURECAP,
+        CrossCompileTarget("riscv64-hybrid", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
+                           extra_target_suffix="-for-purecap-rootfs", is_cheri_hybrid=True,
+                           rootfs_target=CHERIBSD_RISCV_PURECAP,
                            non_cheri_for_hybrid_rootfs_target=CHERIBSD_RISCV_NO_CHERI_FOR_HYBRID_ROOTFS)
     CHERIBSD_RISCV_PURECAP_FOR_HYBRID_ROOTFS = \
-        CrossCompileTarget(("riscv64-purecap", "for-hybrid-rootfs"), CPUArchitecture.RISCV64, CheriBSDTargetInfo,
-                           is_cheri_purecap=True, rootfs_target=CHERIBSD_RISCV_HYBRID,
+        CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
+                           extra_target_suffix="-for-hybrid-rootfs", is_cheri_purecap=True,
+                           rootfs_target=CHERIBSD_RISCV_HYBRID,
                            hybrid_for_purecap_rootfs_target=CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS)
 
     CHERIBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriBSDTargetInfo)
@@ -1078,19 +1082,22 @@ class CompilationTargets(BasicCompilationTargets):
                                                   check_conflict_with=CHERIBSD_MORELLO_HYBRID,
                                                   hybrid_target=CHERIBSD_MORELLO_HYBRID)
     CHERIBSD_MORELLO_NO_CHERI_FOR_HYBRID_ROOTFS = \
-        CrossCompileTarget(("morello-aarch64", "for-hybrid-rootfs"), CPUArchitecture.AARCH64, CheriBSDMorelloTargetInfo,
-                           rootfs_target=CHERIBSD_MORELLO_HYBRID, non_cheri_target=CHERIBSD_MORELLO_NO_CHERI)
+        CrossCompileTarget("morello-aarch64", CPUArchitecture.AARCH64, CheriBSDMorelloTargetInfo,
+                           extra_target_suffix="-for-hybrid-rootfs", rootfs_target=CHERIBSD_MORELLO_HYBRID,
+                           non_cheri_target=CHERIBSD_MORELLO_NO_CHERI)
     CHERIBSD_MORELLO_NO_CHERI_FOR_PURECAP_ROOTFS = \
-        CrossCompileTarget(("morello-aarch64", "for-purecap-rootfs"), CPUArchitecture.AARCH64,
-                           CheriBSDMorelloTargetInfo, rootfs_target=CHERIBSD_MORELLO_PURECAP,
+        CrossCompileTarget("morello-aarch64", CPUArchitecture.AARCH64, CheriBSDMorelloTargetInfo,
+                           extra_target_suffix="-for-purecap-rootfs", rootfs_target=CHERIBSD_MORELLO_PURECAP,
                            non_cheri_target=CHERIBSD_MORELLO_NO_CHERI)
     CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS = \
-        CrossCompileTarget(("morello-hybrid", "for-purecap-rootfs"), CPUArchitecture.AARCH64, CheriBSDMorelloTargetInfo,
-                           is_cheri_hybrid=True, rootfs_target=CHERIBSD_MORELLO_PURECAP,
+        CrossCompileTarget("morello-hybrid", CPUArchitecture.AARCH64, CheriBSDMorelloTargetInfo,
+                           extra_target_suffix="-for-purecap-rootfs", is_cheri_hybrid=True,
+                           rootfs_target=CHERIBSD_MORELLO_PURECAP,
                            non_cheri_for_hybrid_rootfs_target=CHERIBSD_MORELLO_NO_CHERI_FOR_HYBRID_ROOTFS)
     CHERIBSD_MORELLO_PURECAP_FOR_HYBRID_ROOTFS = \
-        CrossCompileTarget(("morello-purecap", "for-hybrid-rootfs"), CPUArchitecture.AARCH64, CheriBSDMorelloTargetInfo,
-                           is_cheri_purecap=True, rootfs_target=CHERIBSD_MORELLO_HYBRID,
+        CrossCompileTarget("morello-purecap", CPUArchitecture.AARCH64, CheriBSDMorelloTargetInfo,
+                           extra_target_suffix="-for-hybrid-rootfs", is_cheri_purecap=True,
+                           rootfs_target=CHERIBSD_MORELLO_HYBRID,
                            hybrid_for_purecap_rootfs_target=CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS)
     CHERIBSD_X86_64 = CrossCompileTarget("amd64", CPUArchitecture.X86_64, CheriBSDTargetInfo)
 
