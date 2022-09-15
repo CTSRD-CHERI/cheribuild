@@ -50,7 +50,7 @@ from typing import Callable, Tuple, Union
 from ..config.chericonfig import BuildType, CheriConfig, ComputedDefaultValue, Linkage, supported_build_type_strings
 from ..config.loader import ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption
 from ..config.target_info import (AbstractProject, AutoVarInit, BasicCompilationTargets, CPUArchitecture,
-                                  CrossCompileTarget, TargetInfo)
+                                  CrossCompileTarget, TargetInfo, NativeTargetInfo)
 from ..processutils import (check_call_handle_noexec, commandline_to_str, CompilerInfo, get_compiler_info,
                             get_program_version, get_version_output, keep_terminal_sane, popen_handle_noexec,
                             print_command, run_command, set_env, ssh_host_accessible)
@@ -3382,7 +3382,7 @@ class _CMakeAndMesonSharedLogic(Project):
 
     @property
     def cmake_prefix_paths(self):
-        return remove_duplicates(self.target_info.cmake_prefix_paths + self.dependency_install_prefixes)
+        return remove_duplicates(self.target_info.cmake_prefix_paths(self.config) + self.dependency_install_prefixes)
 
     def _replace_values_in_toolchain_file(self, template: str, file: Path, **kwargs):
         result = template
@@ -3716,32 +3716,34 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         super().install(_stdout_filter=_stdout_filter)
 
     def run_tests(self):
-        if (self.build_dir / "CTestTestfile.cmake").exists():
+        if (self.build_dir / "CTestTestfile.cmake").exists() or self.config.pretend:
             # We can run tests using CTest
             if self.compiling_for_host():
-                self.run_cmd("ctest", "-V", "--output-on-failure", cwd=self.build_dir, env=self.ctest_environment)
+                self.run_cmd(shutil.which(os.getenv("CTEST_COMMAND", "ctest")) or "ctest", "-V", "--output-on-failure",
+                             cwd=self.build_dir, env=self.ctest_environment)
             else:
-                from .cmake import BuildCrossCompiledCMake
                 try:
-                    xtarget = self.get_crosscompile_target(self.config)
-                    cmake_xtarget = \
-                        xtarget.get_non_cheri_for_purecap_rootfs_target() if xtarget.is_cheri_purecap() else xtarget
-                    cmake_target = BuildCrossCompiledCMake.get_instance(self, cross_target=cmake_xtarget)
-                    expected_ctest_path = cmake_target.install_dir / "bin/ctest"
+                    cmake_xtarget = self.crosscompile_target
+                    # Use a non-CHERI CMake binary for the purecap rootfs since CMake does not build yet.
+                    if cmake_xtarget.is_cheri_purecap() and self.target_info.is_cheribsd():
+                        cmake_xtarget = cmake_xtarget.get_non_cheri_for_purecap_rootfs_target()
+                    # Use a string here instead of BuildCrossCompiledCMake to avoid a cyclic import.
+                    cmake_target = target_manager.get_target("cmake-crosscompiled", cmake_xtarget, self.config, self)
+                    cmake_project = cmake_target.project_class.get_instance(self, cross_target=cmake_xtarget)
+                    expected_ctest_path = cmake_project.install_dir / "bin/ctest"
                     if not expected_ctest_path.is_file():
-                        self.dependency_error(
-                            f"cannot find cross-compiled CTest binary ({expected_ctest_path}) to run tests.",
-                            cheribuild_target=cmake_target.target)
+                        self.dependency_error(f"cannot find CTest binary ({expected_ctest_path}) to run tests.",
+                                              cheribuild_target=cmake_project.target)
                     # --output-junit needs version 3.21
                     min_version = "3.21"
-                    if not list(cmake_target.install_dir.glob("share/*/Help/release/" + min_version + ".rst")):
+                    if not list(cmake_project.install_dir.glob("share/*/Help/release/" + min_version + ".rst")):
                         self.dependency_error("cannot find release notes for CMake", min_version,
                                               "- installed CMake version is too old",
-                                              cheribuild_target=cmake_target.target)
+                                              cheribuild_target=cmake_project.target)
                 except LookupError:
                     self.warning("Do not know how to cross-compile CTest for", self.target_info, "-> cannot run tests")
                     return
-                args = ["--cmake-install-dir", str(cmake_target.install_dir)]
+                args = ["--cmake-install-dir", str(cmake_project.install_dir)]
                 for var, value in self.ctest_environment.items():
                     args.append("--test-setup-command=export " + shlex.quote(var + "=" + value))
                 args.extend(self.ctest_script_extra_args)
@@ -3994,13 +3996,12 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         )
         if not self.compiling_for_host():
             native_toolchain_template = include_local_file("files/meson-cross-file-native-env.ini.in")
-            if BasicCompilationTargets.NATIVE in self.supported_architectures:
-                host_target_info = self.get_instance(self, cross_target=BasicCompilationTargets.NATIVE).target_info
-            else:
-                from .cmake import BuildCMake  # Could also use any other native project
-                host_target_info = BuildCMake.get_instance(self,
-                                                           cross_target=BasicCompilationTargets.NATIVE).target_info
+            # Create a stub NativeTargetInfo to obtain the host {CMAKE_PREFIX,PKG_CONFIG}_PATH.
+            # NB: we pass None as the project argument here to ensure the results do not different between projects.
+            # noinspection PyTypeChecker
+            host_target_info = NativeTargetInfo(BasicCompilationTargets.NATIVE, None)
             host_prefixes = self.host_dependency_prefixes
+            assert self.config.other_tools_dir in host_prefixes
             host_pkg_config_dirs = list(itertools.chain.from_iterable(
                 host_target_info.pkgconfig_candidates(x) for x in host_prefixes))
             self._replace_values_in_toolchain_file(
@@ -4008,8 +4009,9 @@ class MesonProject(_CMakeAndMesonSharedLogic):
                 NATIVE_C_COMPILER=self.host_CC, NATIVE_CXX_COMPILER=self.host_CXX,
                 TOOLCHAIN_PKGCONFIG_BINARY=pkg_config_bin, TOOLCHAIN_CMAKE_BINARY=cmake_bin,
                 # To find native packages we have to add the bootstrap tools to PKG_CONFIG_PATH and CMAKE_PREFIX_PATH.
-                NATIVE_PKG_CONFIG_PATH=remove_duplicates(host_pkg_config_dirs + host_target_info.pkgconfig_dirs),
-                NATIVE_CMAKE_PREFIX_PATH=remove_duplicates(host_prefixes + host_target_info.cmake_prefix_paths)
+                NATIVE_PKG_CONFIG_PATH=remove_duplicates(host_pkg_config_dirs),
+                NATIVE_CMAKE_PREFIX_PATH=remove_duplicates(
+                    host_prefixes + host_target_info.cmake_prefix_paths(self.config))
             )
 
         if self.install_prefix != self.install_dir:

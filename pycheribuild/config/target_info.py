@@ -190,8 +190,7 @@ class TargetInfo(ABC):
     def toolchain_system_version(self) -> "typing.Optional[str]":
         return None
 
-    @property
-    def cmake_prefix_paths(self) -> "list[Path]":
+    def cmake_prefix_paths(self, config: "CheriConfig") -> "list[Path]":
         """List of additional directories to be searched for packages (e.g. sysroot/usr/local/riscv64-purecap)"""
         return []
 
@@ -562,9 +561,8 @@ class NativeTargetInfo(TargetInfo):
         # Note: some packages also install to libdata/pkgconfig or share/pkgconfig
         return self.pkgconfig_candidates(self.config.other_tools_dir)
 
-    @property
-    def cmake_prefix_paths(self) -> "list[Path]":
-        return [self.config.other_tools_dir]
+    def cmake_prefix_paths(self, config: "CheriConfig") -> "list[Path]":
+        return [config.other_tools_dir]
 
     def pkgconfig_candidates(self, prefix: Path) -> "list[str]":
         result = super().pkgconfig_candidates(prefix)
