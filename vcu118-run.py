@@ -416,7 +416,7 @@ def main():
         pass
     args = parser.parse_args()
     print(args)
-    init_global_config(ConfigBase(pretend=args.pretend, verbose=True, quiet=False))
+    init_global_config(ConfigBase(pretend=args.pretend, verbose=True, quiet=False, force=False))
     if (args.action == "all" and args.bitfile is not None) or args.action == "bitfile":
         if args.ltxfile is None:
             args.ltxfile = Path(args.bitfile).with_suffix(".ltx")

@@ -45,7 +45,7 @@ from .colour import AnsiColour, coloured
 
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "include_local_file", "Type_T", "init_global_config",  # no-combine
-           "status_update", "fatal_error", "coloured", "AnsiColour",  # no-combine
+           "status_update", "fatal_error", "coloured", "AnsiColour", "query_yes_no",  # no-combine
            "warning_message", "DoNotUseInIfStmt", "ThreadJoiner", "InstallInstructions",  # no-combine
            "SafeDict", "error_message", "ConfigBase", "final", "add_error_context",  # no-combine
            "default_make_jobs_count", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
@@ -88,16 +88,18 @@ else:
 class ConfigBase:
     TEST_MODE = False
 
-    def __init__(self, *, pretend: bool, verbose: bool, quiet: bool):
+    def __init__(self, *, pretend: bool, verbose: bool, quiet: bool, force: bool):
         self.quiet = quiet
         self.verbose = verbose
         self.pretend = pretend
+        self.force = force
         self.internet_connection_last_checked_at = None  # type: typing.Optional[float]
         self.internet_connection_last_check_result = False
 
 
 # noinspection PyTypeChecker
-GlobalConfig = ConfigBase(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt())
+GlobalConfig = ConfigBase(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt(),
+                          force=DoNotUseInIfStmt())
 
 
 def init_global_config(config: ConfigBase, *, test_mode: bool = False):
@@ -264,6 +266,25 @@ def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, ex
         if fixit_hint:
             fixit_message(fixit_hint)
         sys.exit(exit_code)
+
+
+def query_yes_no(config: ConfigBase, message: str = "", *, default_result=False, force_result=True,
+                 yes_no_str: str = None) -> bool:
+    if yes_no_str is None:
+        yes_no_str = " [Y]/n " if default_result else " y/[N] "
+    if config.pretend:
+        print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="", flush=True)
+        return force_result  # in pretend mode we always return true
+    if config.force:
+        # in force mode we always return the forced result without prompting the user
+        print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="", flush=True)
+        return force_result
+    if not sys.__stdin__.isatty():
+        return default_result  # can't get any input -> return the default
+    result = input(message + yes_no_str)
+    if default_result:
+        return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
+    return str(result).lower().startswith("y")  # anything but y will be treated as false
 
 
 @functools.lru_cache(maxsize=20)
