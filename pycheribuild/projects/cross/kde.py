@@ -979,9 +979,7 @@ class BuildDoplhin(KDECMakeProject):
 
 class BuildLibPng(CrossCompileCMakeProject):
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
-    repository = GitRepository("https://github.com/glennrp/libpng",
-                               temporary_url_override="https://github.com/CTSRD-CHERI/libpng",
-                               url_override_reason="Needs https://github.com/glennrp/libpng/pull/386",
+    repository = GitRepository("https://github.com/glennrp/libpng", old_urls=[b"https://github.com/CTSRD-CHERI/libpng"],
                                default_branch="libpng16", force_branch=True)
     target = "libpng"
     # The tests take a really long time to run (~2.5 hours on purecap RISC-V)
