@@ -47,8 +47,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Tuple, Union
 
-from ..config.chericonfig import BuildType, CheriConfig, Linkage, supported_build_type_strings
-from ..config.loader import (ComputedDefaultValue, ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption)
+from ..config.chericonfig import BuildType, CheriConfig, ComputedDefaultValue, Linkage, supported_build_type_strings
+from ..config.loader import ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption
 from ..config.target_info import (AbstractProject, AutoVarInit, BasicCompilationTargets, CPUArchitecture,
                                   CrossCompileTarget, TargetInfo)
 from ..processutils import (check_call_handle_noexec, commandline_to_str, CompilerInfo, get_compiler_info,

@@ -42,98 +42,15 @@ try:
 except ImportError:
     argcomplete = None
 
+from .chericonfig import CheriConfig, ComputedDefaultValue
 from ..utils import fatal_error, status_update, warning_message, error_message
 from ..colour import AnsiColour, coloured
 from pathlib import Path
 from enum import Enum
 
-if typing.TYPE_CHECKING:  # no-combine
-    from .chericonfig import CheriConfig  # no-combine
-    from ..projects.project import SimpleProject  # no-combine
-
 T = typing.TypeVar('T')
-AnyProjectSubclass = typing.TypeVar('AnyProjectSubclass', bound='SimpleProject')
+InstanceTy = typing.TypeVar('InstanceTy')
 _ConfigOptionTypeFn = typing.Callable[[typing.Union[str, typing.List[str]]], T]
-
-
-class ComputedDefaultValue(typing.Generic[T]):
-    def __init__(self, function: "typing.Callable[[CheriConfig, AnyProjectSubclass], T]",
-                 as_string: "typing.Union[str, typing.Callable[[typing.Any], str]]",
-                 as_readme_string: "typing.Union[str, typing.Callable[[typing.Any], str]]" = None,
-                 inherit: "ComputedDefaultValue[T]" = None):
-        if inherit is not None:
-            def inheriting_function(config, project):
-                val = function(config, project)
-                if val is None:
-                    val = inherit.function(config, project)
-                return val
-            self.function = inheriting_function
-        else:
-            assert function is not None, "Must provide function or inherit"
-            self.function = function
-
-        if inherit is not None:
-            assert callable(as_string), "Inheriting only makes sense with callable as_string"
-
-            if not callable(inherit.as_string):
-                def inherit_as_string_wrapper(cls):
-                    return inherit.as_string
-                inherited_as_string = inherit_as_string_wrapper
-            else:
-                inherited_as_string = inherit.as_string
-
-            def inheriting_as_string(cls):
-                val = as_string(cls)
-                if val is not None:
-                    return val
-                return inherited_as_string(cls)
-
-            self.as_string = inheriting_as_string
-        else:
-            assert function is not None, "Must provide as_string or inherit"
-            self.as_string = as_string
-
-        if inherit is not None:
-            if not callable(as_readme_string):
-                assert as_readme_string is None, "Inheriting only makes sense with callable or None as_readme_string"
-
-                def as_readme_string_none_wrapper(cls):
-                    return None
-                as_readme_string = as_readme_string_none_wrapper
-
-            if not callable(inherit.as_readme_string):
-                def inherit_as_readme_string_wrapper(cls):
-                    return inherit.as_readme_string
-                inherited_as_readme_string = inherit_as_readme_string_wrapper
-            else:
-                inherited_as_readme_string = inherit.as_readme_string
-
-            # Prefer using the overridden as_string rather than the inherited
-            # as_readme_string so you only need to override as_readme_string if
-            # you need to use it yourself, rather than to avoid using an
-            # inherited one not consistent with your as_string
-            def inheriting_as_readme_string(cls):
-                assert callable(as_readme_string)
-                val = as_readme_string(cls)
-                if val is not None:
-                    return val
-                val = as_string(cls)
-                if val is not None:
-                    return val
-                val = inherited_as_readme_string(cls)
-                if val is not None:
-                    return val
-                return inherited_as_string(cls)
-
-            self.as_readme_string = inheriting_as_readme_string
-        else:
-            self.as_readme_string = as_readme_string
-
-    def __call__(self, config: "CheriConfig", obj: "SimpleProject") -> T:
-        return self.function(config, obj)
-
-    def __repr__(self):
-        return "{ComputedDefault:" + str(self.as_string) + "}"
 
 
 # From https://bugs.python.org/issue25061
@@ -362,8 +279,8 @@ class ConfigLoaderBase(object):
     def add_option(self, name: str, shortname=None,
                    default: "typing.Optional[typing.Union[T, ComputedDefaultValue[T]]]" = None,
                    type: _ConfigOptionTypeFn = str, group=None, help_hidden=False,
-                   _owning_class: "typing.Type" = None, _fallback_names: "typing.List[str]" = None,
-                   option_cls: "typing.Type[CommandLineConfigOption[T]]" = None, **kwargs) -> T:
+                   _owning_class: "typing.Type[InstanceTy]" = None, _fallback_names: "typing.List[str]" = None,
+                   option_cls: "typing.Type[CommandLineConfigOption[T, InstanceTy]]" = None, **kwargs) -> T:
         if not self.is_needed_for_completion(name, shortname, type):
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
@@ -429,7 +346,7 @@ class ConfigLoaderBase(object):
         return self._parsed_args.targets
 
 
-class ConfigOptionBase(typing.Generic[T]):
+class ConfigOptionBase(typing.Generic[T, InstanceTy]):
     def __init__(self, name: str, shortname: typing.Optional[str], default, value_type: _ConfigOptionTypeFn,
                  _owning_class=None, _loader: ConfigLoaderBase = None, _fallback_names: "typing.List[str]" = None,
                  _legacy_alias_names: "typing.List[str]" = None):
@@ -467,7 +384,7 @@ class ConfigOptionBase(typing.Generic[T]):
         self._is_default_value = False
 
     # noinspection PyUnusedLocal
-    def load_option(self, config: "CheriConfig", instance: "typing.Optional[SimpleProject]", owner: "typing.Type",
+    def load_option(self, config: "CheriConfig", instance: "typing.Optional[InstanceTy]", owner: "typing.Type",
                     return_none_if_default=False) -> T:
         result = self._load_option_impl(config, self.full_option_name)
         # fall back from --qtbase-mips/foo to --qtbase/foo
@@ -536,7 +453,7 @@ class ConfigOptionBase(typing.Generic[T]):
         return self._cached
 
     def _get_default_value(self, config: "CheriConfig",
-                           instance: "typing.Optional[SimpleProject]" = None) -> _LoadedConfigValue:
+                           instance: "typing.Optional[InstanceTy]" = None) -> _LoadedConfigValue:
         if callable(self.default):
             return self.default(config, instance)
         else:
@@ -577,7 +494,7 @@ class ConfigOptionBase(typing.Generic[T]):
         return "<{}({}) type={} cached={}>".format(self.__class__.__name__, self.name, self.value_type, self._cached)
 
 
-class DefaultValueOnlyConfigOption(ConfigOptionBase):
+class DefaultValueOnlyConfigOption(ConfigOptionBase[T, InstanceTy]):
     # noinspection PyUnusedLocal
     def __init__(self, *args, _loader, **kwargs):
         super().__init__(*args, _loader=_loader)
@@ -639,7 +556,7 @@ class StoreActionWithPossibleAliases(argparse.Action):
         return ' | '.join(self.option_strings[:self.displayed_option_count])
 
 
-class CommandLineConfigOption(ConfigOptionBase[T]):
+class CommandLineConfigOption(ConfigOptionBase[T, InstanceTy]):
     # noinspection PyProtectedMember,PyUnresolvedReferences
     def __init__(self, name: str, shortname: "typing.Optional[str]", default, value_type: _ConfigOptionTypeFn,
                  _owning_class, _loader: ConfigLoaderBase, help_hidden: bool,
@@ -702,7 +619,7 @@ class CommandLineConfigOption(ConfigOptionBase[T]):
 
 
 # noinspection PyProtectedMember
-class JsonAndCommandLineConfigOption(CommandLineConfigOption[T]):
+class JsonAndCommandLineConfigOption(CommandLineConfigOption[T, InstanceTy]):
     def __init__(self, *args, **kwargs):
         # Note: we ignore _legacy_alias_names for command line options and only load them from the JSON
         alias_names = kwargs.pop("_legacy_alias_names", tuple())
