@@ -420,7 +420,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                 disk_image_path = run_instance.disk_image
                 if not disk_image_path.exists():
                     self.project.dependency_error("Missing disk image",
-                                                  cheribuild_target=run_instance.disk_image_class.target)
+                                                  cheribuild_target=run_instance.disk_image_project.target)
         elif not qemu_options.can_boot_kernel_directly:
             # We need to boot the disk image instead of running the kernel directly (amd64)
             assert rootfs_xtarget.is_any_x86() or rootfs_xtarget.is_aarch64(
