@@ -880,7 +880,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "strip", default=True, help="strip ELF files to reduce size of generated image")
         cls.include_cheribsdtest = cls.add_bool_option(
             "include-cheribsdtest", default=True, help="Also add static cheribsdtest base variants to the disk image")
-        cls.kernels = cls.add_config_option("kernel-names", kind=list, default=None,
+        cls.kernels = cls.add_config_option("kernel-names", kind=list, default=[""],
                                             help="Kernel(s) to include in the image; empty string or '/' for "
                                                  "/boot/kernel/, X for /boot/kernel.X/")
 
@@ -925,7 +925,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         if self._have_cplusplus_support(["lib", "usr/lib"]):
             files_to_add.append(include_local_file("files/minimal-image/need-cplusplus.files"))
         if self.include_boot_kernel:
-            for k in (self.kernels if self.kernels is not None else [""]):
+            for k in self.kernels:
                 files_to_add.append("boot/%s/kernel" % ("kernel" if k == "" or k == "/" else ("kernel.%s" % (k,)),))
         elif self.kernels is not None:
             self.warning("This disk image is not installing kernels, yet kernel names given.")
