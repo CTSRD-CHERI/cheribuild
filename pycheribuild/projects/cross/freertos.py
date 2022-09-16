@@ -32,6 +32,7 @@
 import os
 from typing import ClassVar
 
+from .compiler_rt import BuildCompilerRtBuiltins
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository)
 from ..run_qemu import LaunchQEMUBase
@@ -67,8 +68,6 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.compiler_resource = self.get_compiler_info(self.CC).get_resource_dir()
-
         self.default_demo_app = "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target,
                                                                                       softfloat=True) + \
                                 self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
@@ -86,9 +85,6 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
         # Set sysroot Makefile arg to pick up libc
         self.make_args.set(SYSROOT=str(self.sdk_sysroot))
-
-        # Add compiler-rt location to the search path
-        # self.make_args.set(LDFLAGS="-L"+str(self.compiler_resource / "lib"))
 
         if self.target_info.target.is_cheri_purecap():
             # CHERI-RISC-V sophisticated Demo with more advanced device drivers
@@ -156,7 +152,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
         with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
                           # Add compiler-rt location to the search path
-                          LDFLAGS="-L" + str(self.compiler_resource / "lib")):
+                          LDFLAGS="-L" + str(BuildCompilerRtBuiltins.get_install_dir(self) / "lib")):
             super().process()
 
 
@@ -172,6 +168,11 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
 
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.kernel_project = BuildFreeRTOS.get_instance(self)
+        self.current_kernel = self.kernel_project.install_dir / f"FreeRTOS/Demo/{self.demo}_{self.demo_app}.elf"
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -201,9 +202,5 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
                self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
 
     def get_riscv_bios_args(self) -> "list[str]":
-        # Run a FreeRTOS demo application (run in machine mode using the -bios QEMU argument)
-        return ["-bios", str(BuildFreeRTOS.get_install_dir(self)) + "/FreeRTOS/Demo/" +
-                self.demo + "_" + self.demo_app + ".elf"]
-
-    def process(self):
-        super().process()
+        # Use -bios none to ensure the FreeRTOS demo application runs in machine mode.
+        return ["-bios", "none"]

@@ -93,9 +93,14 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
     _enable_smbfs_support = False
     _add_virtio_rng = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.kernel_project = BuildRtems.get_instance(self)
+        self.current_kernel = self.kernel_project.build_dir / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe"
+
     def get_riscv_bios_args(self) -> "list[str]":
-        # Run a simple RTEMS shell application (run in machine mode using the -bios QEMU argument)
-        return ["-bios", str(BuildRtems.get_build_dir(self) / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe")]
+        # Run a simple RTEMS shell application (run in machine mode using the -bios none)
+        return ["-bios", "none"]
 
     def process(self):
         super().process()
