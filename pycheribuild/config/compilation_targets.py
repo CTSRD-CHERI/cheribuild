@@ -268,7 +268,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def toolchain_system_version(self) -> str:
         return str(self.FREEBSD_VERSION) + ".0"
 
-    def _get_sdk_root_dir_lazy(self):
+    def _get_sdk_root_dir_lazy(self) -> Path:
         from ..projects.cross.cheribsd import BuildFreeBSD, FreeBSDToolchainKind
         # Determine the toolchain based on --freebsd/toolchain=<>
         fbsd = self._get_rootfs_project(self.target.get_rootfs_target())
@@ -738,7 +738,7 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         raise NotImplementedError("Should not be called")
 
-    def _get_sdk_root_dir_lazy(self):
+    def _get_sdk_root_dir_lazy(self) -> Path:
         from ..projects.cross.llvm import BuildCheriOSLLVM
         return BuildCheriOSLLVM.get_install_dir(self.project, cross_target=CompilationTargets.NATIVE)
 
