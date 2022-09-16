@@ -34,7 +34,8 @@ from pathlib import Path
 
 from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, commandline_to_str, CrossCompileTarget,
                        DefaultInstallDir, GitRepository, Linkage, MakeCommandKind, MakefileProject, MesonProject,
-                       Project, SimpleProject, SubversionRepository)
+                       Project, SubversionRepository)
+from ..simple_project import SimpleProject
 from ...config.compilation_targets import CompilationTargets
 from ...utils import AnsiColour, coloured
 

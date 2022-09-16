@@ -31,8 +31,8 @@ import sys
 
 from .cross.bbl import BuildBBLNoPayload
 from .cross.cheribsd import BuildCheriBsdMfsKernel, ConfigPlatform
-from .project import (AutotoolsProject, BuildType, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind,
-                      SimpleProject)
+from .project import AutotoolsProject, BuildType, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind
+from .simple_project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 
 

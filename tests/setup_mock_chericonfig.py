@@ -3,7 +3,7 @@ from pathlib import Path
 
 from pycheribuild.config.chericonfig import CheriConfig
 from pycheribuild.config.loader import ConfigLoaderBase, DefaultValueOnlyConfigLoader
-from pycheribuild.projects.project import SimpleProject
+from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.targets import Target
 from pycheribuild.utils import init_global_config
 

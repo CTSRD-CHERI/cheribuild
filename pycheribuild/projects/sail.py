@@ -36,8 +36,8 @@ from pathlib import Path
 from subprocess import CalledProcessError
 from typing import Any, Dict, Tuple, Union
 
-from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project,
-                      SimpleProject)
+from .project import AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
+from .simple_project import SimpleProject
 from ..processutils import get_program_version
 from ..targets import target_manager
 from ..utils import AnsiColour, coloured, OSInfo, ThreadJoiner, InstallInstructions

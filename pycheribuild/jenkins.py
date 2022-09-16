@@ -46,7 +46,8 @@ from .projects import *  # noqa: F401,F403
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # noqa: F401,F403
 from .projects.cross.crosscompileproject import CrossCompileMixin
-from .projects.project import Project, SimpleProject
+from .projects.project import Project
+from .projects.simple_project import SimpleProject
 from .targets import SimpleTargetAlias, Target, target_manager
 from .processutils import get_program_version, run_and_kill_children_on_exit, run_command
 from .utils import fatal_error, init_global_config, OSInfo, status_update, ThreadJoiner, warning_message

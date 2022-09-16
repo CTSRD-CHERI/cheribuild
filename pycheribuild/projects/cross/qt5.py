@@ -37,7 +37,8 @@ from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, Cr
                                   DefaultInstallDir, GitRepository, MakeCommandKind)
 from .wayland import BuildWayland
 from .x11 import BuildLibXCB
-from ..project import SimpleProject, default_source_dir_in_subdir
+from ..project import default_source_dir_in_subdir
+from ..simple_project import SimpleProject
 from ...processutils import set_env
 from ...utils import InstallInstructions
 

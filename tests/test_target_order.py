@@ -18,10 +18,10 @@ from pycheribuild.projects.cross.gmp import BuildGmp
 from pycheribuild.projects.cross.llvm import BuildCheriLLVM, BuildMorelloLLVM
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 from pycheribuild.projects.disk_image import BuildDiskImageBase
-from pycheribuild.projects.project import DefaultInstallDir, Project, \
-    SimpleProject
+from pycheribuild.projects.project import DefaultInstallDir, Project
 from pycheribuild.projects.run_fvp import LaunchFVPBase
 from pycheribuild.projects.run_qemu import BuildAll, BuildAndRunCheriBSD, LaunchCheriBSD
+from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.projects.sdk import BuildCheriBSDSdk, BuildSdk
 from pycheribuild.projects.spike import RunCheriSpikeBase
 from pycheribuild.targets import Target, target_manager

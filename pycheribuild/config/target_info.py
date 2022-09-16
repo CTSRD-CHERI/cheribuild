@@ -41,7 +41,8 @@ from ..processutils import get_compiler_info
 
 
 __all__ = ["AbstractProject", "AArch64FloatSimdOptions", "AutoVarInit", "BasicCompilationTargets",  # no-combine
-           "CPUArchitecture",  "CrossCompileTarget", "CompilerType", "MipsFloatAbi", "TargetInfo"]  # no-combine
+           "CPUArchitecture",  "CrossCompileTarget", "CompilerType", "MipsFloatAbi", "TargetInfo",  # no-combine
+           "NativeTargetInfo"]  # no-combine
 
 
 class CPUArchitecture(Enum):
