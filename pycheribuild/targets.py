@@ -79,8 +79,9 @@ class Target(object):
         assert self.__project is not None
         return self.__project
 
-    def get_dependencies(self, config: CheriConfig) -> "typing.List[Target]":
-        return self.project_class.recursive_dependencies(config)
+    def get_dependencies(self, config: CheriConfig) -> "list[Target]":
+        # Due to cyclic imports + forward declarations we need to silence a bad-return-type error here
+        return self.project_class.recursive_dependencies(config)  # pytype: disable=bad-return-type
 
     # noinspection PyProtectedMember
     def cache_dependencies(self, config: CheriConfig) -> None:
@@ -90,7 +91,7 @@ class Target(object):
         if self._completed:
             return
         project = self.get_or_create_project(None, config)
-        with project.set_env(PATH=config.dollar_path_with_other_tools):
+        with set_env(PATH=config.dollar_path_with_other_tools, config=config):
             # make sure all system dependencies exist first
             project.check_system_dependencies()
 
@@ -117,7 +118,7 @@ class Target(object):
             new_env = {"PATH": project.config.dollar_path_with_other_tools}
             if project.config.clang_colour_diags:
                 new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
-            with project.set_env(**new_env):
+            with set_env(**new_env, config=config):
                 func(project)
             status_update(msg, "for target '" + self.name + "' in", time.time() - starttime, "seconds")
 
@@ -384,17 +385,17 @@ class TargetManager(object):
         for name, value in self.enabled_target_items(config):
             yield name
 
-    def non_alias_target_names(self, config: typing.Optional[CheriConfig]) -> "typing.Generator[str]":
+    def non_alias_target_names(self, config: typing.Optional[CheriConfig]) -> "typing.Iterator[str]":
         for name, value in self.enabled_target_items(config):
             if not isinstance(value, _TargetAliasBase):
                 yield name
 
-    def non_deprecated_target_names(self, config: typing.Optional[CheriConfig]) -> "typing.Generator[str]":
+    def non_deprecated_target_names(self, config: typing.Optional[CheriConfig]) -> "typing.Iterator[str]":
         for name, value in self.enabled_target_items(config):
             if not isinstance(value, DeprecatedTargetAlias):
                 yield name
 
-    def targets(self, config: typing.Optional[CheriConfig]) -> "typing.Iterable[Target]":
+    def targets(self, config: typing.Optional[CheriConfig]) -> "typing.Iterator[Target]":
         for name, value in self.enabled_target_items(config):
             yield value
 
