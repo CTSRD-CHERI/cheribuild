@@ -46,7 +46,7 @@ from .config.loader import JsonAndCommandLineConfigLoader
 from .projects import *  # noqa: F401,F403
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # noqa: F401,F403
-from .projects.project import SimpleProject
+from .projects.simple_project import SimpleProject
 from .targets import target_manager
 from .processutils import (get_program_version, print_command, run_and_kill_children_on_exit, run_command)
 from .utils import (AnsiColour, coloured, fatal_error, have_working_internet_connection, init_global_config,

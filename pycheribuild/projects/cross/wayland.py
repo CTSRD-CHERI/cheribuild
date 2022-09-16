@@ -29,7 +29,8 @@ import shutil
 from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
-from ..project import DefaultInstallDir, GitRepository, SimpleProject, AutotoolsProject
+from ..project import DefaultInstallDir, GitRepository, AutotoolsProject
+from ..simple_project import SimpleProject
 from ...config.chericonfig import CheriConfig, Linkage
 from ...config.compilation_targets import CompilationTargets
 from ...utils import OSInfo

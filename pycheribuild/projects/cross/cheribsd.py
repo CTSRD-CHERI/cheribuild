@@ -41,9 +41,9 @@ from typing import Optional, ClassVar
 
 from .crosscompileproject import CrossCompileProject
 from .llvm import BuildLLVMMonoRepoBase
-from ..project import (BuildType, CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
-                       MakeCommandKind, MakeOptions, Project, ReuseOtherProjectRepository, SimpleProject,
-                       TargetAliasWithDependencies)
+from ..project import (BuildType, CheriConfig, CPUArchitecture, DefaultInstallDir, GitRepository,
+                       MakeCommandKind, MakeOptions, Project, ReuseOtherProjectRepository)
+from ..simple_project import _clear_line_sequence, flush_stdio, SimpleProject, TargetAliasWithDependencies
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CompilerType as FreeBSDToolchainKind, CrossCompileTarget
@@ -623,7 +623,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def _stdout_filter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
             if self._last_stdout_line_can_be_overwritten:
-                sys.stdout.buffer.write(Project._clear_line_sequence)
+                sys.stdout.buffer.write(_clear_line_sequence)
             sys.stdout.buffer.write(line)
             flush_stdio(sys.stdout)
             self._last_stdout_line_can_be_overwritten = False

@@ -39,7 +39,8 @@ from pathlib import Path
 from .cross.cheribsd import (BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDWithDefaultOptions)
 from .cross.gdb import (BuildGDB, BuildKGDB)
 from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget,
-                      DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
+                      DefaultInstallDir, GitRepository, MakeCommandKind)
+from .simple_project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile
 from ..utils import AnsiColour, classproperty, coloured, include_local_file

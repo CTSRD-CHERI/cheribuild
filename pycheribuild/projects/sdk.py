@@ -32,8 +32,8 @@ import os
 import subprocess
 
 from .cross.cheribsd import BuildCHERIBSD
-from .project import (CheriConfig, CMakeProject, CPUArchitecture, DefaultInstallDir, GitRepository, SimpleProject,
-                      TargetAliasWithDependencies)
+from .project import CheriConfig, CMakeProject, CPUArchitecture, DefaultInstallDir, GitRepository
+from .simple_project import SimpleProject, TargetAliasWithDependencies
 from ..targets import target_manager
 from ..utils import classproperty, include_local_file
 

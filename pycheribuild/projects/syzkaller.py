@@ -36,7 +36,8 @@ from .build_qemu import BuildQEMU
 from .cross.cheribsd import BuildCHERIBSD, ConfigPlatform, CheriBSDConfigTable
 from .cross.crosscompileproject import CompilationTargets, CrossCompileProject
 from .disk_image import BuildCheriBSDDiskImage
-from .project import DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject
+from .project import DefaultInstallDir, GitRepository, MakeCommandKind
+from .simple_project import SimpleProject
 from ..processutils import commandline_to_str
 from ..qemu_utils import QemuOptions
 from ..utils import ThreadJoiner

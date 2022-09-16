@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
-from pycheribuild.projects.project import SimpleProject
+from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.targets import target_manager
 
 

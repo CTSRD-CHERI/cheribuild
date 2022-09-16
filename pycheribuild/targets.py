@@ -39,7 +39,7 @@ from .processutils import set_env
 from .utils import add_error_context, AnsiColour, coloured, fatal_error, status_update, warning_message, query_yes_no
 
 if typing.TYPE_CHECKING:  # no-combine
-    from .projects.project import SimpleProject  # no-combine
+    from .projects.simple_project import SimpleProject  # no-combine
 
 
 class Target(object):

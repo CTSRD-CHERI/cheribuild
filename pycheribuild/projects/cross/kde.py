@@ -35,8 +35,9 @@ from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMake
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
 from .wayland import BuildWayland, BuildLinux_Input_H
 from .x11 import BuildLibXCB
-from ..project import (DefaultInstallDir, GitRepository, MakeCommandKind, TargetAliasWithDependencies,
-                       default_source_dir_in_subdir, ReuseOtherProjectRepository)
+from ..project import (DefaultInstallDir, GitRepository, MakeCommandKind, default_source_dir_in_subdir,
+                       ReuseOtherProjectRepository)
+from ..simple_project import TargetAliasWithDependencies
 from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets

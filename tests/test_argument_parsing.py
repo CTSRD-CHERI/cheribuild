@@ -24,7 +24,7 @@ from pycheribuild.projects.cross.qt5 import BuildQtBase
 # noinspection PyProtectedMember
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase
 # Override the default config loader:
-from pycheribuild.projects.project import SimpleProject
+from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.projects.run_qemu import LaunchCheriBSD
 from pycheribuild.targets import MultiArchTargetAlias, Target, target_manager
 

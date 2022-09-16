@@ -36,7 +36,7 @@ from subprocess import CompletedProcess
 
 from .disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase, BuildFreeBSDImage
 from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
-from .project import SimpleProject
+from .simple_project import SimpleProject
 from ..config.chericonfig import CheriConfig
 from ..config.compilation_targets import CompilationTargets
 from ..config.loader import ComputedDefaultValue

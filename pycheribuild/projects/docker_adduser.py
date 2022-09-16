@@ -33,7 +33,7 @@ import os
 import getpass
 import subprocess
 
-from .project import SimpleProject
+from .simple_project import SimpleProject
 from ..utils import OSInfo
 
 
