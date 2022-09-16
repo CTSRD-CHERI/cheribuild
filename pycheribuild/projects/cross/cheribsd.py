@@ -1720,9 +1720,9 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     target = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-mfs-root"]
     repository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD, do_update=True)
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS + \
-        CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS + \
-        [CompilationTargets.CHERIBSD_AARCH64]
+    # NB: Only RISC-V kernels can be launched directly in QEMU right now, so we don't bother offering this target for
+    # AArch64/Morello yet.
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS
     default_build_dir = ComputedDefaultValue(function=cheribsd_reuse_build_dir,
                                              as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
     # This exists specifically for this target
