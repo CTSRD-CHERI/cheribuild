@@ -26,6 +26,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 from .crosscompileproject import CompilationTargets, CrossCompileMesonProject, GitRepository
+from ...utils import InstallInstructions
 
 
 class BuildLibDrm(CrossCompileMesonProject):
@@ -93,7 +94,8 @@ class BuildMesa(CrossCompileMesonProject):
             import mako
             assert mako is not None  # silence flake8 "imported but unused" warning
         except ImportError:
-            self.dependency_error("Missing python module mako", install_instructions="pip3 install --user mako")
+            self.dependency_error("Missing python module mako",
+                                  install_instructions=InstallInstructions("pip3 install --user mako"))
 
     def setup(self):
         super().setup()

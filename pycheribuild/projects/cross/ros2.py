@@ -27,6 +27,7 @@ import shlex
 import shutil
 
 from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
+from ...utils import InstallInstructions
 
 
 class BuildRos2(CrossCompileCMakeProject):
@@ -48,7 +49,8 @@ class BuildRos2(CrossCompileCMakeProject):
     def _run_vcs(self):
         # this is the meta version control system used by ros for downloading and unpacking repos
         if not shutil.which("vcs"):
-            self.dependency_error("Missing vcs command", install_instructions="pip3 install --user vcstool")
+            self.dependency_error("Missing vcs command",
+                                  install_instructions=InstallInstructions("pip3 install --user vcstool"))
         cmdline = ["vcs", "import", "--input", "ros2_minimal.repos", "src"]
         self.run_cmd(cmdline, cwd=self.source_dir)
 
@@ -56,7 +58,8 @@ class BuildRos2(CrossCompileCMakeProject):
         # colcon is the meta build system (on top of cmake) used by ros
         if not shutil.which("colcon"):
             self.dependency_error("Missing colcon command",
-                                  install_instructions="pip3 install --user colcon-common-extensions")
+                                  install_instructions=InstallInstructions(
+                                      "pip3 install --user colcon-common-extensions"))
         colcon_cmd = ["colcon", "build",
                       "--install-base", self.install_dir,
                       "--build-base", self.build_dir,
