@@ -132,8 +132,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if self._xtarget is CompilationTargets.RTEMS_RISCV64_PURECAP:
             return DefaultInstallDir.ROOTFS_LOCALBASE
         elif self._xtarget is not None and self._xtarget.target_info_cls.is_baremetal():
-            # Conflicting file names for non-CHERI,hybrid, and purecap
-            return DefaultInstallDir.DO_NOT_INSTALL
+            # Conflicting file names for RISC-V non-CHERI,hybrid, and purecap -> install to prefixed directory
+            # instead of the compiler resource directory
+            return DefaultInstallDir.ROOTFS_LOCALBASE
         return DefaultInstallDir.COMPILER_RESOURCE_DIR
 
     def linkage(self):
@@ -180,20 +181,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         super().install(**kwargs)
 
         libname = "libclang_rt.builtins-" + self.triple_arch + ".a"
-
         if self.target_info.is_rtems():
             self.move_file(self.install_dir / "lib/rtems5" / libname, self.install_dir / "lib" / libname)
-        else:
-            # Non-RISC-V baremetal toolchains search in lib not lib/baremetal
-            # (the inconsistency should be fixed in Clang, although in this
-            # case the RISC-V behaviour is perhaps convenient).
-            if not self.target_info.target.is_riscv(include_purecap=True):
-                self.move_file(self.install_dir / "lib/baremetal" / libname,
-                               self.real_install_root_dir / "lib" / libname)
-
-            if self.compiling_for_mips(include_purecap=True):
-                # HACK: we don't really need libunwind but the toolchain pulls it in automatically
-                # TODO: is there an easier way to create empty .a files?
-                self.run_cmd("ar", "rcv", self.install_dir / "lib/libunwind.a", "/dev/null")
-                self.run_cmd("ar", "dv", self.install_dir / "lib/libunwind.a", "null")
-                self.run_cmd("ar", "t", self.install_dir / "lib/libunwind.a")  # should be empty now
+        elif self.target_info.is_baremetal():
+            self.move_file(self.install_dir / "lib/baremetal" / libname, self.real_install_root_dir / "lib" / libname)
+            self.create_symlink(self.install_dir / "lib" / libname, self.install_dir / "lib/libgcc.a",
+                                print_verbose_only=False)
