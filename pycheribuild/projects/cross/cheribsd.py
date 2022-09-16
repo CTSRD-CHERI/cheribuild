@@ -51,41 +51,24 @@ from ...processutils import latest_system_clang_tool, print_command
 from ...utils import cached_property, classproperty, include_local_file, is_jenkins_build, OSInfo, ThreadJoiner
 
 
-def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
-    assert isinstance(project, BuildFreeBSD)
-    xtarget = project.get_crosscompile_target(config)
-    assert not xtarget.is_hybrid_or_purecap_cheri(), "FreeBSD does not build for CHERI (yet?)"
-    return config.output_root / ("freebsd" + project.build_configuration_suffix(xtarget))
+def _arch_suffixed_custom_install_dir(prefix: str) -> "ComputedDefaultValue[Path]":
+    def inner(config: CheriConfig, project: Project):
+        xtarget = project.crosscompile_target
+        # Check that we don't accidentally inherit the FreeBSD install directories for CheriBSD
+        if not isinstance(project, BuildCHERIBSD) and xtarget.is_hybrid_or_purecap_cheri():
+            raise ValueError(f"{project.target} should not build for CHERI architectures")
+        return config.output_root / (prefix + project.build_configuration_suffix(xtarget))
+    return ComputedDefaultValue(function=inner, as_string="$INSTALL_ROOT/" + prefix + "-<arch>")
 
 
-def freebsd_reuse_build_dir(config: CheriConfig, project: "SimpleProject"):
+def freebsd_reuse_build_dir(config: CheriConfig, project: "SimpleProject") -> Path:
     build_freebsd = BuildFreeBSD.get_instance(project, config)
     return build_freebsd.default_build_dir(config, build_freebsd)
 
 
-def freebsd_release_install_dir(config: CheriConfig, project: "BuildFreeBSDRelease"):
-    assert isinstance(project, BuildFreeBSDRelease)
-    xtarget = project.crosscompile_target
-    assert not xtarget.is_hybrid_or_purecap_cheri(), "FreeBSD does not build for CHERI (yet?)"
-    return config.output_root / ("freebsd-release" + project.build_configuration_suffix(xtarget))
-
-
-# noinspection PyProtectedMember
-def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
-    assert isinstance(project, BuildCHERIBSD)
-    xtarget = project.crosscompile_target
-    return config.output_root / ("rootfs" + project.build_configuration_suffix(xtarget))
-
-
-def cheribsd_reuse_build_dir(config: CheriConfig, project: "SimpleProject"):
+def cheribsd_reuse_build_dir(config: CheriConfig, project: "SimpleProject") -> Path:
     build_cheribsd = BuildCHERIBSD.get_instance(project, config)
     return build_cheribsd.default_build_dir(config, build_cheribsd)
-
-
-def cheribsd_release_install_dir(config: CheriConfig, project: "BuildCheriBSDRelease"):
-    assert isinstance(project, BuildCheriBSDRelease)
-    xtarget = project.crosscompile_target
-    return config.output_root / ("cheribsd-release" + project.build_configuration_suffix(xtarget))
 
 
 def _clear_dangerous_make_env_vars():
@@ -513,8 +496,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     # the stable/13 branch using cheribuild. However, MIPS is no longer included in ALL_SUPPORTED_FREEBSD_TARGETS.
     supported_architectures = CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS + [CompilationTargets.FREEBSD_MIPS64]
 
-    _default_install_dir_fn = ComputedDefaultValue(function=freebsd_install_dir,
-                                                   as_string="$INSTALL_ROOT/freebsd-{mips/x86}")
+    _default_install_dir_fn = _arch_suffixed_custom_install_dir("freebsd")
     add_custom_make_options = True
     use_llvm_binutils = False
 
@@ -1552,7 +1534,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     can_build_with_system_clang = False  # We need CHERI LLVM for most architectures
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git",
                                old_branches={"master": "main"})
-    _default_install_dir_fn = cheribsd_install_dir
+    _default_install_dir_fn = _arch_suffixed_custom_install_dir("rootfs")
     supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
     is_sdk_target = True
     hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
@@ -1568,9 +1550,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     @classmethod
     def setup_config_options(cls, kernel_only_target=False, install_directory_help=None, **kwargs):
         if install_directory_help is None:
-            install_directory_help = "Install directory for CheriBSD root file system (default: " \
-                                     "<OUTPUT>/rootfs-mips64-hybrid or <OUTPUT>/rootfs-riscv64-purecap, " \
-                                     "etc. depending on target)"
+            install_directory_help = "Install directory for CheriBSD root file system"
         super().setup_config_options(install_directory_help=install_directory_help, use_upstream_llvm=False,
                                      kernel_only_target=kernel_only_target)
         fpga_targets = CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS
@@ -1971,7 +1951,7 @@ class BuildFreeBSDRelease(BuildFreeBSDReleaseMixin, BuildFreeBSD):
     _always_add_suffixed_targets = True
     default_build_dir = ComputedDefaultValue(function=freebsd_reuse_build_dir,
                                              as_string=lambda cls: BuildFreeBSD.project_build_dir_help())
-    _default_install_dir_fn = freebsd_release_install_dir
+    _default_install_dir_fn = _arch_suffixed_custom_install_dir("freebsd-release")
     # We want the FreeBSD config options as well so the release installworld,
     # distributeworld etc. calls match what was built.
     _config_inherits_from = BuildFreeBSD
@@ -1984,7 +1964,7 @@ class BuildCheriBSDRelease(BuildFreeBSDReleaseMixin, BuildCHERIBSD):
     _always_add_suffixed_targets = True
     default_build_dir = ComputedDefaultValue(function=cheribsd_reuse_build_dir,
                                              as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
-    _default_install_dir_fn = cheribsd_release_install_dir
+    _default_install_dir_fn = _arch_suffixed_custom_install_dir("cheribsd-release")
     # We want the CheriBSD config options as well so the release installworld,
     # distributeworld etc. calls match what was built.
     _config_inherits_from = BuildCHERIBSD
