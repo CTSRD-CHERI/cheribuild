@@ -469,7 +469,7 @@ class TargetManager(object):
             for target in chosen_targets:
                 target.execute(config)
 
-    def get_all_chosen_targets(self, config) -> "typing.Iterable[Target]":
+    def get_all_chosen_targets(self, config) -> "list[Target]":
         # check that all target dependencies are correct:
         if os.getenv("CHERIBUILD_DEBUG"):
             for t in self._all_targets.values():
@@ -484,7 +484,7 @@ class TargetManager(object):
         # assert self._all_targets["llvm"] < self._all_targets["all"]
         # assert self._all_targets["disk-image"] > self._all_targets["qemu"]
         # assert self._all_targets["sdk"] > self._all_targets["sdk-sysroot"]
-        explicitly_chosen_targets = []  # type: typing.List[Target]
+        explicitly_chosen_targets: "list[Target]" = []
         for target_name in config.targets:
             if target_name not in self._all_targets:
                 # See if it was a target alias without a default

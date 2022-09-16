@@ -40,7 +40,7 @@ from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepos
                       SimpleProject)
 from ..processutils import get_program_version
 from ..targets import target_manager
-from ..utils import AnsiColour, coloured, OSInfo, ThreadJoiner
+from ..utils import AnsiColour, coloured, OSInfo, ThreadJoiner, InstallInstructions
 
 if typing.TYPE_CHECKING:
     _MixinBase = Project
@@ -367,7 +367,7 @@ class OcamlProject(OpamMixin, Project):
                 self.run_in_ocaml_env("ocamlfind query " + shlex.quote(pkg), cwd="/", print_verbose_only=True)
             except CalledProcessError:
                 instrs = "Try running `" + self._opam_cmd_str("install", _add_switch=False) + " " + pkg + "`"
-                self.dependency_error("missing opam package " + pkg, install_instructions=instrs)
+                self.dependency_error("missing opam package " + pkg, install_instructions=InstallInstructions(instrs))
 
     def install(self, **kwargs):
         pass
@@ -382,7 +382,8 @@ class OcamlProject(OpamMixin, Project):
             hint = "Try running `" + self._opam_cmd_str("update", _add_switch=False) + " && " + self._opam_cmd_str(
                 "switch", _add_switch=False) + " " + self.required_ocaml_version + "`"
             self.dependency_error("OCaml env seems to be messed up. Note: On MacOS homebrew OCaml is not installed"
-                                  " correctly. Try installing it with opam instead:", install_instructions=hint)
+                                  " correctly. Try installing it with opam instead:",
+                                  install_instructions=InstallInstructions(hint))
         super().process()
 
 
@@ -405,7 +406,7 @@ class BuildSailFromSource(OcamlProject):
             self.run_in_ocaml_env("ocamlfind query menhirLib", cwd="/", print_verbose_only=True)
         except CalledProcessError:
             self.dependency_error("missing opam package menhirLib",
-                                  install_instructions="Try running `opam install menhir`")
+                                  install_instructions=InstallInstructions("Try running `opam install menhir`"))
 
     def compile(self, **kwargs):
         pass
