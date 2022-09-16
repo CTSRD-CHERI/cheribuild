@@ -174,6 +174,6 @@ class BuildUpstreamOpenSBI(BuildOpenSBI):
     def run_tests(self):
         options = QemuOptions(self.crosscompile_target)
         self.run_cmd(options.get_commandline(
-            qemu_command=BuildQEMU.qemu_binary(self), add_network_device=False,
-            bios_args=["-bios", self.install_dir / "share/opensbi/lp64/generic/firmware//fw_payload.elf"]),
+            qemu_command=BuildQEMU.qemu_binary(self), add_network_device=False, bios_args=["-bios", "none"],
+            kernel_file=self.install_dir / "share/opensbi/lp64/generic/firmware//fw_payload.elf"),
             give_tty_control=True, cwd="/")

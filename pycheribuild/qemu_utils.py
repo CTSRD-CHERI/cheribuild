@@ -157,6 +157,8 @@ class QemuOptions:
                         bios_args: "typing.List[str]" = None, trap_on_unrepresentable=False,
                         debugger_on_cheri_trap=False, add_virtio_rng=False, write_disk_image_changes=True,
                         gui_options: "typing.List[str]" = None) -> "typing.List[str]":
+        if kernel_file is None and disk_image is None:
+            raise ValueError("Must pass kernel and/or disk image path when launching QEMU")
         if qemu_command is None:
             qemu_command = self.get_qemu_binary()
         result = [str(qemu_command)]
