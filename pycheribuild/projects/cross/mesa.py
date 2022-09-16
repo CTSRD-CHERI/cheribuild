@@ -25,6 +25,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+import sys
+import subprocess
+
 from .crosscompileproject import CompilationTargets, CrossCompileMesonProject, GitRepository
 from ...utils import InstallInstructions
 
@@ -91,9 +94,8 @@ class BuildMesa(CrossCompileMesonProject):
     def check_system_dependencies(self):
         super().check_system_dependencies()
         try:
-            import mako
-            assert mako is not None  # silence flake8 "imported but unused" warning
-        except ImportError:
+            self.run_cmd(sys.executable, "-c", "import mako")
+        except subprocess.CalledProcessError:
             self.dependency_error("Missing python module mako",
                                   install_instructions=InstallInstructions("pip3 install --user mako"))
 
