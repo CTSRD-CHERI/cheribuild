@@ -1344,8 +1344,8 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
         sys.exit(2)  # different exit code for test failures
 
 
-def main(test_function: "typing.Callable[[QemuCheriBSDInstance, argparse.Namespace], bool]" = None,
-         test_setup_function: "typing.Callable[[QemuCheriBSDInstance, argparse.Namespace], None]" = None,
+def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None,
+         test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
          argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]" = None,
          argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]" = None):
     # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
