@@ -301,7 +301,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
                 for dep_name in cls._xtarget.target_info_cls.base_sysroot_targets(cls._xtarget, config):
                     try:
                         dep_target = target_manager.get_target(dep_name, arch=expected_build_arch.get_rootfs_target(),
-                                                               config=config, caller=cls)
+                                                               config=config, caller=cls.target)
                         dependencies.append(dep_target.name)
                     except KeyError:
                         fatal_error("Could not find sysroot target '", dep_name, "' for ", cls.__name__, sep="")
@@ -309,7 +309,8 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         # Try to resovle the target names to actual targets and potentially add recursive depdencies
         for dep_name in dependencies:
             try:
-                dep_target = target_manager.get_target(dep_name, arch=expected_build_arch, config=config, caller=cls)
+                dep_target = target_manager.get_target(dep_name, arch=expected_build_arch, config=config,
+                                                       caller=cls.target)
             except KeyError:
                 fatal_error("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
                 raise

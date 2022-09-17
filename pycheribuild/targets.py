@@ -34,7 +34,7 @@ import typing
 from collections import OrderedDict
 
 from .config.chericonfig import CheriConfig
-from .config.target_info import CrossCompileTarget
+from .config.target_info import CrossCompileTarget, AbstractProject
 from .processutils import set_env
 from .utils import add_error_context, AnsiColour, coloured, fatal_error, status_update, warning_message, query_yes_no
 
@@ -407,7 +407,7 @@ class TargetManager(object):
             return self._targets_for_command_line_options_only[name]
 
     def get_target(self, name: str, arch: typing.Optional[CrossCompileTarget], config: CheriConfig,
-                   caller: "typing.Union[SimpleProject, str]") -> Target:
+                   caller: "typing.Union[AbstractProject, str]") -> Target:
         target = self.get_target_raw(name)
         # print("get_target", name, arch, end="")
         if isinstance(target, MultiArchTargetAlias):
