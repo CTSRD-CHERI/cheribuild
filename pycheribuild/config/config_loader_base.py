@@ -68,6 +68,7 @@ class ConfigLoaderBase(ABC):
 
     options: "dict[str, ConfigOptionBase]" = {}
     _json: "dict[str, _LoadedConfigValue]" = {}
+    is_completing_arguments: bool = "_ARGCOMPLETE" in os.environ
     is_generating_readme: bool = "_GENERATING_README" in os.environ
     is_running_unit_tests: bool = False
 

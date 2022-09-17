@@ -37,7 +37,7 @@ from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
 from .chericonfig import CheriConfig
-from .loader import ConfigOptionBase, JsonAndCommandLineConfigLoader
+from .config_loader_base import ConfigOptionBase, ConfigLoaderBase
 from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi,
                           TargetInfo, AArch64FloatSimdOptions)
 from ..projects.project import Project
@@ -955,7 +955,7 @@ def enable_hybrid_for_purecap_rootfs_targets() -> bool:
     if os.getenv("CHERIBUILD_ENABLE_HYBRID_FOR_PURECAP_ROOTFS_TARGETS", None) is not None:
         return True
     argv = sys.argv
-    if JsonAndCommandLineConfigLoader.is_completing_arguments:
+    if ConfigLoaderBase.is_completing_arguments:
         argv = os.getenv("COMP_LINE", "").split()
     return "--enable-hybrid-for-purecap-rootfs-targets" in argv
 

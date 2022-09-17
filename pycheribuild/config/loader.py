@@ -384,13 +384,14 @@ class ArgparseSetGivenAction(argparse.Action):
 class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     _parsed_args: argparse.Namespace
 
-    is_completing_arguments: bool = "_ARGCOMPLETE" in os.environ
-    show_all_help: bool = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or is_completing_arguments
-    _argcomplete_prefix: "typing.Optional[str]" = get_argcomplete_prefix() if is_completing_arguments else None
+    show_all_help: bool = any(
+        s in sys.argv for s in ("--help-all", "--help-hidden")) or ConfigLoaderBase.is_completing_arguments
+    _argcomplete_prefix: "typing.Optional[str]" = (get_argcomplete_prefix()
+                                                   if ConfigLoaderBase.is_completing_arguments else None)
     _argcomplete_prefix_includes_slash: bool = "/" in _argcomplete_prefix if _argcomplete_prefix else False
 
     def __init__(self, argparser_class: "typing.Type[argparse.ArgumentParser]" = argparse.ArgumentParser):
-        if self.is_completing_arguments:
+        if self.is_completing_arguments or self.is_running_unit_tests:
             self._parser = argparser_class(formatter_class=NoOpHelpFormatter)
         else:
             terminal_width = shutil.get_terminal_size(fallback=(120, 24))[0]
