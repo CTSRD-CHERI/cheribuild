@@ -34,13 +34,12 @@ import sys
 import typing
 from abc import abstractmethod, ABC
 from pathlib import Path
+from typing import Optional, Union, Callable
 
 from .computed_default_value import ComputedDefaultValue
 from ..utils import fatal_error, warning_message, ConfigBase
 
 T = typing.TypeVar('T')
-InstanceTy = typing.TypeVar('InstanceTy')
-_ConfigOptionTypeFn = typing.Callable[[typing.Union[str, typing.List[str]]], T]
 
 if typing.TYPE_CHECKING:
     import argparse
@@ -49,7 +48,7 @@ if typing.TYPE_CHECKING:
 class _LoadedConfigValue:
     """A simple class to hold the loaded value as well as the source (to handle relative paths correctly)"""
 
-    def __init__(self, value, loaded_from: "typing.Optional[Path]", used_key: str = None):
+    def __init__(self, value, loaded_from: "Optional[Path]", used_key: str = None):
         # assert value is not None, used_key + " is None"
         self.value = value
         self.loaded_from = loaded_from
@@ -93,7 +92,7 @@ class ConfigLoaderBase(ABC):
         self.freebsd_group = self.add_argument_group("FreeBSD and CheriBSD build configuration")
         self.docker_group = self.add_argument_group("Options controlling the use of docker for building")
 
-    def add_commandline_only_option(self, *args, type: "typing.Callable[[str], T]" = str, **kwargs) -> T:
+    def add_commandline_only_option(self, *args, type: "Callable[[str], T]" = str, **kwargs) -> T:
         """
         :return: A config option that is always loaded from the command line no matter what the default is
         """
@@ -106,11 +105,10 @@ class ConfigLoaderBase(ABC):
                                negatable=kwargs.pop("negatable", False), type=bool, **kwargs)
 
     # noinspection PyShadowingBuiltins
-    def add_option(self, name: str, shortname=None, *,
-                   default: "typing.Optional[typing.Union[T, ComputedDefaultValue[T]]]" = None,
-                   type: _ConfigOptionTypeFn = str, _owning_class: "typing.Type[InstanceTy]" = None,
-                   _fallback_names: "typing.List[str]" = None,
-                   option_cls: "typing.Type[ConfigOptionBase[T, InstanceTy]]" = None, **kwargs) -> T:
+    def add_option(self, name: str, shortname=None, *, default: "Union[T, ComputedDefaultValue[T]]" = None,
+                   type: "Union[type[T], Callable[[str], T]]" = str, _owning_class: type = None,
+                   _fallback_names: "list[str]" = None, option_cls: "Optional[type[ConfigOptionBase[T]]]" = None,
+                   **kwargs) -> T:
         if option_cls is None:
             option_cls = self.__option_cls
 
@@ -154,11 +152,11 @@ class ConfigLoaderBase(ABC):
         return True
 
     @abstractmethod
-    def add_argument_group(self, description: str) -> "typing.Optional[argparse._ArgumentGroup]":
+    def add_argument_group(self, description: str) -> "Optional[argparse._ArgumentGroup]":
         ...
 
     @abstractmethod
-    def add_mutually_exclusive_group(self) -> "typing.Optional[argparse._MutuallyExclusiveGroup]":
+    def add_mutually_exclusive_group(self) -> "Optional[argparse._MutuallyExclusiveGroup]":
         ...
 
     @abstractmethod
@@ -166,15 +164,16 @@ class ConfigLoaderBase(ABC):
         ...
 
 
-class ConfigOptionBase(typing.Generic[T, InstanceTy]):
-    def __init__(self, name: str, shortname: typing.Optional[str], default, value_type: _ConfigOptionTypeFn,
-                 _owning_class=None, *, _loader: ConfigLoaderBase = None, _fallback_names: "typing.List[str]" = None,
-                 _legacy_alias_names: "typing.List[str]" = None):
+class ConfigOptionBase(typing.Generic[T]):
+    def __init__(self, name: str, shortname: Optional[str], default,
+                 value_type: "Union[type[T], Callable[[typing.Any], T]]", _owning_class=None, *,
+                 _loader: ConfigLoaderBase = None, _fallback_names: "list[str]" = None,
+                 _legacy_alias_names: "list[str]" = None):
         self.name = name
         self.shortname = shortname
         self.default = default
         self.value_type = value_type
-        self._cached: "typing.Optional[T]" = None
+        self._cached: "Optional[T]" = None
         self._loader = _loader
         # if none it means the global CheriConfig is the class containing this option
         self._owning_class = _owning_class
@@ -182,7 +181,7 @@ class ConfigOptionBase(typing.Generic[T, InstanceTy]):
         self.alias_names = _legacy_alias_names  # for targets such as gdb-mips, etc
         self._is_default_value = False
 
-    def load_option(self, config: "ConfigBase", instance: "typing.Optional[InstanceTy]", owner: "typing.Type",
+    def load_option(self, config: "ConfigBase", instance: "Optional[object]", owner: type,
                     return_none_if_default=False) -> T:
         result = self._load_option_impl(config, self.full_option_name)
         # fall back from --qtbase-mips/foo to --qtbase/foo
@@ -220,7 +219,7 @@ class ConfigOptionBase(typing.Generic[T, InstanceTy]):
             sys.exit()
         return result
 
-    def _load_option_impl(self, config: "ConfigBase", target_option_name) -> "typing.Optional[_LoadedConfigValue]":
+    def _load_option_impl(self, config: "ConfigBase", target_option_name) -> "Optional[_LoadedConfigValue]":
         # target_option_name may not be the same as self.full_option_name if we are loading the fallback value
         raise NotImplementedError()
 
@@ -250,14 +249,13 @@ class ConfigOptionBase(typing.Generic[T, InstanceTy]):
             self._cached = self.load_option(self._loader._cheri_config, instance, owner)
         return self._cached
 
-    def _get_default_value(self, config: "ConfigBase",
-                           instance: "typing.Optional[InstanceTy]" = None) -> _LoadedConfigValue:
+    def _get_default_value(self, config: "ConfigBase", instance: "Optional[object]" = None) -> _LoadedConfigValue:
         if callable(self.default):
             return self.default(config, instance)
         else:
             return self.default
 
-    def _convert_type(self, loaded_result: _LoadedConfigValue) -> "typing.Optional[T]":
+    def _convert_type(self, loaded_result: _LoadedConfigValue) -> "Optional[T]":
         # check for None to make sure we don't call str(None) which would result in "None"
         if loaded_result is None:
             return None
@@ -292,7 +290,7 @@ class ConfigOptionBase(typing.Generic[T, InstanceTy]):
         return "<{}({}) type={} cached={}>".format(self.__class__.__name__, self.name, self.value_type, self._cached)
 
 
-class DefaultValueOnlyConfigOption(ConfigOptionBase[T, InstanceTy]):
+class DefaultValueOnlyConfigOption(ConfigOptionBase[T]):
     # noinspection PyUnusedLocal
     def __init__(self, *args, _loader, **kwargs) -> None:
         super().__init__(*args, _loader=_loader)

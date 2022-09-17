@@ -34,14 +34,14 @@ import os
 import shutil
 import sys
 import typing
+from typing import Optional, Union, Any, Callable
 
 try:
     import argcomplete
 except ImportError:
-    argcomplete: typing.Optional[typing.Any] = None
+    argcomplete: Optional[Any] = None
 
-from .config_loader_base import (ConfigLoaderBase, ConfigOptionBase, InstanceTy, DefaultValueOnlyConfigOption,
-                                 _ConfigOptionTypeFn, _LoadedConfigValue)
+from .config_loader_base import ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption, _LoadedConfigValue
 from .chericonfig import CheriConfig, ComputedDefaultValue
 from ..utils import fatal_error, status_update, warning_message, error_message
 from ..colour import AnsiColour, coloured
@@ -57,8 +57,8 @@ class _EnumArgparseType(typing.Generic[EnumTy]):
     """Factory for creating enum object types
     """
 
-    def __init__(self, enumclass: "typing.Type[EnumTy]"):
-        self.enums: "typing.Type[EnumTy]" = enumclass
+    def __init__(self, enumclass: "type[EnumTy]"):
+        self.enums: "type[EnumTy]" = enumclass
         # Validate that all enum keys match the expected format
         for member in enumclass:
             # only upppercase letters, numbers and _ allowed
@@ -71,7 +71,7 @@ class _EnumArgparseType(typing.Generic[EnumTy]):
                                    " member " + member.name + ": must all be upper case letters or _ or digits.")
         # self.action = action
 
-    def __call__(self, astring: typing.Union[str, list[str], EnumTy]) -> "typing.Union[EnumTy, list[EnumTy]]":
+    def __call__(self, astring: "Union[str, list[str], EnumTy]") -> "Union[EnumTy, list[EnumTy]]":
         if isinstance(astring, list):
             return [self.__call__(a) for a in astring]
         if isinstance(astring, self.enums):
@@ -104,7 +104,7 @@ class MyJsonEncoder(json.JSONEncoder):
         # noinspection PyArgumentList
         super().__init__(*args, **kwargs)
 
-    def default(self, o) -> typing.Any:
+    def default(self, o) -> Any:
         if isinstance(o, Path):
             return str(o)
         if isinstance(o, _LoadedConfigValue):
@@ -141,6 +141,7 @@ def get_argcomplete_prefix() -> str:
 
 # Based on Python 3.9 BooleanOptionalAction, but places the "no" after the first /
 class BooleanNegatableAction(argparse.Action):
+    # noinspection PyShadowingBuiltins
     def __init__(self, option_strings: "list[str]", dest, default=None, type=None, choices=None, required=False,
                  help=None, metavar=None, alias_names=None):
         # Add the negated option, placing the "no" after the / instead of the start -> --cheribsd/no-build-tests
@@ -175,6 +176,7 @@ class BooleanNegatableAction(argparse.Action):
 
 # argparse._StoreAction but with a possible list of aliases
 class StoreActionWithPossibleAliases(argparse.Action):
+    # noinspection PyShadowingBuiltins
     def __init__(self, option_strings: "list[str]", dest, nargs=None, default=None, type=None, choices=None,
                  required=False, help=None, metavar=None, alias_names=None):
         if nargs == 1:
@@ -192,14 +194,15 @@ class StoreActionWithPossibleAliases(argparse.Action):
         return ' | '.join(self.option_strings[:self.displayed_option_count])
 
 
-class CommandLineConfigOption(ConfigOptionBase[T, InstanceTy]):
+class CommandLineConfigOption(ConfigOptionBase[T]):
     _loader: "JsonAndCommandLineConfigLoader"
 
     # noinspection PyProtectedMember,PyUnresolvedReferences
-    def __init__(self, name: str, shortname: "typing.Optional[str]", default, value_type: _ConfigOptionTypeFn,
-                 _owning_class, *, _loader: "JsonAndCommandLineConfigLoader", help_hidden: bool,
-                 group: "typing.Optional[argparse._ArgumentGroup]", _fallback_names: "typing.List[str]" = None,
-                 _legacy_alias_names: "typing.List[str]" = None, **kwargs):
+    def __init__(self, name: str, shortname: "Optional[str]", default,
+                 value_type: "Union[type[T], Callable[[Any], T]]", _owning_class, *,
+                 _loader: "JsonAndCommandLineConfigLoader", help_hidden: bool,
+                 group: "Optional[argparse._ArgumentGroup]", _fallback_names: "list[str]" = None,
+                 _legacy_alias_names: "list[str]" = None, **kwargs):
         super().__init__(name, shortname, default, value_type, _owning_class, _loader=_loader,
                          _fallback_names=_fallback_names, _legacy_alias_names=_legacy_alias_names)
         # hide obscure options unless --help-hidden/--help/all is passed
@@ -227,9 +230,9 @@ class CommandLineConfigOption(ConfigOptionBase[T, InstanceTy]):
             else:
                 self.default_str = str(default)
         # _legacy_alias_names are ignored for command line options (since they only exist for backwards compat)
-        self.action = self._add_argparse_action(name, shortname, default, group, kwargs)
+        self.action = self._add_argparse_action(name, shortname, group, **kwargs)
 
-    def _add_argparse_action(self, name, shortname, default, group, kwargs) -> "argparse.Action":
+    def _add_argparse_action(self, name, shortname, group, **kwargs) -> "argparse.Action":
         # add the default string to help if it is not lambda and help != argparse.SUPPRESS
         has_default_help_text = isinstance(self.default, ComputedDefaultValue) or not callable(self.default)
         assert "default" not in kwargs  # Should be handled manually
@@ -262,12 +265,12 @@ class CommandLineConfigOption(ConfigOptionBase[T, InstanceTy]):
         return action
 
     def _load_option_impl(self, config: "CheriConfig",
-                          target_option_name: str) -> "typing.Optional[_LoadedConfigValue]":
+                          target_option_name: str) -> "Optional[_LoadedConfigValue]":
         from_cmdline = self._load_from_commandline()
         return from_cmdline
 
     # noinspection PyProtectedMember
-    def _load_from_commandline(self) -> "typing.Optional[_LoadedConfigValue]":
+    def _load_from_commandline(self) -> "Optional[_LoadedConfigValue]":
         assert self._loader._parsed_args  # load() must have been called before using this object
         # FIXME: check the fallback name here
         assert hasattr(self._loader._parsed_args, self.action.dest)
@@ -278,7 +281,7 @@ class CommandLineConfigOption(ConfigOptionBase[T, InstanceTy]):
 
 
 # noinspection PyProtectedMember
-class JsonAndCommandLineConfigOption(CommandLineConfigOption[T, InstanceTy]):
+class JsonAndCommandLineConfigOption(CommandLineConfigOption[T]):
     def __init__(self, *args, **kwargs) -> None:
         # Note: we ignore _legacy_alias_names for command line options and only load them from the JSON
         alias_names = kwargs.pop("_legacy_alias_names", tuple())
@@ -302,7 +305,7 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption[T, InstanceTy]):
             return from_json
         return None  # not found -> fall back to default
 
-    def _lookup_key_in_json(self, full_option_name: str) -> "typing.Optional[_LoadedConfigValue]":
+    def _lookup_key_in_json(self, full_option_name: str) -> "Optional[_LoadedConfigValue]":
         if full_option_name in self._loader._json:
             return self._loader._json[full_option_name]
         # if there are any / characters treat these as an object reference
@@ -318,7 +321,7 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption[T, InstanceTy]):
             json_object = json_object.value
         return json_object.get(json_key, None)
 
-    def _load_from_json(self, full_option_name: str) -> "typing.Optional[_LoadedConfigValue]":
+    def _load_from_json(self, full_option_name: str) -> "Optional[_LoadedConfigValue]":
         result = self._lookup_key_in_json(full_option_name)
         # See if any of the other long option names is a valid key name:
         if result is None:
@@ -359,7 +362,7 @@ class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
 
 
 # https://stackoverflow.com/a/14902564/894271
-def dict_raise_on_duplicates_and_store_src(ordered_pairs, src_file) -> "dict[typing.Any, _LoadedConfigValue]":
+def dict_raise_on_duplicates_and_store_src(ordered_pairs, src_file) -> "dict[Any, _LoadedConfigValue]":
     """Reject duplicate keys."""
     d = {}
     for k, v in ordered_pairs:
@@ -383,11 +386,11 @@ class CommandLineConfigLoader(ConfigLoaderBase):
 
     show_all_help: bool = any(
         s in sys.argv for s in ("--help-all", "--help-hidden")) or ConfigLoaderBase.is_completing_arguments
-    _argcomplete_prefix: "typing.Optional[str]" = (get_argcomplete_prefix()
-                                                   if ConfigLoaderBase.is_completing_arguments else None)
+    _argcomplete_prefix: "Optional[str]" = (
+        get_argcomplete_prefix() if ConfigLoaderBase.is_completing_arguments else None)
     _argcomplete_prefix_includes_slash: bool = "/" in _argcomplete_prefix if _argcomplete_prefix else False
 
-    def __init__(self, argparser_class: "typing.Type[argparse.ArgumentParser]" = argparse.ArgumentParser, *,
+    def __init__(self, argparser_class: "type[argparse.ArgumentParser]" = argparse.ArgumentParser, *,
                  option_cls=CommandLineConfigOption, command_line_only_options_cls=CommandLineConfigOption):
         if self.is_completing_arguments or self.is_running_unit_tests:
             self._parser = argparser_class(formatter_class=NoOpHelpFormatter)
@@ -401,8 +404,8 @@ class CommandLineConfigLoader(ConfigLoaderBase):
 
     # noinspection PyShadowingBuiltins
     def add_option(self, name: str, shortname=None, *,
-                   default: "typing.Optional[typing.Union[T, ComputedDefaultValue[T]]]" = None, group=None,
-                   type: _ConfigOptionTypeFn = str, help_hidden=False, **kwargs) -> T:
+                   default: "Optional[Union[T, ComputedDefaultValue[T]]]" = None, group=None,
+                   type: "Union[type[T], Callable[[Any], T]]" = str, help_hidden=False, **kwargs) -> T:
         if not self.is_needed_for_completion(name, shortname, type):
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
@@ -514,11 +517,11 @@ class CommandLineConfigLoader(ConfigLoaderBase):
 
 
 class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
-    def __init__(self, argparser_class: "typing.Type[argparse.ArgumentParser]" = argparse.ArgumentParser, *,
+    def __init__(self, argparser_class: "type[argparse.ArgumentParser]" = argparse.ArgumentParser, *,
                  option_cls=JsonAndCommandLineConfigOption, command_line_only_options_cls=CommandLineConfigOption):
         super().__init__(argparser_class, option_cls=option_cls,
                          command_line_only_options_cls=command_line_only_options_cls)
-        self._config_path: "typing.Optional[Path]" = None
+        self._config_path: "Optional[Path]" = None
         # Choose the default config file based on argv[0]
         # This allows me to have symlinks for e.g. stable-cheribuild.py release-cheribuild.py debug-cheribuild.py
         # that pick up the right config file in ~/.config or the cheribuild directory
@@ -539,7 +542,7 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
                 return program[0:-len(suffix)]
         return ""
 
-    def __load_json_with_comments(self, config_path: Path) -> "typing.Dict[str, typing.Any]":
+    def __load_json_with_comments(self, config_path: Path) -> "dict[str, Any]":
         """
         Loads a JSON file ignoring any lines that start with '#' or '//'
         :param config_path: path to the json file
@@ -562,7 +565,7 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
             return result
 
     # Based on https://stackoverflow.com/a/7205107/894271
-    def merge_dict_recursive(self, a: "typing.Dict[str, _LoadedConfigValue]", b: "typing.Dict[str, _LoadedConfigValue]",
+    def merge_dict_recursive(self, a: "dict[str, _LoadedConfigValue]", b: "dict[str, _LoadedConfigValue]",
                              included_file: Path, base_file: Path, path=None) -> dict:
         """merges b into a"""
         if path is None:
