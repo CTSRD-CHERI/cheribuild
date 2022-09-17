@@ -1,6 +1,9 @@
 [flake8]
 max-line-length = 120
-extend-exclude = 3rdparty/
+extend-exclude =
+  3rdparty/
+  venv/
+  .pytype/
 show-source = true
 statistics = true
 # TODO: max-complexity = 20
