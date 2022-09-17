@@ -125,10 +125,6 @@ class BuildMtdev(CrossCompileAutotoolsProject):
         if self.target_info.is_freebsd():
             self.CFLAGS.append("-I" + str(BuildLinux_Input_H.get_instance(self).include_install_dir))
 
-    def configure(self, **kwargs):
-        self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
-        super().configure(**kwargs)
-
 
 class BuildLibEvdev(CrossCompileMesonProject):
     target = "libevdev"
@@ -189,10 +185,6 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
         if self.build_type.is_debug:
             self.configure_args.append("--enable-debug")
         self.configure_args.append("--disable-docs")  # avoid dependency on makeinfo
-
-    def configure(self, **kwargs):
-        self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
-        super().configure(**kwargs)
 
     def run_tests(self):
         runtest_cmd = shutil.which("runtest")

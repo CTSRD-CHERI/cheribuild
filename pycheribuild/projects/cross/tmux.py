@@ -29,7 +29,3 @@ from .crosscompileproject import CrossCompileAutotoolsProject, GitRepository
 class BuildTmux(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/tmux/tmux")
     dependencies = ["libevent"]
-
-    def configure(self, **kwargs):
-        self.run_cmd("./autogen.sh", cwd=self.source_dir)
-        super().configure(**kwargs)

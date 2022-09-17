@@ -170,12 +170,6 @@ class BuildGettext(CrossCompileAutotoolsProject):
             "ac_cv_lib_rt_sched_yield=no"
         ])
 
-    def configure(self, **kwargs):
-        # gettext-runtime/intl
-        if not (self.source_dir / "configure").exists():
-            self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
-        super().configure()
-
     def clean(self):
         if not (self.source_dir / "Makefile").exists():
             return None

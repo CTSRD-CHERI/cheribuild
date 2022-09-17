@@ -1829,6 +1829,10 @@ class AutotoolsProject(Project):
                 self.configure_args.append("--prefix=" + str(self.install_dir))
         if self.extra_configure_flags:
             self.configure_args.extend(self.extra_configure_flags)
+        # If there is no ./configure script but ./autogen.sh exists, try running that first
+        if not self.configure_command.exists() and (self.configure_command.parent / "autogen.sh").is_file():
+            self.run_cmd(self.configure_command.parent / "autogen.sh", cwd=self.configure_command.parent,
+                         env=dict(NOCONFIGURE=1))
         super().configure(**kwargs)
 
     def needs_configure(self) -> bool:

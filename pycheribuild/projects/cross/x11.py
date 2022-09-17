@@ -60,10 +60,6 @@ class X11Mixin:
 class X11AutotoolsProjectBase(X11Mixin, CrossCompileAutotoolsProject):
     do_not_add_to_targets = True
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.configure_command = self.source_dir / "autogen.sh"
-
 
 class X11MesonProject(X11Mixin, CrossCompileMesonProject):
     do_not_add_to_targets = True
@@ -73,13 +69,12 @@ class X11CMakeProject(X11Mixin, CrossCompileCMakeProject):
     do_not_add_to_targets = True
 
 
-class BuildXorgMacros(X11AutotoolsProjectBase):
+class BuildXorgMacros(X11Mixin, CrossCompileAutotoolsProject):
     target = "xorg-macros"
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/util/macros.git")
 
 
-# Like X11AutotoolsProjectBase but also adds xorg-macros as a dependency
-class X11AutotoolsProject(X11AutotoolsProjectBase):
+class X11AutotoolsProject(X11Mixin, CrossCompileAutotoolsProject):
     do_not_add_to_targets = True
     dependencies = ["xorg-macros"]
 

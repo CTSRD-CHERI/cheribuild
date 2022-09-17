@@ -821,8 +821,6 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
                                                 help="Use hardware performance counters")
 
     def configure(self, **kwargs):
-        if not (self.source_dir / "configure").exists():
-            self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
         self.configure_args.append("--enable-unixdomain")
         if self.hw_counters:
             self.configure_args.append("--enable-pmc={}".format(self.hw_counters))
