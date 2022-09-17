@@ -28,9 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from .project import BuildType, CheriConfig, CMakeProject, GitRepository
+from .project import BuildType, CheriConfig, CMakeProject, GitRepository, ComputedDefaultValue
 from ..config.compilation_targets import CompilationTargets
-from ..config.loader import ComputedDefaultValue
 
 
 class BuildCheriOS(CMakeProject):

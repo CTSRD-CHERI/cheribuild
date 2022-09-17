@@ -32,7 +32,7 @@ from enum import Enum
 from pathlib import Path
 
 from .chericonfig import CheriConfig
-from .loader import ComputedDefaultValue, ConfigLoaderBase, JsonAndCommandLineConfigLoader
+from .config_loader_base import ComputedDefaultValue, ConfigLoaderBase
 from ..utils import default_make_jobs_count
 
 
@@ -61,7 +61,6 @@ class DefaultCheriConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, available_targets: list) -> None:
         super().__init__(loader, action_class=CheribuildAction)
         self.default_action = CheribuildAction.BUILD
-        assert isinstance(loader, JsonAndCommandLineConfigLoader)
         # The run mode:
         self.get_config_option = loader.add_option("get-config-option", type=str, metavar="KEY",
                                                    group=loader.action_group,

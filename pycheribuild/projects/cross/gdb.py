@@ -34,8 +34,7 @@ from pathlib import Path
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
                                   DefaultInstallDir, GitRepository, Linkage, MakeCommandKind)
 from .gmp import BuildGmp
-from ..project import TargetBranchInfo
-from ...config.loader import ComputedDefaultValue
+from ..project import TargetBranchInfo, ComputedDefaultValue
 from ...processutils import run_command
 from ...utils import OSInfo, status_update
 

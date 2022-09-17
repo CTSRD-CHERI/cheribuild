@@ -43,10 +43,9 @@ from .cross.gdb import BuildGDB
 from .cross.u_boot import BuildUBoot
 from .disk_image import (BuildCheriBSDDiskImage, BuildDiskImageBase, BuildFreeBSDImage,
                          BuildFreeBSDWithDefaultOptionsDiskImage, BuildMinimalCheriBSDDiskImage)
-from .project import CheriConfig, CPUArchitecture, Project
+from .project import CheriConfig, CPUArchitecture, Project, ComputedDefaultValue
 from .simple_project import SimpleProject, TargetAliasWithDependencies
 from ..config.compilation_targets import CompilationTargets
-from ..config.loader import ComputedDefaultValue
 from ..qemu_utils import qemu_supports_9pfs, QemuOptions, riscv_bios_arguments
 from ..utils import AnsiColour, classproperty, coloured, find_free_port, OSInfo
 

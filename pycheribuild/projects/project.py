@@ -49,7 +49,7 @@ from .repository import (ExternallyManagedSourceRepository, GitRepository, Mercu
                          ReuseOtherProjectRepository, ReuseOtherProjectDefaultTargetRepository, SourceRepository,
                          SubversionRepository, TargetBranchInfo)
 from ..config.chericonfig import BuildType, CheriConfig, ComputedDefaultValue, Linkage, supported_build_type_strings
-from ..config.loader import ConfigOptionBase
+from ..config.config_loader_base import ConfigOptionBase
 from ..config.target_info import (AbstractProject, AutoVarInit, BasicCompilationTargets, CPUArchitecture,
                                   CrossCompileTarget, TargetInfo, NativeTargetInfo)
 from ..processutils import (commandline_to_str, CompilerInfo, get_compiler_info, get_program_version,

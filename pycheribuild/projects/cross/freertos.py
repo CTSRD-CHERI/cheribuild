@@ -33,10 +33,9 @@ import os
 from typing import ClassVar
 
 from .compiler_rt import BuildCompilerRtBuiltins
-from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
-                                  GitRepository)
+from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
+from ..project import ComputedDefaultValue, CheriConfig
 from ..run_qemu import LaunchQEMUBase
-from ...config.loader import ComputedDefaultValue
 
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):

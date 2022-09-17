@@ -218,7 +218,7 @@ class ComputedDefaultValue(typing.Generic[Type_T]):
 class CheriConfig(ConfigBase):
     def __init__(self, loader, action_class) -> None:
         # Work around circular dependencies
-        from .loader import ConfigLoaderBase
+        from .config_loader_base import ConfigLoaderBase
         # noinspection PyTypeChecker
         super().__init__(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt(),
                          force=DoNotUseInIfStmt())
@@ -541,7 +541,7 @@ class CheriConfig(ConfigBase):
             self.pretend = True
         if self.debug_output:
             self.verbose = True
-        self.targets = self.loader.targets
+        self.targets = self.loader.targets()
         assert self.clang_path is not None, "clang_path was None!"
         if not self.clang_path.exists():
             self.clang_path = Path("/c/compiler/is/missing")

@@ -33,10 +33,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from .project import (AutotoolsProject, BuildType, CheriConfig, CPUArchitecture, CrossCompileTarget, DefaultInstallDir,
-                      GitRepository, MakeCommandKind)
+                      GitRepository, MakeCommandKind, ComputedDefaultValue)
 from .simple_project import _cached_get_homebrew_prefix, SimpleProject
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
-from ..config.loader import ComputedDefaultValue
 
 
 class BuildQEMUBase(AutotoolsProject):

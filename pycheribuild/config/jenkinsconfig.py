@@ -34,7 +34,7 @@ from enum import Enum
 from pathlib import Path
 
 from .chericonfig import CheriConfig
-from .loader import ComputedDefaultValue, ConfigLoaderBase
+from .config_loader_base import ComputedDefaultValue, ConfigLoaderBase
 from .target_info import CompilerType
 from ..filesystemutils import FileSystemUtils
 from ..utils import default_make_jobs_count, fatal_error, OSInfo, warning_message

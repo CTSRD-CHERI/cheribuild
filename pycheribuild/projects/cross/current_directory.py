@@ -28,8 +28,7 @@ from pathlib import Path
 
 from .crosscompileproject import (CrossCompileSimpleProject, CrossCompileAutotoolsProject, CrossCompileCMakeProject,
                                   CrossCompileMakefileProject, CrossCompileMesonProject)
-from ..project import ExternallyManagedSourceRepository
-from ...config.loader import ComputedDefaultValue
+from ..project import ExternallyManagedSourceRepository, ComputedDefaultValue
 
 
 _cwd_path = Path(os.getcwd())

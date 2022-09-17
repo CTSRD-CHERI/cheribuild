@@ -22,6 +22,7 @@ class MockConfig(CheriConfig):
         self.fake_loader._parsed_args = MockArgs()
         super().__init__(self.fake_loader, action_class=MockActions)
         self.default_action = ""
+        self.action = None
         self.source_root = source_root
         self.build_root = source_root / "build"
         self.output_root = source_root / "output"

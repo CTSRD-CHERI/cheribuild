@@ -32,12 +32,11 @@ import sys
 from pathlib import Path
 from typing import ClassVar, Iterable
 
-from ..project import BuildType, CMakeProject, DefaultInstallDir, GitRepository
+from ..project import BuildType, CMakeProject, DefaultInstallDir, GitRepository, ComputedDefaultValue
 from ..simple_project import SimpleProject
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTargetInfo, CompilationTargets,
                                            FreeBSDTargetInfo)
-from ...config.loader import ComputedDefaultValue
 from ...config.target_info import CompilerType, CrossCompileTarget
 from ...processutils import CompilerInfo
 from ...utils import is_jenkins_build, OSInfo, ThreadJoiner, remove_duplicates, InstallInstructions

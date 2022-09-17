@@ -28,8 +28,7 @@
 # SUCH DAMAGE.
 #
 from .cross.llvm import BuildLLVMSplitRepoBase
-from .project import CMakeProject, GitRepository
-from ..config.loader import ComputedDefaultValue
+from .project import CMakeProject, GitRepository, ComputedDefaultValue
 
 install_to_soaap_dir = ComputedDefaultValue(function=lambda config, project: config.output_root / "soaap",
                                             as_string="$INSTALL_ROOT/soaap")

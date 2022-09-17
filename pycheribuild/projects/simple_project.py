@@ -42,7 +42,7 @@ from pathlib import Path
 from typing import Callable, Union, Optional
 
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue
-from ..config.loader import ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption
+from ..config.config_loader_base import ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption
 from ..config.target_info import (AbstractProject, AutoVarInit, BasicCompilationTargets, CPUArchitecture,
                                   CrossCompileTarget, TargetInfo)
 from ..processutils import (check_call_handle_noexec, commandline_to_str, keep_terminal_sane, popen_handle_noexec,
@@ -647,10 +647,13 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
 
         # check that the group was defined in the current class not a superclass
         if "_commandline_option_group" not in cls.__dict__:
-            # noinspection PyProtectedMember
-            # has to be a single underscore otherwise the name gets mangled to _Foo__commandlineOptionGroup
-            cls._commandline_option_group = cls._config_loader._parser.add_argument_group(
-                "Options for target '" + cls.target + "'")
+            # If we are parsing command line arguments add a group for argparse
+            if hasattr(cls._config_loader, "_parser"):  # XXX:  Use hasattr instead of isinstance to avoid imports.
+                # noinspection PyProtectedMember
+                cls._commandline_option_group = cls._config_loader._parser.add_argument_group(
+                    "Options for target '" + cls.target + "'")
+            else:
+                cls._commandline_option_group = None
         if cls.hide_options_from_help:
             help_hidden = True
         synthetic_base = getattr(cls, "synthetic_base", None)

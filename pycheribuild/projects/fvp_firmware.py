@@ -32,12 +32,11 @@ from pathlib import Path
 
 from .cross.crosscompileproject import CrossCompileMakefileProject
 from .cross.gdb import BuildGDB
-from .project import (DefaultInstallDir, GitRepository, MakefileProject, Project,
+from .project import (DefaultInstallDir, GitRepository, MakefileProject, Project, ComputedDefaultValue,
                       ReuseOtherProjectDefaultTargetRepository)
 from .simple_project import SimpleProject
 from ..config.chericonfig import BuildType, CheriConfig
 from ..config.compilation_targets import CompilationTargets
-from ..config.loader import ComputedDefaultValue
 from ..utils import OSInfo
 
 
