@@ -189,13 +189,15 @@ class StoreActionWithPossibleAliases(argparse.Action):
 
 
 class CommandLineConfigOption(ConfigOptionBase[T, InstanceTy]):
+    _loader: "JsonAndCommandLineConfigLoader"
+
     # noinspection PyProtectedMember,PyUnresolvedReferences
     def __init__(self, name: str, shortname: "typing.Optional[str]", default, value_type: _ConfigOptionTypeFn,
-                 _owning_class, _loader: ConfigLoaderBase, help_hidden: bool,
+                 _owning_class, *, _loader: "JsonAndCommandLineConfigLoader", help_hidden: bool,
                  group: "typing.Optional[argparse._ArgumentGroup]", _fallback_names: "typing.List[str]" = None,
                  _legacy_alias_names: "typing.List[str]" = None, **kwargs):
-        super().__init__(name, shortname, default, value_type, _owning_class, _loader, _fallback_names,
-                         _legacy_alias_names)
+        super().__init__(name, shortname, default, value_type, _owning_class, _loader=_loader,
+                         _fallback_names=_fallback_names, _legacy_alias_names=_legacy_alias_names)
         # hide obscure options unless --help-hidden/--help/all is passed
         if help_hidden and not self._loader.show_all_help:
             kwargs["help"] = argparse.SUPPRESS

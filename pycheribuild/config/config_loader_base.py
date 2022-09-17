@@ -108,7 +108,7 @@ class ConfigLoaderBase(ABC):
                                negatable=kwargs.pop("negatable", False), type=bool, **kwargs)
 
     # noinspection PyShadowingBuiltins
-    def add_option(self, name: str, shortname=None,
+    def add_option(self, name: str, shortname=None, *,
                    default: "typing.Optional[typing.Union[T, ComputedDefaultValue[T]]]" = None,
                    type: _ConfigOptionTypeFn = str, _owning_class: "typing.Type[InstanceTy]" = None,
                    _fallback_names: "typing.List[str]" = None,
@@ -171,7 +171,7 @@ class ConfigLoaderBase(ABC):
 
 class ConfigOptionBase(typing.Generic[T, InstanceTy]):
     def __init__(self, name: str, shortname: typing.Optional[str], default, value_type: _ConfigOptionTypeFn,
-                 _owning_class=None, _loader: ConfigLoaderBase = None, _fallback_names: "typing.List[str]" = None,
+                 _owning_class=None, *, _loader: ConfigLoaderBase = None, _fallback_names: "typing.List[str]" = None,
                  _legacy_alias_names: "typing.List[str]" = None):
         self.name = name
         self.shortname = shortname
