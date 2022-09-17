@@ -40,7 +40,7 @@ import typing
 try:
     import argcomplete
 except ImportError:
-    argcomplete = None
+    argcomplete: typing.Optional[typing.Any] = None
 
 from .chericonfig import CheriConfig, ComputedDefaultValue
 from ..utils import fatal_error, status_update, warning_message, error_message
@@ -50,15 +50,16 @@ from enum import Enum
 
 T = typing.TypeVar('T')
 InstanceTy = typing.TypeVar('InstanceTy')
+EnumTy = typing.TypeVar('EnumTy', bound=Enum)
 _ConfigOptionTypeFn = typing.Callable[[typing.Union[str, typing.List[str]]], T]
 
 
 # From https://bugs.python.org/issue25061
-class _EnumArgparseType(object):
+class _EnumArgparseType(typing.Generic[EnumTy]):
     """Factory for creating enum object types
     """
 
-    def __init__(self, enumclass: "typing.Type[Enum]"):
+    def __init__(self, enumclass: "typing.Type[EnumTy]"):
         self.enums = enumclass
         # Validate that all enum keys match the expected format
         for member in enumclass:
@@ -72,7 +73,7 @@ class _EnumArgparseType(object):
                                    " member " + member.name + ": must all be upper case letters or _ or digits.")
         # self.action = action
 
-    def __call__(self, astring):
+    def __call__(self, astring: typing.Union[str, list[str], EnumTy]) -> "typing.Union[EnumTy, list[EnumTy]]":
         if isinstance(astring, list):
             return [self.__call__(a) for a in astring]
         if isinstance(astring, self.enums):
@@ -80,7 +81,7 @@ class _EnumArgparseType(object):
         name = self.enums.__name__
         try:
             # convert the passed value to the enum name
-            enum_value_name = astring.upper()  # type: str
+            enum_value_name: str = astring.upper()
             enum_value_name = enum_value_name.replace("-", "_")
             for e in self.enums:
                 if e.value == astring:
@@ -94,7 +95,7 @@ class _EnumArgparseType(object):
         #           self.action.choices = None  # hugly hack to prevent post validation from choices
         return v
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         astr = ', '.join([t.name.lower() for t in self.enums])
         return '%s(%s)' % (self.enums.__name__, astr)
 
@@ -108,20 +109,20 @@ class _LoadedConfigValue:
         self.loaded_from = loaded_from
         self.used_key = used_key
 
-    def is_nested_dict(self):
+    def is_nested_dict(self) -> bool:
         return isinstance(self.value, dict)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self.value)
 
 
 # custom encoder to handle pathlib.Path and _LoadedConfigValue objects
 class MyJsonEncoder(json.JSONEncoder):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         # noinspection PyArgumentList
         super().__init__(*args, **kwargs)
 
-    def default(self, o):
+    def default(self, o) -> typing.Any:
         if isinstance(o, Path):
             return str(o)
         if isinstance(o, _LoadedConfigValue):
@@ -132,11 +133,11 @@ class MyJsonEncoder(json.JSONEncoder):
 # When tab-completing, argparse spends 100ms printing the help message for all available targets
 # Avoid this by providing a no-op help formatter
 class NoOpHelpFormatter(argparse.HelpFormatter):
-    def format_help(self):
+    def format_help(self) -> str:
         return "TAB-COMPLETING, THIS STRING SHOULD NOT BE VISIBLE"
 
 
-def get_argcomplete_prefix():
+def get_argcomplete_prefix() -> str:
     if "_ARGCOMPLETE_BENCHMARK" in os.environ:
         os.environ["_ARGCOMPLETE_IFS"] = "\n"
         # os.environ["COMP_LINE"] = "cheribuild.py " # return all targets
@@ -154,18 +155,18 @@ def get_argcomplete_prefix():
 
 class ConfigLoaderBase(object):
     # will be set later...
-    _cheri_config = None  # type: CheriConfig
+    _cheri_config: CheriConfig
+    _parsed_args: argparse.Namespace
 
-    options = dict()  # type: typing.Dict[str, "ConfigOptionBase"]
-    _parsed_args = None
-    _json = {}  # type: typing.Dict[str, _LoadedConfigValue]
-    is_completing_arguments = "_ARGCOMPLETE" in os.environ
-    is_generating_readme = "_GENERATING_README" in os.environ
-    is_running_unit_tests = False
-    _argcomplete_prefix = get_argcomplete_prefix() if is_completing_arguments else None
-    _argcomplete_prefix_includes_slash = "/" in _argcomplete_prefix if _argcomplete_prefix else None
+    options: "dict[str, ConfigOptionBase]" = {}
+    _json: "dict[str, _LoadedConfigValue]" = {}
+    is_completing_arguments: bool = "_ARGCOMPLETE" in os.environ
+    is_generating_readme: bool = "_GENERATING_README" in os.environ
+    is_running_unit_tests: bool = False
+    _argcomplete_prefix: "typing.Optional[str]" = get_argcomplete_prefix() if is_completing_arguments else None
+    _argcomplete_prefix_includes_slash: bool = "/" in _argcomplete_prefix if _argcomplete_prefix else False
 
-    show_all_help = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or is_completing_arguments
+    show_all_help: bool = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or is_completing_arguments
 
     def __init__(self, option_cls, argparser_class: "typing.Type[argparse.ArgumentParser]" = argparse.ArgumentParser):
         self.__option_cls = option_cls
@@ -192,7 +193,7 @@ class ConfigLoaderBase(object):
         self.unknown_config_option_is_error = False
         self.completion_excludes = []
 
-    def _load_command_line_args(self):
+    def _load_command_line_args(self) -> None:
         if argcomplete and self.is_completing_arguments:
             if "_ARGCOMPLETE_BENCHMARK" in os.environ:
                 # Argcomplete < 2.0 needs the file in binary mode, >= 2.0 needs it in text mode.
@@ -254,7 +255,7 @@ class ConfigLoaderBase(object):
         return self.add_option(*args, option_cls=CommandLineConfigOption, default=default,
                                negatable=kwargs.pop("negatable", False), type=bool, **kwargs)
 
-    def is_needed_for_completion(self, name: str, shortname: str, option_type):
+    def is_needed_for_completion(self, name: str, shortname: str, option_type) -> bool:
         comp_prefix = self._argcomplete_prefix
         while comp_prefix is not None:  # fake loop to allow early return
             if comp_prefix.startswith("--") and name.startswith(comp_prefix[2:]):
@@ -320,10 +321,10 @@ class ConfigLoaderBase(object):
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
         return self.add_option(name, shortname, type=Path, **kwargs)
 
-    def load(self):
+    def load(self) ->     typing.NoReturn:
         raise NotImplementedError()
 
-    def finalize_options(self, available_targets, **kwargs):
+    def finalize_options(self, available_targets, **kwargs) ->     typing.NoReturn:
         raise NotImplementedError()
 
     def reload(self) -> None:
@@ -333,11 +334,11 @@ class ConfigLoaderBase(object):
         self.reset()
         self.load()
 
-    def reset(self):
+    def reset(self) -> None:
         for option in self.options.values():
             option._cached = None
 
-    def debug_msg(self, *args, sep=" ", **kwargs):
+    def debug_msg(self, *args, sep=" ", **kwargs) -> None:
         if self._parsed_args and self._parsed_args.verbose is True:
             print(coloured(AnsiColour.cyan, *args, sep=sep), file=sys.stderr, **kwargs)
 
@@ -375,7 +376,7 @@ class ConfigOptionBase(typing.Generic[T, InstanceTy]):
                     self.default_str = default.name.lower()
             else:
                 self.default_str = str(default)
-        self._cached = None
+        self._cached: "typing.Optional[T]" = None
         self._loader = _loader
         # if none it means the global CheriConfig is the class containing this option
         self._owning_class = _owning_class
@@ -426,19 +427,19 @@ class ConfigOptionBase(typing.Generic[T, InstanceTy]):
         # target_option_name may not be the same as self.full_option_name if we are loading the fallback value
         raise NotImplementedError()
 
-    def debug_msg(self, *args, **kwargs):
+    def debug_msg(self, *args, **kwargs) -> None:
         self._loader.debug_msg(*args, **kwargs)
 
     @property
-    def full_option_name(self):
+    def full_option_name(self) -> str:
         return self.name
 
     @property
-    def is_default_value(self):
+    def is_default_value(self) -> bool:
         assert self._cached is not None, "Must load value before calling is_default_value()"
         return self._is_default_value
 
-    def __get__(self, instance, owner):
+    def __get__(self, instance, owner) -> T:
         assert instance is not None or not callable(self.default), \
             f"Tried to access read config option {self.full_option_name} without an object instance. " \
             f"Config options using computed defaults can only be used with an object instance. Owner = {owner}"
@@ -459,7 +460,7 @@ class ConfigOptionBase(typing.Generic[T, InstanceTy]):
         else:
             return self.default
 
-    def _convert_type(self, loaded_result: _LoadedConfigValue):
+    def _convert_type(self, loaded_result: _LoadedConfigValue) -> "typing.Optional[T]":
         # check for None to make sure we don't call str(None) which would result in "None"
         if loaded_result is None:
             return None
@@ -490,13 +491,13 @@ class ConfigOptionBase(typing.Generic[T, InstanceTy]):
             result = self.value_type(result)  # make sure it has the right type (e.g. Path, int, bool, str)
         return result
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<{}({}) type={} cached={}>".format(self.__class__.__name__, self.name, self.value_type, self._cached)
 
 
 class DefaultValueOnlyConfigOption(ConfigOptionBase[T, InstanceTy]):
     # noinspection PyUnusedLocal
-    def __init__(self, *args, _loader, **kwargs):
+    def __init__(self, *args, _loader, **kwargs) -> None:
         super().__init__(*args, _loader=_loader)
 
     def _load_option_impl(self, config: "CheriConfig", target_option_name):
@@ -529,11 +530,11 @@ class BooleanNegatableAction(argparse.Action):
         super().__init__(option_strings=all_option_strings, dest=dest, nargs=0,
                          default=default, type=type, choices=choices, required=required, help=help, metavar=metavar)
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(self, parser, namespace, values, option_string=None) -> None:
         if option_string in self.option_strings:
             setattr(namespace, self.dest, option_string not in self._negated_option_strings)
 
-    def format_usage(self):
+    def format_usage(self) -> str:
         return ' | '.join(self.option_strings[:self.displayed_option_count])
 
 
@@ -549,10 +550,10 @@ class StoreActionWithPossibleAliases(argparse.Action):
         super().__init__(option_strings=option_strings, dest=dest, nargs=nargs, default=default, type=type,
                          choices=choices, required=required, help=help, metavar=metavar)
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(self, parser, namespace, values, option_string=None) -> None:
         setattr(namespace, self.dest, values)
 
-    def format_usage(self):
+    def format_usage(self) -> str:
         return ' | '.join(self.option_strings[:self.displayed_option_count])
 
 
@@ -570,7 +571,7 @@ class CommandLineConfigOption(ConfigOptionBase[T, InstanceTy]):
         # _legacy_alias_names are ignored for command line options (since they only exist for backwards compat)
         self.action = self._add_argparse_action(name, shortname, default, group, kwargs)
 
-    def _add_argparse_action(self, name, shortname, default, group, kwargs):
+    def _add_argparse_action(self, name, shortname, default, group, kwargs) -> "argparse.Action":
         # add the default string to help if it is not lambda and help != argparse.SUPPRESS
         has_default_help_text = isinstance(self.default, ComputedDefaultValue) or not callable(self.default)
         assert "default" not in kwargs  # Should be handled manually
@@ -620,7 +621,7 @@ class CommandLineConfigOption(ConfigOptionBase[T, InstanceTy]):
 
 # noinspection PyProtectedMember
 class JsonAndCommandLineConfigOption(CommandLineConfigOption[T, InstanceTy]):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         # Note: we ignore _legacy_alias_names for command line options and only load them from the JSON
         alias_names = kwargs.pop("_legacy_alias_names", tuple())
         super().__init__(*args, **kwargs)
@@ -680,20 +681,20 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption[T, InstanceTy]):
 
 
 class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(DefaultValueOnlyConfigOption)
         # Ignore options stored in other classes
         self.options = dict()
 
-    def finalize_options(self, available_targets: list, **kwargs):
+    def finalize_options(self, available_targets: list, **kwargs) -> None:
         pass
 
-    def load(self):
+    def load(self) -> None:
         pass
 
 
 # https://stackoverflow.com/a/14902564/894271
-def dict_raise_on_duplicates_and_store_src(ordered_pairs, src_file):
+def dict_raise_on_duplicates_and_store_src(ordered_pairs, src_file) -> "dict[typing.Any, _LoadedConfigValue]":
     """Reject duplicate keys."""
     d = {}
     for k, v in ordered_pairs:
@@ -707,7 +708,7 @@ def dict_raise_on_duplicates_and_store_src(ordered_pairs, src_file):
 
 # https://stackoverflow.com/a/50936474
 class ArgparseSetGivenAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(self, parser, namespace, values, option_string=None) -> None:
         setattr(namespace, self.dest, values)
         setattr(namespace, self.dest + '_given', True)
 
@@ -731,7 +732,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         self.configure_group = self._parser.add_mutually_exclusive_group()
 
     @staticmethod
-    def get_config_prefix():
+    def get_config_prefix() -> str:
         program = Path(sys.argv[0]).name
         suffixes = ["cheribuild", "cheribuild.py"]
         for suffix in suffixes:
@@ -739,7 +740,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 return program[0:-len(suffix)]
         return ""
 
-    def finalize_options(self, available_targets: list, **kwargs):
+    def finalize_options(self, available_targets: list, **kwargs) -> None:
         target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
                                                   help="The targets to build")
         if argcomplete and self.is_completing_arguments:
@@ -864,7 +865,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 print(coloured(AnsiColour.green, "Note: Configuration file", self._config_path,
                                "does not exist, using only command line arguments."))
 
-    def load(self):
+    def load(self) -> None:
         self._load_command_line_args()
 
         self._load_json_config_file()
@@ -908,7 +909,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             raise ValueError("Unknown config option '" + fullname + "'")
         return False
 
-    def _validate_config_file(self):
+    def _validate_config_file(self) -> None:
         for k, v in self._json.items():
             self.__validate("", k, v)
 

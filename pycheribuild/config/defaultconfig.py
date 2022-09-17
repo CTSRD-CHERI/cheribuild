@@ -47,7 +47,7 @@ class CheribuildAction(Enum):
     DUMP_CONFIGURATION = ("--dump-configuration", "Print the current configuration as JSON. This can be saved to "
                                                   "~/.config/cheribuild.json to make it persistent")
 
-    def __init__(self, option_name, help_message, altname=None, actions=None):
+    def __init__(self, option_name, help_message, altname=None, actions=None) -> None:
         self.option_name = option_name
         self.help_message = help_message
         self.altname = altname
@@ -58,7 +58,7 @@ class CheribuildAction(Enum):
 
 
 class DefaultCheriConfig(CheriConfig):
-    def __init__(self, loader: ConfigLoaderBase, available_targets: list):
+    def __init__(self, loader: ConfigLoaderBase, available_targets: list) -> None:
         super().__init__(loader, action_class=CheribuildAction)
         self.default_action = CheribuildAction.BUILD
         assert isinstance(loader, JsonAndCommandLineConfigLoader)
@@ -121,8 +121,8 @@ class DefaultCheriConfig(CheriConfig):
         default_make_jobs_computed = ComputedDefaultValue(lambda p, cls: default_make_jobs,
                                                           as_string=str(default_make_jobs),
                                                           as_readme_string="<system-dependent>")
-        self.make_jobs = loader.add_option("make-jobs", "j", type=int, default=default_make_jobs_computed,
-                                           help="Number of jobs to use for compiling")
+        self.make_jobs: int = loader.add_option("make-jobs", "j", type=int, default=default_make_jobs_computed,
+                                                help="Number of jobs to use for compiling")
 
         # configurable paths
         self.source_root = loader.add_path_option("source-root",
@@ -159,7 +159,7 @@ class DefaultCheriConfig(CheriConfig):
             "enable-hybrid-for-purecap-rootfs-targets", default=False, help_hidden=True)
         loader.finalize_options(available_targets)
 
-    def load(self):
+    def load(self) -> None:
         super().load()
         # now set some generic derived config options
         self.cheri_sdk_dir = self.tools_root / self.default_cheri_sdk_directory_name

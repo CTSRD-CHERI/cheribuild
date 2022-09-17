@@ -58,7 +58,7 @@ class JenkinsAction(Enum):
 
     # TODO: TEST = ("--test", "Run tests for the passed targets instead of building them", "--run-tests")
 
-    def __init__(self, option_name, help_message, altname=None, actions=None):
+    def __init__(self, option_name, help_message, altname=None, actions=None) -> None:
         self.option_name = option_name
         self.help_message = help_message
         self.altname = altname
@@ -89,7 +89,7 @@ def _infer_compiler_output_path(config: "JenkinsConfig", _):
 
 
 class JenkinsConfig(CheriConfig):
-    def __init__(self, loader: ConfigLoaderBase, available_targets: list):
+    def __init__(self, loader: ConfigLoaderBase, available_targets: list) -> None:
         super().__init__(loader, action_class=JenkinsAction)
         self.default_action = ""  # error if no action set
 
@@ -208,7 +208,7 @@ class JenkinsConfig(CheriConfig):
             os_suffix = "unknown-os"
         return self.workspace / ("qemu-" + os_suffix) / "bin"
 
-    def load(self):
+    def load(self) -> None:
         super().load()
 
         if not self.workspace or not self.workspace.is_dir():

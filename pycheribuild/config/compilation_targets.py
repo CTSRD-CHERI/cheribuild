@@ -50,9 +50,9 @@ if typing.TYPE_CHECKING:  # no-combine
 
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
-    uses_morello_llvm = False
+    uses_morello_llvm: bool = False
 
-    def __init__(self, target, project):
+    def __init__(self, target, project) -> None:
         super().__init__(target, project)
         self._sdk_root_dir: typing.Optional[Path] = None
 
@@ -224,7 +224,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         return result
 
     @classmethod
-    def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, softfloat: bool):
+    def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, softfloat: bool) -> str:
         assert xtarget.is_riscv(include_purecap=True)
         # Use the insane RISC-V arch string to enable CHERI
         arch_string = "rv" + str(xtarget.cpu_architecture.word_bits()) + "ima"
@@ -236,7 +236,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         return arch_string
 
     @classmethod
-    def get_riscv_abi(cls, xtarget: CrossCompileTarget, *, softfloat: bool):
+    def get_riscv_abi(cls, xtarget: CrossCompileTarget, *, softfloat: bool) -> str:
         assert xtarget.is_riscv(include_purecap=True)
         xlen = xtarget.cpu_architecture.word_bits()
         purecap = xtarget.is_cheri_purecap()
@@ -255,8 +255,8 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
 
 
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
-    shortname = "FreeBSD"
-    FREEBSD_VERSION = 13
+    shortname: str = "FreeBSD"
+    FREEBSD_VERSION: int = 13
 
     @property
     def cmake_system_name(self) -> str:
@@ -295,7 +295,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return Path(self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name, dirname)
 
     @classmethod
-    def is_freebsd(cls):
+    def is_freebsd(cls) -> bool:
         return True
 
     @classmethod
@@ -394,7 +394,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
                                  use_full_disk_image=False, mount_installdir=False,
                                  use_benchmark_kernel_by_default=False,
-                                 rootfs_alternate_kernel_dir=None):
+                                 rootfs_alternate_kernel_dir=None) -> None:
         if typing.TYPE_CHECKING:
             assert isinstance(self.project, Project)
         # mount_sysroot may be needed for projects such as QtWebkit where the minimal image doesn't contain all the
@@ -507,9 +507,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
 
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
-    shortname = "CheriBSD"
-    os_prefix = ""  # CheriBSD is the default target, so we omit the OS prefix from target names
-    FREEBSD_VERSION = 13
+    shortname: str = "CheriBSD"
+    os_prefix: str = ""  # CheriBSD is the default target, so we omit the OS prefix from target names
+    FREEBSD_VERSION: int = 13
 
     @classmethod
     def _get_compiler_project(self) -> "typing.Type[BuildLLVMBase]":
@@ -521,7 +521,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         return LaunchCheriBSD
 
     @classmethod
-    def is_cheribsd(cls):
+    def is_cheribsd(cls) -> bool:
         return True
 
     def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
@@ -587,7 +587,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         from ..projects.cross.cheribsd import BuildCHERIBSD
         return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
 
-    def cheribsd_version(self):
+    def cheribsd_version(self) -> "typing.Optional[int]":
         pattern = re.compile(r"#define\s+__CheriBSD_version\s+([0-9]+)")
         try:
             with open(self.sysroot_dir / "usr/include/sys/param.h") as f:
@@ -601,8 +601,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
 
 class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
-    shortname = "CheriBSD-Morello"
-    uses_morello_llvm = True
+    shortname: str = "CheriBSD-Morello"
+    uses_morello_llvm: bool = True
 
     @classmethod
     def _get_compiler_project(self) -> "typing.Type[BuildLLVMBase]":
@@ -648,8 +648,8 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
 
 # FIXME: This is completely wrong since cherios is not cheribsd, but should work for now:
 class CheriOSTargetInfo(CheriBSDTargetInfo):
-    shortname = "CheriOS"
-    FREEBSD_VERSION = 0
+    shortname: str = "CheriOS"
+    FREEBSD_VERSION: int = 0
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         raise NotImplementedError("Should not be called")
@@ -663,15 +663,15 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
         return Path("/this/path/should/not/be/used")
 
     @classmethod
-    def is_cheribsd(cls):
+    def is_cheribsd(cls) -> bool:
         return False
 
     @classmethod
-    def is_freebsd(cls):
+    def is_freebsd(cls) -> bool:
         return False
 
     @classmethod
-    def is_baremetal(cls):
+    def is_baremetal(cls) -> bool:
         return True
 
     @classmethod
@@ -689,19 +689,19 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
 
 
 class RTEMSTargetInfo(_ClangBasedTargetInfo):
-    shortname = "RTEMS"
-    RTEMS_VERSION = 5
+    shortname: str = "RTEMS"
+    RTEMS_VERSION: int = 5
 
     @property
     def cmake_system_name(self) -> str:
         return "rtems" + str(self.RTEMS_VERSION)
 
     @classmethod
-    def is_rtems(cls):
+    def is_rtems(cls) -> bool:
         return True
 
     @classmethod
-    def is_newlib(cls):
+    def is_newlib(cls) -> bool:
         return True
 
     @classmethod
@@ -742,8 +742,8 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
 
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
-    shortname = "Newlib"
-    os_prefix = "baremetal-"
+    shortname: str = "Newlib"
+    os_prefix: str = "baremetal-"
 
     @property
     def cmake_system_name(self) -> str:
@@ -807,11 +807,11 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         return super().additional_executable_link_flags
 
     @classmethod
-    def is_baremetal(cls):
+    def is_baremetal(cls) -> bool:
         return True
 
     @classmethod
-    def is_newlib(cls):
+    def is_newlib(cls) -> bool:
         return True
 
     def _get_rootfs_project(self, xtarget: CrossCompileTarget) -> "Project":
@@ -820,9 +820,9 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
 
 class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
-    shortname = "Morello-Baremetal"
-    os_prefix = "baremetal-"
-    uses_morello_llvm = True
+    shortname: str = "Morello-Baremetal"
+    os_prefix: str = "baremetal-"
+    uses_morello_llvm: bool = True
 
     @property
     def cmake_system_name(self) -> str:
@@ -868,7 +868,7 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
         raise ValueError("Other baremetal cases have not been tested yet!")
 
     @classmethod
-    def is_baremetal(cls):
+    def is_baremetal(cls) -> bool:
         return True
 
 
@@ -937,19 +937,19 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
         return self.bindir / (self.binary_prefix + "strip")
 
     @classmethod
-    def essential_compiler_and_linker_flags_impl(cls, *args, **kwargs):
+    def essential_compiler_and_linker_flags_impl(cls, *args, **kwargs) -> "list[str]":
         # This version of GCC should work without any additional flags
         return []
 
     @classmethod
-    def is_baremetal(cls):
+    def is_baremetal(cls) -> bool:
         return False
 
-    def must_link_statically(self):
+    def must_link_statically(self) -> bool:
         return True
 
 
-def enable_hybrid_for_purecap_rootfs_targets():
+def enable_hybrid_for_purecap_rootfs_targets() -> bool:
     # Checking sys.argv here is rather ugly, but we can't make this depend on parsing arguments first since the list of
     # command line options depends on the supported targets.
     if os.getenv("CHERIBUILD_ENABLE_HYBRID_FOR_PURECAP_ROOTFS_TARGETS", None) is not None:
@@ -1114,7 +1114,7 @@ class CompilationTargets(BasicCompilationTargets):
         ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + ALL_SUPPORTED_BAREMETAL_TARGETS
 
     @staticmethod
-    def _dump_cheribsd_target_relations():
+    def _dump_cheribsd_target_relations() -> None:
         for target in CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID + \
                       CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_HYBRID_ROOTFS_TARGETS + \
                       CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS + \

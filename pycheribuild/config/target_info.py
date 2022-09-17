@@ -37,7 +37,7 @@ from typing import Optional, ClassVar
 from .chericonfig import CheriConfig, AArch64FloatSimdOptions, MipsFloatAbi
 from ..utils import cached_property, final, OSInfo, warning_message, status_update, fatal_error, Type_T
 from ..filesystemutils import FileSystemUtils
-from ..processutils import get_compiler_info
+from ..processutils import get_compiler_info, CompilerInfo
 
 
 __all__ = ["AbstractProject", "AArch64FloatSimdOptions", "AutoVarInit", "BasicCompilationTargets",  # no-combine
@@ -135,20 +135,20 @@ class AbstractProject(FileSystemUtils):
     custom_c_compiler: Optional[Path] = None
     custom_cxx_compiler: Optional[Path] = None
 
-    def get_compiler_info(self, compiler: Path):
+    def get_compiler_info(self, compiler: Path) -> CompilerInfo:
         return get_compiler_info(compiler, config=self.config)
 
     @staticmethod
-    def info(*args, **kwargs):
+    def info(*args, **kwargs) -> None:
         # TODO: move all those methods here
         status_update(*args, **kwargs)
 
     @staticmethod
-    def warning(*args, **kwargs):
+    def warning(*args, **kwargs) -> None:
         warning_message(*args, **kwargs)
 
     @staticmethod
-    def fatal(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False):
+    def fatal(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False) -> None:
         fatal_error(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending)
 
     @classmethod
@@ -163,9 +163,9 @@ class AbstractProject(FileSystemUtils):
 
 
 class TargetInfo(ABC):
-    shortname = "INVALID"  # type: str
+    shortname: str = "INVALID"  # type: str
     # os_prefix defaults to shortname.lower() if not set
-    os_prefix = None  # type: typing.Optional[str]
+    os_prefix: Optional[str] = None
 
     def __init__(self, target: "CrossCompileTarget", project: AbstractProject):
         self.target = target
@@ -361,46 +361,46 @@ class TargetInfo(ABC):
         raise NotImplementedError("Should not be called for " + self.project.target)
 
     @classmethod
-    def is_native(cls):
+    def is_native(cls) -> bool:
         return False
 
     @classmethod
-    def is_baremetal(cls):
+    def is_baremetal(cls) -> bool:
         return False
 
     @classmethod
-    def is_rtems(cls):
+    def is_rtems(cls) -> bool:
         return False
 
     @classmethod
-    def is_newlib(cls):
+    def is_newlib(cls) -> bool:
         return False
 
     @classmethod
-    def is_freebsd(cls):
+    def is_freebsd(cls) -> bool:
         return False
 
     @classmethod
-    def is_cheribsd(cls):
+    def is_cheribsd(cls) -> bool:
         return False
 
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
                                  use_full_disk_image=False, mount_installdir=False,
                                  use_benchmark_kernel_by_default=False,
-                                 rootfs_alternate_kernel_dir=None):
+                                 rootfs_alternate_kernel_dir=None) -> None:
         raise ValueError("run_cheribsd_test_script only supports CheriBSD targets")
 
     @classmethod
-    def is_macos(cls):
+    def is_macos(cls) -> bool:
         return False
 
     @classmethod
-    def is_linux(cls):
+    def is_linux(cls) -> bool:
         return False
 
     @property
-    def pointer_size(self):
+    def pointer_size(self) -> int:
         if self.target.is_cheri_purecap():
             return self.capability_size
         if self.target.is_i386():
@@ -409,7 +409,7 @@ class TargetInfo(ABC):
         return 8
 
     @property
-    def capability_size(self):
+    def capability_size(self) -> int:
         if self.target.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
             assert self.config.mips_cheri_bits in (128, 256), "No other cap size supported yet"
             return self.config.mips_cheri_bits // 8
@@ -422,7 +422,7 @@ class TargetInfo(ABC):
         raise ValueError("Capabilities not supported for " + repr(self))
 
     @property
-    def capability_size_in_bits(self):
+    def capability_size_in_bits(self) -> int:
         return self.capability_size * 8
 
     @staticmethod
@@ -453,8 +453,8 @@ class TargetInfo(ABC):
 
 
 class NativeTargetInfo(TargetInfo):
-    shortname = "native"
-    os_prefix = ""  # Don't add an extra -native to target names
+    shortname: str = "native"
+    os_prefix: str = ""  # Don't add an extra -native to target names
 
     @property
     def sdk_root_dir(self):
@@ -521,27 +521,27 @@ class NativeTargetInfo(TargetInfo):
         return self.c_compiler.parent / "strip"
 
     @classmethod
-    def is_freebsd(cls):
+    def is_freebsd(cls) -> bool:
         return OSInfo.IS_FREEBSD
 
     @classmethod
-    def is_cheribsd(cls):
+    def is_cheribsd(cls) -> bool:
         return OSInfo.is_cheribsd()
 
     @classmethod
-    def is_macos(cls):
+    def is_macos(cls) -> bool:
         return OSInfo.IS_MAC
 
     @classmethod
-    def is_linux(cls):
+    def is_linux(cls) -> bool:
         return OSInfo.IS_LINUX
 
     @classmethod
-    def is_native(cls):
+    def is_native(cls) -> bool:
         return True
 
     @property
-    def default_libdir(self):
+    def default_libdir(self) -> str:
         if OSInfo.is_ubuntu() or OSInfo.is_debian():
             # Ubuntu and Debian default to installing to lib/<triple> directories
             if self.target.is_x86_64():
@@ -571,7 +571,7 @@ class NativeTargetInfo(TargetInfo):
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
                                                  perform_sanity_checks=True, default_flags_only=False,
-                                                 softfloat: bool = None):
+                                                 softfloat: bool = None) -> "list[str]":
         result = []
         if instance.project.auto_var_init != AutoVarInit.NONE:
             compiler = instance.project.get_compiler_info(instance.c_compiler)
@@ -591,7 +591,7 @@ class NativeTargetInfo(TargetInfo):
 
 class CrossCompileTarget(object):
     # Currently the same for all targets
-    DEFAULT_SUBOBJECT_BOUNDS = "conservative"
+    DEFAULT_SUBOBJECT_BOUNDS: str = "conservative"
 
     def __init__(self, arch_suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[TargetInfo]",
                  *, is_cheri_purecap=False, is_cheri_hybrid=False, extra_target_suffix: str = "",
@@ -601,7 +601,7 @@ class CrossCompileTarget(object):
                  non_cheri_for_hybrid_rootfs_target: "CrossCompileTarget" = None,
                  non_cheri_for_purecap_rootfs_target: "CrossCompileTarget" = None,
                  hybrid_for_purecap_rootfs_target: "CrossCompileTarget" = None,
-                 purecap_for_hybrid_rootfs_target: "CrossCompileTarget" = None):
+                 purecap_for_hybrid_rootfs_target: "CrossCompileTarget" = None) -> None:
         assert not arch_suffix.startswith("-"), arch_suffix
         assert not extra_target_suffix or extra_target_suffix.startswith("-"), extra_target_suffix
         name_prefix = target_info_cls.shortname
@@ -726,13 +726,13 @@ class CrossCompileTarget(object):
     def create_target_info(self, project: AbstractProject) -> TargetInfo:
         return self.target_info_cls(self, project)
 
-    def build_suffix(self, config: CheriConfig, *, include_os: bool):
+    def build_suffix(self, config: CheriConfig, *, include_os: bool) -> str:
         assert self.target_info_cls is not None
         target_suffix = self.generic_target_suffix if include_os else self.base_target_suffix
         result = "-" + target_suffix + self.cheri_config_suffix(config)
         return result
 
-    def cheri_config_suffix(self, config: CheriConfig):
+    def cheri_config_suffix(self, config: CheriConfig) -> str:
         """
         :return: a string such as "-subobject-safe"/"128"/"128-plt" to ensure different build/install dirs for config
         options
@@ -755,7 +755,7 @@ class CrossCompileTarget(object):
             result += "-" + config.cross_target_suffix
         return result
 
-    def is_native(self):
+    def is_native(self) -> bool:
         """returns true if we are building for the curent host"""
         assert self.target_info_cls is not None
         return self.target_info_cls.is_native()
@@ -771,31 +771,31 @@ class CrossCompileTarget(object):
         return True
 
     # Querying the CPU architecture:
-    def is_mips(self, include_purecap: bool = None):
+    def is_mips(self, include_purecap: bool = None) -> bool:
         return self._check_arch(CPUArchitecture.MIPS64, include_purecap)
 
-    def is_riscv32(self, include_purecap: bool = None):
+    def is_riscv32(self, include_purecap: bool = None) -> bool:
         return self._check_arch(CPUArchitecture.RISCV32, include_purecap)
 
-    def is_riscv64(self, include_purecap: bool = None):
+    def is_riscv64(self, include_purecap: bool = None) -> bool:
         return self._check_arch(CPUArchitecture.RISCV64, include_purecap)
 
-    def is_riscv(self, include_purecap: bool = None):
+    def is_riscv(self, include_purecap: bool = None) -> bool:
         return self.is_riscv32(include_purecap) or self.is_riscv64(include_purecap)
 
-    def is_aarch64(self, include_purecap: bool = None):
+    def is_aarch64(self, include_purecap: bool = None) -> bool:
         return self._check_arch(CPUArchitecture.AARCH64, include_purecap)
 
-    def is_i386(self, include_purecap: bool = None):
+    def is_i386(self, include_purecap: bool = None) -> bool:
         return self._check_arch(CPUArchitecture.I386, include_purecap)
 
-    def is_x86_64(self, include_purecap: bool = None):
+    def is_x86_64(self, include_purecap: bool = None) -> bool:
         return self._check_arch(CPUArchitecture.X86_64, include_purecap)
 
-    def is_any_x86(self, include_purecap: bool = None):
+    def is_any_x86(self, include_purecap: bool = None) -> bool:
         return self.is_i386(include_purecap) or self.is_x86_64(include_purecap)
 
-    def is_cheri_purecap(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None):
+    def is_cheri_purecap(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None) -> bool:
         if valid_cpu_archs is None:
             return self._is_cheri_purecap
         if not self._is_cheri_purecap:
@@ -806,7 +806,7 @@ class CrossCompileTarget(object):
                 return True
         return False
 
-    def is_cheri_hybrid(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None):
+    def is_cheri_hybrid(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None) -> bool:
         if valid_cpu_archs is None:
             return self._is_cheri_hybrid
         if not self._is_cheri_hybrid:
@@ -817,7 +817,7 @@ class CrossCompileTarget(object):
                 return True
         return False
 
-    def is_hybrid_or_purecap_cheri(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None):
+    def is_hybrid_or_purecap_cheri(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None) -> bool:
         return self.is_cheri_purecap(valid_cpu_archs) or self.is_cheri_hybrid(valid_cpu_archs)
 
     def get_rootfs_target(self) -> "CrossCompileTarget":
@@ -879,7 +879,7 @@ class CrossCompileTarget(object):
             return self._purecap_for_hybrid_rootfs_target
         raise ValueError("Don't know CHERI purecap for hybrid rootfs version of " + repr(self))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         result = self.target_info_cls.__name__ + "(" + self.cpu_architecture.name
         if self._is_cheri_purecap:
             result += " purecap"
@@ -892,7 +892,7 @@ class CrossCompileTarget(object):
             result += " rootfs"
         return result
 
-    def _dump_target_relations(self):
+    def _dump_target_relations(self) -> None:
         self_repr = repr(self)
         for n in ('non_cheri', 'hybrid', 'purecap', 'non_cheri_for_hybrid_rootfs', 'non_cheri_for_purecap_rootfs',
                   'hybrid_for_purecap_rootfs', 'purecap_for_hybrid_rootfs'):

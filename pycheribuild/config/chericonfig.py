@@ -82,7 +82,7 @@ class BuildType(Enum):
             raise NotImplementedError()
 
 
-supported_build_type_strings = [t.value for t in BuildType]
+supported_build_type_strings: "list[str]" = [str(t.value) for t in BuildType]
 
 
 class Linkage(Enum):
@@ -95,10 +95,10 @@ class MipsFloatAbi(Enum):
     SOFT = ("mips64", "-msoft-float")
     HARD = ("mips64hf", "-mhard-float")
 
-    def freebsd_target_arch(self):
+    def freebsd_target_arch(self) -> str:
         return self.value[0]
 
-    def clang_float_flag(self):
+    def clang_float_flag(self) -> str:
         return self.value[1]
 
 
@@ -108,10 +108,10 @@ class AArch64FloatSimdOptions(Enum):
     SOFT = ("-softfp", "+nofp+nosimd")
     SOFT_SIMD = ("-softfp-with-simd", "+nofp")  # TODO: does it make sense to have this?
 
-    def config_suffix(self):
+    def config_suffix(self) -> str:
         return self.value[0]
 
-    def clang_march_flag(self):
+    def clang_march_flag(self) -> str:
         return self.value[1]
 
 
@@ -211,12 +211,12 @@ class ComputedDefaultValue(typing.Generic[Type_T]):
     def __call__(self, config: "CheriConfig", obj: "typing.Any") -> Type_T:
         return self.function(config, obj)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{ComputedDefault:" + str(self.as_string) + "}"
 
 
 class CheriConfig(ConfigBase):
-    def __init__(self, loader, action_class):
+    def __init__(self, loader, action_class) -> None:
         # Work around circular dependencies
         from .loader import ConfigLoaderBase
         # noinspection PyTypeChecker
@@ -307,16 +307,16 @@ class CheriConfig(ConfigBase):
         self.verbose = None  # type: Optional[bool]
         self.debug_output = loader.add_commandline_only_bool_option("debug-output", "vv",
                                                                     help="Extremely verbose output")
-        self.quiet = None  # type: Optional[bool]
-        self.clean = None  # type: Optional[bool]
-        self.force = None  # type: Optional[bool]
-        self.write_logfile = None  # type: Optional[bool]
-        self.skip_update = None  # type: Optional[bool]
-        self.skip_clone = None  # type: Optional[bool]
-        self.confirm_clone = None  # type: Optional[bool]
-        self.skip_configure = None  # type: Optional[bool]
-        self.force_configure = None  # type: Optional[bool]
-        self.force_update = None  # type: Optional[bool]
+        self.quiet: "Optional[bool] " = None
+        self.clean: "Optional[bool] " = None
+        self.force: "Optional[bool] " = None
+        self.write_logfile: "Optional[bool] " = None
+        self.skip_update: "Optional[bool] " = None
+        self.skip_clone: "Optional[bool] " = None
+        self.confirm_clone: "Optional[bool] " = None
+        self.skip_configure: "Optional[bool] " = None
+        self.force_configure: "Optional[bool] " = None
+        self.force_update: "Optional[bool] " = None
         self.mips_float_abi = loader.add_option("mips-float-abi", default=MipsFloatAbi.SOFT, type=MipsFloatAbi,
                                                 group=loader.cross_compile_options_group,
                                                 help="The floating point ABI to use for building MIPS+CHERI programs")
@@ -535,7 +535,7 @@ class CheriConfig(ConfigBase):
         self.targets = None  # type: typing.Optional[typing.List[str]]
         self.__optional_properties = ["internet_connection_last_checked_at", "start_after", "start_with"]
 
-    def load(self):
+    def load(self) -> None:
         self.loader.load()
         if self.print_targets_only:
             self.pretend = True
@@ -652,7 +652,7 @@ class CheriConfig(ConfigBase):
         assert self.build_root.is_absolute(), self.build_root
         return True
 
-    def should_skip_dependency(self, target_name: str, requested_by: str):
+    def should_skip_dependency(self, target_name: str, requested_by: str) -> bool:
         filters = self.skip_dependency_filters
         for regex in filters:
             if regex.fullmatch(target_name):
@@ -662,14 +662,14 @@ class CheriConfig(ConfigBase):
         return False
 
     # FIXME: not sure why this is needed
-    def __getattribute__(self, item):
+    def __getattribute__(self, item) -> "typing.Any":
         v = object.__getattribute__(self, item)
         if hasattr(v, '__get__'):
             # noinspection PyCallingNonCallable
             return v.__get__(self, self.__class__)  # pytype: disable=attribute-error
         return v
 
-    def get_options_json(self):
+    def get_options_json(self) -> str:
         json_dict = OrderedDict()
         for v in self.loader.options.values():
             # noinspection PyProtectedMember
@@ -704,6 +704,6 @@ class CheriConfig(ConfigBase):
                 warning_message("Could not get group name for GID", result)
                 return result
 
-    def debug_message(self, *args, **kwargs):
+    def debug_message(self, *args, **kwargs) -> None:
         if self.debug_output:
             status_update(*args, **kwargs)
