@@ -109,6 +109,10 @@ class MyJsonEncoder(json.JSONEncoder):
             return str(o)
         if isinstance(o, _LoadedConfigValue):
             return o.value
+        if isinstance(o, Enum):
+            if isinstance(o.value, str):
+                return o.value
+            return o.name.replace("_", "-")
         return super().default(o)
 
 

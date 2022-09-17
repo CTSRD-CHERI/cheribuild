@@ -28,11 +28,13 @@
 # SUCH DAMAGE.
 #
 import fcntl
+import json
 import os
 import shutil
 import subprocess
 import sys
 import traceback
+from collections import OrderedDict
 # noinspection PyUnresolvedReferences
 from pathlib import Path
 
@@ -40,7 +42,7 @@ from .config.defaultconfig import CheribuildAction, DefaultCheriConfig
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
-from .config.loader import JsonAndCommandLineConfigLoader
+from .config.loader import JsonAndCommandLineConfigLoader, MyJsonEncoder, ConfigOptionBase
 # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
 from .projects import *  # noqa: F401,F403
@@ -102,10 +104,12 @@ def check_not_root() -> None:
 
 
 # noinspection PyProtectedMember
-def get_config_option_value(option: ConfigOptionBase, config: DefaultCheriConfig) -> typing.Any:
+def get_config_option_value(option: ConfigOptionBase, config: DefaultCheriConfig) -> str:
     if option._owning_class is not None:
+        project_cls: "type[SimpleProject]" = option._owning_class
         Target.instantiating_targets_should_warn = False
-        obj = option._owning_class.get_instance(None, config=config)
+        t = target_manager.get_target(project_cls.target, None, config, caller="get_config_option")
+        obj = t.get_or_create_project(None, config)
         return option.__get__(obj, option._owning_class)
     # otherwise it must be a config option on CheriConfig:
     return option.__get__(config, type(config))
@@ -144,7 +148,15 @@ def real_main() -> None:
         print("There are", len(names), "available targets:\n ", "\n  ".join(names))
         sys.exit()
     elif CheribuildAction.DUMP_CONFIGURATION in cheri_config.action:
-        print(cheri_config.get_options_json())
+        json_dict = OrderedDict()
+        for v in cheri_config.loader.options.values():
+            try:
+                json_dict[v.full_option_name] = get_config_option_value(v, cheri_config)
+            except LookupError:
+                if cheri_config.debug_output:
+                    print("Skipping alias config option", v.full_option_name, file=sys.stderr)
+                continue
+        json.dump(json_dict, sys.stdout, sort_keys=True, cls=MyJsonEncoder, indent=4)
         sys.exit()
     elif cheri_config.get_config_option:
         if cheri_config.get_config_option not in config_loader.options:

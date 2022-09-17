@@ -30,12 +30,10 @@
 import collections
 import getpass
 import grp
-import json
 import os
 import re
 import shutil
 import typing
-from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -668,15 +666,6 @@ class CheriConfig(ConfigBase):
             # noinspection PyCallingNonCallable
             return v.__get__(self, self.__class__)  # pytype: disable=attribute-error
         return v
-
-    def get_options_json(self) -> str:
-        json_dict = OrderedDict()
-        for v in self.loader.options.values():
-            # noinspection PyProtectedMember
-            json_dict[v.full_option_name] = v.__get__(
-                self, v._owning_class if v._owning_class else self)  # pytype: disable=attribute-error
-        from .loader import MyJsonEncoder
-        return json.dumps(json_dict, sort_keys=True, cls=MyJsonEncoder, indent=4)
 
     @classmethod
     def get_user_name(cls) -> str:

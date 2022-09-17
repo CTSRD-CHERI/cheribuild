@@ -283,7 +283,7 @@ class MultiArchTargetAlias(_TargetAliasBase):
             # Use the default target:
             cross_target = self.project_class.default_architecture
         if cross_target is None:
-            raise ValueError("ERROR:", self.name, "does not have a default_architecture value!")
+            raise LookupError("ERROR:", self.name, "does not have a default_architecture value!")
         # find the correct derived project:
         for tgt in self.derived_targets:
             if tgt.target_arch is cross_target:

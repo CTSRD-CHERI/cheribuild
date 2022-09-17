@@ -163,7 +163,7 @@ class AbstractProject(FileSystemUtils):
 
 
 class TargetInfo(ABC):
-    shortname: str = "INVALID"  # type: str
+    shortname: str = "INVALID"
     # os_prefix defaults to shortname.lower() if not set
     os_prefix: Optional[str] = None
 

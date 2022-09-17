@@ -220,10 +220,6 @@ def _jenkins_main() -> None:
     SimpleProject._config_loader = config_loader
     target_manager.register_command_line_options()
     cheri_config.load()
-    if cheri_config.verbose:
-        # json = cheri_config.get_options_json()  # make sure all config options are loaded
-        # pprint.pprint(config_loader.options)
-        pass
     init_global_config(cheri_config, test_mode=False)
 
     # special target to extract the sdk

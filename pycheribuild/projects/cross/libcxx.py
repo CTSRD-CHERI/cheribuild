@@ -183,9 +183,11 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
                                                           mount_builddir=True, mount_sysroot=True)
 
 
-def _default_ssh_port(c, p):
-    return LaunchCheriBSD.get_instance(p, c, cross_target=p.get_crosscompile_target(
-        c).get_rootfs_target()).ssh_forwarding_port
+def _default_ssh_port(c, p: CMakeProject):
+    xtarget = p.get_crosscompile_target(c)
+    if not xtarget.target_info_cls.is_cheribsd():
+        return None
+    return LaunchCheriBSD.get_instance(p, c, cross_target=xtarget.get_rootfs_target()).ssh_forwarding_port
 
 
 class BuildLibCXX(_CxxRuntimeCMakeProject):
