@@ -39,7 +39,7 @@ import typing
 from pathlib import Path
 
 from .config.jenkinsconfig import JenkinsAction, JenkinsConfig
-from .config.loader import CommandLineConfigOption, ConfigLoaderBase
+from .config.loader import CommandLineConfigOption, CommandLineConfigLoader
 # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
 from .projects import *  # noqa: F401,F403
@@ -56,13 +56,9 @@ EXTRACT_SDK_TARGET: str = "extract-sdk"
 RUN_EVERYTHING_TARGET: str = "__run_everything__"
 
 
-class JenkinsConfigLoader(ConfigLoaderBase):
-    """
-    A simple config loader that always returns the default value for all added options
-    """
-
+class JenkinsConfigLoader(CommandLineConfigLoader):
     def load(self) -> None:
-        self._load_command_line_args()
+        super().load()
         assert isinstance(self._parsed_args.targets, list)
         self._parsed_args.verbose = True
 
@@ -82,9 +78,6 @@ class JenkinsConfigLoader(ConfigLoaderBase):
                 always_complete_options=None,  # don't print -/-- by default
                 print_suppressed=True,  # also include target-specific options
                 )
-
-    def __init__(self) -> None:
-        super().__init__(CommandLineConfigOption)
 
 
 class SdkArchive(object):

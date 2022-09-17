@@ -38,11 +38,11 @@ from collections import OrderedDict
 # noinspection PyUnresolvedReferences
 from pathlib import Path
 
-from .config.defaultconfig import CheribuildAction, DefaultCheriConfig
+from .config.defaultconfig import CheribuildAction, DefaultCheriConfig, DefaultCheribuildConfigLoader
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
-from .config.loader import JsonAndCommandLineConfigLoader, MyJsonEncoder, ConfigOptionBase
+from .config.loader import MyJsonEncoder, ConfigOptionBase
 # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
 from .projects import *  # noqa: F401,F403
@@ -121,7 +121,7 @@ def real_main() -> None:
     ensure_fd_is_blocking(sys.stdout.fileno())
     ensure_fd_is_blocking(sys.stderr.fileno())
 
-    config_loader = JsonAndCommandLineConfigLoader()
+    config_loader = DefaultCheribuildConfigLoader()
     # Don't suggest deprecated names when tab-completing
     if config_loader.is_completing_arguments:
         all_target_names = list(sorted(target_manager.non_deprecated_target_names(None)))
@@ -139,7 +139,7 @@ def real_main() -> None:
     if not cheri_config.allow_running_as_root:
         check_not_root()
     init_global_config(cheri_config)
-    if JsonAndCommandLineConfigLoader.get_config_prefix() == "docker-":
+    if config_loader.get_config_prefix() == "docker-":
         cheri_config.docker = True
 
     if CheribuildAction.LIST_TARGETS in cheri_config.action:

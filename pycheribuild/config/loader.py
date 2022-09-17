@@ -345,9 +345,6 @@ class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
         # Ignore options stored in other classes
         self.options = dict()
 
-    def finalize_options(self, available_targets: list, **kwargs) -> None:
-        pass
-
     def load(self) -> None:
         pass
 
@@ -381,7 +378,7 @@ class ArgparseSetGivenAction(argparse.Action):
         setattr(namespace, self.dest + '_given', True)
 
 
-class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
+class CommandLineConfigLoader(ConfigLoaderBase):
     _parsed_args: argparse.Namespace
 
     show_all_help: bool = any(
@@ -390,27 +387,15 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                                                    if ConfigLoaderBase.is_completing_arguments else None)
     _argcomplete_prefix_includes_slash: bool = "/" in _argcomplete_prefix if _argcomplete_prefix else False
 
-    def __init__(self, argparser_class: "typing.Type[argparse.ArgumentParser]" = argparse.ArgumentParser):
+    def __init__(self, argparser_class: "typing.Type[argparse.ArgumentParser]" = argparse.ArgumentParser, *,
+                 option_cls=CommandLineConfigOption, command_line_only_options_cls=CommandLineConfigOption):
         if self.is_completing_arguments or self.is_running_unit_tests:
             self._parser = argparser_class(formatter_class=NoOpHelpFormatter)
         else:
             terminal_width = shutil.get_terminal_size(fallback=(120, 24))[0]
             self._parser = argparser_class(
                 formatter_class=lambda prog: argparse.HelpFormatter(prog, width=terminal_width))
-        super().__init__(option_cls=JsonAndCommandLineConfigOption,
-                         command_line_only_options_cls=CommandLineConfigOption)
-        self._config_path = None  # type: typing.Optional[Path]
-
-        # Choose the default config file based on argv[0]
-        # This allows me to have symlinks for e.g. stable-cheribuild.py release-cheribuild.py debug-cheribuild.py
-        # that pick up the right config file in ~/.config or the cheribuild directory
-        cheribuild_rootdir = Path(__file__).absolute().parent.parent.parent
-        self._inferred_config_prefix = self.get_config_prefix()
-        self.default_config_path = Path(cheribuild_rootdir, self._inferred_config_prefix + "cheribuild.json")
-        self.path_group.add_argument("--config-file", metavar="FILE", type=str, default=str(self.default_config_path),
-                                     action=ArgparseSetGivenAction,
-                                     help="The config file that is used to load the default settings (default: '" +
-                                          str(self.default_config_path) + "')")
+        super().__init__(option_cls=option_cls, command_line_only_options_cls=command_line_only_options_cls)
         self._parser.add_argument("--help-all", "--help-hidden", action="help", help="Show all help options, including"
                                                                                      " the target-specific ones.")
 
@@ -524,6 +509,27 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         # self.debug_msg("Skipping option", name)
         return False
 
+    def load(self) -> None:
+        self._load_command_line_args()
+
+
+class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
+    def __init__(self, argparser_class: "typing.Type[argparse.ArgumentParser]" = argparse.ArgumentParser, *,
+                 option_cls=JsonAndCommandLineConfigOption, command_line_only_options_cls=CommandLineConfigOption):
+        super().__init__(argparser_class, option_cls=option_cls,
+                         command_line_only_options_cls=command_line_only_options_cls)
+        self._config_path: "typing.Optional[Path]" = None
+        # Choose the default config file based on argv[0]
+        # This allows me to have symlinks for e.g. stable-cheribuild.py release-cheribuild.py debug-cheribuild.py
+        # that pick up the right config file in ~/.config or the cheribuild directory
+        cheribuild_rootdir = Path(__file__).absolute().parent.parent.parent
+        self._inferred_config_prefix = self.get_config_prefix()
+        self.default_config_path = Path(cheribuild_rootdir, self._inferred_config_prefix + "cheribuild.json")
+        self.path_group.add_argument("--config-file", metavar="FILE", type=str, default=str(self.default_config_path),
+                                     action=ArgparseSetGivenAction,
+                                     help="The config file that is used to load the default settings (default: '" +
+                                          str(self.default_config_path) + "')")
+
     @staticmethod
     def get_config_prefix() -> str:
         program = Path(sys.argv[0]).name
@@ -532,26 +538,6 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             if program.endswith(suffix):
                 return program[0:-len(suffix)]
         return ""
-
-    def finalize_options(self, available_targets: list, **kwargs) -> None:
-        target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
-                                                  help="The targets to build")
-        if argcomplete and self.is_completing_arguments:
-            # if OSInfo.IS_FREEBSD: # FIXME: for some reason this won't work
-            self.completion_excludes = ["-t", "--skip-dependencies"]
-            if sys.platform.startswith("freebsd"):
-                self.completion_excludes += ["--freebsd-builder-copy-only", "--freebsd-builder-hostname",
-                                             "--freebsd-builder-output-path"]
-
-            visible_targets = available_targets.copy()
-            visible_targets.remove("__run_everything__")
-            target_completer = argcomplete.completers.ChoicesCompleter(visible_targets)
-            target_option.completer = target_completer
-            # make sure we get target completion for the unparsed args too by adding another zero_or more options
-            # not sure why this works but it's a nice hack
-            unparsed = self._parser.add_argument("targets", metavar="TARGET", type=list, nargs=argparse.ZERO_OR_MORE,
-                                                 help=argparse.SUPPRESS, choices=available_targets)
-            unparsed.completer = target_completer
 
     def __load_json_with_comments(self, config_path: Path) -> "typing.Dict[str, typing.Any]":
         """
@@ -663,8 +649,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                       file=sys.stderr)
 
     def load(self) -> None:
-        self._load_command_line_args()
-
+        super().load()
         self._load_json_config_file()
         # Now validate the config file
         self._validate_config_file()

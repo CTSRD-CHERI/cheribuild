@@ -93,9 +93,6 @@ class ConfigLoaderBase(ABC):
         self.freebsd_group = self.add_argument_group("FreeBSD and CheriBSD build configuration")
         self.docker_group = self.add_argument_group("Options controlling the use of docker for building")
 
-        # TODO: should replace this group with a tristate value
-        self.configure_group = self.add_mutually_exclusive_group()
-
     def add_commandline_only_option(self, *args, type: "typing.Callable[[str], T]" = str, **kwargs) -> T:
         """
         :return: A config option that is always loaded from the command line no matter what the default is
@@ -136,9 +133,8 @@ class ConfigLoaderBase(ABC):
     def load(self) -> None:
         ...
 
-    @abstractmethod
     def finalize_options(self, available_targets, **kwargs) -> None:
-        ...
+        pass
 
     def reload(self) -> None:
         """
