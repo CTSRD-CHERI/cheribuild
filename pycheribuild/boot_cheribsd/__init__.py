@@ -775,7 +775,7 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
     qemu_args = qemu_options.get_commandline(qemu_command=qemu_command, kernel_file=kernel_image, disk_image=disk_image,
                                              bios_args=bios_args, user_network_args=user_network_args,
                                              write_disk_image_changes=write_disk_image_changes,
-                                             add_network_device=True,
+                                             add_network_device=True, add_usb_input=True,
                                              trap_on_unrepresentable=trap_on_unrepresentable,  # For debugging
                                              add_virtio_rng=True  # faster entropy gathering
                                              )

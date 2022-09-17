@@ -154,7 +154,7 @@ class QemuOptions:
 
     def get_commandline(self, *, qemu_command=None, kernel_file: Path = None, disk_image: Path = None,
                         disk_image_format: str = "raw", user_network_args: str = "", add_network_device=True,
-                        bios_args: "typing.List[str]" = None, trap_on_unrepresentable=False,
+                        bios_args: "typing.List[str]" = None, trap_on_unrepresentable=False, add_usb_input: bool,
                         debugger_on_cheri_trap=False, add_virtio_rng=False, write_disk_image_changes=True,
                         gui_options: "typing.List[str]" = None) -> "typing.List[str]":
         if kernel_file is None and disk_image is None:
@@ -187,6 +187,10 @@ class QemuOptions:
             result.extend(self.user_network_args(user_network_args))
         if add_virtio_rng:
             result.extend(["-device", "virtio-rng-pci"])
+        if add_usb_input:
+            # Add USB input devices instead of the default PS/2. This ensures that the USB kernel setup logic
+            # in CheriBSD is tested during CI runs.
+            result.extend(["-device", "qemu-xhci", "-device", "usb-mouse", "-device", "usb-kbd"])
         return result
 
 

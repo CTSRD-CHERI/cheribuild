@@ -436,6 +436,8 @@ class CheriConfig(ConfigBase):
         self.run_under_gdb = loader.add_bool_option("run-under-gdb", group=loader.run_group,
                                                     help="Run tests/benchmarks under GDB. Note: currently most "
                                                          "targets ignore this flag.")
+        self.emulate_usb_input_devices = loader.add_bool_option("emulate-usb-input-devices", group=loader.run_group,
+                                                                default=True, help="Emulate USB keyboard+mouse in QEMU")
 
         # Test options:
         self._test_ssh_key = loader.add_path_option("test-ssh-key", default=None, group=loader.tests_group,
