@@ -38,9 +38,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+from .config_loader_base import ConfigLoaderBase
+from .computed_default_value import ComputedDefaultValue
 from ..processutils import latest_system_clang_tool, run_command
 from ..utils import (cached_property, ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, status_update,
-                     warning_message, Type_T)
+                     warning_message)
 
 
 class BuildType(Enum):
@@ -133,91 +135,8 @@ def _skip_dependency_filter_arg(values: "list[str]") -> "list[re.Pattern]":
     return result
 
 
-class ComputedDefaultValue(typing.Generic[Type_T]):
-    def __init__(self, function: "typing.Callable[[CheriConfig, typing.Any], Type_T]",
-                 as_string: "typing.Union[str, typing.Callable[[typing.Any], str]]",
-                 as_readme_string: "typing.Union[str, typing.Callable[[typing.Any], str]]" = None,
-                 inherit: "ComputedDefaultValue[Type_T]" = None):
-        if inherit is not None:
-            def inheriting_function(config, project):
-                val = function(config, project)
-                if val is None:
-                    val = inherit.function(config, project)
-                return val
-            self.function = inheriting_function
-        else:
-            assert function is not None, "Must provide function or inherit"
-            self.function = function
-
-        if inherit is not None:
-            assert callable(as_string), "Inheriting only makes sense with callable as_string"
-
-            if not callable(inherit.as_string):
-                def inherit_as_string_wrapper(cls):
-                    return inherit.as_string
-                inherited_as_string = inherit_as_string_wrapper
-            else:
-                inherited_as_string = inherit.as_string
-
-            def inheriting_as_string(cls):
-                val = as_string(cls)
-                if val is not None:
-                    return val
-                return inherited_as_string(cls)
-
-            self.as_string = inheriting_as_string
-        else:
-            assert function is not None, "Must provide as_string or inherit"
-            self.as_string = as_string
-
-        if inherit is not None:
-            if not callable(as_readme_string):
-                assert as_readme_string is None, "Inheriting only makes sense with callable or None as_readme_string"
-
-                def as_readme_string_none_wrapper(cls):
-                    return None
-                as_readme_string = as_readme_string_none_wrapper
-
-            if not callable(inherit.as_readme_string):
-                def inherit_as_readme_string_wrapper(cls):
-                    return inherit.as_readme_string
-                inherited_as_readme_string = inherit_as_readme_string_wrapper
-            else:
-                inherited_as_readme_string = inherit.as_readme_string
-
-            # Prefer using the overridden as_string rather than the inherited
-            # as_readme_string so you only need to override as_readme_string if
-            # you need to use it yourself, rather than to avoid using an
-            # inherited one not consistent with your as_string
-            def inheriting_as_readme_string(cls):
-                assert callable(as_readme_string)
-                val = as_readme_string(cls)
-                if val is not None:
-                    return val
-                val = as_string(cls)
-                if val is not None:
-                    return val
-                val = inherited_as_readme_string(cls)
-                if val is not None:
-                    return val
-                return inherited_as_string(cls)
-
-            self.as_readme_string = inheriting_as_readme_string
-        else:
-            self.as_readme_string = as_readme_string
-
-    def __call__(self, config: "CheriConfig", obj: "typing.Any") -> Type_T:
-        return self.function(config, obj)
-
-    def __repr__(self) -> str:
-        return "{ComputedDefault:" + str(self.as_string) + "}"
-
-
 class CheriConfig(ConfigBase):
     def __init__(self, loader, action_class) -> None:
-        # Work around circular dependencies
-        from .config_loader_base import ConfigLoaderBase
-        # noinspection PyTypeChecker
         super().__init__(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt(),
                          force=DoNotUseInIfStmt())
         self._cached_deps = collections.defaultdict(dict)

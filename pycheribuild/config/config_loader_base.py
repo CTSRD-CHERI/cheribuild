@@ -35,8 +35,8 @@ import typing
 from abc import abstractmethod, ABC
 from pathlib import Path
 
-from .chericonfig import CheriConfig, ComputedDefaultValue
-from ..utils import fatal_error, warning_message
+from .computed_default_value import ComputedDefaultValue
+from ..utils import fatal_error, warning_message, ConfigBase
 
 T = typing.TypeVar('T')
 InstanceTy = typing.TypeVar('InstanceTy')
@@ -64,7 +64,7 @@ class _LoadedConfigValue:
 
 class ConfigLoaderBase(ABC):
     # will be set later...
-    _cheri_config: CheriConfig
+    _cheri_config: ConfigBase
 
     options: "dict[str, ConfigOptionBase]" = {}
     _json: "dict[str, _LoadedConfigValue]" = {}
@@ -186,8 +186,7 @@ class ConfigOptionBase(typing.Generic[T, InstanceTy]):
         self.alias_names = _legacy_alias_names  # for targets such as gdb-mips, etc
         self._is_default_value = False
 
-    # noinspection PyUnusedLocal
-    def load_option(self, config: "CheriConfig", instance: "typing.Optional[InstanceTy]", owner: "typing.Type",
+    def load_option(self, config: "ConfigBase", instance: "typing.Optional[InstanceTy]", owner: "typing.Type",
                     return_none_if_default=False) -> T:
         result = self._load_option_impl(config, self.full_option_name)
         # fall back from --qtbase-mips/foo to --qtbase/foo
@@ -225,7 +224,7 @@ class ConfigOptionBase(typing.Generic[T, InstanceTy]):
             sys.exit()
         return result
 
-    def _load_option_impl(self, config: "CheriConfig", target_option_name) -> "typing.Optional[_LoadedConfigValue]":
+    def _load_option_impl(self, config: "ConfigBase", target_option_name) -> "typing.Optional[_LoadedConfigValue]":
         # target_option_name may not be the same as self.full_option_name if we are loading the fallback value
         raise NotImplementedError()
 
@@ -255,7 +254,7 @@ class ConfigOptionBase(typing.Generic[T, InstanceTy]):
             self._cached = self.load_option(self._loader._cheri_config, instance, owner)
         return self._cached
 
-    def _get_default_value(self, config: "CheriConfig",
+    def _get_default_value(self, config: "ConfigBase",
                            instance: "typing.Optional[InstanceTy]" = None) -> _LoadedConfigValue:
         if callable(self.default):
             return self.default(config, instance)
@@ -302,5 +301,5 @@ class DefaultValueOnlyConfigOption(ConfigOptionBase[T, InstanceTy]):
     def __init__(self, *args, _loader, **kwargs) -> None:
         super().__init__(*args, _loader=_loader)
 
-    def _load_option_impl(self, config: "CheriConfig", target_option_name):
+    def _load_option_impl(self, config: "ConfigBase", target_option_name):
         return None  # always use the default value
