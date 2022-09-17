@@ -97,6 +97,8 @@ do
 		# check that there are no obvious mistakes:
 		try_run ./cheribuild.py --help
 		try_run ./jenkins-cheri-build.py --help
+		try_run ./cheribuild.py --get-config-option llvm/source-directory
+		try_run ./cheribuild.py --get-config-option output-root
 		try_run ./cheribuild.py -p __run_everything__ --clean --build --test --benchmark
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --allow-more-than-one-target --build --test --cpu=default -p __run_everything__
 		# Regression for --benchmark-clean-boot:

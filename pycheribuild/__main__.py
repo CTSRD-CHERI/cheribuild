@@ -47,7 +47,7 @@ from .projects import *  # noqa: F401,F403
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # noqa: F401,F403
 from .projects.simple_project import SimpleProject
-from .targets import target_manager
+from .targets import target_manager, Target
 from .processutils import (get_program_version, print_command, run_and_kill_children_on_exit, run_command)
 from .utils import (AnsiColour, coloured, fatal_error, have_working_internet_connection, init_global_config,
                     status_update)
@@ -101,6 +101,16 @@ def check_not_root() -> None:
                     " Please re-run as a non-root user.", pretend=False)
 
 
+# noinspection PyProtectedMember
+def get_config_option_value(option: ConfigOptionBase, config: DefaultCheriConfig) -> typing.Any:
+    if option._owning_class is not None:
+        Target.instantiating_targets_should_warn = False
+        obj = option._owning_class.get_instance(None, config=config)
+        return option.__get__(obj, option._owning_class)
+    # otherwise it must be a config option on CheriConfig:
+    return option.__get__(config, type(config))
+
+
 def real_main() -> None:
     # avoid weird errors with macos terminal:
     ensure_fd_is_blocking(sys.stdin.fileno())
@@ -140,9 +150,7 @@ def real_main() -> None:
         if cheri_config.get_config_option not in config_loader.options:
             fatal_error("Unknown config key", cheri_config.get_config_option)
         option = config_loader.options[cheri_config.get_config_option]
-        # noinspection PyProtectedMember
-        owning_class = option._owning_class if option._owning_class else cheri_config
-        print(option.__get__(cheri_config, owning_class))  # pytype: disable=attribute-error
+        print(get_config_option_value(option, cheri_config))
         sys.exit()
 
     assert any(x in cheri_config.action for x in (CheribuildAction.TEST, CheribuildAction.BUILD,
