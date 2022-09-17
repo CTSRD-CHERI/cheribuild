@@ -629,12 +629,14 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             # XXX: Ideally we would always load this file and merge the two if
             # both exist, with the bundled config file setting new defaults.
             configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-            print("Checking", Path(configdir, self._config_path.name), "since", self._config_path, "doesn't exist")
+            print("Checking", Path(configdir, self._config_path.name), "since", self._config_path, "doesn't exist",
+                  file=sys.stderr)
             self._config_path = Path(configdir, self._config_path.name)
             if self._inferred_config_prefix:
                 print(coloured(AnsiColour.green, "Note: Configuration file path inferred as"),
                       coloured(AnsiColour.blue, self._config_path),
-                      coloured(AnsiColour.green, "based on command name"))
+                      coloured(AnsiColour.green, "based on command name"),
+                      file=sys.stderr)
             if self._config_path.exists():
                 self._json = self.__load_json_with_includes(self._config_path)
             else:
@@ -643,13 +645,15 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                     # certainly an error. Report it as such and don't
                     print(coloured(AnsiColour.green, "Note: Configuration file path inferred as"),
                           coloured(AnsiColour.blue, self._config_path),
-                          coloured(AnsiColour.green, "based on command name"))
+                          coloured(AnsiColour.green, "based on command name"),
+                          file=sys.stderr)
                     fatal_error("Configuration file ", self._config_path, "matching prefixed command was not found.",
                                 "If this is intended pass an explicit `--config-file=/dev/null` argument.",
                                 pretend=False)
                     raise FileNotFoundError(self._parsed_args.config_file)
                 print(coloured(AnsiColour.green, "Note: Configuration file", self._config_path,
-                               "does not exist, using only command line arguments."))
+                               "does not exist, using only command line arguments."),
+                      file=sys.stderr)
 
     def load(self) -> None:
         self._load_command_line_args()
