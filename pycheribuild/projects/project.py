@@ -226,9 +226,9 @@ class MakeOptions(object):
             cmake_version = get_program_version(Path(shutil.which(self.command) or "cmake"), config=config)
             if jobs:
                 # -j added in 3.12: https://cmake.org/cmake/help/latest/release/3.12.html#command-line
-                assert cmake_version >= (3, 12, 0)
-                result.extend(["-j", str(jobs)])
-                jobs = None  # don't pass the flag to the build tool again
+                if cmake_version < (3, 12, 0):
+                    result.extend(["-j", str(jobs)])
+                    jobs = None  # don't pass the flag to the build tool again
             if verbose:
                 # --verbose added in 3.14: https://cmake.org/cmake/help/latest/release/3.14.html#command-line
                 if cmake_version >= (3, 14, 0):
