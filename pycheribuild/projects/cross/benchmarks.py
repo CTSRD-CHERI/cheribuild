@@ -33,8 +33,9 @@ import stat
 import tempfile
 from pathlib import Path
 
-from .crosscompileproject import (BenchmarkMixin, CompilationTargets, CrossCompileAutotoolsProject,
-                                  CrossCompileProject, DefaultInstallDir, GitRepository, MakeCommandKind)
+from .benchmark_mixin import BenchmarkMixin
+from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, CrossCompileProject,
+                                  DefaultInstallDir, GitRepository, MakeCommandKind)
 from .llvm_test_suite import BuildLLVMTestSuite, BuildLLVMTestSuiteBase
 from ..project import ExternallyManagedSourceRepository, ReuseOtherProjectRepository
 from ...config.target_info import CPUArchitecture
@@ -149,11 +150,11 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
             if not (benchmark_dir / "run_jenkins-bluehive.sh").exists():
                 self.fatal("Created invalid benchmark bundle...")
             num_iterations = self.config.benchmark_iterations or 10
-            self.target_info.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
-                                                benchmark_script_args=["-d1", "-r" + str(num_iterations), "-s",
-                                                                       self.benchmark_size,
-                                                                       "-o", self.default_statcounters_csv_name,
-                                                                       self.benchmark_version])
+            self.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
+                                    benchmark_script_args=["-d1", "-r" + str(num_iterations),
+                                                           "-s", self.benchmark_size,
+                                                           "-o", self.default_statcounters_csv_name,
+                                                           self.benchmark_version])
 
 
 class BuildMiBenchNew(BuildLLVMTestSuiteBase):
@@ -273,10 +274,10 @@ class BuildOlden(BenchmarkMixin, CrossCompileProject):
             if not (benchmark_dir / "run_jenkins-bluehive.sh").exists():
                 self.fatal("Created invalid benchmark bundle...")
             num_iterations = self.config.benchmark_iterations or 15
-            self.target_info.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
-                                                benchmark_script_args=["-d1", "-r" + str(num_iterations), "-o",
-                                                                       self.default_statcounters_csv_name,
-                                                                       self.test_arch_suffix])
+            self.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
+                                    benchmark_script_args=["-d1", "-r" + str(num_iterations), "-o",
+                                                           self.default_statcounters_csv_name,
+                                                           self.test_arch_suffix])
 
 
 class BuildSpec2006(BenchmarkMixin, CrossCompileProject):
@@ -525,11 +526,10 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
                               self.bluehive_benchmark_script_archname]
             if self.config.run_under_gdb:
                 benchmark_args.insert(0, "-g")
-            self.target_info.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
-                                                # The benchmarks take a long time to run -> allow up to a 3 hours per
-                                                # iteration
-                                                extra_runbench_args=["--timeout", str(60 * 60 * 3 * num_iterations)],
-                                                benchmark_script_args=benchmark_args)
+            self.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
+                                    # The benchmarks take a long time to run -> allow up to a 3 hours per iteration
+                                    extra_runbench_args=["--timeout", str(60 * 60 * 3 * num_iterations)],
+                                    benchmark_script_args=benchmark_args)
 
     def __check_valid_benchmark_list(self):
         for x in self.benchmark_list:

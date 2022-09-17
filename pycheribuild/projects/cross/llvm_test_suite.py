@@ -31,8 +31,9 @@ import shutil
 import typing
 from pathlib import Path
 
-from .crosscompileproject import (BenchmarkMixin, BuildType, CompilationTargets, CrossCompileCMakeProject,
-                                  DefaultInstallDir, GitRepository)
+from .benchmark_mixin import BenchmarkMixin
+from .crosscompileproject import (BuildType, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
+                                  GitRepository)
 from .llvm import BuildCheriLLVM, BuildUpstreamLLVM, BuildLLVMBase
 from ..project import ReuseOtherProjectRepository
 from ...utils import cached_property, is_jenkins_build

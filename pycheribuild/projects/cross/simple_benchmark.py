@@ -32,9 +32,10 @@ import tempfile
 from pathlib import Path
 
 from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
+from .benchmark_mixin import BenchmarkMixin
 
 
-class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):
+class BuildSimpleCheriBenchmarks(BenchmarkMixin, CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/arichardson/simple-cheri-benchmarks.git")
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     target = "simple-cheri-benchmarks"
@@ -68,7 +69,6 @@ class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):
             return
         with tempfile.TemporaryDirectory() as td:
             benchmarks_dir = self.create_test_dir(Path(td))
-            self.target_info.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
-                                                benchmark_script_args=["-d1", "-r10", "-o",
-                                                                       self.default_statcounters_csv_name,
-                                                                       "-a", self.archname_column])
+            self.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
+                                    benchmark_script_args=["-d1", "-r10", "-o", self.default_statcounters_csv_name,
+                                                           "-a", self.archname_column])

@@ -39,7 +39,7 @@ from ..simple_project import SimpleProject
 from ...config.compilation_targets import CompilationTargets
 from ...utils import AnsiColour, coloured
 
-__all__ = ["BenchmarkMixin", "CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",  # no-combine
+__all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",  # no-combine
            "CrossCompileTarget", "CrossCompileSimpleProject", "CrossCompileProject",  # no-combine
            "MakeCommandKind", "Linkage", "DefaultInstallDir", "BuildType", "CompilationTargets",  # no-combine
            "GitRepository", "CrossCompileMixin", "CrossCompileMakefileProject",  # no-combine
@@ -47,10 +47,8 @@ __all__ = ["BenchmarkMixin", "CheriConfig", "CrossCompileCMakeProject", "CrossCo
 
 
 if typing.TYPE_CHECKING:
-    _BenchmarkMixinBase = Project
     _CrossCompileMixinBase = SimpleProject
 else:
-    _BenchmarkMixinBase = object
     _CrossCompileMixinBase = object
 
 
@@ -65,20 +63,6 @@ class CrossCompileMixin(_CrossCompileMixinBase):
     # Add a (mostly) reasonable default for installation directories:
     native_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
-
-
-# We also build benchmarks for hybrid to see whether those compilation flags change the results
-class BenchmarkMixin(_BenchmarkMixinBase):
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID_FOR_PURECAP_ROOTFS + [
-        CompilationTargets.NATIVE]
-    default_build_type = BuildType.RELEASE
-    prefer_full_lto_over_thin_lto = True
-
-    @property
-    def optimization_flags(self):
-        if self.build_type.is_release:
-            return ["-O3"]
-        return super().optimization_flags
 
 
 class CrossCompileSimpleProject(CrossCompileMixin, SimpleProject):
