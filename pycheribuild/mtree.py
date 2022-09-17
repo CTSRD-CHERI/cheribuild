@@ -46,10 +46,10 @@ class MtreeEntry(object):
         self.path = path
         self.attributes = attributes
 
-    def is_dir(self):
+    def is_dir(self) -> bool:
         return self.attributes.get("type") == "dir"
 
-    def is_file(self):
+    def is_file(self) -> bool:
         return self.attributes.get("type") == "file"
 
     @classmethod
@@ -89,7 +89,7 @@ class MtreeEntry(object):
                         warning_message("Could not parse line", line, "in mtree file", mtree_file, e)
             return result
 
-    def __str__(self):
+    def __str__(self) -> str:
         def escape(s):
             # mtree uses strsvis(3) (in VIS_CSTYLE format) to encode path names containing non-printable characters.
             # Note: we only handle spaces here since we haven't seen any other special characters being use. If they do
@@ -97,7 +97,7 @@ class MtreeEntry(object):
             return s.replace(" ", "\\s")
         return escape(self.path) + " " + " ".join(k + "=" + shlex.quote(v) for k, v in self.attributes.items())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<MTREE entry: " + str(self) + ">"
 
 
@@ -157,7 +157,7 @@ class MtreeFile(object):
         return mtree_path
 
     @staticmethod
-    def infer_mode_string(path: Path, should_be_dir):
+    def infer_mode_string(path: Path, should_be_dir) -> str:
         try:
             result = "0{0:o}".format(stat.S_IMODE(path.lstat().st_mode))  # format as octal with leading 0 prefix
         except IOError as e:
@@ -221,7 +221,7 @@ class MtreeFile(object):
             assert src_symlink is None
             self.add_file(None, path_in_image, symlink_dest=str(symlink_dest), **kwargs)
 
-    def add_dir(self, path, mode=None, uname="root", gname="wheel", print_status=True, reference_dir=None):
+    def add_dir(self, path, mode=None, uname="root", gname="wheel", print_status=True, reference_dir=None) -> None:
         if isinstance(path, Path):
             path = str(path)
         assert not path.startswith("/")
@@ -256,11 +256,11 @@ class MtreeFile(object):
             status_update("Adding dir", path, "to mtree", file=sys.stderr)
         self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
 
-    def __contains__(self, item):
+    def __contains__(self, item) -> bool:
         mtree_path = self._ensure_mtree_path_fmt(str(item))
         return mtree_path in self._mtree
 
-    def exclude_matching(self, globs, exceptions=None, print_status=False):
+    def exclude_matching(self, globs, exceptions=None, print_status=False) -> None:
         """Remove paths matching any pattern in globs (but not matching any in exceptions)"""
         if exceptions is None:
             exceptions = []
@@ -285,7 +285,7 @@ class MtreeFile(object):
                 status_update("Deleting", path, "from mtree", file=sys.stderr)
             self._mtree.pop(path)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         import pprint
         return "<MTREE: " + pprint.pformat(self._mtree) + ">"
 

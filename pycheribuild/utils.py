@@ -60,56 +60,52 @@ Type_T = typing.TypeVar("Type_T")
 try:
     from typing import final
 except ImportError:
-    def final(f):
+    def final(f: Type_T) -> Type_T:
         return f
 
 
 # noinspection PyPep8Naming
-class classproperty(object):
-    def __init__(self, f):
+class classproperty(typing.Generic[Type_T]):
+    def __init__(self, f: "typing.Callable[[typing.Any], Type_T]") -> None:
         self.f = f
 
-    def __get__(self, obj, owner):
+    def __get__(self, obj, owner) -> Type_T:
         return self.f(owner)
 
 
 # Placeholder until config has been initialized.
-if typing.TYPE_CHECKING:
-    DoNotUseInIfStmt = bool
-else:
-    class DoNotUseInIfStmt:
-        def __bool__(self):
-            raise ValueError("Should not be used")
+class DoNotUseInIfStmt(bool if typing.TYPE_CHECKING else object):
+    def __bool__(self):
+        raise ValueError("Should not be used")
 
-        def __len__(self):
-            raise ValueError("Should not be used")
+    def __len__(self):
+        raise ValueError("Should not be used")
 
 
 class ConfigBase:
-    TEST_MODE = False
+    TEST_MODE: bool = False
 
-    def __init__(self, *, pretend: bool, verbose: bool, quiet: bool, force: bool):
+    def __init__(self, *, pretend: bool, verbose: bool, quiet: bool, force: bool) -> None:
         self.quiet = quiet
         self.verbose = verbose
         self.pretend = pretend
         self.force = force
-        self.internet_connection_last_checked_at = None  # type: typing.Optional[float]
+        self.internet_connection_last_checked_at: typing.Optional[float] = None
         self.internet_connection_last_check_result = False
 
 
-# noinspection PyTypeChecker
-GlobalConfig = ConfigBase(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt(),
-                          force=DoNotUseInIfStmt())
+GlobalConfig: ConfigBase = ConfigBase(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt(),
+                                      force=DoNotUseInIfStmt())
 
 
-def init_global_config(config: ConfigBase, *, test_mode: bool = False):
+def init_global_config(config: ConfigBase, *, test_mode: bool = False) -> None:
     global GlobalConfig
     GlobalConfig = config
     GlobalConfig.TEST_MODE = test_mode
     assert not (GlobalConfig.verbose and GlobalConfig.quiet), "mutually exclusive"
 
 
-def get_global_config():
+def get_global_config() -> ConfigBase:
     return GlobalConfig
 
 
@@ -119,24 +115,24 @@ if False and sys.version_info >= (3, 8, 0):
     pass
 else:
     # Note: this is a copy of the python 3.8.6 implementation with f-strings removed for python 3.5.2 compat.
-    _NOT_FOUND = object()
+    _NOT_FOUND: object = object()
 
     # noinspection PyPep8Naming
-    class cached_property:  # noqa: N801
-        def __init__(self, func):
+    class cached_property(typing.Generic[Type_T]):  # noqa: N801
+        def __init__(self, func: "typing.Callable[[typing.Any], Type_T]") -> None:
             self.func = func
             self.attrname = func.__name__ if sys.version_info < (3, 6) else None
             self.__doc__ = func.__doc__
             self.lock = RLock()
 
-        def __set_name__(self, _, name):  # XXX: requires python 3.6
+        def __set_name__(self, _, name) -> None:  # XXX: requires python 3.6
             if self.attrname is None:
                 self.attrname = name
             elif name != self.attrname:
                 raise TypeError("Cannot assign the same cached_property to two different names "
                                 "({} and {}).".format(self.attrname, name))
 
-        def __get__(self, instance, owner=None):
+        def __get__(self, instance, owner=None) -> Type_T:
             if instance is None:
                 return self
             if self.attrname is None:
@@ -188,7 +184,7 @@ def find_free_port(preferred_port: int = None) -> SocketAndPort:
     return SocketAndPort(s, s.getsockname()[1])
 
 
-def default_make_jobs_count():
+def default_make_jobs_count() -> typing.Optional[int]:
     make_jobs = os.cpu_count()
     if make_jobs > 24:
         # don't use up all the resources on shared build systems
@@ -203,23 +199,23 @@ def maybe_add_space(msg, sep) -> tuple:
     return msg,
 
 
-def status_update(*args, sep=" ", **kwargs):
+def status_update(*args, sep=" ", **kwargs) -> None:
     print(coloured(AnsiColour.cyan, *args, sep=sep), **kwargs)
 
 
-def fixit_message(*args, sep=" "):
+def fixit_message(*args, sep=" ") -> None:
     print(coloured(AnsiColour.blue, maybe_add_space("Possible solution:", sep) + args, sep=sep), file=sys.stderr,
           flush=True)
 
 
-def warning_message(*args, sep=" ", fixit_hint=None):
+def warning_message(*args, sep=" ", fixit_hint=None) -> None:
     # we ignore fatal errors when simulating a run
     print(coloured(AnsiColour.magenta, maybe_add_space("Warning:", sep) + args, sep=sep), file=sys.stderr, flush=True)
     if fixit_hint:
         fixit_message(fixit_hint)
 
 
-_ERROR_CONTEXT = []
+_ERROR_CONTEXT: "list[str]" = []
 
 
 @contextlib.contextmanager
@@ -243,14 +239,15 @@ def _add_error_context(prefix, args, sep) -> "str":
     return coloured(AnsiColour.red, maybe_add_space(prefix + ":", sep) + args, sep=sep)
 
 
-def error_message(*args, sep=" ", fixit_hint=None):
+def error_message(*args, sep=" ", fixit_hint=None) -> None:
     # we ignore fatal errors when simulating a run
     print(_add_error_context("Error", args, sep=sep), file=sys.stderr, flush=True)
     if fixit_hint:
         fixit_message(fixit_hint)
 
 
-def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exit_code=3, pretend: bool = None):
+def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exit_code=3,
+                pretend: bool = None) -> None:
     if pretend is None:
         pretend = GlobalConfig.pretend  # TODO: remove
     # we ignore fatal errors when simulating a run
@@ -296,7 +293,7 @@ def include_local_file(path: str) -> str:
         return f.read()
 
 
-def have_working_internet_connection(config: ConfigBase):
+def have_working_internet_connection(config: ConfigBase) -> bool:
     if config.TEST_MODE:
         return True
     current_check_time = time.time()
@@ -331,7 +328,7 @@ def have_working_internet_connection(config: ConfigBase):
         return result
 
 
-def is_case_sensitive_dir(d: Path):
+def is_case_sensitive_dir(d: Path) -> bool:
     if not d.exists():
         # assume true for macos:
         if OSInfo.IS_MAC:
@@ -359,7 +356,7 @@ class InstallInstructions:
         self.cheribuild_target = cheribuild_target
         self._alternative = alternative
 
-    def fixit_hint(self):
+    def fixit_hint(self) -> str:
         if callable(self._message):
             result = self._message()
         else:
@@ -377,25 +374,25 @@ class InstallInstructions:
 
 
 class OSInfo(object):
-    IS_LINUX = sys.platform.startswith("linux")
-    IS_FREEBSD = sys.platform.startswith("freebsd")
-    IS_MAC = sys.platform.startswith("darwin")
-    __os_release_cache = None
+    IS_LINUX: bool = sys.platform.startswith("linux")
+    IS_FREEBSD: bool = sys.platform.startswith("freebsd")
+    IS_MAC: bool = sys.platform.startswith("darwin")
+    __os_release_cache: "typing.Optional[dict[str, str]]" = None
 
     @classmethod
-    def is_ubuntu(cls):
+    def is_ubuntu(cls) -> bool:
         return cls.__is_linux_distribution("ubuntu")
 
     @classmethod
-    def is_suse(cls):
+    def is_suse(cls) -> bool:
         return cls.__is_linux_distribution("suse") or cls.__is_linux_distribution("opensuse")
 
     @classmethod
-    def is_debian(cls):
+    def is_debian(cls) -> bool:
         return cls.__is_linux_distribution("debian")
 
     @classmethod
-    def is_cheribsd(cls):
+    def is_cheribsd(cls) -> bool:
         return cls.IS_FREEBSD and cls.etc_os_release().get("ID", "") == "cheribsd"
 
     @classmethod
@@ -405,13 +402,13 @@ class OSInfo(object):
         return kind in cls.etc_os_release().get("ID", "") or kind in cls.etc_os_release().get("ID_LIKE", "")
 
     @staticmethod
-    def etc_os_release() -> dict:
+    def etc_os_release() -> "dict[str, str]":
         if OSInfo.__os_release_cache is None:
             OSInfo.__os_release_cache = OSInfo.__parse_etc_os_release()
         return OSInfo.__os_release_cache
 
     @staticmethod
-    def __parse_etc_os_release() -> dict:
+    def __parse_etc_os_release() -> "dict[str, str]":
         if not Path("/etc/os-release").exists():
             return {}
         with Path("/etc/os-release").open(encoding="utf-8") as f:
@@ -423,7 +420,7 @@ class OSInfo(object):
         return d
 
     @classmethod
-    def package_manager(cls):
+    def package_manager(cls) -> str:
         if cls.IS_MAC:
             return "brew"
         elif cls.IS_FREEBSD:
@@ -485,11 +482,11 @@ class OSInfo(object):
                                        cheribuild_target, alternative)
 
     @classmethod
-    def uses_apt(cls):
+    def uses_apt(cls) -> bool:
         return cls.is_debian() or cls.is_ubuntu()
 
     @classmethod
-    def uses_zypper(cls):
+    def uses_zypper(cls) -> bool:
         return cls.is_suse()
 
 
@@ -497,11 +494,11 @@ class ThreadJoiner(object):
     def __init__(self, thread: "typing.Optional[threading.Thread]"):
         self.thread = thread
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         if self.thread is not None:
             self.thread.start()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, *args) -> None:
         if self.thread is not None:
             if self.thread.is_alive():
                 status_update("Waiting for '", self.thread.name, "' to complete", sep="")
@@ -521,7 +518,7 @@ def remove_duplicates(items: "typing.Iterable[Type_T]") -> "list[Type_T]":
     return list(dict.fromkeys(items))
 
 
-def remove_prefix(s: str, prefix: str, prefix_required=False):
+def remove_prefix(s: str, prefix: str, prefix_required=False) -> str:
     if not s.startswith(prefix):
         if prefix_required:
             raise ValueError(s + " does not start with " + prefix)
@@ -534,4 +531,4 @@ def remove_prefix(s: str, prefix: str, prefix_required=False):
 #
 # https://stackoverflow.com/questions/17215400/python-format-string-unused-named-arguments
 class SafeDict(dict):
-    def __missing__(self, key): return '{' + key + '}'
+    def __missing__(self, key) -> str: return '{' + key + '}'

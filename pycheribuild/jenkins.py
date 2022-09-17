@@ -52,8 +52,8 @@ from .targets import SimpleTargetAlias, Target, target_manager
 from .processutils import get_program_version, run_and_kill_children_on_exit, run_command
 from .utils import fatal_error, init_global_config, OSInfo, status_update, ThreadJoiner, warning_message
 
-EXTRACT_SDK_TARGET = "extract-sdk"
-RUN_EVERYTHING_TARGET = "__run_everything__"
+EXTRACT_SDK_TARGET: str = "extract-sdk"
+RUN_EVERYTHING_TARGET: str = "__run_everything__"
 
 
 class JenkinsConfigLoader(ConfigLoaderBase):
@@ -61,12 +61,12 @@ class JenkinsConfigLoader(ConfigLoaderBase):
     A simple config loader that always returns the default value for all added options
     """
 
-    def load(self):
+    def load(self) -> None:
         self._load_command_line_args()
         assert isinstance(self._parsed_args.targets, list)
         self._parsed_args.verbose = True
 
-    def finalize_options(self, available_targets: list, **kwargs):
+    def finalize_options(self, available_targets: list, **kwargs) -> None:
         target_option = self._parser.add_argument(
             "targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE, help="The target to build",
             choices=available_targets + [EXTRACT_SDK_TARGET, RUN_EVERYTHING_TARGET])
@@ -83,7 +83,7 @@ class JenkinsConfigLoader(ConfigLoaderBase):
                 print_suppressed=True,  # also include target-specific options
                 )
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(CommandLineConfigOption)
 
 
@@ -96,7 +96,7 @@ class SdkArchive(object):
         self.required_globs = [] if required_globs is None else required_globs  # type: list
         self.extra_args = [] if extra_args is None else extra_args  # type: list
 
-    def extract(self):
+    def extract(self) -> None:
         assert self.archive.exists(), str(self.archive)
         self.cheri_config.FS.makedirs(self.output_dir)
         run_command(["tar", "xf", self.archive, "-C", self.output_dir] + self.extra_args,
@@ -117,7 +117,7 @@ class SdkArchive(object):
                     return False
         return True
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.archive)
 
 
@@ -182,7 +182,7 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[Sdk
                                        expected_bindir / "ld", relative=True)
 
 
-def create_sdk_from_archives(cheri_config: JenkinsConfig, needs_cheribsd_sysroot, extract_all: bool):
+def create_sdk_from_archives(cheri_config: JenkinsConfig, needs_cheribsd_sysroot, extract_all: bool) -> None:
     # If the archive is newer, delete the existing sdk unless --keep-sdk is passed install root:
     all_archives = get_sdk_archives(cheri_config, needs_cheribsd_sysroot=needs_cheribsd_sysroot)
     status_update("Will use the following SDK archives:", all_archives)
@@ -209,7 +209,7 @@ def create_sdk_from_archives(cheri_config: JenkinsConfig, needs_cheribsd_sysroot
         extract_sdk_archives(cheri_config, archives)
 
 
-def _jenkins_main():
+def _jenkins_main() -> None:
     os.environ["_CHERIBUILD_JENKINS_BUILD"] = "1"
     all_target_names = list(sorted(target_manager.target_names(None)))
     config_loader = JenkinsConfigLoader()
@@ -280,7 +280,7 @@ def _jenkins_main():
         create_tarball(cheri_config)
 
 
-def build_target(cheri_config, target: Target):
+def build_target(cheri_config, target: Target) -> None:
     # Note: This if exists for now to avoid a large diff.
     if True:
         target.check_system_deps(cheri_config)
@@ -311,7 +311,7 @@ def build_target(cheri_config, target: Target):
             target.run_tests(cheri_config)
 
 
-def create_tarball(cheri_config):
+def create_tarball(cheri_config) -> None:
     if True:  # Note: This if exists for now to avoid a large whitespace diff.
         bsdtar_path = shutil.which("bsdtar")
         tar_cmd = None
@@ -351,7 +351,7 @@ def create_tarball(cheri_config):
         run_command("du", "-sh", cheri_config.workspace / cheri_config.tarball_name)
 
 
-def strip_binaries(_: JenkinsConfig, project: SimpleProject, directory: Path):
+def strip_binaries(_: JenkinsConfig, project: SimpleProject, directory: Path) -> None:
     status_update("Tarball directory size before stripping ELF files:")
     run_command("du", "-sh", directory)
     for root, dirs, filelist in os.walk(str(directory)):
@@ -365,5 +365,5 @@ def strip_binaries(_: JenkinsConfig, project: SimpleProject, directory: Path):
     run_command("du", "-sh", directory)
 
 
-def jenkins_main():
+def jenkins_main() -> None:
     run_and_kill_children_on_exit(_jenkins_main)

@@ -39,7 +39,7 @@ from .utils import OSInfo, warning_message
 
 
 class QemuOptions:
-    def __init__(self, xtarget: CrossCompileTarget, want_debugger=False):
+    def __init__(self, xtarget: CrossCompileTarget, want_debugger=False) -> None:
         self.xtarget = xtarget
         self.virtio_disk = True
         self.force_virtio_blk_device = False
@@ -118,13 +118,13 @@ class QemuOptions:
         else:
             return ["-drive", "file=" + str(image) + ",format=" + image_format + ",index=0,media=disk"]
 
-    def can_use_virtio_network(self):
+    def can_use_virtio_network(self) -> bool:
         # We'd like to use virtio everwhere, but FreeBSD doesn't like it on BE mips.
         if self.xtarget.is_mips(include_purecap=True):
             return False
         return True
 
-    def _qemu_network_config(self):
+    def _qemu_network_config(self) -> "tuple[str, str]":
         if self.has_default_nic:
             assert self.xtarget.is_mips(include_purecap=True)
             return "pcnet", "le0"
@@ -138,10 +138,10 @@ class QemuOptions:
         else:
             return "virtio-net-pci", "em0"  # XXX: is vtnet0 correct?
 
-    def network_interface_name(self):
+    def network_interface_name(self) -> str:
         return self._qemu_network_config()[1]
 
-    def user_network_args(self, extra_options):
+    def user_network_args(self, extra_options) -> "list[str]":
         # We'd like to use virtio everwhere, but FreeBSD doesn't like it on BE mips.
         if self.has_default_nic:
             return ["-nic", "user,id=net0" + extra_options]
@@ -154,9 +154,9 @@ class QemuOptions:
 
     def get_commandline(self, *, qemu_command=None, kernel_file: Path = None, disk_image: Path = None,
                         disk_image_format: str = "raw", user_network_args: str = "", add_network_device=True,
-                        bios_args: "typing.List[str]" = None, trap_on_unrepresentable=False,
+                        bios_args: "list[str]" = None, trap_on_unrepresentable=False,
                         debugger_on_cheri_trap=False, add_virtio_rng=False, write_disk_image_changes=True,
-                        gui_options: "typing.List[str]" = None) -> "typing.List[str]":
+                        gui_options: "list[str]" = None) -> "list[str]":
         if kernel_file is None and disk_image is None:
             raise ValueError("Must pass kernel and/or disk image path when launching QEMU")
         if qemu_command is None:
@@ -199,7 +199,7 @@ def qemu_supports_9pfs(qemu: Path) -> bool:
     return b"-virtfs ?: Usage: -virtfs" in prog.stderr
 
 
-def riscv_bios_arguments(xtarget: CrossCompileTarget, _, prefer_bbl=True) -> typing.List[str]:
+def riscv_bios_arguments(xtarget: CrossCompileTarget, _, prefer_bbl=True) -> "list[str]":
     assert xtarget.is_riscv(include_purecap=True)
     if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
         # noinspection PyUnreachableCode

@@ -123,13 +123,13 @@ class TtyState:
             if self._isatty():
                 warning_message("Failed to query TTY flags for", context, "-", e)
 
-    def _isatty(self):
+    def _isatty(self) -> bool:
         try:
             return os.isatty(self.fd.fileno())
         except io.UnsupportedOperation:
             return False
 
-    def _restore_attrs(self):
+    def _restore_attrs(self) -> None:
         try:
             # Run drain first to ensure that we get the most recent state.
             termios.tcdrain(self.fd)
@@ -152,7 +152,7 @@ class TtyState:
             print("Previous state", self.attrs)
             print("New state", new_attrs)
 
-    def _restore_flags(self):
+    def _restore_flags(self) -> None:
         new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         if new_flags == self.flags:
             return
@@ -165,7 +165,7 @@ class TtyState:
             print("Previous flags", hex(self.flags))
             print("New flags", hex(new_flags))
 
-    def restore(self):
+    def restore(self) -> None:
         if self.attrs is not None:  # Not a TTY
             self._restore_attrs()
         if self.flags is not None:  # Not a real file?
@@ -255,7 +255,7 @@ def get_interpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.
             return None
 
 
-def _make_called_process_error(retcode, args, *, stdout=None, stderr=None, cwd=None):
+def _make_called_process_error(retcode, args, *, stdout=None, stderr=None, cwd=None) -> subprocess.CalledProcessError:
     err = subprocess.CalledProcessError(retcode, args, output=stdout, stderr=stderr)
     err.cwd = cwd
     return err
@@ -303,7 +303,7 @@ def scoped_open(*args, ignore_open_error, **kwargs):
 
 
 # https://stackoverflow.com/a/15257702/894271
-def _new_tty_foreground_process_group():
+def _new_tty_foreground_process_group() -> None:
     try:
         os.setpgrp()
     except Exception as e:
@@ -321,20 +321,20 @@ def _new_tty_foreground_process_group():
 
 # Python 3.7 has contextlib.nullcontext
 class FakePopen:
-    def kill(self):
+    def kill(self) -> None:
         pass
 
-    def terminate(self):
+    def terminate(self) -> None:
         pass
 
     @staticmethod
-    def poll():
+    def poll() -> int:
         return 0
 
-    def __enter__(self):
+    def __enter__(self) -> "FakePopen":
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args) -> None:
         pass
 
 
@@ -443,14 +443,14 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
 
 
 class DoNoQuoteStr:
-    def __init__(self, s):
+    def __init__(self, s: str) -> None:
         self.s = s
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.s
 
 
-def _quote(s):
+def _quote(s) -> str:
     return str(s) if isinstance(s, DoNoQuoteStr) else shlex.quote(str(s))
 
 
@@ -467,10 +467,10 @@ class CompilerInfo(object):
         self.version_str = version_str
         self.default_target = default_target
         self.config = config
-        self._resource_dir = None  # type: typing.Optional[Path]
-        self._supported_warning_flags = dict()  # type: dict[str, bool]
-        self._supported_sanitizer_flags = dict()  # type: dict[tuple[str, tuple[str]], bool]
-        self._include_dirs = dict()  # type: dict[tuple[str], list[Path]]
+        self._resource_dir: "typing.Optional[Path]" = None
+        self._supported_warning_flags: "dict[str, bool]" = {}
+        self._supported_sanitizer_flags: "dict[tuple[str, tuple[str]], bool]" = {}
+        self._include_dirs: "dict[tuple[str], list[Path]]" = {}
         assert compiler in ("unknown compiler", "clang", "apple-clang", "gcc"), "unknown type: " + compiler
 
     def get_resource_dir(self) -> Path:
@@ -520,7 +520,7 @@ class CompilerInfo(object):
             self._include_dirs[tuple(basic_flags)] = include_dirs
         return list(include_dirs)
 
-    def _supports_warning_flag(self, flag: str):
+    def _supports_warning_flag(self, flag: str) -> bool:
         assert flag.startswith("-W")
         try:
             result = run_command(self.path, flag, "-fsyntax-only", "-xc", "/dev/null", "-Werror=unknown-warning-option",
@@ -549,14 +549,14 @@ class CompilerInfo(object):
             self._supported_sanitizer_flags[(sanitzer_flag, tuple(arch_flags))] = result
         return result
 
-    def supports_warning_flag(self, flag: str):
+    def supports_warning_flag(self, flag: str) -> bool:
         result = self._supported_warning_flags.get(flag)
         if result is None:
             result = self._supports_warning_flag(flag)
             self._supported_warning_flags[flag] = result
         return result
 
-    def supports_Og_flag(self):
+    def supports_Og_flag(self) -> bool:
         if self.compiler == "gcc" and self.version > (4, 8, 0):
             return True
         if self.compiler == "clang" and self.version > (4, 0, 0):
@@ -585,7 +585,7 @@ class CompilerInfo(object):
         result.append("--ld-path=" + str(linker))
         return result
 
-    def get_matching_binutil(self, binutil):
+    def get_matching_binutil(self, binutil) -> typing.Optional[Path]:
         assert self.is_clang
         name = self.path.name
         version_suffix = ""
@@ -617,11 +617,11 @@ class CompilerInfo(object):
     def is_apple_clang(self):
         return self.compiler == "apple-clang"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{} ({} {})".format(self.path, self.compiler, ".".join(map(str, self.version)))
 
 
-_cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
+_cached_compiler_infos: "dict[Path, CompilerInfo]" = {}
 
 
 def get_compiler_info(compiler: "typing.Union[str, Path]", *, config: ConfigBase) -> CompilerInfo:

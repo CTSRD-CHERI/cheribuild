@@ -41,15 +41,15 @@ from .utils import AnsiColour, ConfigBase, fatal_error, status_update, ThreadJoi
 
 
 class FileSystemUtils(object):
-    def __init__(self, config: ConfigBase):
+    def __init__(self, config: ConfigBase) -> None:
         self.config = config
 
-    def makedirs(self, path: Path):
+    def makedirs(self, path: Path) -> None:
         print_command("mkdir", "-p", path, print_verbose_only=True)
         if not self.config.pretend and not path.is_dir():
             os.makedirs(str(path), exist_ok=True)
 
-    def _delete_directories(self, *dirs):
+    def _delete_directories(self, *dirs) -> None:
         # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
         # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
         run_command("rm", "-rf", *dirs)
@@ -74,7 +74,7 @@ class FileSystemUtils(object):
             self.path = path
             self.parent = parent
 
-        def run(self):
+        def run(self) -> None:
             try:
                 if self.parent.config.verbose:
                     status_update("Deleting", self.path, "asynchronously")
@@ -140,12 +140,12 @@ class FileSystemUtils(object):
             deleter_thread = FileSystemUtils.DeleterThread(self, tempdir)
         return ThreadJoiner(deleter_thread)
 
-    def copy_directory(self, src_path: Path, dst_path: Path):
+    def copy_directory(self, src_path: Path, dst_path: Path) -> None:
         print_command("cp", "-r", src_path, dst_path, print_verbose_only=True)
         if not self.config.pretend:
             shutil.copytree(str(src_path), str(dst_path))
 
-    def delete_file(self, file: Path, print_verbose_only=False, warn_if_missing=False):
+    def delete_file(self, file: Path, print_verbose_only=False, warn_if_missing=False) -> None:
         print_command("rm", "-f", file, print_verbose_only=print_verbose_only)
         if not file.is_file() and not file.is_symlink():
             if warn_if_missing:
@@ -156,7 +156,7 @@ class FileSystemUtils(object):
         file.unlink()
 
     @staticmethod
-    def _transfer_to_from_remote(src: str, dest: str):
+    def _transfer_to_from_remote(src: str, dest: str) -> None:
         # if we have rsync we can skip the copy if file is already up-to-date
         if shutil.which("rsync"):
             try:
@@ -171,15 +171,15 @@ class FileSystemUtils(object):
             run_command("scp", src, dest)
 
     @classmethod
-    def copy_remote_file(cls, remote_path: str, target_file: Path):
+    def copy_remote_file(cls, remote_path: str, target_file: Path) -> None:
         return cls._transfer_to_from_remote(remote_path, str(target_file))
 
-    def upload_file(self, target_file: Path, remote_host: str, remote_path: str):
+    def upload_file(self, target_file: Path, remote_host: str, remote_path: str) -> None:
         assert target_file.is_absolute(), target_file
         assert (self.config.pretend and not target_file.exists()) or target_file.is_file()
         return self._transfer_to_from_remote(str(target_file), remote_host + ":" + remote_path)
 
-    def upload_dir(self, target_dir: Path, remote_host: str, remote_path: str):
+    def upload_dir(self, target_dir: Path, remote_host: str, remote_path: str) -> None:
         assert target_dir.is_absolute(), target_dir
         assert (self.config.pretend and not target_dir.exists()) or target_dir.is_dir()
         assert remote_path.startswith("/"), remote_path
@@ -250,7 +250,7 @@ class FileSystemUtils(object):
         if srcs:
             run_command("ln", "-fs", *srcs, str(destdir) + "/", cwd=cwd, print_verbose_only=print_verbose_only)
 
-    def move_file(self, src: Path, dest: Path, force=False, create_dirs=True):
+    def move_file(self, src: Path, dest: Path, force=False, create_dirs=True) -> None:
         if not src.exists():
             fatal_error(src, "doesn't exist")
         cmd = ["mv", "-f"] if force else ["mv"]
@@ -258,7 +258,8 @@ class FileSystemUtils(object):
             self.makedirs(dest.parent)
         run_command(cmd + [str(src), str(dest)])
 
-    def install_file(self, src: Path, dest: Path, *, force=False, create_dirs=True, print_verbose_only=True, mode=None):
+    def install_file(self, src: Path, dest: Path, *, force=False, create_dirs=True, print_verbose_only=True,
+                     mode=None) -> None:
         if force:
             print_command("cp", "-f", src, dest, print_verbose_only=print_verbose_only)
         else:
@@ -295,7 +296,7 @@ class FileSystemUtils(object):
             f.writelines(map(lambda line: line + '\n', lines))
             f.truncate()
 
-    def add_unique_line_to_file(self, file: Path, line: str):
+    def add_unique_line_to_file(self, file: Path, line: str) -> None:
         status_update("Adding '", line, "' to ", file, sep="")
         self.rewrite_file(file, lambda lines: lines if line in lines else (lines + [line]))
 
@@ -313,7 +314,7 @@ class FileSystemUtils(object):
         raise ValueError("Must override triple_prefixes_for_binaries to use create_triple_prefixed_symlinks!")
 
     def create_triple_prefixed_symlinks(self, tool_path: Path, tool_name: str = None,
-                                        create_unprefixed_link: bool = False, cwd: str = None):
+                                        create_unprefixed_link: bool = False, cwd: str = None) -> None:
         """
         Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
         for build tools like clang, ld, etc.
@@ -344,7 +345,7 @@ class FileSystemUtils(object):
 
     @staticmethod
     # Not cached since another target could write to this dir: @functools.lru_cache(maxsize=20)
-    def is_nonexistent_or_empty_dir(d: Path):
+    def is_nonexistent_or_empty_dir(d: Path) -> bool:
         # print("Checking if dir is empty:", d)
         if not d.exists():
             return True
@@ -355,7 +356,7 @@ class FileSystemUtils(object):
         return True
 
     @staticmethod
-    def realpath(p: Path):
+    def realpath(p: Path) -> Path:
         # TODO: Require 3.6 after Ubuntu 16.04 EOL (scheduled for April 30, 2021)
         # Python 3.5 always raises an exception for non-existent files.
         if sys.version_info > (3, 6):

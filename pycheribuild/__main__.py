@@ -51,15 +51,15 @@ from .targets import target_manager
 from .processutils import (get_program_version, print_command, run_and_kill_children_on_exit, run_command)
 from .utils import (AnsiColour, coloured, fatal_error, have_working_internet_connection, init_global_config,
                     status_update)
-DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent.parent]
+DIRS_TO_CHECK_FOR_UPDATES: "list[Path]" = [Path(__file__).parent.parent]
 
 
-def update_check(config: DefaultCheriConfig):
+def update_check(config: DefaultCheriConfig) -> None:
     for d in DIRS_TO_CHECK_FOR_UPDATES:
         _update_check(config, d)
 
 
-def _update_check(config: DefaultCheriConfig, d: Path):
+def _update_check(config: DefaultCheriConfig, d: Path) -> None:
     if not shutil.which("git"):
         return
     # Avoid update check if we don't have an internet connection
@@ -85,7 +85,7 @@ def _update_check(config: DefaultCheriConfig, d: Path):
             os.execv(sys.argv[0], sys.argv)
 
 
-def ensure_fd_is_blocking(fd):
+def ensure_fd_is_blocking(fd) -> None:
     flag = fcntl.fcntl(fd, fcntl.F_GETFL)
     if flag & os.O_NONBLOCK:
         # Try to unset the flag (this appears to happen on macOS sometimes):
@@ -95,13 +95,13 @@ def ensure_fd_is_blocking(fd):
         fatal_error("fd", fd, "is set to nonblocking and could not unset flag")
 
 
-def check_not_root():
+def check_not_root() -> None:
     if os.geteuid() == 0:
         fatal_error("You are running cheribuild as root. This is dangerous, bad practice and can cause builds to fail."
                     " Please re-run as a non-root user.", pretend=False)
 
 
-def real_main():
+def real_main() -> None:
     # avoid weird errors with macos terminal:
     ensure_fd_is_blocking(sys.stdin.fileno())
     ensure_fd_is_blocking(sys.stdout.fileno())
@@ -261,7 +261,7 @@ def real_main():
             target.run_benchmarks(cheri_config)
 
 
-def main():
+def main() -> None:
     try:
         run_and_kill_children_on_exit(real_main)
     except Exception as e:
