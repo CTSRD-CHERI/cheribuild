@@ -331,7 +331,7 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         return result
 
     def run_command_via_ssh(self, command: typing.List[str], *, stdout=None, stderr=None, check=True, verbose=False,
-                            use_controlmaster=False, **kwargs) -> subprocess.CompletedProcess:
+                            use_controlmaster=False, **kwargs) -> "subprocess.CompletedProcess[bytes]":
         assert self.ssh_port is not None
         ssh_command = ["ssh", "{user}@{host}".format(user=self.ssh_user, host="localhost"),
                        "-p", str(self.ssh_port),

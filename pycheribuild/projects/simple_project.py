@@ -608,7 +608,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
     def run_cmd(self, *args, capture_output=False, capture_error=False, input: typing.Union[str, bytes] = None,
                 timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
                 no_print=False, replace_env=False, give_tty_control=False,
-                **kwargs) -> subprocess.CompletedProcess[bytes]:
+                **kwargs) -> "subprocess.CompletedProcess[bytes]":
         return run_command(*args, capture_output=capture_output, capture_error=capture_error, input=input,
                            timeout=timeout, config=self.config, print_verbose_only=print_verbose_only,
                            run_in_pretend_mode=run_in_pretend_mode, raise_in_pretend_mode=raise_in_pretend_mode,
@@ -1112,7 +1112,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         script_dir = Path(__file__).parent.parent.parent / "test-scripts"  # no-combine
         return script_dir / script_name
 
-    def run_shell_script(self, script, shell="sh", **kwargs) -> subprocess.CompletedProcess[bytes]:
+    def run_shell_script(self, script, shell="sh", **kwargs) -> "subprocess.CompletedProcess[bytes]":
         print_args = dict(**kwargs)
         # Remove kwargs not supported by print_command
         print_args.pop("capture_output", None)
