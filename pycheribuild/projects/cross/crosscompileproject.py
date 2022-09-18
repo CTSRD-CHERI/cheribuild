@@ -33,9 +33,9 @@ import typing
 from pathlib import Path
 
 from ..cmake_project import CMakeProject
-from ..project import (AutotoolsProject, BuildType, CheriConfig, commandline_to_str, CrossCompileTarget,
-                       DefaultInstallDir, GitRepository, Linkage, MakeCommandKind, MakefileProject, MesonProject,
-                       Project, SubversionRepository)
+from ..meson_project import MesonProject
+from ..project import (AutotoolsProject, BuildType, CheriConfig, commandline_to_str, CrossCompileTarget, GitRepository,
+                       DefaultInstallDir, Linkage, MakeCommandKind, MakefileProject, Project, SubversionRepository)
 from ..simple_project import SimpleProject
 from ...config.compilation_targets import CompilationTargets
 from ...utils import AnsiColour, coloured
