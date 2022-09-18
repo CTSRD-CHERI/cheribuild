@@ -33,10 +33,19 @@
 from .cmake_project import CMakeProject
 from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository,
                       MakeCommandKind, ReuseOtherProjectDefaultTargetRepository)
+from .cross.crosscompileproject import CrossCompileAutotoolsProject
 from ..config.chericonfig import BuildType
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..targets import target_manager
 from ..utils import replace_one
+
+
+# CMake uses libuv, which currently causes CTest to crash.
+# We should fix this in libuv, and build against the system libuv until the change has been upstreamed and CMake has
+# pulled in the fixes.
+class BuildLibuv(CrossCompileAutotoolsProject):
+    target = "libuv"
+    repository = GitRepository("https://github.com/libuv/libuv.git")
 
 
 # Not really autotools but same sequence of commands (other than the script being call bootstrap instead of configure)
