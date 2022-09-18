@@ -98,7 +98,7 @@ class _AdditionalFileTemplates(object):
 
 
 def _default_disk_image_name(config: CheriConfig, directory: Path, project: "BuildDiskImageBase"):
-    xtarget = project.get_crosscompile_target(config)
+    xtarget = project.get_crosscompile_target()
     if project.use_qcow2:
         suffix = "qcow2"
     else:
@@ -136,7 +136,7 @@ class BuildDiskImageBase(SimpleProject):
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
-        return [cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
+        return [cls._source_class.get_class_for_target(cls.get_crosscompile_target()).target]
 
     @classmethod
     def setup_config_options(cls, *, default_hostname, extra_files_suffix="", **kwargs):
@@ -201,7 +201,7 @@ class BuildDiskImageBase(SimpleProject):
         self.big_endian = self.compiling_for_mips(include_purecap=True)
 
     def _get_source_class_target(self, config):
-        return self.get_crosscompile_target(config)
+        return self.get_crosscompile_target()
 
     def add_file_to_image(self, file: Path, *, base_directory: Path = None, user="root", group="wheel", mode=None,
                           path_in_target=None, strip_binaries: bool = None):
@@ -447,7 +447,7 @@ class BuildDiskImageBase(SimpleProject):
         if not self.include_gdb and not self.include_kgdb:
             return
         # FIXME: if /usr/local/bin/gdb is in the image make /usr/bin/gdb a symlink
-        cross_target = self.source_project.get_crosscompile_target(self.config)
+        cross_target = self.source_project.crosscompile_target
         if cross_target.is_cheri_purecap():
             cross_target = cross_target.get_cheri_hybrid_for_purecap_rootfs_target()
         if cross_target not in BuildGDB.supported_architectures:
@@ -1370,7 +1370,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config)
         # GDB is not strictly a dependency, but having it in the disk image makes life a lot easier
-        xtarget = cls.get_crosscompile_target(config)
+        xtarget = cls.get_crosscompile_target()
         gdb_xtarget = xtarget.get_cheri_hybrid_for_purecap_rootfs_target() if xtarget.is_cheri_purecap() else xtarget
         result.append(BuildGDB.get_class_for_target(gdb_xtarget).target)
         return result
@@ -1385,7 +1385,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
 
 
 def _default_tar_name(config: CheriConfig, directory: Path, project: "BuildDiskImageBase"):
-    xtarget = project.get_crosscompile_target(config)
+    xtarget = project.get_crosscompile_target()
     return directory / (project.disk_image_prefix + project.build_configuration_suffix(xtarget) + ".tar.xz")
 
 

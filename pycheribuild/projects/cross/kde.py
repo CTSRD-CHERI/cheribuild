@@ -215,7 +215,7 @@ class BuildKWayland(KDECMakeProject):
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config) + ["libglvnd", "wayland-protocols", "qtwayland",
                                                  "plasma-wayland-protocols"]
-        if cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
+        if cls.get_crosscompile_target().target_info_cls.is_freebsd():
             result.append("linux-input-h")
         return result
 
@@ -368,7 +368,7 @@ class BuildKDBusAddons(KDECMakeProject):
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        if cls.get_crosscompile_target(config).target_info_cls.is_macos():
+        if cls.get_crosscompile_target().target_info_cls.is_macos():
             return super().dependencies(config)
         return super().dependencies(config) + ["qtx11extras"]
 
@@ -378,7 +378,7 @@ class BuildKGuiAddons(KDECMakeProject):
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        if cls.get_crosscompile_target(config).target_info_cls.is_macos():
+        if cls.get_crosscompile_target().target_info_cls.is_macos():
             return super().dependencies(config)
         return super().dependencies(config) + ["qtx11extras"]
 
@@ -425,7 +425,7 @@ class BuildKWindowSystem(KDECMakeProject):
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        if cls.get_crosscompile_target(config).target_info_cls.is_macos():
+        if cls.get_crosscompile_target().target_info_cls.is_macos():
             return super().dependencies(config)
         return super().dependencies(config) + ["qtx11extras", "libxfixes", "libxrender"]
 
@@ -507,7 +507,7 @@ class BuildKNotifications(KDECMakeProject):
     def dependencies(cls, config) -> "list[str]":
         result = ["qtdeclarative", "kwindowsystem", "kconfig", "kconfig-native", "kcoreaddons", "kcoreaddons-native",
                   "phonon"]
-        if cls.get_crosscompile_target(config).target_info_cls.is_macos():
+        if cls.get_crosscompile_target().target_info_cls.is_macos():
             return result + ["qtmacextras"]
         return result + ["qtx11extras"]
 
@@ -613,7 +613,7 @@ class BuildKGlobalAccel(KDECMakeProject):
     @classmethod
     def dependencies(cls, config) -> "list[str]":
         result = ["kconfig", "kconfig-native", "kcrash", "kdbusaddons", "kwindowsystem"]
-        if not cls.get_crosscompile_target(config).target_info_cls.is_macos():
+        if not cls.get_crosscompile_target().target_info_cls.is_macos():
             result += ["qtx11extras", "libxcb"]
         return result
 
@@ -822,7 +822,7 @@ class BuildKIdleTime(KDECMakeProject):
     @classmethod
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config)
-        if not cls.get_crosscompile_target(config).is_native():
+        if not cls.get_crosscompile_target().is_native():
             result.extend(["libxext", "libxcb", "qtx11extras"])
         return result
 
@@ -871,7 +871,7 @@ class BuildKWin(KDECMakeProject):
                                                  "lcms2"]
         if cls.use_mesa:
             result.append("mesa")
-        if cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
+        if cls.get_crosscompile_target().target_info_cls.is_freebsd():
             result.append("linux-input-h")
         return result
 

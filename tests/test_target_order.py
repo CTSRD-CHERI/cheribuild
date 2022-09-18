@@ -347,13 +347,13 @@ def test_hybrid_targets(enable_hybrid_targets):
     config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
     config.enable_hybrid_targets = enable_hybrid_targets
     all_hybrid_targets = [x for x in target_manager.targets(config) if
-                          x.project_class.get_crosscompile_target(config).is_cheri_hybrid()]
+                          x.project_class.get_crosscompile_target().is_cheri_hybrid()]
 
     def should_include_target(target: Target):
         cls = target.project_class
 
         # We allow hybrid for baremetal targets:
-        xtarget = cls.get_crosscompile_target(config)
+        xtarget = cls.get_crosscompile_target()
         if xtarget.target_info_cls.is_baremetal():
             return False
 

@@ -111,7 +111,7 @@ class BuildMtdev(CrossCompileAutotoolsProject):
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
-        if cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
+        if cls.get_crosscompile_target().target_info_cls.is_freebsd():
             return super().dependencies(config) + ["linux-input-h"]
         return super().dependencies(config)
 
@@ -154,7 +154,7 @@ class BuildLibInput(CrossCompileMesonProject):
     @classmethod
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config) + ["mtdev", "libevdev"]
-        if cls.get_crosscompile_target(config).target_info_cls.is_freebsd():
+        if cls.get_crosscompile_target().target_info_cls.is_freebsd():
             result.extend(["libudev-devd", "epoll-shim"])
         return result
 
@@ -254,7 +254,7 @@ class BuildWayland(CrossCompileMesonProject):
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         deps = super().dependencies(config)
-        target = cls.get_crosscompile_target(config)
+        target = cls.get_crosscompile_target()
         if not target.is_native() or target.target_info_cls.is_cheribsd():
             # For native (non-CheriBSD) builds we use the host libraries
             deps.extend(["libexpat", "libffi", "libxml2"])

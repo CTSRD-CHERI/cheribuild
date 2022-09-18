@@ -51,7 +51,7 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
 
     @classmethod
     def llvm_project(cls, config) -> typing.Type[BuildLLVMBase]:
-        target_info = cls.get_crosscompile_target(config).target_info_cls
+        target_info = cls.get_crosscompile_target().target_info_cls
         if issubclass(target_info, FreeBSDTargetInfo):
             # noinspection PyProtectedMember
             return target_info._get_compiler_project()

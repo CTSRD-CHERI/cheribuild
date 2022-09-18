@@ -44,7 +44,7 @@ class BuildCheriBSDSdk(TargetAliasWithDependencies):
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
-        if cls.get_crosscompile_target(config).is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+        if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             deps = ["freestanding-morello-sdk"]
         else:
             deps = ["freestanding-cheri-sdk"]

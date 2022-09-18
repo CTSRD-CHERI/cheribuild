@@ -184,7 +184,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
 
 
 def _default_ssh_port(c, p: CMakeProject):
-    xtarget = p.get_crosscompile_target(c)
+    xtarget = p.get_crosscompile_target()
     if not xtarget.target_info_cls.is_cheribsd():
         return None
     return LaunchCheriBSD.get_instance(p, c, cross_target=xtarget.get_rootfs_target()).ssh_forwarding_port

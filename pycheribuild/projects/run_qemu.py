@@ -207,7 +207,7 @@ class LaunchQEMUBase(SimpleProject):
         if cls._cached_chosen_qemu:
             return cls._cached_chosen_qemu
 
-        xtarget = cls.get_crosscompile_target(config)
+        xtarget = cls.get_crosscompile_target()
         can_provide_src_via_smb = False
         supported_qemu_classes = []
         if xtarget.is_mips(include_purecap=True) or xtarget.is_riscv(include_purecap=True):
@@ -677,7 +677,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
 
     @classmethod
     def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "list[str]":
-        xtarget = cls.get_crosscompile_target(config)
+        xtarget = cls.get_crosscompile_target()
         result = []
         chosen_qemu = cls.get_chosen_qemu(config)
         if chosen_qemu.cls:
@@ -725,8 +725,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         result = super().dependencies(config)
         # RISCV needs OpenSBI/BBL to run:
         # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):
-        xtarget = cls.get_crosscompile_target(config)
-        if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+        if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             result.append("bbl-baremetal-riscv64-purecap")
         return result
 

@@ -276,7 +276,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
             include_toolchain_dependencies = False  # --skip-sdk means skip toolchain and skip sysroot
         assert cls._xtarget is not None
         dependencies = cls.dependencies
-        expected_build_arch = cls.get_crosscompile_target(config)
+        expected_build_arch = cls.get_crosscompile_target()
         assert expected_build_arch is not None
         assert cls._xtarget is not None
         if expected_build_arch is None or cls._xtarget is None:
@@ -437,10 +437,10 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
             if config is None:
                 config = caller.config
             if cross_target is None:
-                cross_target = caller.get_crosscompile_target(config)
+                cross_target = caller.get_crosscompile_target()
         else:
             if cross_target is None:
-                cross_target = cls.get_crosscompile_target(config)
+                cross_target = cls.get_crosscompile_target()
             assert config is not None, "Need either caller or config argument!"
         return cls.get_instance_for_cross_target(cross_target, config, caller=caller)
 
@@ -453,7 +453,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         target = target_manager.get_target(root_class.target, cross_target, config, caller=caller)
         result = target.get_or_create_project(cross_target, config)
         assert isinstance(result, SimpleProject)
-        found_target = result.get_crosscompile_target(config)
+        found_target = result.get_crosscompile_target()
         # XXX: FIXME: add cross target to every call
         assert cross_target is not None
         if cross_target is not None:
@@ -467,7 +467,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
 
     @property
     def crosscompile_target(self):
-        return self.get_crosscompile_target(self.config)
+        return self.get_crosscompile_target()
 
     def get_host_triple(self):
         compiler = self.get_compiler_info(self.host_CC)
@@ -537,7 +537,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         """
         config = self.config
         if target is None:
-            target = self.get_crosscompile_target(config)
+            target = self.get_crosscompile_target()
         result = ""
         if self.build_dir_suffix:
             result += self.build_dir_suffix
@@ -759,7 +759,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         # Check that the target actually exists
         tgt = target_manager.get_target(cheribuild_target, None, config=self.config, caller=self)
         # And check that it's a native target:
-        if not tgt.project_class.get_crosscompile_target(self.config).is_native():
+        if not tgt.project_class.get_crosscompile_target().is_native():
             self.fatal("add_required_*() should use a native cheribuild target and not ", cheribuild_target,
                        "- found while processing", self.target, fatal_when_pretending=True)
 

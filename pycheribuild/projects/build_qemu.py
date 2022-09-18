@@ -87,10 +87,10 @@ class BuildQEMUBase(AutotoolsProject):
             if config is None:
                 config = caller.config
             if xtarget is None:
-                xtarget = caller.get_crosscompile_target(config)
+                xtarget = caller.get_crosscompile_target()
         else:
             if xtarget is None:
-                xtarget = cls.get_crosscompile_target(config)
+                xtarget = cls.get_crosscompile_target()
             assert config is not None, "Need either caller or config argument!"
         return cls.qemu_binary_for_target(xtarget, config)
 

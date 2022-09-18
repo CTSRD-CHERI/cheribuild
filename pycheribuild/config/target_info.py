@@ -152,7 +152,7 @@ class AbstractProject(FileSystemUtils):
         fatal_error(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending)
 
     @classmethod
-    def get_crosscompile_target(cls, config: CheriConfig) -> "CrossCompileTarget":
+    def get_crosscompile_target(cls) -> "CrossCompileTarget":
         target = cls._xtarget
         if target is not None:
             return target

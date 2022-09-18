@@ -153,7 +153,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         deps = super().dependencies(config)
-        rootfs_target = cls.get_crosscompile_target(config).get_rootfs_target()
+        rootfs_target = cls.get_crosscompile_target().get_rootfs_target()
         deps.append(BuildSharedMimeInfo.get_class_for_target(rootfs_target).target)
         deps.append("sqlite")  # TODO: minimal should probably not include QtSql
         if cls.minimal:
@@ -164,12 +164,12 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                          "libsm", "libxext", "libxtst", "libxcb-render-util", "libxcb-wm", "libxcb-keysyms"])
         # Always use our patched image/sql libraries instead of the host ones:
         deps.extend(["libpng", "libjpeg-turbo"])
-        if not cls.get_crosscompile_target(config).is_native():
+        if not cls.get_crosscompile_target().is_native():
             # We can only depend on fonts when installing to a rootfs, as those need to be installed to a directory
             # that is only writable by root.
             deps.extend([InstallDejaVuFonts.get_class_for_target(rootfs_target).target])
         # For non-macOS we need additional libraries for GUI and openGL parts.
-        if not cls.get_crosscompile_target(config).target_info_cls.is_macos():
+        if not cls.get_crosscompile_target().target_info_cls.is_macos():
             deps.extend(["dbus", "fontconfig", "libinput"])
             if cls.use_opengl:
                 deps.extend(["libglvnd", "libdrm"])

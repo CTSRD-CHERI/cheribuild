@@ -72,8 +72,7 @@ def install_dir_not_specified(_: CheriConfig, project: "Project"):
 
 def _default_build_dir(config: CheriConfig, project: "SimpleProject"):
     assert isinstance(project, Project)
-    target = project.get_crosscompile_target(config)
-    return project.build_dir_for_target(target)
+    return project.build_dir_for_target(project.crosscompile_target)
 
 
 class MakeCommandKind(Enum):
@@ -454,7 +453,7 @@ class Project(SimpleProject):
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
-        if cls.needs_native_build_for_crosscompile and not cls.get_crosscompile_target(config).is_native():
+        if cls.needs_native_build_for_crosscompile and not cls.get_crosscompile_target().is_native():
             return [cls.get_class_for_target(BasicCompilationTargets.NATIVE).target]
         return []
 
@@ -1511,7 +1510,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                                                                     caller=self)
                 if self.config.verbose:
                     self.info(self.target, "install dir for", xtarget.name, "is", self.install_dir)
-                    other_xtarget = other_instance.get_crosscompile_target(self.config)
+                    other_xtarget = other_instance.crosscompile_target
                     self.info(self.target, "install dir for", other_xtarget.name, "is", self.install_dir)
                 assert other_instance.install_dir != self.install_dir, \
                     other_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(

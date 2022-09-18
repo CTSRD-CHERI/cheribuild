@@ -54,8 +54,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         result = super().dependencies(config)
         if cls.kernel_class:
-            xtarget = cls.get_crosscompile_target(config)
-            result.append(cls.kernel_class.get_class_for_target(xtarget).target)
+            result.append(cls.kernel_class.get_class_for_target(cls.get_crosscompile_target()).target)
         return result
 
     def setup(self):

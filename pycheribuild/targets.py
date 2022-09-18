@@ -109,7 +109,7 @@ class Target(object):
         # instantiate the project and run it
         starttime = time.time()
         with add_error_context(coloured(AnsiColour.yellow, "(in target ", self.name, ")", sep="")):
-            project = self.get_or_create_project(self.project_class.get_crosscompile_target(config), config)
+            project = self.get_or_create_project(self.project_class.get_crosscompile_target(), config)
             # noinspection PyProtectedMember
             if not project._setup_called:
                 project.setup()
