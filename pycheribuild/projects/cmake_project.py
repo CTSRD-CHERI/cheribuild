@@ -363,5 +363,5 @@ class MakefileProject(Project):
         else:
             self.make_args.set_env(**{var: value})
 
-    def _do_generate_cmakelists(self) -> typing.NoReturn:
+    def _do_generate_cmakelists(self) -> "typing.NoReturn":
         raise ValueError(f"Should not be called for CMake project {self.target}")

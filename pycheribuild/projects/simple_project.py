@@ -71,7 +71,7 @@ def flush_stdio(stream) -> None:
                 time.sleep(0.1)
 
 
-def _default_stdout_filter(_: bytes) -> typing.NoReturn:
+def _default_stdout_filter(_: bytes) -> "typing.NoReturn":
     raise NotImplementedError("Should never be called, this is a dummy")
 
 
