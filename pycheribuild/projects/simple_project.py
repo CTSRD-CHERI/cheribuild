@@ -201,7 +201,7 @@ def _cached_get_homebrew_prefix(package: "typing.Optional[str]", config: CheriCo
 _clear_line_sequence: bytes = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
 
 
-class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
+class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING else ProjectSubclassDefinitionHook):
     _commandline_option_group: typing.Any = None
     _config_loader: ConfigLoaderBase = None
 
@@ -476,32 +476,32 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
 
     # noinspection PyPep8Naming
     @property
-    def CC(self):
+    def CC(self) -> Path:
         return self.target_info.c_compiler
 
     # noinspection PyPep8Naming
     @property
-    def CXX(self):
+    def CXX(self) -> Path:
         return self.target_info.cxx_compiler
 
     # noinspection PyPep8Naming
     @property
-    def CPP(self):
+    def CPP(self) -> Path:
         return self.target_info.c_preprocessor
 
     # noinspection PyPep8Naming
     @property
-    def host_CC(self):
+    def host_CC(self) -> Path:
         return TargetInfo.host_c_compiler(self.config)
 
     # noinspection PyPep8Naming
     @property
-    def host_CXX(self):
+    def host_CXX(self) -> Path:
         return TargetInfo.host_cxx_compiler(self.config)
 
     # noinspection PyPep8Naming
     @property
-    def host_CPP(self):
+    def host_CPP(self) -> Path:
         return TargetInfo.host_c_preprocessor(self.config)
 
     @property
@@ -552,7 +552,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         return result
 
     @property
-    def triple_arch(self):
+    def triple_arch(self) -> str:
         target_triple = self.target_info.target_triple
         return target_triple[:target_triple.find("-")]
 
@@ -569,7 +569,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         return self.target_info.sdk_root_dir / "bin"
 
     @property
-    def display_name(self):
+    def display_name(self) -> str:
         if self._xtarget is None:
             return self.target + " (target alias)"
         return self.target + " (" + self._xtarget.build_suffix(self.config,
@@ -599,7 +599,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         raise LookupError("Invalid arch " + str(arch) + " for class " + str(cls))
 
     @property
-    def cross_sysroot_path(self):
+    def cross_sysroot_path(self) -> Path:
         assert self.target_info is not None, "called from invalid class " + str(self.__class__)
         return self.target_info.sysroot_dir
 

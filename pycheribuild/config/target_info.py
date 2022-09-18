@@ -172,7 +172,7 @@ class TargetInfo(ABC):
         self.project = project
 
     @property
-    def cmake_processor_id(self):
+    def cmake_processor_id(self) -> str:
         if self.target.is_mips(include_purecap=True):
             if self.target.is_cheri_purecap():
                 return "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.mips_cheri_bits_str)
@@ -180,7 +180,7 @@ class TargetInfo(ABC):
                 return "BERI (MIPS IV compatible)"
         if self.target.is_aarch64(include_purecap=True):
             return "ARM64"
-        return self.target.cpu_architecture.value
+        return str(self.target.cpu_architecture.value)
 
     @property
     @abstractmethod
@@ -270,7 +270,7 @@ class TargetInfo(ABC):
     @abstractmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
                                                  perform_sanity_checks=True, default_flags_only=False,
-                                                 softfloat: bool = None):
+                                                 softfloat: bool = None) -> list[str]:
         """
         :return: flags such as -target + -mabi which are needed for both compiler and linker
         """
@@ -278,13 +278,13 @@ class TargetInfo(ABC):
 
     def get_essential_compiler_and_linker_flags(self, xtarget: "CrossCompileTarget" = None,
                                                 perform_sanity_checks=True, default_flags_only=False,
-                                                softfloat: bool = None):
+                                                softfloat: bool = None) -> list[str]:
         return self.essential_compiler_and_linker_flags_impl(self, perform_sanity_checks=perform_sanity_checks,
                                                              xtarget=xtarget if xtarget is not None else self.target,
                                                              default_flags_only=default_flags_only, softfloat=softfloat)
 
     @property
-    def additional_executable_link_flags(self):
+    def additional_executable_link_flags(self) -> list[str]:
         """Additional linker flags that need to be passed when building an executable (e.g. custom linker script)"""
         return []
 
@@ -332,7 +332,7 @@ class TargetInfo(ABC):
         return []  # whatever the default is
 
     @property
-    def install_prefix_dirname(self):
+    def install_prefix_dirname(self) -> str:
         """The name of the root directory to install to: i.e. for CheriBSD /usr/local/mips64-purecap or
         /usr/local/riscv64-hybrid"""
         result = self.target.generic_arch_suffix
@@ -345,7 +345,7 @@ class TargetInfo(ABC):
         return self.project.config
 
     @property
-    def must_link_statically(self):
+    def must_link_statically(self) -> bool:
         """E.g. for baremetal target infos we have to link statically (and add the -static linker flag)"""
         return False
 
@@ -457,11 +457,11 @@ class NativeTargetInfo(TargetInfo):
     os_prefix: str = ""  # Don't add an extra -native to target names
 
     @property
-    def sdk_root_dir(self):
+    def sdk_root_dir(self) -> Path:
         raise ValueError("Should not be called for native")
 
     @property
-    def sysroot_dir(self):
+    def sysroot_dir(self) -> Path:
         raise ValueError("Should not be called for native")
 
     @property
@@ -760,7 +760,7 @@ class CrossCompileTarget(object):
         assert self.target_info_cls is not None
         return self.target_info_cls.is_native()
 
-    def _check_arch(self, arch: CPUArchitecture, include_purecap: "typing.Optional[bool]"):
+    def _check_arch(self, arch: CPUArchitecture, include_purecap: "typing.Optional[bool]") -> bool:
         if self.cpu_architecture is not arch:
             return False
         if include_purecap is None:
