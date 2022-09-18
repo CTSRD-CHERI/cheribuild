@@ -1,6 +1,6 @@
 #!/bin/sh
 set -xe
-kind=${{1:-smb}}
+kind="${{1:-smb}}"
 if [ -n "$(ls -A "/nfsroot")" ]; then
     echo "/nfsroot is not empty. Already mounted?"
     exit 0
@@ -15,11 +15,11 @@ if [ "$kind" = "smb" ]; then
     else
         mkdir -p /outputroot && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/output_root /outputroot
     fi
-    test -L /nfsroot-nocheri || ln -sfnv /outputroot/{NOCHERI_ROOTFS_DIRNAME} /nfsroot-nocheri
-    test -L /nfsroot-hybrid  || ln -sfnv /outputroot/{HYBRID_ROOTFS_DIRNAME}  /nfsroot-hybrid
-    test -L /nfsroot-purecap || ln -sfnv /outputroot/{PURECAP_ROOTFS_DIRNAME} /nfsroot-purecap
+    test -L /nfsroot-nocheri || ln -sfnv "/outputroot/{NOCHERI_ROOTFS_DIRNAME}" /nfsroot-nocheri
+    test -L /nfsroot-hybrid  || ln -sfnv "/outputroot/{HYBRID_ROOTFS_DIRNAME}" /nfsroot-hybrid
+    test -L /nfsroot-purecap || ln -sfnv "/outputroot/{PURECAP_ROOTFS_DIRNAME}" /nfsroot-purecap
 elif [ "$kind" = "nfs" ]; then
-    mkdir -p /nfsroot && mount 10.0.2.2:{ROOTFS_DIR} /nfsroot/
+    mkdir -p /nfsroot && mount "10.0.2.2:{ROOTFS_DIR}" /nfsroot/
 else
     echo "usage: $0 [smb|nfs]"
 fi

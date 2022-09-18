@@ -1,6 +1,6 @@
 #!/bin/sh
 set -xe
-kind=${{1:-smb}}
+kind="${{1:-smb}}"
 if [ -n "$(ls -A "{SRCPATH}")" ]; then
     echo "{SRCPATH} is not empty. Already mounted?"
     exit 0
@@ -9,9 +9,9 @@ fi
 if [ "$kind" = "smb" ]; then
     # rootfs is provided as the first SMB mount, but we now have named smb mounts:
     # mkdir -p /nfsroot && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu1 /nfsroot
-    mkdir -p {SRCPATH} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/source_root {SRCPATH}
+    mkdir -p "{SRCPATH}" && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/source_root "{SRCPATH}"
 elif [ "$kind" = "nfs" ]; then
-    mkdir -p {SRCPATH} && mount -o ro 10.0.2.2:{SRCPATH} {SRCPATH}
+    mkdir -p "{SRCPATH}" && mount -o ro "10.0.2.2:{SRCPATH}" "{SRCPATH}"
 else
     echo "usage: $0 [smb|nfs]"
 fi

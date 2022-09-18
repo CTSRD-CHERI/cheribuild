@@ -18,4 +18,4 @@ fi
 
 umount /nfsroot
 echo "Rerooting from nfs:10.0.2.2:{ROOTFS_DIR}"
-kenv vfs.root.mountfrom=nfs:10.0.2.2:{ROOTFS_DIR} && reboot -r
+kenv "vfs.root.mountfrom=nfs:10.0.2.2:{ROOTFS_DIR}" && reboot -r
