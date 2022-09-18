@@ -403,9 +403,8 @@ class CommandLineConfigLoader(ConfigLoaderBase):
                                                                                      " the target-specific ones.")
 
     # noinspection PyShadowingBuiltins
-    def add_option(self, name: str, shortname=None, *,
-                   default: "Optional[Union[T, ComputedDefaultValue[T]]]" = None, group=None,
-                   type: "Union[type[T], Callable[[Any], T]]" = str, help_hidden=False, **kwargs) -> T:
+    def add_option(self, name: str, shortname=None, *, type: "Union[type[T], Callable[[str], T]]" = str,
+                   default: "Union[ComputedDefaultValue[T], T]" = None, group=None, help_hidden=False, **kwargs) -> T:
         if not self.is_needed_for_completion(name, shortname, type):
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
@@ -487,9 +486,11 @@ class CommandLineConfigLoader(ConfigLoaderBase):
     def targets(self) -> "list[str]":
         return self._parsed_args.targets
 
+    # noinspection PyUnresolvedReferences,PyProtectedMember
     def add_argument_group(self, description: str) -> "argparse._ArgumentGroup":
         return self._parser.add_argument_group(description)
 
+    # noinspection PyUnresolvedReferences,PyProtectedMember
     def add_mutually_exclusive_group(self) -> "argparse._MutuallyExclusiveGroup":
         return self._parser.add_mutually_exclusive_group()
 

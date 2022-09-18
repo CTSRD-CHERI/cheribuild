@@ -36,7 +36,8 @@ from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileC
                                   GitRepository)
 from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..build_qemu import BuildQEMU
-from ..project import CMakeProject, ReuseOtherProjectDefaultTargetRepository
+from ..cmake_project import CMakeProject
+from ..project import ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD
 from ...config.chericonfig import BuildType
 from ...utils import OSInfo
@@ -210,7 +211,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         cls.nfs_path_in_qemu = cls.add_path_option("nfs-mounted-path-in-qemu", metavar="PATH",
                                                    help="The path used inside QEMU to refer to nfs-mounted-path")
         cls.qemu_host = cls.add_config_option("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
-                                              default=lambda c, p: "localhost")
+                                              default="localhost")
         cls.qemu_port = cls.add_config_option("ssh-port", help="The QEMU SSH port to connect to for running tests",
                                               _allow_unknown_targets=True, default=_default_ssh_port,
                                               only_add_for_targets=CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS)

@@ -1125,12 +1125,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 return None
             query_args = args.copy()
             query_args.set_command(bmake_binary)
-            bw_flags = query_args.all_commandline_args + ["BUILD_WITH_STRICT_TMPPATH=0",
-                                                          "-f", self.source_dir / "Makefile.inc1",
-                                                          "-m", self.source_dir / "share/mk",
-                                                          "showconfig",
-                                                          "-D_NO_INCLUDE_COMPILERMK",  # avoid calling ${CC} --version
-                                                          "-V", var]
+            bw_flags = query_args.all_commandline_args(self.config) + [
+                "BUILD_WITH_STRICT_TMPPATH=0",
+                "-f", self.source_dir / "Makefile.inc1",
+                "-m", self.source_dir / "share/mk",
+                "showconfig",
+                "-D_NO_INCLUDE_COMPILERMK",  # avoid calling ${CC} --version
+                "-V", var]
             if not self.source_dir.exists():
                 assert self.config.pretend, "This should only happen when running in a test environment"
                 return None
@@ -1309,8 +1310,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             buildenv_target = "buildenv"
             if self.config.libcompat_buildenv and self.libcompat_name():
                 buildenv_target = self.libcompat_name() + "buildenv"
-            self.run_cmd([self.make_args.command] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
-                         cwd=self.source_dir)
+            self.run_cmd([self.make_args.command] + args.all_commandline_args(self.config) + [buildenv_target],
+                         env=args.env_vars, cwd=self.source_dir)
         else:
             super().process()
 
@@ -1361,7 +1362,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.info("Skipping default ABI build of", subdir, "since --libcompat-buildenv was passed.")
         else:
             self.info("Building", subdir, "using buildenv target")
-            self.run_cmd([self.make_args.command] + make_args.all_commandline_args + ["buildenv"],
+            self.run_cmd([self.make_args.command] + make_args.all_commandline_args(self.config) + ["buildenv"],
                          env=make_args.env_vars, cwd=self.source_dir)
         # If we are building a library, we want to build both the CHERI and the mips version (unless the
         # user explicitly specified --libcompat-buildenv)
@@ -1369,8 +1370,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             compat_target = self.libcompat_name() + "buildenv"
             self.info("Building", subdir, "using", compat_target, "target")
             extra_flags = ["MK_TESTS=no"]  # don't build tests since they will overwrite the non-compat ones
-            self.run_cmd([self.make_args.command] + make_args.all_commandline_args + extra_flags + [compat_target],
-                         env=make_args.env_vars, cwd=self.source_dir)
+            self.run_cmd([self.make_args.command] + make_args.all_commandline_args(self.config) + extra_flags + [
+                compat_target], env=make_args.env_vars, cwd=self.source_dir)
 
     def get_kernel_install_path(self, kernconf: str = None) -> Path:
         """

@@ -25,7 +25,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from .project import CMakeProject, DefaultInstallDir, GitRepository
+from .cmake_project import CMakeProject
+from .project import DefaultInstallDir, GitRepository
 
 
 # Faster Python version creduce

@@ -105,8 +105,8 @@ class ConfigLoaderBase(ABC):
                                negatable=kwargs.pop("negatable", False), type=bool, **kwargs)
 
     # noinspection PyShadowingBuiltins
-    def add_option(self, name: str, shortname=None, *, default: "Union[T, ComputedDefaultValue[T]]" = None,
-                   type: "Union[type[T], Callable[[str], T]]" = str, _owning_class: type = None,
+    def add_option(self, name: str, shortname=None, *, type: "Union[type[T], Callable[[str], T]]" = str,
+                   default: "Union[ComputedDefaultValue[T], T]" = None, _owning_class: type = None,
                    _fallback_names: "list[str]" = None, option_cls: "Optional[type[ConfigOptionBase[T]]]" = None,
                    **kwargs) -> T:
         if option_cls is None:
@@ -151,10 +151,12 @@ class ConfigLoaderBase(ABC):
     def is_needed_for_completion(self, name: str, shortname: str, option_type) -> bool:
         return True
 
+    # noinspection PyUnresolvedReferences,PyProtectedMember
     @abstractmethod
     def add_argument_group(self, description: str) -> "Optional[argparse._ArgumentGroup]":
         ...
 
+    # noinspection PyUnresolvedReferences,PyProtectedMember
     @abstractmethod
     def add_mutually_exclusive_group(self) -> "Optional[argparse._MutuallyExclusiveGroup]":
         ...

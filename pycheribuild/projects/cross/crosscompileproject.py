@@ -32,7 +32,8 @@ import os
 import typing
 from pathlib import Path
 
-from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, commandline_to_str, CrossCompileTarget,
+from ..cmake_project import CMakeProject
+from ..project import (AutotoolsProject, BuildType, CheriConfig, commandline_to_str, CrossCompileTarget,
                        DefaultInstallDir, GitRepository, Linkage, MakeCommandKind, MakefileProject, MesonProject,
                        Project, SubversionRepository)
 from ..simple_project import SimpleProject

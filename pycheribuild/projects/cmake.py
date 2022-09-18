@@ -30,7 +30,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import (AutotoolsProject, CheriConfig, CMakeProject, DefaultInstallDir, GitRepository,
+from .cmake_project import CMakeProject
+from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository,
                       MakeCommandKind, ReuseOtherProjectDefaultTargetRepository)
 from ..config.chericonfig import BuildType
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget

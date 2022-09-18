@@ -24,7 +24,8 @@
 # SUCH DAMAGE.
 #
 
-from .project import CMakeProject, DefaultInstallDir, GitRepository
+from .cmake_project import CMakeProject
+from .project import DefaultInstallDir, GitRepository
 
 
 class BuildCJSON(CMakeProject):

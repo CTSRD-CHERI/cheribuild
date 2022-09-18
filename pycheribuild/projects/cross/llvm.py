@@ -32,7 +32,8 @@ import sys
 from pathlib import Path
 from typing import ClassVar, Iterable
 
-from ..project import BuildType, CMakeProject, DefaultInstallDir, GitRepository, ComputedDefaultValue
+from ..cmake_project import CMakeProject
+from ..project import BuildType, DefaultInstallDir, GitRepository, ComputedDefaultValue
 from ..simple_project import SimpleProject
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTargetInfo, CompilationTargets,
