@@ -442,7 +442,7 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
             return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
-class DoNoQuoteStr:
+class DoNoQuoteStr(str if typing.TYPE_CHECKING else object):
     def __init__(self, s: str) -> None:
         self.s = s
 
@@ -459,7 +459,7 @@ def commandline_to_str(args: "typing.Iterable[typing.Union[str,Path]]") -> str:
 
 
 class CompilerInfo(object):
-    def __init__(self, path: Path, compiler: str, version: "typing.Tuple[int]", version_str: str, default_target: str,
+    def __init__(self, path: Path, compiler: str, version: "tuple[int, ...]", version_str: str, default_target: str,
                  *, config: ConfigBase):
         self.path = path
         self.compiler = compiler
@@ -625,10 +625,10 @@ def get_compiler_info(compiler: "typing.Union[str, Path]", *, config: ConfigBase
         assert found_in_path is not None, "Called with non-existent compiler " + str(compiler)
         compiler = Path(found_in_path)
 
+    kind = "unknown compiler"
+    version = (0, 0, 0)
+    version_str = "unknown version"
     if compiler not in _cached_compiler_infos:
-        kind = "unknown compiler"
-        version = (0, 0, 0)
-        version_str = "unknown version"
         if not compiler.exists():
             # Don't try to cache output for a non-existent compiler (e.g. CHERI LLVM before it was built).
             return CompilerInfo(compiler, kind, version, version_str, default_target="", config=config)
@@ -703,9 +703,8 @@ def get_version_output(program: Path, command_args: tuple = None, *, config: Con
 
 
 @functools.lru_cache(maxsize=20)
-def get_program_version(program: Path, command_args: tuple = None, component_kind: "typing.Type[Type_T]" = int,
-                        regex=None, program_name: bytes = None, *,
-                        config: ConfigBase) -> "typing.Tuple[Type_T, Type_T, Type_T]":
+def get_program_version(program: Path, command_args: tuple = None, component_kind: "type[Type_T]" = int,
+                        regex=None, program_name: bytes = None, *, config: ConfigBase) -> "tuple[Type_T, ...]":
     if config is None:
         config = get_global_config()  # TODO: remove
     if program_name is None:
@@ -719,8 +718,8 @@ def get_program_version(program: Path, command_args: tuple = None, component_kin
 
 
 # extract the version component from program output such as "git version 2.7.4"
-def extract_version(output: bytes, component_kind: "typing.Type[Type_T]" = int, regex: "typing.Pattern" = None,
-                    program_name: bytes = b"") -> "typing.Tuple[Type_T, Type_T, Type_T]":
+def extract_version(output: bytes, component_kind: "type[Type_T]" = int, regex: "typing.Pattern" = None,
+                    program_name: bytes = b"") -> "tuple[Type_T, ...]":
     if regex is None:
         prefix = re.escape(program_name) + b" " if program_name else b""
         regex = re.compile(prefix + b"version\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?")
@@ -730,7 +729,6 @@ def extract_version(output: bytes, component_kind: "typing.Type[Type_T]" = int, 
     if not match:
         print(output)
         raise ValueError("Expected to match regex " + str(regex))
-    # noinspection PyTypeChecker
     # Python 3.7.0 includes None elements for unmatched optional groups, so we have to omit those.
     return tuple(component_kind(x) for x in match.groups() if x is not None)
 

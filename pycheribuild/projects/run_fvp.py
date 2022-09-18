@@ -369,10 +369,10 @@ VOLUME /diskimg
                     self.warning("Error killing background process:", e)
 
     @cached_property
-    def fvp_revision(self) -> "typing.Tuple[int, int, int]":
+    def fvp_revision(self) -> "typing.Tuple[int, ...]":
         return self._get_version(result_if_invalid=self.latest_known_fvp)
 
-    def _get_version(self, docker_image=None, *, result_if_invalid) -> "typing.Tuple[int, int, int]":
+    def _get_version(self, docker_image=None, *, result_if_invalid) -> "tuple[int, ...]":
         pre_cmd, fvp_path = self._fvp_base_command(need_tty=False, docker_image=docker_image)
         try:
             version_out = self.run_cmd(pre_cmd + [fvp_path, "--version"], capture_output=True, run_in_pretend_mode=True)
@@ -472,9 +472,9 @@ class LaunchFVPBase(SimpleProject):
                                                            help="When set rsync will be used to update the image from "
                                                                 "the remote server prior to running it.")
         cls.ssh_port = cls.add_config_option("ssh-port", default=cls.default_ssh_port(), kind=int)
-        cls.extra_tcp_forwarding = cls.add_config_option("extra-tcp-forwarding", kind=list, default=(),
-                                                         help="Additional TCP bridge ports beyond ssh/22; "
-                                                              "list of [hostip:]port=[guestip:]port")
+        cls.extra_tcp_forwarding: "list[str]" = cls.add_config_option(
+            "extra-tcp-forwarding", kind=list, default=[],
+            help="Additional TCP bridge ports beyond ssh/22; list of [hostip:]port=[guestip:]port")
         # Allow using the architectural FVP:
         cls.use_architectureal_fvp = cls.add_bool_option("use-architectural-fvp",
                                                          help="Use the architectural FVP that requires a license.")

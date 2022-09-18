@@ -31,6 +31,7 @@ import os
 import shutil
 import stat
 import tempfile
+import typing
 from pathlib import Path
 
 from .benchmark_mixin import BenchmarkMixin
@@ -303,13 +304,13 @@ class BuildSpec2006(BenchmarkMixin, CrossCompileProject):
                                                        help="override the list of benchmarks to run")
 
     @property
-    def config_name(self):
+    def config_name(self) -> str:
         if self.compiling_for_cheri():
-            build_arch = "cheri" + self.cheri_config_suffix + "-" + self.linkage().value
+            build_arch = "cheri" + self.cheri_config_suffix + "-" + str(self.linkage().value)
             float_abi = self.config.mips_float_abi.name.lower() + "fp"
             return "freebsd-" + build_arch + "-" + float_abi
         elif self.compiling_for_mips(include_purecap=False):
-            build_arch = "mips-" + self.linkage().value
+            build_arch = "mips-" + str(self.linkage().value)
             float_abi = self.config.mips_float_abi.name.lower() + "fp"
             return "freebsd-" + build_arch + "-" + float_abi
         else:
@@ -546,6 +547,7 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
 class BuildSpec2006New(BuildLLVMTestSuiteBase):
     repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
     target = "spec2006-new"
+    spec_iso_path: "typing.ClassVar[typing.Optional[Path]]"
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -590,7 +592,7 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
     def setup(self):
         if self.spec_iso_path is None:
             self.fatal("You must set --", self.get_config_option_name("spec_iso_path"))
-            self.spec_iso_path = "/missing/spec2006.iso"
+            self.spec_iso_path = Path("/missing/spec2006.iso")
         super().setup()
         # Only build spec2006
         # self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006;External/SPEC/CFP2006",
@@ -599,7 +601,7 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
                                TEST_SUITE_RUN_TYPE='test',  # TODO: allow train+ref
                                TEST_SUITE_SPEC2006_ROOT=self.extracted_spec_sources)
 
-    def _check_broken_bsdtar(self, bsdtar: Path) -> "tuple[bool, tuple[int, int, int]]":
+    def _check_broken_bsdtar(self, bsdtar: Path) -> "tuple[bool, tuple[int, ...]]":
         if self.config.pretend and not bsdtar.exists():
             return False, (0, 0, 0)
         bsdtar_version = get_program_version(bsdtar, regex=rb"bsdtar\s+(\d+)\.(\d+)\.?(\d+)? \- libarchive",

@@ -71,7 +71,7 @@ SUPPORTED_ARCHITECTURES = {x.generic_target_suffix: x for x in (CompilationTarge
                                                                 CompilationTargets.CHERIBSD_MORELLO_PURECAP,
                                                                 )}
 
-AUTOBOOT_PROMPT = re.compile(r"(H|, h)it \[Enter\] to boot ")
+AUTOBOOT_PROMPT = re.compile(r"(H|, h)it \[Enter] to boot ")
 BOOT_LOADER_PROMPT = "OK "
 
 STARTING_INIT = "start_init: trying /sbin/init"
@@ -699,11 +699,9 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
         pass
 
     def run(self, cmd, **kwargs):
-        # noinspection PyTypeChecker
         run_cheribsd_command(self, cmd, **kwargs)
 
     def checked_run(self, cmd, **kwargs):
-        # noinspection PyTypeChecker
         checked_run_cheribsd_command(self, cmd, **kwargs)
 
     def check_ssh_connection(self, prefix="SSH connection:"):
@@ -834,6 +832,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         # BOOTVERBOSE is off for the amd64 kernel, so we don't see the STARTING_INIT message
         # TODO: it would be nice if we had a message to detect userspace startup without requiring bootverbose
         bootverbose = False
+        # noinspection PyTypeChecker
         init_messages = [STARTING_INIT, BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3] + FATAL_ERROR_MESSAGES
         boot_messages = init_messages + [TRYING_TO_MOUNT_ROOT]
         loader_boot_prompt_messages = boot_messages + [BOOT_LOADER_PROMPT]
@@ -1139,7 +1138,6 @@ def get_argument_parser() -> argparse.ArgumentParser:
                              "LD_PRELOAD or LD_CHERI_PRELOAD")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60,
                         help="Timeout in seconds for running tests")
-    # noinspection PyTypeChecker
     parser.add_argument("--qemu-logfile", help="File to write all interactions with QEMU to", type=Path)
     parser.add_argument("--test-environment-only", action="store_true",
                         help="Setup mount paths + SSH for tests but don't actually run the tests (implies --interact)")

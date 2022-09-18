@@ -99,7 +99,6 @@ class ConfigLoaderBase(ABC):
         return self.add_option(*args, type=type, option_cls=self.__command_line_only_options_cls, **kwargs)
 
     def add_commandline_only_bool_option(self, *args, default=False, **kwargs) -> bool:
-        # noinspection PyTypeChecker
         assert default is False or kwargs.get("negatable") is True
         return self.add_option(*args, option_cls=self.__command_line_only_options_cls, default=default,
                                negatable=kwargs.pop("negatable", False), type=bool, **kwargs)

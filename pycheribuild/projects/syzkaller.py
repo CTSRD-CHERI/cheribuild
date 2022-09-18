@@ -31,6 +31,7 @@
 
 import json
 import os
+from pathlib import Path
 
 from .build_qemu import BuildQEMU
 from .cross.cheribsd import BuildCHERIBSD, ConfigPlatform, CheriBSDConfigTable
@@ -67,7 +68,7 @@ class BuildSyzkaller(CrossCompileProject):
     def __init__(self, config):
         self._install_prefix = config.cheri_sdk_dir
         self._install_dir = config.cheri_sdk_dir
-        self.destdir = ""
+        self.destdir = Path("")
         super().__init__(config)
 
         # self.gopath = source_base / gohome
@@ -202,7 +203,7 @@ class RunSyzkaller(SimpleProject):
             qemu_opts = QemuOptions(self.crosscompile_target)
             template = {
                 "name": "cheribsd-n64",
-                "target": "freebsd/" + self.crosscompile_target.cpu_architecture.value,
+                "target": "freebsd/" + str(self.crosscompile_target.cpu_architecture.value),
                 "http": ":10000",
                 "rpc": ":10001",
                 "workdir": str(self.syz_workdir),

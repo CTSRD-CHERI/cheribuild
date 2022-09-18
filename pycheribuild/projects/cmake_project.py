@@ -62,7 +62,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     root_cmakelists_subdirectory: Optional[Path] = None
     ctest_script_extra_args: Sequence[str] = tuple()
     # 3.13.4 is the minimum version for LLVM and that also allows us to use "cmake --build -j <N>" unconditionally.
-    _minimum_cmake_or_meson_version: "tuple[int, int, int]" = (3, 13, 4)
+    _minimum_cmake_or_meson_version: "tuple[int, ...]" = (3, 13, 4)
 
     def _toolchain_file_list_to_str(self, value: list) -> str:
         assert isinstance(value, list), f"Expected a list and not {type(value)}: {value}"

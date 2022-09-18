@@ -79,7 +79,7 @@ class CPUArchitecture(Enum):
         if self is CPUArchitecture.ARM32:
             return "arm"
         # All others match the Meson table
-        return self.value
+        return str(self.value)
 
     def endianess(self) -> str:
         # Meson expects us to pass this manually... Why not query the compiler???

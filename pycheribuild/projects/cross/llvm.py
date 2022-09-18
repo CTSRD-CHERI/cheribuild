@@ -281,7 +281,6 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 
     def check_compiler_version(self, major: int, minor: int, patch=0):
         info = self.get_compiler_info(self.CC)
-        # noinspection PyTypeChecker
         version_str = ".".join(map(str, info.version))
         if info.compiler == "apple-clang":
             self.info("Compiler is apple clang", version_str, " -- assuming it matches required version",

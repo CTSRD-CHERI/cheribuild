@@ -55,16 +55,16 @@ class BuildUBoot(Project):
         ]
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
-    # noinspection PyTypeChecker
-    _default_install_dir_fn = ComputedDefaultValue(function=uboot_install_dir,
-                                                   as_string="$SDK_ROOT/u-boot/riscv{32,64}{,-hybrid,-purecap}")
+    _default_install_dir_fn: ComputedDefaultValue[Path] = \
+        ComputedDefaultValue(function=uboot_install_dir,
+                             as_string="$SDK_ROOT/u-boot/riscv{32,64}{,-hybrid,-purecap}")
 
-    def __init__(self, config):
+    def __init__(self, config) -> None:
         super().__init__(config)
         self.add_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
         self.kconfig_overrides = dict()
 
-    def setup(self):
+    def setup(self) -> None:
         super().setup()
         compflags = " " + self.commandline_to_str(self.essential_compiler_and_linker_flags)
         compflags += " -Qunused-arguments"
@@ -94,17 +94,17 @@ class BuildUBoot(Project):
             self.make_args.set(V=True)
 
     @property
-    def platform(self):
+    def platform(self) -> str:
         if self.crosscompile_target.is_riscv():
             return "qemu-riscv64_smode"
         assert False, "unhandled target"
 
     @property
-    def uboot_suffix(self):
+    def uboot_suffix(self) -> str:
         return self.crosscompile_target.generic_arch_suffix.replace("baremetal-", "")
 
     @property
-    def firmware_path(self):
+    def firmware_path(self) -> Path:
         # Prefer install path in QEMU for the QEMU firmware
         if not self.build_dir_suffix:
             qemu_fw_dir = BuildQEMU.get_firmware_dir(self, cross_target=CompilationTargets.NATIVE)

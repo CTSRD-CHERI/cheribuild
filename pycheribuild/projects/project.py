@@ -1615,7 +1615,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 class _CMakeAndMesonSharedLogic(Project):
     do_not_add_to_targets: bool = True
     tests_need_full_disk_image: bool = False
-    _minimum_cmake_or_meson_version: "tuple[int, int, int]" = None
+    _minimum_cmake_or_meson_version: "Optional[tuple[int, ...]]" = None
     _configure_tool_name: str
     _toolchain_template: str
     _toolchain_file: Path
@@ -1748,7 +1748,7 @@ class _CMakeAndMesonSharedLogic(Project):
             assert value is not None
             self.configure_args.append("-D" + option + "=" + str(value))
 
-    def _get_configure_tool_version(self) -> "tuple[int, int, int]":
+    def _get_configure_tool_version(self) -> "tuple[int, ...]":
         cmd = Path(self.configure_command)
         assert self.configure_command is not None
         if not cmd.is_absolute() or not Path(self.configure_command).exists():
@@ -1773,7 +1773,6 @@ class _CMakeAndMesonSharedLogic(Project):
         super().check_system_dependencies()
         if self._minimum_cmake_or_meson_version is not None:
             version_components = self._get_configure_tool_version()
-            # noinspection PyTypeChecker
             if version_components < self._minimum_cmake_or_meson_version:
                 version_str = ".".join(map(str, version_components))
                 expected_str = ".".join(map(str, self._minimum_cmake_or_meson_version))
