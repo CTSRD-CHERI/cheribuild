@@ -92,6 +92,7 @@ class ConfigLoaderBase(ABC):
         self.freebsd_group = self.add_argument_group("FreeBSD and CheriBSD build configuration")
         self.docker_group = self.add_argument_group("Options controlling the use of docker for building")
 
+    # noinspection PyShadowingBuiltins
     def add_commandline_only_option(self, *args, type: "Callable[[str], T]" = str, **kwargs) -> T:
         """
         :return: A config option that is always loaded from the command line no matter what the default is
@@ -182,7 +183,7 @@ class ConfigOptionBase(typing.Generic[T]):
         self.alias_names = _legacy_alias_names  # for targets such as gdb-mips, etc
         self._is_default_value = False
 
-    def load_option(self, config: "ConfigBase", instance: "Optional[object]", owner: type,
+    def load_option(self, config: "ConfigBase", instance: "Optional[object]", _: type,
                     return_none_if_default=False) -> T:
         result = self._load_option_impl(config, self.full_option_name)
         # fall back from --qtbase-mips/foo to --qtbase/foo

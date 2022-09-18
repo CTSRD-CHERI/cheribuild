@@ -83,8 +83,8 @@ class BenchmarkMixin(_BenchmarkMixinBase):
                 self.fatal("QEMU binary", qemu_path, "doesn't exist")
             basic_args += ["--use-qemu-instead-of-fpga", "--qemu-path=" + str(qemu_path),
                            "--qemu-ssh-port=" + str(qemu_ssh_socket.port)]
-        else:
-            self.fatal("run_fpga_benchmark has not been updated for RISC-V")
+        elif not self.compiling_for_mips(include_purecap=True):
+            self.fatal("run_fpga_benchmark has not been updated for RISC-V/AArch64")
             return
 
         if self.config.test_ssh_key is not None:
@@ -111,6 +111,7 @@ class BenchmarkMixin(_BenchmarkMixinBase):
         from ...projects.cross.cheribsd import BuildCheriBsdMfsKernel, ConfigPlatform
         if self.config.benchmark_with_qemu:
             # When benchmarking with QEMU we always spawn a new instance
+            # noinspection PyProtectedMember
             kernel_image = self.target_info._get_mfs_root_kernel(ConfigPlatform.QEMU,
                                                                  not self.config.benchmark_with_debug_kernel)
             basic_args.append("--kernel-img=" + str(kernel_image))

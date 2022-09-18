@@ -316,11 +316,11 @@ class GitRepository(SourceRepository):
                 else:
                     current_project.warning("Could not parse git rev-parse output. ",
                                             "Output was", revparse, "-- will not attempt to update remote URLs.")
-            except subprocess.CalledProcessError as e:
-                if b"no upstream configured" in e.stderr:
+            except subprocess.CalledProcessError as exc:
+                if b"no upstream configured" in exc.stderr:
                     return None
                 else:
-                    current_project.warning("git rev-parse failed, will not attempt to update remote URLs:", e)
+                    current_project.warning("git rev-parse failed, will not attempt to update remote URLs:", exc)
             return None
 
         # handle repositories that have moved:

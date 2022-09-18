@@ -45,8 +45,8 @@ class BuildOpenSSL(CrossCompileProject):
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     @classmethod
-    def get_version(cls) -> tuple:
-        return (1, 1, 1)
+    def get_version(cls) -> "tuple[int, ...]":
+        return 1, 1, 1
 
     def setup(self):
         super().setup()

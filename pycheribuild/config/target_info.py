@@ -300,7 +300,7 @@ class TargetInfo(ABC):
     @property
     def localbase(self) -> Path:
         """Relative path from the root to LOCALBASE (usr/local on FreeBSD)"""
-        raise NotImplementedError("Should only be called for FreeBSD targets")
+        raise RuntimeError("Should only be called for FreeBSD targets")
 
     @property
     @abstractmethod

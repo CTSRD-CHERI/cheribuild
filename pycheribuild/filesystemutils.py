@@ -203,6 +203,7 @@ class FileSystemUtils(object):
         :param mode: The file mode for the resulting file (octal number or string)
         :param overwrite: If true the file will be overwritten, otherwise it will cause an error if the file exists
         :param never_print_cmd: don't ever print the echo commmand (even in verbose)
+        :param print_verbose_only: only print contents in verbose mode
         """
         if not never_print_cmd:
             print_command("echo", contents, colour=AnsiColour.green, output_file=file,

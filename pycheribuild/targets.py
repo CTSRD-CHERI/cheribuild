@@ -366,7 +366,8 @@ class TargetManager(object):
         for tgt in self._targets_for_command_line_options_only.values():
             tgt.project_class.setup_config_options()
 
-    def target_disabled_reason(self, target: Target, config: CheriConfig) -> typing.Optional[str]:
+    @staticmethod
+    def target_disabled_reason(target: Target, config: CheriConfig) -> typing.Optional[str]:
         if not config.enable_hybrid_targets:
             xtarget = target.xtarget
             # NB: We allow hybrid for baremetal targets (for now...)

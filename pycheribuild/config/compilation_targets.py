@@ -375,7 +375,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return Path("usr/local")
 
     @classmethod
-    def _get_compiler_project(self) -> "typing.Type[BuildLLVMBase]":
+    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMBase]":
         from ..projects.cross.llvm import BuildUpstreamLLVM
         return BuildUpstreamLLVM
 
@@ -512,7 +512,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     FREEBSD_VERSION: int = 13
 
     @classmethod
-    def _get_compiler_project(self) -> "typing.Type[BuildLLVMBase]":
+    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMBase]":
         from ..projects.cross.llvm import BuildCheriLLVM
         return BuildCheriLLVM
 
@@ -605,7 +605,7 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     uses_morello_llvm: bool = True
 
     @classmethod
-    def _get_compiler_project(self) -> "typing.Type[BuildLLVMBase]":
+    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMBase]":
         from ..projects.cross.llvm import BuildMorelloLLVM
         return BuildMorelloLLVM
 

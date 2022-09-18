@@ -34,11 +34,11 @@ from ..project import ExternallyManagedSourceRepository, ComputedDefaultValue
 _cwd_path = Path(os.getcwd())
 
 
-def _cwd_source_dir(config, project):
+def _cwd_source_dir(_, _1):
     return _cwd_path
 
 
-def _cwd_directory_basename(config, project):
+def _cwd_directory_basename(_, _1):
     return _cwd_path.name
 
 

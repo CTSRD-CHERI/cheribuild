@@ -55,6 +55,7 @@ else:
 
 # This mixin sets supported_architectures to ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS and thereby
 # avoids repeating this for every target than can be cross-built
+# noinspection PyAbstractClass
 class CrossCompileMixin(_CrossCompileMixinBase):
     do_not_add_to_targets = True
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
@@ -66,6 +67,7 @@ class CrossCompileMixin(_CrossCompileMixinBase):
     cross_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
 
+# noinspection PyAbstractClass
 class CrossCompileSimpleProject(CrossCompileMixin, SimpleProject):
     do_not_add_to_targets = True
 

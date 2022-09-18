@@ -97,7 +97,7 @@ class _AdditionalFileTemplates(object):
         return include_local_file("files/cheribsd/dot.bash_profile.in")
 
 
-def _default_disk_image_name(config: CheriConfig, directory: Path, project: "BuildDiskImageBase"):
+def _default_disk_image_name(_: CheriConfig, directory: Path, project: "BuildDiskImageBase"):
     xtarget = project.get_crosscompile_target()
     if project.use_qcow2:
         suffix = "qcow2"
@@ -183,7 +183,7 @@ class BuildDiskImageBase(SimpleProject):
 
         self.makefs_cmd = None  # type: typing.Optional[Path]
         self.mkimg_cmd = None  # type: typing.Optional[Path]
-        source_class = self._source_class.get_class_for_target(self._get_source_class_target(config))
+        source_class = self._source_class.get_class_for_target(self._get_source_class_target())
         assert issubclass(source_class, BuildFreeBSD), source_class
         self.source_project = source_class.get_instance(self)
         assert isinstance(self.source_project, BuildFreeBSD)
@@ -200,7 +200,7 @@ class BuildDiskImageBase(SimpleProject):
         # MIPS needs big-endian disk images
         self.big_endian = self.compiling_for_mips(include_purecap=True)
 
-    def _get_source_class_target(self, config):
+    def _get_source_class_target(self):
         return self.get_crosscompile_target()
 
     def add_file_to_image(self, file: Path, *, base_directory: Path = None, user="root", group="wheel", mode=None,
@@ -1384,7 +1384,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
         self.minimum_image_size = "256m"  # let's try to shrink the image size
 
 
-def _default_tar_name(config: CheriConfig, directory: Path, project: "BuildDiskImageBase"):
+def _default_tar_name(_: CheriConfig, directory: Path, project: "BuildDiskImageBase"):
     xtarget = project.get_crosscompile_target()
     return directory / (project.disk_image_prefix + project.build_configuration_suffix(xtarget) + ".tar.xz")
 
