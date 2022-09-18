@@ -544,7 +544,7 @@ class Project(SimpleProject):
     _install_prefix: Optional[Path] = None
     destdir: Optional[Path] = None
 
-    __can_use_lld_map: dict[str, bool] = dict()
+    __can_use_lld_map: "dict[str, bool]" = dict()
 
     def can_use_lld(self, compiler: Path) -> bool:
         command = [str(compiler)] + self.essential_compiler_and_linker_flags + ["-fuse-ld=lld", "-xc", "-o",
@@ -843,8 +843,8 @@ class Project(SimpleProject):
 
         self.configure_command = None
         # non-assignable variables:
-        self.configure_args: list[str] = []
-        self.configure_environment: dict[str, str] = {}
+        self.configure_args: "list[str]" = []
+        self.configure_environment: "dict[str, str]" = {}
         self._last_stdout_line_can_be_overwritten = False
         self.make_args = MakeOptions(self.make_kind, self)
         self._compiledb_tool: Optional[str] = None
@@ -1288,7 +1288,7 @@ class Project(SimpleProject):
         self.run_make("all", cwd=cwd, parallel=parallel)
 
     @property
-    def make_install_env(self):
+    def make_install_env(self) -> "dict[str, str]":
         if self.destdir:
             env = self.make_args.env_vars.copy()
             if "DESTDIR" not in env:
@@ -1297,7 +1297,7 @@ class Project(SimpleProject):
         return self.make_args.env_vars
 
     @property
-    def real_install_root_dir(self):
+    def real_install_root_dir(self) -> Path:
         """
         :return: the real install root directory (e.g. if prefix == /usr/local and destdir == /tmp/benchdir it will
          return /tmp/benchdir/usr/local
@@ -1308,7 +1308,7 @@ class Project(SimpleProject):
         return self._install_dir
 
     @property
-    def install_dir(self):
+    def install_dir(self) -> Path:
         return self.real_install_root_dir
 
     @property
@@ -1726,7 +1726,7 @@ class _CMakeAndMesonSharedLogic(Project):
             **kwargs)
 
     def _add_configure_options(self, *, _include_empty_vars=False, _replace=True, _implicitly_convert_lists=False,
-                               _config_file_options: list, **kwargs) -> None:
+                               _config_file_options: "list[str]", **kwargs) -> None:
         for option, value in kwargs.items():
             if not _replace and any(x.startswith("-D" + option + "=") for x in self.configure_args):
                 self.verbose_print("Not replacing ", option, "since it is already set.")
@@ -1880,7 +1880,7 @@ class MakefileProject(Project):
             LDFLAGS=commandline_to_str(self.default_ldflags + self.LDFLAGS),
         )
 
-    def set_make_cmd_with_args(self, var, cmd: Path, args: list) -> None:
+    def set_make_cmd_with_args(self, var, cmd: Path, args: "list[str]") -> None:
         value = str(cmd)
         if args:
             value += " " + self.commandline_to_str(args)

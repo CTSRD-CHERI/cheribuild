@@ -857,7 +857,8 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
     #     self._line_not_important_stdout_filter(line)
 
     def run_with_logfile(self, args: "typing.Sequence[str]", logfile_name: str, *, stdout_filter=None, cwd: Path = None,
-                         env: dict = None, append_to_logfile=False, stdin=subprocess.DEVNULL) -> None:
+                         env: "Optional[dict[str, Optional[str]]]" = None, append_to_logfile=False,
+                         stdin=subprocess.DEVNULL) -> None:
         """
         Runs make and logs the output
         config.quiet doesn't display anything, normal only status updates and config.verbose everything

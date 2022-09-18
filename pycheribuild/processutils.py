@@ -57,8 +57,8 @@ __all__ = ["print_command", "get_compiler_info", "CompilerInfo", "popen", "popen
            "run_and_kill_children_on_exit", "ssh_config_parameters", "ssh_host_accessible"]  # no-combine
 
 
-def __filter_env(env: dict) -> dict:
-    result = dict()
+def __filter_env(env: "dict[str, str]") -> "dict[str, str]":
+    result: "dict[str, str]" = dict()
     for k, v in env.items():
         if k not in os.environ or os.environ[k] != v:
             result[k] = v
@@ -78,7 +78,7 @@ def set_env(*, print_verbose_only=True, config: ConfigBase = None, **environ):
     False
 
     """
-    changed_values = dict()  # type: dict[str, typing.Optional[str]]
+    changed_values: dict[str, typing.Optional[str]] = dict()
     if environ:
         if config is None:
             config = get_global_config()  # TODO: remove
