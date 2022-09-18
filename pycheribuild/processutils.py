@@ -520,39 +520,32 @@ class CompilerInfo(object):
             self._include_dirs[tuple(basic_flags)] = include_dirs
         return list(include_dirs)
 
-    def _supports_warning_flag(self, flag: str) -> bool:
+    def _supports_flag(self, flag: str, *other_args: "list[str]") -> bool:
         assert flag.startswith("-W")
         try:
-            result = run_command(self.path, flag, "-fsyntax-only", "-xc", "/dev/null", "-Werror=unknown-warning-option",
-                                 print_verbose_only=True, run_in_pretend_mode=True, capture_error=True,
-                                 allow_unexpected_returncode=True, config=self.config)
-        except (subprocess.CalledProcessError, OSError) as e:
-            warning_message("Failed to check for", flag, "support:", e)
-            return False
-        return result.returncode == 0
-
-    def _supports_sanitizer_flag(self, sanitzer_flag: str, arch_flags: "list[str]"):
-        assert sanitzer_flag.startswith("-fsanitize")
-        try:
-            result = run_command(self.path, *arch_flags, sanitzer_flag, "-c", "-xc", "/dev/null", "-Werror",
-                                 "-o", "/dev/null", print_verbose_only=True, run_in_pretend_mode=True,
+            if not self.path.exists():
+                return False  # avoid failing in jenkins
+            result = run_command(self.path, *other_args, flag, print_verbose_only=True, run_in_pretend_mode=True,
                                  capture_error=True, allow_unexpected_returncode=True, config=self.config)
         except (subprocess.CalledProcessError, OSError) as e:
-            warning_message("Failed to check for", sanitzer_flag, "support:", e)
+            warning_message("Failed to check for", flag, "support:", e)
             return False
         return result.returncode == 0
 
     def supports_sanitizer_flag(self, sanitzer_flag: str, arch_flags: "list[str]"):
         result = self._supported_sanitizer_flags.get((sanitzer_flag, tuple(arch_flags)))
         if result is None:
-            result = self._supports_sanitizer_flag(sanitzer_flag, arch_flags)
+            assert sanitzer_flag.startswith("-fsanitize")
+            result = self._supports_flag(sanitzer_flag,
+                                         arch_flags + ["-c", "-xc", "/dev/null", "-Werror", "-o", "/dev/null"])
             self._supported_sanitizer_flags[(sanitzer_flag, tuple(arch_flags))] = result
         return result
 
     def supports_warning_flag(self, flag: str) -> bool:
         result = self._supported_warning_flags.get(flag)
         if result is None:
-            result = self._supports_warning_flag(flag)
+            assert flag.startswith("-W")
+            result = self._supports_flag(flag, ["-fsyntax-only", "-xc", "/dev/null", "-Werror=unknown-warning-option"])
             self._supported_warning_flags[flag] = result
         return result
 
@@ -633,6 +626,12 @@ def get_compiler_info(compiler: "typing.Union[str, Path]", *, config: ConfigBase
         compiler = Path(found_in_path)
 
     if compiler not in _cached_compiler_infos:
+        kind = "unknown compiler"
+        version = (0, 0, 0)
+        version_str = "unknown version"
+        if not compiler.exists():
+            # Don't try to cache output for a non-existent compiler (e.g. CHERI LLVM before it was built).
+            return CompilerInfo(compiler, kind, version, version_str, default_target="", config=config)
         # Avoid querying the same compiler twice if it is a symlink
         compiler_realpath = compiler.resolve() if compiler.exists() else compiler
         if compiler_realpath in _cached_compiler_infos:
@@ -664,9 +663,6 @@ def get_compiler_info(compiler: "typing.Union[str, Path]", *, config: ConfigBase
         apple_llvm_version = apple_llvm_version_pattern.search(version_cmd.stderr)
         gcc_version = gcc_version_pattern.search(version_cmd.stderr)
         target = target_pattern.search(version_cmd.stderr)
-        kind = "unknown compiler"
-        version = (0, 0, 0)
-        version_str = "unknown version"
         target_string = target.group(1).decode("utf-8") if target else ""
         if gcc_version:
             kind = "gcc"

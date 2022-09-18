@@ -551,6 +551,10 @@ class Project(SimpleProject):
                                                                                 "/dev/null", "-"]
         command_str = commandline_to_str(command)
         if command_str not in Project.__can_use_lld_map:
+            assert compiler.is_absolute(), compiler
+            # Don't cache the result for a non-existent compiler (we could still be building it)
+            if not compiler.exists():
+                return False
             try:
                 run_command(command, run_in_pretend_mode=True,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raise_in_pretend_mode=True,
