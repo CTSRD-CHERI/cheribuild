@@ -48,4 +48,4 @@ jobs:
                     if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
             -   name: Run pytype
                 run: |
-                    pytype --config pytype.cfg --python-version 3.8
+                    pytype --config pytype.cfg --python-version 3.8 -j `nproc`
