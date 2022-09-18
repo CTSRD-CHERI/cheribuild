@@ -75,10 +75,10 @@ class classproperty(typing.Generic[Type_T]):
 
 # Placeholder until config has been initialized.
 class DoNotUseInIfStmt(bool if typing.TYPE_CHECKING else object):
-    def __bool__(self):
+    def __bool__(self) -> typing.NoReturn:
         raise ValueError("Should not be used")
 
-    def __len__(self):
+    def __len__(self) -> typing.NoReturn:
         raise ValueError("Should not be used")
 
 

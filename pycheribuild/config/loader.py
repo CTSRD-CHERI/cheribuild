@@ -354,10 +354,10 @@ class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
     def targets(self) -> "list[str]":
         return []
 
-    def add_argument_group(self, description: str):
+    def add_argument_group(self, description: str) -> None:
         return None
 
-    def add_mutually_exclusive_group(self):
+    def add_mutually_exclusive_group(self) -> None:
         return None
 
 
@@ -487,10 +487,10 @@ class CommandLineConfigLoader(ConfigLoaderBase):
     def targets(self) -> "list[str]":
         return self._parsed_args.targets
 
-    def add_argument_group(self, description: str):
+    def add_argument_group(self, description: str) -> "argparse._ArgumentGroup":
         return self._parser.add_argument_group(description)
 
-    def add_mutually_exclusive_group(self):
+    def add_mutually_exclusive_group(self) -> "argparse._MutuallyExclusiveGroup":
         return self._parser.add_mutually_exclusive_group()
 
     def is_needed_for_completion(self, name: str, shortname: str, option_type) -> bool:

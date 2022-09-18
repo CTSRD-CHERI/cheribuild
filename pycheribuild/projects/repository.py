@@ -42,7 +42,7 @@ if typing.TYPE_CHECKING:
 
 __all__ = ["GitRepository", "ExternallyManagedSourceRepository", "MercurialRepository",  # no-combine
            "ReuseOtherProjectRepository", "ReuseOtherProjectDefaultTargetRepository",  # no-combine
-           "SubversionRepository", "TargetBranchInfo"]  # no-combine
+           "SubversionRepository", "TargetBranchInfo", "SourceRepository"]  # no-combine
 
 
 class SourceRepository(object):

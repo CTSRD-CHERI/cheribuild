@@ -38,6 +38,7 @@ import sys
 import threading
 import time
 import typing
+from abc import abstractmethod, ABCMeta
 from pathlib import Path
 from typing import Callable, Union, Optional
 
@@ -57,7 +58,7 @@ __all__ = ["_cached_get_homebrew_prefix", "_clear_line_sequence", "_default_stdo
 Type_T = typing.TypeVar("Type_T")
 
 
-def flush_stdio(stream):
+def flush_stdio(stream) -> None:
     while True:
         try:
             # can lead to EWOULDBLOCK if stream cannot be flushed immediately
@@ -70,13 +71,13 @@ def flush_stdio(stream):
                 time.sleep(0.1)
 
 
-def _default_stdout_filter(_: bytes):
+def _default_stdout_filter(_: bytes) -> typing.NoReturn:
     raise NotImplementedError("Should never be called, this is a dummy")
 
 
-class ProjectSubclassDefinitionHook(type):
+class ProjectSubclassDefinitionHook(ABCMeta):
     # noinspection PyProtectedMember
-    def __init__(cls, name: str, bases, clsdict):
+    def __init__(cls, name: str, bases, clsdict) -> None:
         super().__init__(name, bases, clsdict)
         if typing.TYPE_CHECKING:
             assert issubclass(cls, SimpleProject)  # pytype: disable=name-error
@@ -197,63 +198,63 @@ def _cached_get_homebrew_prefix(package: "typing.Optional[str]", config: CheriCo
 
 # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
 # However, if the output is just a plain text file don't attempt to do any line clearing
-_clear_line_sequence = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
+_clear_line_sequence: bytes = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
 
 
 class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
-    _commandline_option_group = None
-    _config_loader = None  # type: ConfigLoaderBase
+    _commandline_option_group: typing.Any = None
+    _config_loader: ConfigLoaderBase = None
 
     # The source dir/build dir names will be inferred from the target name unless default_directory_basename is set.
     # Note that this is not inherited by default unless you set inherit_default_directory_basename (which itself is
     # inherited as normal, so can be set in a base class).
-    default_directory_basename = None  # type: str
-    inherit_default_directory_basename = False  # type: bool
+    default_directory_basename: Optional[str] = None
+    inherit_default_directory_basename: bool = False
     # Old names in the config file (per-architecture) for backwards compat
-    _config_file_aliases = tuple()  # type: typing.Tuple[str, ...]
-    dependencies = []  # type: typing.List[str]
-    dependencies_must_be_built = False
-    direct_dependencies_only = False
+    _config_file_aliases: "tuple[str, ...]" = tuple()
+    dependencies: "list[str]" = []
+    dependencies_must_be_built: bool = False
+    direct_dependencies_only: bool = False
     # skip_toolchain_dependencies can be set to true for target aliases to skip the toolchain dependecies by default.
     # For example, when running "cheribuild.py morello-firmware --clean" we don't want to also do a clean build of LLVM.
-    skip_toolchain_dependencies = False
+    skip_toolchain_dependencies: bool = False
     _cached_full_deps: "Optional[list[Target]]" = None
     _cached_filtered_deps: "Optional[list[Target]]" = None
-    is_alias = False
-    is_sdk_target = False  # for --skip-sdk
+    is_alias: bool = False
+    is_sdk_target: bool = False  # for --skip-sdk
     # Set to true to omit the extra -<os> suffix in target names (otherwise we would end up with targets such as
     # freebsd-freebsd-amd64, etc.)
-    include_os_in_target_suffix = True
-    source_dir = None  # type: Path
-    build_dir = None  # type: Path
-    build_dir_suffix = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
-    use_asan = False
-    add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
-    install_dir = None  # type: Path
-    build_in_source_dir = False  # For projects that can't build in the source dir
-    build_via_symlink_farm = False  # Create source symlink farm to work around lack of out-of-tree build support
+    include_os_in_target_suffix: bool = True
+    source_dir: Optional[Path] = None
+    build_dir: Optional[Path] = None
+    install_dir: Optional[Path] = None
+    build_dir_suffix: str = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
+    use_asan: bool = False
+    add_build_dir_suffix_for_native: bool = False  # Whether to add -native to the native build dir
+    build_in_source_dir: bool = False  # For projects that can't build in the source dir
+    build_via_symlink_farm: bool = False  # Create source symlink farm to work around lack of out-of-tree build support
     # For target_info.py. Real value is only set for Project subclasses, since SimpleProject subclasses should not
     # include C/C++ compilation (there is no source+build dir)
-    auto_var_init = AutoVarInit.NONE
+    auto_var_init: AutoVarInit = AutoVarInit.NONE
     # Whether to hide the options from the default --help output (only add to --help-hidden)
-    hide_options_from_help = False
+    hide_options_from_help: bool = False
     # Project subclasses will automatically have a target based on their name generated unless they add this:
-    do_not_add_to_targets = True
+    do_not_add_to_targets: bool = True
     # Default to NATIVE only
-    supported_architectures = [BasicCompilationTargets.NATIVE]
+    supported_architectures: "list[CrossCompileTarget]" = [BasicCompilationTargets.NATIVE]
     # The architecture to build for the unsuffixed target name (defaults to supported_architectures[0] if no match)
-    _default_architecture = None  # type: typing.Optional[CrossCompileTarget]
+    _default_architecture: "Optional[CrossCompileTarget]" = None
 
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     # To check that we don't create an crosscompile targets without a fixed target
-    _should_not_be_instantiated = True
+    _should_not_be_instantiated: bool = True
     # To prevent non-suffixed targets in case the only target is not NATIVE
-    _always_add_suffixed_targets = False  # add a suffixed target only if more than one variant is supported
+    _always_add_suffixed_targets: bool = False  # add a suffixed target only if more than one variant is supported
 
-    custom_target_name = None  # type: typing.Optional[typing.Callable[[str, CrossCompileTarget], str]]
+    custom_target_name: "Optional[typing.Callable[[str, CrossCompileTarget], str]]" = None
 
     @classmethod
-    def is_toolchain_target(cls):
+    def is_toolchain_target(cls) -> bool:
         return False
 
     @property
@@ -423,7 +424,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         return _cached
 
     @classmethod
-    def _cache_full_dependencies(cls, config, *, allow_already_cached=False):
+    def _cache_full_dependencies(cls, config, *, allow_already_cached=False) -> None:
         assert allow_already_cached or cls.__dict__.get("_cached_full_deps", None) is None, "Already cached??"
         cls._cached_full_deps = cls._recursive_dependencies_impl(config, include_dependencies=True,
                                                                  include_toolchain_dependencies=True,
@@ -466,10 +467,10 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         return self._default_architecture
 
     @property
-    def crosscompile_target(self):
+    def crosscompile_target(self) -> CrossCompileTarget:
         return self.get_crosscompile_target()
 
-    def get_host_triple(self):
+    def get_host_triple(self) -> str:
         compiler = self.get_compiler_info(self.host_CC)
         return compiler.default_target
 
@@ -509,25 +510,25 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         return self.target_info.get_essential_compiler_and_linker_flags()
 
     @classproperty
-    def needs_sysroot(self):
+    def needs_sysroot(self) -> bool:
         return not self._xtarget.is_native()  # Most projects need a sysroot (but not native)
 
-    def compiling_for_mips(self, include_purecap: bool):
+    def compiling_for_mips(self, include_purecap: bool) -> bool:
         return self.crosscompile_target.is_mips(include_purecap=include_purecap)
 
-    def compiling_for_cheri(self, valid_cpu_archs: "list[CPUArchitecture]" = None):
+    def compiling_for_cheri(self, valid_cpu_archs: "list[CPUArchitecture]" = None) -> bool:
         return self.crosscompile_target.is_cheri_purecap(valid_cpu_archs)
 
-    def compiling_for_cheri_hybrid(self, valid_cpu_archs: "list[CPUArchitecture]" = None):
+    def compiling_for_cheri_hybrid(self, valid_cpu_archs: "list[CPUArchitecture]" = None) -> bool:
         return self.crosscompile_target.is_cheri_hybrid(valid_cpu_archs)
 
-    def compiling_for_host(self):
+    def compiling_for_host(self) -> bool:
         return self.crosscompile_target.is_native()
 
-    def compiling_for_riscv(self, include_purecap: bool):
+    def compiling_for_riscv(self, include_purecap: bool) -> bool:
         return self.crosscompile_target.is_riscv(include_purecap=include_purecap)
 
-    def compiling_for_aarch64(self, include_purecap: bool):
+    def compiling_for_aarch64(self, include_purecap: bool) -> bool:
         return self.crosscompile_target.is_aarch64(include_purecap=include_purecap)
 
     def build_configuration_suffix(self, target: typing.Optional[CrossCompileTarget] = None) -> str:
@@ -606,13 +607,14 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
     # noinspection PyShadowingBuiltins
     def run_cmd(self, *args, capture_output=False, capture_error=False, input: typing.Union[str, bytes] = None,
                 timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
-                no_print=False, replace_env=False, give_tty_control=False, **kwargs):
+                no_print=False, replace_env=False, give_tty_control=False,
+                **kwargs) -> subprocess.CompletedProcess[bytes]:
         return run_command(*args, capture_output=capture_output, capture_error=capture_error, input=input,
                            timeout=timeout, config=self.config, print_verbose_only=print_verbose_only,
                            run_in_pretend_mode=run_in_pretend_mode, raise_in_pretend_mode=raise_in_pretend_mode,
                            no_print=no_print, replace_env=replace_env, give_tty_control=give_tty_control, **kwargs)
 
-    def set_env(self, *, print_verbose_only=True, **environ):
+    def set_env(self, *, print_verbose_only=True, **environ) -> "typing.ContextManager":
         return set_env(print_verbose_only=print_verbose_only, config=self.config, **environ)
 
     @staticmethod
@@ -718,7 +720,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
     __config_options_set = dict()  # typing.Dict[Type, bool]
 
     @classmethod
-    def setup_config_options(cls, **kwargs):
+    def setup_config_options(cls, **kwargs) -> None:
         # assert cls not in cls.__config_options_set, "Setup called twice?"
         cls.__config_options_set[cls] = True
 
@@ -727,7 +729,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
                                                                           "the value of the global --clean option"),
                                              help="Override --clean/--no-clean for this target only")
 
-    def __init__(self, config: CheriConfig):
+    def __init__(self, config: CheriConfig) -> None:
         assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
         self.target_info = self._xtarget.create_target_info(self)
         super().__init__(config)
@@ -742,7 +744,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         self._setup_called = False
         assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
 
-    def setup(self):
+    def setup(self) -> None:
         """
         Class setup that is run just before process()/run_tests/run_benchmarks. This ensures that all dependent targets
         have been built before and therefore querying e.g. the target compiler will work correctly.
@@ -750,7 +752,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         assert not self._setup_called, "Should only be called once"
         self._setup_called = True
 
-    def has_required_system_tool(self, executable: str):
+    def has_required_system_tool(self, executable: str) -> bool:
         return executable in self.__required_system_tools
 
     def _validate_cheribuild_target_for_system_deps(self, cheribuild_target: "typing.Optional[str]"):
@@ -781,7 +783,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
 
     def add_required_pkg_config(self, package: str, install_instructions: str = None, default: str = None,
                                 freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
-                                cheribuild_target: str = None, alternative_instructions: str = None):
+                                cheribuild_target: str = None, alternative_instructions: str = None) -> None:
         if not self.has_required_system_tool("pkg-config"):
             self.add_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
         if install_instructions is not None:
@@ -794,7 +796,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
 
     def add_required_system_header(self, header: str, install_instructions: str = None, default: str = None,
                                    freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
-                                   cheribuild_target: str = None, alternative_instructions: str = None):
+                                   cheribuild_target: str = None, alternative_instructions: str = None) -> None:
         if install_instructions is not None:
             instructions = InstallInstructions(install_instructions, cheribuild_target=cheribuild_target,
                                                alternative=alternative_instructions)
@@ -808,7 +810,8 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         return query_yes_no(self.config, message, default_result=default_result, force_result=force_result,
                             yes_no_str=yes_no_str)
 
-    def ask_for_confirmation(self, message: str, error_message="Cannot continue.", default_result=True, **kwargs):
+    def ask_for_confirmation(self, message: str, error_message="Cannot continue.", default_result=True,
+                             **kwargs) -> None:
         if not self.query_yes_no(message, default_result=default_result, **kwargs):
             self.fatal(error_message)
 
@@ -831,7 +834,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
                     # ValueError: write to closed file
                     continue
 
-    def _line_not_important_stdout_filter(self, line: bytes):
+    def _line_not_important_stdout_filter(self, line: bytes) -> None:
         # by default we don't keep any line persistent, just have updating output
         if self._last_stdout_line_can_be_overwritten:
             sys.stdout.buffer.write(_clear_line_sequence)
@@ -840,14 +843,14 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         flush_stdio(sys.stdout)
         self._last_stdout_line_can_be_overwritten = True
 
-    def _show_line_stdout_filter(self, line: bytes):
+    def _show_line_stdout_filter(self, line: bytes) -> None:
         if self._last_stdout_line_can_be_overwritten:
             sys.stdout.buffer.write(b"\n")
         sys.stdout.buffer.write(line)
         flush_stdio(sys.stdout)
         self._last_stdout_line_can_be_overwritten = False
 
-    _stdout_filter = None  # don't filter output by default
+    _stdout_filter: Optional[Callable[[bytes], None]] = None  # don't filter output by default
 
     # Subclasses can add the following:
     # def _stdout_filter(self, line: bytes):
@@ -974,7 +977,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
             self.warning("Failed to detect file type for", file, e)
         return False
 
-    def should_strip_elf_file_for_tarball(self, f: Path):
+    def should_strip_elf_file_for_tarball(self, f: Path) -> bool:
         if f.suffix == ".o":
             # We musn't strip crt1.o, etc. sice if we do the linker can't find essential symbols such as __start
             # __programe or environ.
@@ -982,7 +985,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
             return False
         return True
 
-    def _cleanup_old_files(self, *old_paths: Path, default_delete=True):
+    def _cleanup_old_files(self, *old_paths: Path, default_delete=True) -> None:
         for p in old_paths:
             if not p.exists():
                 continue
@@ -1089,14 +1092,15 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
             prefix = Path("/fake/homebrew/prefix/when/pretending/opt") / package
         return prefix
 
-    def process(self):
-        raise NotImplementedError()
+    @abstractmethod
+    def process(self) -> None:
+        ...
 
-    def run_tests(self):
+    def run_tests(self) -> None:
         # for the --test option
         status_update("No tests defined for target", self.target)
 
-    def run_benchmarks(self):
+    def run_benchmarks(self) -> None:
         # for the --benchmark option
         status_update("No benchmarks defined for target", self.target)
 
@@ -1108,7 +1112,7 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
         script_dir = Path(__file__).parent.parent.parent / "test-scripts"  # no-combine
         return script_dir / script_name
 
-    def run_shell_script(self, script, shell="sh", **kwargs):
+    def run_shell_script(self, script, shell="sh", **kwargs) -> subprocess.CompletedProcess[bytes]:
         print_args = dict(**kwargs)
         # Remove kwargs not supported by print_command
         print_args.pop("capture_output", None)
@@ -1152,16 +1156,16 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
                 self.ask_for_confirmation("Continue with unexpected file?", default_result=False)
         return should_download
 
-    def print(self, *args, **kwargs):
+    def print(self, *args, **kwargs) -> None:
         if not self.config.quiet:
             print(*args, **kwargs)
 
-    def verbose_print(self, *args, **kwargs):
+    def verbose_print(self, *args, **kwargs) -> None:
         if self.config.verbose:
             print(*args, **kwargs)
 
     @classmethod
-    def targets_reset(cls):
+    def targets_reset(cls) -> None:
         # For unit tests to get a fresh instance
         cls._cached_full_deps = None
         cls._cached_filtered_deps = None
@@ -1169,12 +1173,12 @@ class SimpleProject(AbstractProject, metaclass=ProjectSubclassDefinitionHook):
 
 # A target that is just an alias for at least one other targets but does not force building of dependencies
 class TargetAlias(SimpleProject):
-    do_not_add_to_targets = True
-    dependencies_must_be_built = False
-    hasSourceFiles = False
-    is_alias = True
+    do_not_add_to_targets: bool = True
+    dependencies_must_be_built: bool = False
+    hasSourceFiles: bool = False
+    is_alias: bool = True
 
-    def process(self):
+    def process(self) -> None:
         dependencies = self.dependencies
         if callable(self.dependencies):
             dependencies = self.dependencies(self.config)
@@ -1183,6 +1187,6 @@ class TargetAlias(SimpleProject):
 
 # A target that does nothing (used for e.g. the "all" target)
 class TargetAliasWithDependencies(TargetAlias):
-    do_not_add_to_targets = True
-    dependencies_must_be_built = True
-    hasSourceFiles = False
+    do_not_add_to_targets: bool = True
+    dependencies_must_be_built: bool = True
+    hasSourceFiles: bool = False
