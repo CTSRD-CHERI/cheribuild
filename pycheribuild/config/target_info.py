@@ -357,8 +357,8 @@ class TargetInfo(ABC):
         assert isinstance(result, t)
         return result
 
-    def _get_rootfs_project(self, xtarget: "CrossCompileTarget"):
-        raise NotImplementedError("Should not be called for " + self.project.target)
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "AbstractProject":
+        raise LookupError("Should not be called for " + self.project.target)
 
     @classmethod
     def is_native(cls) -> bool:

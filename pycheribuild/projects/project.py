@@ -955,7 +955,7 @@ class Project(SimpleProject):
             # Don't add the rootfs directory, since e.g. target_info.pkgconfig_candidates(<rootfs>) will not return the
             # correct values. For the root directory we rely on the methods in target_info instead.
             all_install_dirs.pop(self.rootfs_dir, None)
-        except NotImplementedError:
+        except LookupError:
             pass  # If there isn't a rootfs, there is no need to skip that project.
         return list(all_install_dirs.keys())
 

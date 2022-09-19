@@ -127,7 +127,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         try:
             # If we are installing into a rootfs, remove the rootfs prefix from the RPATH
             extra_libdirs = ["/" + str(s.relative_to(self.rootfs_dir)) for s in extra_libdirs]
-        except NotImplementedError:
+        except LookupError:
             pass  # If there isn't a rootfs, we use the absolute paths instead.
         rpath_dirs = remove_duplicates(self.target_info.additional_rpath_directories + extra_libdirs)
         if rpath_dirs:
