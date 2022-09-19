@@ -647,31 +647,13 @@ class CrossCompileTarget(object):
     def _set_from(self, other_target: "CrossCompileTarget") -> None:
         if self is other_target:
             return
-        if self._hybrid_target is None and other_target._hybrid_target is not None:
-            self._hybrid_target = other_target._hybrid_target
-            other_target._hybrid_target._set_from(self)
-        if self._non_cheri_target is None and other_target._non_cheri_target is not None:
-            self._non_cheri_target = other_target._non_cheri_target
-            other_target._non_cheri_target._set_from(self)
-        if self._purecap_target is None and other_target._purecap_target is not None:
-            self._purecap_target = other_target._purecap_target
-            other_target._purecap_target._set_from(self)
-        if self._non_cheri_for_hybrid_rootfs_target is None and \
-           other_target._non_cheri_for_hybrid_rootfs_target is not None:
-            self._non_cheri_for_hybrid_rootfs_target = other_target._non_cheri_for_hybrid_rootfs_target
-            other_target._non_cheri_for_hybrid_rootfs_target._set_from(self)
-        if self._non_cheri_for_purecap_rootfs_target is None and \
-           other_target._non_cheri_for_purecap_rootfs_target is not None:
-            self._non_cheri_for_purecap_rootfs_target = other_target._non_cheri_for_purecap_rootfs_target
-            other_target._non_cheri_for_purecap_rootfs_target._set_from(self)
-        if self._hybrid_for_purecap_rootfs_target is None and \
-           other_target._hybrid_for_purecap_rootfs_target is not None:
-            self._hybrid_for_purecap_rootfs_target = other_target._hybrid_for_purecap_rootfs_target
-            other_target._hybrid_for_purecap_rootfs_target._set_from(self)
-        if self._purecap_for_hybrid_rootfs_target is None and \
-           other_target._purecap_for_hybrid_rootfs_target is not None:
-            self._purecap_for_hybrid_rootfs_target = other_target._purecap_for_hybrid_rootfs_target
-            other_target._purecap_for_hybrid_rootfs_target._set_from(self)
+        for attr in ("_hybrid_target", "_non_cheri_target", "_purecap_target", "_non_cheri_for_hybrid_rootfs_target",
+                     "_non_cheri_for_purecap_rootfs_target", "_hybrid_for_purecap_rootfs_target",
+                     "_purecap_for_hybrid_rootfs_target"):
+            if getattr(self, attr) is None and getattr(other_target, attr) is not None:
+                setattr(self, attr, getattr(other_target, attr))
+                # noinspection PyProtectedMember
+                getattr(other_target, attr)._set_from(self)
 
     # Set the related targets:
     def _set_for(self, other_target: "typing.Optional[CrossCompileTarget]", also_set_other=True) -> None:
