@@ -1816,6 +1816,8 @@ class AutotoolsProject(Project):
                 self.configure_args.append("--prefix=" + str(self.install_prefix))
             else:
                 self.configure_args.append("--prefix=" + str(self.install_dir))
+        if self.make_args.kind != MakeCommandKind.DefaultMake:
+            self.add_configure_env_arg("MAKE", self.make_args.command)
         if self.extra_configure_flags:
             self.configure_args.extend(self.extra_configure_flags)
         # If there is no ./configure script but ./autogen.sh exists, try running that first
