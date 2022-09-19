@@ -270,7 +270,7 @@ class TargetInfo(ABC):
     @abstractmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
                                                  perform_sanity_checks=True, default_flags_only=False,
-                                                 softfloat: bool = None) -> list[str]:
+                                                 softfloat: bool = None) -> "list[str]":
         """
         :return: flags such as -target + -mabi which are needed for both compiler and linker
         """
@@ -278,13 +278,13 @@ class TargetInfo(ABC):
 
     def get_essential_compiler_and_linker_flags(self, xtarget: "CrossCompileTarget" = None,
                                                 perform_sanity_checks=True, default_flags_only=False,
-                                                softfloat: bool = None) -> list[str]:
+                                                softfloat: bool = None) -> "list[str]":
         return self.essential_compiler_and_linker_flags_impl(self, perform_sanity_checks=perform_sanity_checks,
                                                              xtarget=xtarget if xtarget is not None else self.target,
                                                              default_flags_only=default_flags_only, softfloat=softfloat)
 
     @property
-    def additional_executable_link_flags(self) -> list[str]:
+    def additional_executable_link_flags(self) -> "list[str]":
         """Additional linker flags that need to be passed when building an executable (e.g. custom linker script)"""
         return []
 

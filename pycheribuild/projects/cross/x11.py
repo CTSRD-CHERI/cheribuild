@@ -90,7 +90,7 @@ class X11AutotoolsProject(X11Mixin, CrossCompileAutotoolsProject):
             self.configure_args.append("--enable-malloc0returnsnull")
 
     @property
-    def default_ldflags(self) -> list[str]:
+    def default_ldflags(self) -> "list[str]":
         result = super().default_ldflags
         if not self.target_info.is_macos():
             result.append(DoNoQuoteStr("-Wl,--enable-new-dtags,-rpath,'$$ORIGIN/../lib'"))
