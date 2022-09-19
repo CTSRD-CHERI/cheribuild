@@ -1149,7 +1149,15 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             should_download = True
         if should_download:
             self.makedirs(dest.parent)
-            self.run_cmd("wget", url, "-O", dest)
+            if shutil.which("wget"):
+                self.run_cmd("wget", url, "-O", dest)
+            elif shutil.which("curl"):
+                self.run_cmd("curl", "--location", "-o", dest, url)  # --location needed to handle redirects
+            elif shutil.which("fetch"):  # pre-installed on FreeBSD/CheriBSD
+                self.run_cmd("fetch", "-o", dest, url)
+            else:
+                self.dependency_error("Cannot find a tool to download target URL.",
+                                      install_instructions=InstallInstructions("Please install wget or curl"))
             downloaded_sha256 = self.sha256sum(dest)
             self.verbose_print("Downloaded", url, "with SHA256 hash", downloaded_sha256)
             if sha256 is not None and downloaded_sha256 != sha256:

@@ -43,23 +43,20 @@ class BuildChocolate_Doom(CrossCompileAutotoolsProject):
 class BuildFreedoom(CrossCompileProject):
     repository = ExternallyManagedSourceRepository()
     dependencies = ["chocolate-doom"]
-    version = "0.12.1"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.add_required_system_tool("wget")
-        self.url_prefix = "https://github.com/freedoom/freedoom/releases/download/v{0}/".format(self.version)
-        self.packages = {
-            'freedoom': ['freedoom1', 'freedoom2'],
-            'freedm': ['freedm']
-        }
+    version = "0.12.1"
+    url_prefix: str = "https://github.com/freedoom/freedoom/releases/download/v{0}/".format(version)
+    packages: "dict[str, list[str]]" = {
+        'freedoom': ['freedoom1', 'freedoom2'],
+        'freedm': ['freedm']
+    }
 
     def compile(self, **kwargs):
         for pkgname, wads in self.packages.items():
             filename = "{0}-{1}.zip".format(pkgname, self.version)
             wadfiles = ['*/' + wad + ".wad" for wad in wads]
             if not (self.build_dir / filename).is_file():
-                self.run_cmd("wget", self.url_prefix + filename, cwd=self.build_dir)
+                self.download_file(self.build_dir / filename, self.url_prefix + filename)
             self.run_cmd("unzip", "-jo", filename, *wadfiles, cwd=self.build_dir)
 
     def install(self, **kwargs):

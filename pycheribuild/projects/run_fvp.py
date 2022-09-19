@@ -62,8 +62,6 @@ class InstallMorelloFVP(SimpleProject):
             self.add_required_system_tool("socat", homebrew="socat")
             if OSInfo.IS_MAC:
                 self.add_required_system_tool("Xquartz", homebrew="homebrew/cask/xquartz")
-        if self.installer_path is None:
-            self.add_required_system_tool("wget")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
