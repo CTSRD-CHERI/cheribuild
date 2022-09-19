@@ -46,7 +46,3 @@ class BuildValgrind(AutotoolsProject):
             self.add_required_system_header("/usr/include/x86_64-linux-gnu/asm/types.h", apt="linux-libc-dev:amd64")
             # 32-bit headers not available on ubuntu
             # self.configure_args.append("--enable-only64bit")
-
-    def configure(self, **kwargs):
-        self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
-        super().configure()
