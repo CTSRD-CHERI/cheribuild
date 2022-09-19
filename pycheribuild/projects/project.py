@@ -1820,8 +1820,10 @@ class AutotoolsProject(Project):
             self.configure_args.extend(self.extra_configure_flags)
         # If there is no ./configure script but ./autogen.sh exists, try running that first
         if not self.configure_command.exists() and (self.configure_command.parent / "autogen.sh").is_file():
+            # We need to pass NOCONFIGURE=1, to avoid invoking the configure script directly plus any environment
+            # variables that might affect the autoconf lookup (e.g. ACLOCAL_PATH).
             self.run_cmd(self.configure_command.parent / "autogen.sh", cwd=self.configure_command.parent,
-                         env=dict(NOCONFIGURE=1))
+                         env={**dict(NOCONFIGURE=1), **self.configure_environment})
         super().configure(**kwargs)
 
     def needs_configure(self) -> bool:
