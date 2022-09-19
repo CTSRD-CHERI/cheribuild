@@ -248,27 +248,6 @@ class BuildDiskImageBase(SimpleProject):
             self.write_file(target_file, contents, never_print_cmd=True, overwrite=False, mode=mode)
         self.add_file_to_image(target_file, base_directory=base_dir)
 
-    def _wget_fetch(self, what, where):
-        # https://apple.stackexchange.com/a/100573/251654
-        # https://www.gnu.org/software/wget/manual/html_node/Directory-Options.html
-        wget_cmd = ["wget", "--no-host-directories", "--cut-dirs=3",  # strip prefix
-                    "--timestamping", "-r", "--level", "inf", "--no-parent",  # recursive but ignore parents
-                    "--convert-links", "--execute=robots = off",
-                    # ignore robots.txt files, don't download robots.txt files"
-                    "--no-verbose",
-                    ]
-        self.run_cmd(wget_cmd + what, cwd=where)
-
-    def _wget_fetch_dir(self, what, where):
-        if self.wget_via_tmp:
-            with tempfile.TemporaryDirectory(prefix="cheribuild-wget-") as td:
-                # Speed things up by using whatever we've got locally, too
-                self.run_cmd("rsync", "-avvP", str(where) + "/.", td + "/.")
-                self._wget_fetch(what, td)
-                self.run_cmd("rsync", "-avvP", "--no-times", "--delete", td + "/.", str(where) + "/.")
-        else:
-            self._wget_fetch(what, where)
-
     def prepare_rootfs(self):
         assert self.tmpdir is not None
         assert self.manifest_file is not None
