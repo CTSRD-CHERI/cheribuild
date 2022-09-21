@@ -606,6 +606,13 @@ class BuildQtModuleWithQMake(CrossCompileProject):
         super().__init__(config)
         self.early_qmake_args = []
 
+    def setup(self):
+        super().setup()
+        # Avoid starting GUI windows with xcb/wayland while running tests. Without this many tests fail with:
+        # qt.qpa.xcb: could not connect to display
+        # qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
+        self.make_args.set_env(QT_QPA_PLATFORM="offscreen")
+
     def configure(self, **kwargs):
         # Run the QtBase QMake to generate a makefile
         self.run_cmd(BuildQtBase.get_instance(self).qt_host_tools_path / "bin/qmake", *self.early_qmake_args,
