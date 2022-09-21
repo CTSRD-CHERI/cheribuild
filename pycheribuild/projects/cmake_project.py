@@ -279,9 +279,6 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             else:
                 try:
                     cmake_xtarget = self.crosscompile_target
-                    # Use a non-CHERI CMake binary for the purecap rootfs since CMake does not build yet.
-                    if cmake_xtarget.is_cheri_purecap() and self.target_info.is_cheribsd():
-                        cmake_xtarget = cmake_xtarget.get_non_cheri_for_purecap_rootfs_target()
                     # Use a string here instead of BuildCrossCompiledCMake to avoid a cyclic import.
                     cmake_target = target_manager.get_target("cmake-crosscompiled", cmake_xtarget, self.config, self)
                     cmake_project = cmake_target.project_class.get_instance(self, cross_target=cmake_xtarget)

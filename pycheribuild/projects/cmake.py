@@ -33,8 +33,8 @@
 from .cmake_project import CMakeProject
 from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository,
                       MakeCommandKind, ReuseOtherProjectDefaultTargetRepository)
-from .cross.crosscompileproject import CrossCompileAutotoolsProject
-from ..config.chericonfig import BuildType
+from .cross.crosscompileproject import CrossCompileCMakeProject
+from ..config.chericonfig import BuildType, Linkage
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..targets import target_manager
 from ..utils import replace_one
@@ -43,9 +43,11 @@ from ..utils import replace_one
 # CMake uses libuv, which currently causes CTest to crash.
 # We should fix this in libuv, and build against the system libuv until the change has been upstreamed and CMake has
 # pulled in the fixes.
-class BuildLibuv(CrossCompileAutotoolsProject):
+class BuildLibuv(CrossCompileCMakeProject):
     target = "libuv"
-    repository = GitRepository("https://github.com/libuv/libuv.git")
+    repository = GitRepository("https://github.com/libuv/libuv.git",
+                               temporary_url_override="https://github.com/arichardson/libuv.git",
+                               url_override_reason="https://github.com/libuv/libuv/pull/3756")
 
 
 # Not really autotools but same sequence of commands (other than the script being call bootstrap instead of configure)
@@ -57,10 +59,26 @@ class BuildCMake(AutotoolsProject):
     make_kind = MakeCommandKind.Ninja
     add_host_target_build_config_options = False
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config, configure_script="bootstrap")
+    @classmethod
+    def dependencies(cls, _: CheriConfig) -> "list[str]":
+        xtarget = cls.get_crosscompile_target()
+        if xtarget is not None and xtarget.is_cheri_purecap():
+            return ["libuv"]
+        return []
+
+    def setup(self) -> None:
+        super().setup()
+        self.configure_command = self.source_dir / "bootstrap"
         self.configure_args.append("--parallel=" + str(self.config.make_jobs))
         self.configure_args.append("--generator=Ninja")
+        if self.crosscompile_target.is_cheri_purecap():
+            # CTest is broken on purecap Morello with the bundled libuv (passes pointers via a pipe)
+            # NB: --bootstrap-system-libuv is not needed since the usage outside CTest is fine.
+            self.configure_args.append("--system-libuv")
+            self.configure_environment["CMAKE_PREFIX_PATH"] = BuildLibuv.get_install_dir(self)
+
+    def run_tests(self) -> None:
+        self.run_make("test", logfile_name="test")
 
 
 # When cross-compiling CMake, we do so using the CMake files instead of the bootstrap script
@@ -72,17 +90,20 @@ class BuildCrossCompiledCMake(CMakeProject):
 
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCMake, do_update=True)
     target = "cmake-crosscompiled"  # Can't use cmake here due to command line option conflict
+    dependencies = ["libuv"]
     default_directory_basename = "cmake"
     default_build_type = BuildType.RELEASE  # Don't include debug info by default
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    # Also build cmake hybrid so that -hybrid projects can use it with --test
-    # TODO: fix purecap ctest: libuv passes pointers to itself through a pipe
-    supported_architectures = (CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS +
-                               CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS)
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS
+
+    def linkage(self):
+        # We always want to build the CheriBSD CTest binary static so that we can use in QEMU without needing libuv.
+        assert "libuv" in self.dependencies
+        return Linkage.STATIC
 
     @property
     def cmake_prefix_paths(self):
-        return []  # only the default search dirs
+        return [BuildLibuv.get_install_dir(self)]  # only the libuv search dir
 
     @property
     def pkgconfig_dirs(self):
@@ -90,13 +111,14 @@ class BuildCrossCompiledCMake(CMakeProject):
 
     def setup(self):
         super().setup()
+        assert not self.compiling_for_host(), "Target is cross-compilation only"
         # Don't bother building the ncurses or Qt GUIs even if libs are available
         self.add_cmake_options(BUILD_CursesDialog=False, BUILD_QtDialog=False)
         # Prefer static libraries for 3rd-party dependencies
         self.add_cmake_options(BUILD_SHARED_LIBS=False)
+        self.add_cmake_options(CMAKE_USE_SYSTEM_LIBRARY_LIBUV=True)
 
     def run_tests(self):
-        assert not self.compiling_for_host(), "Target is cross-compilation only"
         # TODO: generate JUnit output once https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6020 is merged
         # Can't run the testsuite since many tests depend on having a C compiler installed.
         test_command = "cd /build && ./bin/ctest -N"
