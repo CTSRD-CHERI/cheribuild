@@ -2,6 +2,8 @@
 # Copyright (c) 2017 Alex Richardson
 # All rights reserved.
 #
+# Copyright (c) 2022 Arm Limited and/or its affiliates <open-source-office@arm.com>
+#
 # This software was developed by SRI International and the University of
 # Cambridge Computer Laboratory under DARPA/AFRL contract FA8750-10-C-0237
 # ("CTSRD"), as part of the DARPA CRASH research programme.
@@ -753,6 +755,10 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     make_kind = MakeCommandKind.GnuMake
     needs_native_build_for_crosscompile = True
+    supported_architectures = list(
+        set(CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS) |
+        set(CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS)
+    )
 
     def setup(self):
         super().setup()

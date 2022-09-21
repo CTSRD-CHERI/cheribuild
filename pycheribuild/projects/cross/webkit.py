@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2020 Alex Richardson
+# Copyright (c) 2022 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # This software was developed by SRI International and the University of
 # Cambridge Computer Laboratory (Department of Computer Science and
@@ -29,7 +30,7 @@
 #
 
 from enum import Enum
-
+from ...config.compilation_targets import CompilationTargets
 from pycheribuild.projects.cross.crosscompileproject import (CrossCompileCMakeProject,
                                                              DefaultInstallDir, GitRepository)
 
@@ -48,6 +49,10 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
     dependencies = ["icu4c"]
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    supported_architectures = list(
+        set(CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS) |
+        set(CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS)
+    )
 
     @classmethod
     def setup_config_options(cls, **kwargs):
