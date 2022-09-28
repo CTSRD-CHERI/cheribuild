@@ -591,7 +591,7 @@ class BuildDiskImageBase(SimpleProject):
                 self.run_cmd("cat", tmp_mtree.name)
                 # Note: it appears msdosfs makefs only works if you pass a fixed size, so use 2m which is large
                 # enough to fit either loader_simp.efi or loader.efi.
-                self.run_cmd([self.makefs_cmd, "-t", "msdos", "-s", "2m",
+                self.run_cmd([self.makefs_cmd, "-t", "msdos", "-s", "100m",
                               # "-d", "0x2fffffff",  # super verbose output
                               # "-d", "0x20000000",  # MSDOSFS debug output
                               "-B", "le",  # byte order little endian
