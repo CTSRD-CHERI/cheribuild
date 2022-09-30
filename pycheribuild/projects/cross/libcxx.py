@@ -40,7 +40,7 @@ from ..cmake_project import CMakeProject
 from ..project import ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD
 from ...config.chericonfig import BuildType
-from ...utils import OSInfo
+from ...utils import OSInfo, replace_one
 
 
 # A base class to set the default installation directory
@@ -363,13 +363,15 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
 
 class BuildLlvmLibs(CMakeProject):
     target = "llvm-libs"
-    repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="llvm")
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="runtimes")
     llvm_project = BuildCheriLLVM
     # TODO: support cross-compilation
     supported_architectures = [CompilationTargets.NATIVE]
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     dependencies = ["llvm"]
     default_build_type = BuildType.DEBUG
+    # TODO: add compiler-rt
+    enabled_runtimes: "list[str]" = ["libunwind", "libcxxabi", "libcxx"]
 
     @property
     def custom_c_preprocessor(self):
@@ -387,21 +389,39 @@ class BuildLlvmLibs(CMakeProject):
         super().setup()
         lit_args = "--xunit-xml-output " + os.getenv("WORKSPACE", ".") + \
                    "/test-results.xml --max-time 3600 --timeout 120 -s -vv"
-        self.add_cmake_options(LLVM_ENABLE_PROJECTS="libunwind;libcxxabi;libcxx",
-                               # ;compiler-rt
+        self.add_cmake_options(LIBCXX_ENABLE_ASSERTIONS=True)
+        external_cxxabi = None
+        if self.compiling_for_cheri():
+            # We have to use libcxxrt for now and libunwind does not build:
+            self.enabled_runtimes.remove("libcxxabi")
+            external_cxxabi = "libcxxrt"
+            if self.llvm_project is BuildUpstreamLLVM:
+                self.enabled_runtimes.remove("libunwind")  # CHERI fixes have not been upstreamed.
+            # Skip experimental for now since it crashes the compiler...
+            self.add_cmake_options(LIBCXX_TEST_PARAMS="enable_experimental=False")
+            self.add_cmake_options(LIBCXXABI_TEST_PARAMS="enable_experimental=False")
+
+        if external_cxxabi is not None:
+            self.add_cmake_options(LIBCXX_CXX_ABI=external_cxxabi)
+            # LIBCXX_ENABLE_ABI_LINKER_SCRIPT is needed if we use libcxxrt/system libc++abi in the tests
+            self.add_cmake_options(LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False, LIBCXX_ENABLE_ABI_LINKER_SCRIPT=True)
+        else:
+            # When using the locally-built libc++abi, we link the ABI library objects as part of libc++.so
+            assert "libcxxabi" in self.enabled_runtimes, self.enabled_runtimes
+            self.add_cmake_options(LIBCXXABI_USE_LLVM_UNWINDER="libunwind" in self.enabled_runtimes)
+            self.add_cmake_options(LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False, LIBCXX_ENABLE_ABI_LINKER_SCRIPT=True)
+
+        self.add_cmake_options(LLVM_ENABLE_RUNTIMES=";".join(self.enabled_runtimes),
                                LIBCXX_ENABLE_SHARED=True,
                                LIBCXX_ENABLE_STATIC=True,
-                               LIBCXX_CXX_ABI="libcxxabi",
-                               LIBCXX_USE_COMPILER_RT=False,
-                               LIBCXXABI_USE_LLVM_UNWINDER=True,
-                               CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
                                LIBCXX_INCLUDE_TESTS=True,
                                LLVM_LIT_ARGS=lit_args,
                                LIBCXX_ENABLE_EXCEPTIONS=True,
                                LIBCXX_ENABLE_RTTI=True,
                                )
-        if not self.target_info.is_macos():
-            self.add_cmake_options(LIBCXX_ENABLE_STATIC_ABI_LIBRARY=True)
+        # The cheribuild default RPATH settings break the linker script (but should also be unnecessary without it).
+        self.add_cmake_options(CMAKE_INSTALL_RPATH_USE_LINK_PATH=False, CMAKE_BUILD_RPATH_USE_ORIGIN=False,
+                               CMAKE_INSTALL_RPATH="", _replace=True)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -410,13 +430,14 @@ class BuildLlvmLibs(CMakeProject):
                                                          help="Use the ssh.py executor for localhost (to check that "
                                                               "it works correctly)")
 
-    def compile(self, **kwargs):
-        self.run_make(["unwind", "cxxabi", "cxx"])
-
-    def install(self, **kwargs):
-        self.run_make_install(target=["install-unwind", "install-cxxabi", "install-cxx"])
-
     def run_tests(self):
+        if self.compiling_for_host():
+            # Without setting LC_ALL lit attempts to encode some things as ASCII and fails.
+            # This only happens on FreeBSD, but we might as well set it everywhere
+            with self.set_env(LC_ALL="en_US.UTF-8", FILECHECK_DUMP_INPUT_ON_FAILURE=1):
+                targets = ["check-" + replace_one(tgt,  "lib", "") for tgt in self.enabled_runtimes]
+                self.run_cmd("cmake", "--build", self.build_dir, "--target", *targets)
+                return
         # We can't use check-all since that will (currently) also build and test LLVM and using the
         # individual check-* targets will overwrite the XML output.
         # We could rename and merge the output files, but it seems simpler to invoke lit directly:
@@ -438,13 +459,13 @@ class BuildLlvmLibs(CMakeProject):
 
 class BuildUpstreamLlvmLibs(BuildLlvmLibs):
     target = "upstream-llvm-libs"
-    repository = ReuseOtherProjectDefaultTargetRepository(BuildUpstreamLLVM, subdirectory="llvm")
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildUpstreamLLVM, subdirectory="runtimes")
     llvm_project = BuildUpstreamLLVM
 
 
 class BuildUpstreamLlvmLibsWithHostCompiler(BuildLlvmLibs):
     target = "upstream-llvm-libs-with-host-compiler"
-    repository = ReuseOtherProjectDefaultTargetRepository(BuildUpstreamLLVM, subdirectory="llvm")
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildUpstreamLLVM, subdirectory="runtimes")
     llvm_project = BuildUpstreamLLVM
 
     @property
