@@ -40,7 +40,7 @@ from ..cmake_project import CMakeProject
 from ..project import ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD
 from ...config.chericonfig import BuildType
-from ...utils import OSInfo, replace_one
+from ...utils import OSInfo
 
 
 # A base class to set the default installation directory
@@ -435,8 +435,7 @@ class BuildLlvmLibs(CMakeProject):
             # Without setting LC_ALL lit attempts to encode some things as ASCII and fails.
             # This only happens on FreeBSD, but we might as well set it everywhere
             with self.set_env(LC_ALL="en_US.UTF-8", FILECHECK_DUMP_INPUT_ON_FAILURE=1):
-                targets = ["check-" + replace_one(tgt,  "lib", "") for tgt in self.enabled_runtimes]
-                self.run_cmd("cmake", "--build", self.build_dir, "--target", *targets)
+                self.run_cmd("cmake", "--build", self.build_dir, "--target", "check-runtimes")
                 return
         # We can't use check-all since that will (currently) also build and test LLVM and using the
         # individual check-* targets will overwrite the XML output.
