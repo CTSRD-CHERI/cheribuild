@@ -1718,9 +1718,13 @@ class _CMakeAndMesonSharedLogic(Project):
     def _add_configure_options(self, *, _include_empty_vars=False, _replace=True, _implicitly_convert_lists=False,
                                _config_file_options: "list[str]", **kwargs) -> None:
         for option, value in kwargs.items():
-            if not _replace and any(x.startswith("-D" + option + "=") for x in self.configure_args):
-                self.verbose_print("Not replacing ", option, "since it is already set.")
-                return
+            existing_option = next((x for x in self.configure_args if x.startswith("-D" + option + "=")), None)
+            if existing_option is not None:
+                if _replace:
+                    self.configure_args.remove(existing_option)
+                else:
+                    self.warning("Not replacing ", option, "since it is already set.")
+                    return
             if any(x.startswith("-D" + option) for x in _config_file_options):
                 self.info("Not using default value of '", value, "' for configure option '", option,
                           "' since it is explicitly overwritten in the configuration", sep="")
