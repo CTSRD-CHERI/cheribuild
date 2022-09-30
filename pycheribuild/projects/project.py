@@ -1847,6 +1847,17 @@ class AutotoolsProject(Project):
         self.make_args.set(**kwargs)
         self.make_args.env_vars.update(**kwargs)
 
+    def run_tests(self) -> None:
+        # Most autotools projects have a "check" target that we can use.
+        try:
+            self.run_cmd(self.make_args.command,
+                         *self.make_args.get_commandline_args(targets=["-n", "check"], jobs=1, config=self.config),
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=self.build_dir)
+        except subprocess.CalledProcessError:
+            # If make -n check fails, assume there are no tests.
+            return super().run_tests()
+        self.run_make("check", parallel=False, logfile_name="test")  # Unlikely to be parallel-safe
+
 
 class MakefileProject(Project):
     """A very simple project that just set some defualt variables such as CC/CXX, etc"""
