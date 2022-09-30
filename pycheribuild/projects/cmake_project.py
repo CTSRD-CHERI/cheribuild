@@ -140,6 +140,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         if self.config.create_compilation_db:
             # TODO: always generate it?
             self.configure_args.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
+        self._toolchain_file: "Optional[Path]" = None
         if self.compiling_for_host():
             # When building natively, pass arguments on the command line instead of using the toolchain file.
             # This makes it a lot easier to reproduce the builds outside cheribuild.
@@ -148,7 +149,72 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             self._toolchain_template = include_local_file("files/CrossToolchain.cmake.in")
             self._toolchain_file = self.build_dir / "CrossToolchain.cmake"
             self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self._toolchain_file)
-        # Don't add the user provided options here, add them in configure() so that they are put last
+
+        if self.install_prefix != self.install_dir:
+            assert self.destdir, "custom install prefix requires DESTDIR being set!"
+            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.install_prefix)
+        else:
+            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.install_dir)
+        custom_ldflags = self.default_ldflags + self.LDFLAGS
+        self.add_cmake_options(
+            CMAKE_C_COMPILER=self.CC,
+            CMAKE_CXX_COMPILER=self.CXX,
+            CMAKE_ASM_COMPILER=self.CC,  # Compile assembly files with the default compiler
+            # All of these should be commandlines not CMake lists:
+            CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CFLAGS),
+            CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CXXFLAGS),
+            CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.ASMFLAGS),
+            CMAKE_EXE_LINKER_FLAGS_INIT=commandline_to_str(
+                custom_ldflags + self.target_info.additional_executable_link_flags),
+            CMAKE_SHARED_LINKER_FLAGS_INIT=commandline_to_str(
+                custom_ldflags + self.target_info.additional_shared_library_link_flags),
+            CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(
+                custom_ldflags + self.target_info.additional_shared_library_link_flags),
+        )
+        if self.optimization_flags:
+            # If the project uses custom optimization flags (e.g. SPEC), override the CMake defaults defined in
+            # Modules/Compiler/GNU.cmake. Just adding them to CMAKE_<LANG>_FLAGS_INIT is not enough since the
+            # CMAKE_<LANG>_FLAGS_<CONFIG>_INIT and  CMAKE_<LANG>_FLAGS variables will be appended and override the
+            # optimization flags that we passed as part of CMAKE_<LANG>_FLAGS_INIT.
+            flags = " " + commandline_to_str(self.optimization_flags)
+            if self.build_type.is_release:
+                flags += " -DNDEBUG"
+            self.add_cmake_options(**{f"CMAKE_C_FLAGS{self.build_type_var_suffix}": flags,
+                                      f"CMAKE_CXX_FLAGS{self.build_type_var_suffix}": flags})
+        if not self.compiling_for_host():
+            # TODO: set CMAKE_STRIP, CMAKE_NM, CMAKE_OBJDUMP, CMAKE_READELF, CMAKE_DLLTOOL, CMAKE_DLLTOOL,
+            #  CMAKE_ADDR2LINE
+            self.add_cmake_options(
+                _CMAKE_TOOLCHAIN_LOCATION=self.target_info.sdk_root_dir / "bin",
+                CMAKE_LINKER=self.target_info.linker)
+
+        if self.target_info.additional_executable_link_flags:
+            self.add_cmake_options(
+                CMAKE_REQUIRED_LINK_OPTIONS=commandline_to_str(self.target_info.additional_executable_link_flags))
+            # TODO: if this doesn't work we can set CMAKE_TRY_COMPILE_TARGET_TYPE to build a static lib instead
+            # https://cmake.org/cmake/help/git-master/variable/CMAKE_TRY_COMPILE_TARGET_TYPE.html
+            # XXX: we should have everything set up correctly so this should no longer be needed for FreeBSD
+            if self.target_info.is_baremetal():
+                self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")
+        if self.force_static_linkage:
+            self.add_cmake_options(
+                CMAKE_SHARED_LIBRARY_SUFFIX=".a",
+                CMAKE_FIND_LIBRARY_SUFFIXES=".a",
+                CMAKE_EXTRA_SHARED_LIBRARY_SUFFIXES=".a")
+        else:
+            # Use $ORIGIN in the build RPATH (this should make it easier to run tests without having the absolute
+            # build directory mounted).
+            self.add_cmake_options(CMAKE_BUILD_RPATH_USE_ORIGIN=True)
+            # Infer the RPATH needed for each executable.
+            self.add_cmake_options(CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
+            # CMake does not add the install directory even if it's a non-default location, so add it manually.
+            self.add_cmake_options(CMAKE_INSTALL_RPATH="$ORIGIN/../lib")
+        if not self.compiling_for_host() and self.make_args.subkind == MakeCommandKind.Ninja:
+            # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
+            # Fixed in https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 (3.21.20210625)
+            self.add_cmake_options(
+                CMAKE_BUILD_WITH_INSTALL_RPATH=self._get_configure_tool_version() < (3, 21, 20210625))
+        # NB: Don't add the user provided options here, we append add them in configure() so that they are put last.
 
     def add_cmake_options(self, *, _include_empty_vars=False, _replace=True, **kwargs) -> None:
         return self._add_configure_options(_config_file_options=self.cmake_options, _replace=_replace,
@@ -187,79 +253,14 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                                             TOOLCHAIN_FILE_PATH=file.absolute())
 
     def configure(self, **kwargs) -> None:
-        if self.install_prefix != self.install_dir:
-            assert self.destdir, "custom install prefix requires DESTDIR being set!"
-            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.install_prefix)
-        else:
-            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.install_dir)
-        custom_ldflags = self.default_ldflags + self.LDFLAGS
-        self.add_cmake_options(
-            CMAKE_C_COMPILER=self.CC,
-            CMAKE_CXX_COMPILER=self.CXX,
-            CMAKE_ASM_COMPILER=self.CC,  # Compile assembly files with the default compiler
-            # All of these should be commandlines not CMake lists:
-            CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CFLAGS),
-            CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CXXFLAGS),
-            CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.ASMFLAGS),
-            CMAKE_EXE_LINKER_FLAGS_INIT=commandline_to_str(
-                custom_ldflags + self.target_info.additional_executable_link_flags),
-            CMAKE_SHARED_LINKER_FLAGS_INIT=commandline_to_str(
-                custom_ldflags + self.target_info.additional_shared_library_link_flags),
-            CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(
-                custom_ldflags + self.target_info.additional_shared_library_link_flags),
-        )
-        if self.optimization_flags:
-            # If the project uses custom optimization flags (e.g. SPEC), override the CMake defaults defined in
-            # Modules/Compiler/GNU.cmake. Just adding them to CMAKE_<LANG>_FLAGS_INIT is not enough since the
-            # CMAKE_<LANG>_FLAGS_<CONFIG>_INIT and  CMAKE_<LANG>_FLAGS variables will be appended and override the
-            # optimization flags that we passed as part of CMAKE_<LANG>_FLAGS_INIT.
-            flags = " " + commandline_to_str(self.optimization_flags)
-            if self.build_type.is_release:
-                flags += " -DNDEBUG"
-            self.add_cmake_options(**{f"CMAKE_C_FLAGS{self.build_type_var_suffix}": flags,
-                                      f"CMAKE_CXX_FLAGS{self.build_type_var_suffix}": flags})
-        if not self.compiling_for_host():
-            # TODO: set CMAKE_STRIP, CMAKE_NM, CMAKE_OBJDUMP, CMAKE_READELF, CMAKE_DLLTOOL, CMAKE_DLLTOOL,
-            #  CMAKE_ADDR2LINE
-            self.generate_cmake_toolchain_file(self._toolchain_file)
-            self.add_cmake_options(
-                _CMAKE_TOOLCHAIN_LOCATION=self.target_info.sdk_root_dir / "bin",
-                CMAKE_LINKER=self.target_info.linker)
-
-        if self.target_info.additional_executable_link_flags:
-            self.add_cmake_options(
-                CMAKE_REQUIRED_LINK_OPTIONS=commandline_to_str(self.target_info.additional_executable_link_flags))
-            # TODO: if this doesn't work we can set CMAKE_TRY_COMPILE_TARGET_TYPE to build a static lib instead
-            # https://cmake.org/cmake/help/git-master/variable/CMAKE_TRY_COMPILE_TARGET_TYPE.html
-            # XXX: we should have everything set up correctly so this should no longer be needed for FreeBSD
-            if self.target_info.is_baremetal():
-                self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")
-        if self.force_static_linkage:
-            self.add_cmake_options(
-                CMAKE_SHARED_LIBRARY_SUFFIX=".a",
-                CMAKE_FIND_LIBRARY_SUFFIXES=".a",
-                CMAKE_EXTRA_SHARED_LIBRARY_SUFFIXES=".a")
-        else:
-            # Use $ORIGIN in the build RPATH (this should make it easier to run tests without having the absolute
-            # build directory mounted).
-            self.add_cmake_options(CMAKE_BUILD_RPATH_USE_ORIGIN=True)
-            # Infer the RPATH needed for each executable.
-            self.add_cmake_options(CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
-            # CMake does not add the install directory even if it's a non-default location, so add it manually.
-            self.add_cmake_options(CMAKE_INSTALL_RPATH="$ORIGIN/../lib")
-        if not self.compiling_for_host() and self.make_args.subkind == MakeCommandKind.Ninja:
-            # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
-            # Fixed in https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 (3.21.20210625)
-            self.add_cmake_options(
-                CMAKE_BUILD_WITH_INSTALL_RPATH=self._get_configure_tool_version() < (3, 21, 20210625))
-        # TODO: BUILD_SHARED_LIBS=OFF?
-
-        # Add the options from the config file:
-        self.configure_args.extend(self.cmake_options)
+        # Add the options from the config file now so that they are added after child class setup() calls.
+        self.configure_args.extend(self.cmake_options)  # FIXME: probably shouldn't modify this list
         # make sure we get a completely fresh cache when --reconfigure is passed:
         cmake_cache = self.build_dir / "CMakeCache.txt"
         if self.force_configure:
             self.delete_file(cmake_cache)
+        if self._toolchain_file is not None:
+            self.generate_cmake_toolchain_file(self._toolchain_file)
         super().configure(**kwargs)
         if self.config.copy_compilation_db_to_source_dir and (self.build_dir / "compile_commands.json").exists():
             self.install_file(self.build_dir / "compile_commands.json", self.source_dir / "compile_commands.json",
