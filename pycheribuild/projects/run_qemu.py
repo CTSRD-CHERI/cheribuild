@@ -832,6 +832,13 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
     _freebsd_class = BuildCheriBsdMfsKernel
     _disk_image_class = None
 
+    # XXX: Existing code isn't reqdy to run these but we want to support building them
+    @classproperty
+    def supported_architectures(self):
+        arches = super().supported_architectures
+        return list(set(arches) -
+                    set([CompilationTargets.CHERIBSD_AARCH64] + CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS))
+
     def __init__(self, config):
         super().__init__(config, needs_disk_image=False)
         if self.config.use_minimal_benchmark_kernel:
