@@ -63,7 +63,9 @@ class ArmNoneEabiToolchain(SimpleProject):
             else:
                 self.fatal("Unsupported CPU architecture")
         elif self.target_info.is_macos():
-            assert self.crosscompile_target.is_x86_64(), "Assumes x86_64"
+            # XXX: Works fine with Rosetta...
+            if not self.crosscompile_target.is_x86_64():
+                self.fatal("Unsupported CPU architecture")
             filename = "gcc-arm-none-eabi-9-2020-q2-update-mac.tar.bz2"
         if filename is None:
             self.fatal("Cannot infer download URL for current OS:", platform.platform(),
