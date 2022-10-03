@@ -41,9 +41,9 @@ try:
 except ImportError:
     argcomplete: Optional[Any] = None
 
+from .computed_default_value import ComputedDefaultValue
 from .config_loader_base import ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption, _LoadedConfigValue
-from .chericonfig import CheriConfig, ComputedDefaultValue
-from ..utils import fatal_error, status_update, warning_message, error_message
+from ..utils import fatal_error, status_update, warning_message, error_message, ConfigBase
 from ..colour import AnsiColour, coloured
 from pathlib import Path
 from enum import Enum
@@ -264,8 +264,7 @@ class CommandLineConfigOption(ConfigOptionBase[T]):
         assert not action.type  # we handle the type of the value manually
         return action
 
-    def _load_option_impl(self, config: "CheriConfig",
-                          target_option_name: str) -> "Optional[_LoadedConfigValue]":
+    def _load_option_impl(self, config: ConfigBase, target_option_name: str) -> "Optional[_LoadedConfigValue]":
         from_cmdline = self._load_from_commandline()
         return from_cmdline
 
@@ -288,7 +287,7 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption[T]):
         super().__init__(*args, **kwargs)
         self.alias_names = alias_names
 
-    def _load_option_impl(self, config: "CheriConfig", target_option_name: str):
+    def _load_option_impl(self, config: ConfigBase, target_option_name: str):
         # First check the value specified on the command line, then load JSON and then fallback to the default
         from_cmd_line = self._load_from_commandline()
         # config_debug(full_option_name, "from cmdline:", from_cmd_line)
