@@ -520,7 +520,7 @@ class CompilerInfo(object):
             self._include_dirs[tuple(basic_flags)] = include_dirs
         return list(include_dirs)
 
-    def _supports_flag(self, flag: str, *other_args: "list[str]") -> bool:
+    def _supports_flag(self, flag: str, other_args: "list[str]") -> bool:
         assert flag.startswith("-W")
         try:
             if not self.path.exists():
