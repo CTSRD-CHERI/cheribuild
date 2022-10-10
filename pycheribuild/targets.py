@@ -113,8 +113,10 @@ class Target(object):
             # noinspection PyProtectedMember
             if not project._setup_called:
                 project.setup()
+                project.setup_late()
             # noinspection PyProtectedMember
             assert project._setup_called, str(self._project_class) + ": forgot to call super().setup()?"
+            assert project._setup_late_called, str(self._project_class) + ": forgot to call super().setup_late()?"
             new_env = {"PATH": project.config.dollar_path_with_other_tools}
             if project.config.clang_colour_diags:
                 new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"

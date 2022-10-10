@@ -155,32 +155,6 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.install_prefix)
         else:
             self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.install_dir)
-        custom_ldflags = self.default_ldflags + self.LDFLAGS
-        self.add_cmake_options(
-            CMAKE_C_COMPILER=self.CC,
-            CMAKE_CXX_COMPILER=self.CXX,
-            CMAKE_ASM_COMPILER=self.CC,  # Compile assembly files with the default compiler
-            # All of these should be commandlines not CMake lists:
-            CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CFLAGS),
-            CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CXXFLAGS),
-            CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.ASMFLAGS),
-            CMAKE_EXE_LINKER_FLAGS_INIT=commandline_to_str(
-                custom_ldflags + self.target_info.additional_executable_link_flags),
-            CMAKE_SHARED_LINKER_FLAGS_INIT=commandline_to_str(
-                custom_ldflags + self.target_info.additional_shared_library_link_flags),
-            CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(
-                custom_ldflags + self.target_info.additional_shared_library_link_flags),
-        )
-        if self.optimization_flags:
-            # If the project uses custom optimization flags (e.g. SPEC), override the CMake defaults defined in
-            # Modules/Compiler/GNU.cmake. Just adding them to CMAKE_<LANG>_FLAGS_INIT is not enough since the
-            # CMAKE_<LANG>_FLAGS_<CONFIG>_INIT and  CMAKE_<LANG>_FLAGS variables will be appended and override the
-            # optimization flags that we passed as part of CMAKE_<LANG>_FLAGS_INIT.
-            flags = " " + commandline_to_str(self.optimization_flags)
-            if self.build_type.is_release:
-                flags += " -DNDEBUG"
-            self.add_cmake_options(**{f"CMAKE_C_FLAGS{self.build_type_var_suffix}": flags,
-                                      f"CMAKE_CXX_FLAGS{self.build_type_var_suffix}": flags})
         if not self.compiling_for_host():
             # TODO: set CMAKE_STRIP, CMAKE_NM, CMAKE_OBJDUMP, CMAKE_READELF, CMAKE_DLLTOOL, CMAKE_DLLTOOL,
             #  CMAKE_ADDR2LINE
@@ -215,6 +189,37 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             self.add_cmake_options(
                 CMAKE_BUILD_WITH_INSTALL_RPATH=self._get_configure_tool_version() < (3, 21, 20210625))
         # NB: Don't add the user provided options here, we append add them in configure() so that they are put last.
+
+    def setup_late(self):
+        super().setup_late()
+        custom_ldflags = self.default_ldflags + self.LDFLAGS
+        self.add_cmake_options(
+            CMAKE_C_COMPILER=self.CC,
+            CMAKE_CXX_COMPILER=self.CXX,
+            CMAKE_ASM_COMPILER=self.CC,  # Compile assembly files with the default compiler
+            # All of these should be commandlines not CMake lists:
+            CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CFLAGS),
+            CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CXXFLAGS),
+            CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.ASMFLAGS),
+            CMAKE_EXE_LINKER_FLAGS_INIT=commandline_to_str(
+                custom_ldflags + self.target_info.additional_executable_link_flags),
+            CMAKE_SHARED_LINKER_FLAGS_INIT=commandline_to_str(
+                custom_ldflags + self.target_info.additional_shared_library_link_flags),
+            CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(
+                custom_ldflags + self.target_info.additional_shared_library_link_flags),
+        )
+        if self.optimization_flags:
+            # If the project uses custom optimization flags (e.g. SPEC), override the CMake defaults defined in
+            # Modules/Compiler/GNU.cmake. Just adding them to CMAKE_<LANG>_FLAGS_INIT is not enough since the
+            # CMAKE_<LANG>_FLAGS_<CONFIG>_INIT and  CMAKE_<LANG>_FLAGS variables will be appended and override the
+            # optimization flags that we passed as part of CMAKE_<LANG>_FLAGS_INIT.
+            flags = " " + commandline_to_str(self.optimization_flags)
+            if self.build_type.is_release:
+                flags += " -DNDEBUG"
+            self.add_cmake_options(**{f"CMAKE_C_FLAGS{self.build_type_var_suffix}": flags,
+                                      f"CMAKE_CXX_FLAGS{self.build_type_var_suffix}": flags})
+        # Add the options from the config file now so that they are added after child class setup() calls.
+        self.configure_args.extend(self.cmake_options)  # FIXME: probably shouldn't modify this list
 
     def add_cmake_options(self, *, _include_empty_vars=False, _replace=True, **kwargs) -> None:
         return self._add_configure_options(_config_file_options=self.cmake_options, _replace=_replace,
@@ -253,8 +258,6 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                                             TOOLCHAIN_FILE_PATH=file.absolute())
 
     def configure(self, **kwargs) -> None:
-        # Add the options from the config file now so that they are added after child class setup() calls.
-        self.configure_args.extend(self.cmake_options)  # FIXME: probably shouldn't modify this list
         # make sure we get a completely fresh cache when --reconfigure is passed:
         cmake_cache = self.build_dir / "CMakeCache.txt"
         if self.force_configure:

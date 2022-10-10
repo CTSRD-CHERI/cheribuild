@@ -742,6 +742,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         self.__required_pkg_config = {}  # type: typing.Dict[str, InstallInstructions]
         self._system_deps_checked = False
         self._setup_called = False
+        self._setup_late_called = False
         assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
 
     def setup(self) -> None:
@@ -751,6 +752,14 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         """
         assert not self._setup_called, "Should only be called once"
         self._setup_called = True
+
+    def setup_late(self) -> None:
+        """
+        Like setup(), but called after setup() has been executed for all child classes.
+        This can be used for example when adding configure arguments that depend on state modifications in setup().
+        """
+        assert not self._setup_late_called, "Should only be called once"
+        self._setup_late_called = True
 
     def has_required_system_tool(self, executable: str) -> bool:
         return executable in self.__required_system_tools
