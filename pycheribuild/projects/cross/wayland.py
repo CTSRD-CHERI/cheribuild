@@ -205,7 +205,7 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
                                       "please install a newer version with cheribuild", cheribuild_target="dejagnu")
 
             if self.can_run_binaries_on_remote_morello_board():
-                Path(self.build_dir, "site.exp").write_text(f"""
+                self.write_file(self.build_dir / "site.exp", contents=f"""
 if ![info exists boards_dir] {{
     set boards_dir {{}}
 }}
@@ -213,11 +213,11 @@ lappend boards_dir "{self.build_dir}"
 verbose "Global Config File: target_triplet is $target_triplet" 2
 global target_list
 set target_list "remote-cheribsd"
-""")
+""", overwrite=True)
                 ssh_options = "-o NoHostAuthenticationForLocalhost=yes"
                 ssh_port = ssh_config_parameters(self.config.remote_morello_board).get("port", "22")
                 ssh_user = ssh_config_parameters(self.config.remote_morello_board).get("user", "root")
-                Path(self.build_dir, "remote-cheribsd.exp").write_text(f"""
+                self.write_file(self.build_dir / "remote-cheribsd.exp", contents=f"""
 load_generic_config "unix"
 set_board_info connect ssh
 set_board_info hostname {self.config.remote_morello_board}
@@ -229,7 +229,7 @@ set_board_info ssh_opts "{ssh_options}"
 # set_board_info exec_shell "gdb-run-noninteractive.sh"
 # Build tests statically linked so they pick up the local libffi library
 set TOOL_OPTIONS -static
-""")
+""", overwrite=True)
                 self.run_cmd(["make", "check", "RUNTESTFLAGS=-a --target-board remote-cheribsd --xml"],
                              env=dict(BOARDSDIR=self.build_dir, DEJAGNU=self.build_dir / "site.exp"),
                              cwd=str(self.build_dir))
