@@ -290,13 +290,16 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.spec_iso_path = cls.add_path_option("iso-path", default=None, help="Path to the SPEC2006 ISO image")
+        cls.spec_iso_path = cls.add_path_option("iso-path", altname="spec-sources", default=None,
+                                                help="Path to the SPEC2006 ISO image or extracted sources")
         cls.fast_benchmarks_only = cls.add_bool_option("fast-benchmarks-only", default=False)
         cls.benchmark_override = cls.add_config_option("benchmarks", default=[], kind=list,
                                                        help="override the list of benchmarks to run")
 
     @property
     def extracted_spec_sources(self) -> Path:
+        if self.spec_iso_path.is_dir():
+            return self.spec_iso_path  # assume we were passed the path to the extracted sources
         return self.build_dir / "spec-extracted"
 
     def __init__(self, *args, **kwargs):
@@ -348,9 +351,8 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
         # are missing). This does not appear to be a problem with Ubuntu 18.04's version 3.2.2.
         return (3, 3) <= bsdtar_version < (3, 5), bsdtar_version
 
-    def configure(self, **kwargs):
-        # Need to extract the ISO it before configuring
-        self.makedirs(self.extracted_spec_sources)
+    def extract_spec_iso_image(self):
+        assert self.spec_iso_path != self.extracted_spec_sources
         if not (self.extracted_spec_sources / "install.sh").exists():
             self.clean_directory(self.extracted_spec_sources)  # clean up partial builds
             bsdtar = Path(shutil.which("bsdtar") or "/could/not/find/bsdtar")
@@ -369,6 +371,12 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
             # over the permissions so that we don't die if we try to clean up
             # later.
             self.run_cmd("chmod", "-R", "u+rwX", self.extracted_spec_sources, cwd=self.build_dir)
+
+    def configure(self, **kwargs):
+        if not self.spec_iso_path.is_dir():
+            # Need to extract the ISO it before configuring
+            self.makedirs(self.extracted_spec_sources)
+            self.extract_spec_iso_image()
         super().configure(**kwargs)
 
     def install(self, **kwargs):
