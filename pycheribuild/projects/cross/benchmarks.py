@@ -299,8 +299,9 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
 
     @property
     def extracted_spec_sources(self) -> Path:
+        assert self.spec_iso_path is not None, "should only be called after setup()"
         if self.spec_iso_path.is_dir():
-            return self.spec_iso_path  # assume we were passed the path to the extracted sources
+            return Path(self.spec_iso_path)  # assume we were passed the path to the extracted sources
         return self.build_dir / "spec-extracted"
 
     def __init__(self, *args, **kwargs):
