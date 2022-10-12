@@ -293,6 +293,7 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
         cls.spec_iso_path = cls.add_path_option("iso-path", altname="spec-sources", default=None,
                                                 help="Path to the SPEC2006 ISO image or extracted sources")
         cls.fast_benchmarks_only = cls.add_bool_option("fast-benchmarks-only", default=False)
+        cls.workload = cls.add_config_option("workload", choices=("test", "train", "ref"), default="test")
         cls.benchmark_override = cls.add_config_option("benchmarks", default=[], kind=list,
                                                        help="override the list of benchmarks to run")
 
@@ -339,7 +340,7 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
         # self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006;External/SPEC/CFP2006",
         self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006",
                                TEST_SUITE_COPY_DATA=True,
-                               TEST_SUITE_RUN_TYPE='test',  # TODO: allow train+ref
+                               TEST_SUITE_RUN_TYPE=self.workload,
                                TEST_SUITE_SPEC2006_ROOT=self.extracted_spec_sources)
 
     def _check_broken_bsdtar(self, bsdtar: Path) -> "tuple[bool, tuple[int, ...]]":
