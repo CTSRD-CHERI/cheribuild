@@ -101,13 +101,12 @@ class _AdditionalFileTemplates(object):
 
 
 def _default_disk_image_name(_: CheriConfig, directory: Path, project: "BuildDiskImageBase"):
-    xtarget = project.get_crosscompile_target()
     if project.use_qcow2:
         suffix = "qcow2"
     else:
         suffix = "img"
     # Don't add the os_prefix to the disk image name since it should already be encoded in project.disk_image_prefix)
-    return directory / (project.disk_image_prefix + project.build_configuration_suffix(xtarget) + "." + suffix)
+    return directory / (project.disk_image_prefix + project.build_configuration_suffix() + "." + suffix)
 
 
 def _default_disk_image_hostname(prefix: str) -> "ComputedDefaultValue[str]":
@@ -207,7 +206,7 @@ class BuildDiskImageBase(SimpleProject):
         self.big_endian = self.compiling_for_mips(include_purecap=True)
 
     def _get_source_class_target(self):
-        return self.get_crosscompile_target()
+        return self.crosscompile_target
 
     def add_file_to_image(self, file: Path, *, base_directory: Path = None, user="root", group="wheel", mode=None,
                           path_in_target=None, strip_binaries: bool = None):
@@ -1370,7 +1369,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
 
 
 def _default_tar_name(_: CheriConfig, directory: Path, project: "BuildDiskImageBase"):
-    xtarget = project.get_crosscompile_target()
+    xtarget = project.crosscompile_target
     return directory / (project.disk_image_prefix + project.build_configuration_suffix(xtarget) + ".tar.xz")
 
 

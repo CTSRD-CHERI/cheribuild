@@ -155,12 +155,8 @@ class AbstractProject(FileSystemUtils):
     @classmethod
     def get_crosscompile_target(cls) -> "CrossCompileTarget":
         target = cls._xtarget
-        if target is not None:
-            return target
-        # otherwise fall back to the default specified in the class
-        result = cls.default_architecture
-        assert result is not None
-        return result
+        assert target is not None
+        return target
 
 
 class TargetInfo(ABC):

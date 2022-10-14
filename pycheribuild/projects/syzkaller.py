@@ -83,7 +83,7 @@ class BuildSyzkaller(CrossCompileProject):
         self._new_path = (str(self.config.cheri_sdk_dir / "bin") + ":" +
                           str(self.config.dollar_path_with_other_tools))
 
-        cheribsd_target = self.get_crosscompile_target().get_rootfs_target()
+        cheribsd_target = self.crosscompile_target.get_rootfs_target()
         self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self, cross_target=cheribsd_target)
 
     def syzkaller_install_path(self):

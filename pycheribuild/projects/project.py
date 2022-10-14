@@ -616,7 +616,7 @@ class Project(SimpleProject):
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
                 function=lambda config, proj: (
-                    False if proj.get_crosscompile_target().is_cheri_purecap() else proj.default_use_asan),
+                    False if proj.crosscompile_target.is_cheri_purecap() else proj.default_use_asan),
                 as_string=str(cls.default_use_asan))
             cls.use_asan = cls.add_bool_option("use-asan", default=asan_default,
                                                help="Build with AddressSanitizer enabled")
