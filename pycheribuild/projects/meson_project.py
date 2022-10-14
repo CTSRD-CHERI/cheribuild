@@ -78,7 +78,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             if OSInfo.is_ubuntu() or OSInfo.is_debian():
                 install_instructions = "Try running `pip3 install --upgrade --user meson`"
             self.add_required_system_tool("meson", homebrew="meson", zypper="meson", freebsd="meson", apt="meson",
-                                          install_instructions=install_instructions)
+                                          custom_install_instructions=install_instructions)
         self.configure_args.insert(0, "setup")
         # We generate a toolchain file when cross-compiling and the toolchain files need at least 0.57
         self.set_minimum_meson_version(0, 57)
