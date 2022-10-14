@@ -586,8 +586,8 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             help="Select extra kernel variant with the given ABI to run.")
 
     def __init__(self, config: CheriConfig, *, freebsd_class: "typing.Type[BuildFreeBSD]" = None,
-                 disk_image_class: "typing.Type[BuildDiskImageBase]" = None, needs_disk_image=True):
-        super().__init__(config)
+                 disk_image_class: "typing.Type[BuildDiskImageBase]" = None, needs_disk_image=True, **kwargs):
+        super().__init__(config, **kwargs)
         if freebsd_class is None and disk_image_class is not None:
             # noinspection PyProtectedMember
             disk_image_instance = disk_image_class.get_instance(self)
@@ -690,7 +690,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
 
     def __init__(self, *args, needs_disk_image=True, **kwargs):
         super().__init__(*args, needs_disk_image=needs_disk_image, freebsd_class=self._freebsd_class,
-                         disk_image_class=self._disk_image_class)
+                         disk_image_class=self._disk_image_class, **kwargs)
 
     def run_tests(self):
         rootfs_kernel_bootdir = None

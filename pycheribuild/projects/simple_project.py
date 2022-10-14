@@ -471,10 +471,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def default_architecture(self) -> "typing.Optional[CrossCompileTarget]":
         return self._default_architecture
 
-    @property
-    def crosscompile_target(self) -> CrossCompileTarget:
-        return self.get_crosscompile_target()
-
     def get_host_triple(self) -> str:
         compiler = self.get_compiler_info(self.host_CC)
         return compiler.default_target
@@ -734,11 +730,13 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                                                                           "the value of the global --clean option"),
                                              help="Override --clean/--no-clean for this target only")
 
-    def __init__(self, config: CheriConfig) -> None:
+    def __init__(self, config: CheriConfig, *, crosscompile_target: CrossCompileTarget) -> None:
         assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
         self.target_info = self._xtarget.create_target_info(self)
         super().__init__(config)
         self.config = config
+        self.crosscompile_target = crosscompile_target
+        assert self._xtarget == crosscompile_target, "Failed to update all callers?"
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
         assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
             self.__class__)
