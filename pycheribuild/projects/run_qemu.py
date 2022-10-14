@@ -266,7 +266,7 @@ class LaunchQEMUBase(SimpleProject):
             if qemu_binary is None:
                 if qemu_class is None:
                     # Deferred until setup time when we have an instance (need
-                    # qemu_options member and add_required_system_tool)
+                    # qemu_options member and check_required_system_tool)
                     can_provide_src_via_smb = None
                     qemu_binary = None
                 else:

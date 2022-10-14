@@ -28,8 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir,
-                                  GitRepository)
+from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
 
 
 class BuildOpenSSH(CrossCompileAutotoolsProject):
@@ -40,9 +39,9 @@ class BuildOpenSSH(CrossCompileAutotoolsProject):
     # LD is used with CFLAGS so don't set to ld/ld.lld
     _define_ld = False
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.add_required_system_tool("autoreconf", default="autoconf")
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("autoreconf", default="autoconf")
 
     def setup(self):
         super().setup()

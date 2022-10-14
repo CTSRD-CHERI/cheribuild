@@ -59,9 +59,12 @@ class BuildUBoot(Project):
         ComputedDefaultValue(function=uboot_install_dir,
                              as_string="$SDK_ROOT/u-boot/riscv{32,64}{,-hybrid,-purecap}")
 
-    def __init__(self, config) -> None:
-        super().__init__(config)
-        self.add_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.kconfig_overrides = dict()
 
     def setup(self) -> None:

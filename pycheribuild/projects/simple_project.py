@@ -742,7 +742,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
         assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
             self.__class__)
-        self.__required_system_tools = {}  # type: typing.Dict[str, InstallInstructions]
         self._system_deps_checked = False
         self._setup_called = False
         self._setup_late_called = False
@@ -763,9 +762,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         """
         assert not self._setup_late_called, "Should only be called once"
         self._setup_late_called = True
-
-    def has_required_system_tool(self, executable: str) -> bool:
-        return executable in self.__required_system_tools
 
     def _validate_cheribuild_target_for_system_deps(self, cheribuild_target: "typing.Optional[str]"):
         if not cheribuild_target:
@@ -840,22 +836,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             self.dependency_error("Required C header", header, "is missing!", install_instructions=instructions,
                                   cheribuild_target=instructions.cheribuild_target)
         self.__checked_system_headers[header] = instructions
-
-    def add_required_system_tool(self, executable: str, custom_install_instructions: "Optional[str]" = None,
-                                 default: "Optional[str]" = None, freebsd: "Optional[str]" = None,
-                                 apt: "Optional[str]" = None, zypper: "Optional[str]" = None,
-                                 homebrew: "Optional[str]" = None, cheribuild_target: "Optional[str]" = None,
-                                 alternative_instructions: "Optional[str]" = None):
-        if custom_install_instructions is not None:
-            instructions = InstallInstructions(custom_install_instructions, cheribuild_target=cheribuild_target,
-                                               alternative=alternative_instructions)
-        else:
-            instructions = OSInfo.install_instructions(executable, False, default=default, freebsd=freebsd,
-                                                       zypper=zypper, apt=apt, homebrew=homebrew,
-                                                       cheribuild_target=cheribuild_target)
-        if executable in self.__required_system_tools:
-            assert instructions.fixit_hint() == self.__required_system_tools[executable].fixit_hint()
-        self.__required_system_tools[executable] = instructions
 
     def query_yes_no(self, message: str = "", *, default_result=False, force_result=True,
                      yes_no_str: str = None) -> bool:
@@ -1111,10 +1091,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         Checks that all the system dependencies (required tool, etc) are available
         :return: Throws an error if dependencies are missing
         """
-        for (tool, instructions) in self.__required_system_tools.items():
-            self.check_required_system_tool(tool, instructions=instructions,
-                                            cheribuild_target=instructions.cheribuild_target,
-                                            alternative_instructions=instructions.alternative)
         self._system_deps_checked = True
 
     def get_homebrew_prefix(self, package: "typing.Optional[str]" = None) -> Path:

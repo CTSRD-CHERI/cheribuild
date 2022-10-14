@@ -39,9 +39,9 @@ class BuildGit(CrossCompileAutotoolsProject):
     builds_docbook_xml = True
     dependencies = ["curl", "libexpat"]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.add_required_system_tool("asciidoc")
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("asciidoc")
 
     def setup(self):
         super().setup()
@@ -63,7 +63,7 @@ class BuildGit(CrossCompileAutotoolsProject):
             self.configure_args.extend([
                 "--with-curl=" + str(BuildCurl.get_install_dir(self)),
                 "--with-expat=" + str(BuildExpat.get_install_dir(self)),
-            ])
+                ])
             # Build-time detection of uname to determine more properties
             # Only S and R seem to be used currently, but provide sensible
             # values or, for V, a dummy kernconf (and format it like a release

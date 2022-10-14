@@ -34,15 +34,15 @@ class BuildSQLite(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
                                default_branch="3.22.0-cheri", force_branch=True)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
         # XXX: Disabling amalgamation should remove the requirement for tclsh, but it seems the build still invokes it.
-        self.add_required_system_tool("tclsh", freebsd="tcl-wrapper")
+        self.check_required_system_tool("tclsh", freebsd="tcl-wrapper")
 
     def setup(self):
         super().setup()
         if not self.compiling_for_host():
-            self.configure_environment["BUILD_CC"] = self.host_CC
+            self.configure_environment["BUILD_CC"] = str(self.host_CC)
         self.configure_args.append("--with-pic")  # ensure that static lib can be embedded in qtbase
         # always disable tcl, since it tries to install to /usr on Ubuntu
         self.configure_args.append("--disable-tcl")

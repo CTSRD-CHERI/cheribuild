@@ -62,17 +62,18 @@ class BuildOpenSBI(Project):
     def needs_sysroot(self):
         return False  # we can build without a sysroot
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.add_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
         if OSInfo.IS_MAC:
-            self.add_required_system_tool("greadlink", homebrew="coreutils")
-            self.make_args.set(READLINK="greadlink")
+            self.check_required_system_tool("greadlink", homebrew="coreutils")
 
     def setup(self):
         super().setup()
         compflags = " " + self.commandline_to_str(self.essential_compiler_and_linker_flags)
         compflags += " -Qunused-arguments"  # -mstrict-align -no-pie
+        if OSInfo.IS_MAC:
+            self.make_args.set(READLINK="greadlink")
         self.make_args.set(
             O=self.build_dir,  # output dir
             I=self.install_dir,  # install dir

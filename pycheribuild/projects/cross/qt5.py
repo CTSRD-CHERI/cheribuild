@@ -103,12 +103,12 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
     def _can_build_tools(self):
         return self.compiling_for_host() and not self.compiling_for_cheri()  # Missing purecap glib2
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.add_required_system_tool("xmlto", homebrew="xmlto", apt="xmlto")
-        self.add_required_system_tool("xmllint", homebrew="libxml2", apt="libxml2-utils",
-                                      cheribuild_target="libxml2-native")
-        self.add_required_system_tool("msgfmt", freebsd="gettext-tools")  # no way to disable translations
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("xmlto", homebrew="xmlto", apt="xmlto")
+        self.check_required_system_tool("xmllint", homebrew="libxml2", apt="libxml2-utils",
+                                        cheribuild_target="libxml2-native")
+        self.check_required_system_tool("msgfmt", freebsd="gettext-tools")  # no way to disable translations
 
     def setup(self):
         super().setup()
@@ -141,10 +141,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     use_opengl: bool
     minimal: bool
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.configure_command = self.source_dir / "configure"
-        self.add_required_system_tool("perl", freebsd="perl5")
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("perl", freebsd="perl5")
 
     @property
     def qt_host_tools_path(self):
@@ -184,6 +183,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
     def setup(self):
         super().setup()
+        self.configure_command = self.source_dir / "configure"
         if self.compiling_for_mips(include_purecap=False) and self.force_static_linkage:
             assert "-mxgot" in self.default_compiler_flags
         if self.config.verbose:
@@ -824,10 +824,13 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             return self.config.cheri_sdk_bindir  # Use the CHERI SDK for native
         return self.target_info.sdk_root_dir / "bin"
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.add_required_system_tool("ruby", apt="ruby")
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("ruby", apt="ruby")
+        self.check_required_system_tool("gperf", homebrew="gperf", apt="gperf")
 
+    def setup(self):
+        super().setup()
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations",
                                      "-Wno-error=cheri-capability-misuse",
                                      "-Wno-error=format"]  # FIXME: build with capability -Werror
@@ -878,8 +881,6 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                 self.add_cmake_options(CHERI_PURE_CAPABILITY=True)
             if not self.compiling_for_host():
                 self.add_cmake_options(QTWEBKIT_LINK_STATIC_ONLY=self.force_static_linkage)
-
-        self.add_required_system_tool("gperf", homebrew="gperf", apt="gperf")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
