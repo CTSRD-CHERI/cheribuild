@@ -69,11 +69,11 @@ class StartKDevelop(SimpleProject):
     target = "run-kdevelop"
     dependencies = ["kdevelop"]
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.add_required_system_tool("cmake", default="cmake", homebrew="cmake", zypper="cmake", apt="cmake",
-                                      freebsd="cmake")
-        self.add_required_system_tool("qtpaths")
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("cmake", default="cmake", homebrew="cmake", zypper="cmake", apt="cmake",
+                                        freebsd="cmake")
+        self.check_required_system_tool("qtpaths")
 
     def process(self):
         kdevelop_binary = BuildKDevelop.get_install_dir(self) / "bin/start-kdevelop.py"

@@ -53,7 +53,6 @@ class OpamMixin(_MixinBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_required_system_tool("opam", homebrew="opam", apt="opam", cheribuild_target="opam-2.0")
         self.required_ocaml_version = "4.11.1"
         self.__using_correct_switch = False
         self.__ignore_switch_version = False
@@ -64,6 +63,7 @@ class OpamMixin(_MixinBase):
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
+        self.check_required_system_tool("opam", homebrew="opam", apt="opam", cheribuild_target="opam-2.0")
         opam_path = shutil.which("opam")
         if opam_path:
             opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?",
@@ -148,10 +148,10 @@ class OpamMixin(_MixinBase):
 class Opam2(SimpleProject):
     target = "opam-2.0"
 
-    def __init__(self, config):
-        super().__init__(config)
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
         if OSInfo.IS_LINUX:
-            self.add_required_system_tool("bwrap", cheribuild_target="bubblewrap")
+            self.check_required_system_tool("bwrap", cheribuild_target="bubblewrap")
 
     def process(self):
         if OSInfo.IS_LINUX and self.crosscompile_target.is_x86_64():
@@ -196,9 +196,9 @@ class BuildSailFromOpam(ProjectUsingOpam):
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.add_required_system_tool("z3", homebrew="z3 --without-python@2 --with-python")
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
+        self.check_required_system_tool("z3", homebrew="z3 --without-python@2 --with-python")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -396,13 +396,9 @@ class BuildSailFromSource(OcamlProject):
     needed_ocaml_packages = OcamlProject.needed_ocaml_packages + ["zarith", "lem", "linksem"]
 
     # TODO: `opam install linenoise` for isail?
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.add_required_system_tool("z3", homebrew="z3 --without-python@2 --with-python")
-
     def check_system_dependencies(self):
         super().check_system_dependencies()
+        self.check_required_system_tool("z3", homebrew="z3 --without-python@2 --with-python")
         try:
             # opam and ocamlfind don't agree for menhir
             self.run_in_ocaml_env("ocamlfind query menhirLib", cwd="/", print_verbose_only=True)
