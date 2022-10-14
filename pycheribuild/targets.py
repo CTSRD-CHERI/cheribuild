@@ -61,10 +61,10 @@ class Target(object):
         assert result._xtarget is not None
         return result
 
+    # noinspection PyProtectedMember
     @property
     def xtarget(self):
         result = self._project_class
-        # noinspection PyProtectedMember
         assert result._xtarget is not None
         return result._xtarget
 
@@ -103,7 +103,7 @@ class Target(object):
         return self._create_project(config)
 
     def _create_project(self, config: CheriConfig) -> "SimpleProject":
-        return self.project_class(config)
+        return self.project_class(config, crosscompile_target=self.xtarget)
 
     # noinspection PyProtectedMember
     def _do_run(self, config, msg: str, func: "typing.Callable[[SimpleProject], typing.Any]"):
@@ -217,7 +217,7 @@ class MultiArchTarget(Target):
         return self.target_arch
 
     def _create_project(self, config: CheriConfig) -> "SimpleProject":
-        return self.project_class(config)
+        return self.project_class(config, crosscompile_target=self.xtarget)
 
     def __repr__(self) -> str:
         return "<Cross target (" + self.target_arch.name + ") " + self.name + ">"

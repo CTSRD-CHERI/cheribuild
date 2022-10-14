@@ -29,7 +29,7 @@ class MockProject(Project):
         self._install_dir = expected_install
         expected_build = Path(config.source_root, "build", name + "-build")  # type: Path
         self.build_dir = expected_build
-        super().__init__(config)
+        super().__init__(config, crosscompile_target=CompilationTargets.NATIVE)
         assert self.source_dir == expected_src
         assert self.build_dir == expected_build
         assert self.install_dir == expected_install
