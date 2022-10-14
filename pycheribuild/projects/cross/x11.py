@@ -171,7 +171,7 @@ class BuildLibXCBCursor(X11AutotoolsProject):
 
     def __init__(self, config):
         super().__init__(config)
-        self.add_required_system_tool("gperf", apt="gperf")
+        self.add_required_system_tool("gperf", homebrew="gperf", apt="gperf")
 
     def setup(self):
         super().setup()

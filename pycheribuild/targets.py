@@ -105,16 +105,16 @@ class Target(object):
     def _create_project(self, config: CheriConfig) -> "SimpleProject":
         return self.project_class(config)
 
+    # noinspection PyProtectedMember
     def _do_run(self, config, msg: str, func: "typing.Callable[[SimpleProject], typing.Any]"):
         # instantiate the project and run it
         starttime = time.time()
         with add_error_context(coloured(AnsiColour.yellow, "(in target ", self.name, ")", sep="")):
             project = self.get_or_create_project(self.project_class.get_crosscompile_target(), config)
-            # noinspection PyProtectedMember
             if not project._setup_called:
                 project.setup()
+            if not project._setup_late_called:
                 project.setup_late()
-            # noinspection PyProtectedMember
             assert project._setup_called, str(self._project_class) + ": forgot to call super().setup()?"
             assert project._setup_late_called, str(self._project_class) + ": forgot to call super().setup_late()?"
             new_env = {"PATH": project.config.dollar_path_with_other_tools}

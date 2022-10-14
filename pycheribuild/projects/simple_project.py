@@ -251,6 +251,11 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     # To prevent non-suffixed targets in case the only target is not NATIVE
     _always_add_suffixed_targets: bool = False  # add a suffixed target only if more than one variant is supported
 
+    # List of system tools/headers/pkg-config files that have been checked so far (to avoid duplicate work)
+    __checked_system_tools = {}  # type: typing.Dict[str, InstallInstructions]
+    __checked_system_headers = {}  # type: typing.Dict[str, InstallInstructions]
+    __checked_pkg_config = {}  # type: typing.Dict[str, InstallInstructions]
+
     custom_target_name: "Optional[typing.Callable[[str, CrossCompileTarget], str]]" = None
 
     @classmethod
@@ -774,6 +779,70 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             self.fatal("add_required_*() should use a native cheribuild target and not ", cheribuild_target,
                        "- found while processing", self.target, fatal_when_pretending=True)
 
+    def check_required_system_tool(self, executable: str, instructions: "Optional[InstallInstructions]" = None,
+                                   default: "Optional[str]" = None, freebsd: "Optional[str]" = None,
+                                   apt: "Optional[str]" = None, zypper: "Optional[str]" = None,
+                                   homebrew: "Optional[str]" = None, cheribuild_target: "Optional[str]" = None,
+                                   alternative_instructions: "Optional[str]" = None):
+        if instructions is None:
+            instructions = OSInfo.install_instructions(
+                executable, is_lib=False, default=default, freebsd=freebsd, zypper=zypper, apt=apt, homebrew=homebrew,
+                cheribuild_target=cheribuild_target, alternative=alternative_instructions)
+        if executable in self.__checked_system_tools:
+            # If we already checked for this tool, the install instructions should match
+            x = self.__checked_system_tools[executable]
+            assert instructions.fixit_hint() == self.__checked_system_tools[executable].fixit_hint(), executable
+            return  # already checked
+        assert instructions.cheribuild_target == cheribuild_target
+        assert instructions.alternative == alternative_instructions
+        self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
+        if not shutil.which(str(executable)):
+            self.dependency_error("Required program", executable, "is missing!", install_instructions=instructions,
+                                  cheribuild_target=instructions.cheribuild_target)
+        self.__checked_system_tools[executable] = instructions
+
+    def check_required_pkg_config(self, package: str, instructions: InstallInstructions = None,
+                                  default: str = None, freebsd: str = None, apt: str = None, zypper: str = None,
+                                  homebrew: str = None, cheribuild_target: str = None,
+                                  alternative_instructions: str = None) -> None:
+        if "pkg-config" not in self.__checked_system_tools:
+            self.check_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
+            return
+        if instructions is None:
+            instructions = OSInfo.install_instructions(
+                package, is_lib=False, default=default, freebsd=freebsd, zypper=zypper, apt=apt, homebrew=homebrew,
+                cheribuild_target=cheribuild_target, alternative=alternative_instructions)
+        if package in self.__checked_pkg_config:
+            # If we already checked for this pkg-config .pc file, the install instructions should match
+            assert instructions.fixit_hint() == self.__checked_pkg_config[package].fixit_hint(), package
+            return  # already checked
+        self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
+        try:
+            self.run_cmd(["pkg-config", "--exists", package])
+        except subprocess.CalledProcessError as e:
+            self.dependency_error("Required library", package, "is missing:", e, install_instructions=instructions,
+                                  cheribuild_target=instructions.cheribuild_target)
+        self.__checked_pkg_config[package] = instructions
+
+    def check_required_system_header(self, header: str, instructions: InstallInstructions = None,
+                                     default: str = None, freebsd: str = None, apt: str = None, zypper: str = None,
+                                     homebrew: str = None, cheribuild_target: str = None,
+                                     alternative_instructions: str = None) -> None:
+        if instructions is None:
+            instructions = OSInfo.install_instructions(
+                header, is_lib=False, default=default, freebsd=freebsd, zypper=zypper, apt=apt, homebrew=homebrew,
+                cheribuild_target=cheribuild_target, alternative=alternative_instructions)
+        if header in self.__checked_system_headers:
+            # If we already checked for this header file, the install instructions should match
+            assert instructions.fixit_hint() == self.__checked_system_headers[header].fixit_hint(), header
+            return  # already checked
+        self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
+        include_dirs = self.get_compiler_info(self.CC).get_include_dirs(self.essential_compiler_and_linker_flags)
+        if not any(Path(d, header).exists() for d in include_dirs):
+            self.dependency_error("Required C header", header, "is missing!", install_instructions=instructions,
+                                  cheribuild_target=instructions.cheribuild_target)
+        self.__checked_system_headers[header] = instructions
+
     def add_required_system_tool(self, executable: str, custom_install_instructions: "Optional[str]" = None,
                                  default: "Optional[str]" = None, freebsd: "Optional[str]" = None,
                                  apt: "Optional[str]" = None, zypper: "Optional[str]" = None,
@@ -1069,30 +1138,17 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         :return: Throws an error if dependencies are missing
         """
         for (tool, instructions) in self.__required_system_tools.items():
-            assert isinstance(instructions, InstallInstructions)
-            self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
-            if not shutil.which(str(tool)):
-                self.dependency_error("Required program", tool, "is missing!", install_instructions=instructions,
-                                      cheribuild_target=instructions.cheribuild_target)
+            self.check_required_system_tool(tool, instructions=instructions,
+                                            cheribuild_target=instructions.cheribuild_target,
+                                            alternative_instructions=instructions.alternative)
         for (package, instructions) in self.__required_pkg_config.items():
-            assert isinstance(instructions, InstallInstructions)
-            self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
-            if not shutil.which("pkg-config"):
-                # error should already have printed above
-                break
-            check_cmd = ["pkg-config", "--exists", package]
-            print_command(check_cmd, print_verbose_only=True)
-            exit_code = subprocess.call(check_cmd)
-            if exit_code != 0:
-                self.dependency_error("Required library", package, "is missing!", install_instructions=instructions,
-                                      cheribuild_target=instructions.cheribuild_target)
+            self.check_required_pkg_config(package, instructions=instructions,
+                                           cheribuild_target=instructions.cheribuild_target,
+                                           alternative_instructions=instructions.alternative)
         for (header, instructions) in self.__required_system_headers.items():
-            assert isinstance(instructions, InstallInstructions)
-            self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
-            include_dirs = self.get_compiler_info(self.CC).get_include_dirs(self.essential_compiler_and_linker_flags)
-            if not any(Path(d, header).exists() for d in include_dirs):
-                self.dependency_error("Required C header", header, "is missing!", install_instructions=instructions,
-                                      cheribuild_target=instructions.cheribuild_target)
+            self.check_required_system_header(header, instructions=instructions,
+                                              cheribuild_target=instructions.cheribuild_target,
+                                              alternative_instructions=instructions.alternative)
         self._system_deps_checked = True
 
     def get_homebrew_prefix(self, package: "typing.Optional[str]" = None) -> Path:

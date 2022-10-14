@@ -43,7 +43,8 @@ class BuildBluespecCompiler(Project):
         super().__init__(config)
         self.add_required_system_tool("ghc", apt="ghc", homebrew="ghc")
         self.add_required_system_tool("cabal", apt="cabal-install", homebrew="cabal-install")
-        for i in ("autoconf", "gperf", "bison", "flex"):
+        self.add_required_system_tool("gperf", homebrew="gperf", apt="gperf")
+        for i in ("autoconf", "bison", "flex"):
             self.add_required_system_tool(i, homebrew=i)
         self.make_args.set(PREFIX=self.install_dir)
 

@@ -71,7 +71,8 @@ class StartKDevelop(SimpleProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.add_required_system_tool("cmake")
+        self.add_required_system_tool("cmake", default="cmake", homebrew="cmake", zypper="cmake", apt="cmake",
+                                      freebsd="cmake")
         self.add_required_system_tool("qtpaths")
 
     def process(self):
