@@ -204,7 +204,7 @@ class MakeOptions(object):
         assert isinstance(self.__command_args, list)
         # noinspection PyProtectedMember
         if not Path(value).is_absolute():
-            self.__project.add_required_system_tool(value, install_instructions=install_instructions)
+            self.__project.add_required_system_tool(value, custom_install_instructions=install_instructions)
         self.__can_pass_j_flag = can_pass_j_flag
 
     def all_commandline_args(self, config) -> "list[str]":
@@ -857,7 +857,7 @@ class Project(SimpleProject):
             if self.make_args.is_gnu_make and False:
                 # use compiledb instead of bear for gnu make
                 # https://blog.jetbrains.com/clion/2018/08/working-with-makefiles-in-clion-using-compilation-db/
-                self.add_required_system_tool("compiledb", install_instructions="Run `pip install --user compiledb``")
+                self.add_required_system_tool("compiledb", custom_install_instructions="Run `pip install --user compiledb``")
                 self._compiledb_tool = "compiledb"
             else:
                 self.add_required_system_tool("bear", homebrew="bear", cheribuild_target="bear")
