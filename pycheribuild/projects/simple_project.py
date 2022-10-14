@@ -744,7 +744,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             self.__class__)
         self.__required_system_tools = {}  # type: typing.Dict[str, InstallInstructions]
         self.__required_system_headers = {}  # type: typing.Dict[str, InstallInstructions]
-        self.__required_pkg_config = {}  # type: typing.Dict[str, InstallInstructions]
         self._system_deps_checked = False
         self._setup_called = False
         self._setup_late_called = False
@@ -858,19 +857,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         if executable in self.__required_system_tools:
             assert instructions.fixit_hint() == self.__required_system_tools[executable].fixit_hint()
         self.__required_system_tools[executable] = instructions
-
-    def add_required_pkg_config(self, package: str, custom_install_instructions: str = None, default: str = None,
-                                freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
-                                cheribuild_target: str = None, alternative_instructions: str = None) -> None:
-        if not self.has_required_system_tool("pkg-config"):
-            self.add_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
-        if custom_install_instructions is not None:
-            instructions = InstallInstructions(custom_install_instructions, cheribuild_target=cheribuild_target,
-                                               alternative=alternative_instructions)
-        else:
-            instructions = OSInfo.install_instructions(package, True, default=default, freebsd=freebsd, zypper=zypper,
-                                                       apt=apt, homebrew=homebrew, cheribuild_target=cheribuild_target)
-        self.__required_pkg_config[package] = instructions
 
     def add_required_system_header(self, header: str, custom_install_instructions: str = None, default: str = None,
                                    freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
@@ -1141,10 +1127,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             self.check_required_system_tool(tool, instructions=instructions,
                                             cheribuild_target=instructions.cheribuild_target,
                                             alternative_instructions=instructions.alternative)
-        for (package, instructions) in self.__required_pkg_config.items():
-            self.check_required_pkg_config(package, instructions=instructions,
-                                           cheribuild_target=instructions.cheribuild_target,
-                                           alternative_instructions=instructions.alternative)
         for (header, instructions) in self.__required_system_headers.items():
             self.check_required_system_header(header, instructions=instructions,
                                               cheribuild_target=instructions.cheribuild_target,

@@ -410,6 +410,13 @@ class BuildFreeBSDBase(Project):
                                               help="Don't build all of FreeBSD, just what is needed for running most "
                                                    "CHERI tests/benchmarks")
 
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        # The bootstrap tools need libarchive which is not always installed on Linux. macOS ships a libarchive.dylib
+        # (without headers) so we use that with the contrib/ headers and don't need an additional package.
+        if not OSInfo.IS_FREEBSD:
+            self.check_required_pkg_config("libarchive", apt="libarchive-dev", zypper="libarchive-devel")
+
     def __init__(self, config, *, use_bootstrap_toolchain: bool) -> None:
         super().__init__(config)
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.build_dir)}
@@ -421,10 +428,6 @@ class BuildFreeBSDBase(Project):
             self.make_args.set_command(self.source_dir / "tools/build/make.py",
                                        early_args=["--bootstrap-toolchain"] if use_bootstrap_toolchain else [])
 
-        # The bootstrap tools need libarchive which is not always installed on Linux. macOS ships a libarchive.dylib
-        # (without headers) so we use that with the contrib/ headers and don't need an additional package.
-        if OSInfo.IS_LINUX:
-            self.add_required_pkg_config("libarchive", apt="libarchive-dev", zypper="libarchive-devel")
         self.make_args.set(
             DB_FROM_SRC=True,  # don't use the system passwd file
             I_REALLY_MEAN_NO_CLEAN=True,  # Also skip the useless delete-old step
@@ -1855,9 +1858,9 @@ else:
 
 
 class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
-    def __init__(self, config: CheriConfig) -> None:
-        super().__init__(config)
-        self.add_required_system_tool("bsdtar", cheribuild_target="bsdtar", apt="libarchive-tools")
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("bsdtar", cheribuild_target="bsdtar", apt="libarchive-tools")
 
     @property
     def release_objdir(self) -> Optional[Path]:

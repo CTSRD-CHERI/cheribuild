@@ -98,21 +98,23 @@ class BuildQEMUBase(AutotoolsProject):
     def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
         raise NotImplementedError()
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.add_required_system_tool("glibtoolize" if self.target_info.is_macos() else "libtoolize",
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("glibtoolize" if self.target_info.is_macos() else "libtoolize",
                                       default="libtool")
-        self.add_required_system_tool("autoreconf", default="autoconf")
-        self.add_required_system_tool("aclocal", default="automake")
+        self.check_required_system_tool("autoreconf", default="autoconf")
+        self.check_required_system_tool("aclocal", default="automake")
 
-        self.add_required_pkg_config("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",
+        self.check_required_pkg_config("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",
                                      freebsd="pixman")
-        self.add_required_pkg_config("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
+        self.check_required_pkg_config("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
                                      freebsd="glib")
         # Tests require GNU sed
-        self.add_required_system_tool("sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed",
+        self.check_required_system_tool("sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed",
                                       freebsd="gsed")
 
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")
 
@@ -183,8 +185,8 @@ class BuildQEMUBase(AutotoolsProject):
             if (self.config.other_tools_dir / "sbin/smbd").exists():
                 smbd_path = self.config.other_tools_dir / "sbin/smbd"
 
-            self.add_required_system_tool(smbd_path, cheribuild_target="samba", freebsd="samba48", apt="samba",
-                                          homebrew="samba")
+            self.check_required_system_tool(smbd_path, cheribuild_target="samba", freebsd="samba48", apt="samba",
+                                            homebrew="samba")
 
             self.configure_args.append("--smbd=" + str(smbd_path))
             if not Path(smbd_path).exists():
