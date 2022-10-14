@@ -824,8 +824,8 @@ class Project(SimpleProject):
             result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
         return result
 
-    def __init__(self, config: CheriConfig) -> None:
-        super().__init__(config)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         # set up the install/build/source directories (allowing overrides from config file)
         assert isinstance(self.repository, SourceRepository), self.target + " repository member is wrong!"
         if hasattr(self, "_repository_url") and isinstance(self.repository, GitRepository):
@@ -833,18 +833,18 @@ class Project(SimpleProject):
             self.repository.url = self._repository_url
 
         if isinstance(self.default_directory_basename, ComputedDefaultValue):
-            self.default_directory_basename = self.default_directory_basename(config, self)
+            self.default_directory_basename = self.default_directory_basename(self.config, self)
         if isinstance(self.repository, ReuseOtherProjectRepository):
             initial_source_dir = inspect.getattr_static(self, "_initial_source_dir")
             assert isinstance(initial_source_dir, ConfigOptionBase)
             # noinspection PyProtectedMember
-            assert initial_source_dir._get_default_value(config, self) is None, \
+            assert initial_source_dir._get_default_value(self.config, self) is None, \
                 "initial source dir != None for ReuseOtherProjectRepository"
         if self.source_dir is None:
             self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
         else:
             if isinstance(self.source_dir, ComputedDefaultValue):
-                self.source_dir = self.source_dir(config, self)
+                self.source_dir = self.source_dir(self.config, self)
             self._initial_source_dir = self.source_dir
 
         if self.build_in_source_dir:
@@ -1759,12 +1759,15 @@ class _CMakeAndMesonSharedLogic(Project):
     def _configure_tool_install_instructions(self) -> InstallInstructions:
         raise NotImplementedError()
 
-    def check_system_dependencies(self) -> None:
+    def setup(self):
+        super().setup()
         assert self.configure_command is not None
         if not Path(self.configure_command).is_absolute():
             abspath = shutil.which(self.configure_command)
             if abspath:
                 self.configure_command = abspath
+
+    def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
         if self._minimum_cmake_or_meson_version is not None:
             version_components = self._get_configure_tool_version()
@@ -1794,9 +1797,9 @@ class AutotoolsProject(Project):
     Like Project but automatically sets up the defaults for autotools like projects
     Sets configure command to ./configure, adds --prefix=installdir
     """
-    def __init__(self, config, configure_script="configure") -> None:
-        super().__init__(config)
-        self.configure_command = self.source_dir / configure_script
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.configure_command = self.source_dir / "configure"
 
     def setup(self) -> None:
         super().setup()

@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 from .cmake_project import CMakeProject
-from .project import BuildType, CheriConfig, DefaultInstallDir, GitRepository
+from .project import BuildType, DefaultInstallDir, GitRepository
 from .simple_project import SimpleProject
 
 
@@ -38,9 +38,6 @@ class BuildLibKompareDiff2(CMakeProject):
     repository = GitRepository("git://anongit.kde.org/libkomparediff2.git")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-
 
 class BuildKDevplatform(CMakeProject):
     dependencies = ["libkomparediff2"]
@@ -48,8 +45,8 @@ class BuildKDevplatform(CMakeProject):
     repository = GitRepository("https://github.com/arichardson/kdevplatform.git", default_branch="cheri")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         self.add_cmake_options(BUILD_git=False)
 
 
@@ -59,8 +56,8 @@ class BuildKDevelop(CMakeProject):
     repository = GitRepository("https://github.com/arichardson/kdevelop.git", default_branch="cheri")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         # Tell kdevelop to use the CHERI clang and install the wrapper script that sets the right environment variables
         self.add_cmake_options(LLVM_ROOT=self.config.cheri_sdk_dir, INSTALL_KDEVELOP_LAUNCH_WRAPPER=True)
 

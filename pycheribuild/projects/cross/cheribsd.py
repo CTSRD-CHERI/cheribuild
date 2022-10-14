@@ -377,10 +377,15 @@ class BuildFreeBSDBase(Project):
     has_optional_tests: bool = True
     default_build_tests: bool = True
     default_build_type: BuildType = BuildType.RELWITHDEBINFO
+    build_toolchain: "FreeBSDToolchainKind"  # Set in subclass
     # Define the command line arguments here to make type checkers happy.
     minimal: "ClassVar[bool]"
     build_tests: "ClassVar[bool]"
     extra_make_args: "ClassVar[list[str]]"
+
+    @property
+    def use_bootstrapped_toolchain(self) -> bool:
+        return self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAPPED
 
     @classmethod
     def can_build_with_ccache(cls) -> bool:
@@ -417,8 +422,8 @@ class BuildFreeBSDBase(Project):
         if not OSInfo.IS_FREEBSD:
             self.check_required_pkg_config("libarchive", apt="libarchive-dev", zypper="libarchive-devel")
 
-    def __init__(self, config, *, use_bootstrap_toolchain: bool) -> None:
-        super().__init__(config)
+    def setup(self) -> None:
+        super().setup()
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.build_dir)}
         # TODO? Avoid lots of nested child directories by using MAKEOBJDIR instead of MAKEOBJDIRPREFIX
         # self.make_args.env_vars = {"MAKEOBJDIR": str(self.build_dir)}
@@ -426,7 +431,7 @@ class BuildFreeBSDBase(Project):
         if self.crossbuild:
             # Use the script that I added for building on Linux/MacOS:
             self.make_args.set_command(self.source_dir / "tools/build/make.py",
-                                       early_args=["--bootstrap-toolchain"] if use_bootstrap_toolchain else [])
+                                       early_args=["--bootstrap-toolchain"] if self.use_bootstrapped_toolchain else [])
 
         self.make_args.set(
             DB_FROM_SRC=True,  # don't use the system passwd file
@@ -510,10 +515,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
     # cheribsd-mfs-root-kernel doesn't have a default kernel-config, instead
     # building a set, but kernel-config should still override that.
     has_default_buildkernel_kernel_config: bool = True
-
-    @property
-    def use_bootstrapped_toolchain(self) -> bool:
-        return self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAPPED
 
     @classmethod
     def get_rootfs_dir(cls, caller, config=None, cross_target: CrossCompileTarget = None) -> Path:
@@ -742,8 +743,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.info(cc_info.path, " (", cc_info.version_str, ") can be used to build FreeBSD.", sep="")
         return clang_root, None, None
 
-    def __init__(self, config: CheriConfig) -> None:
-        super().__init__(config, use_bootstrap_toolchain=self.use_bootstrapped_toolchain)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self._setup_make_args_called = False
         self.destdir = self.install_dir
         self._install_prefix = Path("/")
@@ -1467,9 +1468,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     default_install_dir: DefaultInstallDir = DefaultInstallDir.DO_NOT_INSTALL
     minimal: bool = False
     hide_options_from_help: bool = True  # hide this from --help for now
-
-    def __init__(self, config) -> None:
-        super().__init__(config, use_bootstrap_toolchain=True)
+    build_toolchain = FreeBSDToolchainKind.BOOTSTRAPPED
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
@@ -1594,10 +1593,9 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                help="Only build a sysroot instead of the full system. This will only "
                                                     "build the libraries and skip all binaries")
 
-    def __init__(self, config: CheriConfig) -> None:
-        super().__init__(config)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.extra_kernels_with_mfs = []
-
         configs = self.extra_kernel_configs()
         self.extra_kernels += [c.kernconf for c in configs if not c.mfsroot]
         self.extra_kernels_with_mfs += [c.kernconf for c in configs if c.mfsroot]
@@ -1739,8 +1737,8 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         from ..disk_image import BuildMfsRootCheriBSDDiskImage
         return BuildMfsRootCheriBSDDiskImage
 
-    def __init__(self, config: CheriConfig) -> None:
-        super().__init__(config)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.mfs_root_image_instance = self.mfs_root_image_class.get_instance(self)
         # Re-use the same build directory as the CheriBSD target that was used for the disk image
         # This ensure that the kernel build tools can be found in the build directory
@@ -2011,8 +2009,8 @@ class BuildCheriBSDRelease(BuildFreeBSDReleaseMixin, BuildCHERIBSD):
 #         cls.build_tests = False
 #         super().setup_config_options(**kwargs)
 #
-#     def __init__(self, config):
-#         super().__init__(config)
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
 #         if self.compiling_for_cheri():
 #             self.make_args.set_with_options(CHERI_PURE=True)
 #         self.make_args.set_with_options(INCLUDES=False, PROFILE=False, MAN=False, KERBEROS=False)
@@ -2075,8 +2073,8 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         return [cls.rootfs_source_class.target]
 
-    def __init__(self, config: CheriConfig) -> None:
-        super().__init__(config)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         # GNU tar doesn't accept --include (and doesn't handle METALOG). bsdtar appears to be available
         # on FreeBSD and macOS by default. On Linux it is not always installed by default.
         self.bsdtar_cmd = "bsdtar"

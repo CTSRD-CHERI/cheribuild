@@ -28,13 +28,13 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import CheriConfig, CrossCompileCMakeProject, GitRepository
+from .crosscompileproject import CrossCompileCMakeProject, GitRepository
 
 
 class BuildPoco(CrossCompileCMakeProject):
     target = "poco"
     repository = GitRepository("https://github.com/dodsonmg/poco.git", default_branch="cheri", force_branch=True)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         self.COMMON_FLAGS.append("-DHAVE_STDINT_H=1")

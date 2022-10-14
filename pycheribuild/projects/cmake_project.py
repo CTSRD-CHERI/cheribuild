@@ -97,8 +97,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         cls.cmake_options = cls.add_config_option("cmake-options", default=[], kind=list, metavar="OPTIONS",
                                                   help="Additional command line options to pass to CMake")
 
-    def __init__(self, config) -> None:
-        super().__init__(config)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.configure_command = os.getenv("CMAKE_COMMAND", None)
         if self.configure_command is None:
             self.configure_command = "cmake"
@@ -116,6 +116,10 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             self.check_required_system_tool("make")
         else:
             self.make_args.subkind = MakeCommandKind.CustomMakeTool  # VS/XCode, etc.
+        self._toolchain_file: "Optional[Path]" = None
+        if not self.compiling_for_host():
+            self._toolchain_template = include_local_file("files/CrossToolchain.cmake.in")
+            self._toolchain_file = self.build_dir / "CrossToolchain.cmake"
 
     def setup(self) -> None:
         super().setup()
@@ -140,14 +144,11 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         if self.config.create_compilation_db:
             # TODO: always generate it?
             self.configure_args.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
-        self._toolchain_file: "Optional[Path]" = None
         if self.compiling_for_host():
             # When building natively, pass arguments on the command line instead of using the toolchain file.
             # This makes it a lot easier to reproduce the builds outside cheribuild.
             self.add_cmake_options(CMAKE_PREFIX_PATH=self._toolchain_file_list_to_str(self.cmake_prefix_paths))
         else:
-            self._toolchain_template = include_local_file("files/CrossToolchain.cmake.in")
-            self._toolchain_file = self.build_dir / "CrossToolchain.cmake"
             self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self._toolchain_file)
 
         if self.install_prefix != self.install_dir:
@@ -188,7 +189,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             # Fixed in https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 (3.21.20210625)
             self.add_cmake_options(
                 CMAKE_BUILD_WITH_INSTALL_RPATH=self._get_configure_tool_version() < (3, 21, 20210625))
-        # NB: Don't add the user provided options here, we append add them in configure() so that they are put last.
+        # NB: Don't add the user provided options here, we append add them in setup_late() so that they are put last.
 
     def setup_late(self):
         super().setup_late()

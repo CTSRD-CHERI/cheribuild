@@ -31,7 +31,6 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import CheriConfig
 from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
 
 
@@ -51,8 +50,8 @@ class BuildDeviceModel(CrossCompileAutotoolsProject):
         self.install_file(self.build_dir / "obj/device-model-riscv.bin",
                           self.real_install_root_dir / "device-model-riscv.bin")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         cc = self.config.cheri_sdk_bindir / "clang"
         objcopy = self.config.cheri_sdk_bindir / "objcopy"
         self.make_args.env_vars = {"CC": str(cc),

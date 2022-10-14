@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import BuildType, CheriConfig, CrossCompileCMakeProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import BuildType, CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 
 
 class SNMalloc(CrossCompileCMakeProject):
@@ -79,8 +79,8 @@ class SNMalloc(CrossCompileCMakeProject):
         # XXX misnamed now, but so be it
         cls.revoke_verbose = cls.add_bool_option("revoke-verbose", help="Report revocation statistics")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         if self.revoke:
             self.quarantine = True

@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-from .crosscompileproject import BuildType, CheriConfig, CrossCompileCMakeProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import BuildType, CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 
 
 class BuildLibMemwalk(CrossCompileCMakeProject):
@@ -36,8 +36,8 @@ class BuildLibMemwalk(CrossCompileCMakeProject):
     default_build_type = BuildType.DEBUG
     target = "libmemwalk"
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
     def install(*args, **kwargs):

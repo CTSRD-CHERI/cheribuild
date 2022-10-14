@@ -31,7 +31,7 @@
 #
 import os
 
-from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import CompilationTargets, CrossCompileProject, DefaultInstallDir, GitRepository
 from ..run_qemu import LaunchQEMUBase
 
 
@@ -49,8 +49,8 @@ class BuildRtems(CrossCompileProject):
     # RTEMS BSPs to build
     rtems_bsps = []
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         if self.target_info.target.is_cheri_purecap():
             self.rtems_bsps = ["rv64imafdcxcheri_medany", "rv64xcheri_gfe", "rv64xcheri_qemu"]

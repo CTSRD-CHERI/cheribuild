@@ -29,7 +29,7 @@
 #
 import re
 
-from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir,
+from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository, MakeCommandKind)
 
 
@@ -45,12 +45,9 @@ class BuildNginx(CrossCompileAutotoolsProject):
     _configure_understands_enable_static = False
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.configure_command = self.source_dir / "auto/configure"
-
     def setup(self):
         super().setup()
+        self.configure_command = self.source_dir / "auto/configure"
         if not self.compiling_for_host():
             self.COMMON_FLAGS.extend(["-pedantic",
                                       "-Wno-gnu-statement-expression",

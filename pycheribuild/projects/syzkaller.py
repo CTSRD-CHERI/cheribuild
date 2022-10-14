@@ -65,11 +65,11 @@ class BuildSyzkaller(CrossCompileProject):
             help="Rerun syz-extract and syz-sysgen to rebuild generated Go "
                  "syscall descriptions.")
 
-    def __init__(self, config):
+    def __init__(self, config, *args, **kwargs):
         self._install_prefix = config.cheri_sdk_dir
         self._install_dir = config.cheri_sdk_dir
         self.destdir = Path("")
-        super().__init__(config)
+        super().__init__(config, *args, **kwargs)
 
         # self.gopath = source_base / gohome
         self.goroot = config.cheri_sdk_dir / "go"

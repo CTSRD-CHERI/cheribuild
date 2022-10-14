@@ -36,7 +36,7 @@ from pathlib import Path
 from subprocess import CalledProcessError
 from typing import Any, Dict, Tuple, Union
 
-from .project import AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
+from .project import AutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from .simple_project import SimpleProject
 from ..processutils import get_program_version
 from ..targets import target_manager
@@ -358,9 +358,6 @@ class OcamlProject(OpamMixin, Project):
     build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake
     needed_ocaml_packages = ["ocamlbuild"]
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
