@@ -101,9 +101,9 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
             self.check_required_pkg_config("gmp", freebsd="gmp")
             self.check_required_pkg_config("expat", freebsd="expat")
 
-    def __init__(self, config: CheriConfig):
+    def __init__(self, *args, **kwargs):
         self._compile_status_message = None
-        super().__init__(config)
+        super().__init__(*args, **kwargs)
 
     def setup(self) -> None:
         super().setup()

@@ -59,10 +59,6 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libunwind")
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        # self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)  # Adding -ldl won't work: no libdl in /usr/lib64c
-
     def configure(self, **kwargs):
         # TODO: should share some code with libcxx
         # to find the libcxx lit config files and library:
@@ -142,8 +138,8 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
         result = super().dependencies(config)
         return result + ["libunwind"]
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         if not self.target_info.is_baremetal():
             self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.get_install_dir(self) / "lib",
                                    CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
@@ -222,8 +218,8 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
                                                    "(default: number of build jobs (-j flag) / 2)",
                                               default=lambda c, p: c.make_jobs / 2, kind=int)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         if self.qemu_host:
             self.qemu_host = os.path.expandvars(self.qemu_host)
         self.libcxx_lit_jobs = ""

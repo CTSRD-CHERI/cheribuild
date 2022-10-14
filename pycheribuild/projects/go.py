@@ -29,7 +29,7 @@
 # SUCH DAMAGE.
 from pathlib import Path
 
-from .project import CheriConfig, CrossCompileTarget, DefaultInstallDir, GitRepository, Project
+from .project import CrossCompileTarget, DefaultInstallDir, GitRepository, Project
 from ..utils import ThreadJoiner
 
 
@@ -46,8 +46,8 @@ class BuildGo(Project):
         cls.go_bootstrap = cls.add_path_option("bootstrap-toolchain", show_help=False,
                                                help="Path to alternate go bootstrap toolchain.")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # It does not seem possible to change this in the go build scripts (easily).
         self.make_dir = self.source_dir / "src"

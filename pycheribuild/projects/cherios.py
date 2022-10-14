@@ -29,7 +29,7 @@
 #
 
 from .cmake_project import CMakeProject
-from .project import BuildType, CheriConfig, GitRepository, ComputedDefaultValue
+from .project import BuildType, GitRepository, ComputedDefaultValue
 from ..config.compilation_targets import CompilationTargets
 
 
@@ -50,8 +50,8 @@ class BuildCheriOS(CMakeProject):
         cls.smp_cores = cls.add_config_option("smp-cores", default=1, kind=int)
         cls.build_net = cls.add_bool_option("build-net", default=False)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         self.add_cmake_options(CHERI_SDK_DIR=self.target_info.sdk_root_dir)
         self.add_cmake_options(BUILD_FOR_CHERI128=self.config.mips_cheri_bits == 128)
         self.add_cmake_options(BUILD_WITH_NET=self.build_net)

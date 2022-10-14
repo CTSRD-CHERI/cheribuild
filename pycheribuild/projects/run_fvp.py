@@ -443,8 +443,8 @@ class LaunchFVPBase(SimpleProject):
     def supported_architectures(self):
         return self._source_class.supported_architectures
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.fvp_project = None
 
     def setup(self):

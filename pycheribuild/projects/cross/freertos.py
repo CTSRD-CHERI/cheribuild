@@ -34,7 +34,7 @@ from typing import ClassVar
 
 from .compiler_rt import BuildCompilerRtBuiltins
 from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
-from ..project import ComputedDefaultValue, CheriConfig
+from ..project import ComputedDefaultValue
 from ..run_qemu import LaunchQEMUBase
 
 
@@ -65,12 +65,14 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     demo_app: "ClassVar[str]"
     demo_bsp: "ClassVar[str]"
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.default_demo_app = "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target,
                                                                                       softfloat=True) + \
                                 self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
 
+    def setup(self):
+        super().setup()
         # We only support building FreeRTOS with llvm from cheribuild
         self.make_args.set(TOOLCHAIN="llvm")
 

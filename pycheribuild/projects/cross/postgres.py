@@ -29,8 +29,7 @@
 #
 import re
 
-from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository,
-                                  MakeCommandKind)
+from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind
 from ...utils import OSInfo
 
 
@@ -47,8 +46,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     # critical source files with -mxcaptable
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         if self.enable_assertions:
             self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
             # self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")

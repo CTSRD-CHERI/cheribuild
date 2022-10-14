@@ -32,8 +32,7 @@ import tempfile
 from pathlib import Path
 from typing import ClassVar
 
-from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, GitRepository,
-                                  MakeCommandKind)
+from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject, GitRepository, MakeCommandKind
 from ...processutils import commandline_to_str
 
 
@@ -66,8 +65,8 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         super().setup_config_options(**kwargs)
         cls.locale_support = cls.add_bool_option("locale-support", show_help=False, help="Build with locale support")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._install_prefix = self._install_prefix.parent  # newlib install already appends the triple
         self._install_dir = self._install_dir.parent  # newlib install already appends the triple
         self.verbose_print("install_dir=", self.install_dir, "_install_prefix=", self._install_prefix, "_install_dir=",

@@ -32,7 +32,7 @@ import os
 import shutil
 from pathlib import Path
 
-from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
+from .project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..utils import OSInfo
 
 SMB_OUT_OF_SOURCE_BUILD_WORKS = False
@@ -51,8 +51,8 @@ class BuildSamba(Project):
                                old_urls=[b"https://github.com/samba-team/samba.git"],
                                default_branch="v4-13-stable", force_branch=True)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.configure_command = self.source_dir / "configure"
         if SMB_OUT_OF_SOURCE_BUILD_WORKS:
             self.configure_command = self.source_dir / "buildtools/bin/waf"

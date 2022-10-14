@@ -870,8 +870,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                                             help="Kernel(s) to include in the image; empty string or '/' for "
                                                  "/boot/kernel/, X for /boot/kernel.X/")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.minimum_image_size = "20m"  # let's try to shrink the image size
         # The base input is only cheribsdbox and all the symlinks
         self.input_metalogs = [self.rootfs_dir / "cheribsdbox.mtree"]
@@ -1123,8 +1123,8 @@ class BuildBesspinCheriBSDDiskImage(BuildDiskImageBase):
         super().setup_config_options(default_hostname=_default_disk_image_hostname("cheribsd-besspin"),
                                      extra_files_suffix="-besspin", **kwargs)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.minimum_image_size = "20m"  # let's try to shrink the image size
         self.is_minimal = True
         self.is_besspin = True
@@ -1364,8 +1364,8 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(default_hostname=_default_disk_image_hostname("cheribsd"), **kwargs)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.minimum_image_size = "256m"  # let's try to shrink the image size
 
 
@@ -1413,8 +1413,8 @@ class BuildFreeBSDImage(BuildDiskImageBase):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(default_hostname=_default_disk_image_hostname("freebsd"), **kwargs)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         # TODO: different extra-files directory
         self.minimum_image_size = "256m"
 

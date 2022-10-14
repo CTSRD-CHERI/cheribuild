@@ -390,8 +390,8 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
         cls.minimal = cls.add_bool_option("minimal", show_help=True, default=True,
                                           help="Don't build QtWidgets or QtGui, etc")
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.set_minimum_cmake_version(3, 18)
 
     def process(self):
@@ -605,10 +605,6 @@ class BuildQtModuleWithQMake(CrossCompileProject):
     dependencies = ["qtbase"]
     default_source_dir = default_source_dir_in_subdir(Path("qt5"))
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.early_qmake_args = []
-
     def setup(self):
         super().setup()
         # Avoid starting GUI windows with xcb/wayland while running tests. Without this many tests fail with:
@@ -618,7 +614,7 @@ class BuildQtModuleWithQMake(CrossCompileProject):
 
     def configure(self, **kwargs):
         # Run the QtBase QMake to generate a makefile
-        self.run_cmd(BuildQtBase.get_instance(self).qt_host_tools_path / "bin/qmake", *self.early_qmake_args,
+        self.run_cmd(BuildQtBase.get_instance(self).qt_host_tools_path / "bin/qmake",
                      self.source_dir, "--", *self.configure_args, cwd=self.build_dir,
                      env=self.configure_environment)
 
@@ -758,8 +754,8 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     needs_native_build_for_crosscompile = True
 
-    def __init__(self, config):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         self.configure_command = self.source_dir / "icu4c/source/configure"
         self.configure_args.extend(["--disable-plugins", "--disable-dyload",
                                     "--disable-tests",

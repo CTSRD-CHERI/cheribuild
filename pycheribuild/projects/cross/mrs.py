@@ -28,8 +28,7 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
-                                  GitRepository)
+from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 
 
 class MRS(CrossCompileCMakeProject):
@@ -74,8 +73,8 @@ class MRS(CrossCompileCMakeProject):
                                                          help="limit the quarantine size to QUARANTINE_HIGHWATER "
                                                               "bytes (supersedes QUARANTINE_RATIO)")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         if self.debug:
             self.add_cmake_options(DEBUG=True)
         if self.offload_quarantine:

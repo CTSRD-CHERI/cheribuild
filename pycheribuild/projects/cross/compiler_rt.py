@@ -30,7 +30,7 @@
 #
 from pathlib import Path
 
-from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
+from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
 from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository, Linkage
 from ...config.target_info import CPUArchitecture
@@ -144,8 +144,8 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         # version of 3.13.4.
         return Linkage.DEFAULT
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         assert self.target_info.is_baremetal() or self.target_info.is_rtems(), "No other targets supported yet"
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")

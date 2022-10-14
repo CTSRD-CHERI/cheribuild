@@ -113,8 +113,8 @@ class BuildQEMUBase(AutotoolsProject):
         self.check_required_system_tool("sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed",
                                       freebsd="gsed")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")
 
@@ -152,8 +152,6 @@ class BuildQEMUBase(AutotoolsProject):
         if self.config.verbose:
             self.make_args.set(V=1)
 
-    def setup(self):
-        super().setup()
         compiler = self.CC
         ccinfo = self.get_compiler_info(compiler)
         if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
@@ -314,15 +312,12 @@ class BuildQEMU(BuildQEMUBase):
     def get_firmware_dir(cls, caller: SimpleProject, cross_target: CrossCompileTarget = None):
         return cls.get_install_dir(caller, cross_target=cross_target) / "share/qemu"
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         if self.unaligned:
             self.COMMON_FLAGS.append("-DCHERI_UNALIGNED")
         if self.statistics:
             self.COMMON_FLAGS.append("-DDO_CHERI_STATISTICS=1")
-
-    def setup(self):
-        super().setup()
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DENABLE_CHERI_SANITIY_CHECKS=1")
         # the capstone disassembler doesn't support CHERI instructions:

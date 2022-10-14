@@ -181,8 +181,8 @@ class LaunchQEMUBase(SimpleProject):
                                                          help="Additional TCP bridge ports beyond ssh/22; "
                                                               "list of [hostip:]port=[guestip:]port")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.current_kernel = None  # type: typing.Optional[Path]
         self.disk_image = None  # type: typing.Optional[Path]
         self.disk_image_format = "raw"
@@ -585,7 +585,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             kind=KernelABI, enum_choices=[KernelABI.HYBRID, KernelABI.PURECAP],
             help="Select extra kernel variant with the given ABI to run.")
 
-    def __init__(self, config: CheriConfig, freebsd_class: "typing.Type[BuildFreeBSD]" = None,
+    def __init__(self, config: CheriConfig, *, freebsd_class: "typing.Type[BuildFreeBSD]" = None,
                  disk_image_class: "typing.Type[BuildDiskImageBase]" = None, needs_disk_image=True):
         super().__init__(config)
         if freebsd_class is None and disk_image_class is not None:
@@ -688,8 +688,8 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
             result.append(cls._disk_image_class.get_class_for_target(xtarget).target)
         return result
 
-    def __init__(self, config, *, needs_disk_image=True):
-        super().__init__(config, needs_disk_image=needs_disk_image, freebsd_class=self._freebsd_class,
+    def __init__(self, *args, needs_disk_image=True, **kwargs):
+        super().__init__(*args, needs_disk_image=needs_disk_image, freebsd_class=self._freebsd_class,
                          disk_image_class=self._disk_image_class)
 
     def run_tests(self):
@@ -742,10 +742,10 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(40), **kwargs)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         # FIXME: these should be config options
-        cherios = BuildCheriOS.get_instance(self, config)
+        cherios = BuildCheriOS.get_instance(self, self.config)
         self.source_project = cherios
         self.current_kernel = cherios.build_dir / "boot/cherios.elf"
         self.disk_image = self.config.output_root / "cherios-disk.img"
@@ -784,8 +784,8 @@ class LaunchDmQEMU(LaunchCheriBSD):
     _add_virtio_rng = False
     hide_options_from_help = True
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.qemu_user_networking = False
 
     def process(self):
@@ -839,14 +839,14 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
         return list(set(arches) -
                     set([CompilationTargets.CHERIBSD_AARCH64] + CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS))
 
-    def __init__(self, config):
-        super().__init__(config, needs_disk_image=False)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, needs_disk_image=False, **kwargs)
         if self.config.use_minimal_benchmark_kernel:
             kernel_config = self.kernel_project.default_kernel_config(ConfigPlatform.QEMU, benchmark=True)
             self.current_kernel = self.kernel_project.get_kernel_install_path(kernel_config)
             if str(self.remote_kernel_path).endswith("MFS_ROOT"):
                 self.remote_kernel_path += "_BENCHMARK"
-        self.rootfs_path = BuildCHERIBSD.get_rootfs_dir(self, config)
+        self.rootfs_path = BuildCHERIBSD.get_rootfs_dir(self, self.config)
 
 
 class BuildAndRunCheriBSD(TargetAliasWithDependencies):
