@@ -116,11 +116,6 @@ class BuildLLVMBase(CMakeProject):
                                  "llvm-readobj", "llvm-size", "llvm-strings", "llvm-strip", "llvm-symbolizer",
                                  "opt"]
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        # NB: macOS includes it in the SDK, FreeBSD includes it in base
-        self.add_required_pkg_config("zlib", apt="zlib1g-dev", zypper="zlib-devel")
-
     def setup(self):
         super().setup()
         if self.compiling_for_host():
@@ -278,6 +273,8 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         super().check_system_dependencies()
         # make sure we have at least version 3.8
         self.check_compiler_version(3, 8)
+        # NB: macOS includes it in the SDK, FreeBSD includes it in base
+        self.check_required_pkg_config("zlib", apt="zlib1g-dev", zypper="zlib-devel")
 
     def check_compiler_version(self, major: int, minor: int, patch=0):
         info = self.get_compiler_info(self.CC)
