@@ -879,7 +879,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             if not self.compiling_for_host():
                 self.add_cmake_options(QTWEBKIT_LINK_STATIC_ONLY=self.force_static_linkage)
 
-        self.add_required_system_tool("gperf")
+        self.add_required_system_tool("gperf", homebrew="gperf", apt="gperf")
 
     @classmethod
     def setup_config_options(cls, **kwargs):

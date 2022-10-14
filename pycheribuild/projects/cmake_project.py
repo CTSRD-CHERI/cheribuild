@@ -79,7 +79,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         return "TRUE" if value else "FALSE"
 
     def _configure_tool_install_instructions(self) -> InstallInstructions:
-        return OSInfo.install_instructions("cmake", False, default="cmake", cheribuild_target="cmake")
+        return OSInfo.install_instructions("cmake", False, default="cmake", homebrew="cmake", zypper="cmake",
+                                           apt="cmake", freebsd="cmake")
 
     @property
     def _get_version_args(self) -> dict:
@@ -101,7 +102,6 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         self.configure_command = os.getenv("CMAKE_COMMAND", None)
         if self.configure_command is None:
             self.configure_command = "cmake"
-            self.add_required_system_tool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
         # allow a -G flag in cmake-options to override the default generator (Ninja).
         custom_generator = next((x for x in self.cmake_options if x.startswith("-G")), None)
         generator = custom_generator if custom_generator else self._default_cmake_generator_arg

@@ -170,23 +170,24 @@ class MakeOptions(object):
                 # Prefer homebrew-installed gmake if it is available.
                 return "gmake"
             else:
-                self.__project.add_required_system_tool("make")
+                self.__project.check_required_system_tool("make")
                 return "make"
         elif self.kind == MakeCommandKind.GnuMake:
             if OSInfo.IS_LINUX and not shutil.which("gmake"):
                 status_update("Could not find `gmake` command, assuming `make` is GNU make")
-                self.__project.add_required_system_tool("make")
+                self.__project.check_required_system_tool("make")
                 return "make"
             else:
-                self.__project.add_required_system_tool("gmake", homebrew="make")
+                self.__project.check_required_system_tool("gmake", homebrew="make")
                 return "gmake"
         elif self.kind == MakeCommandKind.BsdMake:
             return "make" if OSInfo.IS_FREEBSD else "bmake"
         elif self.kind == MakeCommandKind.Ninja:
-            self.__project.add_required_system_tool("ninja", homebrew="ninja", apt="ninja-build")
+            self.__project.check_required_system_tool("ninja", homebrew="ninja", apt="ninja-build")
             return "ninja"
         elif self.kind == MakeCommandKind.CMake:
-            assert self.__project.has_required_system_tool("cmake")
+            self.__project.check_required_system_tool("cmake", default="cmake", homebrew="cmake", zypper="cmake",
+                                                      apt="cmake", freebsd="cmake")
             assert self.subkind is not None
             return "cmake"
         else:
