@@ -42,10 +42,10 @@ class BuildRiscvArchTestsBase(MakefileProject):
     needs_sysroot = False
     supported_architectures = [CompilationTargets.NATIVE]  # Not really but works for now
 
-    def __init__(self, config):
-        super().__init__(config)
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
         # FIXME: build with clang instead of requiring RISC-V GCC
-        self.add_required_system_tool("riscv64-unknown-elf-gcc", homebrew="riscv/riscv/riscv-gnu-toolchain")
+        self.check_required_system_tool("riscv64-unknown-elf-gcc", homebrew="riscv/riscv/riscv-gnu-toolchain")
 
 
 class BuildRiscvArchTestsSail(BuildRiscvArchTestsBase):

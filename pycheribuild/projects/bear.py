@@ -43,11 +43,6 @@ class BuildBear(CMakeProject):
             return [str(self.get_homebrew_prefix("openssl") / "lib/pkgconfig")] + super().pkgconfig_dirs
         return super().pkgconfig_dirs
 
-    # For devel branch:
-    # def __init__(self, config):
-    #     super().__init__(config)
-    #     self.add_required_system_tool("go")
-    #
     # def install(self, **kwargs):
     #     self.makedirs(self.install_dir / "bin")
     #     self.create_symlink(self.build_dir / "bear/bin/bear", self.install_dir / "bin/bear", relative=False,
