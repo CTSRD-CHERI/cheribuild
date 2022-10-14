@@ -47,9 +47,9 @@ class BuildCheriSpike(AutotoolsProject):
     lto_set_ld = False
     make_kind = MakeCommandKind.GnuMake
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.add_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
 
     def setup(self):
         super().setup()
@@ -57,8 +57,8 @@ class BuildCheriSpike(AutotoolsProject):
         self.configure_args.append("--disable-rvfi-dii")
         # We have to pass LDFLAGS as part of CC/CXX since the build system is dumb.
         common_flags = self.default_compiler_flags + self.default_ldflags
-        self.configure_environment["CC"] = self.commandline_to_str([self.CC] + common_flags + self.CFLAGS)
-        self.configure_environment["CXX"] = self.commandline_to_str([self.CXX] + common_flags + self.CXXFLAGS)
+        self.configure_environment["CC"] = self.commandline_to_str([str(self.CC)] + common_flags + self.CFLAGS)
+        self.configure_environment["CXX"] = self.commandline_to_str([str(self.CXX)] + common_flags + self.CXXFLAGS)
 
     @classmethod
     def get_simulator_binary(cls, caller):

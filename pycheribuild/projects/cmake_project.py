@@ -110,10 +110,10 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         self.build_type_var_suffix = ""
         if "Ninja" in generator:
             self.make_args.subkind = MakeCommandKind.Ninja
-            self.add_required_system_tool("ninja", homebrew="ninja", apt="ninja-build")
+            self.check_required_system_tool("ninja", homebrew="ninja", apt="ninja-build")
         elif "Makefiles" in generator:
             self.make_args.subkind = MakeCommandKind.DefaultMake
-            self.add_required_system_tool("make")
+            self.check_required_system_tool("make")
         else:
             self.make_args.subkind = MakeCommandKind.CustomMakeTool  # VS/XCode, etc.
 

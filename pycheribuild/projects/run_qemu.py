@@ -111,7 +111,7 @@ class ChosenQEMU(object):
             # Only CHERI QEMU supports more than one SMB share; conservatively
             # guess what kind of QEMU this is
             self._can_provide_src_via_smb = launch.crosscompile_target.is_hybrid_or_purecap_cheri()
-            launch.add_required_system_tool(binary_name)
+            launch.check_required_system_tool(binary_name)
             binary_path = shutil.which(binary_name)
             if not binary_path:
                 launch.fatal("Could not find system QEMU", binary_name)

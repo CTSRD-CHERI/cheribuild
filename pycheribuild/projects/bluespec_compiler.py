@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
+from .project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..utils import OSInfo
 
 
@@ -39,13 +39,13 @@ class BuildBluespecCompiler(Project):
     build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.add_required_system_tool("ghc", apt="ghc", homebrew="ghc")
-        self.add_required_system_tool("cabal", apt="cabal-install", homebrew="cabal-install")
-        self.add_required_system_tool("gperf", homebrew="gperf", apt="gperf")
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
+        self.check_required_system_tool("ghc", apt="ghc", homebrew="ghc")
+        self.check_required_system_tool("cabal", apt="cabal-install", homebrew="cabal-install")
+        self.check_required_system_tool("gperf", homebrew="gperf", apt="gperf")
         for i in ("autoconf", "bison", "flex"):
-            self.add_required_system_tool(i, homebrew=i)
+            self.check_required_system_tool(i, homebrew=i)
         self.make_args.set(PREFIX=self.install_dir)
 
     def compile(self, **kwargs):

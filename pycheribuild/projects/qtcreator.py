@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
+from .project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 
 
 class BuildQtCreator(Project):
@@ -35,11 +35,14 @@ class BuildQtCreator(Project):
     repository = GitRepository("https://code.qt.io/qt-creator/qt-creator.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.add_required_system_tool("qmake")
+    def setup(self):
+        super().setup()
         self.configure_command = "qmake"
         self.configure_args.extend(["-r", self.source_dir / "qtcreator.pro"])
         self.configure_environment["LLVM_INSTALL_DIR"] = str(self.config.cheri_sdk_dir)
         self.make_args.kind = MakeCommandKind.DefaultMake  # should also work with bsd make
         self.make_args.set(INSTALL_ROOT=str(self.install_dir))
+
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("qmake")

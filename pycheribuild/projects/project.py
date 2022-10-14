@@ -196,16 +196,14 @@ class MakeOptions(object):
             self.__project.fatal("Cannot infer path from CustomMakeTool. Set self.make_args.set_command(\"tool\")")
             raise RuntimeError()
 
-    def set_command(self, value, can_pass_j_flag=True, early_args: "list[str]" = None, *,
-                    install_instructions=None):
+    def set_command(self, value, can_pass_j_flag=True, early_args: "list[str]" = None):
         self.__command = str(value)
         if early_args is None:
             early_args = []
         self.__command_args = early_args
         assert isinstance(self.__command_args, list)
-        # noinspection PyProtectedMember
         if not Path(value).is_absolute():
-            self.__project.add_required_system_tool(value, custom_install_instructions=install_instructions)
+            self.__project.check_required_system_tool(value)
         self.__can_pass_j_flag = can_pass_j_flag
 
     def all_commandline_args(self, config) -> "list[str]":
@@ -585,6 +583,14 @@ class Project(SimpleProject):
         # Check that the make command exists (this will also add it to the required system tools)
         if self.make_args.command is None:
             self.fatal("Make command not set!")
+        if self.config.create_compilation_db and self.compile_db_requires_bear:
+            if self.make_args.is_gnu_make and False:
+                # use compiledb instead of bear for gnu make
+                self.check_required_system_tool("compiledb",
+                                                instructions=InstallInstructions("Run `pip install --user compiledb``"))
+            else:
+                self.check_required_system_tool("bear", homebrew="bear", cheribuild_target="bear")
+                self._compiledb_tool = "bear"
         super().check_system_dependencies()
 
     lto_by_default: bool = False  # Don't default to LTO
@@ -858,10 +864,8 @@ class Project(SimpleProject):
             if self.make_args.is_gnu_make and False:
                 # use compiledb instead of bear for gnu make
                 # https://blog.jetbrains.com/clion/2018/08/working-with-makefiles-in-clion-using-compilation-db/
-                self.add_required_system_tool("compiledb", custom_install_instructions="Run `pip install --user compiledb``")
                 self._compiledb_tool = "compiledb"
             else:
-                self.add_required_system_tool("bear", homebrew="bear", cheribuild_target="bear")
                 self._compiledb_tool = "bear"
         self._force_clean = False
         self._prevent_assign = True

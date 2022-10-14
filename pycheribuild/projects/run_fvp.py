@@ -55,13 +55,13 @@ class InstallMorelloFVP(SimpleProject):
     min_ram_mb = 4900
     warn_ram_mb = 7900
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
         if self.use_docker_container:
-            self.add_required_system_tool("docker", homebrew="homebrew/cask/docker")
-            self.add_required_system_tool("socat", homebrew="socat")
+            self.check_required_system_tool("docker", homebrew="homebrew/cask/docker")
+            self.check_required_system_tool("socat", homebrew="socat")
             if OSInfo.IS_MAC:
-                self.add_required_system_tool("Xquartz", homebrew="homebrew/cask/xquartz")
+                self.check_required_system_tool("Xquartz", homebrew="homebrew/cask/xquartz")
 
     @classmethod
     def setup_config_options(cls, **kwargs):

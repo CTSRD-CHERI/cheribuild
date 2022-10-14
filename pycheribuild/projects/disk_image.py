@@ -58,10 +58,13 @@ class BuildMtools(AutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     build_in_source_dir = True
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.add_required_system_tool("autoreconf", default="autoconf")
-        self.add_required_system_tool("aclocal", default="automake")
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("autoreconf", default="autoconf")
+        self.check_required_system_tool("aclocal", default="automake")
+
+    def setup(self):
+        super().setup()
         # Manpages won't build:
         self.make_args.set(MAN1="", MAN5="")
 
@@ -171,15 +174,18 @@ class BuildDiskImageBase(SimpleProject):
         cls.no_autoboot = cls.add_bool_option("no-autoboot", default=False,
                                               help="Disable autoboot and boot menu for targets that use loader(8)")
 
-    def __init__(self, config):
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("ssh-keygen", apt="openssh-client", zypper="openssh-clients")
+
+    def __init__(self, *args, **kwargs):
         # TODO: different extra-files directory
-        super().__init__(config)
+        super().__init__(*args, **kwargs)
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
         self.manifest_file = None  # type: typing.Optional[Path]
         self.extra_files = []  # type: typing.List[Path]
         self.auto_prefixes = ["usr/local/", "opt/", "extra/", "bin/bash"]
-        self.add_required_system_tool("ssh-keygen", apt="openssh-client", zypper="openssh-clients")
 
         self.makefs_cmd = None  # type: typing.Optional[Path]
         self.mkimg_cmd = None  # type: typing.Optional[Path]
@@ -1375,9 +1381,9 @@ class BuildCheriBSDTarball(BuildCheriBSDDiskImage):
         function=lambda conf, proj: _default_tar_name(conf, conf.output_root, proj),
         as_string=lambda cls: "$OUTPUT_ROOT/" + cls.disk_image_prefix + "-<TARGET>.tar.xz depending on architecture")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.add_required_system_tool("bsdtar", cheribuild_target="bsdtar", apt="libarchive-tools")
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("bsdtar", cheribuild_target="bsdtar", apt="libarchive-tools")
 
     def make_disk_image(self):
         # write out the manifest file:
