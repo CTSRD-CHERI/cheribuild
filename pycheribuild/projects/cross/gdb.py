@@ -185,8 +185,6 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
             self.LDFLAGS.append("-lelf")
             self.LDFLAGS.append("-lmd")
             self.configure_environment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
-            # Look in /usr/lib not /usr/local/lib
-            self.configure_args.append("--with-separate-debug-dir=/usr/lib/debug")
             self.configure_environment["CC_FOR_BUILD"] = str(self.host_CC)
             self.configure_environment["CXX_FOR_BUILD"] = str(self.host_CXX)
             self.configure_environment["CFLAGS_FOR_BUILD"] = "-g -fcommon"
