@@ -101,17 +101,17 @@ class BuildQEMUBase(AutotoolsProject):
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
         self.check_required_system_tool("glibtoolize" if self.target_info.is_macos() else "libtoolize",
-                                      default="libtool")
+                                        default="libtool")
         self.check_required_system_tool("autoreconf", default="autoconf")
         self.check_required_system_tool("aclocal", default="automake")
 
-        self.check_required_pkg_config("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",
-                                     freebsd="pixman")
+        self.check_required_pkg_config("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel",
+                                       apt="libpixman-1-dev", freebsd="pixman")
         self.check_required_pkg_config("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
-                                     freebsd="glib")
+                                       freebsd="glib")
         # Tests require GNU sed
         self.check_required_system_tool("sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed",
-                                      freebsd="gsed")
+                                        freebsd="gsed")
 
     def setup(self):
         super().setup()

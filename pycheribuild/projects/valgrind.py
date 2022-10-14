@@ -44,4 +44,3 @@ class BuildValgrind(AutotoolsProject):
         if OSInfo.is_ubuntu() or OSInfo.is_debian():
             self.check_required_system_header("/usr/include/i386-linux-gnu/asm/types.h", apt="linux-libc-dev:i386")
             self.check_required_system_header("/usr/include/x86_64-linux-gnu/asm/types.h", apt="linux-libc-dev:amd64")
-

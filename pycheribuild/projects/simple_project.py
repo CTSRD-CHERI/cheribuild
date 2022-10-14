@@ -784,7 +784,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                 cheribuild_target=cheribuild_target, alternative=alternative_instructions)
         if executable in self.__checked_system_tools:
             # If we already checked for this tool, the install instructions should match
-            x = self.__checked_system_tools[executable]
             assert instructions.fixit_hint() == self.__checked_system_tools[executable].fixit_hint(), executable
             return  # already checked
         assert instructions.cheribuild_target == cheribuild_target
