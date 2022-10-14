@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 
-from .project import AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository
+from .project import AutotoolsProject, DefaultInstallDir, GitRepository
 from ..utils import OSInfo
 
 
@@ -38,11 +38,10 @@ class BuildValgrind(AutotoolsProject):
     repository = GitRepository("git://sourceware.org/git/valgrind.git",
                                default_branch="VALGRIND_3_14_BRANCH", force_branch=True)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
         # Need the i386 kernel headers
         if OSInfo.is_ubuntu() or OSInfo.is_debian():
-            self.add_required_system_header("/usr/include/i386-linux-gnu/asm/types.h", apt="linux-libc-dev:i386")
-            self.add_required_system_header("/usr/include/x86_64-linux-gnu/asm/types.h", apt="linux-libc-dev:amd64")
-            # 32-bit headers not available on ubuntu
-            # self.configure_args.append("--enable-only64bit")
+            self.check_required_system_header("/usr/include/i386-linux-gnu/asm/types.h", apt="linux-libc-dev:i386")
+            self.check_required_system_header("/usr/include/x86_64-linux-gnu/asm/types.h", apt="linux-libc-dev:amd64")
+
