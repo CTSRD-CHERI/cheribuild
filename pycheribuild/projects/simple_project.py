@@ -743,7 +743,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
             self.__class__)
         self.__required_system_tools = {}  # type: typing.Dict[str, InstallInstructions]
-        self.__required_system_headers = {}  # type: typing.Dict[str, InstallInstructions]
         self._system_deps_checked = False
         self._setup_called = False
         self._setup_late_called = False
@@ -857,17 +856,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         if executable in self.__required_system_tools:
             assert instructions.fixit_hint() == self.__required_system_tools[executable].fixit_hint()
         self.__required_system_tools[executable] = instructions
-
-    def add_required_system_header(self, header: str, custom_install_instructions: str = None, default: str = None,
-                                   freebsd: str = None, apt: str = None, zypper: str = None, homebrew: str = None,
-                                   cheribuild_target: str = None, alternative_instructions: str = None) -> None:
-        if custom_install_instructions is not None:
-            instructions = InstallInstructions(custom_install_instructions, cheribuild_target=cheribuild_target,
-                                               alternative=alternative_instructions)
-        else:
-            instructions = OSInfo.install_instructions(header, True, default=default, freebsd=freebsd, zypper=zypper,
-                                                       apt=apt, homebrew=homebrew, cheribuild_target=cheribuild_target)
-        self.__required_system_headers[header] = instructions
 
     def query_yes_no(self, message: str = "", *, default_result=False, force_result=True,
                      yes_no_str: str = None) -> bool:
@@ -1127,10 +1115,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             self.check_required_system_tool(tool, instructions=instructions,
                                             cheribuild_target=instructions.cheribuild_target,
                                             alternative_instructions=instructions.alternative)
-        for (header, instructions) in self.__required_system_headers.items():
-            self.check_required_system_header(header, instructions=instructions,
-                                              cheribuild_target=instructions.cheribuild_target,
-                                              alternative_instructions=instructions.alternative)
         self._system_deps_checked = True
 
     def get_homebrew_prefix(self, package: "typing.Optional[str]" = None) -> Path:

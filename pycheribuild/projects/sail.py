@@ -173,9 +173,12 @@ class BuildBubbleWrap(AutotoolsProject):
     repository = GitRepository("https://github.com/projectatomic/bubblewrap")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.add_required_system_header("sys/capability.h", apt="libcap-dev")
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_header("sys/capability.h", apt="libcap-dev")
+
+    def setup(self):
+        super().setup()
         self.configure_args.append("--with-bash-completion-dir=no")
 
 
@@ -256,9 +259,9 @@ class BuildSailCheriMips(ProjectUsingOpam):
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
+        self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -308,9 +311,9 @@ class BuildSailRISCV(ProjectUsingOpam):
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
+        self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     def compile(self, **kwargs):
         for arch in ("RV64", "RV32"):
@@ -332,9 +335,9 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
 
-    def __init__(self, config):
-        super().__init__(config)
-        self.add_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
+        self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     def compile(self, **kwargs):
         for arch in ("RV64", "RV32"):

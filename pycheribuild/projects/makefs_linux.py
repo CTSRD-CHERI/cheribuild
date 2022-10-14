@@ -29,7 +29,7 @@
 #
 from pathlib import Path
 
-from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
+from .project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..utils import OSInfo
 
 
@@ -40,19 +40,14 @@ class BuildMakefsOnLinux(Project):
     build_in_source_dir = True  # out of source builds don't work
     make_kind = MakeCommandKind.GnuMake
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        if OSInfo.IS_LINUX:
-            self.add_required_system_header("bsd/bsd.h")
-        if not OSInfo.IS_FREEBSD:
-            self.add_required_system_tool("bmake", homebrew="bmake", cheribuild_target="bmake")
-
     def check_system_dependencies(self):
-        if OSInfo.IS_FREEBSD:
-            return  # not need on FreeBSD
         super().check_system_dependencies()
         if not Path("/usr/include/bsd/bsd.h").is_file():
             self.dependency_error("libbsd must be installed to compile makefs on linux")
+        if OSInfo.IS_LINUX:
+            self.check_required_system_header("bsd/bsd.h")
+        if not OSInfo.IS_FREEBSD:
+            self.check_required_system_tool("bmake", homebrew="bmake", cheribuild_target="bmake")
 
     def compile(self, **kwargs):
         # Doesn't have an all target
