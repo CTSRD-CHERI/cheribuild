@@ -117,6 +117,9 @@ class BuildCrossCompiledCMake(CMakeProject):
         # Prefer static libraries for 3rd-party dependencies
         self.add_cmake_options(BUILD_SHARED_LIBS=False)
         self.add_cmake_options(CMAKE_USE_SYSTEM_LIBRARY_LIBUV=True)
+        # CMake can't find the static libuv due to a different libname
+        self.add_cmake_options(
+            LibUV_LIBRARY=BuildLibuv.get_install_dir(self) / self.target_info.default_libdir / "libuv_a.a")
 
     def run_tests(self):
         # TODO: generate JUnit output once https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6020 is merged
