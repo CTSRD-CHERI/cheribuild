@@ -186,33 +186,49 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
             )
 
 
-class BuildMiBenchNew(BuildLLVMTestSuiteBase):
+class _BuildLLVMTestSuiteSubdir(BuildLLVMTestSuiteBase):
+    do_not_add_to_targets = True
     repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
-    target = "mibench-new"
+    _ignored_install_dirs: "typing.ClassVar[tuple[str, ...]]" = ("CMakeFiles",)
+    _test_suite_subdirs: "typing.ClassVar[list[str]]"
 
     def setup(self):
         super().setup()
-        self.add_cmake_options(TEST_SUITE_SUBDIRS="MultiSource/Benchmarks/MiBench", TEST_SUITE_COPY_DATA=True)
+        self.add_cmake_options(
+            TEST_SUITE_SUBDIRS=";".join(self._test_suite_subdirs),
+            TEST_SUITE_COPY_DATA=True,
+        )
+
+    def install(self, **kwargs):
+        # TEST_SUITE_SUBDIRS is a CMake list
+        for benchmark in self._test_suite_subdirs:
+            self.install_subproject_benchmark_dir(self.build_dir / benchmark)
+
+    def install_subproject_benchmark_dir(self, subdir: Path):
+        for curdir, dirnames, filenames in os.walk(str(subdir)):
+            # Prune the directories to visit
+            for ignored in self._ignored_install_dirs:
+                if ignored in dirnames:
+                    dirnames.remove(ignored)
+
+            relpath = os.path.relpath(curdir, str(subdir))
+            for filename in filenames:
+                new_file = Path(curdir, filename)
+                if new_file.suffix in (".cmake", ".reference_output", ".time", ".test"):
+                    continue
+                self.install_file(new_file, self.install_dir / relpath / filename, print_verbose_only=True)
+
+
+class BuildMiBenchNew(_BuildLLVMTestSuiteSubdir):
+    target = "mibench-new"
+    _ignored_install_dirs = ("CMakeFiles", "consumer-typeset", "consumer-lame", "office-ispell", "telecomm-gsm")
+    _test_suite_subdirs = ["MultiSource/Benchmarks/MiBench"]
 
     def compile(self, **kwargs):
         super().compile(**kwargs)
         self.install_file(
             self.source_dir / "MultiSource/lit.local.cfg", self.build_dir / "MultiSource/lit.local.cfg", force=True
         )
-
-    def install(self, **kwargs):
-        root_dir = str(self.build_dir / "MultiSource/Benchmarks/MiBench")
-        for curdir, dirnames, filenames in os.walk(root_dir):
-            # We don't run some benchmarks (e.g. consumer-typeset or consumer-lame) yet
-            for ignored_dirname in ("CMakeFiles", "consumer-typeset", "consumer-lame", "office-ispell", "telecomm-gsm"):
-                if ignored_dirname in dirnames:
-                    dirnames.remove(ignored_dirname)
-            relpath = os.path.relpath(curdir, root_dir)
-            for filename in filenames:
-                new_file = Path(curdir, filename)
-                if new_file.suffix in (".cmake", ".reference_output", ".time", ".test"):
-                    continue
-                self.install_file(new_file, self.install_dir / relpath / filename, print_verbose_only=True)
 
 
 class BuildOlden(BenchmarkMixin, CrossCompileProject):
@@ -319,11 +335,12 @@ class BuildOlden(BenchmarkMixin, CrossCompileProject):
             )
 
 
-class BuildSpec2006New(BuildLLVMTestSuiteBase):
-    repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
+class BuildSpec2006New(_BuildLLVMTestSuiteSubdir):
     target = "spec2006"
     spec_iso_path: "typing.ClassVar[Optional[Path]]"
     _config_file_aliases = ("spec2006-new",)
+    # TODO: External/SPEC/CFP2006",
+    _test_suite_subdirs = ["External/SPEC/CINT2006"]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -375,11 +392,7 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
             self.fatal("You must set --", self.get_config_option_name("spec_iso_path"))
             self.spec_iso_path = Path("/missing/spec2006.iso")
         super().setup()
-        # Only build spec2006
-        # self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006;External/SPEC/CFP2006",
         self.add_cmake_options(
-            TEST_SUITE_SUBDIRS="External/SPEC/CINT2006",
-            TEST_SUITE_COPY_DATA=True,
             TEST_SUITE_RUN_TYPE=self.workload,
             TEST_SUITE_SPEC2006_ROOT=self.extracted_spec_sources,
         )
@@ -426,25 +439,79 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
             self.extract_spec_iso_image()
         super().configure(**kwargs)
 
-    def install(self, **kwargs):
-        self.install_benchmark_dir(str(self.build_dir / "External/SPEC/CINT2006"))
-        # self.install_benchmark_dir(str(self.build_dir / "External/SPEC/CFP2006"))
-
-    def install_benchmark_dir(self, root_dir: str):
-        for curdir, dirnames, filenames in os.walk(root_dir):
-            # We don't run some benchmarks (e.g. consumer-typeset or consumer-lame) yet
-            for ignored_dirname in ("CMakeFiles",):
-                if ignored_dirname in dirnames:
-                    dirnames.remove(ignored_dirname)
-            relpath = os.path.relpath(curdir, root_dir)
-            for filename in filenames:
-                new_file = Path(curdir, filename)
-                self.install_file(new_file, self.install_dir / relpath / filename, print_verbose_only=True)
-
 
 for _arch in BuildSpec2006New.supported_architectures:
     _tgt = BuildSpec2006New.get_class_for_target(_arch).target
     target_manager.add_target_alias(replace_one(_tgt, "spec2006-", "spec2006-new-"), _tgt, deprecated=True)
+
+
+class BuildSpec2017(_BuildLLVMTestSuiteSubdir):
+    target = "spec2017"
+    _test_suite_subdirs = ["External/SPEC/CINT2017rate", "External/SPEC/CFP2017rate"]
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.spec_sources = cls.add_path_option(
+            "spec-sources", default=Path(), help="Path to the extracted SPEC2017 sources"
+        )
+        cls.workload = cls.add_config_option("workload", choices=("test", "train", "ref"), default="test")
+
+    def setup(self):
+        if self.spec_sources == Path():
+            self.fatal("You must set", self.get_config_option_name("spec_sources"))
+            self.spec_sources = Path("/missing/spec2017/extracted/path")
+        if not self.spec_sources.is_dir():
+            self.fatal(
+                "Missing SPEC 2017 sources, please extract them and set", self.get_config_option_name("spec_sources")
+            )
+        super().setup()
+        self.add_cmake_options(
+            TEST_SUITE_SUPPRESS_WARNINGS=False,
+            TEST_SUITE_RUN_TYPE=self.workload,
+            TEST_SUITE_SPEC2017_ROOT=self.spec_sources,
+        )
+        if self.target_info.is_freebsd():
+            self.add_cmake_options(TEST_SUITE_USE_PMCSTAT=True)
+        self.cross_warning_flags.append("-Werror=writable-strings")
+        self.cross_warning_flags.append("-Wno-builtin-macro-redefined")  # perl
+        self.cross_warning_flags.append("-Wno-constant-logical-operand")  # perl
+        self.cross_warning_flags.append("-Wno-string-compare")  # perl
+        # GCC code does a lot of dodgy stuff :(
+        self.cross_warning_flags.append("-Wno-error=incompatible-pointer-types")
+        self.cross_warning_flags.append("-Wno-error=format")
+        self.cross_warning_flags.append("-Wno-format-security")
+        self.common_warning_flags.append("-Wno-shift-negative-value")
+        self.common_warning_flags.append("-Wno-shift-count-overflow")
+        self.common_warning_flags.append("-Wno-switch-bool")
+        self.common_warning_flags.append("-Wno-tautological-compare")
+        self.common_warning_flags.append("-Wno-array-bounds")
+        self.common_warning_flags.append("-Wno-expansion-to-defined")
+        self.common_warning_flags.append("-Wno-deprecated-register")
+        self.common_warning_flags.append("-Wno-parentheses-equality")
+        self.common_warning_flags.append("-Wno-string-plus-int")
+        self.common_warning_flags.append("-Wno-logical-not-parentheses")
+        self.common_warning_flags.append("-Wno-enum-conversion")
+        self.common_warning_flags.append("-Wno-void-pointer-to-enum-cast")
+        self.common_warning_flags.append("-Wno-switch")
+        self.common_warning_flags.append("-Wno-undefined-bool-conversion")  # omnet
+        self.common_warning_flags.append("-Wno-null-dereference")  # dealII
+        # self.common_warning_flags.append("-Wno-unused-comparison")  # dealII (possibly a bug?)
+        self.common_warning_flags.append("-Wno-dangling-else")  # dealII
+        self.common_warning_flags.append("-Wno-undefined-var-template")  # dealII
+        self.common_warning_flags.append("-Wno-macro-redefined")  # perl
+        self.common_warning_flags.append("-Wno-compound-token-split-by-macro")
+        self.common_warning_flags.append("-Wno-exceptions")
+        self.common_warning_flags.append("-Wno-varargs")
+        self.common_warning_flags.append("-Wno-non-c-typedef-for-linkage")
+        self.common_warning_flags.append("-Wno-absolute-value")
+        self.common_warning_flags.append("-Wno-parentheses-equality")
+        self.common_warning_flags.append("-Wno-self-assign-field")
+        self.common_warning_flags.append("-Wno-deprecated-declarations")
+        self.common_warning_flags.append("-Wno-implicit-const-int-float-conversion")
+        self.common_warning_flags.append("-Wno-parentheses-equality")  # x264
+        self.common_warning_flags.append("-Wno-unreachable-code-generic-assoc")  # blender
+        self.common_warning_flags.append("-Wno-deprecated-non-prototype")  # nab_r
 
 
 class BuildLMBench(BenchmarkMixin, CrossCompileProject):
