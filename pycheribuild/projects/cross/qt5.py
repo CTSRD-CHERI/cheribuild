@@ -86,10 +86,12 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
             result = native_instance.install_dir / "bin/update-mime-database"
             if not result.exists():
                 native_instance.dependency_error(
-                    "Cannot find native update-mime-database", cheribuild_target=cls.target,
+                    "Cannot find native update-mime-database", cheribuild_target=native_instance.target,
                     cheribuild_xtarget=CompilationTargets.NATIVE)
             return result
         else:
+            # We are building on CheriBSD (purecap)
+            assert native_instance.compiling_for_cheri()
             result = shutil.which("update-mime-database")
             if not result:
                 native_instance.dependency_error(
@@ -114,8 +116,9 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
             "update-mimedb": True,
             "build-tools": self._can_build_tools
         })
-        # Ensure that we have update-mime-database available as it will be used in a post-install action.
-        self.get_update_mime_database_path(self)
+        if not self._can_build_tools:
+            # Ensure that we have update-mime-database available as it will be used in a post-install action.
+            self.get_update_mime_database_path(self)
 
     def configure(self, **kwargs):
         if not self.compiling_for_host():

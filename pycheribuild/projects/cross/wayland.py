@@ -192,7 +192,7 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
             self.dependency_error("DejaGNU is not installed.",
                                   install_instructions=OSInfo.install_instructions("runtest", False, default="dejagnu",
                                                                                    apt="dejagnu", homebrew="deja-gnu"),
-                                  cheribuild_target="dejagnu")
+                                  cheribuild_target="dejagnu", cheribuild_xtarget=CompilationTargets.NATIVE)
         if self.compiling_for_host():
             self.run_cmd("make", "check", "RUNTESTFLAGS=-a", cwd=self.build_dir,
                          env=dict(DEJAGNU=self.source_dir / ".ci/site.exp", BOARDSDIR=self.source_dir / ".ci"))
@@ -202,7 +202,8 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
                                               config=self.config)
             if runtest_ver < (1, 6, 4):
                 self.dependency_error("DejaGnu version", runtest_ver, "cannot be used to run tests remotely,",
-                                      "please install a newer version with cheribuild", cheribuild_target="dejagnu")
+                                      "please install a newer version with cheribuild",
+                                      cheribuild_target="dejagnu", cheribuild_xtarget=CompilationTargets.NATIVE)
 
             if self.can_run_binaries_on_remote_morello_board():
                 self.write_file(self.build_dir / "site.exp", contents=f"""

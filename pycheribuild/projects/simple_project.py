@@ -1042,6 +1042,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                 xtarget = cheribuild_xtarget if cheribuild_xtarget is not None else self.crosscompile_target
                 dep_target = target_manager.get_target(cheribuild_target, xtarget, config=self.config, caller=self)
                 dep_target.check_system_deps(self.config)
+                assert dep_target.get_or_create_project(None, self.config).crosscompile_target == xtarget
                 dep_target.execute(self.config)
                 return  # should be installed now
         if fatal:
