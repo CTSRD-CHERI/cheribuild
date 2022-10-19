@@ -131,29 +131,38 @@ def test_build_and_run(target_name, expected_list):
     # Note: For architectures that CHERI QEMU builds by default we currently
     # explicitly default to using that rather than the system QEMU.
     pytest.param("run-morello-hybrid", True,
-                 ["qemu", "morello-llvm-native", "cheribsd-morello-hybrid", "gdb-morello-hybrid",
+                 ["qemu", "morello-llvm-native", "cheribsd-morello-hybrid",
+                  "gmp-morello-hybrid", "gdb-morello-hybrid",
                   "disk-image-morello-hybrid"]),
     pytest.param("run-morello-purecap", True,
                  ["qemu", "morello-llvm-native", "cheribsd-morello-purecap",
+                  "gmp-morello-hybrid-for-purecap-rootfs",
                   "gdb-morello-hybrid-for-purecap-rootfs", "disk-image-morello-purecap"]),
     pytest.param("run-riscv64", True,
-                 ["qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64"]),
+                 ["qemu", "llvm-native", "cheribsd-riscv64", "gmp-riscv64",
+                  "gdb-riscv64", "disk-image-riscv64"]),
     pytest.param("run-riscv64-hybrid", True,
-                 ["qemu", "llvm-native", "cheribsd-riscv64-hybrid", "gdb-riscv64-hybrid",
+                 ["qemu", "llvm-native", "cheribsd-riscv64-hybrid",
+                  "gmp-riscv64-hybrid", "gdb-riscv64-hybrid",
                   "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-hybrid"]),
     pytest.param("run-riscv64-purecap", True,
-                 ["qemu", "llvm-native", "cheribsd-riscv64-purecap", "gdb-riscv64-hybrid-for-purecap-rootfs",
+                 ["qemu", "llvm-native", "cheribsd-riscv64-purecap",
+                  "gmp-riscv64-hybrid-for-purecap-rootfs", "gdb-riscv64-hybrid-for-purecap-rootfs",
                   "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap"]),
     pytest.param("run-aarch64", True,
-                 ["qemu", "llvm-native", "cheribsd-aarch64", "gdb-aarch64", "disk-image-aarch64"]),
+                 ["qemu", "llvm-native", "cheribsd-aarch64", "gmp-aarch64",
+                  "gdb-aarch64", "disk-image-aarch64"]),
     pytest.param("run-amd64", True,
-                 ["qemu", "llvm-native", "cheribsd-amd64", "gdb-amd64", "disk-image-amd64"]),
+                 ["qemu", "llvm-native", "cheribsd-amd64", "gmp-amd64",
+                  "gdb-amd64", "disk-image-amd64"]),
     # Morello code won't run on QEMU (yet)
     pytest.param("run-fvp-morello-hybrid", True,
-                 ["install-morello-fvp", "morello-llvm-native", "cheribsd-morello-hybrid", "gdb-morello-hybrid",
+                 ["install-morello-fvp", "morello-llvm-native", "cheribsd-morello-hybrid",
+                  "gmp-morello-hybrid", "gdb-morello-hybrid",
                   "morello-firmware", "disk-image-morello-hybrid"]),
     pytest.param("run-fvp-morello-purecap", True,
                  ["install-morello-fvp", "morello-llvm-native", "cheribsd-morello-purecap",
+                  "gmp-morello-hybrid-for-purecap-rootfs",
                   "gdb-morello-hybrid-for-purecap-rootfs", "morello-firmware", "disk-image-morello-purecap"]),
 ])
 def test_all_run_deps(target, add_toolchain: bool, expected_deps):
@@ -293,9 +302,10 @@ def test_riscv():
     assert _sort_targets(["run-riscv64-purecap"], add_dependencies=True, skip_sdk=True) == [
         "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"]
     assert _sort_targets(["disk-image-riscv64"], add_dependencies=True, skip_sdk=False) == [
-        "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64"]
+        "llvm-native", "cheribsd-riscv64", "gmp-riscv64", "gdb-riscv64", "disk-image-riscv64"]
     assert _sort_targets(["run-riscv64"], add_dependencies=True, skip_sdk=False) == [
-        "qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64", "run-riscv64"]
+        "qemu", "llvm-native", "cheribsd-riscv64", "gmp-riscv64", "gdb-riscv64",
+        "disk-image-riscv64", "run-riscv64"]
 
 
 # Check that libcxx deps with skip sdk pick the matching -native/-mips versions

@@ -96,7 +96,8 @@ def test_skip_update():
 
 @pytest.mark.parametrize("args,expected", [
     pytest.param(["--include-dependencies", "run-riscv64-purecap"],
-                 ["qemu", "llvm-native", "cheribsd-riscv64-purecap", "gdb-riscv64-hybrid-for-purecap-rootfs",
+                 ["qemu", "llvm-native", "cheribsd-riscv64-purecap",
+                  "gmp-riscv64-hybrid-for-purecap-rootfs", "gdb-riscv64-hybrid-for-purecap-rootfs",
                   "bbl-baremetal-riscv64-purecap", "disk-image-riscv64-purecap", "run-riscv64-purecap"],
                  id="run-include-deps"),
     pytest.param(["--include-dependencies", "--skip-sdk", "run-riscv64-purecap"],
