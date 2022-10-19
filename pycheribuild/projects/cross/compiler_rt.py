@@ -71,7 +71,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN=False,
             COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal(),
             # Needed after https://reviews.llvm.org/D99621
-            COMPILER_RT_DEFAULT_TARGET_ONLY=True,
+            COMPILER_RT_DEFAULT_TARGET_ONLY=not self.compiling_for_host(),
             # Per-target runtime directories don't add the purecap suffix so can't be used right now.
             LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=False,
             )
