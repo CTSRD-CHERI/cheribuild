@@ -124,6 +124,9 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
             "--with-guile=no",
             ])
 
+        if self.target_info.is_freebsd():
+            self.configure_args.append("--with-separate-debug-dir=/usr/lib/debug")
+
         if self.use_lto:
             self.configure_args.append("--enable-lto")
 
