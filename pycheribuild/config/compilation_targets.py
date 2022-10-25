@@ -418,7 +418,8 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                 disk_image_path = run_instance.disk_image
                 if not disk_image_path.exists():
                     self.project.dependency_error("Missing disk image",
-                                                  cheribuild_target=run_instance.disk_image_project.target)
+                                                  cheribuild_target=run_instance.disk_image_project.target,
+                                                  cheribuild_xtarget=rootfs_xtarget)
         elif not qemu_options.can_boot_kernel_directly:
             # We need to boot the disk image instead of running the kernel directly (amd64)
             assert rootfs_xtarget.is_any_x86() or rootfs_xtarget.is_aarch64(
@@ -429,7 +430,8 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                 instance = BuildMinimalCheriBSDDiskImage.get_instance(self.project, cross_target=rootfs_xtarget)
                 disk_image_path = instance.disk_image_path
                 if not disk_image_path.exists():
-                    self.project.dependency_error("Missing disk image", cheribuild_target=instance.target)
+                    self.project.dependency_error("Missing disk image", cheribuild_target=instance.target,
+                                                  cheribuild_xtarget=rootfs_xtarget)
         elif kernel_path is None and "--kernel" not in self.config.test_extra_args:
             from ..projects.cross.cheribsd import ConfigPlatform
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass

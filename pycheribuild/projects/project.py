@@ -1778,7 +1778,8 @@ class _CMakeAndMesonSharedLogic(Project):
                 install_instrs = self._configure_tool_install_instructions()
                 self.dependency_error(tool, "version", version_str, "is too old (need at least", expected_str + ")",
                                       install_instructions=install_instrs,
-                                      cheribuild_target=install_instrs.cheribuild_target)
+                                      cheribuild_target=install_instrs.cheribuild_target,
+                                      cheribuild_xtarget=BasicCompilationTargets.NATIVE)
 
 
 class AutotoolsProject(Project):
