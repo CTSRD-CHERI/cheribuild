@@ -112,7 +112,7 @@ class TtyState:
             self.attrs = termios.tcgetattr(fd)
         except Exception as e:
             # Can happen if sys.stdin/sys.stdout/sys.stderr is not a TTY
-            if self._isatty():
+            if self._is_foreground_tty():
                 warning_message("Failed to query TTY state for", context, "-", e)
             self.attrs = None
         try:
@@ -121,16 +121,24 @@ class TtyState:
             # Can happen if sys.stdin/sys.stdout/sys.stderr is not a real file.  When running tests with pytest, this
             # will raise UnsupportedOperation("redirected stdin is pseudofile, has no fileno()")
             self.flags = None
-            if self._isatty():
+            if self._is_foreground_tty():
                 warning_message("Failed to query TTY flags for", context, "-", e)
 
-    def _isatty(self) -> bool:
+    def _is_foreground_tty(self) -> bool:
         try:
-            return os.isatty(self.fd.fileno())
-        except io.UnsupportedOperation:
+            # We are in the foreground if tcgetpgrp(fd) returns the same value as getpgrp().
+            tty_pgrp = os.tcgetpgrp(self.fd.fileno())
+            process_pgrp = os.getpgrp()
+            return tty_pgrp == process_pgrp and os.isatty(self.fd.fileno())
+        except OSError:
             return False
 
     def _restore_attrs(self) -> None:
+        if not self._is_foreground_tty():
+            # Don't attempt to restore previous TTY state if we are not running in the foreground. This ensures that
+            # we don't unexpectly change the state when running as part of a wrapper script and also ensures that we
+            # don't block indefinitely inside tcdrain(). See https://github.com/CTSRD-CHERI/cheribuild/issues/182.
+            return
         try:
             # Run drain first to ensure that we get the most recent state.
             termios.tcdrain(self.fd)
