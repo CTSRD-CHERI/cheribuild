@@ -80,7 +80,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
 
     def _configure_tool_install_instructions(self) -> InstallInstructions:
         return OSInfo.install_instructions("cmake", False, default="cmake", homebrew="cmake", zypper="cmake",
-                                           apt="cmake", freebsd="cmake")
+                                           apt="cmake", freebsd="cmake", cheribuild_target="cmake")
 
     @property
     def _get_version_args(self) -> dict:
@@ -290,13 +290,13 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                     expected_ctest_path = cmake_project.install_dir / "bin/ctest"
                     if not expected_ctest_path.is_file():
                         self.dependency_error(f"cannot find CTest binary ({expected_ctest_path}) to run tests.",
-                                              cheribuild_target=cmake_project.target)
+                                              cheribuild_target=cmake_project.target, cheribuild_xtarget=cmake_xtarget)
                     # --output-junit needs version 3.21
                     min_version = "3.21"
                     if not list(cmake_project.install_dir.glob("share/*/Help/release/" + min_version + ".rst")):
                         self.dependency_error("cannot find release notes for CMake", min_version,
                                               "- installed CMake version is too old",
-                                              cheribuild_target=cmake_project.target)
+                                              cheribuild_target=cmake_project.target, cheribuild_xtarget=cmake_xtarget)
                 except LookupError:
                     self.warning("Do not know how to cross-compile CTest for", self.target_info, "-> cannot run tests")
                     return

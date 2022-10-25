@@ -789,7 +789,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
         if not shutil.which(str(executable)):
             self.dependency_error("Required program", executable, "is missing!", install_instructions=instructions,
-                                  cheribuild_target=instructions.cheribuild_target)
+                                  cheribuild_target=instructions.cheribuild_target,
+                                  cheribuild_xtarget=BasicCompilationTargets.NATIVE)
         self.__checked_system_tools[executable] = instructions
 
     def check_required_pkg_config(self, package: str, instructions: InstallInstructions = None,
@@ -812,7 +813,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             self.run_cmd(["pkg-config", "--exists", package])
         except subprocess.CalledProcessError as e:
             self.dependency_error("Required library", package, "is missing:", e, install_instructions=instructions,
-                                  cheribuild_target=instructions.cheribuild_target)
+                                  cheribuild_target=instructions.cheribuild_target,
+                                  cheribuild_xtarget=BasicCompilationTargets.NATIVE)
         self.__checked_pkg_config[package] = instructions
 
     def check_required_system_header(self, header: str, instructions: InstallInstructions = None,
@@ -831,7 +833,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         include_dirs = self.get_compiler_info(self.CC).get_include_dirs(self.essential_compiler_and_linker_flags)
         if not any(Path(d, header).exists() for d in include_dirs):
             self.dependency_error("Required C header", header, "is missing!", install_instructions=instructions,
-                                  cheribuild_target=instructions.cheribuild_target)
+                                  cheribuild_target=instructions.cheribuild_target,
+                                  cheribuild_xtarget=BasicCompilationTargets.NATIVE)
         self.__checked_system_headers[header] = instructions
 
     def query_yes_no(self, message: str = "", *, default_result=False, force_result=True,

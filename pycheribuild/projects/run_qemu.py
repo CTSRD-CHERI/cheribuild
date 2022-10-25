@@ -290,7 +290,8 @@ class LaunchQEMUBase(SimpleProject):
     def process(self):
         if not self.chosen_qemu.binary.exists():
             self.dependency_error("QEMU is missing:", self.chosen_qemu.binary,
-                                  cheribuild_target=self.chosen_qemu.cls.target if self.chosen_qemu.cls else None)
+                                  cheribuild_target=self.chosen_qemu.cls.target if self.chosen_qemu.cls else None,
+                                  cheribuild_xtarget=CompilationTargets.NATIVE)
 
         qemu_loader_or_kernel = self.current_kernel
         if self.use_uboot:
@@ -309,8 +310,10 @@ class LaunchQEMUBase(SimpleProject):
                              "- falling back on kernel")
 
         if qemu_loader_or_kernel is not None and not qemu_loader_or_kernel.exists():
-            kernel_target = self.kernel_project.target if self.kernel_project is not None else None
-            self.dependency_error("Loader/kernel is missing:", qemu_loader_or_kernel, cheribuild_target=kernel_target)
+            kernel_target_name = self.kernel_project.target if self.kernel_project is not None else None
+            kernel_xtarget = self.kernel_project.crosscompile_target if self.kernel_project is not None else None
+            self.dependency_error("Loader/kernel is missing:", qemu_loader_or_kernel,
+                                  cheribuild_target=kernel_target_name, cheribuild_xtarget=kernel_xtarget)
 
         if self.forward_ssh_port and not self.is_port_available(self.ssh_forwarding_port):
             self.print_port_usage(self.ssh_forwarding_port)
@@ -348,8 +351,11 @@ class LaunchQEMUBase(SimpleProject):
         if self.cvtrace:
             logfile_options += ["-cheri-trace-format", "cvtrace"]
         if self.disk_image is not None and not self.disk_image.exists():
-            disk_image_target = self.disk_image_project.target if self.disk_image_project is not None else None
-            self.dependency_error("Disk image is missing:", self.disk_image, cheribuild_target=disk_image_target)
+            disk_image_target_name = self.disk_image_project.target if self.disk_image_project is not None else None
+            disk_image_xtarget = (
+                self.disk_image_project.crosscompile_target if self.disk_image_project is not None else None)
+            self.dependency_error("Disk image is missing:", self.disk_image, cheribuild_target=disk_image_target_name,
+                                  cheribuild_xtarget=disk_image_xtarget)
 
         user_network_options = ""
         smb_dir_count = 0
