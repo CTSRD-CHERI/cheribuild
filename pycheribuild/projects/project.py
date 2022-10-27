@@ -1762,8 +1762,8 @@ class _CMakeAndMesonSharedLogic(Project):
             if abspath:
                 self.configure_command = abspath
 
-    def check_system_dependencies(self) -> None:
-        super().check_system_dependencies()
+    def process(self) -> None:
+        super().process()
         if self._minimum_cmake_or_meson_version is not None:
             version_components = self._get_configure_tool_version()
             if version_components < self._minimum_cmake_or_meson_version:

@@ -29,6 +29,7 @@
 #
 import os
 import sys
+import typing
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -51,6 +52,7 @@ class BuildQEMUBase(AutotoolsProject):
     default_build_type = BuildType.RELEASE
     lto_by_default = True
     use_smbd: bool
+    smbd_path: typing.Optional[Path]
     qemu_targets: "str"
 
     @classmethod
@@ -168,29 +170,26 @@ class BuildQEMUBase(AutotoolsProject):
         # This would have cought some problems in the past
         self.common_warning_flags.append("-Werror=return-type")
         if self.use_smbd:
-            smbd_path = "/usr/sbin/smbd"
+            self.smbd_path = Path("/usr/sbin/smbd")
             if self.target_info.is_freebsd():
-                smbd_path = "/usr/local/sbin/smbd"
+                self.smbd_path = Path("/usr/local/sbin/smbd")
             elif self.target_info.is_macos():
                 prefix = _cached_get_homebrew_prefix("samba", self.config)
                 if prefix:
-                    smbd_path = prefix / "sbin/samba-dot-org-smbd"
+                    self.smbd_path = prefix / "sbin/samba-dot-org-smbd"
                 else:
-                    smbd_path = self.config.other_tools_dir / "sbin/smbd"
-                self.info("Guessed samba path", smbd_path)
+                    self.smbd_path = self.config.other_tools_dir / "sbin/smbd"
+                self.info("Guessed samba path", self.smbd_path)
 
             # Prefer the self-compiled samba if available.
             if (self.config.other_tools_dir / "sbin/smbd").exists():
-                smbd_path = self.config.other_tools_dir / "sbin/smbd"
+                self.smbd_path = self.config.other_tools_dir / "sbin/smbd"
 
-            self.check_required_system_tool(smbd_path, cheribuild_target="samba", freebsd="samba48", apt="samba",
-                                            homebrew="samba")
-
-            self.configure_args.append("--smbd=" + str(smbd_path))
-            if not Path(smbd_path).exists():
+            self.configure_args.append("--smbd=" + str(self.smbd_path))
+            if not Path(self.smbd_path).exists():
                 if self.target_info.is_macos():
                     # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
-                    # sources but the macos /usr/sbin/smbd is incompatible with that:
+                    # sources but the macOS /usr/sbin/smbd is incompatible with that:
                     self.warning("QEMU user-mode samba shares require the samba.org smbd. You will need to install it "
                                  "using homebrew (`brew install samba`) or build from source (`cheribuild.py samba`) "
                                  "since the /usr/sbin/smbd shipped by macOS is incompatible with QEMU")
@@ -239,6 +238,12 @@ class BuildQEMUBase(AutotoolsProject):
         if (self.source_dir / "pixman/pixman").exists():
             self.warning("QEMU might build the broken pixman submodule, run `git submodule deinit -f pixman` to clean")
         super().update()
+
+    def process(self) -> None:
+        if self.use_smbd and self.smbd_path is not None:
+            self.check_required_system_tool(str(self.smbd_path), cheribuild_target="samba", freebsd="samba48",
+                                            apt="samba", homebrew="samba")
+        super().process()
 
 
 # noinspection PyAbstractClass

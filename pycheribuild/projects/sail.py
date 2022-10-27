@@ -61,8 +61,8 @@ class OpamMixin(_MixinBase):
     def opamroot(self):
         return self.config.cheri_sdk_dir / "opamroot"
 
-    def check_system_dependencies(self):
-        super().check_system_dependencies()
+    def process(self):
+        super().process()
         self.check_required_system_tool("opam", homebrew="opam", apt="opam", cheribuild_target="opam-2.0")
         opam_path = shutil.which("opam")
         if opam_path:
