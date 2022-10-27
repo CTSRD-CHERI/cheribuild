@@ -54,7 +54,8 @@ from .utils import (ConfigBase, fatal_error, get_global_config, OSInfo, status_u
 __all__ = ["print_command", "get_compiler_info", "CompilerInfo", "popen", "popen_handle_noexec",  # no-combine
            "run_command", "latest_system_clang_tool", "commandline_to_str", "set_env", "extract_version",  # no-combine
            "get_program_version", "check_call_handle_noexec", "get_version_output", "keep_terminal_sane",  # no-combine
-           "run_and_kill_children_on_exit", "ssh_config_parameters", "ssh_host_accessible"]  # no-combine
+           "run_and_kill_children_on_exit", "ssh_config_parameters", "ssh_host_accessible",  # no-combine
+           "DoNotQuoteStr"]  # no-combine
 
 
 def __filter_env(env: "dict[str, str]") -> "dict[str, str]":
@@ -442,7 +443,7 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
             return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
-class DoNoQuoteStr(str if typing.TYPE_CHECKING else object):
+class DoNotQuoteStr(str if typing.TYPE_CHECKING else object):
     def __init__(self, s: str) -> None:
         self.s = s
 
@@ -451,7 +452,7 @@ class DoNoQuoteStr(str if typing.TYPE_CHECKING else object):
 
 
 def _quote(s) -> str:
-    return str(s) if isinstance(s, DoNoQuoteStr) else shlex.quote(str(s))
+    return str(s) if isinstance(s, DoNotQuoteStr) else shlex.quote(str(s))
 
 
 def commandline_to_str(args: "typing.Iterable[typing.Union[str,Path]]") -> str:

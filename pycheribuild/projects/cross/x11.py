@@ -36,7 +36,7 @@ from .freetype import BuildFreeType2
 from ..project import DefaultInstallDir, GitRepository, Project
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
-from ...processutils import DoNoQuoteStr, get_program_version, set_env
+from ...processutils import DoNotQuoteStr, get_program_version, set_env
 from ...utils import OSInfo
 
 
@@ -94,7 +94,7 @@ class X11AutotoolsProject(X11Mixin, CrossCompileAutotoolsProject):
     def default_ldflags(self) -> "list[str]":
         result = super().default_ldflags
         if not self.target_info.is_macos():
-            result.append(DoNoQuoteStr("-Wl,--enable-new-dtags,-rpath,'$$ORIGIN/../lib'"))
+            result.append(DoNotQuoteStr("-Wl,--enable-new-dtags,-rpath,'$$ORIGIN/../lib'"))
         return result
 
 
