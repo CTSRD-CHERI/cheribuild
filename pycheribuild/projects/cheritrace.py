@@ -50,4 +50,3 @@ class BuildCheriTrace(CMakeProject):
             LLVM_CONFIG=llvm_config_path,
             PYTHON_BINDINGS=self.include_python_bindings
         )
-        super().configure()
