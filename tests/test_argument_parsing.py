@@ -50,6 +50,7 @@ def _parse_arguments(args: typing.List[str], *, config_file=Path("/this/does/not
     assert isinstance(args, list)
     assert all(isinstance(arg, str) for arg in args), "Invalid argv " + str(args)
     ConfigLoaderBase._cheri_config._cached_deps = collections.defaultdict(dict)
+    assert isinstance(ConfigLoaderBase._cheri_config, DefaultCheriConfig)
     target_manager.reset()
     ConfigLoaderBase._cheri_config.loader._config_path = config_file
     sys.argv = ["cheribuild.py"] + args
