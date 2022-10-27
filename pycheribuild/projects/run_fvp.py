@@ -36,8 +36,8 @@ from subprocess import CompletedProcess
 
 from .disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase, BuildFreeBSDImage
 from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
-from .simple_project import SimpleProject, ComputedDefaultValue
-from ..config.chericonfig import CheriConfig
+from .simple_project import SimpleProject
+from ..config.chericonfig import CheriConfig, ComputedDefaultValue
 from ..config.compilation_targets import CompilationTargets
 from ..processutils import extract_version, popen
 from ..utils import (AnsiColour, cached_property, classproperty, coloured, fatal_error, find_free_port, OSInfo,
