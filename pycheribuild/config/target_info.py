@@ -124,7 +124,6 @@ class AbstractProject(FileSystemUtils):
     """A base class for (Simple)Project that exposes only the fields/methods needed in target_info."""
     config: CheriConfig
     target: str
-    _setup_called: bool
     _xtarget: "Optional[CrossCompileTarget]" = None
 
     auto_var_init: AutoVarInit  # Needed for essential_compiler_flags
@@ -135,6 +134,11 @@ class AbstractProject(FileSystemUtils):
     custom_c_preprocessor: Optional[Path] = None
     custom_c_compiler: Optional[Path] = None
     custom_cxx_compiler: Optional[Path] = None
+
+    def __init__(self, config):
+        super().__init__(config)
+        self._setup_called = False
+        self._init_called = False
 
     def get_compiler_info(self, compiler: Path) -> CompilerInfo:
         return get_compiler_info(compiler, config=self.config)
@@ -351,14 +355,15 @@ class TargetInfo(ABC):
         return False
 
     @final
-    def get_rootfs_project(self, *, t: "typing.Type[Type_T]", xtarget: "CrossCompileTarget" = None) -> Type_T:
+    def get_rootfs_project(self, *, t: "typing.Type[Type_T]",
+                           xtarget: "CrossCompileTarget" = None) -> typing.Type[Type_T]:
         if xtarget is None:
             xtarget = self.target
         result = self._get_rootfs_project(xtarget.get_rootfs_target())
-        assert isinstance(result, t)
+        assert issubclass(result, t)
         return result
 
-    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "AbstractProject":
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "typing.Type[AbstractProject]":
         raise LookupError("Should not be called for " + self.project.target)
 
     @classmethod

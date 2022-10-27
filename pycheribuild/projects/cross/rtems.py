@@ -93,8 +93,8 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
     _enable_smbfs_support = False
     _add_virtio_rng = False
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def setup(self):
+        super().setup()
         self.kernel_project = BuildRtems.get_instance(self)
         self.current_kernel = self.kernel_project.build_dir / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe"
 

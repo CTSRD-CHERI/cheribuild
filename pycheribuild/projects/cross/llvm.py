@@ -38,7 +38,7 @@ from ..simple_project import SimpleProject
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTargetInfo, CompilationTargets,
                                            FreeBSDTargetInfo)
-from ...config.target_info import CompilerType, CrossCompileTarget
+from ...config.target_info import CompilerType, CrossCompileTarget, AbstractProject
 from ...processutils import CompilerInfo
 from ...utils import is_jenkins_build, OSInfo, ThreadJoiner, remove_duplicates, InstallInstructions
 
@@ -413,17 +413,16 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
 
     def add_compiler_with_config_file(self, prefix: str, target: CrossCompileTarget):
         # Create a fake project class that has the required properties needed for essential_compiler_and_linker_flags
-        class MockProject:
-            needs_sysroot = True
-            config = self.config
-
-            def warning(*args, **kwags):
-                pass
+        class MockProject(AbstractProject):
+            def __init__(self, config, _target: CrossCompileTarget):
+                super().__init__(config)
+                self.crosscompile_target = _target
+                self.needs_sysroot = True
 
         prefix += target.build_suffix(self.config, include_os=False)
         # Instantiate the target_info using the mock project:
         # noinspection PyTypeChecker
-        target_info = target.target_info_cls(target, MockProject())  # pytype: disable=wrong-arg-types,not-instantiable
+        target_info = target.target_info_cls(target, MockProject(self.config, target))
         assert isinstance(target_info, FreeBSDTargetInfo)
         # We only want the compiler flags, don't check whether required files exist
         flags = target_info.get_essential_compiler_and_linker_flags(perform_sanity_checks=False,

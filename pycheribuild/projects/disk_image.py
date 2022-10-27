@@ -43,7 +43,7 @@ from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUAr
 from .simple_project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile
-from ..utils import AnsiColour, classproperty, coloured, include_local_file
+from ..utils import AnsiColour, classproperty, coloured, include_local_file, cached_property
 
 
 # Notes:
@@ -177,7 +177,7 @@ class BuildDiskImageBase(SimpleProject):
         super().check_system_dependencies()
         self.check_required_system_tool("ssh-keygen", apt="openssh-client", zypper="openssh-clients")
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         # TODO: different extra-files directory
         super().__init__(*args, **kwargs)
         # make use of the mtree file created by make installworld
@@ -185,25 +185,35 @@ class BuildDiskImageBase(SimpleProject):
         self.manifest_file = None  # type: typing.Optional[Path]
         self.extra_files = []  # type: typing.List[Path]
         self.auto_prefixes = ["usr/local/", "opt/", "extra/", "bin/bash"]
-
         self.makefs_cmd = None  # type: typing.Optional[Path]
         self.mkimg_cmd = None  # type: typing.Optional[Path]
-        source_class = self._source_class.get_class_for_target(self._get_source_class_target())
-        assert issubclass(source_class, BuildFreeBSD), source_class
-        self.source_project = source_class.get_instance(self)
-        assert isinstance(self.source_project, BuildFreeBSD)
-        self.rootfs_dir = self.source_project.get_install_dir(self)
-        assert self.rootfs_dir is not None
-        self.user_group_db_dir = self.rootfs_dir / "etc"
         self.minimum_image_size = "1g"  # minimum image size = 1GB
         self.mtree = MtreeFile(verbose=self.config.verbose)
-        self.input_metalogs = [self.rootfs_dir / "METALOG.world", self.rootfs_dir / "METALOG.kernel"]
+        self.input_metalogs = []
         # used during process to generated files
         self.tmpdir = None  # type: typing.Optional[Path]
         self.file_templates = _AdditionalFileTemplates()
         self.hostname = os.path.expandvars(self.hostname)  # Expand env vars in hostname to allow $CHERI_BITS
         # MIPS needs big-endian disk images
         self.big_endian = self.compiling_for_mips(include_purecap=True)
+
+    @cached_property
+    def source_project(self) -> BuildFreeBSD:
+        source_class = self._source_class.get_class_for_target(self._get_source_class_target())
+        assert issubclass(source_class, BuildFreeBSD), source_class
+        return source_class.get_instance(self)
+
+    @property
+    def rootfs_dir(self) -> Path:
+        return self.source_project.install_dir
+
+    @property
+    def user_group_db_dir(self) -> Path:
+        return self.rootfs_dir / "etc"
+
+    def setup(self) -> None:
+        super().setup()
+        self.input_metalogs = [self.rootfs_dir / "METALOG.world", self.rootfs_dir / "METALOG.kernel"]
 
     def _get_source_class_target(self):
         return self.crosscompile_target
@@ -873,9 +883,12 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         super().__init__(*args, **kwargs)
         self.minimum_image_size = "20m"  # let's try to shrink the image size
         # The base input is only cheribsdbox and all the symlinks
-        self.input_metalogs = [self.rootfs_dir / "cheribsdbox.mtree"]
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
+
+    def setup(self):
+        super().setup()
+        self.input_metalogs = [self.rootfs_dir / "cheribsdbox.mtree"]
 
     @property
     def include_swap_partition(self):

@@ -48,8 +48,7 @@ from .repository import (ExternallyManagedSourceRepository, GitRepository, Mercu
                          SubversionRepository, TargetBranchInfo)
 from ..config.chericonfig import BuildType, CheriConfig, ComputedDefaultValue, Linkage, supported_build_type_strings
 from ..config.config_loader_base import ConfigOptionBase
-from ..config.target_info import (AbstractProject, AutoVarInit, BasicCompilationTargets, CPUArchitecture,
-                                  CrossCompileTarget, TargetInfo)
+from ..config.target_info import AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, TargetInfo
 from ..processutils import (commandline_to_str, CompilerInfo, get_compiler_info, get_program_version,
                             get_version_output, run_command, ssh_host_accessible)
 from ..utils import (AnsiColour, cached_property, classproperty, coloured, InstallInstructions,
@@ -476,21 +475,17 @@ class Project(SimpleProject):
     def generate_cmakelists(self):
         return self.config.generate_cmakelists
 
-    # TODO: remove these three
     @classmethod
-    def get_source_dir(cls, caller: "SimpleProject", config: CheriConfig = None,
-                       cross_target: CrossCompileTarget = None):
-        return cls.get_instance(caller, config, cross_target).source_dir
+    def get_source_dir(cls, caller: "SimpleProject", cross_target: CrossCompileTarget = None):
+        return cls._get_instance_no_setup(caller, cross_target).source_dir
 
     @classmethod
-    def get_build_dir(cls, caller: "AbstractProject", config: CheriConfig = None,
-                      cross_target: CrossCompileTarget = None):
-        return cls.get_instance(caller, config, cross_target).build_dir
+    def get_build_dir(cls, caller: "SimpleProject", cross_target: CrossCompileTarget = None):
+        return cls._get_instance_no_setup(caller, cross_target).build_dir
 
     @classmethod
-    def get_install_dir(cls, caller: "AbstractProject", config: CheriConfig = None,
-                        cross_target: CrossCompileTarget = None):
-        return cls.get_instance(caller, config, cross_target).real_install_root_dir
+    def get_install_dir(cls, caller: "SimpleProject", cross_target: CrossCompileTarget = None):
+        return cls._get_instance_no_setup(caller, cross_target).real_install_root_dir
 
     def build_dir_for_target(self, target: CrossCompileTarget) -> Path:
         return self.config.build_root / (
@@ -952,7 +947,7 @@ class Project(SimpleProject):
         for d in deps:
             if d.xtarget is not self.crosscompile_target:
                 continue  # Don't add pkg-config directories for targets with a different architecture
-            project = d.get_or_create_project(None, self.config)
+            project = d.get_or_create_project(None, self.config, caller=self)
             install_dir = project.install_dir
             if install_dir is not None:
                 all_install_dirs[install_dir] = 1
@@ -977,10 +972,10 @@ class Project(SimpleProject):
         assert not self.compiling_for_host()
         result = dict()  # Use a dict to ensure reproducible order (guaranteed since Python 3.6)
         if self.needs_native_build_for_crosscompile:
-            result[self.get_install_dir(self, self.config, cross_target=BasicCompilationTargets.NATIVE)] = True
+            result[self.get_install_dir(self, cross_target=BasicCompilationTargets.NATIVE)] = True
         for d in self.cached_full_dependencies():
             if d.xtarget.is_native() and not d.project_class.is_toolchain_target():
-                result[d.get_or_create_project(d.xtarget, self.config).install_dir] = True
+                result[d.get_or_create_project(d.xtarget, self.config, caller=self).install_dir] = True
         result[self.config.other_tools_dir] = True
         return list(result.keys())
 
@@ -1083,8 +1078,8 @@ class Project(SimpleProject):
         return True
 
     @cached_property
-    def rootfs_dir(self):
-        return self.target_info.get_rootfs_project(t=Project).install_dir
+    def rootfs_dir(self) -> Path:
+        return self.target_info.get_rootfs_project(t=Project).get_install_dir(self)
 
     @property
     def _no_overwrite_allowed(self) -> "Sequence[str]":

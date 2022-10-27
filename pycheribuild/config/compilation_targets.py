@@ -269,7 +269,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def _get_sdk_root_dir_lazy(self) -> Path:
         from ..projects.cross.cheribsd import BuildFreeBSD, FreeBSDToolchainKind
         # Determine the toolchain based on --freebsd/toolchain=<>
-        fbsd = self._get_rootfs_project(self.target.get_rootfs_target())
+        xtarget = self.target.get_rootfs_target()
+        # We don't want to call setup() yet on the FreeBSD instance (not needed to get the compiler)
+        # noinspection PyProtectedMember
+        fbsd = self._get_rootfs_project(xtarget)._get_instance_no_setup(self.project, cross_target=xtarget)
         assert isinstance(fbsd, BuildFreeBSD)
         configured_path = fbsd.build_toolchain_root_dir
         if configured_path is None:
@@ -285,7 +288,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             # Jenkins builds compile against a sysroot that was extracted to sdk/sysroot directory and not the
             # full rootfs
             return self.get_non_rootfs_sysroot_dir()
-        return self.get_rootfs_project(t=Project).install_dir
+        return self.get_rootfs_project(t=Project).get_install_dir(self.project)
 
     def get_non_rootfs_sysroot_dir(self) -> Path:
         if is_jenkins_build():
@@ -379,9 +382,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         from ..projects.cross.llvm import BuildUpstreamLLVM
         return BuildUpstreamLLVM
 
-    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "typing.Type[Project]":
         from ..projects.cross.cheribsd import BuildFreeBSD
-        return BuildFreeBSD.get_instance(self.project, cross_target=xtarget)
+        return BuildFreeBSD.get_class_for_target(xtarget)
 
     def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
         raise NotImplementedError("Only implemented for CheriBSD")
@@ -585,9 +588,9 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 str(self.sysroot_dir / f"{self.localbase}/share/pkgconfig"),
                 str(self.sysroot_dir / f"{self.localbase}/libdata/pkgconfig")]
 
-    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "typing.Type[Project]":
         from ..projects.cross.cheribsd import BuildCHERIBSD
-        return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
+        return BuildCHERIBSD.get_class_for_target(xtarget)
 
     def cheribsd_version(self) -> "typing.Optional[int]":
         pattern = re.compile(r"#define\s+__CheriBSD_version\s+([0-9]+)")
@@ -653,7 +656,7 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
     shortname: str = "CheriOS"
     FREEBSD_VERSION: int = 0
 
-    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "typing.Type[Project]":
         raise LookupError("Should not be called")
 
     def _get_sdk_root_dir_lazy(self) -> Path:
@@ -816,9 +819,9 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     def is_newlib(cls) -> bool:
         return True
 
-    def _get_rootfs_project(self, xtarget: CrossCompileTarget) -> "Project":
+    def _get_rootfs_project(self, xtarget: CrossCompileTarget) -> "typing.Type[Project]":
         from ..projects.cross.newlib import BuildNewlib
-        return BuildNewlib.get_instance(self.project, cross_target=xtarget)
+        return BuildNewlib.get_class_for_target(xtarget)
 
 
 class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
