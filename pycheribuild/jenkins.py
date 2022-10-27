@@ -274,7 +274,7 @@ def build_target(cheri_config, target: Target) -> None:
     if True:
         target.check_system_deps(cheri_config)
         # need to set destdir after check_system_deps:
-        project = target.get_or_create_project(None, cheri_config)
+        project = target.get_or_create_project(None, cheri_config, caller=None)
         assert project
         _ = project.all_dependency_names(cheri_config)  # Ensure dependencies are cached.
         if isinstance(project, CrossCompileMixin):
@@ -332,7 +332,7 @@ def create_tarball(cheri_config) -> None:
             assert len(cheri_config.targets) == 1, "--create-tarball only accepts one target name"
             target = target_manager.get_target_raw(cheri_config.targets[0])
             Target.instantiating_targets_should_warn = False
-            project = target.get_or_create_project(None, cheri_config)
+            project = target.get_or_create_project(None, cheri_config, caller=None)
             strip_binaries(cheri_config, project, cheri_config.workspace / "tarball")
         run_command(
             [tar_cmd, "--create", "--xz"] + tar_flags + ["-f", cheri_config.tarball_name, "-C", "tarball", "."],

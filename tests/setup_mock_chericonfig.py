@@ -68,7 +68,8 @@ def setup_mock_chericonfig(source_root: Path, pretend=True) -> MockConfig:
     # noinspection PyTypeChecker
     init_global_config(config, test_mode=True)
     ConfigLoaderBase._cheri_config = config
-    SimpleProject._config_loader = DefaultValueOnlyConfigLoader()
+    SimpleProject._config_loader = config.loader
+    config.loader.is_running_unit_tests = True
     # noinspection PyProtectedMember
     SimpleProject._config_loader._cheri_config = config
     Target.instantiating_targets_should_warn = False

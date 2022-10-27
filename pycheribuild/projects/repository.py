@@ -87,8 +87,7 @@ class ReuseOtherProjectRepository(SourceRepository):
     def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: typing.Optional[Path]) -> Path:
         if base_project_source_dir is not None:
             return base_project_source_dir
-        return self.source_project.get_source_dir(caller, caller.config,
-                                                  cross_target=self.repo_for_target) / self.subdirectory
+        return self.source_project.get_source_dir(caller, cross_target=self.repo_for_target) / self.subdirectory
 
     def update(self, current_project: "Project", *, src_dir: Path, **kwargs):
         if self.do_update:

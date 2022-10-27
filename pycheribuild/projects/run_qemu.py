@@ -47,7 +47,7 @@ from .project import CheriConfig, CPUArchitecture, Project, ComputedDefaultValue
 from .simple_project import SimpleProject, TargetAliasWithDependencies
 from ..config.compilation_targets import CompilationTargets
 from ..qemu_utils import qemu_supports_9pfs, QemuOptions, riscv_bios_arguments
-from ..utils import AnsiColour, classproperty, coloured, find_free_port, OSInfo
+from ..utils import AnsiColour, classproperty, coloured, find_free_port, OSInfo, fatal_error
 
 
 def get_default_ssh_forwarding_port(addend: int):
@@ -577,6 +577,8 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
     kernel_project: typing.Optional[BuildFreeBSD]
     disk_image_project: typing.Optional[BuildDiskImageBase]
 
+    kernel_config: str
+
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
@@ -596,15 +598,21 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
     def __init__(self, config: CheriConfig, *, freebsd_class: "typing.Type[BuildFreeBSD]" = None,
                  disk_image_class: "typing.Type[BuildDiskImageBase]" = None, needs_disk_image=True, **kwargs):
         super().__init__(config, **kwargs)
-        if freebsd_class is None and disk_image_class is not None:
+        self.freebsd_class = freebsd_class
+        self.disk_image_class = disk_image_class
+        self.needs_disk_image = needs_disk_image
+
+    def setup(self) -> None:
+        super().setup()
+        if self.freebsd_class is None and self.disk_image_class is not None:
             # noinspection PyProtectedMember
-            disk_image_instance = disk_image_class.get_instance(self)
+            disk_image_instance = self.disk_image_class.get_instance(self)
             self.disk_image_project = disk_image_instance
             self.kernel_project = disk_image_instance.source_project
             if disk_image_instance.use_qcow2:
                 self.disk_image_format = "qcow2"
         else:
-            self.kernel_project = freebsd_class.get_instance(self)
+            self.kernel_project = self.freebsd_class.get_instance(self)
 
         if self.kernel_config:
             if self.kernel_config not in self._valid_kernel_configs():
@@ -619,14 +627,14 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
                     self.warning("Can not select kernel ABI to run for non-CHERI target, ignoring --kernel-abi")
             self.kernel_config = self.kernel_project.default_kernel_config(ConfigPlatform.QEMU, **config_filters)
 
-        if self.qemu_options.can_boot_kernel_directly:
+        if self.qemu_options.can_boot_kernel_directly and self.current_kernel is None:
             self.current_kernel = self.kernel_project.get_kernel_install_path(self.kernel_config)
             kern_module_path_arg = self.kernel_project.get_kern_module_path_arg(self.kernel_config)
             if kern_module_path_arg:
                 self._project_specific_options += ["-append", kern_module_path_arg]
-        self.rootfs_path = self.kernel_project.get_rootfs_dir(self, config=config)
-        if needs_disk_image:
-            self.disk_image = disk_image_class.get_instance(self).disk_image_path
+        self.rootfs_path = self.kernel_project.get_rootfs_dir(self)
+        if self.needs_disk_image:
+            self.disk_image = self.disk_image_class.get_instance(self).disk_image_path
 
     def _valid_kernel_configs(self):
         return self.kernel_project.get_kernel_configs(platform=ConfigPlatform.QEMU)
@@ -750,11 +758,14 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(40), **kwargs)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    @property
+    def source_project(self):
+        return BuildCheriOS.get_instance(self, self.config)
+
+    def setup(self):
+        super().setup()
         # FIXME: these should be config options
         cherios = BuildCheriOS.get_instance(self, self.config)
-        self.source_project = cherios
         self.current_kernel = cherios.build_dir / "boot/cherios.elf"
         self.disk_image = self.config.output_root / "cherios-disk.img"
         self._project_specific_options = ["-no-reboot", "-global", "virtio-mmio.force-legacy=false"]
@@ -854,7 +865,7 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
             self.current_kernel = self.kernel_project.get_kernel_install_path(kernel_config)
             if str(self.remote_kernel_path).endswith("MFS_ROOT"):
                 self.remote_kernel_path += "_BENCHMARK"
-        self.rootfs_path = BuildCHERIBSD.get_rootfs_dir(self, self.config)
+        self.rootfs_path = BuildCHERIBSD.get_rootfs_dir(self)
 
 
 class BuildAndRunCheriBSD(TargetAliasWithDependencies):

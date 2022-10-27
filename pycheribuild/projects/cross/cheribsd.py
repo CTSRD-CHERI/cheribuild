@@ -517,8 +517,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
     has_default_buildkernel_kernel_config: bool = True
 
     @classmethod
-    def get_rootfs_dir(cls, caller, config=None, cross_target: CrossCompileTarget = None) -> Path:
-        return cls.get_install_dir(caller, config, cross_target)
+    def get_rootfs_dir(cls, caller, cross_target: CrossCompileTarget = None) -> Path:
+        return cls.get_install_dir(caller, cross_target)
 
     @classmethod
     def setup_config_options(cls, bootstrap_toolchain=False, use_upstream_llvm: bool = None, debug_info_by_default=True,
@@ -1739,13 +1739,13 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.mfs_root_image_instance = self.mfs_root_image_class.get_instance(self)
-        # Re-use the same build directory as the CheriBSD target that was used for the disk image
-        # This ensure that the kernel build tools can be found in the build directory
-        self.image = self.mfs_root_image_instance.disk_image_path
         # No need to rebuild kernel-toolchain, the full toolchain must have
         # been present to build the image in the first place.
         self.kernel_toolchain_exists = True
+
+    @cached_property
+    def image(self) -> Path:
+        return self.mfs_root_image_class.get_instance(self).disk_image_path
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
@@ -2206,7 +2206,7 @@ class BuildDrmKMod(CrossCompileProject):
 
     def setup(self) -> None:
         super().setup()
-        self.freebsd_project = self.target_info.get_rootfs_project(t=BuildFreeBSD)
+        self.freebsd_project = self.target_info.get_rootfs_project(t=BuildFreeBSD).get_instance(self)
         if self.use_buildenv:
             extra_make_args = dict(SYSDIR=self.freebsd_project.source_dir / "sys")
         else:

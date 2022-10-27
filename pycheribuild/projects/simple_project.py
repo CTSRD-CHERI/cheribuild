@@ -451,20 +451,32 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return cls.get_instance_for_cross_target(cross_target, config, caller=caller)
 
     @classmethod
+    def _get_instance_no_setup(cls: typing.Type[Type_T], caller: "SimpleProject",
+                               cross_target: typing.Optional[CrossCompileTarget] = None) -> Type_T:
+        if cross_target is None:
+            cross_target = caller.crosscompile_target
+        target = target_manager.get_target(cls.target, cross_target, caller.config, caller=caller)
+        # noinspection PyProtectedMember
+        result = target._get_or_create_project_no_setup(cross_target, caller.config, caller=caller)
+        assert isinstance(result, SimpleProject)
+        return result
+
+    @classmethod
     def get_instance_for_cross_target(cls: typing.Type[Type_T], cross_target: CrossCompileTarget,
                                       config: CheriConfig, caller: AbstractProject = None) -> Type_T:
         # Also need to handle calling self.get_instance_for_cross_target() on a target-specific instance
-        # In that case cls.target returns e.g. foo-mips, etc and target_manager will always return the MIPS version
+        # In that case cls.target returns e.g. foo-mips, etc. and target_manager will always return the MIPS version
+        if caller is not None:
+            assert caller._init_called, "Cannot call this inside __init__()"
         root_class = getattr(cls, "synthetic_base", cls)
         target = target_manager.get_target(root_class.target, cross_target, config, caller=caller)
-        result = target.get_or_create_project(cross_target, config)
+        result = target.get_or_create_project(cross_target, config, caller=caller)
         assert isinstance(result, SimpleProject)
         found_target = result.get_crosscompile_target()
         # XXX: FIXME: add cross target to every call
         assert cross_target is not None
-        if cross_target is not None:
-            assert found_target is cross_target, "Didn't find right instance of " + str(cls) + ": " + str(
-                found_target) + " vs. " + str(cross_target) + ", caller was " + repr(caller)
+        assert found_target is cross_target, "Didn't find right instance of " + str(cls) + ": " + str(
+            found_target) + " vs. " + str(cross_target) + ", caller was " + repr(caller)
         return result
 
     @classproperty
@@ -734,7 +746,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
         self.target_info = self._xtarget.create_target_info(self)
         super().__init__(config)
-        self.config = config
         self.crosscompile_target = crosscompile_target
         assert self._xtarget == crosscompile_target, "Failed to update all callers?"
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
@@ -1065,7 +1076,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                 xtarget = cheribuild_xtarget if cheribuild_xtarget is not None else self.crosscompile_target
                 dep_target = target_manager.get_target(cheribuild_target, xtarget, config=self.config, caller=self)
                 dep_target.check_system_deps(self.config)
-                assert dep_target.get_or_create_project(None, self.config).crosscompile_target == xtarget
+                assert dep_target.get_or_create_project(None, self.config, caller=self).crosscompile_target == xtarget
                 dep_target.execute(self.config)
                 return  # should be installed now
         if fatal:

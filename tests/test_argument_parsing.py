@@ -35,8 +35,9 @@ T = typing.TypeVar("T", bound=SimpleProject)
 
 
 def _get_target_instance(target_name: str, config, cls: typing.Type[T] = SimpleProject) -> T:
-    result = target_manager.get_target_raw(target_name).get_or_create_project(None, config)
+    result = target_manager.get_target_raw(target_name).get_or_create_project(None, config, caller=None)
     assert isinstance(result, cls)
+    assert result._setup_late_called
     return result
 
 
@@ -58,6 +59,7 @@ def _parse_arguments(args: typing.List[str], *, config_file=Path("/this/does/not
     ConfigLoaderBase._cheri_config.loader.is_running_unit_tests = True
     ConfigLoaderBase._cheri_config.loader.unknown_config_option_is_error = not allow_unknown_options
     ConfigLoaderBase._cheri_config.load()
+    ConfigLoaderBase._cheri_config.pretend = True
     # pprint.pprint(vars(ret))
     assert isinstance(ConfigLoaderBase._cheri_config, DefaultCheriConfig)
     return ConfigLoaderBase._cheri_config
@@ -790,7 +792,7 @@ def test_default_build_dir(target: str, args: list, expected: str):
     # Check that the cheribsd build dir is correct
     config = _parse_arguments(args)
     target = target_manager.get_target(target, None, config, caller="test_default_arch")
-    builddir = target.get_or_create_project(None, config).build_dir
+    builddir = target.get_or_create_project(None, config, caller=None).build_dir
     assert isinstance(builddir, Path)
     assert builddir.name == expected
 
