@@ -593,6 +593,7 @@ class Project(SimpleProject):
     lto_set_ld: bool = True
     default_build_type: BuildType = BuildType.DEFAULT
     default_auto_var_init: AutoVarInit = AutoVarInit.NONE
+    use_lto: bool
 
     @classmethod
     def setup_config_options(cls, install_directory_help="", **kwargs) -> None:
