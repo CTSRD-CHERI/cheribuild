@@ -148,9 +148,9 @@ class AbstractProject(FileSystemUtils):
     def warning(*args, **kwargs) -> None:
         warning_message(*args, **kwargs)
 
-    @staticmethod
-    def fatal(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False) -> None:
-        fatal_error(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending)
+    def fatal(self, *args, sep=" ", fixit_hint=None, fatal_when_pretending=False) -> None:
+        fatal_error(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending,
+                    pretend=self.config.pretend)
 
     @classmethod
     def get_crosscompile_target(cls) -> "CrossCompileTarget":

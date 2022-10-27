@@ -555,9 +555,9 @@ class Project(SimpleProject):
             if not compiler.exists():
                 return False
             try:
-                run_command(command, run_in_pretend_mode=True,
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raise_in_pretend_mode=True,
-                            input="int main() { return 0; }\n", print_verbose_only=True)
+                self.run_cmd(command, run_in_pretend_mode=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raise_in_pretend_mode=True,
+                             input="int main() { return 0; }\n", print_verbose_only=True)
                 status_update(compiler, "supports -fuse-ld=lld, linking should be much faster!")
                 Project.__can_use_lld_map[command_str] = True
             except subprocess.CalledProcessError:
