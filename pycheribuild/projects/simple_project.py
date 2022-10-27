@@ -1071,6 +1071,12 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             install_instructions = install_instructions.fixit_hint()
         if cheribuild_target:
             self.warning("Dependency for", self.target, problem + ":", *args, fixit_hint=install_instructions)
+            if not self._setup_late_called:
+                # TODO: make this a fatal error
+                self.warning("TODO: Should not call dependency_error() with a cheribuild target fixit before "
+                             "setup() has completed. Move the call to process() instead.")
+                self.fatal("Dependency for", self.target, problem + ":", *args, fixit_hint=install_instructions)
+                return
             if self.query_yes_no("Would you like to " + cheribuild_action + " the dependency (" + cheribuild_target +
                                  ") using cheribuild?", force_result=False if is_jenkins_build() else True):
                 xtarget = cheribuild_xtarget if cheribuild_xtarget is not None else self.crosscompile_target

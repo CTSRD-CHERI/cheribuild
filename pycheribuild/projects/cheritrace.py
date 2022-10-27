@@ -41,12 +41,18 @@ class BuildCheriTrace(CMakeProject):
         super().setup_config_options()
         cls.include_python_bindings = cls.add_bool_option("python-bindings")
 
+    @property
+    def llvm_config_path(self):
+        return self.config.cheri_sdk_bindir / "llvm-config"
+
     def setup(self):
         super().setup()
-        llvm_config_path = self.config.cheri_sdk_bindir / "llvm-config"
-        if not llvm_config_path.is_file():
-            self.dependency_error("Could not find llvm-config from CHERI LLVM.", cheribuild_target="llvm")
         self.add_cmake_options(
-            LLVM_CONFIG=llvm_config_path,
+            LLVM_CONFIG=self.llvm_config_path,
             PYTHON_BINDINGS=self.include_python_bindings
         )
+
+    def process(self) -> None:
+        super().process()
+        if not self.llvm_config_path.is_file():
+            self.dependency_error("Could not find llvm-config from CHERI LLVM.", cheribuild_target="llvm")

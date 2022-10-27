@@ -170,8 +170,8 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def setup(self):
+        super().setup()
         self.kernel_project = BuildFreeRTOS.get_instance(self)
         self.current_kernel = self.kernel_project.install_dir / f"FreeRTOS/Demo/{self.demo}_{self.demo_app}.elf"
 
