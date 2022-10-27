@@ -66,7 +66,7 @@ cheribsd_sdk_deps = freestanding_deps + ["cheribsd-riscv64-hybrid", "cheribsd-sd
                                          "cheribsd-morello-purecap", "cheribsd-sdk-morello-purecap",
                                          "sdk-morello-purecap"], id="morello-purecap"),
 ])
-def test_sdk(target_name, expected_list):
+def test_sdk(target_name: str, expected_list: "list[str]"):
     assert _sort_targets([target_name]) == expected_list
 
 
@@ -74,7 +74,7 @@ def test_sdk(target_name, expected_list):
     pytest.param("llvm", "llvm-native"),
     pytest.param("gdb", "gdb-native"),
 ])
-def test_alias_resolving(target_name, expected_name):
+def test_alias_resolving(target_name: str, expected_name: str):
     # test that we select the default target for multi projects:
     assert _sort_targets([target_name]) == [expected_name]
 
@@ -123,7 +123,7 @@ def test_cheribsd_default_aliases():
                  ["freebsd-aarch64", "disk-image-freebsd-aarch64", "run-freebsd-aarch64"]),
     pytest.param("build-and-run-freebsd-amd64", ["freebsd-amd64", "disk-image-freebsd-amd64", "run-freebsd-amd64"]),
 ])
-def test_build_and_run(target_name, expected_list):
+def test_build_and_run(target_name: str, expected_list: "list[str]"):
     assert _sort_targets([target_name], add_dependencies=False) == expected_list + [target_name]
 
 
@@ -165,7 +165,7 @@ def test_build_and_run(target_name, expected_list):
                   "gmp-morello-hybrid-for-purecap-rootfs",
                   "gdb-morello-hybrid-for-purecap-rootfs", "morello-firmware", "disk-image-morello-purecap"]),
 ])
-def test_all_run_deps(target, add_toolchain: bool, expected_deps):
+def test_all_run_deps(target: str, add_toolchain: bool, expected_deps: "list[str]"):
     assert _sort_targets([target], add_dependencies=True, add_toolchain=add_toolchain,
                          build_morello_from_source=False) == expected_deps + [target]
     assert _sort_targets([target], add_dependencies=True, add_toolchain=add_toolchain,
@@ -315,7 +315,7 @@ def test_riscv():
     pytest.param("-riscv64", "-riscv64", id="riscv64"),
     pytest.param("-riscv64-purecap", "-riscv64-purecap", id="riscv64-purecap"),
 ])
-def test_libcxx_deps(suffix, expected_suffix):
+def test_libcxx_deps(suffix: str, expected_suffix: str):
     expected = ["libunwind" + expected_suffix, "libcxxrt" + expected_suffix, "libcxx" + expected_suffix]
     # Now check that the cross-compile versions explicitly chose the matching target:
     assert expected == _sort_targets(["libcxx" + suffix], add_dependencies=True, skip_sdk=True)
@@ -340,8 +340,8 @@ def test_libcxx_deps(suffix, expected_suffix):
     pytest.param("morello-uefi", True, True,
                  ["gdb-native", "morello-acpica", "morello-llvm-native", "morello-uefi"], True),
 ])
-def test_skip_toolchain_deps(target_name, include_recursive_deps, include_toolchain, expected_deps,
-                             morello_from_source):
+def test_skip_toolchain_deps(target_name: str, include_recursive_deps: bool, include_toolchain: bool,
+                             expected_deps: "list[str]", morello_from_source: bool):
     # Check that morello-firmware does not include toolchain dependencies by default, but the individual ones does
     # TODO: should we do the same for all-<target>?
     assert _sort_targets([target_name], add_dependencies=include_recursive_deps, add_toolchain=include_toolchain,
@@ -352,7 +352,7 @@ def test_skip_toolchain_deps(target_name, include_recursive_deps, include_toolch
     pytest.param(True),
     pytest.param(False),
 ])
-def test_hybrid_targets(enable_hybrid_targets):
+def test_hybrid_targets(enable_hybrid_targets: bool):
     # there should only be very few targets that are built hybrid
     config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
     config.enable_hybrid_targets = enable_hybrid_targets
@@ -416,7 +416,7 @@ def _get_native_targets():
 def test_no_dependencies_in_build_dir(config: CheriConfig, native_target: Target):
     # Ensure that native targets do not depend on other targets that do not install their libraries, etc.
     assert native_target.xtarget.is_native()
-    proj = native_target.get_or_create_project(native_target.xtarget, config)
+    proj = native_target.get_or_create_project(native_target.xtarget, config, caller=None)
     if isinstance(proj, Project) and proj.get_default_install_dir_kind() in (DefaultInstallDir.IN_BUILD_DIRECTORY,
                                                                              DefaultInstallDir.DO_NOT_INSTALL):
         # Also not installed, we can ignore this target
