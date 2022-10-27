@@ -203,7 +203,7 @@ class LaunchQEMUBase(SimpleProject):
         cls._cached_chosen_qemu = None
 
     @classmethod
-    def get_chosen_qemu(cls, config):
+    def get_chosen_qemu(cls, config: CheriConfig):
         if cls._cached_chosen_qemu:
             return cls._cached_chosen_qemu
 
@@ -233,12 +233,13 @@ class LaunchQEMUBase(SimpleProject):
             # guess what kind of QEMU this is
             can_provide_src_via_smb = xtarget.is_hybrid_or_purecap_cheri()
             if not cls.custom_qemu_path:
-                cls.fatal("Must specify path to custom QEMU with --" + cls.target + "/custom-qemu-path")
+                fatal_error("Must specify path to custom QEMU with --" + cls.target + "/custom-qemu-path",
+                            pretend=config.pretend)
                 qemu_binary = Path("/no/custom/path/to/qemu")
             else:
                 qemu_binary = Path(cls.custom_qemu_path)
             if not qemu_binary.is_file():
-                cls.fatal("Custom QEMU", cls.custom_qemu_path, "is not a file")
+                fatal_error("Custom QEMU", cls.custom_qemu_path, "is not a file", pretend=config.pretend)
             qemu_class = None
         else:
             if cls.use_qemu == QEMUType.DEFAULT:
@@ -250,7 +251,8 @@ class LaunchQEMUBase(SimpleProject):
                     QEMUType.UPSTREAM: BuildUpstreamQEMU
                 }[cls.use_qemu]
                 if qemu_class not in supported_qemu_classes:
-                    cls.fatal("Cannot use", cls.use_qemu.value, "QEMU with target", xtarget.generic_target_suffix)
+                    fatal_error("Cannot use", cls.use_qemu.value, "QEMU with target", xtarget.generic_target_suffix,
+                                pretend=config.pretend)
                     qemu_class = None
                     qemu_binary = Path("/target/not/supported/with/this/qemu")
                 else:
