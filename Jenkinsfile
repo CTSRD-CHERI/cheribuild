@@ -10,7 +10,8 @@ pipeline {
     stage('Test Python 3.6.0') {
       agent {
         dockerfile {
-          filename 'src/tests/python-360.Dockerfile'
+          dir 'src/tests'
+          filename 'python-360.Dockerfile'
         }
       }
       steps {
@@ -28,7 +29,8 @@ pipeline {
     stage('Test Python 3.7.0') {
       agent {
         dockerfile {
-          filename 'src/tests/python-370.Dockerfile'
+          dir 'src/tests'
+          filename 'python-370.Dockerfile'
         }
       }
       steps {
@@ -46,7 +48,8 @@ pipeline {
     stage('Test Python 3.8.0') {
       agent {
         dockerfile {
-          filename 'src/tests/python-380.Dockerfile'
+          dir 'src/tests'
+          filename 'python-380.Dockerfile'
         }
       }
       steps {
@@ -64,7 +67,8 @@ pipeline {
     stage('Test Python 3.9.0') {
       agent {
         dockerfile {
-          filename 'src/tests/python-390.Dockerfile'
+          dir 'src/tests'
+          filename 'python-390.Dockerfile'
         }
       }
       steps {
@@ -82,7 +86,8 @@ pipeline {
     stage('Test Python RC') {
       agent {
         dockerfile {
-          filename 'src/tests/python-rc.Dockerfile'
+          dir 'src/tests'
+          filename 'python-rc.Dockerfile'
         }
       }
       steps {
@@ -100,7 +105,8 @@ pipeline {
     stage('Test Ubuntu 18.04') {
       agent {
         dockerfile {
-          filename 'src/tests/ubuntu.Dockerfile'
+          dir 'src/tests'
+          filename 'ubuntu.Dockerfile'
         }
       }
       steps {
