@@ -103,6 +103,11 @@ class DefaultCheriConfig(CheriConfig):
             "confirm-clone", help="Ask for confirmation before cloning repositories.")
         self.force_update = loader.add_bool_option("force-update", help="Always update (with autostash) even if there "
                                                                         "are uncommitted changes")
+
+        self.presume_connectivity = loader.add_bool_option(
+            "presume-connectivity",
+            help="Do not probe for network connectivity and just assume that we are suitably connected")
+
         # TODO: should replace this group with a tristate value
         configure_group = loader.add_mutually_exclusive_group()
         self.skip_configure = loader.add_bool_option("skip-configure", help="Skip the configure step",

@@ -90,6 +90,7 @@ class ConfigBase:
         self.verbose = verbose
         self.pretend = pretend
         self.force = force
+        self.presume_connectivity = False
         self.internet_connection_last_checked_at: typing.Optional[float] = None
         self.internet_connection_last_check_result = False
 
@@ -291,7 +292,7 @@ def include_local_file(path: str) -> str:
 
 
 def have_working_internet_connection(config: ConfigBase) -> bool:
-    if config.TEST_MODE:
+    if config.TEST_MODE or config.presume_connectivity:
         return True
     current_check_time = time.time()
     if config.internet_connection_last_checked_at:
