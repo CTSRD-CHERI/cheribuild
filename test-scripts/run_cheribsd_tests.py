@@ -73,6 +73,10 @@ def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_
             print(qemu.match.groups())
             exit_code = int(qemu.match.group(1))
             qemu.expect_prompt()
+        # 127 - "A specified command_file could not be found by a non-interactive shell."
+        if exit_code == 127 and optional:
+            boot_cheribsd.info("Optional cheribsdtest binary " + binary_name + " not present")
+            return True
         if qemu.smb_failed:
             boot_cheribsd.info("SMB mount has failed, performing normal scp")
             host_path = Path(args.test_output_dir, binary_name + ".xml")
@@ -90,12 +94,7 @@ def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_
         time.sleep(10)
         return False
     except boot_cheribsd.CheriBSDCommandFailed as e:
-        if "command not found" in e.args:
-            if optional:
-                return True
-            boot_cheribsd.failure("Cannot find cheribsdtest binary ", binary_name, ": " + str(e), exit=False)
-        else:
-            boot_cheribsd.failure("Failed to run: " + str(e), exit=False)
+        boot_cheribsd.failure("Failed to run: " + str(e), exit=False)
         return False
 
 
