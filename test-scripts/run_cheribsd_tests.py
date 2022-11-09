@@ -45,8 +45,7 @@ from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_genera
 from run_tests_common import boot_cheribsd, CrossCompileTarget, pexpect, run_tests_main
 
 
-# TODO: Remove old_binary_name once the new cheribsdtest names are merged to all relevant CheriBSD branches
-def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_binary_name,
+def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_binary_names,
                      args: argparse.Namespace) -> bool:
     try:
         qemu.checked_run("rm -f /tmp/{}.xml".format(binary_name))
@@ -54,9 +53,18 @@ def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_
         # qemu.run("/bin/{} -a".format(binary_name, binary_name),
         #     ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
         # Generate JUnit XML:
-        qemu.run("if [ -x /bin/{0} ]; then /bin/{0} -a -x; else /bin/{1} -a -x; fi > /tmp/{0}.xml"
-                 .format(binary_name, old_binary_name),
-                 ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
+        test_command = None
+        for i, name in enumerate(reversed([binary_name] + old_binary_names)):
+            path = "/bin/{0}".format(name)
+            cmd = "{0} -a -x".format(path)
+            if i == 0:
+                test_command = cmd
+            else:
+                if i == 1:
+                    test_command = "se {0}; fi".format(test_command)
+                test_command = "if [ -x {0} ]; then {1}; el{2}".format(path, cmd, test_command)
+        test_command = "{0} > /tmp/{1}.xml".format(test_command, binary_name)
+        qemu.run(test_command, ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
         qemu.sendline("echo EXITCODE=$?")
         qemu.expect(["EXITCODE=(\\d+)\r"], timeout=5, pretend_result=0)
         if boot_cheribsd.PRETEND:
@@ -124,8 +132,9 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
             for features in itertools.chain(*map(lambda r: itertools.combinations(cheribsdtest_features, r),
                                             range(0, len(cheribsdtest_features)+1))):
                 test = base[0] + ''.join(features)
+                # TODO: Remove once the new cheribsdtest names are merged to all relevant CheriBSD branches
                 old_test = base[1] + ''.join(features)
-                if not run_cheribsdtest(qemu, test, old_test, args):
+                if not run_cheribsdtest(qemu, test, [old_test], args):
                     tests_successful = False
                     boot_cheribsd.failure("At least one test failure in ", test, exit=False)
         qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
