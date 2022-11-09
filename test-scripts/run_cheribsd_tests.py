@@ -46,7 +46,7 @@ from run_tests_common import boot_cheribsd, CrossCompileTarget, pexpect, run_tes
 
 
 def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_binary_names,
-                     args: argparse.Namespace) -> bool:
+                     optional, args: argparse.Namespace) -> bool:
     try:
         qemu.checked_run("rm -f /tmp/{}.xml".format(binary_name))
         # Run it once with textual output (for debugging)
@@ -91,6 +91,8 @@ def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_
         return False
     except boot_cheribsd.CheriBSDCommandFailed as e:
         if "command not found" in e.args:
+            if optional:
+                return True
             boot_cheribsd.failure("Cannot find cheribsdtest binary ", binary_name, ": " + str(e), exit=False)
         else:
             boot_cheribsd.failure("Failed to run: " + str(e), exit=False)
@@ -132,10 +134,11 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
             itertools.chain(*map(lambda r: itertools.combinations(cheribsdtest_features, r),
                                  range(0, len(cheribsdtest_features)+1)))
         cheribsdtest_tests = [b + ''.join(f) for f in cheribsdtest_features_powerset for b in cheribsdtest_bases]
+        cheribsdtest_tests = [(t, False) for t in cheribsdtest_tests]
         for test in cheribsdtest_tests:
-            if not run_cheribsdtest(qemu, test, [], args):
+            if not run_cheribsdtest(qemu, test[0], [], test[1], args):
                 tests_successful = False
-                boot_cheribsd.failure("At least one test failure in ", test, exit=False)
+                boot_cheribsd.failure("At least one test failure in ", test[0], exit=False)
         qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
 
     # Run kyua tests
