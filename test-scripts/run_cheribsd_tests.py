@@ -135,6 +135,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
                                  range(0, len(cheribsdtest_features)+1)))
         cheribsdtest_tests = [b + ''.join(f) for f in cheribsdtest_features_powerset for b in cheribsdtest_bases]
         cheribsdtest_tests = [(t, False) for t in cheribsdtest_tests]
+        cheribsdtest_tests.append(("cheribsdtest-mt-c18n", True))
         for test in cheribsdtest_tests:
             if not run_cheribsdtest(qemu, test[0], [], test[1], args):
                 tests_successful = False
