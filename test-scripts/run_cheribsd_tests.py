@@ -125,16 +125,17 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
     if args.run_cheribsdtest:
         # Disable trap dumps while running cheribsdtest (handle both old and new sysctl names until dev is merged):
         qemu.run("sysctl machdep.log_user_cheri_exceptions=0 || sysctl machdep.log_cheri_exceptions=0")
+        cheribsdtest_bases = ["cheribsdtest-hybrid", "cheribsdtest-purecap"]
         # The minimal disk image only has the statically linked base variants:
         cheribsdtest_features = ["-dynamic", "-mt"] if not args.minimal_image else []
-        cheribsdtest_bases = ["cheribsdtest-hybrid", "cheribsdtest-purecap"]
-        for base in cheribsdtest_bases:
-            for features in itertools.chain(*map(lambda r: itertools.combinations(cheribsdtest_features, r),
-                                            range(0, len(cheribsdtest_features)+1))):
-                test = base + ''.join(features)
-                if not run_cheribsdtest(qemu, test, [], args):
-                    tests_successful = False
-                    boot_cheribsd.failure("At least one test failure in ", test, exit=False)
+        cheribsdtest_features_powerset = \
+            itertools.chain(*map(lambda r: itertools.combinations(cheribsdtest_features, r),
+                                 range(0, len(cheribsdtest_features)+1)))
+        cheribsdtest_tests = [b + ''.join(f) for f in cheribsdtest_features_powerset for b in cheribsdtest_bases]
+        for test in cheribsdtest_tests:
+            if not run_cheribsdtest(qemu, test, [], args):
+                tests_successful = False
+                boot_cheribsd.failure("At least one test failure in ", test, exit=False)
         qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
 
     # Run kyua tests
