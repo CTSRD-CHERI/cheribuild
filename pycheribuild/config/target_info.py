@@ -168,7 +168,7 @@ class TargetInfo(ABC):
     # os_prefix defaults to shortname.lower() if not set
     os_prefix: Optional[str] = None
 
-    def __init__(self, target: "CrossCompileTarget", project: AbstractProject):
+    def __init__(self, target: "CrossCompileTarget", project: AbstractProject) -> None:
         self.target = target
         self.project = project
 
@@ -290,12 +290,12 @@ class TargetInfo(ABC):
         return []
 
     @property
-    def additional_shared_library_link_flags(self):
+    def additional_shared_library_link_flags(self) -> "list[str]":
         """Additional linker flags that need to be passed when building an shared library (e.g. custom linker script)"""
         return []
 
     @property
-    def default_libdir(self):
+    def default_libdir(self) -> str:
         return "lib"
 
     @property

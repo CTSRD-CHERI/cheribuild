@@ -283,7 +283,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return configured_path
 
     @property
-    def sysroot_dir(self):
+    def sysroot_dir(self) -> Path:
         if is_jenkins_build():
             # Jenkins builds compile against a sysroot that was extracted to sdk/sysroot directory and not the
             # full rootfs
@@ -314,7 +314,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return target.cpu_architecture.value + common_suffix
 
     @property
-    def freebsd_target(self):
+    def freebsd_target(self) -> str:
         mapping = {
             CPUArchitecture.AARCH64: "arm64",
             CPUArchitecture.ARM32: "arm",
@@ -326,7 +326,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return mapping[self.target.cpu_architecture]
 
     @property
-    def freebsd_target_arch(self):
+    def freebsd_target_arch(self) -> str:
         mapping = {
             CPUArchitecture.AARCH64: "aarch64",
             CPUArchitecture.ARM32: "armv7",
@@ -366,7 +366,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return result
 
     @cached_property
-    def default_libdir(self):
+    def default_libdir(self) -> str:
         if self.target.is_libcompat_target():
             return "lib" + self.libcompat_suffix
         return "lib"

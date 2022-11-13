@@ -730,7 +730,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return cls.add_config_option(name, kind=Path, altname=altname, only_add_for_targets=only_add_for_targets,
                                      **kwargs)
 
-    __config_options_set = dict()  # typing.Dict[Type, bool]
+    __config_options_set: "dict[typing.Type[SimpleProject], bool]" = dict()
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
