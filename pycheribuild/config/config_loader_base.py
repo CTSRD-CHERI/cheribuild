@@ -106,9 +106,9 @@ class ConfigLoaderBase(ABC):
 
     # noinspection PyShadowingBuiltins
     def add_option(self, name: str, shortname=None, *, type: "Union[type[T], Callable[[str], T]]" = str,
-                   default: "Union[ComputedDefaultValue[T], T]" = None, _owning_class: type = None,
-                   _fallback_names: "list[str]" = None, option_cls: "Optional[type[ConfigOptionBase[T]]]" = None,
-                   **kwargs) -> T:
+                   default: "Union[ComputedDefaultValue[T], Optional[T], Callable[[ConfigBase, typing.Any], T]]" = None,
+                   _owning_class: type = None, _fallback_names: "list[str]" = None,
+                   option_cls: "Optional[type[ConfigOptionBase[T]]]" = None, **kwargs) -> T:
         if option_cls is None:
             option_cls = self.__option_cls
 
