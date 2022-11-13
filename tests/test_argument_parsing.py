@@ -37,6 +37,7 @@ T = typing.TypeVar("T", bound=SimpleProject)
 def _get_target_instance(target_name: str, config, cls: typing.Type[T] = SimpleProject) -> T:
     result = target_manager.get_target_raw(target_name).get_or_create_project(None, config, caller=None)
     assert isinstance(result, cls)
+    # noinspection PyProtectedMember
     assert result._setup_late_called
     return result
 
