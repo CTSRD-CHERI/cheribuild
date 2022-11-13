@@ -403,7 +403,8 @@ class CommandLineConfigLoader(ConfigLoaderBase):
 
     # noinspection PyShadowingBuiltins
     def add_option(self, name: str, shortname=None, *, type: "Union[type[T], Callable[[str], T]]" = str,
-                   default: "Union[ComputedDefaultValue[T], T]" = None, group=None, help_hidden=False, **kwargs) -> T:
+                   default: "Union[ComputedDefaultValue[T], Optional[T], Callable[[ConfigBase, typing.Any], T]]" = None,
+                   group=None, help_hidden=False, **kwargs) -> T:
         if not self.is_needed_for_completion(name, shortname, type):
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
