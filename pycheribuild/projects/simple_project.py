@@ -80,7 +80,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
     def __init__(cls, name: str, bases, clsdict) -> None:
         super().__init__(name, bases, clsdict)
         if typing.TYPE_CHECKING:
-            assert issubclass(cls, SimpleProject)  # pytype: disable=name-error
+            assert issubclass(cls, SimpleProject)
         if clsdict.get("do_not_add_to_targets") is not None:
             if clsdict.get("do_not_add_to_targets") is True:
                 return  # if do_not_add_to_targets is defined within the class we skip it
@@ -151,7 +151,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                 new_dict["synthetic_base"] = cls  # We are already adding it here
                 # noinspection PyTypeChecker
                 new_cls = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
-                assert issubclass(new_cls, SimpleProject)  # pytype: disable=name-error
+                assert issubclass(new_cls, SimpleProject)
                 target_manager.add_target(MultiArchTarget(new_name, new_cls, arch, base_target))
                 # Handle old names for FreeBSD/CheriBSD targets in the config file:
                 if arch.target_info_cls.is_freebsd() and not arch.target_info_cls.is_native():
