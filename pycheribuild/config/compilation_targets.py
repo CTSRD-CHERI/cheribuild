@@ -1125,6 +1125,7 @@ class CompilationTargets(BasicCompilationTargets):
                       CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS + \
                       CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS + \
                       CompilationTargets.ALL_CHERIBSD_PURECAP_FOR_HYBRID_ROOTFS_TARGETS:
+            # noinspection PyProtectedMember
             target._dump_target_relations()
 
 # Uncomment for debugging target relations
