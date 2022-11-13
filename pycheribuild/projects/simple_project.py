@@ -451,7 +451,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return cls.get_instance_for_cross_target(cross_target, config, caller=caller)
 
     @classmethod
-    def _get_instance_no_setup(cls: typing.Type[Type_T], caller: "SimpleProject",
+    def _get_instance_no_setup(cls: typing.Type[Type_T], caller: AbstractProject,
                                cross_target: typing.Optional[CrossCompileTarget] = None) -> Type_T:
         if cross_target is None:
             cross_target = caller.crosscompile_target
@@ -722,8 +722,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     @classmethod
     def add_bool_option(cls, name: str, *, altname=None, only_add_for_targets: list = None,
                         default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
-        return cls.add_config_option(name, default=default, kind=bool, altname=altname,
-                                     only_add_for_targets=only_add_for_targets, **kwargs)
+        return typing.cast(bool, cls.add_config_option(name, default=default, kind=bool, altname=altname,
+                                                       only_add_for_targets=only_add_for_targets, **kwargs))
 
     @classmethod
     def add_path_option(cls, name: str, *, altname=None, only_add_for_targets: list = None, **kwargs) -> Optional[Path]:

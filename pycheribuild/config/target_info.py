@@ -122,13 +122,14 @@ class AutoVarInit(Enum):
 
 class AbstractProject(FileSystemUtils):
     """A base class for (Simple)Project that exposes only the fields/methods needed in target_info."""
-    config: CheriConfig
-    target: str
-    _xtarget: "Optional[CrossCompileTarget]" = None
-
-    auto_var_init: AutoVarInit  # Needed for essential_compiler_flags
+    _xtarget: "ClassVar[Optional[CrossCompileTarget]]" = None
     default_architecture: "ClassVar[Optional[CrossCompileTarget]]"
     needs_sysroot: "ClassVar[bool]"
+
+    auto_var_init: AutoVarInit  # Needed for essential_compiler_flags
+    config: CheriConfig
+    crosscompile_target: "CrossCompileTarget"
+    target: str
 
     # Allow overrides for libc++/llvm-test-suite
     custom_c_preprocessor: Optional[Path] = None

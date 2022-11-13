@@ -48,7 +48,8 @@ from .repository import (ExternallyManagedSourceRepository, GitRepository, Mercu
                          SubversionRepository, TargetBranchInfo)
 from ..config.chericonfig import BuildType, CheriConfig, ComputedDefaultValue, Linkage, supported_build_type_strings
 from ..config.config_loader_base import ConfigOptionBase
-from ..config.target_info import AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, TargetInfo
+from ..config.target_info import (AbstractProject, AutoVarInit, BasicCompilationTargets, CPUArchitecture,
+                                  CrossCompileTarget, TargetInfo)
 from ..processutils import (commandline_to_str, CompilerInfo, get_compiler_info, get_program_version,
                             get_version_output, run_command, ssh_host_accessible)
 from ..utils import (AnsiColour, cached_property, classproperty, coloured, InstallInstructions,
@@ -476,15 +477,15 @@ class Project(SimpleProject):
         return self.config.generate_cmakelists
 
     @classmethod
-    def get_source_dir(cls, caller: "SimpleProject", cross_target: CrossCompileTarget = None):
+    def get_source_dir(cls, caller: AbstractProject, cross_target: CrossCompileTarget = None):
         return cls._get_instance_no_setup(caller, cross_target).source_dir
 
     @classmethod
-    def get_build_dir(cls, caller: "SimpleProject", cross_target: CrossCompileTarget = None):
+    def get_build_dir(cls, caller: AbstractProject, cross_target: CrossCompileTarget = None):
         return cls._get_instance_no_setup(caller, cross_target).build_dir
 
     @classmethod
-    def get_install_dir(cls, caller: "SimpleProject", cross_target: CrossCompileTarget = None):
+    def get_install_dir(cls, caller: AbstractProject, cross_target: CrossCompileTarget = None):
         return cls._get_instance_no_setup(caller, cross_target).real_install_root_dir
 
     def build_dir_for_target(self, target: CrossCompileTarget) -> Path:
