@@ -21,6 +21,7 @@ class TestArgumentParser(argparse.ArgumentParser):
             raise RuntimeError(status, message)
 
 
+# noinspection PyProtectedMember
 @pytest.fixture(scope="session", autouse=True)
 def _register_targets():
     sys.argv = ["cheribuild.py"]
