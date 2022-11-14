@@ -443,6 +443,7 @@ class Project(SimpleProject):
     has_optional_tests: bool = False
     default_build_tests: bool = True  # whether to build tests by default
     show_optional_tests_in_help: bool = True  # whether to show the --foo/build-tests in --help
+    add_gdb_index = True  # whether to build with -Wl,--gdb-index if the linker supports it
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
@@ -810,7 +811,7 @@ class Project(SimpleProject):
         result += self.essential_compiler_and_linker_flags
         ccinfo = self.get_compiler_info(self.CC)
         result.extend(ccinfo.linker_override_flags(self.target_info.linker))
-        if self.should_include_debug_info and ".bfd" not in self.target_info.linker.name:
+        if self.should_include_debug_info and self.add_gdb_index and ".bfd" not in self.target_info.linker.name:
             # Add a gdb_index to massively speed up running GDB on CHERIBSD:
             result.append("-Wl,--gdb-index")
             # Also reduce the size of debug info to make copying files over faster
@@ -872,11 +873,8 @@ class Project(SimpleProject):
             install_dir_kind = self.get_default_install_dir_kind()
             # Install to SDK if CHERIBSD_ROOTFS is the install dir but we are not building for CheriBSD
             if install_dir_kind == DefaultInstallDir.ROOTFS_LOCALBASE:
-                if self.target_info.is_baremetal():
+                if self.target_info.is_newlib() or self.target_info.is_rtems():
                     self.destdir = typing.cast(Path, self.sdk_sysroot.parent)
-                    self._install_prefix = Path("/", self.target_info.target_triple)
-                elif self.target_info.is_rtems():
-                    self.destdir = self.sdk_sysroot.parent
                     self._install_prefix = Path("/", self.target_info.target_triple)
                 else:
                     self._install_prefix = Path("/", self.target_info.sysroot_install_prefix_relative)
@@ -1674,11 +1672,9 @@ class _CMakeAndMesonSharedLogic(Project):
             if value is None:
                 continue
             result = self._replace_value(result, required=True, key=key, value=value)
-        # work around jenkins paths that might contain @[0-9]+ in the path:
-        configured_jenkins_workaround = re.sub(r"@\d+", "", result)
-        at_index = configured_jenkins_workaround.find("@")
-        if at_index != -1:
-            self.fatal("Did not replace all keys:", configured_jenkins_workaround[at_index:],
+        not_substituted = re.search(r"@[\w_\d]+@", result)
+        if not_substituted:
+            self.fatal("Did not replace all keys, found", not_substituted.group(0), "at offset", not_substituted.span(),
                        fatal_when_pretending=True)
         self.write_file(contents=result, file=file, overwrite=True)
 

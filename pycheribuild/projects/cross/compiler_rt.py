@@ -187,3 +187,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             self.move_file(self.install_dir / "lib/baremetal" / libname, self.real_install_root_dir / "lib" / libname)
             self.create_symlink(self.install_dir / "lib" / libname, self.install_dir / "lib/libgcc.a",
                                 print_verbose_only=False)
+
+
+class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
+    target = "upstream-compiler-rt-builtins"
+    llvm_project = BuildUpstreamLLVM
+    repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")

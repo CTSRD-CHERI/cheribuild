@@ -23,15 +23,41 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+import os
+
 from .crosscompileproject import CrossCompileMesonProject, GitRepository
+from ..build_qemu import BuildUpstreamQEMU
 from ...config.compilation_targets import CompilationTargets
+from ...processutils import set_env
 
 
 class BuildPicoLibc(CrossCompileMesonProject):
     target = "picolibc"
     repository = GitRepository("https://github.com/picolibc/picolibc.git")
-    supported_architectures = [CompilationTargets.NATIVE]
-    _always_add_suffixed_targets = True
+    supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.BAREMETAL_PICOLIBC_RISCV64]
+    needs_sysroot = False
+    include_os_in_target_suffix = False  # Avoid adding -picolibc- as we are building picolibc here
+    # ld.lld: error: -r and --gdb-index may not be used together
+    add_gdb_index = False
+
+    @classmethod
+    def dependencies(cls, config) -> "list[str]":
+        if cls._xtarget and cls._xtarget.is_native():
+            return []
+        return ["upstream-compiler-rt-builtins"]
+
+    @property
+    def _meson_extra_binaries(self):
+        if not self.compiling_for_host():
+            assert self.compiling_for_riscv(include_purecap=True), "Only tested riscv so far"
+            return "exe_wrapper = ['sh', '-c', 'test -z \"$PICOLIBC_TEST\" || run-riscv \"$@\"', 'run-riscv']"
+        return ""
+
+    @property
+    def _meson_extra_properties(self):
+        if not self.compiling_for_host():
+            return "# skip_sanity_check needed since we are building libc\nskip_sanity_check = true"
+        return ""
 
     def setup(self):
         super().setup()
@@ -51,3 +77,43 @@ class BuildPicoLibc(CrossCompileMesonProject):
                 "native-tests": True,
                 "tinystdio": False,  # currently fails to build due to a linker error when building tests.
             })
+
+    @property
+    def default_compiler_flags(self):
+        if self.compiling_for_riscv(include_purecap=True):
+            # We have to resolve undef weak symbols to 0, but ld.lld doesn't do the rewriting of instructions and
+            # codegen isn't referencing the GOT, so until https://reviews.llvm.org/D107280 lands, we have to use -fpie
+            # See also https://github.com/ClangBuiltLinux/linux/issues/1409 and
+            # https://github.com/riscv-non-isa/riscv-elf-psabi-doc/pull/201
+            return super().default_compiler_flags + ["-fpie"]
+        return super().default_compiler_flags
+
+    @property
+    def default_ldflags(self):
+        result = super().default_ldflags
+        if not self.compiling_for_host():
+            result += ["-L" + str(self.build_dir / "local-libgcc")]
+        return result
+
+    def compile(self, **kwargs):
+        if not self.compiling_for_host():
+            # Symlink libgcc.a to the build dir to allow linking against it without adding all of <sysroot>/lib.
+            self.makedirs(self.build_dir / "local-libgcc")
+            self.create_symlink(self.sdk_sysroot / "lib/libgcc.a", self.build_dir / "local-libgcc/libgcc.a",
+                                print_verbose_only=False)
+        super().compile(**kwargs)
+
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        if self.crosscompile_target.is_riscv64(include_purecap=True):
+            # The clang baremetal driver expect the following directory to exist:
+            self.makedirs(self.install_dir / "rv64imafdc")
+            self.create_symlink(self.install_dir, self.install_dir / "rv64imafdc/lp64d", print_verbose_only=False)
+
+    def run_tests(self):
+        if not self.compiling_for_host():
+            qemu = BuildUpstreamQEMU.qemu_binary_for_target(self.crosscompile_target, self.config)
+            with set_env(PATH=str(qemu.parent) + ":" + os.getenv("PATH", ""), print_verbose_only=False):
+                self.run_cmd(self.configure_command, "test", "--print-errorlogs", cwd=self.build_dir)
+        else:
+            super().run_tests()

@@ -31,6 +31,7 @@ import copy
 import inspect
 import os
 import re
+import shutil
 import sys
 import typing
 from abc import ABCMeta, abstractmethod
@@ -821,6 +822,57 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
         return BuildNewlib.get_class_for_target(xtarget)
 
 
+class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
+    shortname: str = "Picolibc"
+
+    @classmethod
+    def uses_softfloat_by_default(cls, xtarget: "CrossCompileTarget"):
+        return False
+
+    @property
+    def linker(self) -> Path:
+        # FIXME: Currently ld.bfd is required to link picolibc.
+        if self.target.is_riscv64(include_purecap=True):
+            p = typing.cast(Project, self.project)
+            p.check_required_system_tool("riscv64-unknown-elf-ld.bfd", apt="binutils-riscv64-unknown-elf")
+            return Path(shutil.which("riscv64-unknown-elf-ld.bfd") or "/usr/bin/riscv64-unknown-elf-ld.bfd")
+        return super().linker
+
+    @property
+    def sysroot_dir(self) -> Path:
+        sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
+        return sysroot_dir / "picolibc" / self.target.get_rootfs_target().generic_arch_suffix
+
+    @classmethod
+    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+        from ..projects.cross.llvm import BuildUpstreamLLVM
+        return BuildUpstreamLLVM
+
+    def semihosting_ldflags(self):
+        # TODO: there is a separate C++ linker script
+        return ["-lsemihost", "-Wl,-T," + str(self.sysroot_dir / "lib/riscv.ld"),
+                self.sysroot_dir / "lib/crt0-semihost.o"]
+
+    @classmethod
+    def triple_for_target(cls, target, config, include_version: bool) -> str:
+        if target.is_riscv(include_purecap=True):
+            return target.cpu_architecture.value + "-unknown-elf"
+        assert False, "Other baremetal cases have not been tested yet!"
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        return ["picolibc"]
+
+    @property
+    def additional_executable_link_flags(self):
+        # FIXME: custom linker script
+        return super().additional_executable_link_flags + self.semihosting_ldflags()
+
+    def _get_rootfs_project(self, xtarget: CrossCompileTarget) -> "Project":
+        from ..projects.cross.picolibc import BuildPicoLibc
+        return BuildPicoLibc.get_instance(self.project, cross_target=xtarget)
+
+
 class MorelloBaremetalTargetInfo(BaremetalClangTargetInfo):
     shortname: str = "Morello-Baremetal"
     os_prefix: str = "baremetal-"
@@ -1040,6 +1092,10 @@ class CompilationTargets(BasicCompilationTargets):
                                                    is_cheri_purecap=True)
     ARM_NONE_EABI = CrossCompileTarget("arm-none-eabi", CPUArchitecture.ARM32, ArmNoneEabiGccTargetInfo,
                                        is_cheri_hybrid=False, is_cheri_purecap=False)  # For 32-bit firmrware
+
+    # Picolibc targets
+    BAREMETAL_PICOLIBC_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, PicolibcBaremetalTargetInfo)
+
     # FreeBSD targets
     FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, FreeBSDTargetInfo)
     FREEBSD_AMD64 = CrossCompileTarget("amd64", CPUArchitecture.X86_64, FreeBSDTargetInfo)
@@ -1090,6 +1146,7 @@ class CompilationTargets(BasicCompilationTargets):
                                        BAREMETAL_NEWLIB_RISCV64,
                                        BAREMETAL_NEWLIB_RISCV64_HYBRID,
                                        BAREMETAL_NEWLIB_RISCV64_PURECAP,
+                                       BAREMETAL_PICOLIBC_RISCV64,
                                        MORELLO_BAREMETAL_NO_CHERI,
                                        MORELLO_BAREMETAL_HYBRID,
                                        MORELLO_BAREMETAL_PURECAP]

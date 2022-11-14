@@ -28,6 +28,7 @@ toolchain_cxx_flags = @TOOLCHAIN_CXX_FLAGS@
 # meson sets `defaults['CMAKE_SIZEOF_VOID_P'] = ['8' if self.minfo.is_64_bit else '4']`,
 # so we need to manually populate all CMake variables
 @COMMENT_IF_NATIVE@cmake_defaults = false
+@COMMENT_IF_NATIVE@@MESON_EXTRA_PROPERTIES@
 
 @COMMENT_IF_NATIVE@[host_machine]
 @COMMENT_IF_NATIVE@system = system_name
@@ -60,6 +61,7 @@ ralib = toolchain_ranlib
 nm = toolchain_nm
 pkgconfig = '@TOOLCHAIN_PKGCONFIG_BINARY@'
 cmake = '@TOOLCHAIN_CMAKE_BINARY@'
+@MESON_EXTRA_BINARIES@
 
 [cmake]
 CMAKE_AR = toolchain_ar

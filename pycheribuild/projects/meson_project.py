@@ -51,6 +51,8 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     set_pkg_config_path: bool = False
     _configure_tool_name: str = "Meson"
     meson_test_script_extra_args: "Sequence[str]" = tuple()  # additional arguments to pass to run_meson_tests.py
+    _meson_extra_binaries = ""  # Needed for picolibc
+    _meson_extra_properties = ""  # Needed for picolibc
 
     def set_minimum_meson_version(self, major: int, minor: int, patch: int = 0) -> None:
         new_version = (major, minor, patch)
@@ -90,7 +92,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         super().setup()
         self._toolchain_template = include_local_file("files/meson-machine-file.ini.in")
         if not self.compiling_for_host():
-            assert self.target_info.is_freebsd(), "Only tested with FreeBSD so far"
+            assert self.target_info.is_freebsd() or self.target_info.is_baremetal(), "Only tested FreeBSD/baremetal"
             self._toolchain_file = self.build_dir / "meson-cross-file.ini"
             self.configure_args.extend(["--cross-file", str(self._toolchain_file)])
             # We also have to pass a native machine file to override pkg-config/cmake search dirs for host tools
@@ -151,6 +153,8 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             TOOLCHAIN_LINKER=self.target_info.linker,
             TOOLCHAIN_MESON_CPU_FAMILY=self.crosscompile_target.cpu_architecture.as_meson_cpu_family(),
             TOOLCHAIN_ENDIANESS=self.crosscompile_target.cpu_architecture.endianess(),
+            MESON_EXTRA_BINARIES=self._meson_extra_binaries,
+            MESON_EXTRA_PROPERTIES=self._meson_extra_properties,
             TOOLCHAIN_PKGCONFIG_BINARY=pkg_config_bin,
             TOOLCHAIN_CMAKE_BINARY=cmake_bin,
         )
