@@ -644,7 +644,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def add_config_option(cls, name: str, *, show_help=False, altname: str = None,
                           kind: "Union[typing.Type[Type_T], Callable[[str], Type_T]]" = str,
                           default: "Union[ComputedDefaultValue[Type_T], Callable[[CheriConfig, SimpleProject], Type_T],"
-                                   " Optional[Type_T]]" = None, only_add_for_targets: "list[CrossCompileTarget]" = None,
+                                   "Type_T, None]" = None, only_add_for_targets: "list[CrossCompileTarget]" = None,
                           extra_fallback_config_names: "typing.List[str]" = None, _allow_unknown_targets=False,
                           use_default_fallback_config_names=True, **kwargs) -> Optional[Type_T]:
         fullname = cls.target + "/" + name

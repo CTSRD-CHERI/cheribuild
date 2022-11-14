@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import Optional, ClassVar
 
 from .chericonfig import CheriConfig, AArch64FloatSimdOptions, MipsFloatAbi
-from ..utils import cached_property, final, OSInfo, warning_message, status_update, fatal_error, Type_T
+from ..utils import cached_property, final, OSInfo, warning_message, status_update, fatal_error
 from ..filesystemutils import FileSystemUtils
 from ..processutils import get_compiler_info, CompilerInfo
 
@@ -162,6 +162,15 @@ class AbstractProject(FileSystemUtils):
         target = cls._xtarget
         assert target is not None
         return target
+
+    @classmethod
+    def get_instance(cls: "type[_AnyProject]", caller: "Optional[AbstractProject]",
+                     config: "Optional[CheriConfig]" = None,
+                     cross_target: "Optional[CrossCompileTarget]" = None) -> "_AnyProject":
+        raise NotImplementedError()
+
+
+_AnyProject = typing.TypeVar("_AnyProject", bound=AbstractProject)
 
 
 class TargetInfo(ABC):
@@ -356,15 +365,16 @@ class TargetInfo(ABC):
         return False
 
     @final
-    def get_rootfs_project(self, *, t: "typing.Type[Type_T]",
-                           xtarget: "CrossCompileTarget" = None) -> typing.Type[Type_T]:
+    def get_rootfs_project(self, *, t: "type[_AnyProject]", caller: AbstractProject,
+                           xtarget: "CrossCompileTarget" = None) -> _AnyProject:
         if xtarget is None:
             xtarget = self.target
-        result = self._get_rootfs_project(xtarget.get_rootfs_target())
+        xtarget = xtarget.get_rootfs_target()
+        result = self._get_rootfs_class(xtarget)
         assert issubclass(result, t)
-        return result
+        return result.get_instance(caller=caller, cross_target=xtarget, config=self.config)
 
-    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "typing.Type[AbstractProject]":
+    def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[AbstractProject]":
         raise LookupError("Should not be called for " + self.project.target)
 
     @classmethod

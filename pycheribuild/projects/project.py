@@ -1081,7 +1081,9 @@ class Project(SimpleProject):
 
     @cached_property
     def rootfs_dir(self) -> Path:
-        return self.target_info.get_rootfs_project(t=Project).get_install_dir(self)
+        xtarget = self.crosscompile_target.get_rootfs_target()
+        # noinspection PyProtectedMember
+        return self.target_info._get_rootfs_class(xtarget).get_install_dir(self, xtarget)
 
     @property
     def _no_overwrite_allowed(self) -> "Sequence[str]":

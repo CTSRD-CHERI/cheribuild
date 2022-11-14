@@ -2206,7 +2206,7 @@ class BuildDrmKMod(CrossCompileProject):
 
     def setup(self) -> None:
         super().setup()
-        self.freebsd_project = self.target_info.get_rootfs_project(t=BuildFreeBSD).get_instance(self)
+        self.freebsd_project = self.target_info.get_rootfs_project(t=BuildFreeBSD, caller=self)
         if self.use_buildenv:
             extra_make_args = dict(SYSDIR=self.freebsd_project.source_dir / "sys")
         else:
