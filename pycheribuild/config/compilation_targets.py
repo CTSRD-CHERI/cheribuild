@@ -123,6 +123,8 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                                                  xtarget: "CrossCompileTarget", softfloat: bool = None,
                                                  perform_sanity_checks=True, default_flags_only=False):
         assert xtarget is not None
+        if softfloat is None:
+            softfloat = cls.uses_softfloat_by_default(xtarget)
         config = instance.config
         project = instance.project
         # noinspection PyProtectedMember
@@ -185,9 +187,6 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                     result.append("-cheri=" + config.mips_cheri_bits_str)
                     result.append("-mcpu=beri")
         elif xtarget.is_riscv(include_purecap=True):
-            # Note: Baremetal/FreeRTOS currently only supports softfloat
-            if softfloat is None:
-                softfloat = cls.is_baremetal()  # assume softfloat for baremetal
             # Use the insane RISC-V arch string to enable CHERI
             result.append("-march=" + cls.get_riscv_arch_string(xtarget, softfloat=softfloat))
             result.append("-mabi=" + cls.get_riscv_abi(xtarget, softfloat=softfloat))
@@ -259,6 +258,10 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         if not softfloat:
             abi += "d"
         return abi
+
+    @classmethod
+    def uses_softfloat_by_default(cls, xtarget: "CrossCompileTarget"):
+        return False
 
 
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
@@ -752,6 +755,11 @@ class BaremetalClangTargetInfo(_ClangBasedTargetInfo, metaclass=ABCMeta):
     @classmethod
     def is_baremetal(cls):
         return True
+
+    @classmethod
+    def uses_softfloat_by_default(cls, xtarget: "CrossCompileTarget"):
+        # Note: RISC-V Baremetal/FreeRTOS currently only supports softfloat
+        return xtarget.is_riscv(include_purecap=True)
 
 
 class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
