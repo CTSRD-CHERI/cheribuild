@@ -475,9 +475,10 @@ class MercurialRepository(SourceRepository):
         self.force_branch = force_branch
 
     @staticmethod
-    def run_hg(src_dir: "typing.Optional[Path]", *args, **kwargs):
+    def run_hg(src_dir: "typing.Optional[Path]", *args, project: "Project", **kwargs):
         assert src_dir is None or isinstance(src_dir, Path)
         command = ["hg"]
+        project.check_required_system_tool("hg", default="mercurial")
         if src_dir:
             command += ["--cwd", str(src_dir)]
         command += ["--noninteractive"]
@@ -500,7 +501,7 @@ class MercurialRepository(SourceRepository):
             return False
         revset = "ancestor(" + commit + ",.) and id(" + commit + ")"
         log = MercurialRepository.run_hg(src_dir, "log", "--quiet", "--rev", revset,
-                                         capture_output=True, print_verbose_only=True)
+                                         capture_output=True, print_verbose_only=True, project=current_project)
         if len(log.stdout) > 0:
             current_project.verbose_print(coloured(AnsiColour.blue, expected_branch, "contains commit", commit))
             return True
@@ -527,7 +528,7 @@ class MercurialRepository(SourceRepository):
             clone_cmd = ["clone"]
             if self.default_branch:
                 clone_cmd += ["--branch", self.default_branch]
-            self.run_hg(None, clone_cmd + [self.url, base_project_source_dir], cwd="/")
+            self.run_hg(None, clone_cmd + [self.url, base_project_source_dir], cwd="/", project=current_project)
         assert src_dir == base_project_source_dir, "Worktrees only supported with git"
 
     def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path = None, revision=None,
@@ -541,7 +542,8 @@ class MercurialRepository(SourceRepository):
 
         # handle repositories that have moved
         if src_dir.exists() and self.old_urls:
-            remote_url = self.run_hg(src_dir, "paths", "default", capture_output=True).stdout.strip()
+            remote_url = self.run_hg(src_dir, "paths", "default", capture_output=True,
+                                     project=current_project).stdout.strip()
             # Update from the old url:
             for old_url in self.old_urls:
                 assert isinstance(old_url, bytes)
@@ -553,23 +555,24 @@ class MercurialRepository(SourceRepository):
 
         # First pull all the incoming changes to see if we need to update.
         # Note: hg pull is similar to git fetch
-        self.run_hg(src_dir, "pull")
+        self.run_hg(src_dir, "pull", project=current_project)
 
         if revision is not None:
             # TODO: do some identify stuff to check if we are on the right revision?
-            self.run_hg(src_dir, "update", "--merge", revision, print_verbose_only=True)
+            self.run_hg(src_dir, "update", "--merge", revision, print_verbose_only=True, project=current_project)
             return
 
         # Handle forced branches now that we have fetched the latest changes
         if src_dir.exists() and self.force_branch:
             assert self.default_branch, "default_branch must be set if force_branch is true!"
-            branch = self.run_hg(src_dir, "branch", capture_output=True, print_verbose_only=True)
+            branch = self.run_hg(src_dir, "branch", capture_output=True, print_verbose_only=True,
+                                 project=current_project)
             current_branch = branch.stdout.decode("utf-8")
             if current_branch != self.force_branch:
                 current_project.warning("You are trying to build the", current_branch,
                                         "branch. You should be using", self.default_branch)
                 if current_project.query_yes_no("Would you like to change to the " + self.default_branch + " branch?"):
-                    self.run_hg(src_dir, "update", "--merge", self.default_branch)
+                    self.run_hg(src_dir, "update", "--merge", self.default_branch, project=current_project)
                 else:
                     current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
                                                          error_message="Wrong branch: " + current_branch)
@@ -583,8 +586,8 @@ class MercurialRepository(SourceRepository):
         current_project.verbose_print(coloured(AnsiColour.blue, "Current directory is behind tip."))
 
         # make sure we run git stash if we discover any local changes
-        has_changes = len(self.run_hg(src_dir, "diff", "--stat",
-                                      capture_output=True, print_verbose_only=True).stdout) > 1
+        has_changes = len(self.run_hg(src_dir, "diff", "--stat", capture_output=True, print_verbose_only=True,
+                                      project=current_project).stdout) > 1
         if has_changes:
             print(coloured(AnsiColour.green, "Local changes detected in", src_dir))
             # TODO: add a config option to skip this query?
@@ -594,7 +597,7 @@ class MercurialRepository(SourceRepository):
                                                   force_result=True):
                 status_update("Skipping update of", src_dir)
                 return
-        self.run_hg(src_dir, "update", "--merge", print_verbose_only=True)
+        self.run_hg(src_dir, "update", "--merge", print_verbose_only=True, project=current_project)
 
 
 class SubversionRepository(SourceRepository):
