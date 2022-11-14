@@ -41,7 +41,7 @@ dnf install libtool clang-devel bison cmake mercurial ninja-build samba flex tex
 ```
     
 #### FreeBSD
-If you are building CHERI on a RHEL/Fedora-based machine, please install the following packages:
+If you are building CHERI on a FreeBSD machine, please install the following packages:
 
 ```shell
 pkg install autoconf automake bison cmake expat glib gsed llvm mercurial meson ninja pkgconf pixman samba 
