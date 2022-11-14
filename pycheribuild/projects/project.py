@@ -1175,6 +1175,11 @@ class Project(SimpleProject):
         if self.compiling_for_cheri_hybrid([CPUArchitecture.AARCH64]):
             # Hybrid flags are not inferred from the input files, so we have to explicitly pass -mattr= to ld.lld.
             self._lto_linker_flags.extend(["-Wl,-mllvm,-mattr=+morello"])
+        # propagate all -mllvm flags:
+        cflags = self.default_compiler_flags
+        for i, flag in enumerate(cflags):
+            if flag == "-mllvm" and i < len(cflags) - 1:
+                self._lto_linker_flags.append("-Wl,-mllvm," + cflags[i + 1])
         self.info("Building with LTO")
         return True
 
