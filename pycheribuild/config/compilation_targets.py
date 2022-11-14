@@ -46,7 +46,7 @@ from ..utils import cached_property, is_jenkins_build
 
 if typing.TYPE_CHECKING:  # no-combine
     from ..projects.run_qemu import AbstractLaunchFreeBSD  # no-combine
-    from ..projects.cross.llvm import BuildLLVMBase  # no-combine
+    from ..projects.cross.llvm import BuildLLVMMonoRepoBase  # no-combine
 
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
@@ -67,9 +67,16 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         self._sdk_root_dir = self._get_sdk_root_dir_lazy()
         return self._sdk_root_dir
 
-    @abstractmethod
+    @classmethod
+    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+        raise NotImplementedError()
+
     def _get_sdk_root_dir_lazy(self) -> Path:
-        ...
+        return self._get_compiler_project().get_native_install_path(self.config)
+
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        return [cls._get_compiler_project().get_class_for_target(BasicCompilationTargets.NATIVE).target]
 
     @property
     def c_compiler(self) -> Path:
@@ -303,10 +310,6 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return True
 
     @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["upstream-llvm"]
-
-    @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", *, include_version: bool):
         common_suffix = "-unknown-freebsd"
         if include_version:
@@ -379,7 +382,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return Path("usr/local")
 
     @classmethod
-    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMBase]":
+    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
         from ..projects.cross.llvm import BuildUpstreamLLVM
         return BuildUpstreamLLVM
 
@@ -518,7 +521,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     FREEBSD_VERSION: int = 13
 
     @classmethod
-    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMBase]":
+    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
         from ..projects.cross.llvm import BuildCheriLLVM
         return BuildCheriLLVM
 
@@ -552,10 +555,6 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         else:
             purecap_suffix = ""
         return base + purecap_suffix
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm-native"]
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
@@ -611,7 +610,7 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     uses_morello_llvm: bool = True
 
     @classmethod
-    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMBase]":
+    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
         from ..projects.cross.llvm import BuildMorelloLLVM
         return BuildMorelloLLVM
 
@@ -629,10 +628,6 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
         else:
             dirname = "sysroot" + self.target.get_rootfs_target().build_suffix(self.config, include_os=True)
         return Path(self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name, dirname)
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig"):
-        return ["morello-llvm-native"]
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "CheriBSDTargetInfo", *args, xtarget, **kwargs):
@@ -661,8 +656,12 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
         raise LookupError("Should not be called")
 
     def _get_sdk_root_dir_lazy(self) -> Path:
+        return self._get_compiler_project().get_native_install_path(self.config)
+
+    @classmethod
+    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
         from ..projects.cross.llvm import BuildCheriOSLLVM
-        return BuildCheriOSLLVM.get_install_dir(self.project, cross_target=CompilationTargets.NATIVE)
+        return BuildCheriOSLLVM
 
     @property
     def sysroot_dir(self):
@@ -679,10 +678,6 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
     @classmethod
     def is_baremetal(cls) -> bool:
         return True
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["cherios-llvm"]
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
@@ -724,20 +719,14 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
         return self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name / (
                 "sysroot-" + self.target.get_rootfs_target().generic_arch_suffix) / self.target_triple
 
-    def _get_sdk_root_dir_lazy(self) -> Path:
-        return self.config.cheri_sdk_dir
-
-    @property
-    def _compiler_dir(self) -> Path:
-        return self.config.cheri_sdk_bindir
+    @classmethod
+    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+        from ..projects.cross.llvm import BuildCheriLLVM
+        return BuildCheriLLVM
 
     @property
     def must_link_statically(self):
         return True  # only static linking works
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm-native"]
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
@@ -747,16 +736,27 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
             assert False, "No support for building RTEMS for non RISC-V targets yet"
 
 
-class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
-    shortname: str = "Newlib"
-    os_prefix: str = "baremetal-"
-
+class BaremetalClangTargetInfo(_ClangBasedTargetInfo, metaclass=ABCMeta):
     @property
     def cmake_system_name(self) -> str:
         return "Generic"  # CMake requires the value to be set to "Generic" for baremetal targets
 
-    def _get_sdk_root_dir_lazy(self) -> Path:
-        return self.config.cheri_sdk_dir
+    @property
+    def must_link_statically(self):
+        return True  # only static linking works
+
+    @property
+    def localbase(self) -> Path:
+        raise ValueError("Should not be called for baremetal")
+
+    @classmethod
+    def is_baremetal(cls):
+        return True
+
+
+class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
+    shortname = "Newlib"
+    os_prefix = "baremetal-"
 
     @property
     def sysroot_dir(self) -> Path:
@@ -768,18 +768,10 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
         return sysroot_dir / "baremetal" / suffix / self.target_triple
 
-    @property
-    def must_link_statically(self):
-        return True  # only static linking works
-
-    @property
-    def _compiler_dir(self) -> Path:
-        # TODO: BuildUpstreamLLVM.install_dir?
-        return self.config.cheri_sdk_bindir
-
     @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm-native"]  # upstream-llvm??
+    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+        from ..projects.cross.llvm import BuildCheriLLVM
+        return BuildCheriLLVM
 
     @classmethod
     def triple_for_target(cls, target, config, include_version: bool) -> str:
@@ -813,10 +805,6 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         return super().additional_executable_link_flags
 
     @classmethod
-    def is_baremetal(cls) -> bool:
-        return True
-
-    @classmethod
     def is_newlib(cls) -> bool:
         return True
 
@@ -825,35 +813,21 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         return BuildNewlib.get_class_for_target(xtarget)
 
 
-class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
+class MorelloBaremetalTargetInfo(BaremetalClangTargetInfo):
     shortname: str = "Morello-Baremetal"
     os_prefix: str = "baremetal-"
     uses_morello_llvm: bool = True
 
-    @property
-    def cmake_system_name(self) -> str:
-        return "Generic"  # CMake requires the value to be set to "Generic" for baremetal targets
-
-    def _get_sdk_root_dir_lazy(self) -> Path:
-        return self.config.morello_sdk_dir
+    @classmethod
+    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+        from ..projects.cross.llvm import BuildMorelloLLVM
+        return BuildMorelloLLVM
 
     @property
     def sysroot_dir(self) -> Path:
         suffix = self.target.get_rootfs_target().generic_arch_suffix
         sysroot_dir = self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name
         return sysroot_dir / "baremetal" / suffix / self.target_triple
-
-    @property
-    def must_link_statically(self):
-        return True  # only static linking works
-
-    @property
-    def _compiler_dir(self) -> Path:
-        return self.config.morello_sdk_dir / "bin"
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["morello-llvm-native"]
 
     @classmethod
     def triple_for_target(cls, target, config, include_version: bool) -> str:
@@ -872,10 +846,6 @@ class MorelloBaremetalTargetInfo(_ClangBasedTargetInfo):
         if xtarget.cpu_architecture == CPUArchitecture.ARM32 or xtarget.is_aarch64(include_purecap=True):
             return super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs)
         raise ValueError("Other baremetal cases have not been tested yet!")
-
-    @classmethod
-    def is_baremetal(cls) -> bool:
-        return True
 
 
 class ArmNoneEabiGccTargetInfo(TargetInfo):

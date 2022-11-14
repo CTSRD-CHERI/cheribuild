@@ -25,7 +25,8 @@ from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.projects.sdk import BuildCheriBSDSdk, BuildSdk
 from pycheribuild.projects.spike import RunCheriSpikeBase
 from pycheribuild.targets import Target, target_manager
-from pycheribuild.config.compilation_targets import enable_hybrid_for_purecap_rootfs_targets
+from pycheribuild.config.compilation_targets import enable_hybrid_for_purecap_rootfs_targets, CompilationTargets
+from pycheribuild.config.target_info import CrossCompileTarget
 from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
 
 
@@ -430,3 +431,25 @@ def test_no_dependencies_in_build_dir(config: CheriConfig, native_target: Target
             f"{proj.target} depends on {dep_project.target} which is installed to the build dir!"
         assert dep_project.get_default_install_dir_kind() != DefaultInstallDir.DO_NOT_INSTALL, \
             f"{proj.target} depends on {dep_project.target} which is not installed!"
+
+
+@pytest.mark.parametrize("xtarget,expected", [
+    pytest.param(CompilationTargets.CHERIBSD_RISCV_PURECAP, ["llvm-native"]),
+    pytest.param(CompilationTargets.CHERIBSD_X86_64, ["llvm-native"]),
+    pytest.param(CompilationTargets.CHERIBSD_MORELLO_PURECAP, ["morello-llvm-native"]),
+    pytest.param(CompilationTargets.CHERIBSD_MORELLO_NO_CHERI, ["morello-llvm-native"]),
+    pytest.param(CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP, ["llvm-native"]),
+    pytest.param(CompilationTargets.BAREMETAL_NEWLIB_RISCV64, ["llvm-native"]),
+    pytest.param(CompilationTargets.RTEMS_RISCV64_PURECAP, ["llvm-native"]),
+    pytest.param(CompilationTargets.ARM_NONE_EABI, []),
+    pytest.param(CompilationTargets.CHERIOS_RISCV_PURECAP, ["cherios-llvm"]),
+    pytest.param(CompilationTargets.FREEBSD_RISCV64, ["upstream-llvm"]),
+    pytest.param(CompilationTargets.NATIVE, []),
+])
+def test_toolchain_dependencies(xtarget: CrossCompileTarget, expected: "list[str]"):
+    config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+    assert xtarget.target_info_cls.toolchain_targets(xtarget, config) == expected
+    if expected:
+        assert len(expected) == 1
+        compiler_target = target_manager.get_target_raw(expected[0])
+        assert compiler_target.get_real_target(CompilationTargets.NATIVE, config) == compiler_target
