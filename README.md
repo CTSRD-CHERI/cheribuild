@@ -39,6 +39,13 @@ If you are building CHERI on a RHEL/Fedora-based machine, please install the fol
 ```shell
 dnf install libtool clang-devel bison cmake mercurial ninja-build samba flex texinfo glib2-devel pixman-devel libarchive-devel bsdtar bzip2-devel libattr-devel libcap-ng-devel expat-devel
 ```
+    
+#### FreeBSD
+If you are building CHERI on a RHEL/Fedora-based machine, please install the following packages:
+
+```shell
+pkg install autoconf automake bison cmake expat glib gsed llvm mercurial meson ninja pkgconf pixman samba 
+```
 
 #### Arch Linux
 If you are building CHERI on an Arch Linux machine, please install the following packages:
