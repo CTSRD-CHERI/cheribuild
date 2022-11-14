@@ -597,7 +597,7 @@ class MercurialRepository(SourceRepository):
                                                   force_result=True):
                 status_update("Skipping update of", src_dir)
                 return
-        self.run_hg(src_dir, "update", "--merge", print_verbose_only=True, project=current_project)
+        self.run_hg(src_dir, "update", "--merge", ".", print_verbose_only=True, project=current_project)
 
 
 class SubversionRepository(SourceRepository):
