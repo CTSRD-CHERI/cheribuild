@@ -67,10 +67,15 @@ def output_to_junit_suite(xml, output_path, suite_name, good=True):
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--testcase-timeout", required=False, default="1s")
     parser.add_argument("--ld-preload-path", required=False, default=None)
+    parser.add_argument("--test-setup-command", action="append", dest="test_setup_commands", metavar="COMMAND",
+                        help="Run COMMAND as an additional test setup step before running the tests")
 
 
-def setup_juliet_test_environment(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace):
+def setup_juliet_test_environment(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
+    if args.test_setup_commands:
+        for command in args.test_setup_commands:
+            qemu.checked_run(command)
 
 
 def run_juliet_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
