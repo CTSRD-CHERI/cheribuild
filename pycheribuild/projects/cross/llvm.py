@@ -403,12 +403,15 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
     do_not_add_to_targets = True
     root_cmakelists_subdirectory = Path("llvm")
 
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(LLVM_ENABLE_PROJECTS=";".join(self.included_projects))
+
     def configure(self, **kwargs):
         if (self.source_dir / "tools/clang/.git").exists():
             self.fatal("Attempting to build LLVM Monorepo but the checkout is from the split repos!")
         if not self.included_projects:
             self.fatal("Need at least one project in --include-projects config option")
-        self.add_cmake_options(LLVM_ENABLE_PROJECTS=";".join(self.included_projects))
         super().configure(**kwargs)
 
     def add_compiler_with_config_file(self, prefix: str, target: CrossCompileTarget):

@@ -1029,3 +1029,15 @@ def test_relative_paths_in_config():
         assert config.build_root == Path(td, "subdir/build")
         assert config.source_root == Path(td, "some-other-dir")
         assert config.output_root == Path(td, "output")
+
+
+def test_cmake_options():
+    def enable_projects_flag(args: "list[str]"):
+        return next((x for x in args if x.startswith("-DLLVM_ENABLE_PROJECTS")), None)
+
+    config = _parse_arguments(["--skip-configure"])
+    assert enable_projects_flag(_get_target_instance(
+        "llvm-native", config, BuildCheriLLVM).configure_args) == "-DLLVM_ENABLE_PROJECTS=llvm;clang;lld"
+    config = _parse_config_file_and_args(b'{ "llvm/cmake-options": ["-DLLVM_ENABLE_PROJECTS=llvm"] }')
+    assert enable_projects_flag(_get_target_instance(
+        "llvm-native", config, BuildCheriLLVM).configure_args) == "-DLLVM_ENABLE_PROJECTS=llvm"

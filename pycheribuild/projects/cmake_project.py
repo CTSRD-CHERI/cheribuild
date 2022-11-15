@@ -222,7 +222,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             self.add_cmake_options(**{f"CMAKE_C_FLAGS{self.build_type_var_suffix}": flags,
                                       f"CMAKE_CXX_FLAGS{self.build_type_var_suffix}": flags})
         # Add the options from the config file now so that they are added after child class setup() calls.
-        self.configure_args.extend(self.cmake_options)  # FIXME: probably shouldn't modify this list
+        self.configure_args.extend(self.cmake_options)
 
     def add_cmake_options(self, *, _include_empty_vars=False, _replace=True, **kwargs) -> None:
         return self._add_configure_options(_config_file_options=self.cmake_options, _replace=_replace,

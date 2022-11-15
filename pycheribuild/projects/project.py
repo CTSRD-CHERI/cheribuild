@@ -1719,16 +1719,16 @@ class _CMakeAndMesonSharedLogic(Project):
                                _config_file_options: "list[str]", **kwargs) -> None:
         for option, value in kwargs.items():
             existing_option = next((x for x in self.configure_args if x.startswith("-D" + option + "=")), None)
+            if any(x.startswith("-D" + option) for x in _config_file_options):
+                self.info("Not using default value of '", value, "' for configure option '", option,
+                          "' since it is explicitly overwritten in the configuration", sep="")
+                continue
             if existing_option is not None:
                 if _replace:
                     self.configure_args.remove(existing_option)
                 else:
                     self.warning("Not replacing ", option, "since it is already set.")
-                    return
-            if any(x.startswith("-D" + option) for x in _config_file_options):
-                self.info("Not using default value of '", value, "' for configure option '", option,
-                          "' since it is explicitly overwritten in the configuration", sep="")
-                continue
+                    continue
             if isinstance(value, bool):
                 value = self._bool_to_str(value)
             if (not str(value) or not value) and not _include_empty_vars:
