@@ -48,7 +48,7 @@ class BuildQEMUBase(AutotoolsProject):
     is_sdk_target = True
     skip_git_submodules = True  # we don't need these
     can_build_with_asan = True
-    default_targets = "some-invalid-target"
+    default_targets: str = "some-invalid-target"
     default_build_type = BuildType.RELEASE
     lto_by_default = True
     use_smbd: bool
@@ -200,7 +200,6 @@ class BuildQEMUBase(AutotoolsProject):
 
         self.configure_args.extend([
             "--target-list=" + self.qemu_targets,
-            "--enable-slirp=git",
             "--disable-linux-user",
             "--disable-bsd-user",
             "--disable-xen",
@@ -217,6 +216,14 @@ class BuildQEMUBase(AutotoolsProject):
             # injecting shared libraries into any process that is installed as part of the system.
             "--make=" + self.make_args.command,
         ])
+        if self.repository.contains_commit(self, "5890258aeeba303704ec1adca415e46067800777", src_dir=self.source_dir):
+            # TODO: do we want to check for a minimum version here?
+            self.check_required_pkg_config("slirp", apt="libslirp-dev", freebsd="libslirp")
+            # QEMU now requires a system installation of slirp.
+            self.configure_args.append("--enable-slirp")
+        else:
+            self.configure_args.append("--enable-slirp=git")
+
         if self.config.create_compilation_db:
             self.make_args.set(V=1)  # Otherwise bear can't parse the compiler output
         ldflags = self.default_ldflags + self.LDFLAGS
