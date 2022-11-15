@@ -33,7 +33,9 @@ from ...processutils import set_env
 
 class BuildPicoLibc(CrossCompileMesonProject):
     target = "picolibc"
-    repository = GitRepository("https://github.com/picolibc/picolibc.git")
+    repository = GitRepository("https://github.com/picolibc/picolibc.git",
+                               temporary_url_override="https://github.com/arichardson/picolibc.git",
+                               url_override_reason="https://github.com/picolibc/picolibc/pull/376")
     supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.BAREMETAL_PICOLIBC_RISCV64]
     needs_sysroot = False
     include_os_in_target_suffix = False  # Avoid adding -picolibc- as we are building picolibc here

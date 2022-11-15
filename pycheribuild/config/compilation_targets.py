@@ -830,15 +830,6 @@ class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
         return False
 
     @property
-    def linker(self) -> Path:
-        # FIXME: Currently ld.bfd is required to link picolibc.
-        if self.target.is_riscv64(include_purecap=True):
-            p = typing.cast(Project, self.project)
-            p.check_required_system_tool("riscv64-unknown-elf-ld.bfd", apt="binutils-riscv64-unknown-elf")
-            return Path(shutil.which("riscv64-unknown-elf-ld.bfd") or "/usr/bin/riscv64-unknown-elf-ld.bfd")
-        return super().linker
-
-    @property
     def sysroot_dir(self) -> Path:
         sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
         return sysroot_dir / "picolibc" / self.target.get_rootfs_target().generic_arch_suffix
