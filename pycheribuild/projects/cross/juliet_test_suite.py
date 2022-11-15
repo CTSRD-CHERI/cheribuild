@@ -67,6 +67,7 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
     cwe_number = None
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     cwe_warning_flags = []
+    cwe_setup_commands = []
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -100,6 +101,12 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
             args.append("--ld-preload-path")
             args.append(self.ld_preload_path)
 
+        for cmd in self.cwe_setup_commands:
+            args.append("--test-setup-command=" + cmd)
+
+        # For stdin redirection
+        args.append("--test-setup-command=touch /tmp/in.txt")
+
         self.target_info.run_cheribsd_test_script("run_juliet_tests.py", *args, mount_sourcedir=True,
                                                   mount_sysroot=True, mount_builddir=True)
 
@@ -109,6 +116,9 @@ class BuildJulietCWE121(BuildJulietCWESubdir):
     cwe_number = 121
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
                                              subdirectory="testcases/CWE121_Stack_Based_Buffer_Overflow")
+    cwe_setup_commands = [
+                "echo 500 > /tmp/in.txt"
+            ]
 
 
 class BuildJulietCWE122(BuildJulietCWESubdir):
@@ -116,6 +126,9 @@ class BuildJulietCWE122(BuildJulietCWESubdir):
     cwe_number = 122
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
                                              subdirectory="testcases/CWE122_Heap_Based_Buffer_Overflow")
+    cwe_setup_commands = [
+                "echo 500 > /tmp/in.txt"
+            ]
 
 
 class BuildJulietCWE124(BuildJulietCWESubdir):
@@ -123,6 +136,9 @@ class BuildJulietCWE124(BuildJulietCWESubdir):
     cwe_number = 124
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
                                              subdirectory="testcases/CWE124_Buffer_Underwrite")
+    cwe_setup_commands = [
+                "echo -500 > /tmp/in.txt"
+            ]
 
 
 class BuildJulietCWE126(BuildJulietCWESubdir):
@@ -151,6 +167,11 @@ class BuildJulietCWE134(BuildJulietCWESubdir):
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
                                              subdirectory="testcases/CWE134_Uncontrolled_Format_String")
     cwe_warning_flags = ["-Wno-error=format-security"]
+    cwe_setup_commands = [
+                "export ADD=%s%d%s",
+                "echo Format string: %s %d %s > /tmp/file.txt",
+                "echo Format string: %s %d %s > /tmp/in.txt"
+            ]
 
 
 class BuildJulietCWE188(BuildJulietCWESubdir):
