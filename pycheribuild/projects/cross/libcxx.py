@@ -397,9 +397,6 @@ class BuildLlvmLibs(CMakeProject):
             external_cxxabi = "libcxxrt"
             if self.llvm_project is BuildUpstreamLLVM:
                 self.enabled_runtimes.remove("libunwind")  # CHERI fixes have not been upstreamed.
-            # Skip experimental for now since it crashes the compiler...
-            self.add_cmake_options(LIBCXX_TEST_PARAMS="enable_experimental=False")
-            self.add_cmake_options(LIBCXXABI_TEST_PARAMS="enable_experimental=False")
 
         if external_cxxabi is not None:
             self.add_cmake_options(LIBCXX_CXX_ABI=external_cxxabi)
