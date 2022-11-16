@@ -55,12 +55,6 @@ class BuildPicoLibc(CrossCompileMesonProject):
             return "exe_wrapper = ['sh', '-c', 'test -z \"$PICOLIBC_TEST\" || run-riscv \"$@\"', 'run-riscv']"
         return ""
 
-    @property
-    def _meson_extra_properties(self):
-        if not self.compiling_for_host():
-            return "# skip_sanity_check needed since we are building libc\nskip_sanity_check = true"
-        return ""
-
     def setup(self):
         super().setup()
         self.add_meson_options(tests=True, multilib=False, **{
@@ -94,7 +88,9 @@ class BuildPicoLibc(CrossCompileMesonProject):
     def default_ldflags(self):
         result = super().default_ldflags
         if not self.compiling_for_host():
-            result += ["-L" + str(self.build_dir / "local-libgcc")]
+            # We have to add -nostdlib here, otherwise the meson "linker flag supported" checks fail since it implicitly
+            # tries to pull in -lc. This also allows us to avoid setting "skip_sanity_check=True"
+            result += ["-L" + str(self.build_dir / "local-libgcc"), "-nostdlib"]
         return result
 
     def compile(self, **kwargs):
