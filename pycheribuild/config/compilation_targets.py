@@ -195,7 +195,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
 
             if cls.is_baremetal() or cls.is_rtems():
                 # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
-                result.append("-mcmodel=medium")
+                result.append("-mcmodel=medany")
         elif xtarget.is_aarch64(include_purecap=True):
             fp_simd_option = AArch64FloatSimdOptions.SOFT if softfloat else config.aarch64_fp_and_simd_options
             march_suffix = fp_simd_option.clang_march_flag()
