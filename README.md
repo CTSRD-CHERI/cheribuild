@@ -32,12 +32,22 @@ apt install autoconf automake libtool pkg-config clang bison cmake ninja-build s
 ```
 
 Older versions of Ubuntu may report errors when trying to install `libarchive-tools`. In this case try using `apt install bsdtar` instead.
+
 #### RHEL/Fedora
 If you are building CHERI on a RHEL/Fedora-based machine, please install the following packages:
 
 ```shell
 dnf install libtool clang-devel bison cmake ninja-build samba flex texinfo glib2-devel pixman-devel libarchive-devel bsdtar bzip2-devel libattr-devel libcap-ng-devel expat-devel
 ```
+
+#### Arch Linux
+If you are building CHERI on an Arch Linux machine, please install the following packages:
+
+```shell
+pacman -Syu autoconf automake libtool pkgconf clang bison cmake ninja samba flex texinfo time glib2 pixman libarchive bzip2 attr libcap-ng
+```
+
+These package used approx 350MiB, though you probably have most already installed.
 
 # Basic usage
 
