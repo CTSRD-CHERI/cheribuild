@@ -66,12 +66,18 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
     do_not_add_to_targets = True
     cwe_number = None
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    cwe_warning_flags = []
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.testcase_timeout = cls.add_config_option("testcase-timeout", kind=str)
         cls.ld_preload_path = cls.add_config_option("ld-preload-path", kind=str)
+
+    def setup(self):
+        super().setup()
+        for flag in self.cwe_warning_flags:
+            self.cross_warning_flags.append(flag)
 
     def configure(self, **kwargs):
         self.add_cmake_options(PLACE_OUTPUT_IN_TOPLEVEL_DIR=False)
