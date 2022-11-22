@@ -520,7 +520,7 @@ class TargetManager(object):
                 else:
                     import difflib
                     errmsg = coloured(AnsiColour.red, "Target", target_name, "does not exist.")
-                    suggestions = difflib.get_close_matches(target_name, self._all_targets)
+                    suggestions = difflib.get_close_matches(target_name, self.target_names(config))
                 if suggestions:
                     errmsg += " Did you mean " + " or ".join(coloured(AnsiColour.blue, s) for s in suggestions) + "?"
                 else:
