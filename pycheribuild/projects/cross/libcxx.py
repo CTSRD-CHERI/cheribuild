@@ -65,9 +65,6 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
         test_linker_flags = self.commandline_to_str(self.default_ldflags)
 
         cxx_instance = BuildLibCXX.get_instance(self)
-        if self.compiling_for_mips(include_purecap=True) and self.target_info.is_freebsd():
-            # libcxxrt requires __floatundidf/__fixunsdfdi
-            test_linker_flags += " -lcompiler_rt"
         self.add_cmake_options(LIBUNWIND_LIBCXX_PATH=cxx_instance.source_dir,
                                # Should use libc++ from sysroot
                                # LIBUNWIND_LIBCXX_LIBRARY_PATH=BuildLibCXX.get_build_dir(self) / "lib",
