@@ -391,58 +391,6 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assert not cheribsd_riscv_hybrid.debug_kernel, "riscv64-hybrid should have a JSON false override for debug-kernel"
 
 
-def test_kernconf():
-    # The kernel-config command line option is special: There is a global (command-line-only) flag that is used
-    # as the default, but otherwise there should be no inheritance
-    config = _parse_arguments([])
-    cheribsd_riscv_hybrid = _get_cheribsd_instance("cheribsd-riscv64-hybrid", config)
-    cheribsd_riscv = _get_cheribsd_instance("cheribsd-riscv64", config)
-    freebsd_riscv = _get_target_instance("freebsd-riscv64", config, BuildFreeBSD)
-    freebsd_native = _get_target_instance("freebsd-amd64", config, BuildFreeBSD)
-    assert config.freebsd_kernconf is None
-    assert freebsd_riscv.kernel_config == "QEMU"
-    assert cheribsd_riscv_hybrid.kernel_config == "CHERI-QEMU"
-    assert freebsd_native.kernel_config == "GENERIC"
-
-    # Check that --kernconf is used as the fallback
-    config = _parse_arguments(["--kernconf=LINT", "--freebsd-riscv64/kernel-config=FOO"])
-    assert config.freebsd_kernconf == "LINT"
-    attr = inspect.getattr_static(freebsd_riscv, "kernel_config")
-    # previously we would replace the command line attribute with a string -> check this is no longer true
-    assert isinstance(attr, JsonAndCommandLineConfigOption)
-    assert freebsd_riscv.kernel_config == "FOO"
-    assert cheribsd_riscv_hybrid.kernel_config == "LINT"
-    assert freebsd_native.kernel_config == "LINT"
-
-    config = _parse_arguments(["--kernconf=LINT", "--cheribsd-riscv64-hybrid/kernel-config=SOMETHING"])
-    assert config.freebsd_kernconf == "LINT"
-    assert freebsd_riscv.kernel_config == "LINT"
-    assert cheribsd_riscv_hybrid.kernel_config == "SOMETHING"
-    assert freebsd_native.kernel_config == "LINT"
-
-    config = _parse_config_file_and_args(b'{ "cheribsd-riscv64/kernel-config": "RISCV64_CONFIG" }',
-                                         "--kernconf=GENERIC")
-    assert config.freebsd_kernconf == "GENERIC"
-    assert cheribsd_riscv_hybrid.kernel_config == "GENERIC"
-    assert cheribsd_riscv.kernel_config == "RISCV64_CONFIG"
-    assert freebsd_riscv.kernel_config == "GENERIC"
-    assert freebsd_native.kernel_config == "GENERIC"
-
-    # kernel-config/--kernconf should only be valid on the command line:
-    with pytest.raises(ValueError, match="^Unknown config option 'freebsd/kernel-config'$"):
-        _parse_config_file_and_args(b'{ "freebsd/kernel-config": "GENERIC" }')
-    # kernel-config/--kernconf should only be valid on the command line:
-    with pytest.raises(ValueError, match="^Option 'kernel-config' cannot be used in the config file$"):
-        _parse_config_file_and_args(b'{ "kernel-config": "GENERIC" }')
-    with pytest.raises(ValueError, match="^Option 'kernconf' cannot be used in the config file$"):
-        _parse_config_file_and_args(b'{ "kernconf": "GENERIC" }')
-
-    # There should not be any unsuffixed kernel-config options:
-    for tgt in ("cheribsd", "freebsd", "cheribsd-mfs-root-kernel"):
-        with pytest.raises(KeyError, match=r"error: unknown argument '--[\w-]+/kernel-config'"):
-            _parse_arguments(["--" + tgt + "/source-directory=/foo", "--" + tgt + "/kernel-config", "ABC"])
-
-
 def test_duplicate_key():
     with pytest.raises(SyntaxError, match="duplicate key: 'output-root'"):
         _parse_config_file_and_args(b'{ "output-root": "/foo", "some-other-key": "abc", "output-root": "/bar" }')

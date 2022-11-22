@@ -1588,7 +1588,7 @@ class BuildCHERIBSD(BuildFreeBSD):
             only_add_for_targets=CompilationTargets.ALL_CHERIBSD_CHERI_TARGETS_WITH_HYBRID,
             help="Build kernel with caprevoke support (experimental)")
 
-        cls.extra_configs = cls.add_config_option("extra-kernel-configs", metavar="CONFIG", default=[], kind=list,
+        cls.external_configs = cls.add_config_option("extra-kernel-configs", metavar="CONFIG", default=[], kind=list,
                                                   nargs="+", help="Additional kernel configuration files to build")
         if kernel_only_target:
             return  # The remaining options only affect the userspace build
@@ -1602,7 +1602,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         configs = self.extra_kernel_configs()
         self.extra_kernels += [c.kernconf for c in configs if not c.mfsroot]
         self.extra_kernels_with_mfs += [c.kernconf for c in configs if c.mfsroot]
-        self.extra_kernels += self.extra_configs
+        self.extra_kernels += self.external_configs
 
     def get_default_kernel_abi(self) -> KernelABI:
         # XXX: Because the config option has _allow_unknown_targets it exists
@@ -1680,7 +1680,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "list[str]":
         default = super().get_kernel_configs(platform)
         extra = filter_kernel_configs(self.extra_kernel_configs(), platform=platform, kABI=None)
-        return default + [c.kernconf for c in extra] + self.extra_configs
+        return default + [c.kernconf for c in extra] + self.external_configs
 
     def setup(self) -> None:
         super().setup()
@@ -1821,9 +1821,9 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
 
     def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "typing.List[str]":
         if self.kernel_config is not None:
-            return [self.kernel_config] + self.extra_configs
+            return [self.kernel_config] + self.external_configs
         configs = self._get_all_kernel_configs()
-        return [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kABI=None)] + self.extra_configs
+        return [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kABI=None)] + self.external_configs
 
     def get_kernel_install_path(self, kernconf: str = None) -> Path:
         """ Get the installed kernel path for an MFS kernel config that has been built. """
