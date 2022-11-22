@@ -216,13 +216,6 @@ class BuildQEMUBase(AutotoolsProject):
             # injecting shared libraries into any process that is installed as part of the system.
             "--make=" + self.make_args.command,
         ])
-        if self.repository.contains_commit(self, "5890258aeeba303704ec1adca415e46067800777", src_dir=self.source_dir):
-            # TODO: do we want to check for a minimum version here?
-            self.check_required_pkg_config("slirp", apt="libslirp-dev", freebsd="libslirp")
-            # QEMU now requires a system installation of slirp.
-            self.configure_args.append("--enable-slirp")
-        else:
-            self.configure_args.append("--enable-slirp=git")
 
         if self.config.create_compilation_db:
             self.make_args.set(V=1)  # Otherwise bear can't parse the compiler output
@@ -232,6 +225,17 @@ class BuildQEMUBase(AutotoolsProject):
         cxxflags = self.default_compiler_flags + self.CXXFLAGS
         if cxxflags:
             self.configure_args.append("--extra-cxxflags=" + self.commandline_to_str(cxxflags))
+
+    def configure(self, **kwargs):
+        # We call this here instead of inside setup to make sure the repository has been cloned
+        if self.repository.contains_commit(self, "5890258aeeba303704ec1adca415e46067800777", src_dir=self.source_dir):
+            # TODO: do we want to check for a minimum version here?
+            self.check_required_pkg_config("slirp", apt="libslirp-dev", freebsd="libslirp")
+            # QEMU now requires a system installation of slirp.
+            self.configure_args.append("--enable-slirp")
+        else:
+            self.configure_args.append("--enable-slirp=git")
+        super().configure(**kwargs)
 
     def run_tests(self):
         self.run_make("check", cwd=self.build_dir)
