@@ -30,10 +30,11 @@
 import os
 import platform
 import sys
+import typing
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
                                   GitRepository)
-from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
+from .llvm import BuildCheriLLVM, BuildUpstreamLLVM, BuildLLVMMonoRepoBase
 from ..build_qemu import BuildQEMU
 from ..cmake_project import CMakeProject
 from ..project import ReuseOtherProjectDefaultTargetRepository
@@ -357,18 +358,21 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
                                                       use_benchmark_kernel_by_default=True)
 
 
-class BuildLlvmLibs(CrossCompileCMakeProject):
-    target = "llvm-libs"
-    repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="runtimes")
-    llvm_project = BuildCheriLLVM
+class _BuildLlvmRuntimes(CrossCompileCMakeProject):
+    do_not_add_to_targets = True
     _always_add_suffixed_targets = True
-    supported_architectures = [CompilationTargets.NATIVE]
-    default_architecture = CompilationTargets.NATIVE
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    default_build_type = BuildType.DEBUG
-    # TODO: add compiler-rt
-    enabled_runtimes: "list[str]" = ["libunwind", "libcxxabi", "libcxx"]
+
+    # The following have to be set in subclasses
+    llvm_project: "typing.ClassVar[type[BuildLLVMMonoRepoBase]]"
+    enabled_runtimes: "typing.ClassVar[list[str]]"
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "list[str]":
+        return super().dependencies(config) + [cls.llvm_project.get_class_for_target(CompilationTargets.NATIVE).target]
+
+    @classproperty
+    def repository(self):
+        return ReuseOtherProjectDefaultTargetRepository(self.llvm_project, subdirectory="runtimes")
 
     @property
     def custom_c_preprocessor(self):
@@ -475,6 +479,19 @@ class BuildLlvmLibs(CrossCompileCMakeProject):
             with self.set_env(LC_ALL="en_US.UTF-8", FILECHECK_DUMP_INPUT_ON_FAILURE=1):
                 self.run_cmd("cmake", "--build", self.build_dir, "--target", "check-runtimes")
                 return
+
+
+class BuildLlvmLibs(_BuildLlvmRuntimes):
+    target = "llvm-libs"
+    llvm_project = BuildCheriLLVM
+    _always_add_suffixed_targets = True
+    supported_architectures = [CompilationTargets.NATIVE]
+    default_architecture = CompilationTargets.NATIVE
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    default_build_type = BuildType.DEBUG
+    # TODO: add compiler-rt
+    enabled_runtimes: "list[str]" = ["libunwind", "libcxxabi", "libcxx"]
 
 
 class BuildUpstreamLlvmLibs(BuildLlvmLibs):
