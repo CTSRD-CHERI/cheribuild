@@ -922,10 +922,10 @@ def test_mfs_root_kernel_config_options():
     assert config_options == ["_initial_source_dir", "_install_dir", "_linkage",
                               "auto_var_init", "build_alternate_abi_kernels",
                               "build_bench_kernels", "build_dir", "build_fett_kernels", "build_fpga_kernels",
-                              "build_type", "caprevoke_kernel", "debug_kernel", "default_kernel_abi", "extra_configs",
-                              "extra_make_args", "fast_rebuild", "force_configure", "kernel_config",
-                              "mfs_root_image", "skip_update", "use_ccache", "use_lto", "with_clean",
-                              "with_debug_files", "with_debug_info"]
+                              "build_type", "caprevoke_kernel", "debug_kernel", "default_kernel_abi",
+                              "external_configs", "extra_make_args", "fast_rebuild", "force_configure",
+                              "mfs_root_image", "option_kernel_config", "skip_update", "use_ccache",
+                              "use_lto", "with_clean", "with_debug_files", "with_debug_info"]
 
 
 def test_mfs_root_kernel_inherits_defaults_from_cheribsd():
@@ -975,13 +975,6 @@ def test_mfs_root_kernel_inherits_defaults_from_cheribsd():
     assert cheribsd_riscv64_purecap.kernel_config == "BASE_CONFIG_RISCV64"
     assert cheribsd_riscv64_hybrid.kernel_config == "CHERI-QEMU"
     assert mfs_riscv64.kernel_config is None
-    assert mfs_riscv64_hybrid.kernel_config == "MFS_CONFIG_RISCV64_HYBRID"
-    _parse_arguments(["--kernel-config=CONFIG_DEFAULT",
-                      "--cheribsd-riscv64-purecap/kernel-config=BASE_CONFIG_RISCV64",
-                      "--cheribsd-mfs-root-kernel-riscv64-hybrid/kernel-config=MFS_CONFIG_RISCV64_HYBRID"])
-    assert cheribsd_riscv64_purecap.kernel_config == "BASE_CONFIG_RISCV64"
-    assert cheribsd_riscv64_hybrid.kernel_config == "CONFIG_DEFAULT"
-    assert mfs_riscv64.kernel_config == "CONFIG_DEFAULT"
     assert mfs_riscv64_hybrid.kernel_config == "MFS_CONFIG_RISCV64_HYBRID"
 
 

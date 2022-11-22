@@ -608,6 +608,15 @@ class BuildFreeBSD(BuildFreeBSDBase):
             assert not cls._xtarget.is_hybrid_or_purecap_cheri()
             cls.build_lib32 = False
 
+    @property
+    def kernel_config(self):
+        # Shorthand to access the default kernel specified by the kernel-config option.
+        # The configuration option can be a list but the kernel_config is always the default
+        # kernel configuration to build, whether the option overrides it or it is the default one.
+        if self.option_kernel_config is None:
+            return None
+        return self.option_kernel_config[0]
+
     def get_default_kernel_platform(self) -> ConfigPlatform:
         if self.crosscompile_target.is_aarch64(include_purecap=True):
             return ConfigPlatform.FVP
@@ -749,22 +758,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self._install_prefix = Path("/")
         self.kernel_toolchain_exists: bool = False
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
-        # This is the kernel configuration to be used as the default kernel
-        self.kernel_config = None
-        # Additional kernel configurations to build
-        self.extra_kernels = []
-        if self.option_kernel_config:
-            # We have either the default kernel or a list of kernel configuration overrides
-            self.kernel_config = self.option_kernel_config[0]
-            self.extra_kernels += self.option_kernel_config[1:]
-        # Remember whether the kernel config list was forced from command line
-        self._has_override_kernel_configs = False
         if self.has_default_buildkernel_kernel_config:
-            assert self.option_kernel_config, "Missing default kernel_config"
-            self._has_override_kernel_configs = (len(self.option_kernel_config) > 1 or
-                                                 self.kernel_config != self.default_kernel_config())
-        else:
-            self._has_override_kernel_configs = (self.option_kernel_config is not None)
+            assert self.option_kernel_config is not None
+        self.extra_kernels = []
+        if self.option_kernel_config is not None:
+            # The first kernel configuration is the default one, all the others are new extra configs.
+            # This will be non-empty when the kernel-config list is overridden from cheribuild configuration.
+            self.extra_kernels += self.option_kernel_config[1:]
         self.make_args.set(**self.arch_build_flags)
 
         if self.subdir_override:
@@ -1644,7 +1644,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         default_kABI = self.get_default_kernel_abi()
         kernABIs = [default_kABI]
         # If we are ovveriding the kernel configurations list, only build the default ABI
-        if self._has_override_kernel_configs:
+        if self.kernel_config and self.kernel_config != self.default_kernel_config():
             return kernABIs
         # XXX: Because the config option has _allow_unknown_targets it exists
         # in the base class and thus still inherited by non-purecap-kernel
