@@ -525,13 +525,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
                              kernel_only_target=False, **kwargs) -> None:
         super().setup_config_options(kernel_only_target=kernel_only_target, **kwargs)
         if cls._xtarget:
-            # KERNCONF always depends on the target, so we don't inherit this config option. The only exception is
-            # the global --kernel-config option that is provided for convenience and backwards compat.
-            cls.kernel_config = cls.add_config_option(
-                "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
+            # KERNCONF always depends on the target, so we don't inherit this config option.
+            cls.option_kernel_config = cls.add_config_option(
+                "kernel-config", metavar="CONFIG", show_help=True, nargs="+", kind=list,
                 default=ComputedDefaultValue(
                     function=lambda _, p:
-                        p.default_kernel_config() if p.has_default_buildkernel_kernel_config else None,
+                        [p.default_kernel_config()] if p.has_default_buildkernel_kernel_config else None,
                     as_string="target-dependent, usually GENERIC"),
                 use_default_fallback_config_names=False,  #
                 help="The kernel configuration to use for `make buildkernel`")  # type: str
@@ -750,10 +749,23 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self._install_prefix = Path("/")
         self.kernel_toolchain_exists: bool = False
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
-        if self.has_default_buildkernel_kernel_config:
-            assert self.kernel_config is not None
-        self.make_args.set(**self.arch_build_flags)
+        # This is the kernel configuration to be used as the default kernel
+        self.kernel_config = None
+        # Additional kernel configurations to build
         self.extra_kernels = []
+        if self.option_kernel_config:
+            # We have either the default kernel or a list of kernel configuration overrides
+            self.kernel_config = self.option_kernel_config[0]
+            self.extra_kernels += self.option_kernel_config[1:]
+        # Remember whether the kernel config list was forced from command line
+        self._has_override_kernel_configs = False
+        if self.has_default_buildkernel_kernel_config:
+            assert self.option_kernel_config, "Missing default kernel_config"
+            self._has_override_kernel_configs = (len(self.option_kernel_config) > 1 or
+                                                 self.kernel_config != self.default_kernel_config())
+        else:
+            self._has_override_kernel_configs = (self.option_kernel_config is not None)
+        self.make_args.set(**self.arch_build_flags)
 
         if self.subdir_override:
             # build only part of the tree
@@ -1589,7 +1601,7 @@ class BuildCHERIBSD(BuildFreeBSD):
             help="Build kernel with caprevoke support (experimental)")
 
         cls.external_configs = cls.add_config_option("extra-kernel-configs", metavar="CONFIG", default=[], kind=list,
-                                                  nargs="+", help="Additional kernel configuration files to build")
+                                                     nargs="+", help="Additional kernel configuration files to build")
         if kernel_only_target:
             return  # The remaining options only affect the userspace build
         cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=False,
@@ -1631,6 +1643,9 @@ class BuildCHERIBSD(BuildFreeBSD):
     def _get_kABIs_to_build(self) -> "list[KernelABI]":
         default_kABI = self.get_default_kernel_abi()
         kernABIs = [default_kABI]
+        # If we are ovveriding the kernel configurations list, only build the default ABI
+        if self._has_override_kernel_configs:
+            return kernABIs
         # XXX: Because the config option has _allow_unknown_targets it exists
         # in the base class and thus still inherited by non-purecap-kernel
         # targets
@@ -1823,7 +1838,9 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         if self.kernel_config is not None:
             return [self.kernel_config] + self.external_configs
         configs = self._get_all_kernel_configs()
-        return [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kABI=None)] + self.external_configs
+        conf_names = [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kABI=None)]
+        conf_names += self.external_configs
+        return conf_names
 
     def get_kernel_install_path(self, kernconf: str = None) -> Path:
         """ Get the installed kernel path for an MFS kernel config that has been built. """
