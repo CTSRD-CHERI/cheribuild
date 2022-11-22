@@ -31,7 +31,6 @@ import copy
 import inspect
 import os
 import re
-import shutil
 import sys
 import typing
 from abc import ABCMeta, abstractmethod
@@ -829,6 +828,12 @@ class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
     def uses_softfloat_by_default(cls, xtarget: "CrossCompileTarget"):
         return False
 
+    @classmethod
+    def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs) -> "list[str]":
+        # We are linking baremetal binaries -> always use local-exec TLS
+        return super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs) + [
+            "-ftls-model=local-exec"]
+
     @property
     def sysroot_dir(self) -> Path:
         sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
@@ -840,9 +845,19 @@ class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
         return BuildUpstreamLLVM
 
     def semihosting_ldflags(self):
-        # TODO: there is a separate C++ linker script
-        return ["-lsemihost", "-Wl,-T," + str(self.sysroot_dir / "lib/riscv.ld"),
-                self.sysroot_dir / "lib/crt0-semihost.o"]
+        stack_size = "4k"
+        if self.target.is_riscv64(include_purecap=True):
+            flash_start = 0x80000000
+            flash_size = 8 * 1024 * 1024
+            dram_start = flash_start + flash_size * 2  # Use flash_size*2 to ensure there is a gap between
+            dram_size = 32 * 1024 * 1024
+        else:
+            raise ValueError(f"Unsupported architecture {self.target}")
+        # Always use the C++ linker script since the only difference is whether .eh_frame is discarded.
+        return ["-Wl,-T," + str(self.sysroot_dir / "lib/picolibcpp.ld"),
+                f"-Wl,--defsym=__flash={hex(flash_start)}", f"-Wl,--defsym=__flash_size={hex(flash_size)}",
+                f"-Wl,--defsym=__ram={hex(dram_start)}", f"-Wl,--defsym=__ram_size={hex(dram_size)}",
+                f"-Wl,--defsym=__stack_size={stack_size}", self.sysroot_dir / "lib/crt0-semihost.o"]
 
     @classmethod
     def triple_for_target(cls, target, config, include_version: bool) -> str:
@@ -856,7 +871,6 @@ class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
 
     @property
     def additional_executable_link_flags(self):
-        # FIXME: custom linker script
         return super().additional_executable_link_flags + self.semihosting_ldflags()
 
     def _get_rootfs_project(self, xtarget: CrossCompileTarget) -> "Project":
@@ -1086,6 +1100,7 @@ class CompilationTargets(BasicCompilationTargets):
 
     # Picolibc targets
     BAREMETAL_PICOLIBC_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, PicolibcBaremetalTargetInfo)
+    ALL_PICOLIBC_TARGETS = [BAREMETAL_PICOLIBC_RISCV64]
 
     # FreeBSD targets
     FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, FreeBSDTargetInfo)
@@ -1137,10 +1152,9 @@ class CompilationTargets(BasicCompilationTargets):
                                        BAREMETAL_NEWLIB_RISCV64,
                                        BAREMETAL_NEWLIB_RISCV64_HYBRID,
                                        BAREMETAL_NEWLIB_RISCV64_PURECAP,
-                                       BAREMETAL_PICOLIBC_RISCV64,
                                        MORELLO_BAREMETAL_NO_CHERI,
                                        MORELLO_BAREMETAL_HYBRID,
-                                       MORELLO_BAREMETAL_PURECAP]
+                                       MORELLO_BAREMETAL_PURECAP] + ALL_PICOLIBC_TARGETS
     ALL_SUPPORTED_RTEMS_TARGETS = [RTEMS_RISCV64, RTEMS_RISCV64_PURECAP]
     ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = \
         ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + ALL_SUPPORTED_BAREMETAL_TARGETS
