@@ -414,7 +414,10 @@ class OSInfo(object):
         with Path("/etc/os-release").open(encoding="utf-8") as f:
             d = {}
             for line in f:
-                k, v = line.rstrip().split("=", maxsplit=1)
+                line = line.strip()
+                if line == '' or line[0] == '#':
+                    continue
+                k, v = line.split("=", maxsplit=1)
                 # .strip('"') will remove if there or else do nothing
                 d[k] = v.strip('"')
         return d
