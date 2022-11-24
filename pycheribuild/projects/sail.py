@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 import os
-import shlex
 import shutil
 import tempfile
 import typing
@@ -40,7 +39,7 @@ from .project import AutotoolsProject, DefaultInstallDir, GitRepository, MakeCom
 from .simple_project import SimpleProject
 from ..processutils import get_program_version
 from ..targets import target_manager
-from ..utils import AnsiColour, coloured, OSInfo, ThreadJoiner, InstallInstructions
+from ..utils import AnsiColour, coloured, OSInfo, ThreadJoiner
 
 if typing.TYPE_CHECKING:
     _MixinBase = Project
@@ -350,115 +349,3 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
         # self.run_make_install()
         self.info("NO INSTALL TARGET YET")
-
-
-# Old way of installing sail:
-class OcamlProject(OpamMixin, Project):
-    do_not_add_to_targets = True
-    native_install_dir = DefaultInstallDir.CHERI_SDK
-    build_in_source_dir = True
-    make_kind = MakeCommandKind.GnuMake
-    needed_ocaml_packages = ["ocamlbuild"]
-
-    def check_system_dependencies(self):
-        super().check_system_dependencies()
-        for pkg in self.needed_ocaml_packages:
-            try:
-                self.run_in_ocaml_env("ocamlfind query " + shlex.quote(pkg), cwd="/", print_verbose_only=True)
-            except CalledProcessError:
-                instrs = "Try running `" + self._opam_cmd_str("install", _add_switch=False) + " " + pkg + "`"
-                self.dependency_error("missing opam package " + pkg, install_instructions=InstallInstructions(instrs))
-
-    def install(self, **kwargs):
-        pass
-
-    def process(self):
-        try:
-            # This is run before cloning so the source dir might not exist -> set CWD to /
-            self.run_in_ocaml_env("ocamlfind ocamlc -where", cwd="/", print_verbose_only=True)
-        except CalledProcessError as e:
-            self.warning(e)
-            self.warning("stderr was:", e.stderr)
-            hint = "Try running `" + self._opam_cmd_str("update", _add_switch=False) + " && " + self._opam_cmd_str(
-                "switch", _add_switch=False) + " " + self.required_ocaml_version + "`"
-            self.dependency_error("OCaml env seems to be messed up. Note: On MacOS homebrew OCaml is not installed"
-                                  " correctly. Try installing it with opam instead:",
-                                  install_instructions=InstallInstructions(hint))
-        super().process()
-
-
-class BuildSailFromSource(OcamlProject):
-    target = "sail-from-source"
-    repository = GitRepository("https://github.com/rems-project/sail", default_branch="sail2")
-    dependencies = ["lem", "ott", "linksem"]
-    needed_ocaml_packages = OcamlProject.needed_ocaml_packages + ["zarith", "lem", "linksem"]
-
-    # TODO: `opam install linenoise` for isail?
-    def check_system_dependencies(self):
-        super().check_system_dependencies()
-        self.check_required_system_tool("z3", homebrew="z3 --without-python@2 --with-python")
-        try:
-            # opam and ocamlfind don't agree for menhir
-            self.run_in_ocaml_env("ocamlfind query menhirLib", cwd="/", print_verbose_only=True)
-        except CalledProcessError:
-            self.dependency_error("missing opam package menhirLib",
-                                  install_instructions=InstallInstructions("Try running `opam install menhir`"))
-
-    def compile(self, **kwargs):
-        pass
-
-    def install(self, **kwargs):
-        # Use ./opam to just build sail, not coq-sail.  Using '.' will try to
-        # build both and we probably don't need all of coq installed just now
-        self.run_in_ocaml_env("opam install -y ./opam")
-
-    def process(self):
-        lemdir = BuildLem.get_source_dir(self)
-        ottdir = BuildOtt.get_source_dir(self)
-        linksemdir = BuildLinksem.get_source_dir(self)
-        with self.set_env(LEMLIB=lemdir / "library",
-                          PATH="{}:{}:".format(ottdir / "bin", lemdir / "bin") + os.environ["PATH"],
-                          OCAMLPATH="{}:{}".format(lemdir / "ocaml-lib/local", linksemdir / "src/local")):
-            super().process()
-
-
-class BuildLem(OcamlProject):
-    repository = GitRepository("https://github.com/rems-project/lem")
-    needed_ocaml_packages = OcamlProject.needed_ocaml_packages + ["zarith"]
-
-    def compile(self, **kwargs):
-        pass
-
-    def install(self, **kwargs):
-        self.run_in_ocaml_env("opam install -y .")
-
-
-class BuildOtt(OcamlProject):
-    repository = GitRepository("https://github.com/ott-lang/ott")
-
-    def compile(self, **kwargs):
-        pass
-
-    def install(self, **kwargs):
-        # Use ./ott.opam to dodge coq-ott
-        self.run_in_ocaml_env("opam install -y ./ott.opam")
-
-
-class BuildLinksem(OcamlProject):
-    repository = GitRepository("https://github.com/rems-project/linksem")
-    dependencies = ["lem", "ott"]
-
-    def compile(self, **kwargs):
-        pass
-
-    def install(self, **kwargs):
-        self.run_in_ocaml_env("opam install -y .")
-
-    def process(self):
-        lemdir = BuildLem.get_source_dir(self)
-        ottdir = BuildOtt.get_source_dir(self)
-        # linksemdir = BuildLinkSem.get_source_dir(self)
-        with self.set_env(LEMLIB=lemdir / "library",
-                          PATH="{}:{}:".format(ottdir / "bin", lemdir / "bin") + os.environ["PATH"],
-                          OCAMLPATH=lemdir / "ocaml-lib/local"):
-            super().process()
