@@ -292,8 +292,16 @@ class RunSailShell(OpamMixin, SimpleProject):
         self.info("Starting sail shell (using {})... ".format(shell))
         import subprocess
         try:
-            with self.set_env(PATH=str(self.config.cheri_sdk_bindir) + ":" + os.getenv("PATH", ""),
-                              PS1="SAIL ENV:\\w> "):
+            prompt_env = {}
+            if "_P9K_TTY" in os.environ or "P9K_TTY" in os.environ:
+                # Set a variable that shows we are in the sail env for the default powerlevel10k prompt.
+                # We could also use various other right hand side prompts, but toolbox seems unlikely to conflict.
+                prompt_env["P9K_TOOLBOX_NAME"] = "sail-opam-env"
+            else:
+                # Otherwise set the VIRTUAL_ENV environment variable if not already present (this should hopefully
+                # be visualized by many custom shell prompts)
+                prompt_env["VIRTUAL_ENV"] = os.getenv("VIRTUAL_ENV", "sail-opam-env"),
+            with self.set_env(PATH=str(self.config.cheri_sdk_bindir) + ":" + os.getenv("PATH", ""), **prompt_env):
                 self.run_command_in_ocaml_env(
                     [shell, "-c", f"echo 'Entering sail environment, send CTRL+D to exit'; exec {shell} -i"],
                     cwd=os.getcwd())
