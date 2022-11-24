@@ -295,8 +295,9 @@ class RunSailShell(OpamMixin, SimpleProject):
         try:
             with self.set_env(PATH=str(self.config.cheri_sdk_bindir) + ":" + os.getenv("PATH", ""),
                               PS1="SAIL ENV:\\w> "):
-                self.run_cmd("which", "sail")
-                self.run_command_in_ocaml_env([shell, "--verbose", "--norc", "-i"], cwd=os.getcwd())
+                self.run_command_in_ocaml_env(
+                    [shell, "-c", f"echo 'Entering sail environment, send CTRL+D to exit'; exec {shell} -i"],
+                    cwd=os.getcwd())
         except subprocess.CalledProcessError as e:
             if e.returncode == 130:
                 return  # User pressed Ctrl+D to exit shell, don't print an error
