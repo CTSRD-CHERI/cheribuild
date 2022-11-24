@@ -44,7 +44,7 @@ dnf install libtool clang-devel bison cmake ninja-build samba flex texinfo glib2
 If you are building CHERI on an Arch Linux machine, please install the following packages:
 
 ```shell
-pacman -Syu autoconf automake libtool pkgconf clang bison cmake ninja samba flex texinfo time glib2 pixman libarchive bzip2 attr libcap-ng
+pacman -Syu autoconf automake libtool pkgconf clang bison cmake ninja samba flex texinfo time glib2 pixman libarchive bzip2 attr libcap-ng inetutils
 ```
 
 These package used approx 350MiB, though you probably have most already installed.
