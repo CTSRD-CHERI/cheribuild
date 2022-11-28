@@ -418,10 +418,15 @@ def test_no_dependencies_in_build_dir(config: CheriConfig, native_target: Target
     # Ensure that native targets do not depend on other targets that do not install their libraries, etc.
     assert native_target.xtarget.is_native()
     proj = native_target.get_or_create_project(native_target.xtarget, config, caller=None)
-    if isinstance(proj, Project) and proj.get_default_install_dir_kind() in (DefaultInstallDir.IN_BUILD_DIRECTORY,
-                                                                             DefaultInstallDir.DO_NOT_INSTALL):
+    if not isinstance(proj, Project):
+        assert isinstance(proj, SimpleProject)
+        # SimpleProject, so also not installed -> we can ignore this target
+        pytest.skip(f"Skipping {proj.target}")
+        return
+    if proj.get_default_install_dir_kind() in (DefaultInstallDir.IN_BUILD_DIRECTORY, DefaultInstallDir.DO_NOT_INSTALL):
         # Also not installed, we can ignore this target
         pytest.skip(f"Skipping {proj.target}: {proj.get_default_install_dir_kind()}")
+        return
     for dep in proj.all_dependency_names(config):
         dep_project = target_manager.get_target(dep, native_target.xtarget, config, "test").project_class
         assert issubclass(dep_project, SimpleProject)
