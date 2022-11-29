@@ -405,6 +405,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                                  use_full_disk_image=False, mount_installdir=False,
                                  use_benchmark_kernel_by_default=False,
                                  rootfs_alternate_kernel_dir=None) -> None:
+        def has_test_extra_arg_override(arg: str):
+            return any(x == arg or x.startswith(arg + "=") for x in self.config.test_extra_args)
+
         if typing.TYPE_CHECKING:
             assert isinstance(self.project, Project)
         # mount_sysroot may be needed for projects such as QtWebkit where the minimal image doesn't contain all the
@@ -422,9 +425,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         if use_full_disk_image:
             assert self.is_cheribsd(), "Not supported for FreeBSD yet"
             if qemu_options.can_boot_kernel_directly:
-                if kernel_path is None and "--kernel" not in self.config.test_extra_args:
+                if kernel_path is None and not has_test_extra_arg_override("--kernel"):
                     kernel_path = run_instance.current_kernel
-            if disk_image_path is None and "--disk-image" not in self.config.test_extra_args:
+            if disk_image_path is None and not has_test_extra_arg_override("--disk-image"):
                 disk_image_path = run_instance.disk_image
                 if not disk_image_path.exists():
                     self.project.dependency_error("Missing disk image",
@@ -434,7 +437,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             # We need to boot the disk image instead of running the kernel directly (amd64)
             assert rootfs_xtarget.is_any_x86() or rootfs_xtarget.is_aarch64(
                 include_purecap=True), "All other architectures can boot directly"
-            if disk_image_path is None and "--disk-image" not in self.config.test_extra_args:
+            if disk_image_path is None and not has_test_extra_arg_override("--disk-image"):
                 assert self.is_cheribsd(), "Not supported for FreeBSD yet"
                 from ..projects.disk_image import BuildMinimalCheriBSDDiskImage
                 instance = BuildMinimalCheriBSDDiskImage.get_instance(self.project, cross_target=rootfs_xtarget)
@@ -442,7 +445,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                 if not disk_image_path.exists():
                     self.project.dependency_error("Missing disk image", cheribuild_target=instance.target,
                                                   cheribuild_xtarget=rootfs_xtarget)
-        elif kernel_path is None and "--kernel" not in self.config.test_extra_args:
+        elif kernel_path is None and not has_test_extra_arg_override("--kernel"):
             from ..projects.cross.cheribsd import ConfigPlatform
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
             # --no-use-minimal-benchmark-kernel on the command line or in the config JSON
@@ -465,13 +468,12 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         script = self.project.get_test_script_path(script_name)
         if not script.exists():
             self.project.fatal("Could not find test script", script)
-
         cmd = [script, "--architecture", rootfs_xtarget.base_arch_suffix]
         if self.config.test_ssh_key is not None:
             cmd.extend(["--ssh-key", self.config.test_ssh_key])
-        if kernel_path and "--kernel" not in self.config.test_extra_args:
+        if kernel_path and not has_test_extra_arg_override("--kernel"):
             cmd.extend(["--kernel", kernel_path])
-        if "--qemu-cmd" not in self.config.test_extra_args:
+        if not has_test_extra_arg_override("--qemu-cmd"):
             chosen_qemu = run_instance.chosen_qemu
             # FIXME: this is rather ugly: In order to access the binary property we have to call setup() first, but
             #  we can't call setup() on the run_instance since that might result in multiple calls to setup().
@@ -480,18 +482,18 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                 chosen_qemu = copy.deepcopy(chosen_qemu)  # avoid modifying the object referenced by run_instance
                 chosen_qemu.setup(run_instance)
             cmd.extend(["--qemu-cmd", chosen_qemu.binary])
-        if mount_builddir and self.project.build_dir and "--build-dir" not in self.config.test_extra_args:
+        if mount_builddir and self.project.build_dir and not has_test_extra_arg_override("--build-dir"):
             cmd.extend(["--build-dir", self.project.build_dir])
-        if mount_sourcedir and self.project.source_dir and "--source-dir" not in self.config.test_extra_args:
+        if mount_sourcedir and self.project.source_dir and not has_test_extra_arg_override("--source-dir"):
             cmd.extend(["--source-dir", self.project.source_dir])
-        if mount_sysroot and "--sysroot-dir" not in self.config.test_extra_args:
+        if mount_sysroot and not has_test_extra_arg_override("--sysroot-dir"):
             cmd.extend(["--sysroot-dir", self.sysroot_dir])
         if mount_installdir:
-            if "--install-destdir" not in self.config.test_extra_args:
+            if not has_test_extra_arg_override("--install-destdir"):
                 cmd.extend(["--install-destdir", self.project.destdir])
-            if "--install-prefix" not in self.config.test_extra_args:
+            if not has_test_extra_arg_override("--install-prefix"):
                 cmd.extend(["--install-prefix", self.project.install_prefix])
-        if disk_image_path and "--disk-image" not in self.config.test_extra_args:
+        if disk_image_path and not has_test_extra_arg_override("--disk-image"):
             cmd.extend(["--disk-image", disk_image_path])
             if not disk_image_path.exists():
                 self.project.fatal("Could not find disk image", disk_image_path)
