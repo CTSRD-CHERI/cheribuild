@@ -33,7 +33,7 @@ from .project import DefaultInstallDir, MakefileProject, Project
 from .repository import GitRepository
 from .sail import BuildSailCheriRISCV
 from .simple_project import SimpleProject
-from ..processutils import popen, commandline_to_str
+from ..processutils import popen, commandline_to_str, FakePopen
 from ..utils import find_free_port
 
 
@@ -101,28 +101,43 @@ class RunTestRIG(SimpleProject):
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
         cls.rerun_last_failure = cls.add_bool_option("rerun-last-failure")
+        cls.existing_test_impl_port = cls.add_config_option("test-implementation-port", kind=int,
+                                                            help="Use a running test implementation instead.")
+
+    def get_test_impl(self, port: int):
+        if self.existing_test_impl_port is not None:
+            return FakePopen()
+        else:
+            return popen(self.get_test_implementation_command(port), config=self.config, stdin=subprocess.DEVNULL,
+                         cwd="/")
 
     def process(self) -> None:
-        reference_impl_port = find_free_port()
-        reference_impl_port.socket.close()  # allow sail to use the socket
-        test_impl_port = find_free_port()
-        test_impl_port.socket.close()  # allow QEMU to use the socket
-        with popen(self.get_reference_implementation_command(reference_impl_port.port), config=self.config,
+        reference_impl_tmpsock = find_free_port()
+        reference_impl_tmpsock.socket.close()  # allow sail to use the socket
+        reference_impl_port = reference_impl_tmpsock.port
+        if self.existing_test_impl_port is not None:
+            test_impl_port = self.existing_test_impl_port
+        else:
+            tmp = find_free_port()
+            tmp.socket.close()  # allow test implementation to use the socket
+            test_impl_port = tmp.port
+        with popen(self.get_reference_implementation_command(reference_impl_port), config=self.config,
                    stdin=subprocess.DEVNULL, cwd="/") as reference_cmd:
-            with popen(self.get_test_implementation_command(test_impl_port.port), config=self.config,
-                       stdin=subprocess.DEVNULL, cwd="/") as test_cmd:
+            with self.get_test_impl(test_impl_port) as test_cmd:
                 time.sleep(1)  # wait 1 second for the implementations to start up.
                 if reference_cmd.poll() is not None:
                     test_cmd.kill()  # kill the other implementation so that the with statement can complete.
                     self.fatal("Reference implementation failed to start correctly. Command was:",
-                               commandline_to_str(self.get_reference_implementation_command(reference_impl_port.port)))
+                               commandline_to_str(self.get_reference_implementation_command(reference_impl_port)))
                     return
+                elif self.existing_test_impl_port is not None:
+                    self.info("Attaching to implementation running on port", self.existing_test_impl_port)
                 elif test_cmd.poll() is not None:
                     reference_cmd.kill()  # kill the other implementation so that the with statement can complete.
                     self.fatal("Test implementation failed to start correctly. Command was:",
-                               commandline_to_str(self.get_test_implementation_command(test_impl_port.port)))
+                               commandline_to_str(self.get_test_implementation_command(test_impl_port)))
                     return
-                vengine_args = ["-a", str(reference_impl_port.port), "-b", str(test_impl_port.port),
+                vengine_args = ["-a", str(reference_impl_port), "-b", str(test_impl_port),
                                 "-r", self.verification_archstring,
                                 "-n", str(self.number_of_runs)]
                 vengine_instance = BuildQuickCheckVengine.get_instance(self)
@@ -155,7 +170,7 @@ class TestRigSailQemuRV64(RunTestRIG):
 
     def get_test_implementation_command(self, port: int) -> "list[str]":
         result = [str(BuildQEMU.get_build_dir(self) / "qemu-system-riscv64cheri"), "--rvfi-dii-port", str(port),
-                  "-cpu", "rv64,g=true,c=true,Counters=true,Zifencei=true,s=true,u=true,Zicsr=true,Xcheri=true",
+                  "-cpu", "rv64,g=true,c=true,Counters=false,Zifencei=true,s=true,u=true,Zicsr=true,Xcheri=true",
                   "-bios", "none"]
         if self.rerun_last_failure:
             result.extend(["-d", "instr,int"])
