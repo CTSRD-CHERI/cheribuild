@@ -837,7 +837,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         boot_messages = init_messages + [TRYING_TO_MOUNT_ROOT]
         loader_boot_prompt_messages = boot_messages + [BOOT_LOADER_PROMPT]
         loader_boot_messages = loader_boot_prompt_messages + [AUTOBOOT_PROMPT]
-        i = child.expect(loader_boot_messages, timeout=5 * 60, timeout_msg="timeout before loader or kernel")
+        i = child.expect(loader_boot_messages, timeout=20 * 60, timeout_msg="timeout before loader or kernel")
         if i >= len(boot_messages):
             # Skip 10s wait from loader(8) if we see the autoboot message
             if i == loader_boot_messages.index(AUTOBOOT_PROMPT):  # Hit Enter
@@ -869,7 +869,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         userspace_starttime = datetime.datetime.now()
         boot_expect_strings = [LOGIN, LOGIN_AS_ROOT_MINIMAL, SHELL_OPEN, BOOT_FAILURE, BOOT_FAILURE2,
                                BOOT_FAILURE3]  # type: typing.List[typing.Union[str, typing.Pattern]]
-        i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=15 * 60,
+        i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=30 * 60,
                          timeout_msg="timeout awaiting login prompt")
         if i == len(boot_expect_strings):  # DHCPACK from
             have_dhclient = True
