@@ -406,7 +406,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                                  use_benchmark_kernel_by_default=False,
                                  rootfs_alternate_kernel_dir=None) -> None:
         def has_test_extra_arg_override(arg: str):
-            return any(x == arg or x.startswith(arg + "=") for x in self.config.test_extra_args)
+            result = next((x for x in self.config.test_extra_args if x == arg or x.startswith(arg + "=")), None)
+            if result is not None:
+                self.project.info("Using override for", self.project.target, arg + ":", result)
+            return result is not None
 
         if typing.TYPE_CHECKING:
             assert isinstance(self.project, Project)
