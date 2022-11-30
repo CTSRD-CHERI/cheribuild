@@ -259,7 +259,7 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
                                             caprevoke=True, benchmark=True))
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
-                                            caprevoke=True, benchmark=True, mfsroot=True))
+                                            caprevoke=True, mfsroot=True))
 
         return configs
 
