@@ -218,6 +218,8 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         for kABI in KernelABI:
             configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, caprevoke=True, default=True))
             configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, caprevoke=True, benchmark=True, default=True))
+            configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, caprevoke=True, benchmark=True, mfsroot=True,
+                                            default=True))
             configs.append(self.make_config({ConfigPlatform.GFE}, kABI, caprevoke=True, mfsroot=True))
             configs.append(self.make_config({ConfigPlatform.AWS}, kABI, fett=True, caprevoke=True))
 
@@ -256,6 +258,8 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
                                             caprevoke=True))
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
                                             caprevoke=True, benchmark=True))
+            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
+                                            caprevoke=True, benchmark=True, mfsroot=True))
 
         return configs
 
