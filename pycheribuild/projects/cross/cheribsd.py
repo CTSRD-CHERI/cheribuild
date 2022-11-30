@@ -219,7 +219,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
             configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, caprevoke=True, default=True))
             configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, caprevoke=True, benchmark=True, default=True))
             configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, caprevoke=True, benchmark=True, mfsroot=True,
-                default=True))
+                                            default=True))
             configs.append(self.make_config({ConfigPlatform.GFE}, kABI, caprevoke=True, mfsroot=True))
             configs.append(self.make_config({ConfigPlatform.AWS}, kABI, fett=True, caprevoke=True))
 
