@@ -135,7 +135,8 @@ class BuildQEMUBase(AutotoolsProject):
             self.configure_args.extend(["--enable-debug", "--enable-debug-tcg"])
         else:
             # Try to optimize as much as possible:
-            self.configure_args.extend(["--disable-stack-protector"])
+            self.configure_args.append("--disable-stack-protector")
+            self.configure_args.append("--disable-pie")  # no need to build as PIE (this just slows down QEMU)
 
         if self.use_asan:
             self.configure_args.append("--enable-sanitizers")
@@ -208,7 +209,6 @@ class BuildQEMUBase(AutotoolsProject):
             # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
             # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
             "--disable-werror",
-            "--disable-pie",  # no need to build as PIE (this just slows down QEMU)
             "--extra-cflags=" + self.commandline_to_str(self.default_compiler_flags + self.CFLAGS),
             "--cxx=" + str(self.CXX),
             "--cc=" + str(self.CC),
