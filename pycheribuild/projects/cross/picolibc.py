@@ -36,7 +36,7 @@ class BuildPicoLibc(CrossCompileMesonProject):
     repository = GitRepository("https://github.com/picolibc/picolibc.git",
                                temporary_url_override="https://github.com/arichardson/picolibc.git",
                                url_override_reason="https://github.com/picolibc/picolibc/pull/376")
-    supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.BAREMETAL_PICOLIBC_RISCV64]
+    supported_architectures = [CompilationTargets.NATIVE] + CompilationTargets.ALL_PICOLIBC_TARGETS
     needs_sysroot = False
     include_os_in_target_suffix = False  # Avoid adding -picolibc- as we are building picolibc here
     # ld.lld: error: -r and --gdb-index may not be used together
@@ -76,7 +76,7 @@ class BuildPicoLibc(CrossCompileMesonProject):
 
     @property
     def default_compiler_flags(self):
-        if self.compiling_for_riscv(include_purecap=True):
+        if self.crosscompile_target.is_riscv64(include_purecap=True):
             # We have to resolve undef weak symbols to 0, but ld.lld doesn't do the rewriting of instructions and
             # codegen isn't referencing the GOT, so until https://reviews.llvm.org/D107280 lands, we have to use -fpie
             # See also https://github.com/ClangBuiltLinux/linux/issues/1409 and

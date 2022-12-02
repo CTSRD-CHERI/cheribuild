@@ -851,7 +851,7 @@ class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
 
     def semihosting_ldflags(self):
         stack_size = "4k"
-        if self.target.is_riscv64(include_purecap=True):
+        if self.target.is_riscv64(include_purecap=True) or self.target.is_riscv32(include_purecap=True):
             flash_start = 0x80000000
             flash_size = 8 * 1024 * 1024
             dram_start = flash_start + flash_size * 2  # Use flash_size*2 to ensure there is a gap between
@@ -1104,8 +1104,9 @@ class CompilationTargets(BasicCompilationTargets):
                                        is_cheri_hybrid=False, is_cheri_purecap=False)  # For 32-bit firmrware
 
     # Picolibc targets
+    BAREMETAL_PICOLIBC_RISCV32 = CrossCompileTarget("riscv32", CPUArchitecture.RISCV32, PicolibcBaremetalTargetInfo)
     BAREMETAL_PICOLIBC_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, PicolibcBaremetalTargetInfo)
-    ALL_PICOLIBC_TARGETS = [BAREMETAL_PICOLIBC_RISCV64]
+    ALL_PICOLIBC_TARGETS = [BAREMETAL_PICOLIBC_RISCV32, BAREMETAL_PICOLIBC_RISCV64]
 
     # FreeBSD targets
     FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, FreeBSDTargetInfo)
