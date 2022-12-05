@@ -735,7 +735,7 @@ class Project(SimpleProject):
             return []
         elif cbt == BuildType.DEBUG:
             # TODO: once clang's -Og is useful: if self.get_compiler_info(self.CC).supports_Og_flag:
-            if self.get_compiler_info(self.CC).compiler == "gcc":
+            if self.get_compiler_info(self.CC).compiler == "gcc" or self.use_asan:
                 return ["-Og"]
             return ["-O0"]
         elif cbt in (BuildType.RELEASE, BuildType.RELWITHDEBINFO):

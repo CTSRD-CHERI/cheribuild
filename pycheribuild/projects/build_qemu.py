@@ -138,6 +138,9 @@ class BuildQEMUBase(AutotoolsProject):
             self.configure_args.append("--disable-stack-protector")
             self.configure_args.append("--disable-pie")  # no need to build as PIE (this just slows down QEMU)
 
+        if self.build_type.should_include_debug_info:
+            self.configure_args.append("--enable-debug-info")
+
         if self.use_asan:
             self.configure_args.append("--enable-sanitizers")
             # Ensure that tests crash on UBSan reports
