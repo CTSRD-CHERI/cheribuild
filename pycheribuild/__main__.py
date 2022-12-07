@@ -77,7 +77,7 @@ def _update_check(config: DefaultCheriConfig, d: Path) -> None:
         msg_end = output.find(b"\n  (use \"git pull\" to update your local branch)")
         if msg_end > 0:
             output = output[behind_index:msg_end]
-        status_update("Current", d.name, "checkout can be updated: ", output.decode("utf-8"))
+        status_update("Current", d.name, "checkout can be updated:", output.decode("utf-8"))
         if input("Would you like to update before continuing? y/[n] (Enter to skip) ").lower().startswith("y"):
             git_version = get_program_version(Path(shutil.which("git") or "git"), config=config)
             # Use the autostash flag for Git >= 2.14
