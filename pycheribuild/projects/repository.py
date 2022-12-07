@@ -185,6 +185,25 @@ class GitRepository(SourceRepository):
             raise subprocess.CalledProcessError(is_ancestor.returncode, is_ancestor.args, output=is_ancestor.stdout,
                                                 stderr=is_ancestor.stderr)
 
+    @staticmethod
+    def get_remote_name(source_dir: Path, warning_func: typing.Callable[..., None]):
+        # Try to get the name of the default remote from the configured upstream branch
+        try:
+            revparse = run_command(["git", "-C", source_dir, "rev-parse", "--symbolic-full-name",
+                                    "@{upstream}"], run_in_pretend_mode=True, capture_output=True,
+                                   capture_error=True).stdout.decode("utf-8")
+            if revparse.startswith("refs/remotes") and len(revparse.split("/")) > 3:
+                return revparse.split("/")[2]
+            else:
+                warning_func("Could not parse git rev-parse output. ",
+                             "Output was", revparse, "-- will not attempt to update remote URLs.")
+        except subprocess.CalledProcessError as exc:
+            if b"no upstream configured" in exc.stderr:
+                return None
+            else:
+                warning_func("git rev-parse failed, will not attempt to update remote URLs:", exc)
+        return None
+
     def ensure_cloned(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path,
                       skip_submodules=False) -> None:
         if current_project.config.skip_clone:
@@ -304,27 +323,9 @@ class GitRepository(SourceRepository):
         if not src_dir.exists():
             return
 
-        def get_remote_name():
-            # Try to get the name of the default remote from the configured upstream branch
-            try:
-                revparse = run_command(["git", "-C", base_project_source_dir, "rev-parse", "--symbolic-full-name",
-                                        "@{upstream}"], run_in_pretend_mode=True, capture_output=True,
-                                       capture_error=True).stdout.decode("utf-8")
-                if revparse.startswith("refs/remotes") and len(revparse.split("/")) > 3:
-                    return revparse.split("/")[2]
-                else:
-                    current_project.warning("Could not parse git rev-parse output. ",
-                                            "Output was", revparse, "-- will not attempt to update remote URLs.")
-            except subprocess.CalledProcessError as exc:
-                if b"no upstream configured" in exc.stderr:
-                    return None
-                else:
-                    current_project.warning("git rev-parse failed, will not attempt to update remote URLs:", exc)
-            return None
-
         # handle repositories that have moved:
         if src_dir.exists() and self.old_urls:
-            remote_name = get_remote_name()
+            remote_name = self.get_remote_name(src_dir, current_project.warning)
             if remote_name is not None:
                 remote_url = run_command("git", "remote", "get-url", remote_name, capture_output=True,
                                          cwd=src_dir).stdout.strip()
@@ -377,7 +378,8 @@ class GitRepository(SourceRepository):
                         # If the branch doesn't exist and there are multiple upstreams with that branch, use --track
                         # to create a new branch that follows the upstream one
                         if e.stderr.strip().endswith(b") remote tracking branches"):
-                            run_command("git", "checkout", "--track", f"{get_remote_name()}/{default_branch}",
+                            remote = self.get_remote_name(src_dir, current_project.warning)
+                            run_command("git", "checkout", "--track", f"{remote}/{default_branch}",
                                         cwd=src_dir, capture_error=True)
                         else:
                             raise e
