@@ -532,13 +532,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
                              kernel_only_target=False, **kwargs) -> None:
         super().setup_config_options(kernel_only_target=kernel_only_target, **kwargs)
         if cls._xtarget:
-            # KERNCONF always depends on the target, so we don't inherit this config option. The only exception is
-            # the global --kernel-config option that is provided for convenience and backwards compat.
-            cls.kernel_config = cls.add_config_option(
-                "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
+            # KERNCONF always depends on the target, so we don't inherit this config option.
+            cls.option_kernel_config = cls.add_config_option(
+                "kernel-config", metavar="CONFIG", show_help=True, nargs="+", kind=list,
                 default=ComputedDefaultValue(
                     function=lambda _, p:
-                        p.default_kernel_config() if p.has_default_buildkernel_kernel_config else None,
+                        [p.default_kernel_config()] if p.has_default_buildkernel_kernel_config else None,
                     as_string="target-dependent, usually GENERIC"),
                 use_default_fallback_config_names=False,  #
                 help="The kernel configuration to use for `make buildkernel`")  # type: str
@@ -615,6 +614,15 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # XXX: this is not correct if we were to support a CHERI-64 userspace
             assert not cls._xtarget.is_hybrid_or_purecap_cheri()
             cls.build_lib32 = False
+
+    @property
+    def kernel_config(self):
+        # Shorthand to access the default kernel specified by the kernel-config option.
+        # The configuration option can be a list but the kernel_config is always the default
+        # kernel configuration to build, whether the option overrides it or it is the default one.
+        if self.option_kernel_config is None:
+            return None
+        return self.option_kernel_config[0]
 
     def get_default_kernel_platform(self) -> ConfigPlatform:
         if self.crosscompile_target.is_aarch64(include_purecap=True):
@@ -758,9 +766,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.kernel_toolchain_exists: bool = False
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
         if self.has_default_buildkernel_kernel_config:
-            assert self.kernel_config is not None
-        self.make_args.set(**self.arch_build_flags)
+            assert self.option_kernel_config is not None
         self.extra_kernels = []
+        if self.option_kernel_config is not None:
+            # The first kernel configuration is the default one, all the others are new extra configs.
+            # This will be non-empty when the kernel-config list is overridden from cheribuild configuration.
+            self.extra_kernels += self.option_kernel_config[1:]
+        self.make_args.set(**self.arch_build_flags)
 
         if self.subdir_override:
             # build only part of the tree
@@ -1594,6 +1606,9 @@ class BuildCHERIBSD(BuildFreeBSD):
             "caprevoke-kernel", show_help=True, _allow_unknown_targets=True,
             only_add_for_targets=CompilationTargets.ALL_CHERIBSD_CHERI_TARGETS_WITH_HYBRID,
             help="Build kernel with caprevoke support (experimental)")
+
+        cls.external_configs = cls.add_config_option("extra-kernel-configs", metavar="CONFIG", default=[], kind=list,
+                                                     nargs="+", help="Additional kernel configuration files to build")
         if kernel_only_target:
             return  # The remaining options only affect the userspace build
         cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=False,
@@ -1606,6 +1621,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         configs = self.extra_kernel_configs()
         self.extra_kernels += [c.kernconf for c in configs if not c.mfsroot]
         self.extra_kernels_with_mfs += [c.kernconf for c in configs if c.mfsroot]
+        self.extra_kernels += self.external_configs
 
     def get_default_kernel_abi(self) -> KernelABI:
         # XXX: Because the config option has _allow_unknown_targets it exists
@@ -1634,6 +1650,9 @@ class BuildCHERIBSD(BuildFreeBSD):
     def _get_kABIs_to_build(self) -> "list[KernelABI]":
         default_kABI = self.get_default_kernel_abi()
         kernABIs = [default_kABI]
+        # If we are ovveriding the kernel configurations list, only build the default ABI
+        if self.kernel_config and self.kernel_config != self.default_kernel_config():
+            return kernABIs
         # XXX: Because the config option has _allow_unknown_targets it exists
         # in the base class and thus still inherited by non-purecap-kernel
         # targets
@@ -1683,7 +1702,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "list[str]":
         default = super().get_kernel_configs(platform)
         extra = filter_kernel_configs(self.extra_kernel_configs(), platform=platform, kABI=None)
-        return default + [c.kernconf for c in extra]
+        return default + [c.kernconf for c in extra] + self.external_configs
 
     def setup(self) -> None:
         super().setup()
@@ -1824,9 +1843,11 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
 
     def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "typing.List[str]":
         if self.kernel_config is not None:
-            return [self.kernel_config]
+            return [self.kernel_config] + self.external_configs
         configs = self._get_all_kernel_configs()
-        return [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kABI=None)]
+        conf_names = [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kABI=None)]
+        conf_names += self.external_configs
+        return conf_names
 
     def get_kernel_install_path(self, kernconf: str = None) -> Path:
         """ Get the installed kernel path for an MFS kernel config that has been built. """

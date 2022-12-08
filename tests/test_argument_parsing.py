@@ -391,58 +391,6 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assert not cheribsd_riscv_hybrid.debug_kernel, "riscv64-hybrid should have a JSON false override for debug-kernel"
 
 
-def test_kernconf():
-    # The kernel-config command line option is special: There is a global (command-line-only) flag that is used
-    # as the default, but otherwise there should be no inheritance
-    config = _parse_arguments([])
-    cheribsd_riscv_hybrid = _get_cheribsd_instance("cheribsd-riscv64-hybrid", config)
-    cheribsd_riscv = _get_cheribsd_instance("cheribsd-riscv64", config)
-    freebsd_riscv = _get_target_instance("freebsd-riscv64", config, BuildFreeBSD)
-    freebsd_native = _get_target_instance("freebsd-amd64", config, BuildFreeBSD)
-    assert config.freebsd_kernconf is None
-    assert freebsd_riscv.kernel_config == "QEMU"
-    assert cheribsd_riscv_hybrid.kernel_config == "CHERI-QEMU"
-    assert freebsd_native.kernel_config == "GENERIC"
-
-    # Check that --kernconf is used as the fallback
-    config = _parse_arguments(["--kernconf=LINT", "--freebsd-riscv64/kernel-config=FOO"])
-    assert config.freebsd_kernconf == "LINT"
-    attr = inspect.getattr_static(freebsd_riscv, "kernel_config")
-    # previously we would replace the command line attribute with a string -> check this is no longer true
-    assert isinstance(attr, JsonAndCommandLineConfigOption)
-    assert freebsd_riscv.kernel_config == "FOO"
-    assert cheribsd_riscv_hybrid.kernel_config == "LINT"
-    assert freebsd_native.kernel_config == "LINT"
-
-    config = _parse_arguments(["--kernconf=LINT", "--cheribsd-riscv64-hybrid/kernel-config=SOMETHING"])
-    assert config.freebsd_kernconf == "LINT"
-    assert freebsd_riscv.kernel_config == "LINT"
-    assert cheribsd_riscv_hybrid.kernel_config == "SOMETHING"
-    assert freebsd_native.kernel_config == "LINT"
-
-    config = _parse_config_file_and_args(b'{ "cheribsd-riscv64/kernel-config": "RISCV64_CONFIG" }',
-                                         "--kernconf=GENERIC")
-    assert config.freebsd_kernconf == "GENERIC"
-    assert cheribsd_riscv_hybrid.kernel_config == "GENERIC"
-    assert cheribsd_riscv.kernel_config == "RISCV64_CONFIG"
-    assert freebsd_riscv.kernel_config == "GENERIC"
-    assert freebsd_native.kernel_config == "GENERIC"
-
-    # kernel-config/--kernconf should only be valid on the command line:
-    with pytest.raises(ValueError, match="^Unknown config option 'freebsd/kernel-config'$"):
-        _parse_config_file_and_args(b'{ "freebsd/kernel-config": "GENERIC" }')
-    # kernel-config/--kernconf should only be valid on the command line:
-    with pytest.raises(ValueError, match="^Option 'kernel-config' cannot be used in the config file$"):
-        _parse_config_file_and_args(b'{ "kernel-config": "GENERIC" }')
-    with pytest.raises(ValueError, match="^Option 'kernconf' cannot be used in the config file$"):
-        _parse_config_file_and_args(b'{ "kernconf": "GENERIC" }')
-
-    # There should not be any unsuffixed kernel-config options:
-    for tgt in ("cheribsd", "freebsd", "cheribsd-mfs-root-kernel"):
-        with pytest.raises(KeyError, match=r"error: unknown argument '--[\w-]+/kernel-config'"):
-            _parse_arguments(["--" + tgt + "/source-directory=/foo", "--" + tgt + "/kernel-config", "ABC"])
-
-
 def test_duplicate_key():
     with pytest.raises(SyntaxError, match="duplicate key: 'output-root'"):
         _parse_config_file_and_args(b'{ "output-root": "/foo", "some-other-key": "abc", "output-root": "/bar" }')
@@ -691,6 +639,19 @@ def test_disk_image_path(target, expected_name):
                   "CHERI-PURECAP-QEMU",
                   "CHERI-FETT",
                   "CHERI-PURECAP-FETT"]),
+    pytest.param("cheribsd-riscv64-purecap",
+                 ["--cheribsd-riscv64-purecap/kernel-config", "FOOBAR_KERNEL",
+                  "--cheribsd-riscv64-purecap/no-build-alternate-abi-kernels"],
+                 "FOOBAR_KERNEL", []),
+    pytest.param("cheribsd-riscv64-purecap",
+                 ["--cheribsd-riscv64-purecap/kernel-config", "FOOBAR_KERNEL",
+                  "--cheribsd-riscv64-purecap/build-alternate-abi-kernels"],
+                 "FOOBAR_KERNEL", []),
+    pytest.param("cheribsd-riscv64-purecap",
+                 ["--cheribsd-riscv64-purecap/kernel-config", "FOOBAR_KERNEL",
+                  "BAZBAZ_KERNEL",
+                  "--cheribsd-riscv64-purecap/build-alternate-abi-kernels"],
+                 "FOOBAR_KERNEL", ["BAZBAZ_KERNEL"]),
     # Morello kernconf tests
     pytest.param("cheribsd-aarch64",
                  [],
@@ -704,6 +665,14 @@ def test_disk_image_path(target, expected_name):
                  [],
                  "GENERIC-MORELLO",
                  ["GENERIC-MORELLO-PURECAP"]),
+    pytest.param("cheribsd-morello-purecap",
+                 ["--cheribsd-morello-purecap/kernel-config", "FOOBAR_KERNEL",
+                  "--cheribsd-morello-purecap/no-build-alternate-abi-kernels"],
+                 "FOOBAR_KERNEL", []),
+    pytest.param("cheribsd-morello-purecap",
+                 ["--cheribsd-morello-purecap/kernel-config", "FOOBAR_KERNEL",
+                  "--cheribsd-morello-purecap/build-alternate-abi-kernels"],
+                 "FOOBAR_KERNEL", []),
     # FreeBSD kernel configs
     pytest.param("freebsd-i386", [], "GENERIC", []),
     pytest.param("freebsd-aarch64", [], "GENERIC", []),
@@ -954,9 +923,9 @@ def test_mfs_root_kernel_config_options():
                               "auto_var_init", "build_alternate_abi_kernels",
                               "build_bench_kernels", "build_dir", "build_fett_kernels", "build_fpga_kernels",
                               "build_type", "caprevoke_kernel", "debug_kernel", "default_kernel_abi",
-                              "extra_make_args", "fast_rebuild", "force_configure", "kernel_config",
-                              "mfs_root_image", "skip_update", "use_ccache", "use_lto", "with_clean",
-                              "with_debug_files", "with_debug_info"]
+                              "external_configs", "extra_make_args", "fast_rebuild", "force_configure",
+                              "mfs_root_image", "option_kernel_config", "skip_update", "use_ccache",
+                              "use_lto", "with_clean", "with_debug_files", "with_debug_info"]
 
 
 def test_mfs_root_kernel_inherits_defaults_from_cheribsd():
@@ -1006,13 +975,6 @@ def test_mfs_root_kernel_inherits_defaults_from_cheribsd():
     assert cheribsd_riscv64_purecap.kernel_config == "BASE_CONFIG_RISCV64"
     assert cheribsd_riscv64_hybrid.kernel_config == "CHERI-QEMU"
     assert mfs_riscv64.kernel_config is None
-    assert mfs_riscv64_hybrid.kernel_config == "MFS_CONFIG_RISCV64_HYBRID"
-    _parse_arguments(["--kernel-config=CONFIG_DEFAULT",
-                      "--cheribsd-riscv64-purecap/kernel-config=BASE_CONFIG_RISCV64",
-                      "--cheribsd-mfs-root-kernel-riscv64-hybrid/kernel-config=MFS_CONFIG_RISCV64_HYBRID"])
-    assert cheribsd_riscv64_purecap.kernel_config == "BASE_CONFIG_RISCV64"
-    assert cheribsd_riscv64_hybrid.kernel_config == "CONFIG_DEFAULT"
-    assert mfs_riscv64.kernel_config == "CONFIG_DEFAULT"
     assert mfs_riscv64_hybrid.kernel_config == "MFS_CONFIG_RISCV64_HYBRID"
 
 
