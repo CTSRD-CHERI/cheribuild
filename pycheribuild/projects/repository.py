@@ -115,6 +115,13 @@ class TargetBranchInfo(object):
 _PRETEND_RUN_GIT_COMMANDS = os.getenv("_TEST_SKIP_GIT_COMMANDS") is None
 
 
+# TODO: can use dataclasses once we depend on python 3.7+
+class GitBranchInfo(typing.NamedTuple):
+    local_branch: str
+    upstream_branch: typing.Optional[str] = None
+    remote_name: typing.Optional[str] = None
+
+
 class GitRepository(SourceRepository):
     def __init__(self, url: str, *, old_urls: typing.List[bytes] = None, default_branch: str = None,
                  force_branch: bool = False, temporary_url_override: str = None,
@@ -146,13 +153,39 @@ class GitRepository(SourceRepository):
         return self._default_branch
 
     @staticmethod
-    def get_current_branch(src_dir: Path) -> "typing.Optional[bytes]":
-        status = run_command("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                             capture_output=True, print_verbose_only=True, cwd=src_dir,
-                             run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS)
-        if status.stdout.startswith(b"## "):
-            return status.stdout[3:status.stdout.find(b"...")].strip()
-        return None
+    def get_branch_info(src_dir: Path) -> "typing.Optional[GitBranchInfo]":
+        try:
+            status = run_command("git", "status", "-b", "-s", "--porcelain=v2", "-u", "no",
+                                 capture_output=True, print_verbose_only=True, cwd=src_dir,
+                                 run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS)
+            if not status.stdout.startswith(b"# branch"):
+                return None  # unexpected output format
+            headers = {}
+            for line in status.stdout.splitlines():
+                if not line.startswith(b"#"):
+                    break  # end of metadata information
+                key, value = line[1:].decode("utf-8").split(None, maxsplit=1)
+                headers[key] = value
+            upstream = headers.get("branch.upstream", None)
+            remote_name, remote_branch = upstream.split("/", maxsplit=1) if upstream else (None, None)
+            return GitBranchInfo(local_branch=headers.get("branch.head", None),
+                                 remote_name=remote_name, upstream_branch=remote_branch)
+        except subprocess.CalledProcessError:
+            # Fall back to v1 output on error (v2 requires git 2.11 -- which should be available everywhere)
+            # TODO: can we drop this support? I believe all systems should have support for git 2.11
+            status = run_command("git", "status", "-b", "-s", "--porcelain", "-u", "no",
+                                 capture_output=True, print_verbose_only=True, cwd=src_dir,
+                                 run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS)
+            if not status.stdout.startswith(b"## "):
+                return None  # unexpected output format
+            branch_info = status.stdout.splitlines()[0].decode("utf-8")
+            local_end_idx = branch_info.find("...")
+            if local_end_idx == -1:
+                return GitBranchInfo(local_branch=branch_info[3:])   # no upstream configured
+            local_branch = branch_info[3:local_end_idx]
+            upstream = branch_info[local_end_idx+3:].split()[0].rstrip()
+            remote_name, remote_branch = upstream.split("/", maxsplit=1)
+            return GitBranchInfo(local_branch=local_branch, remote_name=remote_name, upstream_branch=remote_branch)
 
     @staticmethod
     def contains_commit(current_project: "Project", commit: str, *, src_dir: Path, expected_branch="HEAD",
@@ -184,25 +217,6 @@ class GitRepository(SourceRepository):
             # some other error -> raise so that I can see what went wrong
             raise subprocess.CalledProcessError(is_ancestor.returncode, is_ancestor.args, output=is_ancestor.stdout,
                                                 stderr=is_ancestor.stderr)
-
-    @staticmethod
-    def get_remote_name(source_dir: Path, warning_func: typing.Callable[..., None]):
-        # Try to get the name of the default remote from the configured upstream branch
-        try:
-            revparse = run_command(["git", "-C", source_dir, "rev-parse", "--symbolic-full-name",
-                                    "@{upstream}"], run_in_pretend_mode=True, capture_output=True,
-                                   capture_error=True).stdout.decode("utf-8")
-            if revparse.startswith("refs/remotes") and len(revparse.split("/")) > 3:
-                return revparse.split("/")[2]
-            else:
-                warning_func("Could not parse git rev-parse output. ",
-                             "Output was", revparse, "-- will not attempt to update remote URLs.")
-        except subprocess.CalledProcessError as exc:
-            if b"no upstream configured" in exc.stderr:
-                return None
-            else:
-                warning_func("git rev-parse failed, will not attempt to update remote URLs:", exc)
-        return None
 
     def ensure_cloned(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path,
                       skip_submodules=False) -> None:
@@ -325,9 +339,9 @@ class GitRepository(SourceRepository):
 
         # handle repositories that have moved:
         if src_dir.exists() and self.old_urls:
-            remote_name = self.get_remote_name(src_dir, current_project.warning)
-            if remote_name is not None:
-                remote_url = run_command("git", "remote", "get-url", remote_name, capture_output=True,
+            branch_info = self.get_branch_info(src_dir)
+            if branch_info is not None and branch_info.remote_name is not None:
+                remote_url = run_command("git", "remote", "get-url", branch_info.remote_name, capture_output=True,
                                          cwd=src_dir).stdout.strip()
                 # Strip any .git suffix to match more old URLs
                 if remote_url.endswith(b".git"):
@@ -340,7 +354,7 @@ class GitRepository(SourceRepository):
                     if remote_url == old_url:
                         current_project.warning(current_project.target, "still points to old repository", remote_url)
                         if current_project.query_yes_no("Update to correct URL?"):
-                            run_command("git", "remote", "set-url", remote_name, self.url,
+                            run_command("git", "remote", "set-url", branch_info.remote_name, self.url,
                                         run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, cwd=src_dir)
 
         # First fetch all the current upstream branch to see if we need to autostash/pull.
@@ -357,10 +371,9 @@ class GitRepository(SourceRepository):
 
         # Handle forced branches now that we have fetched the latest changes
         if src_dir.exists() and (self.force_branch or self.old_branches):
-            current_branch = self.get_current_branch(src_dir)
-            if current_branch is not None:
-                current_branch = current_branch.decode('utf-8')
-            if current_branch is None:
+            branch_info = self.get_branch_info(src_dir)
+            current_branch = branch_info.local_branch if branch_info is not None else None
+            if branch_info is None:
                 default_branch = None
             elif self.force_branch:
                 assert self.old_branches is None, "cannot set both force_branch and old_branches"
@@ -378,8 +391,7 @@ class GitRepository(SourceRepository):
                         # If the branch doesn't exist and there are multiple upstreams with that branch, use --track
                         # to create a new branch that follows the upstream one
                         if e.stderr.strip().endswith(b") remote tracking branches"):
-                            remote = self.get_remote_name(src_dir, current_project.warning)
-                            run_command("git", "checkout", "--track", f"{remote}/{default_branch}",
+                            run_command("git", "checkout", "--track", f"{branch_info.remote_name}/{default_branch}",
                                         cwd=src_dir, capture_error=True)
                         else:
                             raise e
