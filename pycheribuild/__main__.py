@@ -79,7 +79,7 @@ def _update_check(config: DefaultCheriConfig, d: Path) -> None:
             run_command("git", "branch", f"--set-upstream-to={branch_info.remote_name}/main", cwd=d)
             if branch_info.local_branch == "master":
                 # And rename master to main if possible.
-                run_command("git", "branch", "-m" "main", cwd=d)
+                run_command("git", "branch", "-m", "main", cwd=d, allow_unexpected_returncode=True)
 
     output = run_command(["git", "status", "-uno"], cwd=project_dir, config=config, capture_output=True,
                          print_verbose_only=True).stdout
