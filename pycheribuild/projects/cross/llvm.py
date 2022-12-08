@@ -186,6 +186,8 @@ class BuildLLVMBase(CMakeProject):
             self.add_cmake_options(LLVM_LINK_LLVM_DYLIB=True)
         if self.install_toolchain_only:
             self.add_cmake_options(LLVM_INSTALL_TOOLCHAIN_ONLY=True)
+        else:
+            self.add_cmake_options(LLVM_INSTALL_UTILS=True)
         if self.skip_static_analyzer:
             # save some build time by skipping the static analyzer
             self.add_cmake_options(CLANG_ENABLE_STATIC_ANALYZER=False,
