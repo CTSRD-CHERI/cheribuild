@@ -12,24 +12,22 @@ RUN apt-get update && apt-get install -y \
   samba \
   telnet \
   texlive-base \
-  texinfo
-
-# RUN git config --global http.sslVerify false
-# RUN cd /tmp && git clone https://github.com/arichardson/bmake && cd bmake \
-#  && ./configure --with-default-sys-path=/usr/local/share/mk --with-machine=amd64 --without-meta --without-filemon --prefix=/usr/local \
-#  && sh ./make-bootstrap.sh && make install && rm -rf /tmp/bmake
+  texinfo \
+  libtool pkg-config autotools-dev automake autoconf \
+  libarchive-dev libglib2.0-dev libpixman-1-dev \
+  bison groff-base flex \
+  cmake \
+  clang-12 lld-12 \
+  gosu && \
+  apt-get clean
 
 COPY cheribuild.json /root/.config/cheribuild.json
-
-# deps to build QEMU+elftoolchain:
-RUN apt-get update && apt-get install -y \
-  libtool pkg-config autotools-dev automake autoconf libglib2.0-dev libpixman-1-dev \
-  bison groff-base libarchive-dev flex
-
-RUN apt-get update && apt-get install -y cmake
-
-RUN apt-get install -y clang-12 lld-12
+COPY entrypoint.sh /usr/bin/entrypoint.sh
 
 VOLUME ["/cheribuild", "/source", "/build", "/output"]
 ENV PATH /cheribuild:$PATH
-CMD bash
+# We use an ENTRYPOINT script to ensure that cheribuild is run as a non-root
+# user that has a UID/GID matching the host so that file ownership in the
+# volumes
+ENTRYPOINT ["/usr/bin/entrypoint.sh"]
+CMD ["/bin/bash"]
