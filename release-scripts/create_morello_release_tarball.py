@@ -34,6 +34,7 @@ from pathlib import Path
 module_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(module_dir))
 # noinspection PyProtectedMember
+import pycheribuild.check_version  # noqa
 from pycheribuild.utils import default_make_jobs_count, GlobalConfig, warning_message  # noqa: E402
 from pycheribuild.processutils import run_command  # noqa: E402
 

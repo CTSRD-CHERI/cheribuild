@@ -12,6 +12,7 @@ except ImportError:
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
+import pycheribuild.check_version  # noqa
 from pycheribuild.mtree import MtreeFile  # noqa: E402
 
 HAVE_LCHMOD = True

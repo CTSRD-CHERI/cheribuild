@@ -37,6 +37,7 @@ import sys
 module_dir = Path(__file__).resolve().parent
 sys.path.append(str(module_dir))
 # noinspection PyPep8
+import pycheribuild.check_version  # noqa
 from pycheribuild.__main__ import main  # "__main__" case  # noqa: E402
 
 main()

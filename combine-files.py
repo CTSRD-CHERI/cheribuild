@@ -121,6 +121,7 @@ def check_all_files_used(directory: Path):
 
 
 # append all the individual files in the right order
+add_filtered_file(script_dir / "check_version.py")
 add_filtered_file(script_dir / "colour.py")
 add_filtered_file(script_dir / "utils.py")
 add_filtered_file(script_dir / "mtree.py")
