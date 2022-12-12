@@ -797,8 +797,21 @@ class BuildLibXml2(CrossCompileCMakeProject):
     def setup(self):
         super().setup()
         # TODO: could enable these for the host version
-        self.add_cmake_options(LIBXML2_WITH_PYTHON=False, LIBXML2_WITH_LZMA=False, LIBXML2_WITH_MODULES=False)
+        self.add_cmake_options(LIBXML2_WITH_PYTHON=False, LIBXML2_WITH_LZMA=False)
+        self.add_cmake_options(LIBXML2_WITH_MODULES=not self.force_static_linkage)
         self.add_cmake_options(BUILD_SHARED_LIBS=not self.force_static_linkage)
+
+
+class BuildLibXslt(CrossCompileCMakeProject):
+    repository = GitRepository("https://gitlab.gnome.org/GNOME/libxslt.git")
+    dependencies = ["libxml2"]
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+
+    def setup(self):
+        super().setup()
+        self.add_cmake_options(BUILD_SHARED_LIBS=not self.force_static_linkage)
+        self.add_cmake_options(LIBXSLT_WITH_PYTHON=False)  # libxml2 built without python
 
 
 class BuildQtWebkit(CrossCompileCMakeProject):
