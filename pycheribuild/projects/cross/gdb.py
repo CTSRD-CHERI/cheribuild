@@ -28,38 +28,12 @@
 # SUCH DAMAGE.
 #
 import shutil
-import typing
-from pathlib import Path
 
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
                                   DefaultInstallDir, GitRepository, Linkage, MakeCommandKind)
 from .gmp import BuildGmp
 from ..project import ComputedDefaultValue
-from ...processutils import run_command
-from ...utils import OSInfo, status_update
-
-
-class TemporarilyRemoveProgramsFromSdk(object):
-    def __init__(self, programs: "typing.List[str]", config: CheriConfig, sdk_bindir: Path):
-        self.programs = programs
-        self.config = config
-        self.sdk_bindir = sdk_bindir
-
-    def __enter__(self):
-        status_update('Temporarily moving', self.programs, "from", self.sdk_bindir)
-        for prog in self.programs:
-            if (self.sdk_bindir / prog).exists():
-                run_command("mv", "-f", prog, prog + ".backup", cwd=self.sdk_bindir,
-                            config=self.config, print_verbose_only=True)
-        return self
-
-    def __exit__(self, *exc):
-        status_update('Restoring', self.programs, "in", self.sdk_bindir)
-        for prog in self.programs:
-            if (self.sdk_bindir / (prog + ".backup")).exists() or self.config.pretend:
-                run_command("mv", "-f", prog + ".backup", prog, cwd=self.sdk_bindir, config=self.config,
-                            print_verbose_only=True)
-        return False
+from ...utils import OSInfo
 
 
 class BuildGDBBase(CrossCompileAutotoolsProject):
@@ -213,14 +187,11 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         super().configure()
 
     def compile(self, **kwargs):
-        with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config,
-                                              self.install_dir):
-            # also install objdump
-            self.run_make(make_target="all-binutils", cwd=self.build_dir)
-            self.run_make(make_target="all-gdb", cwd=self.build_dir)
-            # And for native GDB also build ld.bfd
-            if self.compiling_for_host():
-                self.run_make(make_target="all-ld", cwd=self.build_dir)
+        self.run_make(make_target="all-gdb", cwd=self.build_dir)
+        self.run_make(make_target="all-binutils", cwd=self.build_dir)  # also install objdump
+        # And for native GDB also build ld.bfd
+        if self.compiling_for_host():
+            self.run_make(make_target="all-ld", cwd=self.build_dir)
 
     def install(self, **kwargs):
         self.run_make_install(target="install-gdb")
