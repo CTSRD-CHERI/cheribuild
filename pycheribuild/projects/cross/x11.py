@@ -561,7 +561,7 @@ class BuildXVncServer(X11AutotoolsProject):
 
 class BuildXServer(X11MesonProject):
     target = "xserver"
-    dependencies = ["libx11"]
+    dependencies = ["libx11", "dbus", "pixman", "libxshmfence", "libxkbfile", "libxfont", "libxcvt", "libxext"]
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/xserver.git")
 
     def setup(self):
