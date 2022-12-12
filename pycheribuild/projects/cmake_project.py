@@ -177,7 +177,11 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             self.add_cmake_options(
                 CMAKE_SHARED_LIBRARY_SUFFIX=".a",
                 CMAKE_FIND_LIBRARY_SUFFIXES=".a",
-                CMAKE_EXTRA_SHARED_LIBRARY_SUFFIXES=".a")
+                CMAKE_EXTRA_SHARED_LIBRARY_SUFFIXES=".a",
+                CMAKE_SKIP_RPATH=True)
+            if self.compiling_for_host():
+                self.add_cmake_options(
+                    CMAKE_PROJECT_INCLUDE=Path(__file__).absolute().parent.parent / "files/ForceStaticLibraries.cmake")
         else:
             # Use $ORIGIN in the build RPATH (this should make it easier to run tests without having the absolute
             # build directory mounted).
@@ -186,11 +190,11 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             self.add_cmake_options(CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
             # CMake does not add the install directory even if it's a non-default location, so add it manually.
             self.add_cmake_options(CMAKE_INSTALL_RPATH="$ORIGIN/../lib")
-        if not self.compiling_for_host() and self.make_args.subkind == MakeCommandKind.Ninja:
-            # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
-            # Fixed in https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 (3.21.20210625)
-            self.add_cmake_options(
-                CMAKE_BUILD_WITH_INSTALL_RPATH=self._get_configure_tool_version() < (3, 21, 20210625))
+            if not self.compiling_for_host() and self.make_args.subkind == MakeCommandKind.Ninja:
+                # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
+                # Fixed in https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 (3.21.20210625)
+                self.add_cmake_options(
+                    CMAKE_BUILD_WITH_INSTALL_RPATH=self._get_configure_tool_version() < (3, 21, 20210625))
         # NB: Don't add the user provided options here, we append add them in setup_late() so that they are put last.
 
     def setup_late(self):
@@ -257,8 +261,12 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         # This means we may not need the toolchain file at all
         # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
         # TODO: avoid the toolchain file and set all flags on the command line
+        force_static_script = file.parent / "ForceStaticLibraries.cmake"
+        if self.force_static_linkage:
+            self.write_file(force_static_script, include_local_file("files/ForceStaticLibraries.cmake"),
+                            overwrite=True)
         self._prepare_toolchain_file_common(file, TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
-                                            TOOLCHAIN_FILE_PATH=file.absolute())
+                                            FORCE_STATIC_LIBRARIES_CMAKE_SCRIPT=force_static_script)
 
     def configure(self, **kwargs) -> None:
         # make sure we get a completely fresh cache when --reconfigure is passed:
