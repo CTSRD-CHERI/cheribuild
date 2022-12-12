@@ -29,8 +29,7 @@ class BuildDBus(CrossCompileCMakeProject):
     target = "dbus"
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
     repository = GitRepository("https://gitlab.freedesktop.org/dbus/dbus.git",
-                               temporary_url_override="https://gitlab.freedesktop.org/arichardson/dbus.git",
-                               url_override_reason="Various fixes for FreeBSD and CHERI (most submitted as MRs)")
+                               old_urls=[b"https://gitlab.freedesktop.org/arichardson/dbus.git"])
     dependencies = ["libexpat"]
     ctest_script_extra_args = ["--test-timeout", str(120 * 60)]  # Tests can take a long time to run
 
