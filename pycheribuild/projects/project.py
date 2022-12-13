@@ -765,10 +765,21 @@ class Project(SimpleProject):
             assert not self.compiling_for_cheri()
             result.append("-fsanitize=cfi")
             result.append("-fvisibility=hidden")
+        result.extend(self.essential_compiler_and_linker_flags)
+        result.extend(self.optimization_flags)
+        result.extend(self.COMMON_FLAGS)
+        result.extend(self.compiler_warning_flags)
+        if self.config.use_cheri_ubsan and self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            compiler = self.get_compiler_info(self.target_info.c_compiler)
+            # This needs to be checked late since we depend on the --target/-mabi flags for the -fsanitize= check.
+            if compiler.supports_sanitizer_flag("-fsanitize=cheri", result):
+                result.append("-fsanitize=cheri")
+                if not self.config.use_cheri_ubsan_runtime:
+                    result.append("-fsanitize-trap=cheri")
+            else:
+                self.warning("Compiler", compiler.path, "does not support -fsanitize=cheri, please update your SDK")
         if self.compiling_for_host():
-            return result + self.COMMON_FLAGS + self.compiler_warning_flags + self.optimization_flags
-        result += self.essential_compiler_and_linker_flags + self.optimization_flags
-        result += self.COMMON_FLAGS + self.compiler_warning_flags
+            return result
         if self.config.csetbounds_stats:
             result.extend(["-mllvm", "-collect-csetbounds-output=" + str(self.csetbounds_stats_file),
                            "-mllvm", "-collect-csetbounds-stats=csv",
@@ -1617,6 +1628,9 @@ class _CMakeAndMesonSharedLogic(Project):
         def __str__(self) -> str:
             return str(self.args)
 
+        def __repr__(self) -> str:
+            return str(self)
+
     class EnvVarPathList:
         """Simple wrapper to distinguish CMake (:-separated string) from Meson (python-style list)"""
 
@@ -1625,6 +1639,9 @@ class _CMakeAndMesonSharedLogic(Project):
 
         def __str__(self) -> str:
             return str(self.paths)
+
+        def __repr__(self) -> str:
+            return str(self)
 
     def _toolchain_file_list_to_str(self, value: list) -> str:
         raise NotImplementedError()

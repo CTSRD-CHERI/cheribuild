@@ -217,16 +217,6 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             pass  # No additional flags needed for x86_64.
         else:
             project.warning("Compiler flags might be wong, only native + MIPS checked so far")
-
-        # This needs to be checked last since we depend on the --target/-mabi flags for the -fsanitize= check.
-        if config.use_cheri_ubsan and xtarget.is_hybrid_or_purecap_cheri():
-            compiler = project.get_compiler_info(instance.c_compiler)
-            if compiler.supports_sanitizer_flag("-fsanitize=cheri", result):
-                result.append("-fsanitize=cheri")
-                if not config.use_cheri_ubsan_runtime:
-                    result.append("-fsanitize-trap=cheri")
-            else:
-                project.warning("Compiler", compiler.path, "does not support -fsanitize=cheri, please update your SDK")
         return result
 
     @classmethod
