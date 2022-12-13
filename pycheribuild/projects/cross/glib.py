@@ -36,7 +36,10 @@ class BuildGlib(CrossCompileMesonProject):
 
     def setup(self) -> None:
         super().setup()
-        self.add_meson_options(xattr=False)
-        self.cross_warning_flags.append("-Werror=int-conversion")
+        self.add_meson_options(xattr=False, tests=True)
+        self.common_warning_flags.append("-Werror=int-conversion")
+        self.common_warning_flags.append("-Werror=incompatible-pointer-types")
+        if self.compiling_for_cheri():
+            self.common_warning_flags.append("-Wshorten-cap-to-int")
         if self.target_info.is_freebsd():
             self.add_meson_options(b_lundef=False)  # undefined reference to environ
