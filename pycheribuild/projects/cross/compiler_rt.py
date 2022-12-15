@@ -42,7 +42,8 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     llvm_project = BuildCheriLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
     target = "compiler-rt"
-    default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
+    native_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
+    cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     _check_install_dir_conflict = False
     supported_architectures = \
         CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
@@ -50,6 +51,10 @@ class BuildCompilerRt(CrossCompileCMakeProject):
         CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
 
     def setup(self):
+        # For the NATIVE variant we want to install to the compiler resource dir:
+        if self.compiling_for_host():
+            cc = self.llvm_project.get_native_install_path(self.config) / "bin/clang"
+            self._install_dir = self.get_compiler_info(cc).get_resource_dir()
         super().setup()
         if self.target_info.is_rtems() or self.target_info.is_baremetal():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")  # RTEMS only needs static libs
@@ -108,7 +113,6 @@ class BuildUpstreamCompilerRt(BuildCompilerRt):
     llvm_project = BuildUpstreamLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
     target = "upstream-compiler-rt"
-    # TODO: default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
     default_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     supported_architectures = [CompilationTargets.NATIVE]
 
@@ -135,7 +139,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             # Conflicting file names for RISC-V non-CHERI,hybrid, and purecap -> install to prefixed directory
             # instead of the compiler resource directory
             return DefaultInstallDir.ROOTFS_LOCALBASE
-        return DefaultInstallDir.COMPILER_RESOURCE_DIR
+        return DefaultInstallDir.IN_BUILD_DIRECTORY
 
     def linkage(self):
         # The default value of STATIC (for baremetal targets) would add additional flags that are not be needed
