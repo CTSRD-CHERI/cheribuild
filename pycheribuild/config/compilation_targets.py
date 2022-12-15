@@ -39,7 +39,7 @@ from pathlib import Path
 from .chericonfig import CheriConfig
 from .config_loader_base import ConfigOptionBase, ConfigLoaderBase
 from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi,
-                          TargetInfo, AArch64FloatSimdOptions)
+                          TargetInfo, AArch64FloatSimdOptions, DefaultInstallDir)
 from ..projects.project import Project
 from ..utils import cached_property, is_jenkins_build
 
@@ -77,6 +77,25 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         return [cls._get_compiler_project().get_class_for_target(BasicCompilationTargets.NATIVE).target]
+
+    def _rootfs_path(self) -> Path:
+        xtarget = self.target.get_rootfs_target()
+        # noinspection PyUnresolvedReferences
+        return self._get_rootfs_class(xtarget).get_install_dir(self, xtarget)
+
+    def default_install_dir(self, install_dir: DefaultInstallDir) -> Path:
+        if install_dir == DefaultInstallDir.ROOTFS_OPTBASE:
+            project = self.project
+            if hasattr(project, "path_in_rootfs"):
+                assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
+                return self._rootfs_path() / project.path_in_rootfs[1:]
+            # noinspection PyUnresolvedReferences
+            return self._rootfs_path() / "opt" / self.install_prefix_dirname / project._rootfs_install_dir_name
+        elif install_dir == DefaultInstallDir.KDE_PREFIX:
+            return Path(self._rootfs_path(), "opt", self.install_prefix_dirname, "kde")
+        elif install_dir == DefaultInstallDir.ROOTFS_LOCALBASE:
+            return self.sysroot_dir
+        return super().default_install_dir(install_dir)
 
     @property
     def c_compiler(self) -> Path:

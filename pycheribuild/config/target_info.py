@@ -43,7 +43,7 @@ from ..processutils import get_compiler_info, CompilerInfo
 
 __all__ = ["AbstractProject", "AArch64FloatSimdOptions", "AutoVarInit", "BasicCompilationTargets",  # no-combine
            "CPUArchitecture",  "CrossCompileTarget", "CompilerType", "MipsFloatAbi", "TargetInfo",  # no-combine
-           "NativeTargetInfo"]  # no-combine
+           "NativeTargetInfo", "DefaultInstallDir"]  # no-combine
 
 
 class CPUArchitecture(Enum):
@@ -118,6 +118,28 @@ class AutoVarInit(Enum):
             return ["-ftrivial-auto-var-init=pattern"]
         else:
             raise NotImplementedError()
+
+
+class DefaultInstallDir(Enum):
+    DO_NOT_INSTALL = "Should not be installed"
+    IN_BUILD_DIRECTORY = "$BUILD_DIR/test-install-prefix"
+    # Note: ROOTFS_LOCALBASE will be searched for libraries, ROOTFS_OPTBASE will not. The former should be used for
+    # libraries that will be used by other programs, and the latter should be used for standalone programs (such as
+    # PostgreSQL or WebKit).
+    # Note: for ROOTFS_OPTBASE, the path_in_rootfs attribute can be used to override the default of /opt/...
+    # This also works for ROOTFS_LOCALBASE
+    ROOTFS_OPTBASE = "The rootfs for this target (<rootfs>/opt/<arch>/<program> by default)"
+    ROOTFS_LOCALBASE = "The sysroot for this target (<rootfs>/usr/local/<arch> by default)"
+    KDE_PREFIX = "The sysroot for this target (<rootfs>/opt/<arch>/kde by default)"
+    CHERI_SDK = "The CHERI SDK directory"
+    MORELLO_SDK = "The Morello SDK directory"
+    BOOTSTRAP_TOOLS = "The bootstap tools directory"
+    CUSTOM_INSTALL_DIR = "Custom install directory"
+    SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE = "Sysroot for baremetal projects, rootfs otherwise"
+
+
+_INVALID_INSTALL_DIR: Path = Path("/this/dir/should/be/overwritten/and/not/used/!!!!")
+_DO_NOT_INSTALL_PATH: Path = Path("/this/project/should/not/be/installed!!!!")
 
 
 class AbstractProject(FileSystemUtils):
@@ -313,6 +335,16 @@ class TargetInfo(ABC):
         """Relative path from the root to LOCALBASE (usr/local on FreeBSD)"""
         raise RuntimeError("Should only be called for FreeBSD targets")
 
+    def default_install_dir(self, install_dir: DefaultInstallDir) -> Path:
+        if install_dir == DefaultInstallDir.DO_NOT_INSTALL:
+            return _DO_NOT_INSTALL_PATH
+        elif install_dir == DefaultInstallDir.IN_BUILD_DIRECTORY:
+            # noinspection PyUnresolvedReferences
+            return self.project.build_dir / "test-install-prefix"
+        elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
+            return _INVALID_INSTALL_DIR
+        raise NotImplementedError(f"Unsupported {install_dir} for {self}")
+
     @property
     @abstractmethod
     def c_preprocessor(self) -> Path:
@@ -498,6 +530,26 @@ class NativeTargetInfo(TargetInfo):
     def get_target_triple(self, *, include_version: bool) -> str:
         return self.project.get_compiler_info(self.c_compiler).default_target
 
+    def default_install_dir(self, install_dir: DefaultInstallDir) -> Path:
+        config = self.config
+        if install_dir == DefaultInstallDir.ROOTFS_OPTBASE:
+            raise ValueError("Should not use DefaultInstallDir.ROOTFS_OPTBASE for native builds!")
+        elif install_dir == DefaultInstallDir.KDE_PREFIX:
+            if self._is_libcompat_target:
+                return config.output_root / ("kde-compat" + self._compat_abi_suffix)
+            return self.config.output_root / "kde"
+        elif install_dir == DefaultInstallDir.ROOTFS_LOCALBASE:
+            if self._is_libcompat_target:
+                return config.output_root / ("local" + self._compat_abi_suffix)
+            return config.output_root / "local"
+        elif install_dir == DefaultInstallDir.CHERI_SDK:
+            return config.cheri_sdk_dir
+        elif install_dir == DefaultInstallDir.MORELLO_SDK:
+            return config.morello_sdk_dir
+        elif install_dir == DefaultInstallDir.BOOTSTRAP_TOOLS:
+            return config.other_tools_dir
+        return super().default_install_dir(install_dir)
+
     @property
     def c_compiler(self) -> Path:
         if self.project.custom_c_compiler is not None:
@@ -568,6 +620,10 @@ class NativeTargetInfo(TargetInfo):
         if OSInfo.is_suse() and self.pointer_size > 4:
             return "lib64"
         return "lib"
+
+    @cached_property
+    def _is_libcompat_target(self) -> bool:
+        return _is_native_purecap() and not self.target.is_cheri_purecap()
 
     @cached_property
     def _compat_abi_suffix(self) -> str:

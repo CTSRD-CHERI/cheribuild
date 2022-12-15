@@ -49,8 +49,8 @@ from .repository import (ExternallyManagedSourceRepository, GitRepository, Mercu
 from ..config.chericonfig import BuildType, CheriConfig, ComputedDefaultValue, Linkage, supported_build_type_strings
 from ..config.config_loader_base import ConfigOptionBase
 from ..config.target_info import (AbstractProject, AutoVarInit, BasicCompilationTargets, CPUArchitecture,
-                                  CrossCompileTarget, TargetInfo)
-from ..processutils import (commandline_to_str, CompilerInfo, get_compiler_info, get_program_version,
+                                  CrossCompileTarget, DefaultInstallDir, TargetInfo)
+from ..processutils import (commandline_to_str, CompilerInfo, get_program_version,
                             get_version_output, run_command, ssh_host_accessible)
 from ..utils import (AnsiColour, cached_property, classproperty, coloured, InstallInstructions,
                      is_jenkins_build, OSInfo, status_update, ThreadJoiner, remove_duplicates)
@@ -322,75 +322,9 @@ class MakeOptions(object):
         return self.kind != MakeCommandKind.CustomMakeTool
 
 
-class DefaultInstallDir(Enum):
-    DO_NOT_INSTALL = "Should not be installed"
-    IN_BUILD_DIRECTORY = "$BUILD_DIR/test-install-prefix"
-    # Note: ROOTFS_LOCALBASE will be searched for libraries, ROOTFS_OPTBASE will not. The former should be used for
-    # libraries that will be used by other programs, and the latter should be used for standalone programs (such as
-    # PostgreSQL or WebKit).
-    # Note: for ROOTFS_OPTBASE, the path_in_rootfs attribute can be used to override the default of /opt/...
-    # This also works for ROOTFS_LOCALBASE
-    ROOTFS_OPTBASE = "The rootfs for this target (<rootfs>/opt/<arch>/<program> by default)"
-    ROOTFS_LOCALBASE = "The sysroot for this target (<rootfs>/usr/local/<arch> by default)"
-    KDE_PREFIX = "The sysroot for this target (<rootfs>/opt/<arch>/kde by default)"
-    COMPILER_RESOURCE_DIR = "The compiler resource directory"
-    CHERI_SDK = "The CHERI SDK directory"
-    MORELLO_SDK = "The Morello SDK directory"
-    BOOTSTRAP_TOOLS = "The bootstap tools directory"
-    CUSTOM_INSTALL_DIR = "Custom install directory"
-    SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE = "Sysroot for baremetal projects, rootfs otherwise"
-
-
-_INVALID_INSTALL_DIR: Path = Path("/this/dir/should/be/overwritten/and/not/used/!!!!")
-_DO_NOT_INSTALL_PATH: Path = Path("/this/project/should/not/be/installed!!!!")
-
-
 # noinspection PyProtectedMember
 def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Path:
-    install_dir = project.get_default_install_dir_kind()
-    if install_dir == DefaultInstallDir.DO_NOT_INSTALL:
-        return _DO_NOT_INSTALL_PATH
-    elif install_dir == DefaultInstallDir.IN_BUILD_DIRECTORY:
-        return project.build_dir / "test-install-prefix"
-    elif install_dir == DefaultInstallDir.ROOTFS_OPTBASE:
-        assert not project.compiling_for_host(), "Should not use DefaultInstallDir.ROOTFS_OPTBASE for native builds!"
-        if hasattr(project, "path_in_rootfs"):
-            assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
-            return project.rootfs_dir / project.path_in_rootfs[1:]
-        return Path(
-            project.rootfs_dir / "opt" / project.target_info.install_prefix_dirname / project._rootfs_install_dir_name)
-    elif install_dir == DefaultInstallDir.KDE_PREFIX:
-        if project.compiling_for_host():
-            return config.output_root / "kde"
-        else:
-            return Path(project.rootfs_dir, "opt", project.target_info.install_prefix_dirname, "kde")
-    elif install_dir == DefaultInstallDir.COMPILER_RESOURCE_DIR:
-        compiler_for_resource_dir = project.CC
-        # For the NATIVE variant we want to install to CHERI clang:
-        if project.compiling_for_host():
-            compiler_for_resource_dir = config.cheri_sdk_bindir / "clang"
-        return get_compiler_info(compiler_for_resource_dir, config=config).get_resource_dir()
-    elif install_dir == DefaultInstallDir.ROOTFS_LOCALBASE:
-        if project.compiling_for_host():
-            return config.output_root / "local"
-        assert getattr(project, "path_in_rootfs", None) is None, \
-            "path_in_rootfs only applies to ROOTFS_OPTBASE: " + str(project)
-        return project.sdk_sysroot
-    elif install_dir == DefaultInstallDir.CHERI_SDK:
-        assert project.compiling_for_host(), "CHERI_SDK is only a valid install dir for native, " \
-                                             "use ROOTFS_LOCALBASE/ROOTFS_OPTBASE for cross"
-        return config.cheri_sdk_dir
-    elif install_dir == DefaultInstallDir.MORELLO_SDK:
-        assert project.compiling_for_host(), "MORELLO_SDK is only a valid install dir for native, " \
-                                             "use ROOTFS_LOCALBASE/ROOTFS_OPTBASE for cross"
-        return config.morello_sdk_dir
-    elif install_dir == DefaultInstallDir.BOOTSTRAP_TOOLS:
-        assert project.compiling_for_host(), "BOOTSTRAP_TOOLS is only a valid install dir for native, " \
-                                             "use ROOTFS_LOCALBASE/ROOTS for cross"
-        return config.other_tools_dir
-    elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
-        return _INVALID_INSTALL_DIR
-    raise ValueError(f"Unknown install dir for {project.target}")
+    return project.target_info.default_install_dir(project.get_default_install_dir_kind())
 
 
 def _default_install_dir_str(project: "Project") -> str:
@@ -538,6 +472,7 @@ class Project(SimpleProject):
 
     # useful for cross compile projects that use a prefix and DESTDIR
     _install_prefix: Optional[Path] = None
+    _install_dir: Path
     destdir: Optional[Path] = None
 
     __can_use_lld_map: "dict[str, bool]" = dict()
