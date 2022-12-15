@@ -42,7 +42,7 @@ class BuildEPollShim(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/jiixyj/epoll-shim",
                                temporary_url_override="https://github.com/arichardson/epoll-shim",
                                url_override_reason="https://github.com/jiixyj/epoll-shim/pull/36")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def configure(self, **kwargs):
         self.add_cmake_options(ENABLE_COMPILER_WARNINGS=True)
@@ -107,7 +107,7 @@ class BuildMtdev(CrossCompileAutotoolsProject):
     target = "mtdev"
     needs_full_history = True  # can't use --depth with http:// git repo
     repository = GitRepository("http://bitmath.org/git/mtdev.git")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
@@ -129,7 +129,7 @@ class BuildMtdev(CrossCompileAutotoolsProject):
 class BuildLibEvdev(CrossCompileMesonProject):
     target = "libevdev"
     repository = GitRepository("https://gitlab.freedesktop.org/libevdev/libevdev.git")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()
@@ -140,7 +140,7 @@ class BuildLibEvdev(CrossCompileMesonProject):
 class BuildLibInput(CrossCompileMesonProject):
     target = "libinput"
     repository = GitRepository("https://gitlab.freedesktop.org/libinput/libinput.git")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
@@ -176,7 +176,7 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
                                temporary_url_override="https://github.com/CTSRD-CHERI/libffi.git",
                                url_override_reason="Needs lots of CHERI fixes")
     target = "libffi"
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()
@@ -256,7 +256,7 @@ class BuildWayland(CrossCompileMesonProject):
         return deps
     repository = GitRepository("https://gitlab.freedesktop.org/wayland/wayland.git", default_branch="main",
                                force_branch=True, old_urls=[b"https://github.com/CTSRD-CHERI/wayland"])
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()
@@ -283,7 +283,7 @@ class BuildWaylandProtocols(CrossCompileMesonProject):
     target = "wayland-protocols"
     dependencies = ["wayland", "wayland-native"]  # native wayland-scanner is needed for tests
     repository = GitRepository("https://gitlab.freedesktop.org/wayland/wayland-protocols.git")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()
@@ -294,7 +294,7 @@ class BuildWaylandProtocols(CrossCompileMesonProject):
 class BuildSeatd(CrossCompileMesonProject):
     target = "seatd"
     repository = GitRepository("https://git.sr.ht/~kennylevinsen/seatd")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()

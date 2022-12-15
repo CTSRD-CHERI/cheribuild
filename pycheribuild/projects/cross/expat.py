@@ -36,7 +36,7 @@ class BuildExpat(CrossCompileCMakeProject):
     target = "libexpat"
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     repository = GitRepository("https://github.com/libexpat/libexpat")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
     root_cmakelists_subdirectory = Path("expat")
 
     def setup(self):

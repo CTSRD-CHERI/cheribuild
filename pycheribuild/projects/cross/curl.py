@@ -30,7 +30,7 @@ from ...config.compilation_targets import CompilationTargets
 
 class BuildCurl(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/curl/curl.git")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()

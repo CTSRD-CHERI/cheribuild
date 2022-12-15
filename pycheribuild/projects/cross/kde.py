@@ -545,7 +545,7 @@ class BuildKCMUtils(KDECMakeProject):
 class BuildKCMUtilsTools(KDECMakeProject):
     target = "kcmutils-tools"
     dependencies = ["kitemviews", "kconfigwidgets", "kservice", "kxmlgui", "kdeclarative", "kauth"]
-    supported_architectures = [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_NATIVE
     repository = ReuseOtherProjectRepository(source_project=BuildKCMUtils, do_update=True)
 
     def setup(self):
@@ -973,7 +973,7 @@ class BuildDoplhin(KDECMakeProject):
 
 
 class BuildLibPng(CrossCompileCMakeProject):
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
     repository = GitRepository("https://github.com/glennrp/libpng", old_urls=[b"https://github.com/CTSRD-CHERI/libpng"],
                                default_branch="libpng16", force_branch=True)
     target = "libpng"

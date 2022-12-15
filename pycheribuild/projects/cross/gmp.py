@@ -32,7 +32,7 @@ class BuildGmp(CrossCompileAutotoolsProject):
     repository = MercurialRepository("https://gmplib.org/repo/gmp")
     supported_architectures = (CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID +
                                CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS +
-                               CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS + [CompilationTargets.NATIVE])
+                               CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS + CompilationTargets.ALL_NATIVE)
     native_install_dir = DefaultInstallDir.CHERI_SDK
 
     def check_system_dependencies(self) -> None:

@@ -792,7 +792,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 class BuildLibXml2(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/libxml2")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()
@@ -806,7 +806,7 @@ class BuildLibXslt(CrossCompileCMakeProject):
     repository = GitRepository("https://gitlab.gnome.org/GNOME/libxslt.git")
     dependencies = ["libxml2"]
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()

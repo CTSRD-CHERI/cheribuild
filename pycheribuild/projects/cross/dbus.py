@@ -27,7 +27,7 @@ from .crosscompileproject import CrossCompileCMakeProject, GitRepository, Compil
 
 class BuildDBus(CrossCompileCMakeProject):
     target = "dbus"
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
     repository = GitRepository("https://gitlab.freedesktop.org/dbus/dbus.git",
                                old_urls=[b"https://gitlab.freedesktop.org/arichardson/dbus.git"])
     dependencies = ["libexpat"]
