@@ -36,7 +36,6 @@ class BuildPkg(CrossCompileAutotoolsProject):
     _configure_understands_enable_static = False
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     path_in_rootfs = "/usr/local"
-    build_in_source_dir = True  # Seems to fail when using out-of-source builds
 
     def setup(self):
         super().setup()
