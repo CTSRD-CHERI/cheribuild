@@ -1590,10 +1590,25 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                       _allow_unknown_targets=True,
                                                       help="Also build benchmark kernels")
 
-        cls.caprevoke_kernel = cls.add_bool_option(
+        # Building the caprevoke kernels is somewhat complex behavior:
+        #  - if not specified, self.caprevoke_kernel will be None (the "default" parameter below)
+        #  - if specified and an argument is given, that argument becomes self.caprevoke_kernel and must be one of
+        #    "also" or "first"
+        #  - if specified without an argument, it is as if "first" was given (the "const" parameter below)
+        # Given those options, if self.caprevoke_kernel is
+        #  - None, the caprevoke kernels will not be built
+        #  - "also", the caprevoke kernels end up being just additional, named kernels in /boot
+        #  - "first", the caprevoke kernel (with no other qualifiers) is promoted to being /boot/kernel and whatever it
+        #    displaced is made into an additional kernel.
+        # Why?
+        #  - Jenkins will set this to "also" so that the caprevoke kernels are named and can be added to an install
+        #  - Users can just specify --cheribsd/caprevoke-kernel as before and pick up a reasonable default.
+        cls.caprevoke_kernel = cls.add_config_option(
             "caprevoke-kernel", show_help=True, _allow_unknown_targets=True,
+            choices=["also", "first"], default=None, const="first", nargs="?",
             only_add_for_targets=CompilationTargets.ALL_CHERIBSD_CHERI_TARGETS_WITH_HYBRID,
             help="Build kernel with caprevoke support (experimental)")
+
         if kernel_only_target:
             return  # The remaining options only affect the userspace build
         cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=False,
@@ -1648,7 +1663,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         combinations = []
         if self.build_bench_kernels:
             combinations.append("benchmark")
-        if self.caprevoke_kernel:
+        if self.caprevoke_kernel is not None:
             combinations.append("caprevoke")
         if self.build_fett_kernels:
             if not self.compiling_for_riscv(include_purecap=True):
@@ -1670,7 +1685,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         kABI = filter_kwargs.pop("kABI", self.get_default_kernel_abi())
         if xtarget.is_riscv(include_purecap=True):
             filter_kwargs.setdefault("fett", self.build_fett_kernels)
-        filter_kwargs.setdefault("caprevoke", self.caprevoke_kernel)
+        filter_kwargs.setdefault("caprevoke", self.caprevoke_kernel == "first")
         config = CheriBSDConfigTable.get_default(xtarget, platform, kABI, **filter_kwargs)
         return config.kernconf
 
@@ -1804,7 +1819,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         combinations = []
         if self.build_bench_kernels:
             combinations.append("benchmark")
-        if self.caprevoke_kernel:
+        if self.caprevoke_kernel is not None:
             combinations.append("caprevoke")
         configs = self._get_config_variants({platform}, kernABIs, combinations, mfsroot=True)
         if self.build_fpga_kernels:
