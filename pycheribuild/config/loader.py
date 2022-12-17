@@ -177,14 +177,14 @@ class BooleanNegatableAction(argparse.Action):
 # argparse._StoreAction but with a possible list of aliases
 class StoreActionWithPossibleAliases(argparse.Action):
     # noinspection PyShadowingBuiltins
-    def __init__(self, option_strings: "list[str]", dest, nargs=None, default=None, type=None, choices=None,
+    def __init__(self, option_strings: "list[str]", dest, nargs=None, default=None, type=None, choices=None, const=None,
                  required=False, help=None, metavar=None, alias_names=None):
-        if nargs == 1:
-            raise ValueError("nargs for store actions must be 1")
+        if nargs is not None and nargs != 1 and (nargs != "?" or const is None):
+            raise ValueError("nargs for store actions must either be 1 or be ? and const given")
         self.displayed_option_count = len(option_strings)
         if alias_names is not None:
             option_strings = option_strings + alias_names
-        super().__init__(option_strings=option_strings, dest=dest, nargs=nargs, default=default, type=type,
+        super().__init__(option_strings=option_strings, dest=dest, nargs=nargs, default=default, type=type, const=const,
                          choices=choices, required=required, help=help, metavar=metavar)
 
     def __call__(self, parser, namespace, values, option_string=None) -> None:
