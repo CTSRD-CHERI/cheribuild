@@ -116,6 +116,15 @@ class BuildCheriExercises(CrossCompileProject):
         self._compile_for_cheri_and_non_cheri(
             "ptr-over-pipe", self.source_dir / "src/exercises/pointer-injection/ptr-over-pipe.c")
 
+        # Demonstrate pointer revocation
+        self._compile_file(
+            self.build_dir / "pointer-revocation-temporal-control",
+            self.source_dir / "src/exercises/pointer-revocation/temporal-control.c")
+        self._compile_file(
+            self.build_dir / "pointer-revocation-temporal-control-caprevoke",
+            self.source_dir / "src/exercises/pointer-revocation/temporal-control.c",
+            "-DCAPREVOKE")
+
         # Demonstrate various CheriABI properties
         self._compile_for_cheri_and_non_cheri(
             "kern-read-over", self.source_dir / "src/exercises/cheriabi/kern-read-over.c")
