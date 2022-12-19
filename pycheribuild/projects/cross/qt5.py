@@ -527,7 +527,7 @@ if (! %modules) {
 }
 for my $module (keys %modules) {
     print "$module\n";
-}""", capture_output=True, run_in_pretend_mode=self.source_dir.exists(), cwd=self.source_dir)
+}""", capture_output=True, run_in_pretend_mode=self.source_dir.exists() and shutil.which("perl"), cwd=self.source_dir)
         if not modules_cmd.stdout.strip():
             self.fatal("Coulnd't parse list of Qt Modules")
         for module in modules_cmd.stdout.decode("utf-8").strip().split():

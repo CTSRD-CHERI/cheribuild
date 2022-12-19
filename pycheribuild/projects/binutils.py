@@ -27,10 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import os
-import shutil
 import typing
-from pathlib import Path
 
 from .project import AutotoolsProject, DefaultInstallDir, GitRepository
 
@@ -88,7 +85,7 @@ class BuildGnuBinutils(AutotoolsProject):
         self.configure_args.append("--disable-shared")
         # newer compilers will default to -std=c99 which will break binutils:
         cflags = "-std=gnu89 -O2"
-        info = self.get_compiler_info(Path(os.getenv("CC", shutil.which("cc"))))
+        info = self.get_compiler_info(self.CC)
         if info.compiler == "clang" or (info.compiler == "gcc" and info.version >= (4, 6, 0)):
             cflags += " -Wno-unused"
         self.configure_environment["CFLAGS"] = cflags

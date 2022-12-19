@@ -27,6 +27,7 @@
 #
 import os
 import platform
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -287,7 +288,8 @@ subprocess.check_call(["{real_clang}", "-B{fake_dir}"] + args + ["-fuse-ld=bfd",
         self.create_symlink(bfd_path, fake_compiler_dir / "ld", relative=False)
         self.create_symlink(bfd_path, fake_compiler_dir / "ld.bfd", relative=False)
         firmware_ver = self.run_cmd("git", "-C", self.source_dir, "rev-parse", "--short", "HEAD",
-                                    capture_output=True, run_in_pretend_mode=True).stdout.decode("utf-8").strip()
+                                    run_in_pretend_mode=shutil.which("git") is not None,
+                                    capture_output=True).stdout.decode("utf-8").strip()
         # if ! git diff-index --quiet HEAD --; then
         #   FIRMWARE_VER="${FIRMWARE_VER}-dirty"
         # fi
