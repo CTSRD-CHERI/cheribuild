@@ -218,24 +218,20 @@ class BuildSailFromOpam(ProjectUsingOpam):
         pass
 
     def install(self, **kwargs):
-        # self.run_command_in_ocaml_env(["env"])
-        repos = self.run_opam_cmd("repository", "list", capture_output=True)
-        if REMS_OPAM_REPO not in repos.stdout.decode("utf-8"):
-            self.run_opam_cmd("repository", "add", "rems", REMS_OPAM_REPO)
-        else:
-            self.info("REMS opam repo already added")
-
-        if not self.skip_update:
-            self.run_opam_cmd("update")
-
         destdir_flag = "--destdir=" + str(self.install_dir / "sailprefix")
         # Remove the old sail installation
         self.run_opam_cmd("uninstall", "--verbose", "sail", destdir_flag)
         self.run_opam_cmd("uninstall", "--verbose", "sail")
-
+        # Remove libsail+other subpackages for sail 0.15+
+        self.run_opam_cmd("uninstall", "--verbose", "libsail", destdir_flag)
+        self.run_opam_cmd("uninstall", "-y", "--verbose", "libsail", ignore_errors=True)
         # ensure sail isn't pinned
         self.run_opam_cmd("pin", "remove", "sail", "--no-action")
-        install_flags = ["-y", "--verbose", "--working-dir", "--keep-build-dir", "--with-test", destdir_flag]
+
+        if not self.skip_update:
+            self.run_opam_cmd("update")
+
+        install_flags = ["-y", "--verbose", "--keep-build-dir", "--with-test", destdir_flag]
         if not self.with_clean:
             install_flags.append("--reuse-build-dir")
         if self.use_git_version:
