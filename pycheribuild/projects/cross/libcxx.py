@@ -364,7 +364,10 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
 
     # The following have to be set in subclasses
     llvm_project: "typing.ClassVar[type[BuildLLVMMonoRepoBase]]"
-    enabled_runtimes: "typing.ClassVar[list[str]]"
+    _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]"
+
+    def get_enabled_runtimes(self) -> "list[str]":
+        return list(self._enabled_runtimes)
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
@@ -398,14 +401,15 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
         super().setup()
         lit_args = f"--xunit-xml-output \"{self.build_dir}/test-results.xml\" --max-time 3600 --timeout 120 -s -vv"
         external_cxxabi = None
+        enabled_runtimes = self.get_enabled_runtimes()
         if self.compiling_for_cheri():
             # We have to use libcxxrt for now and libunwind does not build:
-            self.enabled_runtimes.remove("libcxxabi")
+            enabled_runtimes.remove("libcxxabi")
             external_cxxabi = "libcxxrt"
             if self.llvm_project is BuildUpstreamLLVM:
-                self.enabled_runtimes.remove("libunwind")  # CHERI fixes have not been upstreamed.
+                enabled_runtimes.remove("libunwind")  # CHERI fixes have not been upstreamed.
 
-        if "libunwind" in self.enabled_runtimes:
+        if "libunwind" in enabled_runtimes:
             self.add_cmake_options(LIBUNWIND_ENABLE_STATIC=True,
                                    LIBUNWIND_ENABLE_SHARED=not self.target_info.must_link_statically,
                                    LIBUNWIND_IS_BAREMETAL=self.target_info.is_baremetal(),
@@ -415,15 +419,15 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             if self.target_info.is_baremetal():
                 # work around error: use of undeclared identifier 'alloca', also stack is small
                 self.add_cmake_options(LIBUNWIND_REMEMBER_HEAP_ALLOC=True)
-        if "libcxxabi" in self.enabled_runtimes:
-            self.add_cmake_options(LIBCXXABI_USE_LLVM_UNWINDER="libunwind" in self.enabled_runtimes,
+        if "libcxxabi" in enabled_runtimes:
+            self.add_cmake_options(LIBCXXABI_USE_LLVM_UNWINDER="libunwind" in enabled_runtimes,
                                    LIBCXXABI_ENABLE_STATIC=True,
                                    LIBCXXABI_ENABLE_SHARED=not self.target_info.must_link_statically)
             if self.target_info.is_baremetal():
                 self.add_cmake_options(LIBCXXABI_ENABLE_THREADS=False,
                                        LIBCXXABI_NON_DEMANGLING_TERMINATE=True,  # reduces code size
                                        LIBCXXABI_BAREMETAL=True)
-        if "libcxx" in self.enabled_runtimes:
+        if "libcxx" in enabled_runtimes:
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=not self.target_info.must_link_statically,
                                    LIBCXX_ENABLE_STATIC=True,
                                    LIBCXX_INCLUDE_TESTS=True,
@@ -436,7 +440,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 self.add_cmake_options(LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False, LIBCXX_ENABLE_ABI_LINKER_SCRIPT=True)
             else:
                 # When using the locally-built libc++abi, we link the ABI library objects as part of libc++.so
-                assert "libcxxabi" in self.enabled_runtimes, self.enabled_runtimes
+                assert "libcxxabi" in enabled_runtimes, enabled_runtimes
                 if self.llvm_project is BuildUpstreamLLVM:
                     self.add_cmake_options(LIBCXX_ENABLE_STATIC_ABI_LIBRARY=True, LIBCXX_ENABLE_ABI_LINKER_SCRIPT=False)
                 else:
@@ -456,7 +460,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                                        # LIBCXX_ENABLE_UNICODE=False,  # reduce size
                                        )
 
-        self.add_cmake_options(LLVM_ENABLE_RUNTIMES=";".join(self.enabled_runtimes),
+        self.add_cmake_options(LLVM_ENABLE_RUNTIMES=";".join(enabled_runtimes),
                                LLVM_LIT_ARGS=lit_args)
         if self.target_info.is_baremetal():
             # pretend that we are a UNIX platform to prevent CMake errors in HandleLLVMOptions.cmake
@@ -486,26 +490,33 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             with self.set_env(LC_ALL="en_US.UTF-8", FILECHECK_DUMP_INPUT_ON_FAILURE=1):
                 self.run_cmd("cmake", "--build", self.build_dir, "--target", "check-runtimes")
                 return
+        elif self.can_run_binaries_on_remote_morello_board():
+            executor = [self.source_dir / "utils/ssh.py", "--host", self.config.remote_morello_board]
+            # The Morello board has 4 CPUs, so run 4 tests in parallel.
+            self.run_cmd([sys.executable, self.build_dir / "bin/llvm-lit", "-j4", "-vv",
+                          f"--xunit-xml-output={self.build_dir / 'test-results.xml'}",
+                          "-Dexecutor=" + self.commandline_to_str(executor), "test"], cwd=self.build_dir)
 
 
 class BuildLlvmLibs(_BuildLlvmRuntimes):
     target = "llvm-libs"
     llvm_project = BuildCheriLLVM
     _always_add_suffixed_targets = True
-    supported_architectures = [CompilationTargets.NATIVE]
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
+        CompilationTargets.ALL_PICOLIBC_TARGETS
     default_architecture = CompilationTargets.NATIVE
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     default_build_type = BuildType.DEBUG
     # TODO: add compiler-rt
-    enabled_runtimes: "list[str]" = ["libunwind", "libcxxabi", "libcxx"]
+    _enabled_runtimes: "tuple[str, ...]" = ("libunwind", "libcxxabi", "libcxx")
 
 
 class BuildUpstreamLlvmLibs(BuildLlvmLibs):
     target = "upstream-llvm-libs"
     repository = ReuseOtherProjectDefaultTargetRepository(BuildUpstreamLLVM, subdirectory="runtimes")
     llvm_project = BuildUpstreamLLVM
-    supported_architectures = [CompilationTargets.NATIVE] + CompilationTargets.ALL_PICOLIBC_TARGETS
+    supported_architectures = CompilationTargets.ALL_NATIVE + CompilationTargets.ALL_PICOLIBC_TARGETS
 
     @classproperty
     def cross_install_dir(self):
