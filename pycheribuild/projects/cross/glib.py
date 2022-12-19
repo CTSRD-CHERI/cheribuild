@@ -38,9 +38,11 @@ class BuildGlib(CrossCompileMesonProject):
     def setup(self) -> None:
         super().setup()
         self.add_meson_options(xattr=False, tests=True)
+        self.configure_args.append("--localstatedir=/var")  # This is needed for GDBus
         self.common_warning_flags.append("-Werror=int-conversion")
         self.common_warning_flags.append("-Werror=incompatible-pointer-types")
         if self.compiling_for_cheri():
             self.common_warning_flags.append("-Wshorten-cap-to-int")
         if self.target_info.is_freebsd():
             self.add_meson_options(b_lundef=False)  # undefined reference to environ
+        self.add_meson_options(gtk_doc=False)
