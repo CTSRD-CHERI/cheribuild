@@ -28,11 +28,12 @@ from .crosscompileproject import GitRepository, CrossCompileMesonProject
 
 class BuildGlib(CrossCompileMesonProject):
     target = "glib"
-    dependencies = ["pcre2"]
+    dependencies = ["pcre2", "libffi", "dbus"]
     repository = GitRepository("https://gitlab.gnome.org/GNOME/glib.git",
-                               temporary_url_override="https://github.com/CTSRD-CHERI/glib",
+                               temporary_url_override="https://gitlab.gnome.org/arichardson/glib.git",
+                               old_urls=[b"https://github.com/CTSRD-CHERI/glib.git"],
                                url_override_reason="Lots of CHERI incompatibilities",
-                               default_branch="glib_2.72.3_cheri_fixes", force_branch=True)
+                               default_branch="main-with-cheri-fixes", force_branch=True)
 
     def setup(self) -> None:
         super().setup()
