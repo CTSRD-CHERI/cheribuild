@@ -79,7 +79,7 @@ class OpamMixin(_MixinBase):
         return shutil.which("opam") or "opam"
 
     def _opam_cmd(self, command, *args, _add_switch=True):
-        cmdline = [self.opam_binary, command, "--root=" + str(self.opamroot)]
+        cmdline = [self.opam_binary, command, "--cli=2.1", "--root=" + str(self.opamroot)]
         if _add_switch:
             cmdline.append("--switch=" + self.required_ocaml_version)
         cmdline.extend(args)
@@ -125,8 +125,8 @@ class OpamMixin(_MixinBase):
         if Path(self.opam_binary).is_absolute():
             opam_env["OPAM_USER_PATH_RO"] = Path(self.opam_binary).parent
         if not (self.opamroot / "opam-init").exists():
-            self.run_cmd(self.opam_binary, "init", "--disable-sandboxing", "--root=" + str(self.opamroot), "--no-setup",
-                         cwd="/", env=opam_env)
+            self.run_cmd(self.opam_binary, "init", "--cli=2.1", "--disable-sandboxing", "--root=" + str(self.opamroot),
+                         "--no-setup", cwd="/", env=opam_env)
         return opam_env, cwd
 
     def run_in_ocaml_env(self, command: str, cwd=None, print_verbose_only=False, **kwargs):
@@ -139,7 +139,7 @@ class OpamMixin(_MixinBase):
         opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         # for opam commands we don't need to prepend opam exec --
         if command[0] != self.opam_binary:
-            command = [self.opam_binary, "exec", "--root=" + str(self.opamroot), "--"] + command
+            command = [self.opam_binary, "--cli=2.1", "exec", "--root=" + str(self.opamroot), "--"] + command
         assert isinstance(self, SimpleProject)
         return self.run_cmd(command, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
 
