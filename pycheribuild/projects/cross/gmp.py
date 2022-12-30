@@ -39,7 +39,7 @@ class BuildGmp(CrossCompileAutotoolsProject):
         super().check_system_dependencies()
         # It would be nice if we could just disable building documentation, but until we can do so, missing makeinfo
         # results in failing build
-        self.check_required_system_tool("makeinfo", freebsd="texinfo")
+        self.check_required_system_tool("makeinfo", default="texinfo")
 
     def setup(self):
         super().setup()
