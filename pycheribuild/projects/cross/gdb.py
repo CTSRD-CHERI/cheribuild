@@ -71,6 +71,7 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
+        self.check_required_system_tool("makeinfo", default="texinfo")
         if self.compiling_for_host() and self.target_info.is_cheribsd():
             self.check_required_pkg_config("gmp", freebsd="gmp")
             self.check_required_pkg_config("expat", freebsd="expat")
