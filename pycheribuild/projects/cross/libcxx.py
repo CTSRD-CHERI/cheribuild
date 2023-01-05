@@ -402,11 +402,11 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
         lit_args = f"--xunit-xml-output \"{self.build_dir}/test-results.xml\" --max-time 3600 --timeout 120 -s -vv"
         external_cxxabi = None
         enabled_runtimes = self.get_enabled_runtimes()
-        if self.compiling_for_cheri():
-            # We have to use libcxxrt for now and libunwind does not build:
+        if self.target_info.is_freebsd():
+            # When targeting FreeBSD we use libcxxrt instead of the local libc++abi:
             enabled_runtimes.remove("libcxxabi")
             external_cxxabi = "libcxxrt"
-            if self.llvm_project is BuildUpstreamLLVM:
+            if self.llvm_project is BuildUpstreamLLVM and self.compiling_for_cheri():
                 enabled_runtimes.remove("libunwind")  # CHERI fixes have not been upstreamed.
 
         if "libunwind" in enabled_runtimes:
