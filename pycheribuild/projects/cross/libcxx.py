@@ -361,10 +361,13 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
 class _BuildLlvmRuntimes(CrossCompileCMakeProject):
     do_not_add_to_targets = True
     _always_add_suffixed_targets = True
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
 
     # The following have to be set in subclasses
     llvm_project: "typing.ClassVar[type[BuildLLVMMonoRepoBase]]"
-    _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]"
+    # TODO: add compiler-rt
+    _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("libunwind", "libcxxabi", "libcxx")
 
     def get_enabled_runtimes(self) -> "list[str]":
         return list(self._enabled_runtimes)
@@ -501,22 +504,17 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
 class BuildLlvmLibs(_BuildLlvmRuntimes):
     target = "llvm-libs"
     llvm_project = BuildCheriLLVM
-    _always_add_suffixed_targets = True
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
         CompilationTargets.ALL_PICOLIBC_TARGETS
     default_architecture = CompilationTargets.NATIVE
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     default_build_type = BuildType.DEBUG
-    # TODO: add compiler-rt
-    _enabled_runtimes: "tuple[str, ...]" = ("libunwind", "libcxxabi", "libcxx")
 
 
-class BuildUpstreamLlvmLibs(BuildLlvmLibs):
+class BuildUpstreamLlvmLibs(_BuildLlvmRuntimes):
     target = "upstream-llvm-libs"
-    repository = ReuseOtherProjectDefaultTargetRepository(BuildUpstreamLLVM, subdirectory="runtimes")
     llvm_project = BuildUpstreamLLVM
     supported_architectures = CompilationTargets.ALL_NATIVE + CompilationTargets.ALL_PICOLIBC_TARGETS
+    default_architecture = CompilationTargets.NATIVE
 
     @classproperty
     def cross_install_dir(self):
@@ -526,10 +524,11 @@ class BuildUpstreamLlvmLibs(BuildLlvmLibs):
         return super().cross_install_dir
 
 
-class BuildUpstreamLlvmLibsWithHostCompiler(BuildLlvmLibs):
+class BuildUpstreamLlvmLibsWithHostCompiler(_BuildLlvmRuntimes):
     target = "upstream-llvm-libs-with-host-compiler"
-    repository = ReuseOtherProjectDefaultTargetRepository(BuildUpstreamLLVM, subdirectory="runtimes")
     llvm_project = BuildUpstreamLLVM
+    supported_architectures = CompilationTargets.ALL_NATIVE
+    default_architecture = CompilationTargets.NATIVE
 
     @property
     def custom_c_preprocessor(self):
