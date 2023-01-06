@@ -269,7 +269,7 @@ class CheriBSDSpawnMixin(MixinBase):
                 raise e
 
     def run(self, cmd: str, *, expected_output=None, error_output=None, cheri_trap_fatal=True, ignore_cheri_trap=False,
-            timeout=60):
+            timeout=600):
         run_cheribsd_command(self, cmd, expected_output=expected_output, error_output=error_output,
                              cheri_trap_fatal=cheri_trap_fatal, ignore_cheri_trap=ignore_cheri_trap, timeout=timeout)
 
