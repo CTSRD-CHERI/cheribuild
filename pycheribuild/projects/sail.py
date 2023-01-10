@@ -210,6 +210,7 @@ class BuildSailFromOpam(ProjectUsingOpam):
         return ThreadJoiner(None)
 
     def update(self):
+        self.run_opam_cmd("update")
         if not self.use_git_version:
             return
         super().update()
