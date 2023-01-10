@@ -810,7 +810,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                                   alternative_instructions: str = None) -> None:
         if "pkg-config" not in self.__checked_system_tools:
             self.check_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
-            return
         if instructions is None:
             instructions = OSInfo.install_instructions(
                 package, is_lib=False, default=default, freebsd=freebsd, zypper=zypper, apt=apt, homebrew=homebrew,
@@ -823,7 +822,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         try:
             self.run_cmd(["pkg-config", "--modversion", package], capture_output=True)
         except subprocess.CalledProcessError as e:
-            self.dependency_error("Required library", package, "is missing:", e, install_instructions=instructions,
+            self.dependency_error("Required pkg-config file for", package, "is missing:", e,
+                                  install_instructions=instructions,
                                   cheribuild_target=instructions.cheribuild_target,
                                   cheribuild_xtarget=BasicCompilationTargets.NATIVE)
         self.__checked_pkg_config[package] = instructions
