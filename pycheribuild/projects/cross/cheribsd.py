@@ -1846,16 +1846,6 @@ class BuildCheriBsdMfsImageAndKernels(TargetAliasWithDependencies):
         return BuildCheriBsdMfsKernel.supported_architectures
 
 
-class BuildBesspinCheriBsdMfsKernel(BuildCheriBsdMfsKernel):
-    target: str = "besspin-cheribsd-mfs-root-kernel"
-    hide_options_from_help: bool = True
-
-    @classproperty
-    def mfs_root_image_class(self):
-        from ..disk_image import BuildBesspinMfsRootCheriBSDDiskImage
-        return BuildBesspinMfsRootCheriBSDDiskImage
-
-
 if typing.TYPE_CHECKING:
     ReleaseMixinBase = BuildFreeBSD
 else:

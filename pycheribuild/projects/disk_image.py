@@ -122,7 +122,6 @@ class BuildDiskImageBase(SimpleProject):
     _source_class = None  # type: typing.Type[SimpleProject]
     strip_binaries = False  # True by default for minimal disk-image
     is_minimal = False  # To allow building a much smaller image
-    is_besspin = False  # Build an image suitable for use with the BESSPIN toolsuite
     disk_image_prefix = None  # type: str
     default_disk_image_path = ComputedDefaultValue(
         function=lambda conf, proj: _default_disk_image_name(conf, conf.output_root, proj),
@@ -378,18 +377,10 @@ class BuildDiskImageBase(SimpleProject):
         if not sshd_config.exists():
             self.info("SSHD not installed, not changing sshd_config")
         else:
-            if self.is_besspin:
-                self.info("Adding 'PermitRootLogin without-password\nUseDNS no' to /etc/ssh/sshd_config")
-                # make sure we can login as root even without a password:
-                new_sshd_config_contents = self.read_file(sshd_config)
-                new_sshd_config_contents += "\n# Allow passwordless root login:\n"
-                new_sshd_config_contents += "PermitRootLogin yes\n"
-                new_sshd_config_contents += "PasswordAuthentication yes\nPermitEmptyPasswords yes\n"
-            else:
-                self.info("Adding 'PermitRootLogin without-password\nUseDNS no' to /etc/ssh/sshd_config")
-                # make sure we can login as root with pubkey auth:
-                new_sshd_config_contents = self.read_file(sshd_config)
-                new_sshd_config_contents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
+            self.info("Adding 'PermitRootLogin without-password\nUseDNS no' to /etc/ssh/sshd_config")
+            # make sure we can login as root with pubkey auth:
+            new_sshd_config_contents = self.read_file(sshd_config)
+            new_sshd_config_contents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
             new_sshd_config_contents += "\n# Major speedup to SSH performance:\n UseDNS no\n"
             self.create_file_for_image("/etc/ssh/sshd_config", contents=new_sshd_config_contents,
                                        show_contents_non_verbose=False)
@@ -638,10 +629,9 @@ class BuildDiskImageBase(SimpleProject):
             debug_options = ["-d", "0x90000"]  # trace POPULATE and WRITE_FILE events
         try:
             # For the minimal image 2m of free space and 1k inodes should be enough
-            # BESSPIN images require at least 45m to support all the copied test cases
             # For the larger images we need a lot more space (llvm-{cheri,morello} needs more than 1g)
             if self.is_minimal:
-                free_blocks = "45m" if self.is_besspin else "2m"
+                free_blocks = "2m"
             else:
                 free_blocks = "2g"
 
@@ -1107,240 +1097,6 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
 class BuildMfsRootCheriBSDDiskImage(BuildMinimalCheriBSDDiskImage):
     target = "disk-image-mfs-root"
     disk_image_prefix = "cheribsd-mfs-root"
-    include_boot_kernel = False
-    include_boot_files = False
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.include_boot_kernel = cls.add_bool_option("include-kernel", help="Include /boot/kernel/kernel in MFS")
-
-    @property
-    def rootfs_only(self):
-        return True
-
-    @property
-    def cheribsd_class(self):
-        return self._source_class
-
-
-class BuildBesspinCheriBSDDiskImage(BuildDiskImageBase):
-    target = "disk-image-besspin"
-    _source_class = BuildCHERIBSD
-    disk_image_prefix = "cheribsd-besspin"
-    hide_options_from_help = True
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(default_hostname=_default_disk_image_hostname("cheribsd-besspin"),
-                                     extra_files_suffix="-besspin", **kwargs)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.minimum_image_size = "20m"  # let's try to shrink the image size
-        self.is_minimal = True
-        self.is_besspin = True
-
-    @property
-    def include_swap_partition(self):
-        return False
-
-    def add_unlisted_files_to_metalog(self):
-        return
-
-    def make_rootfs_image(self, rootfs_img: Path):
-        self.mtree.exclude_matching([
-            "./boot/*",
-            "./rescue/*",
-            "./usr/tests/*",
-            "./usr/include/*",
-            "./usr/lib/debug/*",
-            "./usr/lib/snmp*",
-            "./usr/lib64*",
-            "./usr/libcheri*",
-            "*.a",
-            "*.o",
-            "./usr/local/*"])
-
-        self.mtree.exclude_matching(["./usr/share/*"], ["./usr/share/skel/*", "./usr/share/locale/C.UTF-8*"])
-
-        bin_globs = ["cheri*", "ed", "red", "helloworld*", "pax"]
-        self.mtree.exclude_matching(list(map(lambda p: "./bin/" + p, bin_globs)))
-
-        lib_globs = ["geom*"]
-        self.mtree.exclude_matching(list(map(lambda p: "./lib/" + p, lib_globs)))
-
-        libexec_globs = ["ld-elf-debug.so.1", "ld-elf64.so.1"]
-        self.mtree.exclude_matching(list(map(lambda p: "./libexec/" + p, libexec_globs)))
-        sbin_globs = [
-            "camcontrol",
-            "pfctl",
-            "ip*",
-            "hastd",
-            "fsdb",
-            "restore",
-            "rrestore",
-            "dump",
-            "rdump",
-            "fsck_msdosfs",
-            "rtsol",
-            "gbde",
-            "iscontrol",
-            "tunefs",
-            "natd"]
-        self.mtree.exclude_matching(list(map(lambda p: "./sbin/" + p, sbin_globs)))
-
-        usr_bin_globs = [
-            "qtrace",
-            "dtc",
-            "openssl",
-            "ex",
-            "nex",
-            "nvi",
-            "nview",
-            "vi",
-            "view",
-            "mandoc",
-            "ntpq",
-            "flex*",
-            "lex*",
-            "make",
-            "bc",
-            "dc",
-            "netstat",
-            "*ftp*",
-            "telnet",
-            "objcopy",
-            "strip",
-            "yacc",
-            "sysstat",
-            "edit",
-            "ee",
-            "ree",
-            "asn1_compile",
-            "Mail",
-            "mail*",
-            "nm",
-            "vacation",
-            "addr3line",
-            "sftp",
-            "kadmin",
-            "truss",
-            "bsnmp*",
-            "rpcgen",
-            "top",
-            "localdef",
-            "drill",
-            "hxtool",
-            "cu",
-            "tip",
-            "patch",
-            "m4",
-            "calendar",
-            "dialog",
-            "mkimp",
-            "diff",
-            "slc",
-            "tftp",
-            "indent",
-            "iscsictl",
-            "ar",
-            "ranlib",
-            "lpr",
-            "bsdiff",
-            "vmstat",
-            "kcc",
-            "klist",
-            "kswitch",
-            "lpq",
-            "users",
-            "unifdef",
-            "lprm",
-            "pr",
-            "primes",
-            "crunchgen",
-            "vtfontcvt",
-            "gprof",
-            "finger",
-            "ssh-agent",
-            "syscall_timing",
-            "nc",
-            "diff3",
-            "bsdcpio",
-            "nfsstat",
-            "host",
-            "rpcinfo",
-            "elfdump",
-            "at",
-            "atq",
-            "atrm",
-            "batch",
-            "hd",
-            "hexdump",
-            "od",
-            "sockstat"
-        ]
-        self.mtree.exclude_matching(list(map(lambda p: "./usr/bin/" + p, usr_bin_globs)))
-
-        usr_lib_exceptions = [
-            "libarchive.so.7",
-            "liblzma.so.5",
-            "libprivatezstd.so.5",
-            "libsysdecode.so.5",
-            "libasn1.so.11",
-            "libblacklist.so.0",
-            "libbsm.so.3",
-            "libbz2.so.4",
-            "libcom_err.so.5",
-            "libdevinfo.so.6",
-            "libgnuregex.so.5",
-            "libgssapi.so.10",
-            "libgssapi_krb5.so.10",
-            "libheimbase.so.11",
-            "libhx509.so.11",
-            "libkrb5.so.11",
-            "libopie.so.8",
-            "libpam.so.6",
-            "libprivateheimipcc.so.11",
-            "libprivateldns.so.5",
-            "libprivatessh.so.5",
-            "libroken.so.11",
-            "libssl.so.111",
-            "libwind.so.11",
-            "libwrap.so.6",
-            "libypclnt.so.4",
-            "pam_*",
-        ]
-        self.mtree.exclude_matching("./usr/lib/*", list(map(lambda p: "./usr/lib/" + p, usr_lib_exceptions)))
-
-        self.mtree.exclude_matching("./usr/libexec/*", ["*/getty"])
-
-        usr_sbin_exceptions = [
-            "adduser",
-            "newsyslog",
-            "pw",
-            "pwd_mkdb",
-            "service",
-            "sshd",
-            "syslogd",
-            "utx"
-        ]
-        self.mtree.exclude_matching("./usr/sbin/*", list(map(lambda p: "./usr/sbin/" + p, usr_sbin_exceptions)))
-
-        # Add a besspin directory
-        self.mtree.add_dir("besspin", print_status=self.config.verbose)
-
-        if self.config.debug_output:
-            self.mtree.write(sys.stderr, pretend=self.config.pretend)
-        if self.config.verbose:
-            self.run_cmd("du", "-ah", self.tmpdir)
-            self.run_cmd("sh", "-c", "du -ah '{}' | sort -h".format(self.tmpdir))
-        super().make_rootfs_image(rootfs_img)
-
-
-class BuildBesspinMfsRootCheriBSDDiskImage(BuildBesspinCheriBSDDiskImage):
-    target = "disk-image-besspin-mfs-root"
-    disk_image_prefix = "cheribsd-besspin-mfs-root"
     include_boot_kernel = False
     include_boot_files = False
 

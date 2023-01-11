@@ -16,6 +16,3 @@ nfs_client_enable="YES"
 fsck_y_enable="YES"
 fsck_y_flags="-T ffs:-R -T ufs:-R"
 crashinfo_enable=NO	# gdb runs for 5+ minutes on F1 if present...
-if [ -e /besspin ]; then
-	ifconfig_xae0="inet 10.88.88.2/24"
-fi
