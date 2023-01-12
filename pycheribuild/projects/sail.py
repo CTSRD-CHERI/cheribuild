@@ -354,3 +354,21 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
         # self.run_make_install()
         self.info("NO INSTALL TARGET YET")
+
+
+class BuildSailMorello(ProjectUsingOpam):
+    target = "sail-morello"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/sail-morello")
+    dependencies = ["sail"]
+    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    build_in_source_dir = True  # Cannot build out-of-source
+    make_kind = MakeCommandKind.GnuMake
+
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
+        self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
+
+    def compile(self, **kwargs):
+        cmd = [self.make_args.command, self.config.make_j_flag,
+               "gen_c", "check_sail"] + self.make_args.all_commandline_args(self.config)
+        self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
