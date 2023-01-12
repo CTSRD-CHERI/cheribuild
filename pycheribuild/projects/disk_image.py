@@ -34,6 +34,7 @@ import shutil
 import sys
 import tempfile
 import typing
+from enum import Enum
 from pathlib import Path
 
 from .cross.cheribsd import (BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDWithDefaultOptions)
@@ -116,6 +117,11 @@ def _default_disk_image_hostname(prefix: str) -> "ComputedDefaultValue[str]":
         as_string=prefix + "-<ARCHITECTURE>")
 
 
+class FileSystemType(Enum):
+    UFS = "ufs"
+    ZFS = "zfs"
+
+
 class BuildDiskImageBase(SimpleProject):
     do_not_add_to_targets = True
     disk_image_path = None  # type: Path
@@ -154,6 +160,10 @@ class BuildDiskImageBase(SimpleProject):
         if "use_qcow2" not in cls.__dict__:
             cls.use_qcow2 = cls.add_bool_option("use-qcow2",
                                                 help="Convert the disk image to QCOW2 format instead of raw")
+        cls.rootfs_type = cls.add_config_option("rootfs-type", show_help=True,
+            kind=FileSystemType, default=FileSystemType.UFS,
+            enum_choices=[FileSystemType.UFS, FileSystemType.ZFS],
+            help="Select the type of the root file system image.")
         cls.remote_path = cls.add_config_option("remote-path", show_help=False, metavar="PATH",
                                                 help="When set rsync will be used to update the image from "
                                                      "the remote server instead of building it locally.")
@@ -282,7 +292,12 @@ class BuildDiskImageBase(SimpleProject):
         # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
         # Overlay extra-files over additional stuff over cheribsd rootfs dir
 
-        fstab_contents = self.file_templates.get_fstab_template()
+        fstab_contents = ""
+        if self.rootfs_type == FileSystemType.UFS:
+            fstab_contents += "/dev/ufs/root / ufs rw,noatime 1 1\n"
+        if self.include_swap_partition:
+            fstab_contents += "/dev/gpt/swap none swap sw 0 0\n"
+        fstab_contents += self.file_templates.get_fstab_template()
         self.create_file_for_image("/etc/fstab", contents=fstab_contents, show_contents_non_verbose=True)
 
         # enable ssh and set hostname
@@ -412,6 +427,8 @@ class BuildDiskImageBase(SimpleProject):
                 loader_conf_contents += "autoboot_delay=\"NO\"\nbeastie_disable=\"YES\"\n"
             else:
                 self.warning("--no-autoboot is not supported for this target, ignoring.")
+        if self.rootfs_type == FileSystemType.ZFS:
+            loader_conf_contents += "zfs_load=\"YES\"\n"
         self.create_file_for_image("/boot/loader.conf", contents=loader_conf_contents, mode=0o644)
 
         # Avoid long boot time on first start due to missing entropy:
@@ -522,12 +539,20 @@ class BuildDiskImageBase(SimpleProject):
         root_partition = out_img.with_suffix(".root.img")
         try:
             self.make_rootfs_image(root_partition)
+
+            if self.rootfs_type == FileSystemType.ZFS:
+                mkimg_bootfs_args = ["-p", "freebsd-boot:=" + str(self.rootfs_dir / "boot/gptzfsboot")]
+                mkimg_rootfs_args = ["-p", "freebsd-zfs:=" + str(root_partition)]
+            elif self.rootfs_type == FileSystemType.UFS:
+                mkimg_bootfs_args = ["-p", "freebsd-boot:=" + str(self.rootfs_dir / "boot/gptboot")]
+                mkimg_rootfs_args = ["-p", "freebsd-ufs:=" + str(root_partition)]
+
             # See mk_nogeli_gpt_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
             self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
                             # "-f", "raw",  # raw disk image instead of qcow2
                             "-b", self.rootfs_dir / "boot/pmbr",  # bootload (MBR)
-                            "-p", "freebsd-boot:=" + str(self.rootfs_dir / "boot/gptboot"),  # gpt boot partition
-                            "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
+                            *mkimg_bootfs_args,
+                            *mkimg_rootfs_args,
                             "-o", out_img  # output file
                             ], cwd=self.rootfs_dir)
         finally:
@@ -555,11 +580,16 @@ class BuildDiskImageBase(SimpleProject):
             else:
                 mkimg_swap_args = []
 
+            if self.rootfs_type == FileSystemType.ZFS:
+                mkimg_rootfs_args = ["-p", "freebsd-zfs:=" + str(root_partition)]
+            elif self.rootfs_type == FileSystemType.UFS:
+                mkimg_rootfs_args = ["-p", "freebsd-ufs:=" + str(root_partition)]
+
             self.make_rootfs_image(root_partition)
             self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
                             # "-f", "raw",  # raw disk image instead of qcow2
                             *mkimg_efi_args,
-                            "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
+                            *mkimg_rootfs_args,
                             *mkimg_swap_args,
                             "-o", out_img  # output file
                             ], cwd=self.rootfs_dir)
@@ -624,10 +654,18 @@ class BuildDiskImageBase(SimpleProject):
         # write out the manifest file:
         self.mtree.write(self.manifest_file, pretend=self.config.pretend)
         # print(self.manifest_file.read_text())
-        debug_options = []
-        if self.config.debug_output:
-            debug_options = ["-d", "0x90000"]  # trace POPULATE and WRITE_FILE events
-        try:
+
+        makefs_flags = []
+        if self.rootfs_type == FileSystemType.ZFS:
+            makefs_flags = [
+                "-t", "zfs",
+                "-o", "poolname=zroot,rootpath=/,bootfs=zroot",
+                "-s", "5g"
+            ]
+        elif self.rootfs_type == FileSystemType.UFS:
+            debug_options = []
+            if self.config.debug_output:
+                debug_options = ["-d", "0x90000"]  # trace POPULATE and WRITE_FILE events
             # For the minimal image 2m of free space and 1k inodes should be enough
             # For the larger images we need a lot more space (llvm-{cheri,morello} needs more than 1g)
             if self.is_minimal:
@@ -639,7 +677,7 @@ class BuildDiskImageBase(SimpleProject):
             if self.is_x86:
                 # x86: -t ffs -f 200000 -s 8g -o version=2,bsize=32768,fsize=4096
                 extra_flags = ["-o", "bsize=32768,fsize=4096,label=root"]
-            self.run_cmd([self.makefs_cmd] + debug_options + extra_flags + [
+            makefs_flags = debug_options + extra_flags + [
                 "-t", "ffs",  # BSD fast file system
                 "-o", "version=2,label=root",  # UFS2
                 "-o", "softupdates=1",  # Enable soft updates journaling
@@ -649,7 +687,10 @@ class BuildDiskImageBase(SimpleProject):
                 # minimum 1024 free inodes for minimal, otherwise at least 1M
                 "-R", "4m",  # round up size to the next 4m multiple
                 "-M", self.minimum_image_size,
-                "-B", "be" if self.big_endian else "le",  # byte order
+                "-B", "be" if self.big_endian else "le"  # byte order
+            ]
+        try:
+            self.run_cmd([self.makefs_cmd] + makefs_flags + [
                 "-N", self.user_group_db_dir,
                 # use master.passwd from the cheribsd source not the current systems passwd file
                 # which makes sure that the numeric UID values are correct
