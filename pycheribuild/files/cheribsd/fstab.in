@@ -1,6 +1,4 @@
-/dev/ufs/root / ufs rw,noatime 1 1
 tmpfs /tmp tmpfs rw,failok 0 0
-/dev/gpt/swap none swap sw,failok 0 0
 
 # Uncomment to automount the default QEMU smbfs
 # //10.0.2.4/qemu /mnt smbfs rw,-I=10.0.2.4,-N 0 0
