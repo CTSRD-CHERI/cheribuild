@@ -27,6 +27,7 @@ import subprocess
 import time
 import typing
 from abc import abstractmethod
+from pathlib import Path
 
 from .build_qemu import BuildQEMU
 from .project import DefaultInstallDir, MakefileProject, Project
@@ -101,6 +102,8 @@ class RunTestRIG(SimpleProject):
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
         cls.rerun_last_failure = cls.add_bool_option("rerun-last-failure")
+        cls.replay_trace = cls.add_path_option("replay-trace", help="Run QCV trace from file/directory")
+        cls.noninteractive = cls.add_bool_option("non-interactive")
         cls.existing_test_impl_port = cls.add_config_option("test-implementation-port", kind=int,
                                                             help="Use a running test implementation instead.")
 
@@ -137,17 +140,27 @@ class RunTestRIG(SimpleProject):
                     self.fatal("Test implementation failed to start correctly. Command was:",
                                commandline_to_str(self.get_test_implementation_command(test_impl_port)))
                     return
-                vengine_args = ["-a", str(reference_impl_port), "-b", str(test_impl_port),
-                                "-r", self.verification_archstring,
-                                "-n", str(self.number_of_runs)]
                 vengine_instance = BuildQuickCheckVengine.get_instance(self)
-                if self.rerun_last_failure:
+                vengine_args = ["-a", str(reference_impl_port), "-b", str(test_impl_port),
+                                "-r", self.verification_archstring]
+                if self.noninteractive:
+                    log_dir = vengine_instance.source_dir / self.target
+                    self.makedirs(log_dir)
+                    vengine_args.extend(["--save-dir", str(log_dir)])
+                    self.number_of_runs *= 10
+
+                vengine_args.extend(["-n", str(self.number_of_runs)])
+                if self.replay_trace:
+                    arg = "--trace-directory=" if self.replay_trace.is_dir() else "--trace-file="
+                    vengine_args.append(arg + str(self.replay_trace))
+                elif self.rerun_last_failure:
                     vengine_args.append("--trace-file=" + str(vengine_instance.build_dir / "last_failure.S"))
                     # vengine_args.append("--verbose=2")
                     vengine_args.append("--no-save")
                 else:
                     vengine_args.append("--verbose=1")
-                BuildQuickCheckVengine.get_instance(self).run_qcvengine(*vengine_args, *self.extra_vengine_args)
+
+                vengine_instance.run_qcvengine(*vengine_args, *self.extra_vengine_args)
                 reference_cmd.kill()
                 test_cmd.kill()
 
