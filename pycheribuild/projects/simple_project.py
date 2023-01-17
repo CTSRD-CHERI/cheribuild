@@ -821,7 +821,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             return  # already checked
         self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
         try:
-            self.run_cmd(["pkg-config", "--exists", package])
+            self.run_cmd(["pkg-config", "--modversion", package], capture_output=True)
         except subprocess.CalledProcessError as e:
             self.dependency_error("Required library", package, "is missing:", e, install_instructions=instructions,
                                   cheribuild_target=instructions.cheribuild_target,
