@@ -77,8 +77,13 @@ class BuildQuickCheckVengine(Project):
         self.run_cmd("cabal", "v2-update", cwd=self.build_dir)
         self.run_cmd("cabal", "v2-build", cwd=self.build_dir)
 
-    def run_qcvengine(self, *args: str, **kwargs):
-        self.run_cmd("cabal", "v2-run", "QCVEngine", "--", *args, cwd=self.build_dir, **kwargs)
+    def run_qcvengine(self, *args: str, cwd: Path = None, **kwargs):
+        self.run_cmd(self.get_qcv_path(), *args, cwd=cwd or self.build_dir, **kwargs)
+
+    def get_qcv_path(self) -> Path:
+        result = self.run_cmd(["cabal", "list-bin", "QCVEngine"],
+                              capture_output=True, cwd=self.build_dir).stdout.decode("utf-8").strip()
+        return Path(result or "/invalid/path/to/QCVEngine")
 
     def run_tests(self):
         self.run_qcvengine("--help", expected_exit_code=1)
@@ -103,6 +108,8 @@ class RunTestRIG(SimpleProject):
         super().setup_config_options(**kwargs)
         cls.rerun_last_failure = cls.add_bool_option("rerun-last-failure")
         cls.replay_trace = cls.add_path_option("replay-trace", help="Run QCV trace from file/directory")
+        cls.replay_current_traces = cls.add_bool_option("replay-current-traces",
+                                                        help="Replay traces captured in the default output directory")
         cls.noninteractive = cls.add_bool_option("non-interactive")
         cls.existing_test_impl_port = cls.add_config_option("test-implementation-port", kind=int,
                                                             help="Use a running test implementation instead.")
@@ -143,36 +150,48 @@ class RunTestRIG(SimpleProject):
                 vengine_instance = BuildQuickCheckVengine.get_instance(self)
                 vengine_args = ["-a", str(reference_impl_port), "-b", str(test_impl_port),
                                 "-r", self.verification_archstring]
+                log_dir = vengine_instance.source_dir / "traces" / self.target
+                self.makedirs(log_dir)
                 if self.noninteractive:
-                    log_dir = vengine_instance.source_dir / self.target
-                    self.makedirs(log_dir)
                     vengine_args.extend(["--save-dir", str(log_dir)])
-                    self.number_of_runs *= 10
+                    self.number_of_runs = 1000
 
                 vengine_args.extend(["-n", str(self.number_of_runs)])
-                if self.replay_trace:
+                if self.replay_current_traces:
+                    vengine_args.extend(["--trace-directory=" + str(log_dir), "--no-save", "--disable-shrink"])
+                elif self.replay_trace:
                     arg = "--trace-directory=" if self.replay_trace.is_dir() else "--trace-file="
-                    vengine_args.append(arg + str(self.replay_trace))
+                    vengine_args.extend([arg + str(self.replay_trace), "--no-save", "--disable-shrink"])
                 elif self.rerun_last_failure:
-                    vengine_args.append("--trace-file=" + str(vengine_instance.build_dir / "last_failure.S"))
+                    vengine_args.append("--trace-file=" + str(log_dir / "last_failure.S"))
                     # vengine_args.append("--verbose=2")
                     vengine_args.append("--no-save")
                 else:
                     vengine_args.append("--verbose=1")
 
-                vengine_instance.run_qcvengine(*vengine_args, *self.extra_vengine_args)
+                vengine_instance.run_qcvengine(*vengine_args, *self.extra_vengine_args, cwd=log_dir)
                 reference_cmd.kill()
                 test_cmd.kill()
 
 
 class TestRigSailQemuRV64(RunTestRIG):
-    target = "testrig-sail-qemu-rv64"
+    target = "testrig-sail-qemu-cheri-rv64"
     dependencies = ["quickcheckvengine", "sail-cheri-riscv", "qemu"]
     # NB: can't use GC here since that implicitly enables ihpm in QCVengine and QEMU does not support mcountinhibit
     # util we have updated to b1675eeb3e6e38b042a23a9647559c9c548c733d.
     verification_archstring = "rv64imafdc_s_xcheri_zicsr_zifencei"
-    # CClear/FPClear are not implemented in QEMU
-    extra_vengine_args = ["--test-exclude-regex=cclear|fpclear"]
+
+    @classmethod
+    def setup_config_options(cls, **kwargs) -> None:
+        super().setup_config_options(**kwargs)
+        cls.test_cheri_only = cls.add_bool_option("test-cheri-only", help="Only run the CHERI-specific passes")
+
+    @property
+    def extra_vengine_args(self):
+        if self.test_cheri_only:
+            return ["--test-include-regex=cap.*"]
+        else:
+            return ["--test-exclude-regex=cclear|fpclear"]  # CClear/FPClear are not implemented in QEMU
 
     def get_reference_implementation_command(self, port: int) -> "list[str]":
         return [str(BuildSailCheriRISCV.get_build_dir(self) / "c_emulator/cheri_riscv_rvfi_RV64"),
