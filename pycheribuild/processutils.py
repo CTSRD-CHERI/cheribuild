@@ -337,8 +337,8 @@ class FakePopen:
         pass
 
     @staticmethod
-    def poll() -> int:
-        return 0
+    def poll() -> typing.Optional[int]:
+        return None
 
     def __enter__(self) -> "FakePopen":
         return self
