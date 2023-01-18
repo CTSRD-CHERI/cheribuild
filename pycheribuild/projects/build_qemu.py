@@ -171,6 +171,8 @@ class BuildQEMUBase(AutotoolsProject):
                                 "-Wextra", "-Wno-sign-compare", "-Wno-unused-parameter",
                                 "-Wno-missing-field-initializers"
                                 ])
+        if ccinfo.compiler == "clang" and ccinfo.version >= (13, 0, 0):
+            self.CFLAGS.append("-Wno-null-pointer-subtraction")
         # This would have cought some problems in the past
         self.common_warning_flags.append("-Werror=return-type")
         if self.use_smbd:
