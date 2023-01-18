@@ -161,9 +161,9 @@ class BuildDiskImageBase(SimpleProject):
             cls.use_qcow2 = cls.add_bool_option("use-qcow2",
                                                 help="Convert the disk image to QCOW2 format instead of raw")
         cls.rootfs_type = cls.add_config_option("rootfs-type", show_help=True,
-            kind=FileSystemType, default=FileSystemType.UFS,
-            enum_choices=[FileSystemType.UFS, FileSystemType.ZFS],
-            help="Select the type of the root file system image.")
+                                                kind=FileSystemType, default=FileSystemType.UFS,
+                                                enum_choices=[FileSystemType.UFS, FileSystemType.ZFS],
+                                                help="Select the type of the root file system image.")
         cls.remote_path = cls.add_config_option("remote-path", show_help=False, metavar="PATH",
                                                 help="When set rsync will be used to update the image from "
                                                      "the remote server instead of building it locally.")
