@@ -1,4 +1,4 @@
-libtmux==0.20.0
+libtmux>=0.10.2,<0.21
 pytest>=7.0,<8.0
 pytest-pycharm>=0.7.0
 argcomplete~=2.0.0
