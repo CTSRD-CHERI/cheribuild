@@ -35,7 +35,7 @@ from .repository import GitRepository
 from .sail import BuildSailCheriRISCV
 from .simple_project import SimpleProject
 from ..processutils import popen, commandline_to_str, FakePopen
-from ..utils import find_free_port
+from ..utils import find_free_port, cached_property
 
 
 # This repository contains various implementations and QuickCheckVEngine
@@ -102,6 +102,14 @@ class RunTestRIG(SimpleProject):
     @abstractmethod
     def get_test_implementation_command(self, port: int) -> "list[str]":
         ...
+
+    @cached_property
+    def run_implementations_with_tracing(self):
+        if self.rerun_last_failure:
+            return True
+        if self.replay_trace and self.replay_trace.is_file():
+            return True  # Also print trace output for single-file traces
+        return self.config.debug_output  # Otherwise only print traces in extremely verbose mode
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
@@ -194,16 +202,17 @@ class TestRigSailQemuRV64(RunTestRIG):
             return ["--test-exclude-regex=cclear|fpclear"]  # CClear/FPClear are not implemented in QEMU
 
     def get_reference_implementation_command(self, port: int) -> "list[str]":
-        return [str(BuildSailCheriRISCV.get_build_dir(self) / "c_emulator/cheri_riscv_rvfi_RV64"),
-                "--rvfi-dii", str(port),
-                "--enable-misaligned",  # QEMU always enabled misaligned accesses
-                # "--disable-writable-misa",
-                "--trace" if self.rerun_last_failure else "--no-trace"]
+        result = [str(BuildSailCheriRISCV.get_build_dir(self) / "c_emulator/cheri_riscv_rvfi_RV64"),
+                "--disable-writable-misa", "--mtval-has-illegal-inst-bits",
+                "--rvfi-dii", str(port), "--enable-misaligned"]  # QEMU always enabled misaligned accesses
+        if self.run_implementations_with_tracing:
+            result.extend(["--trace", "--no-trace=rvfi"])
+        return result
 
     def get_test_implementation_command(self, port: int) -> "list[str]":
         result = [str(BuildQEMU.get_build_dir(self) / "qemu-system-riscv64cheri"), "--rvfi-dii-port", str(port),
                   "-cpu", "rv64,g=true,c=true,Counters=false,Zifencei=true,s=true,u=true,Zicsr=true,Xcheri=true",
                   "-bios", "none"]
-        if self.rerun_last_failure:
+        if self.run_implementations_with_tracing:
             result.extend(["-d", "instr,int"])
         return result
