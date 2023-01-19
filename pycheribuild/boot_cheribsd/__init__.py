@@ -652,7 +652,7 @@ def setup_ssh_for_root_login(qemu: QemuCheriBSDInstance):
     checked_run_cheribsd_command(qemu, "grep -n PermitRootLogin /etc/ssh/sshd_config")
     qemu.sendline("service sshd restart")
     try:
-        qemu.expect(["service: not found", "Starting sshd.", "Cannot 'restart' sshd."], timeout=120)
+        qemu.expect(["service: not found", "Starting sshd.", "Cannot 'restart' sshd."], timeout=240)
     except pexpect.TIMEOUT:
         failure("Timed out setting up SSH keys", exit=True)
     qemu.expect_prompt(timeout=60)
