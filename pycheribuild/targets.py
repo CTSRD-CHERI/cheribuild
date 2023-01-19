@@ -69,7 +69,8 @@ class Target(object):
         assert result._xtarget is not None
         return result._xtarget
 
-    def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config, caller=None) -> "Target":
+    def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config,
+                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> "Target":
         return self
 
     def _get_or_create_project_no_setup(self, _: typing.Optional[CrossCompileTarget], config,
