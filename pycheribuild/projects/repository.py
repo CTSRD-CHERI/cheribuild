@@ -170,7 +170,9 @@ class GitRepository(SourceRepository):
             remote_name, remote_branch = upstream.split("/", maxsplit=1) if upstream else (None, None)
             return GitBranchInfo(local_branch=headers.get("branch.head", None),
                                  remote_name=remote_name, upstream_branch=remote_branch)
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
+            if isinstance(e.__cause__, FileNotFoundError):
+                return None  # git not installed
             # Fall back to v1 output on error (v2 requires git 2.11 -- which should be available everywhere)
             # TODO: can we drop this support? I believe all systems should have support for git 2.11
             status = run_command("git", "status", "-b", "-s", "--porcelain", "-u", "no",
@@ -190,7 +192,7 @@ class GitRepository(SourceRepository):
     @staticmethod
     def contains_commit(current_project: "Project", commit: str, *, src_dir: Path, expected_branch="HEAD",
                         invalid_commit_ref_result: typing.Any = False):
-        if current_project.config.pretend and not src_dir.exists():
+        if current_project.config.pretend and (not src_dir.exists() or not shutil.which("git")):
             return False
         # Note: merge-base --is-ancestor exits with code 0/1, so we need to pass allow_unexpected_returncode
         is_ancestor = run_command("git", "merge-base", "--is-ancestor", commit, expected_branch, cwd=src_dir,

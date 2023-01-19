@@ -102,7 +102,7 @@ do
 		try_run ./cheribuild.py --dump-config
 		try_run ./cheribuild.py -p __run_everything__ --clean --build --test --benchmark
 		# Also check that we can run --pretend mode with all tools missing.
-		try_run env PATH=/does/not/exist ./cheribuild.py -p __run_everything__ --clean --build --test --benchmark
+		try_run env PATH=/does/not/exist "$(command -v python3)" ./cheribuild.py -p __run_everything__ --clean --build --test --benchmark
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --allow-more-than-one-target --build --test --cpu=default -p __run_everything__
 		# Regression for --benchmark-clean-boot:
 		# TODO: try_run ./cheribuild.py mibench-new-riscv64 --benchmark --benchmark-clean-boot -p

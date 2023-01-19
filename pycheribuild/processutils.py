@@ -279,9 +279,11 @@ def check_call_handle_noexec(cmdline: "typing.List[str]", **kwargs):
         if interpreter:
             with keep_terminal_sane(command=cmdline):
                 return subprocess.check_call(interpreter + cmdline, **kwargs)
-        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
+        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None),
+                                         stderr=str(e).encode("utf-8")) from e
     except FileNotFoundError as e:
-        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
+        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None),
+                                         stderr=str(e).encode("utf-8")) from e
 
 
 def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Popen:
@@ -291,9 +293,11 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
         interpreter = get_interpreter(cmdline)
         if interpreter:
             return subprocess.Popen(interpreter + cmdline, **kwargs)
-        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
+        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None),
+                                         stderr=str(e).encode("utf-8")) from e
     except FileNotFoundError as e:
-        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
+        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None),
+                                         stderr=str(e).encode("utf-8")) from e
 
 
 @contextlib.contextmanager
@@ -427,15 +431,17 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
                 stdout, stderr = process.communicate()
                 assert timeout is not None
                 exc = subprocess.TimeoutExpired(process.args, timeout, output=stdout, stderr=stderr)
-            except BrokenPipeError:
+            except BrokenPipeError as e:
                 # just return the exit code
                 process.kill()
                 retcode = process.wait()
                 exc = _make_called_process_error(retcode, process.args, stdout=b"", cwd=kwargs["cwd"])
+                exc.__cause__ = e
             except Exception as e:
                 process.kill()
                 process.wait()
                 exc = e
+                exc.__cause__ = e
             retcode = process.poll()
             if retcode != expected_exit_code and not allow_unexpected_returncode:
                 exc = _make_called_process_error(retcode, process.args, stdout=stdout, stderr=stderr, cwd=kwargs["cwd"])
