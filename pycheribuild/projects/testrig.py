@@ -93,7 +93,10 @@ class RunTestRIG(SimpleProject):
     do_not_add_to_targets = True
     number_of_runs: int = 10
     verification_archstring: "typing.ClassVar[str]"
-    extra_vengine_args: "list[str]" = []
+
+    @property
+    def extra_vengine_args(self) -> "list[str]":
+        return self.vengine_options
 
     @abstractmethod
     def get_reference_implementation_command(self, port: int) -> "list[str]":
@@ -119,8 +122,12 @@ class RunTestRIG(SimpleProject):
         cls.replay_current_traces = cls.add_bool_option("replay-current-traces",
                                                         help="Replay traces captured in the default output directory")
         cls.noninteractive = cls.add_bool_option("non-interactive")
+        cls.number_of_runs = cls.add_config_option("number-of-runs", kind=int, default=20,
+                                                   help="Number of QCVEngine runs")
         cls.existing_test_impl_port = cls.add_config_option("test-implementation-port", kind=int,
                                                             help="Use a running test implementation instead.")
+        cls.vengine_options = cls.add_config_option("extra-vengine-options", default=[], kind=list, metavar="OPTIONS",
+                                                    help="Additional command line options to pass to QCVEngine")
 
     def get_test_impl(self, port: int):
         if self.existing_test_impl_port is not None:
@@ -162,7 +169,6 @@ class RunTestRIG(SimpleProject):
                 self.makedirs(log_dir)
                 if self.noninteractive:
                     vengine_args.extend(["--save-dir", str(log_dir)])
-                    self.number_of_runs = 1000
 
                 vengine_args.extend(["-n", str(self.number_of_runs)])
                 if self.replay_current_traces:
@@ -171,9 +177,8 @@ class RunTestRIG(SimpleProject):
                     arg = "--trace-directory=" if self.replay_trace.is_dir() else "--trace-file="
                     vengine_args.extend([arg + str(self.replay_trace), "--no-save", "--disable-shrink"])
                 elif self.rerun_last_failure:
-                    vengine_args.append("--trace-file=" + str(log_dir / "last_failure.S"))
-                    # vengine_args.append("--verbose=2")
-                    vengine_args.append("--no-save")
+                    vengine_args.extend(["--trace-file=" + str(log_dir / "last_failure.S"),
+                                         "--no-save", "--disable-shrink", "--verbose=2"])
                 else:
                     vengine_args.append("--verbose=1")
 
@@ -197,16 +202,19 @@ class TestRigSailQemuRV64(RunTestRIG):
     @property
     def extra_vengine_args(self):
         if self.test_cheri_only:
-            return ["--test-include-regex=cap.*"]
+            return ["--test-include-regex=cap.*", *super().extra_vengine_args]
         else:
-            return ["--test-exclude-regex=cclear|fpclear"]  # CClear/FPClear are not implemented in QEMU
+            # CClear/FPClear are not implemented in QEMU
+            return ["--test-exclude-regex=cclear|fpclear", *super().extra_vengine_args]
 
     def get_reference_implementation_command(self, port: int) -> "list[str]":
         result = [str(BuildSailCheriRISCV.get_build_dir(self) / "c_emulator/cheri_riscv_rvfi_RV64"),
-                "--disable-writable-misa", "--mtval-has-illegal-inst-bits",
-                "--rvfi-dii", str(port), "--enable-misaligned"]  # QEMU always enabled misaligned accesses
+                  "--disable-writable-misa", "--mtval-has-illegal-inst-bits",
+                  "--rvfi-dii", str(port), "--enable-misaligned"]  # QEMU always enabled misaligned accesses
         if self.run_implementations_with_tracing:
             result.extend(["--trace", "--no-trace=rvfi"])
+        else:
+            result.append("--no-trace")
         return result
 
     def get_test_implementation_command(self, port: int) -> "list[str]":
