@@ -1118,9 +1118,13 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def get_homebrew_prefix(self, package: "typing.Optional[str]" = None) -> Path:
         prefix = _cached_get_homebrew_prefix(package, self.config)
         if not prefix:
-            self.dependency_error("Could not find homebrew package", package,
-                                  install_instructions=InstallInstructions(f"Try running `brew install {package}`"))
-            prefix = Path("/fake/homebrew/prefix/when/pretending/opt") / package
+            prefix = Path("/fake/homebrew/prefix/when/pretending")
+            if package:
+                self.dependency_error("Could not find homebrew package", package,
+                                      install_instructions=InstallInstructions(f"Try running `brew install {package}`"))
+                prefix = prefix / "opt" / package
+            else:
+                self.dependency_error("Could not find homebrew")
         return prefix
 
     @abstractmethod
