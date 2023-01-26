@@ -409,7 +409,6 @@ usage: cheribuild.py [-h] [--help-all] [--config-file FILE] [--pretend] [--build
                      [--cheri-syzkaller/run-sysgen | --cheri-syzkaller/no-run-sysgen]
                      [--run-syzkaller/syz-config RUN-SYZKALLER/SYZ-CONFIG]
                      [--run-syzkaller/ssh-privkey syzkaller_id_rsa] [--run-syzkaller/workdir DIR]
-                     [--run-rtems/ephemeral | --run-rtems/no-ephemeral]
                      [--freebsd/build-tests | --freebsd/no-build-tests] [--freebsd/build-options OPTIONS]
                      [--freebsd/debug-info | --freebsd/no-debug-info] [--freebsd/subdir SUBDIRS]
                      [--cheribsd/build-tests | --cheribsd/no-build-tests] [--cheribsd/build-options OPTIONS]
@@ -453,15 +452,12 @@ usage: cheribuild.py [-h] [--help-all] [--config-file FILE] [--pretend] [--build
                      [--run-minimal/remote-kernel-path RUN-MINIMAL/REMOTE-KERNEL-PATH]
                      [--run-minimal/alternative-kernel RUN-MINIMAL/ALTERNATIVE-KERNEL]
                      [--run-minimal/kernel-abi {hybrid,purecap}] [--run-mfs-root/ssh-forwarding-port PORT]
-                     [--run-mfs-root/ephemeral | --run-mfs-root/no-ephemeral]
                      [--run-mfs-root/remote-kernel-path RUN-MFS-ROOT/REMOTE-KERNEL-PATH]
                      [--run-mfs-root/alternative-kernel RUN-MFS-ROOT/ALTERNATIVE-KERNEL]
                      [--run-mfs-root/kernel-abi {hybrid,purecap}] [--sslproc/build-tests | --sslproc/no-build-tests]
                      [--bash/set-as-root-shell | --bash/no-set-as-root-shell] [--freertos/demo DEMO]
-                     [--freertos/prog PROG] [--freertos/bsp BSP]
-                     [--run-freertos/ephemeral | --run-freertos/no-ephemeral] [--run-freertos/demo DEMO]
-                     [--run-freertos/prog PROG] [--run-freertos/bsp BSP]
-                     [--qtbase-dev/build-tests | --qtbase-dev/no-build-tests]
+                     [--freertos/prog PROG] [--freertos/bsp BSP] [--run-freertos/demo DEMO] [--run-freertos/prog PROG]
+                     [--run-freertos/bsp BSP] [--qtbase-dev/build-tests | --qtbase-dev/no-build-tests]
                      [--qtbase-dev/build-examples | --qtbase-dev/no-build-examples]
                      [--qtbase-dev/assertions | --qtbase-dev/no-assertions]
                      [--qtbase-dev/minimal | --qtbase-dev/no-minimal]
@@ -734,10 +730,6 @@ Options for target 'run-syzkaller':
   --run-syzkaller/workdir DIR
                         Working directory for syzkaller output.
 
-Options for target 'run-rtems':
-  --run-rtems/ephemeral, --run-rtems/no-ephemeral
-                        Run qemu in 'snapshot' mode, changes to the disk image are non-persistent (default: 'False')
-
 Options for target 'freebsd':
   --freebsd/build-tests, --freebsd/no-build-tests
                         Build the tests (default: 'True')
@@ -921,8 +913,6 @@ Options for target 'run-mfs-root':
   --run-mfs-root/ssh-forwarding-port PORT
                         The port on localhost to forward to the QEMU ssh port. You can then use `ssh root@localhost -p
                         $PORT` to connect to the VM (default: '<UID-dependent>')
-  --run-mfs-root/ephemeral, --run-mfs-root/no-ephemeral
-                        Run qemu in 'snapshot' mode, changes to the disk image are non-persistent (default: 'False')
   --run-mfs-root/remote-kernel-path RUN-MFS-ROOT/REMOTE-KERNEL-PATH
                         When set rsync will be used to update the kernel image from a remote host before launching QEMU.
                         Useful when building and running on separate machines.
@@ -948,8 +938,6 @@ Options for target 'freertos':
                         RISC-V-Generic/README for more details (default: 'target-dependent default')
 
 Options for target 'run-freertos':
-  --run-freertos/ephemeral, --run-freertos/no-ephemeral
-                        Run qemu in 'snapshot' mode, changes to the disk image are non-persistent (default: 'False')
   --run-freertos/demo DEMO
                         The FreeRTOS Demo to run. (default: 'RISC-V-Generic')
   --run-freertos/prog PROG
