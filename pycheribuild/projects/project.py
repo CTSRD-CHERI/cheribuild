@@ -1221,6 +1221,17 @@ class Project(SimpleProject):
                 )
         self.__dict__[name] = value
 
+    def _get_scan_build_args(self) -> "list[str]":
+        scan_build_args = [
+            commandline_to_str([self.target_info.scan_build]),
+            "--keep-cc",
+            "--use-cc",
+            commandline_to_str([self.CC]),
+            "--use-c++",
+            commandline_to_str([self.CXX]),
+        ]
+        return scan_build_args
+
     def _get_make_commandline(
         self,
         make_target: "Optional[Union[str, list[str]]]",
@@ -1263,6 +1274,10 @@ class Project(SimpleProject):
                 continue_on_error=self.config.pass_dash_k_to_make,
             ),
         ]
+
+        if self.use_csa:
+            all_args = self._get_scan_build_args() + all_args
+
         if not self.config.make_without_nice:
             all_args = ["nice", *all_args]
         return all_args
