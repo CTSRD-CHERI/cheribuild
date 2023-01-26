@@ -176,6 +176,18 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     def strip_tool(self) -> Path:
         return self._compiler_dir / "llvm-strip"
 
+    @property
+    def ccc_analyzer(self) -> Path:
+        return self.sdk_root_dir / "libexec/ccc-analyzer"
+
+    @property
+    def cxx_analyzer(self) -> Path:
+        return self.sdk_root_dir / "libexec/c++-analyzer"
+
+    @property
+    def scan_build(self) -> Path:
+        return self._compiler_dir / "scan-build"
+
     @classmethod
     @abstractmethod
     def triple_for_target(
@@ -1092,6 +1104,14 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
     @property
     def strip_tool(self) -> Path:
         return self.bindir / (self.binary_prefix + "strip")
+
+    @property
+    def ccc_analyzer(self) -> Path:
+        raise NotImplementedError
+
+    @property
+    def cxx_analyzer(self) -> Path:
+        raise NotImplementedError
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, *args, **kwargs) -> "list[str]":

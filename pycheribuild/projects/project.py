@@ -1932,8 +1932,8 @@ class _CMakeAndMesonSharedLogic(Project):
             ),
             TOOLCHAIN_CXX_FLAGS=cmdline(self.CXXFLAGS),
             TOOLCHAIN_ASM_FLAGS=cmdline(self.ASMFLAGS),
-            TOOLCHAIN_C_COMPILER=self.CC,
-            TOOLCHAIN_CXX_COMPILER=self.CXX,
+            TOOLCHAIN_C_COMPILER=self.cc_wrapper,
+            TOOLCHAIN_CXX_COMPILER=self.cxx_wrapper,
             TOOLCHAIN_AR=self.target_info.ar,
             TOOLCHAIN_RANLIB=self.target_info.ranlib,
             TOOLCHAIN_NM=self.target_info.nm,
@@ -2140,9 +2140,9 @@ class MakefileProject(Project):
         super().setup()
         # Most projects expect that a plain $CC foo.c will work so we include the -target, etc in CC
         essential_flags = self.essential_compiler_and_linker_flags
-        self.set_make_cmd_with_args("CC", self.CC, essential_flags)
+        self.set_make_cmd_with_args("CC", self.cc_wrapper, essential_flags)
         self.set_make_cmd_with_args("CPP", self.CPP, essential_flags)
-        self.set_make_cmd_with_args("CXX", self.CXX, essential_flags)
+        self.set_make_cmd_with_args("CXX", self.cxx_wrapper, essential_flags)
         self.set_make_cmd_with_args("CCLD", self.CC, essential_flags)
         self.set_make_cmd_with_args("CXXLD", self.CXX, essential_flags)
         self.make_args.set_env(AR=self.target_info.ar)

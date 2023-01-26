@@ -735,10 +735,24 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def CC(self) -> Path:  # noqa: N802
         return self.target_info.c_compiler
 
+    @property
+    def cc_wrapper(self) -> Path:
+        if not self.use_csa:
+            return self.CC
+        else:
+            return self.target_info.ccc_analyzer
+
     # noinspection PyPep8Naming
     @property
     def CXX(self) -> Path:  # noqa: N802
         return self.target_info.cxx_compiler
+
+    @property
+    def cxx_wrapper(self) -> Path:
+        if not self.use_csa:
+            return self.CXX
+        else:
+            return self.target_info.cxx_analyzer
 
     # noinspection PyPep8Naming
     @property
