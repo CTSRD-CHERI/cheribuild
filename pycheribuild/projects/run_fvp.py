@@ -470,8 +470,8 @@ class LaunchFVPBase(SimpleProject):
                                                            help="When set rsync will be used to update the image from "
                                                                 "the remote server prior to running it.")
         cls.ssh_port = cls.add_config_option("ssh-port", default=cls.default_ssh_port(), kind=int)
-        cls.extra_tcp_forwarding: "list[str]" = cls.add_config_option(
-            "extra-tcp-forwarding", kind=list, default=[],
+        cls.extra_tcp_forwarding = cls.add_list_option(
+            "extra-tcp-forwarding",
             help="Additional TCP bridge ports beyond ssh/22; list of [hostip:]port=[guestip:]port")
         # Allow using the architectural FVP:
         cls.use_architectureal_fvp = cls.add_bool_option("use-architectural-fvp",

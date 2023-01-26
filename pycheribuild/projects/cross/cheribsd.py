@@ -405,11 +405,10 @@ class BuildFreeBSDBase(Project):
     @classmethod
     def setup_config_options(cls, kernel_only_target=False, **kwargs) -> None:
         super().setup_config_options(**kwargs)
-        cls.extra_make_args = cls.add_config_option("build-options", default=cls.default_extra_make_options, kind=list,
-                                                    metavar="OPTIONS",
-                                                    help="Additional make options to be passed to make when building "
-                                                         "FreeBSD/CheriBSD. See `man src.conf` for more info.",
-                                                    show_help=True)
+        cls.extra_make_args = cls.add_list_option(
+            "build-options", default=cls.default_extra_make_options, metavar="OPTIONS",
+            help="Additional make options to be passed to make when building FreeBSD/CheriBSD. See `man src.conf` "
+                 "for more info.", show_help=True)
         cls.debug_kernel = cls.add_bool_option("debug-kernel", help="Build the kernel with -O0 and verbose boot output",
                                                show_help=False)
         if kernel_only_target:
@@ -588,8 +587,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         subdir_default = ComputedDefaultValue(function=lambda config, proj: config.freebsd_subdir,
                                               as_string="the value of the global --freebsd-subdir options")
 
-        cls.explicit_subdirs_only = cls.add_config_option(
-            "subdir", kind=list, metavar="SUBDIRS", show_help=True, default=subdir_default,
+        cls.explicit_subdirs_only = cls.add_list_option(
+            "subdir", metavar="SUBDIRS", show_help=True, default=subdir_default,
             help="Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding individual"
                  " programs/libraries. If more than one dir is passed, they will be processed in order. Note: This"
                  " will break if not all dependencies have been built.")

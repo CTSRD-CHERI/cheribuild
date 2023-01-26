@@ -67,8 +67,8 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
-        cls.meson_options = cls.add_config_option("meson-options", default=[], kind=list, metavar="OPTIONS",
-                                                  help="Additional command line options to pass to Meson")
+        cls.meson_options = cls.add_list_option("meson-options", metavar="OPTIONS",
+                                                help="Additional command line options to pass to Meson")
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)

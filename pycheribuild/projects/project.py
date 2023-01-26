@@ -1738,8 +1738,8 @@ class AutotoolsProject(Project):
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
-        cls.extra_configure_flags = cls.add_config_option("configure-options", default=[], kind=list, metavar="OPTIONS",
-                                                          help="Additional command line options to pass to configure")
+        cls.extra_configure_flags = cls.add_list_option("configure-options", metavar="OPTIONS",
+                                                        help="Additional command line options to pass to configure")
 
     """
     Like Project but automatically sets up the defaults for autotools like projects

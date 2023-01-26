@@ -906,9 +906,9 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "strip", default=True, help="strip ELF files to reduce size of generated image")
         cls.include_cheribsdtest = cls.add_bool_option(
             "include-cheribsdtest", default=True, help="Also add static cheribsdtest base variants to the disk image")
-        cls.kernels = cls.add_config_option("kernel-names", kind=list, default=[""],
-                                            help="Kernel(s) to include in the image; empty string or '/' for "
-                                                 "/boot/kernel/, X for /boot/kernel.X/")
+        cls.kernels = cls.add_list_option("kernel-names", default=[""],
+                                          help="Kernel(s) to include in the image; empty string or '/' for "
+                                               "/boot/kernel/, X for /boot/kernel.X/")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

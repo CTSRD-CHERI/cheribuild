@@ -126,8 +126,8 @@ class RunTestRIG(SimpleProject):
                                                    help="Number of QCVEngine runs")
         cls.existing_test_impl_port = cls.add_config_option("test-implementation-port", kind=int,
                                                             help="Use a running test implementation instead.")
-        cls.vengine_options = cls.add_config_option("extra-vengine-options", default=[], kind=list, metavar="OPTIONS",
-                                                    help="Additional command line options to pass to QCVEngine")
+        cls.vengine_options = cls.add_list_option("extra-vengine-options", metavar="OPTIONS",
+                                                  help="Additional command line options to pass to QCVEngine")
 
     def get_test_impl(self, port: int):
         if self.existing_test_impl_port is not None:

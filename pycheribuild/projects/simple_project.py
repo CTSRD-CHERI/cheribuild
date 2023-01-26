@@ -726,6 +726,11 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                                                        only_add_for_targets=only_add_for_targets, **kwargs))
 
     @classmethod
+    def add_list_option(cls, name: str, *, default=None, **kwargs) -> "list[str]":
+        return typing.cast(typing.List[str],
+                           cls.add_config_option(name, kind=list, default=[] if default is None else default, **kwargs))
+
+    @classmethod
     def add_path_option(cls, name: str, *, altname=None, only_add_for_targets: list = None, **kwargs) -> Optional[Path]:
         return cls.add_config_option(name, kind=Path, altname=altname, only_add_for_targets=only_add_for_targets,
                                      **kwargs)

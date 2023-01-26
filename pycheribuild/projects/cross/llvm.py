@@ -83,9 +83,8 @@ class BuildLLVMBase(CMakeProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         if "included_projects" not in cls.__dict__:
-            cls.included_projects = cls.add_config_option("include-projects", default=["llvm", "clang", "lld"],
-                                                          kind=list,
-                                                          help="List of LLVM subprojects that should be built")
+            cls.included_projects = cls.add_list_option("include-projects", default=["llvm", "clang", "lld"],
+                                                        help="List of LLVM subprojects that should be built")
         cls.add_default_sysroot = False
         cls.enable_assertions = cls.add_bool_option("assertions", help="build with assertions enabled", default=True)
         if "skip_static_analyzer" not in cls.__dict__:

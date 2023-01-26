@@ -294,8 +294,7 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
                                                 help="Path to the SPEC2006 ISO image or extracted sources")
         cls.fast_benchmarks_only = cls.add_bool_option("fast-benchmarks-only", default=False)
         cls.workload = cls.add_config_option("workload", choices=("test", "train", "ref"), default="test")
-        cls.benchmark_override = cls.add_config_option("benchmarks", default=[], kind=list,
-                                                       help="override the list of benchmarks to run")
+        cls.benchmark_override = cls.add_list_option("benchmarks", help="override the list of benchmarks to run")
 
     @property
     def extracted_spec_sources(self) -> Path:

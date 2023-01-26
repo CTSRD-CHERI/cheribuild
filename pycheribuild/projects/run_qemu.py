@@ -147,8 +147,8 @@ class LaunchQEMUBase(SimpleProject):
                                                    default=None)
         cls.use_uboot = cls.add_bool_option("use-u-boot", default=False,
                                             help="Boot using U-Boot for UEFI if supported (only RISC-V)")
-        cls.extra_qemu_options = cls.add_config_option("extra-options", default=[], kind=list, metavar="QEMU_OPTIONS",
-                                                       help="Additional command line flags to pass to qemu-system")
+        cls.extra_qemu_options = cls.add_list_option("extra-options", metavar="QEMU_OPTIONS",
+                                                     help="Additional command line flags to pass to qemu-system")
         cls.logfile = cls.add_path_option("logfile", default=None, metavar="LOGFILE",
                                           help="The logfile that QEMU should use.")
         cls.log_directory = cls.add_path_option("log-directory", default=None, metavar="DIR",
@@ -180,9 +180,9 @@ class LaunchQEMUBase(SimpleProject):
                 help="Run qemu in 'snapshot' mode, changes to the disk image are non-persistent")
 
         # TODO: add a shortcut for vnc?
-        cls.extra_tcp_forwarding = cls.add_config_option("extra-tcp-forwarding", kind=list, default=(),
-                                                         help="Additional TCP bridge ports beyond ssh/22; "
-                                                              "list of [hostip:]port=[guestip:]port")
+        cls.extra_tcp_forwarding = cls.add_list_option(
+            "extra-tcp-forwarding",
+            help="Additional TCP bridge ports beyond ssh/22; list of [hostip:]port=[guestip:]port")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
