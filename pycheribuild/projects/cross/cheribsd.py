@@ -585,12 +585,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             cls.with_manpages = False
             return  # The remaining options only affect the userspace build
 
-        if "subdir_override" not in cls.__dict__:
-            cls.subdir_override = cls.add_config_option("subdir-with-deps", metavar="DIR",
-                                                        help="Only build subdir DIR instead of the full tree. This "
-                                                             "uses the SUBDIR_OVERRIDE mechanism so "
-                                                             "will build much more than just that directory")
-
         subdir_default = ComputedDefaultValue(function=lambda config, proj: config.freebsd_subdir,
                                               as_string="the value of the global --freebsd-subdir options")
 
@@ -761,10 +755,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             assert self.kernel_config is not None
         self.make_args.set(**self.arch_build_flags)
         self.extra_kernels = []
-
-        if self.subdir_override:
-            # build only part of the tree
-            self.make_args.set(SUBDIR_OVERRIDE=self.subdir_override)
 
     @cached_property
     def build_toolchain_root_dir(self) -> "Optional[Path]":
@@ -1069,7 +1059,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     build_args.set(WORLDFAST=True)
             self.run_make("buildworld", options=build_args)
             self.kernel_toolchain_exists = True  # includes the necessary tools for kernel-toolchain
-        if not self.config.skip_kernel and not self.subdir_override:
+        if not self.config.skip_kernel:
             for i in ("USBROOT", "NFSROOT", "MDROOT"):
                 if ("_" + i) in self.kernel_config:
                     self.info("Not embedding MFS_ROOT image in non-MFS root kernel config:", self.kernel_config)
@@ -1191,11 +1181,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         result.set_env(METALOG=self.install_dir / "METALOG.world")
         return result
 
-    def install(self, all_kernel_configs: str = None, sysroot_only=False, install_with_subdir_override=False,
-                **kwargs) -> None:
-        if self.subdir_override and not install_with_subdir_override:
-            self.info("Skipping install step because SUBDIR_OVERRIDE was set")
-            return
+    def install(self, all_kernel_configs: str = None, sysroot_only=False, **kwargs) -> None:
         if self.config.freebsd_host_tools_only:
             self.info("Skipping install step because freebsd-host-tools was set")
             return
@@ -1709,7 +1695,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         if self.sysroot_only:
             # Don't attempt to build extra kernels if we are only building a sysroot
             return
-        if not self.config.skip_kernel and not self.subdir_override:
+        if not self.config.skip_kernel:
             if self.extra_kernels:
                 self._buildkernel(kernconf=" ".join(self.extra_kernels))
             if self.extra_kernels_with_mfs and self.mfs_root_image:
