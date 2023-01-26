@@ -166,6 +166,7 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     qemu_user_networking = False
     _enable_smbfs_support = False
     _add_virtio_rng = False
+    _uses_disk_image = False
 
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"

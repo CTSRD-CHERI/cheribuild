@@ -134,6 +134,7 @@ class LaunchQEMUBase(SimpleProject):
     custom_qemu_path: Path
     kernel_project: typing.Optional[Project] = None
     disk_image_project: typing.Optional[Project] = None
+    _uses_disk_image = True
 
     @classmethod
     def setup_config_options(cls, default_ssh_port: int = None, **kwargs):
@@ -172,9 +173,11 @@ class LaunchQEMUBase(SimpleProject):
                                                             help="The port on localhost to forward to the QEMU ssh "
                                                                  "port. You can then use `ssh root@localhost -p $PORT` "
                                                                  "to connect to the VM")
-        cls.ephemeral = cls.add_bool_option("ephemeral", show_help=True,
-                                            help="Run qemu in 'snapshot' mode, changes to the disk image "
-                                                 "are non-persistent")
+        cls.ephemeral = False
+        if cls._uses_disk_image:
+            cls.ephemeral = cls.add_bool_option(
+                "ephemeral", show_help=True,
+                help="Run qemu in 'snapshot' mode, changes to the disk image are non-persistent")
 
         # TODO: add a shortcut for vnc?
         cls.extra_tcp_forwarding = cls.add_config_option("extra-tcp-forwarding", kind=list, default=(),
@@ -450,7 +453,11 @@ class LaunchQEMUBase(SimpleProject):
                                                          add_virtio_rng=self._add_virtio_rng)
         qemu_command += self._project_specific_options + self._after_disk_options + monitor_options
         qemu_command += logfile_options + self.extra_qemu_options + virtfs_args
-        self.info("About to run QEMU with image", self.disk_image, "and loader/kernel", qemu_loader_or_kernel)
+        if self.disk_image is None:
+            assert not self._uses_disk_image, "No disk image, should not have --ephemeral flag"
+            self.info("About to run QEMU with loader/kernel", qemu_loader_or_kernel)
+        else:
+            self.info("About to run QEMU with image", self.disk_image, "and loader/kernel", qemu_loader_or_kernel)
 
         if self.config.wait_for_debugger or self.config.debugger_in_tmux_pane:
             gdb_socket_placeholder = find_free_port(preferred_port=1234)
@@ -596,11 +603,10 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             help="Select extra kernel variant with the given ABI to run.")
 
     def __init__(self, config: CheriConfig, *, freebsd_class: "typing.Type[BuildFreeBSD]" = None,
-                 disk_image_class: "typing.Type[BuildDiskImageBase]" = None, needs_disk_image=True, **kwargs):
+                 disk_image_class: "typing.Type[BuildDiskImageBase]" = None, **kwargs):
         super().__init__(config, **kwargs)
         self.freebsd_class = freebsd_class
         self.disk_image_class = disk_image_class
-        self.needs_disk_image = needs_disk_image
 
     def setup(self) -> None:
         super().setup()
@@ -633,7 +639,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             if kern_module_path_arg:
                 self._project_specific_options += ["-append", kern_module_path_arg]
         self.rootfs_path = self.kernel_project.get_rootfs_dir(self)
-        if self.needs_disk_image:
+        if self._uses_disk_image:
             self.disk_image = self.disk_image_class.get_instance(self).disk_image_path
 
     def _valid_kernel_configs(self):
@@ -704,9 +710,8 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
             result.append(cls._disk_image_class.get_class_for_target(xtarget).target)
         return result
 
-    def __init__(self, *args, needs_disk_image=True, **kwargs):
-        super().__init__(*args, needs_disk_image=needs_disk_image, freebsd_class=self._freebsd_class,
-                         disk_image_class=self._disk_image_class, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, freebsd_class=self._freebsd_class, disk_image_class=self._disk_image_class, **kwargs)
 
     def run_tests(self):
         rootfs_kernel_bootdir = None
@@ -850,6 +855,7 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
     target = "run-mfs-root"
     _freebsd_class = BuildCheriBsdMfsKernel
     _disk_image_class = None
+    _uses_disk_image = False
 
     # XXX: Existing code isn't reqdy to run these but we want to support building them
     @classproperty
@@ -859,7 +865,7 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
                     set([CompilationTargets.CHERIBSD_AARCH64] + CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS))
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, needs_disk_image=False, **kwargs)
+        super().__init__(*args, **kwargs)
         if self.config.use_minimal_benchmark_kernel:
             kernel_config = self.kernel_project.default_kernel_config(ConfigPlatform.QEMU, benchmark=True)
             self.current_kernel = self.kernel_project.get_kernel_install_path(kernel_config)

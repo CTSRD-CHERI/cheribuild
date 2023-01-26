@@ -92,6 +92,7 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
     qemu_user_networking = False
     _enable_smbfs_support = False
     _add_virtio_rng = False
+    _uses_disk_image = False
 
     def setup(self):
         super().setup()
