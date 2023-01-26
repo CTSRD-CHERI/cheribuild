@@ -256,7 +256,7 @@ class GitRepository(SourceRepository):
         if src_dir == base_project_source_dir:
             return  # Nothing else to do
 
-        # Handle per-target overrides by adding a new git-worktree git-worktree
+        # Handle per-target overrides by adding a new git-worktree.
         target_override = self.per_target_branches.get(current_project.crosscompile_target, None)
         default_clone_branch = self.get_default_branch(current_project, include_per_target=False)
         assert target_override is not None, "Default src != base src -> must have a per-target override"
