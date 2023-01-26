@@ -35,6 +35,10 @@ class BuildSQLite(CrossCompileAutotoolsProject):
         "https://github.com/CTSRD-CHERI/sqlite.git", default_branch="3.22.0-cheri", force_branch=True
     )
 
+    @classmethod
+    def can_build_with_csa(cls) -> bool:
+        return True
+
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
         # XXX: Disabling amalgamation should remove the requirement for tclsh, but it seems the build still invokes it.

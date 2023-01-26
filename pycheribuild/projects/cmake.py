@@ -111,6 +111,10 @@ class BuildCrossCompiledCMake(CMakeProject):
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS
 
+    @classmethod
+    def can_build_with_csa(cls) -> bool:
+        return True
+
     def linkage(self):
         # We always want to build the CheriBSD CTest binary static so that we can use in QEMU without needing libuv.
         assert "libuv" in self.dependencies

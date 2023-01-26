@@ -47,6 +47,10 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     _check_install_dir_conflict = False
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
 
+    @classmethod
+    def can_build_with_csa(cls) -> bool:
+        return True
+
     def setup(self):
         # For the NATIVE variant we want to install to the compiler resource dir:
         if self.compiling_for_host():
