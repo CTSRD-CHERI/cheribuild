@@ -1444,8 +1444,12 @@ class Project(SimpleProject):
             assert configure_path, "configure_command should not be empty!"
             if not Path(configure_path).exists():
                 self.fatal("Configure command ", configure_path, "does not exist!")
+
+            configure_cmd = [str(configure_path), *self.configure_args]
+            if self.use_csa:
+                configure_cmd = self._get_scan_build_args() + configure_cmd
             self.run_with_logfile(
-                [str(configure_path), *self.configure_args],
+                configure_cmd,
                 logfile_name="configure",
                 cwd=cwd,
                 env=self.configure_environment,
