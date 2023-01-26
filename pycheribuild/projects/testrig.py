@@ -48,7 +48,7 @@ class BuildTestRig(MakefileProject):
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
-        self.check_required_system_tool("cabal", apt="cabal-install")
+        self.check_required_system_tool("cabal", apt="cabal-install", homebrew="cabal-install")
 
     def clean(self):
         self.run_make("clean-vengines")
@@ -66,7 +66,7 @@ class BuildQuickCheckVengine(Project):
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
-        self.check_required_system_tool("cabal", apt="cabal-install")
+        self.check_required_system_tool("cabal", apt="cabal-install", homebrew="cabal-install")
         # TODO: check for at min version?
         # cabal_version = get_program_version(Path("cabal"), config=self.config, program_name=b"cabal-install")
 
