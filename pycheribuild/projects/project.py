@@ -1603,6 +1603,20 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 
     _check_install_dir_conflict: bool = True
 
+    # noinspection PyPep8Naming
+    def _check_build_settings_for_CSA(self):  # noqa: N802
+        if self.build_type != BuildType.DEBUG:
+            self.warning("It's recommended to analyze a project in its Debug configuration.")
+        if not self.with_clean and len(list(self.build_dir.iterdir())) != 0:
+            self.warning(
+                "In order for CSA to analyze the whole project it needs to intercept all compilations."
+                " Therefore the project must be built from scratch."
+                " Consider running with --clean."
+            )
+            self.ask_for_confirmation("Are you sure you want to continue?")
+        if not self.config.skip_install:
+            self.info("You may want to skip install step when building with CSA.")
+
     def _last_build_kind_path(self) -> Path:
         return Path(self.build_dir, ".cheribuild_last_build_kind")
 
@@ -1693,6 +1707,8 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 self.fatal(
                     "Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!"
                 )
+        if self.use_csa:
+            self._check_build_settings_for_CSA()
         install_dir_kind = self.get_default_install_dir_kind()
         if install_dir_kind != DefaultInstallDir.DO_NOT_INSTALL and self._check_install_dir_conflict:
             xtarget: CrossCompileTarget = self._xtarget
