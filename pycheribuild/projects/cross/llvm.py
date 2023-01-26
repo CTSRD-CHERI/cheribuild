@@ -436,6 +436,18 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
         for i in ("clang", "clang++", "clang-cpp"):
             self.create_symlink(self.install_dir / "bin" / i, self.install_dir / "utils" / (prefix + "-" + i))
 
+    def add_compilers_with_config_files(self, prefix: str, rootfs_target: CrossCompileTarget):
+        targets = [rootfs_target]
+        if rootfs_target.is_cheri_hybrid():
+            targets.append(rootfs_target.get_non_cheri_for_hybrid_rootfs_target())
+            targets.append(rootfs_target.get_cheri_purecap_for_hybrid_rootfs_target())
+        elif rootfs_target.is_cheri_purecap():
+            targets.append(rootfs_target.get_non_cheri_for_purecap_rootfs_target())
+            targets.append(rootfs_target.get_cheri_hybrid_for_purecap_rootfs_target())
+
+        for target in targets:
+            self.add_compiler_with_config_file(prefix, target)
+
     @classmethod
     def get_install_dir_for_type(cls, caller: SimpleProject, compiler_type: CompilerType):
         if compiler_type == CompilerType.CHERI_LLVM:
@@ -499,9 +511,9 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
         # we use {freebsd,cheribsd}-<arch>-<variant>-clang instead of <arch>-cheribsd-<variant>-clang
         if self.compiling_for_host():
             for tgt in CompilationTargets.ALL_CHERIBSD_NON_MORELLO_TARGETS:
-                self.add_compiler_with_config_file("cheribsd", tgt)
+                self.add_compilers_with_config_files("cheribsd", tgt)
             for tgt in CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS:
-                self.add_compiler_with_config_file("freebsd", tgt)
+                self.add_compilers_with_config_files("freebsd", tgt)
 
         # llvm-objdump currently doesn't infer the available features
         # This depends on https://reviews.llvm.org/D74023
@@ -573,7 +585,7 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
             self.delete_file(self.install_dir / "include/c++/v1")
         if self.compiling_for_host():
             for tgt in CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS:
-                self.add_compiler_with_config_file("cheribsd", tgt)
+                self.add_compilers_with_config_files("cheribsd", tgt)
 
     @classmethod
     def get_native_install_path(cls, config: CheriConfig):
