@@ -14,7 +14,8 @@ macOS 10.14 and newer is also supported.
 
 # Pre-Build Setup
 #### macOS
-When building on macOS the following packages are required:
+When building on macOS the following commands will install the packages required for
+the most commonly used cheribuild targets:
 ```shell
 brew install cmake ninja libarchive git glib gnu-sed automake autoconf coreutils llvm make wget pixman pkg-config xz
 # Install samba for shared mounts between host and CheriBSD on QEMU
@@ -25,7 +26,8 @@ brew install homebrew/cask/docker homebrew/cask/xquartz socat dtc
 
 
 #### Debian/Ubuntu
-If you are building CHERI on a Debian/Ubuntu-based machine, please install the following packages:
+If you are building CHERI on a Debian/Ubuntu-based machine, the following command will install the packages required for
+the most commonly used cheribuild targets:
 
 ```shell
 apt install autoconf automake libtool pkg-config clang bison cmake mercurial ninja-build samba flex texinfo time libglib2.0-dev libpixman-1-dev libarchive-dev libarchive-tools libbz2-dev libattr1-dev libcap-ng-dev
@@ -34,21 +36,24 @@ apt install autoconf automake libtool pkg-config clang bison cmake mercurial nin
 Older versions of Ubuntu may report errors when trying to install `libarchive-tools`. In this case try using `apt install bsdtar` instead.
 
 #### RHEL/Fedora
-If you are building CHERI on a RHEL/Fedora-based machine, please install the following packages:
+If you are building CHERI on a RHEL/Fedora-based machine, the following command will install the packages required for
+the most commonly used cheribuild targets:
 
 ```shell
 dnf install libtool clang-devel bison cmake mercurial ninja-build samba flex texinfo glib2-devel pixman-devel libarchive-devel bsdtar bzip2-devel libattr-devel libcap-ng-devel expat-devel
 ```
     
 #### FreeBSD
-If you are building CHERI on a FreeBSD machine, please install the following packages:
+If you are building CHERI on a FreeBSD machine, the following command will install the packages required for
+the most commonly used cheribuild targets:
 
 ```shell
 pkg install autoconf automake bison cmake expat glib gsed llvm mercurial meson ninja pkgconf pixman samba 
 ```
 
 #### Arch Linux
-If you are building CHERI on an Arch Linux machine, please install the following packages:
+If you are building CHERI on an Arch Linux machine, the following command will install the packages required for
+the most commonly used cheribuild targets:
 
 ```shell
 pacman -Syu autoconf automake libtool pkgconf clang bison cmake ninja samba flex texinfo time glib2 pixman libarchive bzip2 attr libcap-ng inetutils
