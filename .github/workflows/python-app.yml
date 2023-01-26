@@ -10,15 +10,11 @@ on:
         branches: [ main ]
 
 jobs:
-    build:
+    build-baseline:
         runs-on: ubuntu-latest
+        container: python:3.6.0
         steps:
             -   uses: actions/checkout@v2
-            -   name: Set up Python 3.6.7
-                uses: actions/setup-python@v4
-                with:
-                    python-version: '3.6'
-                    cache: pip
             -   name: Install dependencies
                 run: |
                     python -m pip install --upgrade pip
