@@ -30,7 +30,7 @@ If you are building CHERI on a Debian/Ubuntu-based machine, the following comman
 the most commonly used cheribuild targets:
 
 ```shell
-apt install autoconf automake libtool pkg-config clang bison cmake mercurial ninja-build samba flex texinfo time libglib2.0-dev libpixman-1-dev libarchive-dev libarchive-tools libbz2-dev libattr1-dev libcap-ng-dev
+apt install autoconf automake libtool pkg-config clang bison cmake mercurial ninja-build samba flex texinfo time libglib2.0-dev libpixman-1-dev libarchive-dev libarchive-tools libbz2-dev libattr1-dev libcap-ng-dev libexpat1-dev libgmp-dev
 ```
 
 Older versions of Ubuntu may report errors when trying to install `libarchive-tools`. In this case try using `apt install bsdtar` instead.
@@ -56,7 +56,7 @@ If you are building CHERI on an Arch Linux machine, the following command will i
 the most commonly used cheribuild targets:
 
 ```shell
-pacman -Syu autoconf automake libtool pkgconf clang bison cmake ninja samba flex texinfo time glib2 pixman libarchive bzip2 attr libcap-ng inetutils
+pacman -Syu autoconf automake libtool pkgconf clang bison cmake ninja samba flex texinfo time glib2 pixman libarchive bzip2 attr libcap-ng inetutils mercurial expat gmp
 ```
 
 These package used approx 350MiB, though you probably have most already installed.
