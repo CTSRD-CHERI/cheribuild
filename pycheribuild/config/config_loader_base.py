@@ -217,7 +217,7 @@ class ConfigOptionBase(typing.Generic[T]):
             result = self._convert_type(result)
         except ValueError as e:
             fatal_error("Invalid value for option '", self.full_option_name,
-                        "': could not convert '", result, "': ", str(e), sep="")
+                        "': could not convert '", result, "': ", str(e), sep="", pretend=config.pretend)
             sys.exit()
         return result
 

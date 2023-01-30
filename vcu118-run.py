@@ -140,11 +140,11 @@ reset halt
 
 def load_bitfile(bitfile: Path, ltxfile: Path, fu: FileSystemUtils):
     if shutil.which("vivado") is None:
-        fatal_error("vivado not in $PATH, cannot continue")
+        fatal_error("vivado not in $PATH, cannot continue", pretend=False)
     if bitfile is None or not bitfile.exists():
-        fatal_error("Missing bitfile:", bitfile)
+        fatal_error("Missing bitfile:", bitfile, pretend=False)
     if ltxfile is None or not ltxfile.exists():
-        fatal_error("Missing ltx file:", ltxfile)
+        fatal_error("Missing ltx file:", ltxfile, pretend=False)
     with tempfile.NamedTemporaryFile() as t:
         t.write(VIVADO_SCRIPT)
         t.flush()

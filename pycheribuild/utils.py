@@ -246,10 +246,7 @@ def error_message(*args, sep=" ", fixit_hint=None) -> None:
         fixit_message(fixit_hint)
 
 
-def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exit_code=3,
-                pretend: bool = None) -> None:
-    if pretend is None:
-        pretend = GlobalConfig.pretend  # TODO: remove
+def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exit_code=3, pretend: bool) -> None:
     # we ignore fatal errors when simulating a run
     if pretend:
         print(_add_error_context("Potential fatal error", args, sep=sep), file=sys.stderr, flush=True)

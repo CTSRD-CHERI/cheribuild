@@ -105,7 +105,7 @@ def ensure_fd_is_blocking(fd) -> None:
         fcntl.fcntl(fd, fcntl.F_SETFL, flag & ~os.O_NONBLOCK)
     flag = fcntl.fcntl(fd, fcntl.F_GETFL)
     if flag & os.O_NONBLOCK:
-        fatal_error("fd", fd, "is set to nonblocking and could not unset flag")
+        fatal_error("fd", fd, "is set to nonblocking and could not unset flag", pretend=False)
 
 
 def check_not_root() -> None:
@@ -173,7 +173,7 @@ def real_main() -> None:
         sys.exit()
     elif cheri_config.get_config_option:
         if cheri_config.get_config_option not in config_loader.options:
-            fatal_error("Unknown config key", cheri_config.get_config_option)
+            fatal_error("Unknown config key", cheri_config.get_config_option, pretend=False)
         cheri_config.pretend = True
         cheri_config.quiet = True
         option = config_loader.options[cheri_config.get_config_option]
@@ -245,7 +245,7 @@ def real_main() -> None:
         if cheri_config.libcompat_buildenv or cheri_config.buildenv:
             cheri_config.targets.append("cheribsd")
         else:
-            fatal_error("At least one target name is required (see --list-targets).")
+            fatal_error("At least one target name is required (see --list-targets).", pretend=False)
 
     if not cheri_config.quiet:
         print("Sources will be stored in", cheri_config.source_root)
@@ -307,7 +307,7 @@ def main() -> None:
             raise e
         else:
             traceback.print_exc()
-            fatal_error("Unhandled exception:", e, fatal_when_pretending=True)
+            fatal_error("Unhandled exception:", e, fatal_when_pretending=True, pretend=False)
 
 
 if __name__ == "__main__":

@@ -220,7 +220,7 @@ class JenkinsConfig(CheriConfig):
                 print("Not cleaning non-default output path", self.output_root)
             self.keep_install_dir = True
         if os.path.relpath(str(self.output_root), str(self.workspace)).startswith(".."):
-            fatal_error("Output path", self.output_root, "must be inside workspace", self.workspace)
+            fatal_error("Output path", self.output_root, "must be inside workspace", self.workspace, pretend=False)
         if os.path.relpath(str(self.sysroot_output_root), str(self.workspace)).startswith(".."):
             fatal_error("Sysroot output path", self.sysroot_output_root, "must be inside workspace", self.workspace,
                         pretend=False, fatal_when_pretending=True)
@@ -257,13 +257,14 @@ class JenkinsConfig(CheriConfig):
             self.clang_plusplus_path = Path(os.getenv("HOST_CXX", self.clang_plusplus_path))
             self.clang_cpp_path = Path(os.getenv("HOST_CPP", self.clang_cpp_path))
             if not self.clang_path.exists():
-                fatal_error("C compiler", self.clang_path, "does not exit. Pass --clang-path or set $HOST_CC")
+                fatal_error("C compiler", self.clang_path,
+                            "does not exit. Pass --clang-path or set $HOST_CC", pretend=self.pretend)
             if not self.clang_plusplus_path.exists():
                 fatal_error("C++ compiler", self.clang_plusplus_path,
-                            "does not exit. Pass --clang++-path or set $HOST_CXX")
+                            "does not exit. Pass --clang++-path or set $HOST_CXX", pretend=self.pretend)
             if not self.clang_cpp_path.exists():
                 fatal_error("C pre-processor", self.clang_cpp_path,
-                            "does not exit. Pass --clang-cpp-path or set $HOST_CPP")
+                            "does not exit. Pass --clang-cpp-path or set $HOST_CPP", pretend=self.pretend)
         else:
             # always use the CHERI clang built by jenkins (if available)
             # Prefix $WORKSPACE/native-sdk, but fall back to CHERI/Morello LLVM if that does not exist

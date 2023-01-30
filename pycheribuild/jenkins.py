@@ -104,7 +104,7 @@ class SdkArchive(object):
             # print("Matched files:", found)
             if len(found) == 0:
                 if fatal:
-                    fatal_error("required files", glob, "missing. Source archive =", self.archive)
+                    fatal_error("required files", glob, "missing. Source archive =", self.archive, pretend=False)
                 else:
                     status_update("required files", glob, "missing. Source archive was", self.archive)
                     return False
@@ -156,7 +156,8 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[Sdk
         archive.extract()
 
     if not expected_bindir.exists():
-        fatal_error("SDK bin dir", expected_bindir, "does not exist after extracting sysroot archives!")
+        fatal_error("SDK bin dir", expected_bindir, "does not exist after extracting sysroot archives!",
+                    pretend=cheri_config.pretend)
 
     # Use llvm-ar/llvm-ranlib or the host ar/ranlib if they ar/ranlib are missing from archive
     for tool in ("ar", "ranlib", "nm"):
@@ -225,19 +226,19 @@ def _jenkins_main() -> None:
         cheri_config.targets = list(sorted(target_manager.target_names(cheri_config)))
 
     if cheri_config.action == [""]:
-        fatal_error("No action specified, did you mean to pass --build?")
+        fatal_error("No action specified, did you mean to pass --build?", pretend=False)
         sys.exit()
 
     if len(cheri_config.targets) < 1:
-        fatal_error("Missing target?")
+        fatal_error("Missing target?", pretend=False)
         sys.exit()
 
     if JenkinsAction.CREATE_TARBALL in cheri_config.action and len(cheri_config.targets) != 1:
-        fatal_error("--create-tarball expects exactly one target!")
+        fatal_error("--create-tarball expects exactly one target!", pretend=False)
         sys.exit()
 
     if len(cheri_config.targets) != 1 and not cheri_config.allow_more_than_one_target:
-        fatal_error("More than one target is not supported yet.")
+        fatal_error("More than one target is not supported yet.", pretend=False)
         sys.exit()
 
     if JenkinsAction.BUILD in cheri_config.action or JenkinsAction.TEST in cheri_config.action:
@@ -323,7 +324,7 @@ def create_tarball(cheri_config) -> None:
 
         # bsdtar too old and GNU tar not found
         if not tar_cmd:
-            fatal_error("Could not find a usable version of the tar command")
+            fatal_error("Could not find a usable version of the tar command", pretend=cheri_config.pretend)
             return
         status_update("Creating tarball", cheri_config.tarball_name)
         # Strip all ELF files:
