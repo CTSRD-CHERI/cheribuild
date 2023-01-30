@@ -24,9 +24,8 @@ jobs:
                 run: |
                     # stop the build if there are any flake8 warnings
                     flake8
-            -   name: Test with pytest
-                run: |
-                    pytest
+            -   name: Run basic regression tests
+                run: tests/run_basic_tests.sh
     typecheck:
         runs-on: ubuntu-latest
         steps:
