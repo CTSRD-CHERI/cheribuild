@@ -109,10 +109,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         self.build_type_var_suffix = ""
         if "Ninja" in generator:
             self.make_args.subkind = MakeCommandKind.Ninja
-            self.check_required_system_tool("ninja", homebrew="ninja", apt="ninja-build")
         elif "Makefiles" in generator:
             self.make_args.subkind = MakeCommandKind.DefaultMake
-            self.check_required_system_tool("make")
         else:
             self.make_args.subkind = MakeCommandKind.CustomMakeTool  # VS/XCode, etc.
         self._toolchain_file: "Optional[Path]" = None
@@ -226,6 +224,13 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                                       f"CMAKE_CXX_FLAGS{self.build_type_var_suffix}": flags})
         # Add the options from the config file now so that they are added after child class setup() calls.
         self.configure_args.extend(self.cmake_options)
+
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        if self.make_args.subkind == MakeCommandKind.Ninja:
+            self.check_required_system_tool("ninja", homebrew="ninja", apt="ninja-build")
+        elif self.make_args.subkind == MakeCommandKind.DefaultMake:
+            self.check_required_system_tool("make")
 
     def add_cmake_options(self, *, _include_empty_vars=False, _replace=True, **kwargs) -> None:
         return self._add_configure_options(_config_file_options=self.cmake_options, _replace=_replace,
