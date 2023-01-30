@@ -25,7 +25,7 @@ try_run() {
 }
 
 # check for errors that would fail the GitHub CI:
-try_run_verbose flake8
+try_run_verbose python3 -m flake8
 
 # check that there are no obvious mistakes:
 try_run ./cheribuild.py --help
