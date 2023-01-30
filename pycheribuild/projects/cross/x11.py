@@ -36,7 +36,7 @@ from .freetype import BuildFreeType2
 from ..project import DefaultInstallDir, GitRepository, Project
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
-from ...processutils import DoNotQuoteStr, get_program_version, set_env
+from ...processutils import DoNotQuoteStr, get_program_version
 from ...utils import OSInfo
 
 
@@ -339,7 +339,7 @@ class BuildLibXKBCommon(X11MesonProject):
         if OSInfo.IS_MAC:
             # /usr/bin/bison on macOS is not compatible with this build system
             newpath = str(self.get_homebrew_prefix("bison")) + "/bin:" + newpath
-        with set_env(PATH=newpath):
+        with self.set_env(PATH=newpath):
             super().process()
 
 

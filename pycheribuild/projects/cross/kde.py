@@ -41,7 +41,6 @@ from ..simple_project import TargetAliasWithDependencies
 from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
-from ...processutils import set_env
 from ...utils import is_case_sensitive_dir, OSInfo
 
 
@@ -188,7 +187,7 @@ class BuildGettext(CrossCompileAutotoolsProject):
             new_env["PATH"] = ":".join([str(self.get_homebrew_prefix("gnu-sed") / "libexec/gnubin"),
                                         str(self.get_homebrew_prefix("bison") / "bin"),
                                         os.getenv("PATH")])
-        with set_env(**new_env):
+        with self.set_env(**new_env):
             super().process()
 
 
@@ -1002,7 +1001,7 @@ class BuildLCMS2(CrossCompileAutotoolsProject):
                 libtool_prefix = self.get_homebrew_prefix("libtool")
                 self.create_symlink(libtool_prefix / "bin/glibtool", Path(td) / "libtool", relative=False)
                 self.create_symlink(libtool_prefix / "bin/glibtoolize", Path(td) / "libtoolize", relative=False)
-                with set_env(PATH=td + ":" + os.getenv("PATH", "")):
+                with self.set_env(PATH=td + ":" + os.getenv("PATH", "")):
                     super().process()
         else:
             super().process()

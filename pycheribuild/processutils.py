@@ -67,7 +67,7 @@ def __filter_env(env: "dict[str, str]") -> "dict[str, str]":
 
 
 @contextlib.contextmanager
-def set_env(*, print_verbose_only=True, config: ConfigBase = None, **environ):
+def set_env(*, print_verbose_only=True, config: ConfigBase, **environ):
     """
     Temporarily set the process environment variables.
 
@@ -81,8 +81,6 @@ def set_env(*, print_verbose_only=True, config: ConfigBase = None, **environ):
     """
     changed_values: dict[str, typing.Optional[str]] = dict()
     if environ:
-        if config is None:
-            config = get_global_config()  # TODO: remove
         should_print_update = not print_verbose_only or config.verbose
         for k, v in environ.items():
             # make sure all environment variables are converted to string

@@ -39,7 +39,6 @@ from .wayland import BuildWayland
 from .x11 import BuildLibXCB
 from ..project import default_source_dir_in_subdir
 from ..simple_project import SimpleProject
-from ...processutils import set_env
 from ...utils import InstallInstructions
 
 
@@ -585,7 +584,7 @@ for my $module (keys %modules) {
             # tst_QDate::startOfDay_endOfDay(epoch) is broken in BST (at least on macOS), use Europe/Oslo to match the
             # official CI.
             # Possibly similar to https://bugreports.qt.io/browse/QTBUG-87662
-            with set_env(TZ="Europe/Oslo"):
+            with self.set_env(TZ="Europe/Oslo"):
                 self.run_cmd("make", "check", cwd=self.build_dir)
         else:
             # We run tests using the full disk image since we want e.g. locales to be available.
