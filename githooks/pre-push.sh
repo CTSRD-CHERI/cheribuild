@@ -24,26 +24,6 @@ url="$2"
 
 z40=0000000000000000000000000000000000000000
 
-try_run_verbose() {
-    echo "Running: $*"
-    if ! "$@" ; then
-        echo >&2 "Failed to run $*, don't push this!"
-        exit 1
-    fi
-}
-
-try_run() {
-    if [ -n "$VERBOSE" ]; then
-        try_run_verbose "$@"
-    else
-        echo "Running: $*"
-        if ! "$@" 2>/dev/null >/dev/null; then
-            echo >&2 "Failed to run $*, don't push this!"
-            exit 1
-        fi
-    fi
-}
-
 check_bad_commit_msg() {
     range=$1
     pattern=$2
@@ -65,7 +45,6 @@ export _TEST_SKIP_METALOG=1
 # Also skip `git status`, etc. invocations
 export _TEST_SKIP_GIT_COMMANDS=1
 export CHERIBUILD_DEBUG=1
-
 
 while read -r local_ref local_sha remote_ref remote_sha
 do
@@ -90,34 +69,9 @@ do
 		# Check for DNM (do-not-merge) commit
 		check_bad_commit_msg "$range" '^DNM' "do-not-merge"
 
-		set -e
-		# check for errors that would fail the GitHub CI:
-		try_run_verbose flake8
+		# git hooks run from the root of the repository, so ./tests should work
+		sh -e "./tests/run_basic_tests.sh" || exit 1
 
-		# check that there are no obvious mistakes:
-		try_run ./cheribuild.py --help
-		try_run ./jenkins-cheri-build.py --help
-		try_run ./cheribuild.py --get-config-option llvm/source-directory
-		try_run ./cheribuild.py --get-config-option output-root
-		try_run ./cheribuild.py --dump-config
-		try_run ./cheribuild.py -p __run_everything__ --clean --build --test --benchmark
-		# Also check that we can run --pretend mode with all tools missing.
-		try_run env PATH=/does/not/exist "$(command -v python3)" ./cheribuild.py -p __run_everything__ --clean --build --test --benchmark
-		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --allow-more-than-one-target --build --test --cpu=default -p __run_everything__
-		# Regression for --benchmark-clean-boot:
-		# TODO: try_run ./cheribuild.py mibench-new-riscv64 --benchmark --benchmark-clean-boot -p
-		# TODO: try_run ./cheribuild.py mibench-new-riscv64-purecap --benchmark --benchmark-clean-boot -p
-		# Various jenkins things that have failed in the past
-		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --test --tarball -p libcxx-riscv64-purecap
-		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p run-morello-purecap
-		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --test --tarball --cpu=cheri128 -p llvm-native
-		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --test --tarball --cpu=cheri128 -p llvm-native --without-sdk
-		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --cpu=cheri128 --test run-minimal-riscv64-purecap --keep-install-dir --install-prefix=/rootfs --cheribsd/build-fpga-kernels --no-clean -p
-
-		# Run python tests before pushing
-		if [ -e pytest.ini ]; then
-			try_run_verbose python3 -m pytest -q . >&2
-		fi
 	fi
 done
 
