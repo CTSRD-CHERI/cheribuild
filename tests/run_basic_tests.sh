@@ -18,7 +18,8 @@ try_run() {
         echo "Running: $*"
         if ! "$@" 2>/dev/null >/dev/null; then
             echo >&2 "Failed to run $*, don't push this!"
-            exit 1
+            # Run it again with stderr/stdout available:
+            "$@"; exit 1
         fi
     fi
 }
