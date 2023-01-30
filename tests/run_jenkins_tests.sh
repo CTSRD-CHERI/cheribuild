@@ -39,10 +39,4 @@ if [ ! -e "../$test_prefix-results.xml" ]; then
 fi
 # env | sort
 # Run all targets
-./cheribuild.py -p __run_everything__ > /dev/null
-./cheribuild.py --help > /dev/null
-./cheribuild.py --help-all > /dev/null
-
-env WORKSPACE=/tmp ./jenkins-cheri-build.py --help
-# Run jenkins --build --test for all targets and check there are no exceptions
-env WORKSPACE=/tmp ./jenkins-cheri-build.py --allow-more-than-one-target --build --test --cpu=default -p __run_everything__ > /dev/null
+env VERBOSE=1 ./tests/run_basic_tests.sh
