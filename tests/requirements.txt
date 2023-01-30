@@ -4,3 +4,4 @@ pytest-pycharm>=0.7.0
 argcomplete~=2.0.0
 # Only needed for RISC-V FPGA boot -> not bundled
 pyserial>=3.5
+flake8
