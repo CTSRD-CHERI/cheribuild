@@ -26,6 +26,22 @@ jobs:
                     flake8
             -   name: Run basic regression tests
                 run: tests/run_basic_tests.sh
+    build-macos:
+        runs-on: macos-latest
+        steps:
+            -   uses: actions/checkout@v2
+            -   name: Install dependencies
+                run: |
+                    # Use the system-provided python3 instead of actions/setup-python@v4
+                    python3 --version
+                    python3 -m pip install --upgrade pip
+                    python3 -m pip install --upgrade flake8 pytest
+                    if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
+            -   name: Lint with flake8
+                # stop the build if there are any flake8 warnings
+                run: flake8
+            -   name: Run basic regression tests
+                run: tests/run_basic_tests.sh
     typecheck:
         runs-on: ubuntu-latest
         steps:
