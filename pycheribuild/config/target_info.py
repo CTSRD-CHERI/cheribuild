@@ -166,10 +166,10 @@ class AbstractProject(FileSystemUtils):
     def get_compiler_info(self, compiler: Path) -> CompilerInfo:
         return get_compiler_info(compiler, config=self.config)
 
-    @staticmethod
-    def info(*args, **kwargs) -> None:
+    def info(self, *args, **kwargs) -> None:
         # TODO: move all those methods here
-        status_update(*args, **kwargs)
+        if not self.config.quiet:
+            status_update(*args, **kwargs)
 
     @staticmethod
     def warning(*args, **kwargs) -> None:

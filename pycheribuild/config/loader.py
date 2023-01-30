@@ -299,8 +299,9 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption[T]):
         from_json = self._load_from_json(target_option_name)
         # self.debug_msg(full_option_name, "from JSON:", from_json)
         if from_json is not None:
-            status_update("Overriding default value for", target_option_name, "with value from JSON key",
-                          from_json.used_key, "->", from_json.value, file=sys.stderr)
+            if not config.quiet:
+                status_update("Overriding default value for", target_option_name, "with value from JSON key",
+                              from_json.used_key, "->", from_json.value, file=sys.stderr)
             return from_json
         return None  # not found -> fall back to default
 

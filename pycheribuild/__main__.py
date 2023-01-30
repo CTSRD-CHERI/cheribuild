@@ -160,6 +160,8 @@ def real_main() -> None:
         sys.exit()
     elif CheribuildAction.DUMP_CONFIGURATION in cheri_config.action:
         json_dict = OrderedDict()
+        cheri_config.pretend = True
+        cheri_config.quiet = True
         for v in cheri_config.loader.options.values():
             try:
                 json_dict[v.full_option_name] = get_config_option_value(v, cheri_config)
@@ -172,6 +174,8 @@ def real_main() -> None:
     elif cheri_config.get_config_option:
         if cheri_config.get_config_option not in config_loader.options:
             fatal_error("Unknown config key", cheri_config.get_config_option)
+        cheri_config.pretend = True
+        cheri_config.quiet = True
         option = config_loader.options[cheri_config.get_config_option]
         print(get_config_option_value(option, cheri_config))
         sys.exit()
