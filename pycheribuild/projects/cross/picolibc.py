@@ -29,7 +29,6 @@ from .crosscompileproject import CrossCompileMesonProject, GitRepository
 from ..build_qemu import BuildUpstreamQEMU
 from ..project import DefaultInstallDir
 from ...config.compilation_targets import CompilationTargets
-from ...processutils import set_env
 
 
 class BuildPicoLibc(CrossCompileMesonProject):
@@ -114,7 +113,7 @@ class BuildPicoLibc(CrossCompileMesonProject):
     def run_tests(self):
         if not self.compiling_for_host():
             qemu = BuildUpstreamQEMU.qemu_binary_for_target(self.crosscompile_target, self.config)
-            with set_env(PATH=str(qemu.parent) + ":" + os.getenv("PATH", ""), print_verbose_only=False):
+            with self.set_env(PATH=str(qemu.parent) + ":" + os.getenv("PATH", ""), print_verbose_only=False):
                 self.run_cmd(self.configure_command, "test", "--print-errorlogs", cwd=self.build_dir)
         else:
             super().run_tests()
