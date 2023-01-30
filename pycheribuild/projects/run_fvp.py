@@ -40,8 +40,7 @@ from .simple_project import SimpleProject
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue
 from ..config.compilation_targets import CompilationTargets
 from ..processutils import extract_version, popen
-from ..utils import (AnsiColour, cached_property, classproperty, coloured, fatal_error, find_free_port, OSInfo,
-                     SocketAndPort)
+from ..utils import (AnsiColour, cached_property, classproperty, coloured, find_free_port, OSInfo, SocketAndPort)
 
 
 class InstallMorelloFVP(SimpleProject):
@@ -294,7 +293,7 @@ VOLUME /diskimg
                                 # expected default.
                                 port = int(f.readline())
                                 if port != default_ap_port:
-                                    fatal_error("Unexpected port " + str(port) + " used by FVP in container")
+                                    self.fatal("Unexpected port " + str(port) + " used by FVP in container")
                                 return docker_host_ap_port
                     else:
                         ap_pipe_rfd, ap_pipe_wfd = os.pipe()

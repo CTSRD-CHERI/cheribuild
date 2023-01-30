@@ -86,7 +86,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                 return  # if do_not_add_to_targets is defined within the class we skip it
         elif name.endswith("Base"):
             fatal_error("Found class name ending in Base (", name, ") but do_not_add_to_targets was not defined",
-                        sep="")
+                        sep="", pretend=False)
 
         def die(msg):
             sys.exit(inspect.getfile(cls) + ":" + str(inspect.findsource(cls)[1] + 1) + ": error: " + msg)
@@ -310,7 +310,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                                                                config=config, caller=cls.target)
                         dependencies.append(dep_target.name)
                     except KeyError:
-                        fatal_error("Could not find sysroot target '", dep_name, "' for ", cls.__name__, sep="")
+                        fatal_error("Could not find sysroot target '", dep_name, "' for ", cls.__name__, sep="",
+                                    pretend=config.pretend, fatal_when_pretending=True)
                         raise
         # Try to resovle the target names to actual targets and potentially add recursive depdencies
         for dep_name in dependencies:
@@ -318,7 +319,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                 dep_target = target_manager.get_target(dep_name, arch=expected_build_arch, config=config,
                                                        caller=cls.target)
             except KeyError:
-                fatal_error("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
+                fatal_error("Could not find target '", dep_name, "' for ", cls.__name__, sep="",
+                            pretend=config.pretend, fatal_when_pretending=True)
                 raise
             # Handle --include-dependencies when --skip-sdk/--no-include-toolchain-dependencies is passed
             if explicit_dependencies_only:

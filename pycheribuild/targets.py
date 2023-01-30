@@ -353,7 +353,7 @@ class DeprecatedTargetAlias(SimpleTargetAlias):
                         coloured(AnsiColour.yellow, self.real_target_name),
                         coloured(AnsiColour.magenta, " instead."), sep="")
         if not query_yes_no(config, "Continue?", default_result=True):
-            fatal_error("Cannot continue.")
+            fatal_error("Cannot continue.", pretend=config.pretend, fatal_when_pretending=True)
         return self._real_target
 
 

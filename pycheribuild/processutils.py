@@ -726,7 +726,7 @@ def get_program_version(program: Path, command_args: tuple = None, component_kin
     try:
         stdout = get_version_output(program, command_args=command_args, config=config)
     except subprocess.CalledProcessError as e:
-        fatal_error("Failed to determine version for", program, ":", e)
+        fatal_error("Failed to determine version for", program, ":", e, pretend=config.pretend)
         return 0, 0, 0
     return extract_version(stdout, component_kind, regex, program_name)
 
@@ -834,7 +834,7 @@ def run_and_kill_children_on_exit(fn: "typing.Callable[[], typing.Any]"):
             raise err
         else:
             fatal_error("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
-                        err.returncode, *extra_msg, fatal_when_pretending=True, sep="", exit_code=err.returncode)
+                        err.returncode, *extra_msg, sep="", exit_code=err.returncode, pretend=False)
     finally:
         if error:
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
