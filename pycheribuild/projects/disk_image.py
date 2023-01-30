@@ -546,6 +546,8 @@ class BuildDiskImageBase(SimpleProject):
             elif self.rootfs_type == FileSystemType.UFS:
                 mkimg_bootfs_args = ["-p", "freebsd-boot:=" + str(self.rootfs_dir / "boot/gptboot")]
                 mkimg_rootfs_args = ["-p", "freebsd-ufs:=" + str(root_partition)]
+            else:
+                raise ValueError("Invalid FileSystemType")
 
             # See mk_nogeli_gpt_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
             self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
@@ -580,11 +582,7 @@ class BuildDiskImageBase(SimpleProject):
             else:
                 mkimg_swap_args = []
 
-            if self.rootfs_type == FileSystemType.ZFS:
-                mkimg_rootfs_args = ["-p", "freebsd-zfs:=" + str(root_partition)]
-            elif self.rootfs_type == FileSystemType.UFS:
-                mkimg_rootfs_args = ["-p", "freebsd-ufs:=" + str(root_partition)]
-
+            mkimg_rootfs_args = ["-p", f"freebsd-{self.rootfs_type.value}:={root_partition}"]
             self.make_rootfs_image(root_partition)
             self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
                             # "-f", "raw",  # raw disk image instead of qcow2
