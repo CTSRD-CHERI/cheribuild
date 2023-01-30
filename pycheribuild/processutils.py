@@ -406,7 +406,7 @@ def run_command(*args, capture_output=False, capture_error=False, input: "typing
         kwargs["stdout"] = subprocess.DEVNULL
 
     if "env" in kwargs:
-        env_arg = kwargs["env"]  # type: typing.Dict[str, str]
+        env_arg: "dict[str, str]" = kwargs["env"]
         if not replace_env:
             new_env = os.environ.copy()
             env = {k: str(v) for k, v in env_arg.items()}  # make sure everything is a string

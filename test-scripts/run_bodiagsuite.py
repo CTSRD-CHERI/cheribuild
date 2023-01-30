@@ -89,7 +89,7 @@ class BODiagTestsuite(object):
         # test has been handled -> remove from expected list
         del self.expected_test_names[index]
         if o.with_suffix(".stderr").exists():
-            stderr = o.with_suffix(".stderr").read_bytes().rstrip()  # type: bytes
+            stderr: bytes = o.with_suffix(".stderr").read_bytes().rstrip()
             stderr = stderr.replace(b"\x00", b"\\0")
             testcase.system_err = stderr.decode("utf-8", errors="replace")
         try:

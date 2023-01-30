@@ -49,7 +49,7 @@ class Target(object):
     def __init__(self, name, _project_class: "typing.Type[SimpleProject]"):
         self.name = name
         self._project_class = _project_class
-        self.__project = None  # type: typing.Optional[SimpleProject]
+        self.__project: typing.Optional[SimpleProject] = None
         self._completed = False
         self._tests_have_run = False
         self._benchmarks_have_run = False
@@ -450,7 +450,7 @@ class TargetManager(object):
         return list(OrderedDict((x, True) for x in sorted_targets).keys())
 
     def get_all_targets(self, explicit_targets: "typing.List[Target]", config: CheriConfig) -> "typing.List[Target]":
-        chosen_targets = []  # type: typing.List[Target]
+        chosen_targets: "list[Target]" = []
         for t in explicit_targets:
             if isinstance(t, SimpleTargetAlias):
                 t = t.get_real_target(None, config)

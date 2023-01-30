@@ -30,15 +30,14 @@
 #
 import re
 import sys
-import typing
 from pathlib import Path
 
-script_dir = Path(__file__).resolve().parent / "pycheribuild"  # type: Path
+script_dir: Path = Path(__file__).resolve().parent / "pycheribuild"
 
-imports = []  # type: typing.List[str]
-from_imports = []  # type: typing.List[str]
-lines = []  # type: typing.List[str]
-handled_files = []  # type: typing.List[Path]
+imports: "list[str]" = []
+from_imports: "list[str]" = []
+lines: "list[str]" = []
+handled_files: "list[Path]" = []
 ignored_files = [script_dir / "jenkins.py", script_dir / "config/jenkinsconfig.py"]
 empty_lines = 0
 

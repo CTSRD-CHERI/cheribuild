@@ -26,7 +26,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-import typing
 from pathlib import Path
 
 from .crosscompileproject import CompilationTargets, CrossCompileProject, GitRepository
@@ -54,14 +53,14 @@ class BuildCheriExercises(CrossCompileProject):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.compiled_files = []  # type: typing.List[Path]
+        self.compiled_files: "list[Path]" = []
 
     def _compile_file(self, output: Path, *args, target_override: CrossCompileTarget = None):
         assert isinstance(self.target_info, CheriBSDTargetInfo)
         target_flags = self.target_info.get_essential_compiler_and_linker_flags(xtarget=target_override,
                                                                                 default_flags_only=True)
         warning_flags = ["-Wall", "-Wcheri"]
-        self.run_cmd([self.CC] + target_flags + warning_flags + ["-g", "-fuse-ld=lld", "-o", output, *args],
+        self.run_cmd([str(self.CC)] + target_flags + warning_flags + ["-g", "-fuse-ld=lld", "-o", output, *args],
                      print_verbose_only=False)
         self.compiled_files.append(output)
 

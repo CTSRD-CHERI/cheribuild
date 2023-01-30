@@ -35,7 +35,7 @@ import tempfile
 import shlex
 from pathlib import Path
 
-scriptDir = Path(__file__).resolve().parent  # type: Path
+scriptDir = Path(__file__).resolve().parent
 host = sys.argv[1]
 cheribuildArgs = sys.argv[2:]
 cheribuildArgs = list(map(shlex.quote, cheribuildArgs))

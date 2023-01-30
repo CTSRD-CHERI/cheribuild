@@ -105,7 +105,7 @@ class MtreeFile(object):
     def __init__(self, *, verbose: bool, file: "typing.Union[io.StringIO,Path,typing.IO]" = None,
                  contents_root: Path = None):
         self.verbose = verbose
-        self._mtree = OrderedDict()  # type: typing.Dict[str, MtreeEntry]
+        self._mtree: "dict[str, MtreeEntry]" = OrderedDict()
         if file:
             self.load(file, contents_root=contents_root, append=False)
 

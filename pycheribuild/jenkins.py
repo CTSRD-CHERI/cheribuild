@@ -81,13 +81,13 @@ class JenkinsConfigLoader(CommandLineConfigLoader):
 
 
 class SdkArchive(object):
-    def __init__(self, cheri_config: JenkinsConfig, name, *, required_globs: list = None, extra_args: list = None,
-                 output_dir: Path):
+    def __init__(self, cheri_config: JenkinsConfig, name, *, required_globs: "list[str]" = None,
+                 extra_args: "list[str]" = None, output_dir: Path):
         self.output_dir = output_dir
         self.cheri_config = cheri_config
-        self.archive = cheri_config.workspace / name  # type: Path
-        self.required_globs = [] if required_globs is None else required_globs  # type: list
-        self.extra_args = [] if extra_args is None else extra_args  # type: list
+        self.archive = cheri_config.workspace / name
+        self.required_globs: "list[str]" = [] if required_globs is None else required_globs
+        self.extra_args: "list[str]" = [] if extra_args is None else extra_args
 
     def extract(self) -> None:
         assert self.archive.exists(), str(self.archive)
