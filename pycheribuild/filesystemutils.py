@@ -336,7 +336,7 @@ class FileSystemUtils(object):
             run_command("ln", "-fsn", tool_path.name, tool_name, cwd=cwd, print_verbose_only=True)
 
         for target in self.triple_prefixes_for_binaries:
-            link = tool_path.parent / (target + tool_name)  # type: Path
+            link = tool_path.parent / (target + tool_name)
             if link == tool_path:  # happens for binutils, where prefixed tools are installed
                 # if self.config.verbose:
                 #    print(coloured(AnsiColour.yellow, "Not overwriting", link, "because it is the target"))

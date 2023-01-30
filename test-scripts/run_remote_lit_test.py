@@ -59,7 +59,7 @@ class MultiprocessStages(Enum):
     TIMED_OUT = "timed out"
 
 
-CURRENT_STAGE = MultiprocessStages.FINDING_SSH_PORT  # type: MultiprocessStages
+CURRENT_STAGE: MultiprocessStages = MultiprocessStages.FINDING_SSH_PORT
 
 
 def add_common_cmdline_args(parser: argparse.ArgumentParser, default_xunit_output: str, allow_multiprocessing: bool):
@@ -256,7 +256,7 @@ Host cheribsd-test-instance
         lit_cmd.append("--debug")
     # This does not work since it doesn't handle running ssh commands....
     lit_cmd.append("--timeout=120")  # 2 minutes max per test (in case there is an infinite loop)
-    xunit_file = None  # type: typing.Optional[Path]
+    xunit_file: "typing.Optional[Path]" = None
     if args.xunit_output:
         lit_cmd.append("--xunit-xml-output")
         xunit_file = Path(args.xunit_output).absolute()

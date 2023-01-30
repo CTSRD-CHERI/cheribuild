@@ -113,7 +113,7 @@ def libcxx_main(barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue:
 
 
 class LitShardProcess(Process):
-    stage = None  # type: run_remote_lit_test.MultiprocessStages
+    stage: typing.Optional[run_remote_lit_test.MultiprocessStages] = None
     ssh_port = -1
     error_message = ""
 
@@ -129,7 +129,7 @@ def run_parallel(args: argparse.Namespace):
     mp_barrier = Barrier(parties=args.parallel_jobs + 1, timeout=4 * 60 * 60)
     mp_q = Queue()
     ssh_port_queue = Queue()
-    processes = []  # type: typing.List[LitShardProcess]
+    processes: "list[LitShardProcess]" = []
     # Extract the kernel + disk image in the main process to avoid race condition:
     kernel_path = boot_cheribsd.maybe_decompress(Path(args.kernel), True, True, args,
                                                  what="kernel") if args.kernel else None

@@ -286,7 +286,7 @@ def query_yes_no(config: ConfigBase, message: str = "", *, default_result=False,
 
 @functools.lru_cache(maxsize=20)
 def include_local_file(path: str) -> str:
-    file = Path(__file__).parent / path  # type: Path
+    file = Path(__file__).parent / path
     if not file.is_file():
         fatal_error(file, "is missing!", pretend=False)
     with file.open("r", encoding="utf-8") as f:

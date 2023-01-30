@@ -23,11 +23,11 @@ class MockProject(Project):
     def __init__(self, config: MockConfig, name: str):
         self.target = name
         self.default_directory_basename = name
-        expected_src = config.source_root / "sources" / name  # type: Path
+        expected_src = config.source_root / "sources" / name
         self._initial_source_dir = expected_src
-        expected_install = config.source_root / "install" / name  # type: Path
+        expected_install = config.source_root / "install" / name
         self._install_dir = expected_install
-        expected_build = Path(config.source_root, "build", name + "-build")  # type: Path
+        expected_build = Path(config.source_root, "build", name + "-build")
         self.build_dir = expected_build
         super().__init__(config, crosscompile_target=CompilationTargets.NATIVE)
         assert self.source_dir == expected_src

@@ -49,6 +49,7 @@ import time
 import traceback
 import typing
 from pathlib import Path
+from typing import Optional
 
 from pycheribuild.colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
@@ -110,9 +111,9 @@ FATAL_ERROR_MESSAGES = [CHERI_TRAP_MIPS, CHERI_TRAP_RISCV]
 PRETEND = False
 INTERACT_ON_KERNEL_PANIC = False
 MESSAGE_PREFIX = ""
-QEMU_LOGFILE = None  # type: typing.Optional[Path]
+QEMU_LOGFILE: Optional[Path] = None
 # To keep the port available until we start QEMU
-_SSH_SOCKET_PLACEHOLDER = None  # type: typing.Optional[socket.socket]
+_SSH_SOCKET_PLACEHOLDER: Optional[socket.socket] = None
 MAX_SMBFS_RETRY = 3
 
 
@@ -213,6 +214,7 @@ if typing.TYPE_CHECKING:
     MixinBase = pexpect.spawn
 else:
     MixinBase = object
+PatternListType = typing.List[typing.Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]
 
 
 class CheriBSDSpawnMixin(MixinBase):
@@ -221,17 +223,15 @@ class CheriBSDSpawnMixin(MixinBase):
     def expect_exact_ignore_panic(self, patterns, *, timeout: int):
         return super().expect_exact(patterns, timeout=timeout)
 
-    def expect(self, patterns: "typing.List[typing.Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]",
-               timeout=-1, pretend_result=None, ignore_timeout=False, log_patterns=True, timeout_msg="timeout",
-               **kwargs):
+    def expect(self, patterns: PatternListType, timeout=-1, pretend_result=None, ignore_timeout=False,
+               log_patterns=True, timeout_msg="timeout", **kwargs):
         assert isinstance(patterns, list), "expected list and not " + str(patterns)
         if log_patterns:
             info("Expecting regex ", coloured(AnsiColour.blue, str(patterns)))
         return self._expect_and_handle_panic_impl(patterns, timeout_msg, ignore_timeout=ignore_timeout,
                                                   timeout=timeout, expect_fn=super().expect, **kwargs)
 
-    def expect_exact(self, pattern_list:
-                     "typing.List[typing.Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]",
+    def expect_exact(self, pattern_list: PatternListType,
                      timeout=-1, pretend_result=None, ignore_timeout=False, log_patterns=True, timeout_msg="timeout",
                      **kwargs):
         assert isinstance(pattern_list, list), "expected list and not " + str(pattern_list)
@@ -247,7 +247,8 @@ class CheriBSDSpawnMixin(MixinBase):
         time.sleep(0.05)  # give QEMU a bit of time after printing the prompt (otherwise we might lose some input)
         return result
 
-    def _expect_and_handle_panic_impl(self, options: list, timeout_msg, *, ignore_timeout=True, expect_fn, **kwargs):
+    def _expect_and_handle_panic_impl(self, options: PatternListType, timeout_msg, *, ignore_timeout=True, expect_fn,
+                                      **kwargs):
         assert PANIC not in options
         assert STOPPED not in options
         assert PANIC_KDB not in options
@@ -287,7 +288,7 @@ class CheriBSDInstance(CheriBSDSpawnMixin, pexpect.spawn):
 
 class QemuCheriBSDInstance(CheriBSDInstance):
     EXIT_ON_KERNEL_PANIC = True
-    smb_dirs = None  # type: typing.List[SmbMount]
+    smb_dirs: "list[SmbMount]" = None
     flush_interval = None
 
     def __init__(self, qemu_config: QemuOptions, *args, ssh_port: typing.Optional[int],
@@ -301,7 +302,7 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         # strip the .pub from the key file
         self._ssh_private_key = Path(ssh_pubkey).with_suffix("") if ssh_pubkey else None
         self.ssh_user = "root"
-        self.smb_dirs = []  # type: typing.List[SmbMount]
+        self.smb_dirs = []
         self.smb_failed = False
 
     @property
@@ -867,8 +868,8 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
                 success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
 
         userspace_starttime = datetime.datetime.now()
-        boot_expect_strings = [LOGIN, LOGIN_AS_ROOT_MINIMAL, SHELL_OPEN, BOOT_FAILURE, BOOT_FAILURE2,
-                               BOOT_FAILURE3]  # type: typing.List[typing.Union[str, typing.Pattern]]
+        boot_expect_strings: PatternListType = [LOGIN, LOGIN_AS_ROOT_MINIMAL, SHELL_OPEN, BOOT_FAILURE,
+                                                BOOT_FAILURE2, BOOT_FAILURE3]
         i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=60 * 60,
                          timeout_msg="timeout awaiting login prompt")
         if i == len(boot_expect_strings):  # DHCPACK from
@@ -926,10 +927,10 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
     return
 
 
-def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_archives: list,
-                   test_ld_preload_files: list,
+def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_archives: "list[Path]",
+                   test_ld_preload_files: "list[Path]",
                    test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None):
-    smb_dirs = qemu.smb_dirs  # type: typing.List[SmbMount]
+    smb_dirs = qemu.smb_dirs
     setup_tests_starttime = datetime.datetime.now()
     # Enable userspace CHERI exception logging to aid debugging
     qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
@@ -1032,7 +1033,8 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
         success("Additional test enviroment setup took ", datetime.datetime.now() - setup_tests_starttime)
 
 
-def runtests(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_archives: list, test_ld_preload_files: list,
+def runtests(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_archives: "list[Path]",
+             test_ld_preload_files: "list[Path]",
              test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
              test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None) -> bool:
     try:
@@ -1225,8 +1227,8 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
     starttime = datetime.datetime.now()
 
     # validate args:
-    test_archives = []  # type: list
-    test_ld_preload_files = []  # type: list
+    test_archives: "list[Path]" = []
+    test_ld_preload_files: "list[Path]" = []
     if not args.use_smb_instead_of_ssh and not args.skip_ssh_setup:
         if args.ssh_key is None:
             failure("No SSH key specified, but test script needs SSH. Please pass --test-ssh-key=/path/to/id_foo.pub",
@@ -1248,7 +1250,7 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
                     failure("Test archive is missing: ", test_archive, exit=True)
                 if not test_archive.endswith(".tar.xz"):
                     failure("Currently only .tar.xz archives are supported", exit=True)
-                test_archives.append(test_archive)
+                test_archives.append(Path(test_archive))
         elif args.test_ld_preload:
             info("Preloading the following libraries: ", args.test_ld_preload)
             if not args.test_ld_preload_variable:
@@ -1265,8 +1267,8 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
             failure("WARNING: No test command specified, tests will fail", exit=False)
             args.test_command = "false"
 
-    force_decompression = not args.reuse_image  # type: bool
-    keep_compressed_images = args.keep_compressed_images
+    force_decompression: bool = not args.reuse_image
+    keep_compressed_images: bool = args.keep_compressed_images
     if args.extract_images_to:
         os.makedirs(args.extract_images_to, exist_ok=True)
         new_kernel_path = os.path.join(args.extract_images_to, Path(args.kernel).name)

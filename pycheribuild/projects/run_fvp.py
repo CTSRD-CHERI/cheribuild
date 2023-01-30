@@ -275,7 +275,7 @@ VOLUME /diskimg
                 # Linuxulator wants to make the write point at /tmp inside the
                 # compat chroot, so just use an anonymous pipe and hope Arm
                 # never break passing file descriptors through.
-                ap_servsock = None  # type: typing.Optional[SocketAndPort]
+                ap_servsock: typing.Optional[SocketAndPort] = None
                 try:
                     fvp_kwargs = {}
                     if self.use_docker_container:
@@ -432,7 +432,7 @@ VOLUME /diskimg
 
 class LaunchFVPBase(SimpleProject):
     do_not_add_to_targets = True
-    _source_class = None  # type: BuildDiskImageBase
+    _source_class: typing.ClassVar[BuildDiskImageBase] = None
     required_fvp_version = (0, 11, 19)
 
     @classmethod

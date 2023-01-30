@@ -428,8 +428,8 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         rootfs_xtarget = xtarget.get_rootfs_target()
         from ..qemu_utils import QemuOptions
         qemu_options = QemuOptions(rootfs_xtarget)
-        run_instance = self._get_run_project().get_instance(self.project,
-                                                            cross_target=rootfs_xtarget)  # type: AbstractLaunchFreeBSD
+        run_instance: AbstractLaunchFreeBSD = self._get_run_project().get_instance(self.project,
+                                                                                   cross_target=rootfs_xtarget)
         if rootfs_xtarget.cpu_architecture not in (CPUArchitecture.MIPS64, CPUArchitecture.RISCV64,
                                                    CPUArchitecture.X86_64, CPUArchitecture.AARCH64):
             self.project.warning("CheriBSD test scripts currently only work for MIPS, RISC-V, AArch64, and x86-64")
