@@ -168,7 +168,7 @@ class RunTestRIG(SimpleProject):
                 log_dir = vengine_instance.source_dir / "traces" / self.target
                 self.makedirs(log_dir)
                 if self.noninteractive:
-                    vengine_args.extend(["--save-dir", str(log_dir)])
+                    vengine_args.extend(["--save-dir", str(log_dir), "--continue-on-fail"])
 
                 vengine_args.extend(["-n", str(self.number_of_runs)])
                 if self.replay_current_traces:
