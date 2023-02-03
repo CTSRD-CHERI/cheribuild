@@ -133,8 +133,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     add_host_target_build_config_options = False
     # Should not be needed, but it seems like some of the tests are broken otherwise
     make_kind = MakeCommandKind.GnuMake
-    needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
-    hide_options_from_help = True  # hide this for now
     default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
     use_x11: bool
     use_opengl: bool
@@ -369,15 +367,9 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
     is_large_source_repository = True
     default_source_dir = default_source_dir_in_subdir(Path("qt5"))
     # native_install_dir = DefaultInstallDir.CHERI_SDK
-    needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     # default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
     default_build_type = BuildType.RELWITHDEBINFO
     needs_native_build_for_crosscompile = True
-
-    @property
-    def needs_mxcaptable_dynamic(self):
-        # Debug build: 35927 entries to .captable but current maximum is 32768
-        return self.build_type == BuildType.DEBUG
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -820,11 +812,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
     # webkit is massive if we include debug info
     default_build_type = BuildType.RELWITHDEBINFO
-
     native_install_dir = DefaultInstallDir.CHERI_SDK
     default_source_dir = default_source_dir_in_subdir(Path("qt5"))
-    needs_mxcaptable_static = True  # Currently way over the limit
-    needs_mxcaptable_dynamic = True  # Currently way over the limit
 
     @property
     def llvm_binutils_dir(self) -> Path:

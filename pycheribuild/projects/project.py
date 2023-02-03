@@ -678,9 +678,6 @@ class Project(SimpleProject):
         elif cbt in (BuildType.MINSIZEREL, BuildType.MINSIZERELWITHDEBINFO):
             return ["-Os"]
 
-    needs_mxcaptable_static: bool = False  # E.g. for postgres which is just over the limit:
-    needs_mxcaptable_dynamic: bool = False  # This might be true for Qt/QtWebkit
-
     @property
     def compiler_warning_flags(self) -> "list[str]":
         if self.compiling_for_host():
@@ -720,19 +717,6 @@ class Project(SimpleProject):
                            "-mllvm", "-collect-csetbounds-stats=csv",
                            # "-Xclang", "-cheri-bounds=everywhere-unsafe"])
                            ])
-        # Add mxcaptable for projects that need it
-        if self.compiling_for_mips(include_purecap=True):
-            if self.crosscompile_target.is_cheri_purecap():
-                if self.force_static_linkage and self.needs_mxcaptable_static:
-                    result.append("-mxcaptable")
-                if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
-                    result.append("-mxcaptable")
-            # Do the same for MIPS to get even performance comparisons
-            else:
-                if self.force_static_linkage and self.needs_mxcaptable_static:
-                    result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
-                if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
-                    result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
         return result
 
     @property

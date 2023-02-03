@@ -39,11 +39,6 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     # we have to build in the source directory, out-of-source is broken
     # build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake
-    # TODO: only use mxcaptable for some files
-    needs_mxcaptable_static = True  # both are slightly over the limit
-    needs_mxcaptable_dynamic = True  # both are slightly over the limit
-    # warning: added 31332 entries to .cap_table but current maximum is 16384; try recompiling non-performance
-    # critical source files with -mxcaptable
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     def setup(self):
