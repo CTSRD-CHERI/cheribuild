@@ -333,7 +333,7 @@ class CheriConfig(ConfigBase):
                                                                   "a container name")
 
         # compilation db options:
-        self.create_compilation_db = loader.add_commandline_only_bool_option(
+        self.create_compilation_db = loader.add_bool_option(
             "compilation-db", "-cdb", help="Create a compile_commands.json file in the build dir "
                                            "(requires Bear for non-CMake projects)")
         self.copy_compilation_db_to_source_dir = None  # False for jenkins, an option for cheribuild
