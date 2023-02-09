@@ -474,7 +474,7 @@ class BuildFreeBSDBase(Project):
                              " -- consider setting separate", self.get_config_option_name("extra_make_args"),
                              "in the config file.")
             if "=" in option:
-                key, value = option.split("=")
+                key, value = option.split("=", 1)
                 args = {key: value}
                 self.make_args.set(**args)
             else:
