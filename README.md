@@ -30,10 +30,12 @@ If you are building CHERI on a Debian/Ubuntu-based machine, the following comman
 the most commonly used cheribuild targets:
 
 ```shell
-apt install autoconf automake libtool pkg-config clang bison cmake mercurial ninja-build samba flex texinfo time libglib2.0-dev libpixman-1-dev libarchive-dev libarchive-tools libbz2-dev libattr1-dev libcap-ng-dev libexpat1-dev libgmp-dev libstdc++-12-dev
+apt install autoconf automake libtool pkg-config clang bison cmake mercurial ninja-build samba flex texinfo time libglib2.0-dev libpixman-1-dev libarchive-dev libarchive-tools libbz2-dev libattr1-dev libcap-ng-dev libexpat1-dev libgmp-dev
 ```
 
 Older versions of Ubuntu may report errors when trying to install `libarchive-tools`. In this case try using `apt install bsdtar` instead.
+
+If you later get errors like `fatal error: 'new' file not found` this is probably because you have `gcc-<xx>` installed but not the corresponding `g++-<xx>` which causis `clang++` to select the wrong include directory. Uninstall `gcc` or install `g++` or install an appropriate `libstdc++`.
 
 #### RHEL/Fedora
 If you are building CHERI on a RHEL/Fedora-based machine, the following command will install the packages required for
