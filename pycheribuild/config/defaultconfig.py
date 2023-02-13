@@ -178,7 +178,7 @@ class DefaultCheriConfig(CheriConfig):
         self.morello_sdk_dir = loader.add_path_option("morello-sdk-root",
                                                       default=default_morello_sdk, group=loader.path_group,
                                                       help="The directory to find/install the Morello SDK")
-        self.sysroot_output_root = loader.add_path_option("sysroot-install-root", "-sysroot-install-dir",
+        self.sysroot_output_root = loader.add_path_option("sysroot-install-root", shortname="-sysroot-install-dir",
                                                           default=lambda p, cls: p.tools_root, group=loader.path_group,
                                                           help="Sysroot prefix (default: '<TOOLS_ROOT>')")
 

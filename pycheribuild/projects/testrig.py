@@ -118,7 +118,7 @@ class RunTestRIG(SimpleProject):
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
         cls.rerun_last_failure = cls.add_bool_option("rerun-last-failure")
-        cls.replay_trace = cls.add_path_option("replay-trace", help="Run QCV trace from file/directory")
+        cls.replay_trace = cls.add_optional_path_option("replay-trace", help="Run QCV trace from file/directory")
         cls.replay_current_traces = cls.add_bool_option("replay-current-traces",
                                                         help="Replay traces captured in the default output directory")
         cls.noninteractive = cls.add_bool_option("non-interactive")

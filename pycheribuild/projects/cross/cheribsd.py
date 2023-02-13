@@ -563,8 +563,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
                                                         enum_choice_strings=[t.value for t in FreeBSDToolchainKind],
                                                         help="The toolchain to use for building FreeBSD. When set to "
                                                              "'custom', the 'toolchain-path' option must also be set")
-            cls._cross_toolchain_root = cls.add_path_option("toolchain-path",
-                                                            help="Path to the cross toolchain tools", default=None)
+            cls._cross_toolchain_root = cls.add_optional_path_option(
+                "toolchain-path", help="Path to the cross toolchain tools")
             # override in CheriBSD
             cls.linker_for_world = cls.add_config_option("linker-for-world", default="lld", choices=["bfd", "lld"],
                                                          help="The linker to use for world")
@@ -1553,7 +1553,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.build_fett_kernels = cls.add_bool_option("build-fett-kernels", show_help=False, _allow_unknown_targets=True,
                                                      only_add_for_targets=fpga_targets,
                                                      help="Also build kernels for FETT.")
-        cls.mfs_root_image = cls.add_path_option(
+        cls.mfs_root_image = cls.add_optional_path_option(
             "mfs-root-image", help="Path to an MFS root image to be embedded in the kernel for booting")
 
         cls.default_kernel_abi = cls.add_config_option(
@@ -2007,8 +2007,8 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         cls.remote_path = cls.add_config_option("remote-sdk-path", show_help=True, metavar="PATH",
                                                 help="The path to the CHERI SDK on the remote FreeBSD machine (e.g. "
                                                      "vica:~foo/cheri/output/sdk)")
-        cls.install_dir_override = cls.add_path_option("install-directory",
-                                                       help="Override for the sysroot install directory")
+        cls.install_dir_override = cls.add_optional_path_option(
+            "install-directory", help="Override for the sysroot install directory")
 
     @property
     def cross_sysroot_path(self) -> Path:

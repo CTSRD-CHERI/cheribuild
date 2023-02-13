@@ -143,24 +143,25 @@ class LaunchQEMUBase(SimpleProject):
                                              enum_choice_strings=[t.value for t in QEMUType],
                                              help="The QEMU type to run with. When set to 'custom', "
                                              "the 'custom-qemu-path' option must also be set.")
-        cls.custom_qemu_path = cls.add_path_option("custom-qemu-path", help="Path to the custom QEMU binary",
-                                                   default=None)
+        cls.custom_qemu_path = cls.add_optional_path_option("custom-qemu-path", help="Path to the custom QEMU binary")
         cls.use_uboot = cls.add_bool_option("use-u-boot", default=False,
                                             help="Boot using U-Boot for UEFI if supported (only RISC-V)")
         cls.extra_qemu_options = cls.add_list_option("extra-options", metavar="QEMU_OPTIONS",
                                                      help="Additional command line flags to pass to qemu-system")
-        cls.logfile = cls.add_path_option("logfile", default=None, metavar="LOGFILE",
-                                          help="The logfile that QEMU should use.")
-        cls.log_directory = cls.add_path_option("log-directory", default=None, metavar="DIR",
-                                                help="If set QEMU will log to a timestamped file in this directory. "
-                                                     "Will be ignored if the 'logfile' option is set")
+        cls.logfile = cls.add_optional_path_option("logfile", metavar="LOGFILE",
+                                                   help="The logfile that QEMU should use.")
+        cls.log_directory = cls.add_optional_path_option(
+            "log-directory", metavar="DIR",
+            help="If set QEMU will log to a timestamped file in this directory. "
+                 "Will be ignored if the 'logfile' option is set")
         cls.use_telnet = cls.add_config_option("monitor-over-telnet", kind=int, metavar="PORT", show_help=False,
                                                help="If set, the QEMU monitor will be reachable by connecting to "
                                                     "localhost at $PORT via telnet instead of using CTRL+A,C")
 
-        cls.custom_qemu_smb_mount = cls.add_path_option("smb-host-directory", default=None, metavar="DIR",
-                                                        help="If set QEMU will provide this directory over smb with "
-                                                             "the name //10.0.2.4/qemu for use with mount_smbfs")
+        cls.custom_qemu_smb_mount = cls.add_optional_path_option(
+            "smb-host-directory", metavar="DIR",
+            help="If set QEMU will provide this directory over smb with the name //10.0.2.4/qemu for use with "
+                 "mount_smbfs")
         cls.cvtrace = cls.add_bool_option("cvtrace", help="Use binary trace output instead of textual")
         # TODO: -s will no longer work, not sure anyone uses it though
         if cls.forward_ssh_port:

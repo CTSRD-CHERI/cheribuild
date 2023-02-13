@@ -196,13 +196,16 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         cls.only_compile_tests = cls.add_bool_option("only-compile-tests",
                                                      help="Don't attempt to run tests, only compile them")
         cls.exceptions = cls.add_bool_option("exceptions", default=True, help="Build with support for C++ exceptions")
-        cls.collect_test_binaries = cls.add_path_option("collect-test-binaries", metavar="TEST_PATH",
-                                                        help="Instead of running tests copy them to $TEST_PATH")
-        cls.nfs_mounted_path = cls.add_path_option("nfs-mounted-path", metavar="PATH",
-                                                   help="Use a PATH as a directorythat is NFS mounted inside QEMU "
-                                                        "instead of using scp to copy individual tests")
-        cls.nfs_path_in_qemu = cls.add_path_option("nfs-mounted-path-in-qemu", metavar="PATH",
-                                                   help="The path used inside QEMU to refer to nfs-mounted-path")
+        cls.collect_test_binaries = cls.add_optional_path_option(
+            "collect-test-binaries", metavar="TEST_PATH",
+            help="Instead of running tests copy them to $TEST_PATH")
+        cls.nfs_mounted_path = cls.add_optional_path_option(
+            "nfs-mounted-path", metavar="PATH",
+            help="Use a PATH as a directorythat is NFS mounted inside QEMU instead of using scp to copy "
+                 "individual tests")
+        cls.nfs_path_in_qemu = cls.add_optional_path_option(
+            "nfs-mounted-path-in-qemu", metavar="PATH",
+            help="The path used inside QEMU to refer to nfs-mounted-path")
         cls.qemu_host = cls.add_config_option("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
                                               default="localhost")
         cls.qemu_port = cls.add_config_option("ssh-port", help="The QEMU SSH port to connect to for running tests",
