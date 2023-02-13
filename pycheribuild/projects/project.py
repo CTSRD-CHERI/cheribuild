@@ -1077,7 +1077,8 @@ class Project(SimpleProject):
         return self._get_make_commandline(make_target, make_command, options, parallel, compilation_db_name)
 
     def run_make(self, make_target: "Optional[Union[str, list[str]]]" = None, *,
-                 make_command: str = None, options: MakeOptions = None, logfile_name: str = None, cwd: Path = None,
+                 make_command: "Optional[str]" = None, options: "Optional[MakeOptions]" = None,
+                 logfile_name: "Optional[str]" = None, cwd: "Optional[Path]" = None,
                  append_to_logfile=False, compilation_db_name="compile_commands.json", parallel: bool = True,
                  stdout_filter: "Optional[Callable[[bytes], None]]" = _default_stdout_filter) -> None:
         if not options:
