@@ -37,6 +37,7 @@ import sys
 import typing
 from collections import OrderedDict
 from pathlib import Path
+from typing import Optional, Union
 
 from .utils import status_update, warning_message
 
@@ -53,7 +54,7 @@ class MtreeEntry(object):
         return self.attributes.get("type") == "file"
 
     @classmethod
-    def parse(cls, line: str, contents_root: Path = None) -> "MtreeEntry":
+    def parse(cls, line: str, contents_root: "Optional[Path]" = None) -> "MtreeEntry":
         elements = shlex.split(line)
         path = elements[0]
         # Ensure that the path is normalized:
@@ -102,14 +103,14 @@ class MtreeEntry(object):
 
 
 class MtreeFile(object):
-    def __init__(self, *, verbose: bool, file: "typing.Union[io.StringIO,Path,typing.IO]" = None,
-                 contents_root: Path = None):
+    def __init__(self, *, verbose: bool, file: "Union[io.StringIO, Path, typing.IO, None]" = None,
+                 contents_root: "Optional[Path]" = None):
         self.verbose = verbose
         self._mtree: "dict[str, MtreeEntry]" = OrderedDict()
         if file:
             self.load(file, contents_root=contents_root, append=False)
 
-    def load(self, file: "typing.Union[io.StringIO,Path,typing.IO]", *, append: bool, contents_root: Path = None):
+    def load(self, file: "Union[io.StringIO,Path,typing.IO]", *, append: bool, contents_root: "Optional[Path]" = None):
         if isinstance(file, Path):
             with file.open("r") as f:
                 self.load(f, contents_root=contents_root, append=append)
@@ -139,7 +140,7 @@ class MtreeFile(object):
                 warning_message("Could not parse line", line, "in mtree file", file, ":", e)
 
     @staticmethod
-    def _ensure_mtree_mode_fmt(mode: "typing.Union[str, int]") -> str:
+    def _ensure_mtree_mode_fmt(mode: "Union[str, int]") -> str:
         if not isinstance(mode, str):
             mode = "0" + oct(mode)[2:]
         assert mode.startswith("0")
@@ -174,7 +175,7 @@ class MtreeFile(object):
         return result
 
     def add_file(self, file: "typing.Optional[Path]", path_in_image, mode=None, uname="root", gname="wheel",
-                 print_status=True, parent_dir_mode=None, symlink_dest: str = None):
+                 print_status=True, parent_dir_mode=None, symlink_dest: "Optional[str]" = None):
         if isinstance(path_in_image, Path):
             path_in_image = str(path_in_image)
         assert not path_in_image.startswith("/")
@@ -213,7 +214,7 @@ class MtreeFile(object):
                 status_update("Adding file", file, "to mtree as", mtree_path, file=sys.stderr)
         self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
 
-    def add_symlink(self, *, src_symlink: Path = None, symlink_dest=None, path_in_image: str, **kwargs):
+    def add_symlink(self, *, src_symlink: "Optional[Path]" = None, symlink_dest=None, path_in_image: str, **kwargs):
         if src_symlink is not None:
             assert symlink_dest is None
             self.add_file(src_symlink, path_in_image, **kwargs)
@@ -289,7 +290,7 @@ class MtreeFile(object):
         import pprint
         return "<MTREE: " + pprint.pformat(self._mtree) + ">"
 
-    def write(self, output: "typing.Union[io.StringIO,Path,typing.IO]", *, pretend):
+    def write(self, output: "Union[io.StringIO,Path,typing.IO]", *, pretend):
         if pretend:
             return
         if isinstance(output, Path):

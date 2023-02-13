@@ -42,6 +42,7 @@ import typing
 from multiprocessing import Barrier, Process, Queue
 from pathlib import Path
 from queue import Empty
+from typing import Optional
 
 import run_remote_lit_test
 from run_remote_lit_test import mp_debug
@@ -75,7 +76,8 @@ def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, di
         raise
 
 
-def libcxx_main(barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue: Queue = None, shard_num: int = None):
+def libcxx_main(barrier: "Optional[Barrier]" = None, mp_queue: "Optional[Queue]" = None,
+                ssh_port_queue: "Optional[Queue]" = None, shard_num: "Optional[int]" = None):
     def set_cmdline_args(args: argparse.Namespace):
         boot_cheribsd.info("Setting args:", args)
         if mp_queue:

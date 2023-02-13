@@ -201,8 +201,8 @@ class CommandLineConfigOption(ConfigOptionBase[T]):
     def __init__(self, name: str, shortname: "Optional[str]", default,
                  value_type: "Union[type[T], Callable[[Any], T]]", _owning_class, *,
                  _loader: "JsonAndCommandLineConfigLoader", help_hidden: bool,
-                 group: "Optional[argparse._ArgumentGroup]", _fallback_names: "list[str]" = None,
-                 _legacy_alias_names: "list[str]" = None, **kwargs):
+                 group: "Optional[argparse._ArgumentGroup]", _fallback_names: "Optional[list[str]]" = None,
+                 _legacy_alias_names: "Optional[list[str]]" = None, **kwargs):
         super().__init__(name, shortname, default, value_type, _owning_class, _loader=_loader,
                          _fallback_names=_fallback_names, _legacy_alias_names=_legacy_alias_names)
         # hide obscure options unless --help-hidden/--help/all is passed

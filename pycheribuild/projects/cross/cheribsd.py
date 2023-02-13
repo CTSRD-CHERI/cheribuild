@@ -523,7 +523,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     has_default_buildkernel_kernel_config: bool = True
 
     @classmethod
-    def get_rootfs_dir(cls, caller, cross_target: CrossCompileTarget = None) -> Path:
+    def get_rootfs_dir(cls, caller, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
         return cls.get_install_dir(caller, cross_target)
 
     @classmethod
@@ -533,7 +533,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if cls._xtarget:
             # KERNCONF always depends on the target, so we don't inherit this config option. The only exception is
             # the global --kernel-config option that is provided for convenience and backwards compat.
-            cls.kernel_config: str = cls.add_config_option(
+            cls.kernel_config = cls.add_config_option(
                 "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
                 default=ComputedDefaultValue(
                     function=lambda _, p:
@@ -558,11 +558,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
         else:
             # Prefer using system clang for FreeBSD builds rather than a self-built snapshot of LLVM since that might
             # have new warnings that break the -Werror build.
-            cls.build_toolchain = cls.add_config_option("toolchain", kind=FreeBSDToolchainKind,
-                                                        default=FreeBSDToolchainKind.DEFAULT_COMPILER,
-                                                        enum_choice_strings=[t.value for t in FreeBSDToolchainKind],
-                                                        help="The toolchain to use for building FreeBSD. When set to "
-                                                             "'custom', the 'toolchain-path' option must also be set")
+            cls.build_toolchain = typing.cast(FreeBSDToolchainKind, cls.add_config_option(
+                "toolchain", kind=FreeBSDToolchainKind, default=FreeBSDToolchainKind.DEFAULT_COMPILER,
+                enum_choice_strings=[t.value for t in FreeBSDToolchainKind],
+                help="The toolchain to use for building FreeBSD. When set to 'custom', the 'toolchain-path' option "
+                     "must also be set"))
             cls._cross_toolchain_root = cls.add_optional_path_option(
                 "toolchain-path", help="Path to the cross toolchain tools")
             # override in CheriBSD
@@ -615,7 +615,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         else:
             return ConfigPlatform.QEMU
 
-    def default_kernel_config(self, platform: ConfigPlatform = None, **filter_kwargs) -> str:
+    def default_kernel_config(self, platform: "Optional[ConfigPlatform]" = None, **filter_kwargs) -> str:
         xtarget = self.crosscompile_target
         # Only handle FreeBSD native configs here
         assert not xtarget.is_hybrid_or_purecap_cheri(), "Unexpected FreeBSD target"
@@ -979,7 +979,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 continue
             self.info(conf.name)
 
-    def _buildkernel(self, kernconf: str, mfs_root_image: Path = None, extra_make_args=None,
+    def _buildkernel(self, kernconf: str, mfs_root_image: "Optional[Path]" = None, extra_make_args=None,
                      ignore_skip_kernel=False) -> None:
         # Check that --skip-kernel is respected. However, we ignore it for the cheribsd-mfs-root-kernel targets
         # since those targets only build a kernel.
@@ -1031,8 +1031,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.delete_file(install_dir / "METALOG.kernel")  # Ensure that METALOG does not contain stale values.
         self.run_make("installkernel", options=install_kernel_args, parallel=False)
 
-    def compile(self, mfs_root_image: Path = None, sysroot_only=False, all_kernel_configs: str = None,
-                **kwargs) -> None:
+    def compile(self, mfs_root_image: "Optional[Path]" = None, sysroot_only=False,
+                all_kernel_configs: "Optional[str]" = None, **kwargs) -> None:
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
         if not self.use_bootstrapped_toolchain:
@@ -1180,7 +1180,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         result.set_env(METALOG=self.install_dir / "METALOG.world")
         return result
 
-    def install(self, all_kernel_configs: str = None, sysroot_only=False, **kwargs) -> None:
+    def install(self, all_kernel_configs: "Optional[str]" = None, sysroot_only=False, **kwargs) -> None:
         if self.config.freebsd_host_tools_only:
             self.info("Skipping install step because freebsd-host-tools was set")
             return
@@ -1370,7 +1370,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.run_cmd([self.make_args.command] + make_args.all_commandline_args(self.config) + extra_flags + [
                 compat_target], env=make_args.env_vars, cwd=self.source_dir)
 
-    def get_kernel_install_path(self, kernconf: str = None) -> Path:
+    def get_kernel_install_path(self, kernconf: "Optional[str]" = None) -> Path:
         """
         Get the installed kernel path for the given kernel configuration. If no kernel config
         is given, the default kernel configuration is selected.
@@ -1381,7 +1381,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kerndir = "kernel." + kernconf
         return self.install_dir / "boot" / kerndir / "kernel"
 
-    def get_kern_module_path(self, kernconf: str = None) -> "Optional[str]":
+    def get_kern_module_path(self, kernconf: "Optional[str]" = None) -> "Optional[str]":
         """
         Get the path to provide to kern.module_path for the given kernel
         configuration if needed (i.e. the kernel is not the default one).
@@ -1390,7 +1390,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return None
         return "/boot/kernel." + kernconf
 
-    def get_kern_module_path_arg(self, kernconf: str = None) -> "Optional[str]":
+    def get_kern_module_path_arg(self, kernconf: "Optional[str]" = None) -> "Optional[str]":
         """
         Get the tunable env var to set kern.module_path for the given kernel
         configuration if needed (i.e. the kernel is not the default one).
@@ -1645,7 +1645,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                  combinations + ["mfsroot"])
         return configs
 
-    def default_kernel_config(self, platform: ConfigPlatform = None, **filter_kwargs) -> str:
+    def default_kernel_config(self, platform: "Optional[ConfigPlatform]" = None, **filter_kwargs) -> str:
         xtarget = self.crosscompile_target
         if not xtarget.is_hybrid_or_purecap_cheri():
             return super().default_kernel_config(platform=platform, **filter_kwargs)
@@ -1797,7 +1797,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
                                                  combinations, mfsroot=True)
         return configs
 
-    def default_kernel_config(self, platform: ConfigPlatform = None, **filter_kwargs) -> str:
+    def default_kernel_config(self, platform: "Optional[ConfigPlatform]" = None, **filter_kwargs) -> str:
         if platform is None:
             platform = self.get_default_kernel_platform()
         kABI = filter_kwargs.pop("kABI", self.get_default_kernel_abi())
@@ -1813,7 +1813,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         configs = self._get_all_kernel_configs()
         return [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kABI=None)]
 
-    def get_kernel_install_path(self, kernconf: str = None) -> Path:
+    def get_kernel_install_path(self, kernconf: "Optional[str]" = None) -> Path:
         """ Get the installed kernel path for an MFS kernel config that has been built. """
         path = self.config.cheribsd_image_root / (
             "kernel" + self.crosscompile_target.build_suffix(self.config, include_os=False) +
@@ -1961,8 +1961,8 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
     is_sdk_target: bool = True
     rootfs_source_class: "type[BuildCHERIBSD]" = BuildCHERIBSD
     copy_remote_sysroot: "ClassVar[bool]"
-    remote_path: "ClassVar[str]"
-    install_dir_override: "ClassVar[Path]"
+    remote_path: "ClassVar[Optional[str]]"
+    install_dir_override: "ClassVar[Optional[Path]]"
 
     @classproperty
     def supported_architectures(self):
@@ -2012,8 +2012,9 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
 
     @property
     def cross_sysroot_path(self) -> Path:
-        if self.install_dir_override:
-            return self.install_dir_override
+        if self.install_dir_override is not None:
+            # Work around https://github.com/google/pytype/issues/1344 false positive
+            return typing.cast(Path, self.install_dir_override)
         return super().cross_sysroot_path
 
     def copy_sysroot_from_remote_machine(self) -> None:

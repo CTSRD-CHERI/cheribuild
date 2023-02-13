@@ -30,11 +30,12 @@
 # SUCH DAMAGE.
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 from run_tests_common import boot_cheribsd, junitparser
 
 
-def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path, prefix: str = None):
+def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path, prefix: "Optional[str]" = None):
     assert output_file.resolve() != db_file.resolve()
     with output_file.open("w") as output_stream:
         command = ["kyua", "report-junit", "--results-file=" + str(db_file)]
@@ -44,7 +45,7 @@ def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path, prefix: str =
             fixup_kyua_generated_junit_xml(output_file, prefix)
 
 
-def fixup_kyua_generated_junit_xml(xml_file: Path, prefix: str = None):
+def fixup_kyua_generated_junit_xml(xml_file: Path, prefix: "Optional[str]" = None):
     boot_cheribsd.info("Updating statistics in JUnit file ", xml_file)
     # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
     orig_xml_str = xml_file.read_text("utf-8", errors='backslashreplace')

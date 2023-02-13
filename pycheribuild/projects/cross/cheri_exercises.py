@@ -27,6 +27,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 from pathlib import Path
+from typing import Optional
 
 from .crosscompileproject import CompilationTargets, CrossCompileProject, GitRepository
 from ..project import DefaultInstallDir, Project
@@ -55,7 +56,7 @@ class BuildCheriExercises(CrossCompileProject):
         super().__init__(*args, **kwargs)
         self.compiled_files: "list[Path]" = []
 
-    def _compile_file(self, output: Path, *args, target_override: CrossCompileTarget = None):
+    def _compile_file(self, output: Path, *args, target_override: "Optional[CrossCompileTarget]" = None):
         assert isinstance(self.target_info, CheriBSDTargetInfo)
         target_flags = self.target_info.get_essential_compiler_and_linker_flags(xtarget=target_override,
                                                                                 default_flags_only=True)

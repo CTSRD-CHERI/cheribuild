@@ -49,7 +49,7 @@ import time
 import traceback
 import typing
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Callable
 
 from pycheribuild.colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
@@ -274,7 +274,8 @@ class CheriBSDSpawnMixin(MixinBase):
         run_cheribsd_command(self, cmd, expected_output=expected_output, error_output=error_output,
                              cheri_trap_fatal=cheri_trap_fatal, ignore_cheri_trap=ignore_cheri_trap, timeout=timeout)
 
-    def checked_run(self, cmd: str, *, timeout=600, ignore_cheri_trap=False, error_output: str = None, **kwargs):
+    def checked_run(self, cmd: str, *, timeout=600, ignore_cheri_trap=False, error_output: "Optional[str]" = None,
+                    **kwargs):
         checked_run_cheribsd_command(self, cmd, timeout=timeout, ignore_cheri_trap=ignore_cheri_trap,
                                      error_output=error_output, **kwargs)
 
@@ -469,8 +470,8 @@ def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
                                                    var=cheri_ld_lib_path_var), timeout=3)
 
 
-def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, args: argparse.Namespace = None, *,
-                     what: str) -> Path:
+def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True,
+                     args: "Optional[argparse.Namespace]" = None, *, what: str) -> Path:
     # drop the suffix and then try decompressing
     def bunzip(archive):
         return decompress(archive, force_decompression, cmd=["bunzip2", "-v", "-f"], keep_archive=keep_archive)
@@ -587,7 +588,7 @@ def run_cheribsd_command(qemu: CheriBSDSpawnMixin, cmd: str, expected_output=Non
 
 
 def checked_run_cheribsd_command(qemu: CheriBSDSpawnMixin, cmd: str, timeout=600, ignore_cheri_trap=False,
-                                 error_output: str = None, **kwargs):
+                                 error_output: "Optional[str]" = None, **kwargs):
     starttime = datetime.datetime.now()
     qemu.sendline(
         cmd + " ;if test $? -eq 0; then echo '__COMMAND' 'SUCCESSFUL__'; else echo '__COMMAND' 'FAILED__'; fi")
@@ -746,9 +747,9 @@ def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
 def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path], kernel_image: Path,
                   disk_image: typing.Optional[Path], ssh_port: typing.Optional[int],
                   ssh_pubkey: typing.Optional[Path], *, write_disk_image_changes: bool,
-                  smp_args: "list[str]", smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False,
-                  trap_on_unrepresentable=False, skip_ssh_setup=False, bios_path: Path = None,
-                  boot_alternate_kernel_dir: Path = None) -> QemuCheriBSDInstance:
+                  smp_args: "list[str]", smb_dirs: "Optional[list[SmbMount]]" = None, kernel_init_only=False,
+                  trap_on_unrepresentable=False, skip_ssh_setup=False, bios_path: "Optional[Path]" = None,
+                  boot_alternate_kernel_dir: "Optional[Path]" = None) -> QemuCheriBSDInstance:
     user_network_args = ""
     if smb_dirs is None:
         smb_dirs = []
@@ -817,7 +818,7 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
 
 def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=False,
                    network_iface: typing.Optional[str],
-                   boot_alternate_kernel_dir: Path = None) -> None:
+                   boot_alternate_kernel_dir: "Optional[Path]" = None) -> None:
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -929,7 +930,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
 
 def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_archives: "list[Path]",
                    test_ld_preload_files: "list[Path]",
-                   test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None):
+                   test_setup_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], None]]" = None):
     smb_dirs = qemu.smb_dirs
     setup_tests_starttime = datetime.datetime.now()
     # Enable userspace CHERI exception logging to aid debugging
@@ -1035,8 +1036,8 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
 
 def runtests(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_archives: "list[Path]",
              test_ld_preload_files: "list[Path]",
-             test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
-             test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None) -> bool:
+             test_setup_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], None]]" = None,
+             test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], bool]]" = None) -> bool:
     try:
         _do_test_setup(qemu, args, test_archives, test_ld_preload_files, test_setup_function)
     except KeyboardInterrupt:
@@ -1165,10 +1166,10 @@ def get_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None,
-          test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
-          argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]" = None,
-          argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]" = None):
+def _main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], bool]]" = None,
+          test_setup_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], None]]" = None,
+          argparse_setup_callback: "Optional[Callable[[argparse.ArgumentParser], None]]" = None,
+          argparse_adjust_args_callback: "Optional[Callable[[argparse.Namespace], None]]" = None):
     parser = get_argument_parser()
     if argparse_setup_callback:
         argparse_setup_callback(parser)
@@ -1344,10 +1345,10 @@ def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace]
         sys.exit(2)  # different exit code for test failures
 
 
-def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None,
-         test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
-         argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]" = None,
-         argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]" = None):
+def main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], bool]]" = None,
+         test_setup_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], None]]" = None,
+         argparse_setup_callback: "Optional[Callable[[argparse.ArgumentParser], None]]" = None,
+         argparse_adjust_args_callback: "Optional[Callable[[argparse.Namespace], None]]" = None):
     # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
     with keep_terminal_sane():
         run_and_kill_children_on_exit(

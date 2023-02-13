@@ -7,12 +7,13 @@ import shutil
 import sys
 
 from enum import Enum
+from typing import Optional
 
 from serial.tools.list_ports import comports  # noqa: E402
 from serial.tools.list_ports_common import ListPortInfo  # noqa: E402
 
 
-def find_morello_board_ttys(pretend: bool, board_index: int = None) -> "list[ListPortInfo]":
+def find_morello_board_ttys(pretend: bool, board_index: "Optional[int]" = None) -> "list[ListPortInfo]":
     # find the serial port:
     # Run `ioreg -p IOUSB -l -w 0` on macOS to find the right VID/PID
     expected_vendor_id = 0x0403

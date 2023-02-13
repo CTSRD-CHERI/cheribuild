@@ -23,6 +23,7 @@
 # SUCH DAMAGE.
 
 from pathlib import Path
+from typing import Optional
 
 from ..project import ExternallyManagedSourceRepository
 from .crosscompileproject import CrossCompileMakefileProject, DefaultInstallDir
@@ -52,7 +53,7 @@ class BuildGKermit(CrossCompileMakefileProject):
         if not (self.source_dir / "makefile").is_file():
             self.run_cmd(["tar", "xzvf", self.source_dir / filename, "-C", self.source_dir])
 
-    def compile(self, cwd: Path = None, parallel: bool = True):
+    def compile(self, cwd: "Optional[Path]" = None, parallel: bool = True):
         if cwd is None:
             cwd = self.build_dir
         self.run_make("gkermit", cwd=cwd, parallel=parallel)

@@ -34,6 +34,7 @@ import subprocess
 import threading
 import typing
 from pathlib import Path
+from typing import Optional
 
 from .processutils import print_command, run_command
 from .utils import AnsiColour, ConfigBase, fatal_error, status_update, ThreadJoiner, warning_message
@@ -83,7 +84,8 @@ class FileSystemUtils(object):
             except Exception as e:
                 warning_message("Could not remove directory", self.path, e)
 
-    def async_clean_directory(self, path: Path, *, keep_root=False, keep_dirs: list = None) -> ThreadJoiner:
+    def async_clean_directory(self, path: Path, *, keep_root=False,
+                              keep_dirs: "Optional[list[str]]" = None) -> ThreadJoiner:
         """
         Delete a directory in the background (e.g. deleting the cheribsd build directory delays the build a lot)
         ::
@@ -222,7 +224,7 @@ class FileSystemUtils(object):
     # whether to create a new file called src.basename() inside dest, whether
     # to use dest.parent or dest, etc.
     @staticmethod
-    def create_symlink(src: Path, dest: Path, *, relative=True, cwd: Path = None, print_verbose_only=True):
+    def create_symlink(src: Path, dest: Path, *, relative=True, cwd: "Optional[Path]" = None, print_verbose_only=True):
         assert dest.is_absolute() or cwd is not None
         if not cwd:
             cwd = dest.parent
@@ -236,7 +238,7 @@ class FileSystemUtils(object):
             run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only)
 
     @staticmethod
-    def create_symlinks(srcs: typing.Iterable[Path], destdir: Path, *, relative=True, cwd: Path = None,
+    def create_symlinks(srcs: typing.Iterable[Path], destdir: Path, *, relative=True, cwd: "Optional[Path]" = None,
                         print_verbose_only=True):
         assert destdir.is_absolute() or cwd is not None
         if not cwd:
@@ -313,8 +315,8 @@ class FileSystemUtils(object):
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
         raise ValueError("Must override triple_prefixes_for_binaries to use create_triple_prefixed_symlinks!")
 
-    def create_triple_prefixed_symlinks(self, tool_path: Path, tool_name: str = None,
-                                        create_unprefixed_link: bool = False, cwd: str = None) -> None:
+    def create_triple_prefixed_symlinks(self, tool_path: Path, tool_name: "Optional[str]" = None,
+                                        create_unprefixed_link: bool = False, cwd: "Optional[str]" = None) -> None:
         """
         Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
         for build tools like clang, ld, etc.

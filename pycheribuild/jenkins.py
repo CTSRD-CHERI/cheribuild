@@ -37,6 +37,7 @@ import sys
 import typing
 # noinspection PyUnresolvedReferences
 from pathlib import Path
+from typing import Optional
 
 from .config.jenkinsconfig import JenkinsAction, JenkinsConfig
 from .config.loader import CommandLineConfigOption, CommandLineConfigLoader
@@ -81,8 +82,8 @@ class JenkinsConfigLoader(CommandLineConfigLoader):
 
 
 class SdkArchive(object):
-    def __init__(self, cheri_config: JenkinsConfig, name, *, required_globs: "list[str]" = None,
-                 extra_args: "list[str]" = None, output_dir: Path):
+    def __init__(self, cheri_config: JenkinsConfig, name, *, required_globs: "Optional[list[str]]" = None,
+                 extra_args: "Optional[list[str]]" = None, output_dir: Path):
         self.output_dir = output_dir
         self.cheri_config = cheri_config
         self.archive = cheri_config.workspace / name

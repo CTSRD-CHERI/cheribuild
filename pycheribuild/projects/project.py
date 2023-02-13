@@ -196,7 +196,7 @@ class MakeOptions(object):
             self.__project.fatal("Cannot infer path from CustomMakeTool. Set self.make_args.set_command(\"tool\")")
             raise RuntimeError()
 
-    def set_command(self, value, can_pass_j_flag=True, early_args: "list[str]" = None):
+    def set_command(self, value, can_pass_j_flag=True, early_args: "Optional[list[str]]" = None):
         self.__command = str(value)
         if early_args is None:
             early_args = []
@@ -209,8 +209,8 @@ class MakeOptions(object):
     def all_commandline_args(self, config) -> "list[str]":
         return self.get_commandline_args(config=config)
 
-    def get_commandline_args(self, *, targets: "list[str]" = None, jobs: int = None, verbose=False,
-                             continue_on_error=False, config: CheriConfig) -> "list[str]":
+    def get_commandline_args(self, *, targets: "Optional[list[str]]" = None, jobs: "Optional[int]" = None,
+                             verbose=False, continue_on_error=False, config: CheriConfig) -> "list[str]":
         assert self.kind
         result = list(self.__command_args)
         actual_build_tool = self.kind
@@ -365,7 +365,7 @@ class Project(SimpleProject):
     do_not_add_to_targets: bool = True
     set_pkg_config_path: bool = True  # set the PKG_CONFIG_* environment variables when building
     can_run_parallel_install: bool = False  # Most projects don't work well with parallel installation
-    default_source_dir: ComputedDefaultValue[Path] = ComputedDefaultValue(
+    default_source_dir: ComputedDefaultValue[Optional[Path]] = ComputedDefaultValue(
         function=_default_source_dir, as_string=lambda cls: "$SOURCE_ROOT/" + cls.default_directory_basename)
     # Some projects (e.g. python) need a native build for build tools, etc.
     needs_native_build_for_crosscompile: bool = False
@@ -412,15 +412,15 @@ class Project(SimpleProject):
         return self.config.generate_cmakelists
 
     @classmethod
-    def get_source_dir(cls, caller: AbstractProject, cross_target: CrossCompileTarget = None):
+    def get_source_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None):
         return cls._get_instance_no_setup(caller, cross_target).source_dir
 
     @classmethod
-    def get_build_dir(cls, caller: AbstractProject, cross_target: CrossCompileTarget = None):
+    def get_build_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None):
         return cls._get_instance_no_setup(caller, cross_target).build_dir
 
     @classmethod
-    def get_install_dir(cls, caller: AbstractProject, cross_target: CrossCompileTarget = None):
+    def get_install_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None):
         return cls._get_instance_no_setup(caller, cross_target).real_install_root_dir
 
     def build_dir_for_target(self, target: CrossCompileTarget) -> Path:
@@ -609,12 +609,11 @@ class Project(SimpleProject):
         cls._linkage = cls.add_config_option("linkage", default=Linkage.DEFAULT, kind=Linkage,
                                              help="Build static or dynamic (or use the project default)")
 
-        cls.build_type = cls.add_config_option("build-type",
-                                               help="Optimization+debuginfo defaults (supports the same values as "
-                                                    "CMake (as well as 'DEFAULT' which"
-                                                    " does not pass any additional flags to the configure command).",
-                                               default=cls.default_build_type, kind=BuildType,
-                                               enum_choice_strings=supported_build_type_strings)  # type: BuildType
+        cls.build_type = typing.cast(BuildType, cls.add_config_option(
+            "build-type", default=cls.default_build_type, kind=BuildType,
+            enum_choice_strings=supported_build_type_strings,
+            help="Optimization+debuginfo defaults (supports the same values as CMake (as well as 'DEFAULT' which"
+                 " does not pass any additional flags to the configure command)."))
 
         if cls.has_optional_tests and "build_tests" not in cls.__dict__:
             cls.build_tests = cls.add_bool_option("build-tests", help="Build the tests",
@@ -1035,7 +1034,7 @@ class Project(SimpleProject):
         self.__dict__[name] = value
 
     def _get_make_commandline(self, make_target: "Optional[Union[str, list[str]]]", make_command,
-                              options: MakeOptions, parallel: bool = True, compilation_db_name: str = None):
+                              options: MakeOptions, parallel: bool = True, compilation_db_name: "Optional[str]" = None):
         assert options is not None
         assert make_command is not None
         options = options.copy()
@@ -1067,9 +1066,9 @@ class Project(SimpleProject):
             all_args = ["nice"] + all_args
         return all_args
 
-    def get_make_commandline(self, make_target: "Union[str, list[str]]", make_command: str = None,
-                             options: MakeOptions = None, parallel: bool = True,
-                             compilation_db_name: str = None) -> list:
+    def get_make_commandline(self, make_target: "Union[str, list[str]]", make_command: "Optional[str]" = None,
+                             options: "Optional[MakeOptions]" = None, parallel: bool = True,
+                             compilation_db_name: "Optional[str]" = None) -> list:
         if not options:
             options = self.make_args
         if not make_command:
@@ -1125,7 +1124,7 @@ class Project(SimpleProject):
 
     _extra_git_clean_excludes: "list[str]" = []
 
-    def _git_clean_source_dir(self, git_dir: Path = None) -> None:
+    def _git_clean_source_dir(self, git_dir: "Optional[Path]" = None) -> None:
         if git_dir is None:
             git_dir = self.source_dir
         # just use git clean for cleanup
@@ -1178,7 +1177,7 @@ class Project(SimpleProject):
             fullpath += " " + self.commandline_to_str(args)
         self.configure_environment[prog] = fullpath
 
-    def configure(self, cwd: Path = None, configure_path: Path = None) -> None:
+    def configure(self, cwd: "Optional[Path]" = None, configure_path: "Optional[Path]" = None) -> None:
         if cwd is None:
             cwd = self.build_dir
         if not self.should_run_configure():
@@ -1205,7 +1204,7 @@ class Project(SimpleProject):
             self.run_with_logfile([str(configure_path)] + self.configure_args, logfile_name="configure", cwd=cwd,
                                   env=self.configure_environment)
 
-    def compile(self, cwd: Path = None, parallel: bool = True) -> None:
+    def compile(self, cwd: "Optional[Path]" = None, parallel: bool = True) -> None:
         if cwd is None:
             cwd = self.build_dir
         self.run_make("all", cwd=cwd, parallel=parallel)
@@ -1240,9 +1239,9 @@ class Project(SimpleProject):
             return self._install_prefix
         return self._install_dir
 
-    def run_make_install(self, *, options: MakeOptions = None, _stdout_filter=_default_stdout_filter, cwd=None,
-                         parallel: bool = None, target: "Union[str, list[str]]" = "install",
-                         make_install_env=None, **kwargs):
+    def run_make_install(self, *, options: "Optional[MakeOptions]" = None, _stdout_filter=_default_stdout_filter,
+                         cwd: "Optional[Path]" = None, parallel: bool = None,
+                         target: "Union[str, list[str]]" = "install", make_install_env=None, **kwargs):
         if parallel is None:
             parallel = self.can_run_parallel_install
         if options is None:
@@ -1615,7 +1614,7 @@ class _CMakeAndMesonSharedLogic(Project):
                        fatal_when_pretending=True)
         self.write_file(contents=result, file=file, overwrite=True)
 
-    def _prepare_toolchain_file_common(self, output_file: Path = None, **kwargs) -> None:
+    def _prepare_toolchain_file_common(self, output_file: "Optional[Path]" = None, **kwargs) -> None:
         if output_file is None:
             output_file = self._toolchain_file
         assert self._toolchain_template is not None

@@ -29,6 +29,7 @@
 #
 
 from pathlib import Path
+from typing import Optional
 
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompileTarget, DefaultInstallDir,
@@ -115,7 +116,8 @@ class BuildUBoot(Project):
         return self.install_dir / "u-boot"
 
     @classmethod
-    def get_firmware_path(cls, caller, config: CheriConfig = None, cross_target: CrossCompileTarget = None):
+    def get_firmware_path(cls, caller, config: "Optional[CheriConfig]" = None,
+                          cross_target: "Optional[CrossCompileTarget]" = None):
         return cls.get_instance(caller, config=config, cross_target=cross_target).firmware_path
 
     def configure(self, **kwargs):

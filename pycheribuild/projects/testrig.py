@@ -28,6 +28,7 @@ import time
 import typing
 from abc import abstractmethod
 from pathlib import Path
+from typing import Optional
 
 from .build_qemu import BuildQEMU
 from .project import DefaultInstallDir, MakefileProject, Project
@@ -77,7 +78,7 @@ class BuildQuickCheckVengine(Project):
         self.run_cmd("cabal", "v2-update", cwd=self.build_dir)
         self.run_cmd("cabal", "v2-build", cwd=self.build_dir)
 
-    def run_qcvengine(self, *args: str, cwd: Path = None, **kwargs):
+    def run_qcvengine(self, *args: str, cwd: "Optional[Path]" = None, **kwargs):
         self.run_cmd(self.get_qcv_path(), *args, cwd=cwd or self.build_dir, **kwargs)
 
     def get_qcv_path(self) -> Path:
@@ -122,8 +123,8 @@ class RunTestRIG(SimpleProject):
         cls.replay_current_traces = cls.add_bool_option("replay-current-traces",
                                                         help="Replay traces captured in the default output directory")
         cls.noninteractive = cls.add_bool_option("non-interactive")
-        cls.number_of_runs = cls.add_config_option("number-of-runs", kind=int, default=20,
-                                                   help="Number of QCVEngine runs")
+        cls.number_of_runs = typing.cast(int, cls.add_config_option("number-of-runs", kind=int, default=20,
+                                                                    help="Number of QCVEngine runs"))
         cls.existing_test_impl_port = cls.add_config_option("test-implementation-port", kind=int,
                                                             help="Use a running test implementation instead.")
         cls.vengine_options = cls.add_list_option("extra-vengine-options", metavar="OPTIONS",

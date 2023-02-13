@@ -40,6 +40,7 @@ import traceback
 import typing
 from pathlib import Path
 from threading import RLock
+from typing import Optional
 
 from .colour import AnsiColour, coloured
 
@@ -91,7 +92,7 @@ class ConfigBase:
         self.pretend = pretend
         self.force = force
         self.presume_connectivity = False
-        self.internet_connection_last_checked_at: typing.Optional[float] = None
+        self.internet_connection_last_checked_at: "Optional[float]" = None
         self.internet_connection_last_check_result = False
 
 
@@ -170,7 +171,7 @@ class SocketAndPort(object):
         self.port = port
 
 
-def find_free_port(preferred_port: int = None) -> SocketAndPort:
+def find_free_port(preferred_port: "Optional[int]" = None) -> SocketAndPort:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     if preferred_port is not None:
         try:
@@ -185,7 +186,7 @@ def find_free_port(preferred_port: int = None) -> SocketAndPort:
     return SocketAndPort(s, s.getsockname()[1])
 
 
-def default_make_jobs_count() -> typing.Optional[int]:
+def default_make_jobs_count() -> Optional[int]:
     make_jobs = os.cpu_count()
     if make_jobs > 24:
         # don't use up all the resources on shared build systems
@@ -264,7 +265,7 @@ def fatal_error(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, ex
 
 
 def query_yes_no(config: ConfigBase, message: str = "", *, default_result=False, force_result=True,
-                 yes_no_str: str = None) -> bool:
+                 yes_no_str: "Optional[str]" = None) -> bool:
     if yes_no_str is None:
         yes_no_str = " [Y]/n " if default_result else " y/[N] "
     if config.pretend:
@@ -349,7 +350,7 @@ def is_case_sensitive_dir(d: Path) -> bool:
 
 class InstallInstructions:
     def __init__(self, message: "typing.Union[str, typing.Callable[[], str]]",
-                 cheribuild_target: "typing.Optional[str]" = None, alternative: str = None):
+                 cheribuild_target: "Optional[str]" = None, alternative: "Optional[str]" = None):
         self._message = message
         self.cheribuild_target = cheribuild_target
         self.alternative = alternative
@@ -375,7 +376,7 @@ class OSInfo(object):
     IS_LINUX: bool = sys.platform.startswith("linux")
     IS_FREEBSD: bool = sys.platform.startswith("freebsd")
     IS_MAC: bool = sys.platform.startswith("darwin")
-    __os_release_cache: "typing.Optional[dict[str, str]]" = None
+    __os_release_cache: "Optional[dict[str, str]]" = None
 
     @classmethod
     def is_ubuntu(cls) -> bool:
@@ -492,7 +493,7 @@ class OSInfo(object):
 
 
 class ThreadJoiner(object):
-    def __init__(self, thread: "typing.Optional[threading.Thread]"):
+    def __init__(self, thread: "Optional[threading.Thread]"):
         self.thread = thread
 
     def __enter__(self) -> None:

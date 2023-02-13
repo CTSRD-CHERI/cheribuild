@@ -32,6 +32,7 @@ import sys
 import typing
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Optional
 
 from .project import (AutotoolsProject, BuildType, CheriConfig, CPUArchitecture, CrossCompileTarget, DefaultInstallDir,
                       GitRepository, MakeCommandKind, ComputedDefaultValue)
@@ -76,15 +77,14 @@ class BuildQEMUBase(AutotoolsProject):
                                       help="Build a the graphical UI bits for QEMU (SDL,VNC)")
         cls.build_profiler = cls.add_bool_option("build-profiler", show_help=False, default=False,
                                                  help="Enable QEMU internal profiling")
-        cls.qemu_targets = cls.add_config_option("targets",
-                                                 show_help=True, help="Build QEMU for the following targets",
-                                                 default=cls.default_targets)
+        cls.qemu_targets = typing.cast(str, cls.add_config_option(
+            "targets", show_help=True, help="Build QEMU for the following targets", default=cls.default_targets))
         cls.prefer_full_lto_over_thin_lto = cls.add_bool_option("full-lto", show_help=False, default=True,
                                                                 help="Prefer full LTO over LLVM ThinLTO when using LTO")
 
     @classmethod
-    def qemu_binary(cls, caller: SimpleProject = None, xtarget: CrossCompileTarget = None,
-                    config: CheriConfig = None):
+    def qemu_binary(cls, caller: "Optional[SimpleProject]" = None, xtarget: "Optional[CrossCompileTarget]" = None,
+                    config: "Optional[CheriConfig]" = None):
         if caller is not None:
             if config is None:
                 config = caller.config
@@ -331,7 +331,7 @@ class BuildQEMU(BuildQEMUBase):
         return config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
 
     @classmethod
-    def get_firmware_dir(cls, caller: SimpleProject, cross_target: CrossCompileTarget = None):
+    def get_firmware_dir(cls, caller: SimpleProject, cross_target: "Optional[CrossCompileTarget]" = None):
         return cls.get_install_dir(caller, cross_target=cross_target) / "share/qemu"
 
     def setup(self):

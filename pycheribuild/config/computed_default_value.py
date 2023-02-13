@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import typing
+from typing import Union, Callable, Any
 
 T = typing.TypeVar("T")
 if typing.TYPE_CHECKING:
@@ -36,9 +37,9 @@ if typing.TYPE_CHECKING:
 
 
 class ComputedDefaultValue(typing.Generic[T]):
-    def __init__(self, function: "typing.Callable[[ConfigTy, typing.Any], T]",
-                 as_string: "typing.Union[str, typing.Callable[[typing.Any], str]]",
-                 as_readme_string: "typing.Union[str, typing.Callable[[typing.Any], str]]" = None,
+    def __init__(self, function: "Callable[[ConfigTy, Any], T]",
+                 as_string: "Union[str, Callable[[Any], str]]",
+                 as_readme_string: "Union[str, Callable[[Any], str], None]" = None,
                  inherit: "ComputedDefaultValue[T]" = None):
         if inherit is not None:
             def inheriting_function(config, project):

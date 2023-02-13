@@ -40,6 +40,7 @@ import time
 import typing
 from enum import Enum
 from pathlib import Path
+from typing import Optional
 
 from run_tests_common import boot_cheribsd, pexpect, commandline_to_str
 
@@ -136,7 +137,7 @@ def flush_thread(f, qemu: boot_cheribsd.QemuCheriBSDInstance, should_exit_event:
 
 def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
                          mp_q: multiprocessing.Queue = None, barrier: multiprocessing.Barrier = None,
-                         llvm_lit_path: str = None, lit_extra_args: list = None) -> bool:
+                         llvm_lit_path: "Optional[str]" = None, lit_extra_args: list = None) -> bool:
     try:
         import psutil  # noqa: F401
     except ImportError:
@@ -159,7 +160,7 @@ def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, a
 
 def run_remote_lit_tests_impl(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace,
                               tempdir: str, mp_q: multiprocessing.Queue = None, barrier: multiprocessing.Barrier = None,
-                              llvm_lit_path: str = None, lit_extra_args: list = None) -> bool:
+                              llvm_lit_path: "Optional[str]" = None, lit_extra_args: list = None) -> bool:
     qemu.EXIT_ON_KERNEL_PANIC = False  # since we run multiple threads we shouldn't use sys.exit()
     boot_cheribsd.info("PID of QEMU: ", qemu.pid)
 
