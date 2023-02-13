@@ -35,6 +35,7 @@ import sys
 import typing
 from enum import Enum
 from pathlib import Path
+from typing import Optional
 
 from .build_qemu import BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
 from .cherios import BuildCheriOS
@@ -123,7 +124,7 @@ class LaunchQEMUBase(SimpleProject):
     do_not_add_to_targets = True
     forward_ssh_port = True
     _can_provide_src_via_smb = False
-    ssh_forwarding_port = None  # type: int
+    ssh_forwarding_port: Optional[int] = None
     custom_qemu_smb_mount = None
     needs_sysroot = False
     # Add a virtio RNG to speed up random number generation
@@ -131,18 +132,17 @@ class LaunchQEMUBase(SimpleProject):
     _enable_smbfs_support = True
     _cached_chosen_qemu = None  # type: typing.Optional[ChosenQEMU]
     use_qemu: QEMUType
-    custom_qemu_path: Path
+    custom_qemu_path: Optional[Path]
     kernel_project: typing.Optional[Project] = None
     disk_image_project: typing.Optional[Project] = None
     _uses_disk_image = True
 
     @classmethod
-    def setup_config_options(cls, default_ssh_port: int = None, **kwargs):
+    def setup_config_options(cls, default_ssh_port: "Optional[int]" = None, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.use_qemu = cls.add_config_option("use-qemu", kind=QEMUType, default=QEMUType.DEFAULT,
-                                             enum_choice_strings=[t.value for t in QEMUType],
-                                             help="The QEMU type to run with. When set to 'custom', "
-                                             "the 'custom-qemu-path' option must also be set.")
+        cls.use_qemu = typing.cast(QEMUType, cls.add_config_option(
+            "use-qemu", kind=QEMUType, default=QEMUType.DEFAULT, enum_choice_strings=[t.value for t in QEMUType],
+            help="The QEMU type to run with. When set to 'custom', the 'custom-qemu-path' option must also be set."))
         cls.custom_qemu_path = cls.add_optional_path_option("custom-qemu-path", help="Path to the custom QEMU binary")
         cls.use_uboot = cls.add_bool_option("use-u-boot", default=False,
                                             help="Boot using U-Boot for UEFI if supported (only RISC-V)")
@@ -585,7 +585,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
     kernel_project: typing.Optional[BuildFreeBSD]
     disk_image_project: typing.Optional[BuildDiskImageBase]
 
-    kernel_config: str
+    kernel_config: Optional[str]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -603,8 +603,8 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             kind=KernelABI, enum_choices=[KernelABI.HYBRID, KernelABI.PURECAP],
             help="Select extra kernel variant with the given ABI to run.")
 
-    def __init__(self, config: CheriConfig, *, freebsd_class: "typing.Type[BuildFreeBSD]" = None,
-                 disk_image_class: "typing.Type[BuildDiskImageBase]" = None, **kwargs):
+    def __init__(self, config: CheriConfig, *, freebsd_class: "Optional[type[BuildFreeBSD]]" = None,
+                 disk_image_class: "Optional[type[BuildDiskImageBase]]" = None, **kwargs):
         super().__init__(config, **kwargs)
         self.freebsd_class = freebsd_class
         self.disk_image_class = disk_image_class

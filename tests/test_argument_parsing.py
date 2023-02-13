@@ -6,6 +6,7 @@ import tempfile
 import typing
 # noinspection PyUnresolvedReferences
 from pathlib import Path
+from typing import Optional
 
 import pytest
 
@@ -448,7 +449,7 @@ def test_duplicate_key():
         _parse_config_file_and_args(b'{ "output-root": "/foo", "some-other-key": "abc", "output-root": "/bar" }')
 
 
-def _get_config_with_include(tmpdir: Path, config_json: bytes, workdir: Path = None):
+def _get_config_with_include(tmpdir: Path, config_json: bytes, workdir: "Optional[Path]" = None):
     if not workdir:
         workdir = tmpdir
     config = workdir / "config.json"

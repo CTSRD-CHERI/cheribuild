@@ -33,6 +33,7 @@ import tempfile
 import typing
 from pathlib import Path
 from subprocess import CompletedProcess
+from typing import Optional
 
 from .disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase, BuildFreeBSDImage
 from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
@@ -173,8 +174,8 @@ VOLUME /diskimg
         else:
             return [], self.install_dir / model_relpath
 
-    def execute_fvp(self, args: list, disk_image_path: Path = None, firmware_path: Path = None, x11=True,
-                    tcp_ports: "typing.List[int]" = None, interactive=True, **kwargs) -> CompletedProcess:
+    def execute_fvp(self, args: list, disk_image_path: "Optional[Path]" = None, firmware_path: "Optional[Path]" = None,
+                    x11=True, tcp_ports: "Optional[list[int]]" = None, interactive=True, **kwargs) -> CompletedProcess:
         if tcp_ports is None:
             tcp_ports = []
         display = os.getenv("DISPLAY", None)

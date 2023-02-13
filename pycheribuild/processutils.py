@@ -47,6 +47,7 @@ import termios
 import typing
 from pathlib import Path
 from subprocess import CompletedProcess
+from typing import Optional
 
 from .colour import AnsiColour, coloured
 from .utils import (ConfigBase, fatal_error, get_global_config, OSInfo, status_update, Type_T, warning_message)
@@ -570,7 +571,7 @@ class CompilerInfo(object):
             return True  # assume version is new enough to be based on clang 4
         return False
 
-    def linker_override_flags(self, linker: Path, linker_type: str = None) -> "list[str]":
+    def linker_override_flags(self, linker: Path, linker_type: "Optional[str]" = None) -> "list[str]":
         if not self.is_clang:
             # GCC only allows you to set the linker type, and doesn't allow absolute paths.
             warning_message("Cannot set absolute path to linker", linker, "when compiling with", self.path)

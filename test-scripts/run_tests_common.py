@@ -119,7 +119,7 @@ def finish_and_write_junit_xml_report(all_tests_starttime: datetime.datetime, xm
 
 def run_tests_main(test_function: Callable[[boot_cheribsd.QemuCheriBSDInstance, argparse.Namespace], bool] = None,
                    need_ssh=False, should_mount_builddir=True, should_mount_srcdir=False, should_mount_sysroot=False,
-                   should_mount_installdir=False, build_dir_in_target: str = None,
+                   should_mount_installdir=False, build_dir_in_target: "Optional[str]" = None,
                    test_setup_function: Callable[[boot_cheribsd.QemuCheriBSDInstance, argparse.Namespace], None] = None,
                    argparse_setup_callback: Callable[[argparse.ArgumentParser], None] = None,
                    argparse_adjust_args_callback: Callable[[argparse.Namespace], None] = None):

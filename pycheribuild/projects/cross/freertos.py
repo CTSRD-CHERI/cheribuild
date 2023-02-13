@@ -30,6 +30,7 @@
 # SUCH DAMAGE.
 #
 import os
+import typing
 from typing import ClassVar
 
 from .compiler_rt import BuildCompilerRtBuiltins
@@ -99,22 +100,22 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
-        cls.demo: str = cls.add_config_option(
+        cls.demo: str = typing.cast(str, cls.add_config_option(
             "demo", metavar="DEMO", show_help=True, default=cls.default_demo,
-            help="The FreeRTOS Demo build.")
+            help="The FreeRTOS Demo build."))
 
-        cls.demo_app: str = cls.add_config_option(
+        cls.demo_app: str = typing.cast(str, cls.add_config_option(
             "prog", metavar="PROG", show_help=True, default=cls.default_demo_app,
-            help="The FreeRTOS program to build.")
+            help="The FreeRTOS program to build."))
 
-        cls.demo_bsp: str = cls.add_config_option(
+        cls.demo_bsp: str = typing.cast(str, cls.add_config_option(
             "bsp", metavar="BSP", show_help=True,
             default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
                                          as_string="target-dependent default"),
             help="The FreeRTOS BSP to build. This is only valid for the "
                  "paramterized RISC-V-Generic. The BSP option chooses "
                  "platform, RISC-V arch and RISC-V abi in the "
-                 "$platform-$arch-$abi format. See RISC-V-Generic/README for more details")
+                 "$platform-$arch-$abi format. See RISC-V-Generic/README for more details"))
 
     def default_demo_bsp(self):
         return "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True) + "-" + \
@@ -178,22 +179,22 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(defaultSshPort=None, **kwargs)
 
-        cls.demo: str = cls.add_config_option(
+        cls.demo: str = typing.cast(str, cls.add_config_option(
             "demo", metavar="DEMO", show_help=True, default=cls.default_demo,
-            help="The FreeRTOS Demo to run.")
+            help="The FreeRTOS Demo to run."))
 
-        cls.demo_app: str = cls.add_config_option(
+        cls.demo_app: str = typing.cast(str, cls.add_config_option(
             "prog", metavar="PROG", show_help=True, default=cls.default_demo_app,
-            help="The FreeRTOS program to run.")
+            help="The FreeRTOS program to run."))
 
-        cls.demo_bsp = cls.add_config_option(
+        cls.demo_bsp = typing.cast(str, cls.add_config_option(
             "bsp", metavar="BSP", show_help=True,
             default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
                                          as_string="target-dependent default"),
             help="The FreeRTOS BSP to run. This is only valid for the "
                  "paramterized RISC-V-Generic. The BSP option chooses "
                  "platform, RISC-V arch and RISC-V abi in the "
-                 "$platform-$arch-$abi format. See RISC-V-Generic/README for more details")
+                 "$platform-$arch-$abi format. See RISC-V-Generic/README for more details"))
 
     def default_demo_bsp(self):
         return "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True) + "-" + \

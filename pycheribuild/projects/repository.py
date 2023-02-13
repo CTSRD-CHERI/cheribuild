@@ -32,6 +32,7 @@ import shutil
 import subprocess
 import typing
 from pathlib import Path
+from typing import Optional
 
 from .simple_project import SimpleProject
 from ..config.target_info import CrossCompileTarget
@@ -50,8 +51,8 @@ class SourceRepository(object):
                       skip_submodules=False) -> None:
         raise NotImplementedError
 
-    def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path = None, revision=None,
-               skip_submodules=False) -> None:
+    def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: "Optional[Path]" = None,
+               revision=None, skip_submodules=False) -> None:
         raise NotImplementedError
 
     def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Path) -> Path:
@@ -68,7 +69,7 @@ class ExternallyManagedSourceRepository(SourceRepository):
 
 class ReuseOtherProjectRepository(SourceRepository):
     def __init__(self, source_project: "typing.Type[Project]", *, subdirectory=".",
-                 repo_for_target: CrossCompileTarget = None, do_update=False):
+                 repo_for_target: "Optional[CrossCompileTarget]" = None, do_update=False):
         self.source_project = source_project
         self.subdirectory = subdirectory
         self.repo_for_target = repo_for_target
@@ -106,7 +107,7 @@ class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
 
 # Use git-worktree to handle per-target branches:
 class TargetBranchInfo(object):
-    def __init__(self, branch: str, directory_name: str, url: str = None):
+    def __init__(self, branch: str, directory_name: str, url: "Optional[str]" = None):
         self.branch = branch
         self.directory_name = directory_name
         self.url = url
@@ -123,11 +124,11 @@ class GitBranchInfo(typing.NamedTuple):
 
 
 class GitRepository(SourceRepository):
-    def __init__(self, url: str, *, old_urls: typing.List[bytes] = None, default_branch: str = None,
-                 force_branch: bool = False, temporary_url_override: str = None,
+    def __init__(self, url: str, *, old_urls: "Optional[list[bytes]]" = None, default_branch: "Optional[str]" = None,
+                 force_branch: bool = False, temporary_url_override: "Optional[str]" = None,
                  url_override_reason: "typing.Any" = None,
-                 per_target_branches: typing.Dict[CrossCompileTarget, TargetBranchInfo] = None,
-                 old_branches: typing.Dict[str, str] = None):
+                 per_target_branches: "Optional[dict[CrossCompileTarget, TargetBranchInfo]]" = None,
+                 old_branches: "Optional[dict[str, str]]" = None):
         self.old_urls = old_urls
         if temporary_url_override is not None:
             self.url = temporary_url_override
@@ -330,8 +331,8 @@ class GitRepository(SourceRepository):
             return base_project_source_dir
         return base_project_source_dir.with_name(target_override.directory_name)
 
-    def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path = None, revision=None,
-               skip_submodules=False):
+    def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: "Optional[Path]" = None,
+               revision=None, skip_submodules=False):
         self.ensure_cloned(current_project, src_dir=src_dir, base_project_source_dir=base_project_source_dir,
                            skip_submodules=skip_submodules)
         if current_project.skip_update:
@@ -458,8 +459,8 @@ class GitRepository(SourceRepository):
 
 
 class MercurialRepository(SourceRepository):
-    def __init__(self, url: str, *, old_urls: typing.List[bytes] = None, default_branch: str = None,
-                 force_branch: bool = False, temporary_url_override: str = None,
+    def __init__(self, url: str, *, old_urls: "Optional[list[bytes]]" = None, default_branch: "Optional[str]" = None,
+                 force_branch: bool = False, temporary_url_override: "Optional[str]" = None,
                  url_override_reason: "typing.Any" = None):
         self.old_urls = old_urls
         if temporary_url_override is not None:
@@ -531,8 +532,8 @@ class MercurialRepository(SourceRepository):
             self.run_hg(None, clone_cmd + [self.url, base_project_source_dir], cwd="/", project=current_project)
         assert src_dir == base_project_source_dir, "Worktrees only supported with git"
 
-    def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path = None, revision=None,
-               skip_submodules=False):
+    def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: "Optional[Path]" = None,
+               revision=None, skip_submodules=False):
         self.ensure_cloned(current_project, src_dir=src_dir, base_project_source_dir=base_project_source_dir,
                            skip_submodules=skip_submodules)
         if current_project.skip_update:
@@ -601,7 +602,7 @@ class MercurialRepository(SourceRepository):
 
 
 class SubversionRepository(SourceRepository):
-    def __init__(self, url, *, default_branch: str = None):
+    def __init__(self, url, *, default_branch: "Optional[str]" = None):
         self.url = url
         self._default_branch = default_branch
 

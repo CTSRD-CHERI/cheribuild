@@ -58,8 +58,10 @@ class BenchmarkMixin(_BenchmarkMixinBase):
             return ["-O3"]
         return super().optimization_flags
 
-    def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,
-                           benchmark_script_args: list = None, extra_runbench_args: list = None):
+    def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: "Optional[str]" = None,
+                           benchmark_script: "Optional[str]" = None,
+                           benchmark_script_args: "Optional[list[str]]" = None,
+                           extra_runbench_args: "Optional[list[str]]" = None):
         assert benchmarks_dir is not None
         assert output_file is not None, "output_file must be set to a valid value"
         xtarget = self.crosscompile_target

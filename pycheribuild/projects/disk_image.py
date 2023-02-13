@@ -36,6 +36,7 @@ import tempfile
 import typing
 from enum import Enum
 from pathlib import Path
+from typing import Optional
 
 from .cross.cheribsd import (BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDWithDefaultOptions)
 from .cross.gdb import (BuildGDB, BuildKGDB)
@@ -227,8 +228,8 @@ class BuildDiskImageBase(SimpleProject):
     def _get_source_class_target(self):
         return self.crosscompile_target
 
-    def add_file_to_image(self, file: Path, *, base_directory: Path = None, user="root", group="wheel", mode=None,
-                          path_in_target=None, strip_binaries: bool = None):
+    def add_file_to_image(self, file: Path, *, base_directory: "Optional[Path]" = None, user="root", group="wheel",
+                          mode=None, path_in_target=None, strip_binaries: "Optional[bool]" = None):
         if path_in_target is None:
             assert base_directory is not None, "Either base_directory or path_in_target must be set!"
             path_in_target = os.path.relpath(str(file), str(base_directory))

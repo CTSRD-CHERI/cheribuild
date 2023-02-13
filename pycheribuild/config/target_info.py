@@ -887,7 +887,7 @@ class CrossCompileTarget(object):
     def is_any_x86(self, include_purecap: bool = None) -> bool:
         return self.is_i386(include_purecap) or self.is_x86_64(include_purecap)
 
-    def is_cheri_purecap(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None) -> bool:
+    def is_cheri_purecap(self, valid_cpu_archs: "Optional[list[CPUArchitecture]]" = None) -> bool:
         if valid_cpu_archs is None:
             return self._is_cheri_purecap
         if not self._is_cheri_purecap:
@@ -898,7 +898,7 @@ class CrossCompileTarget(object):
                 return True
         return False
 
-    def is_cheri_hybrid(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None) -> bool:
+    def is_cheri_hybrid(self, valid_cpu_archs: "Optional[list[CPUArchitecture]]" = None) -> bool:
         if valid_cpu_archs is None:
             return self._is_cheri_hybrid
         if not self._is_cheri_hybrid:
@@ -909,7 +909,7 @@ class CrossCompileTarget(object):
                 return True
         return False
 
-    def is_hybrid_or_purecap_cheri(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None) -> bool:
+    def is_hybrid_or_purecap_cheri(self, valid_cpu_archs: "Optional[list[CPUArchitecture]]" = None) -> bool:
         return self.is_cheri_purecap(valid_cpu_archs) or self.is_cheri_hybrid(valid_cpu_archs)
 
     def get_rootfs_target(self) -> "CrossCompileTarget":

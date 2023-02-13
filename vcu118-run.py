@@ -38,6 +38,7 @@ import time
 import typing
 from abc import abstractmethod
 from pathlib import Path
+from typing import Optional
 
 _cheribuild_root = Path(__file__).resolve().parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
@@ -284,8 +285,9 @@ def get_console(tty_info: ListPortInfo) -> SerialConnection:
     return PySerialConnection(tty_info)
 
 
-def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path, kernel_image: Path = None,
-                          kernel_debug_file: Path = None, tty_info: ListPortInfo, num_cores: int) -> FpgaConnection:
+def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path, kernel_image: "Optional[Path]" = None,
+                          kernel_debug_file: "Optional[Path]" = None, tty_info: ListPortInfo,
+                          num_cores: int) -> FpgaConnection:
     # Open the serial connection first to check that it's available:
     serial_conn = get_console(tty_info)
     success("Connected to TTY")

@@ -32,6 +32,7 @@ import shutil
 import subprocess
 import typing
 from pathlib import Path
+from typing import Optional
 
 from .config.target_info import CPUArchitecture, CrossCompileTarget
 from .processutils import run_command
@@ -152,11 +153,11 @@ class QemuOptions:
         found_in_path = shutil.which("qemu-system-" + self.qemu_arch_sufffix)
         return Path(found_in_path) if found_in_path is not None else None
 
-    def get_commandline(self, *, qemu_command=None, kernel_file: Path = None, disk_image: Path = None,
-                        disk_image_format: str = "raw", user_network_args: str = "", add_network_device=True,
-                        bios_args: "list[str]" = None, trap_on_unrepresentable=False,
-                        debugger_on_cheri_trap=False, add_virtio_rng=False, write_disk_image_changes=True,
-                        gui_options: "list[str]" = None) -> "list[str]":
+    def get_commandline(self, *, qemu_command=None, kernel_file: "Optional[Path]" = None,
+                        disk_image: "Optional[Path]" = None, disk_image_format: str = "raw",
+                        user_network_args: str = "", add_network_device=True, bios_args: "Optional[list[str]]" = None,
+                        trap_on_unrepresentable=False, debugger_on_cheri_trap=False, add_virtio_rng=False,
+                        write_disk_image_changes=True, gui_options: "Optional[list[str]]" = None) -> "list[str]":
         if kernel_file is None and disk_image is None:
             raise ValueError("Must pass kernel and/or disk image path when launching QEMU")
         if qemu_command is None:

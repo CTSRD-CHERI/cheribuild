@@ -48,7 +48,7 @@ if typing.TYPE_CHECKING:
 class _LoadedConfigValue:
     """A simple class to hold the loaded value as well as the source (to handle relative paths correctly)"""
 
-    def __init__(self, value, loaded_from: "Optional[Path]", used_key: str = None):
+    def __init__(self, value, loaded_from: "Optional[Path]", used_key: "Optional[str]" = None):
         # assert value is not None, used_key + " is None"
         self.value = value
         self.loaded_from = loaded_from
@@ -107,7 +107,7 @@ class ConfigLoaderBase(ABC):
     # noinspection PyShadowingBuiltins
     def add_option(self, name: str, shortname=None, *, type: "Union[type[T], Callable[[str], T]]" = str,
                    default: "Union[ComputedDefaultValue[T], Optional[T], Callable[[ConfigBase, typing.Any], T]]" = None,
-                   _owning_class: type = None, _fallback_names: "list[str]" = None,
+                   _owning_class: "Optional[type]" = None, _fallback_names: "Optional[list[str]]" = None,
                    option_cls: "Optional[type[ConfigOptionBase[T]]]" = None, **kwargs) -> T:
         if option_cls is None:
             option_cls = self.__option_cls
@@ -176,8 +176,8 @@ class ConfigLoaderBase(ABC):
 class ConfigOptionBase(typing.Generic[T]):
     def __init__(self, name: str, shortname: Optional[str], default,
                  value_type: "Union[type[T], Callable[[typing.Any], T]]", _owning_class=None, *,
-                 _loader: ConfigLoaderBase = None, _fallback_names: "list[str]" = None,
-                 _legacy_alias_names: "list[str]" = None):
+                 _loader: "Optional[ConfigLoaderBase]" = None, _fallback_names: "Optional[list[str]]" = None,
+                 _legacy_alias_names: "Optional[list[str]]" = None):
         self.name = name
         self.shortname = shortname
         self.default = default
