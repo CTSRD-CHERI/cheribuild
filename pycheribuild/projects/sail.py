@@ -52,7 +52,7 @@ class OpamMixin(_MixinBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.required_ocaml_version = "4.14.0"
+        self.required_ocaml_version = "4.13.1"
         self.__using_correct_switch = False
         self.__ignore_switch_version = False
 
