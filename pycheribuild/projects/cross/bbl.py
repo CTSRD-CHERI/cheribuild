@@ -28,11 +28,13 @@
 # SUCH DAMAGE.
 #
 
+from typing import Optional
 from .cheribsd import ConfigPlatform
 from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompileTarget, DefaultInstallDir,
                        GitRepository, MakeCommandKind, Project)
+from ...qemu_utils import QemuOptions
 
 
 class BuildBBLBase(CrossCompileAutotoolsProject):
@@ -48,6 +50,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     kernel_class = None
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     without_payload = False
+    custom_payload: Optional[str] = None
     mem_start = "0x80000000"
 
     @classmethod
@@ -93,6 +96,8 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
             # Build an OpenSBI fw_jump style BBL
             assert self.kernel_class is None
             self.configure_args.append("--without-payload")
+        elif self.custom_payload:
+            self.configure_args.append("--with-payload=" + str(self.custom_payload))
         else:
             # Add the kernel as a payload:
             assert self.kernel_class is not None
@@ -115,6 +120,28 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
 def _bbl_install_dir(config: CheriConfig, project: Project):
     dir_name = project.crosscompile_target.generic_arch_suffix.replace("baremetal-", "")
     return config.cheri_sdk_dir / ("bbl" + project.build_dir_suffix) / dir_name
+
+
+class BuildBBLTestPayload(BuildBBLBase):
+    target = "bbl-test-payload"
+    default_directory_basename = "bbl"  # reuse same source dir
+    build_dir_suffix = "-test-payload"  # but not the build dir
+    cross_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
+    custom_payload = "dummy_payload"
+
+    def setup(self):
+        super().setup()
+        self.configure_args.append("--enable-logo")
+        self.configure_args.append("--enable-print-device-tree")
+
+    def run_tests(self) -> None:
+        options = QemuOptions(self.crosscompile_target)
+        self.run_cmd(options.get_commandline(
+            qemu_command=BuildQEMU.qemu_binary(self), add_network_device=False, bios_args=["-bios", "none"],
+            kernel_file=self.build_dir / "bbl"),
+            give_tty_control=True, cwd="/")
 
 
 # Build BBL without an embedded payload
