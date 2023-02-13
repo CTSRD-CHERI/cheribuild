@@ -41,6 +41,7 @@ class BuildGlib(CrossCompileMesonProject):
         self.configure_args.append("--localstatedir=/var")  # This is needed for GDBus
         self.common_warning_flags.append("-Werror=int-conversion")
         self.common_warning_flags.append("-Werror=incompatible-pointer-types")
+        self.COMMON_FLAGS.append("-DG_ENABLE_EXPERIMENTAL_ABI_COMPILATION")
         if self.compiling_for_cheri():
             self.common_warning_flags.append("-Wshorten-cap-to-int")
         if self.target_info.is_freebsd():
