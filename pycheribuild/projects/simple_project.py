@@ -643,11 +643,11 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return option.full_option_name
 
     @classmethod
-    def add_config_option(cls, name: str, *, show_help=False, altname: str = None,
+    def add_config_option(cls, name: str, *, show_help=False, altname: "Optional[str]" = None,
                           kind: "Union[typing.Type[T], Callable[[str], T]]" = str,
                           default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], T], T, None]"
-                          = None, only_add_for_targets: "list[CrossCompileTarget]" = None,
-                          extra_fallback_config_names: "typing.List[str]" = None, _allow_unknown_targets=False,
+                          = None, only_add_for_targets: "Optional[list[CrossCompileTarget]]" = None,
+                          extra_fallback_config_names: "Optional[list[str]]" = None, _allow_unknown_targets=False,
                           use_default_fallback_config_names=True, **kwargs) -> Optional[T]:
         fullname = cls.target + "/" + name
         # We abuse shortname to implement altname

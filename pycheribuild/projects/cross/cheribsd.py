@@ -480,7 +480,7 @@ class BuildFreeBSDBase(Project):
             else:
                 self.make_args.add_flags(option)
 
-    def run_make(self, make_target="", *, options: MakeOptions = None, parallel=True, **kwargs):
+    def run_make(self, make_target="", *, options: "Optional[MakeOptions]" = None, parallel=True, **kwargs):
         # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested
         if parallel and self.config.make_jobs == 1:
             parallel = False
