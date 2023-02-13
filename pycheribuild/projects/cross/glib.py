@@ -47,3 +47,4 @@ class BuildGlib(CrossCompileMesonProject):
         if self.target_info.is_freebsd():
             self.add_meson_options(b_lundef=False)  # undefined reference to environ
         self.add_meson_options(gtk_doc=False)
+        self.configure_args.append("--wrap-mode=nodownload")
