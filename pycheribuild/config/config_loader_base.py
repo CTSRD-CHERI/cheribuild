@@ -123,9 +123,16 @@ class ConfigLoaderBase(ABC):
         # noinspection PyTypeChecker
         return self.add_option(name, shortname, default=default, type=bool, **kwargs)
 
-    def add_path_option(self, name: str, shortname=None, **kwargs) -> Path:
+    def add_path_option(self, name: str, *,
+                        default: "Union[ComputedDefaultValue[Path], Path, Callable[[ConfigBase, typing.Any], Path]]",
+                        shortname=None, **kwargs) -> Path:
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
-        return self.add_option(name, shortname, type=Path, **kwargs)
+        return typing.cast(Path, self.add_option(name, shortname, type=Path, default=default, **kwargs))
+
+    def add_optional_path_option(self, name: str, *, default: "Optional[Path]" = None, shortname=None,
+                                 **kwargs) -> Path:
+        # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
+        return self.add_option(name, shortname, type=Path, default=default, **kwargs)
 
     @abstractmethod
     def load(self) -> None:

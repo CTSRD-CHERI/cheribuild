@@ -290,8 +290,8 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.spec_iso_path = cls.add_path_option("iso-path", altname="spec-sources", default=None,
-                                                help="Path to the SPEC2006 ISO image or extracted sources")
+        cls.spec_iso_path = cls.add_optional_path_option("iso-path", altname="spec-sources",
+                                                         help="Path to the SPEC2006 ISO image or extracted sources")
         cls.fast_benchmarks_only = cls.add_bool_option("fast-benchmarks-only", default=False)
         cls.workload = cls.add_config_option("workload", choices=("test", "train", "ref"), default="test")
         cls.benchmark_override = cls.add_list_option("benchmarks", help="override the list of benchmarks to run")

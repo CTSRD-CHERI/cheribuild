@@ -536,9 +536,9 @@ class Project(SimpleProject):
     def setup_config_options(cls, install_directory_help="", **kwargs) -> None:
         super().setup_config_options(**kwargs)
         if cls.source_dir is None:
-            cls._initial_source_dir = cls.add_path_option("source-directory", metavar="DIR",
-                                                          default=cls.default_source_dir,
-                                                          help="Override default source directory for " + cls.target)
+            cls._initial_source_dir = cls.add_optional_path_option(
+                "source-directory", metavar="DIR", default=cls.default_source_dir,
+                help="Override default source directory for " + cls.target)
         # --<target>-<suffix>/build-directory is not inherited from the unsuffixed target (unless there is only one
         # supported target).
         default_xtarget = cls.default_architecture

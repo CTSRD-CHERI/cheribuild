@@ -355,10 +355,10 @@ class CheriConfig(ConfigBase):
                                                          "targets ignore this flag.")
 
         # Test options:
-        self._test_ssh_key = loader.add_path_option("test-ssh-key", default=None, group=loader.tests_group,
-                                                    help="The SSH key to used to connect to the QEMU instance when "
-                                                         "running tests on CheriBSD. If not specified a key will be "
-                                                         "generated in the build-root directory on-demand.")
+        self._test_ssh_key = loader.add_optional_path_option(
+            "test-ssh-key", group=loader.tests_group,
+            help="The SSH key to used to connect to the QEMU instance when running tests on CheriBSD. If not specified"
+                 " a key will be generated in the build-root directory on-demand.")
         self.use_minimal_benchmark_kernel = loader.add_bool_option("use-minimal-benchmark-kernel",
                                                                    help="Use a CHERI BENCHMARK version of the "
                                                                         "cheribsd-mfs-root-kernel (without "
@@ -385,8 +385,8 @@ class CheriConfig(ConfigBase):
                                                                       help="Don't actually run the tests. Instead "
                                                                            "setup a QEMU instance with the right "
                                                                            "paths set up.")
-        self.test_ld_preload = loader.add_path_option("test-ld-preload", group=loader.tests_group,
-                                                      help="Preload the given library before running tests")
+        self.test_ld_preload = loader.add_optional_path_option("test-ld-preload", group=loader.tests_group,
+                                                               help="Preload the given library before running tests")
 
         self.benchmark_fpga_extra_args = loader.add_commandline_only_option(
             "benchmark-fpga-extra-args", group=loader.benchmark_group, type=list, metavar="ARGS",
@@ -404,7 +404,7 @@ class CheriConfig(ConfigBase):
         self.benchmark_statcounters_suffix = loader.add_option(
             "benchmark-csv-suffix", group=loader.benchmark_group,
             help="Add a custom suffix for the statcounters CSV.")
-        self.benchmark_ld_preload = loader.add_path_option(
+        self.benchmark_ld_preload = loader.add_optional_path_option(
             "benchmark-ld-preload", group=loader.benchmark_group,
             help="Preload the given library before running benchmarks")
         self.benchmark_with_debug_kernel = loader.add_bool_option(
@@ -426,7 +426,7 @@ class CheriConfig(ConfigBase):
             help="Perform a shallow `git clone` when cloning new projects. This can save a lot of time for large"
                  "repositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-shallow clone")
 
-        self.fpga_custom_env_setup_script = loader.add_path_option(
+        self.fpga_custom_env_setup_script = loader.add_optional_path_option(
             "beri-fpga-env-setup-script", group=loader.path_group,
             help="Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh")
 

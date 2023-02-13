@@ -157,9 +157,8 @@ class RunSyzkaller(SimpleProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.syz_config = cls.add_path_option("syz-config", default=None,
-                                             help="Path to the syzkaller configuration file to use.",
-                                             show_help=True)
+        cls.syz_config = cls.add_optional_path_option(
+            "syz-config", help="Path to the syzkaller configuration file to use.", show_help=True)
         cls.syz_ssh_key = cls.add_path_option("ssh-privkey", show_help=True,
                                               default=lambda config, project: (
                                                       config.source_root / "extra-files" / "syzkaller_id_rsa"),

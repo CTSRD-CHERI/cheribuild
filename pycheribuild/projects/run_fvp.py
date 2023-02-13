@@ -65,7 +65,8 @@ class InstallMorelloFVP(SimpleProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.installer_path = cls.add_path_option("installer-path", help="Path to the FVP installer.sh or installer.tgz")
+        cls.installer_path = cls.add_optional_path_option("installer-path",
+                                                          help="Path to the FVP installer.sh or installer.tgz")
         # We can run the FVP on macOS by using docker. FreeBSD might be able to use Linux emulation.
         cls.use_docker_container = cls.add_bool_option("use-docker-container", default=OSInfo.IS_MAC,
                                                        help="Run the FVP inside a docker container")
@@ -477,11 +478,12 @@ class LaunchFVPBase(SimpleProject):
                                                          help="Use the architectural FVP that requires a license.")
         cls.license_server = cls.add_config_option("license-server", help="License server to use for the model")
         cls.arch_model_path = cls.add_path_option("simulator-path", help="Path to the FVP Model",
-                                                  default="/usr/local/FVP_Base_RevC-Rainier")
+                                                  default=Path("/usr/local/FVP_Base_RevC-Rainier"))
         cls.smp = cls.add_bool_option("smp", help="Simulate multiple CPU cores in the FVP", default=True)
         cls.force_headless = cls.add_bool_option("force-headless", default=False,
                                                  help="Force headless use of the FVP")
-        cls.fvp_trace = cls.add_path_option("trace", help="Enable FVP tracing plugin to output to the given file")
+        cls.fvp_trace = cls.add_optional_path_option("trace",
+                                                     help="Enable FVP tracing plugin to output to the given file")
         cls.fvp_trace_mmu = cls.add_bool_option("trace-mmu", default=False, help="Emit FVP MMU trace events")
         cls.fvp_trace_icount = cls.add_config_option("trace-start-icount",
                                                      help="Instruction count from which to start Tarmac trace")
