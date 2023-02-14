@@ -47,7 +47,7 @@ import termios
 import typing
 from pathlib import Path
 from subprocess import CompletedProcess
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 from .colour import AnsiColour, coloured
 from .utils import (ConfigBase, fatal_error, get_global_config, OSInfo, status_update, Type_T, warning_message)
@@ -805,7 +805,7 @@ def latest_system_clang_tool(config: ConfigBase, basename: str,
     return newest[0]
 
 
-def run_and_kill_children_on_exit(fn: "typing.Callable[[], typing.Any]"):
+def run_and_kill_children_on_exit(fn: "Callable[[], typing.Any]"):
     error = False
     try:
         opgrp = os.getpgrp()

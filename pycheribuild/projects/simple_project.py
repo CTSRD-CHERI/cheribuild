@@ -979,7 +979,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                 self.__run_process_with_filtered_output(make, logfile, stdout_filter, args)
 
     def __run_process_with_filtered_output(self, proc: subprocess.Popen, logfile: "Optional[typing.IO]",
-                                           stdout_filter: "typing.Callable[[bytes], None]",
+                                           stdout_filter: "Callable[[bytes], None]",
                                            args: "list[str]"):
         logfile_lock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
         stderr_thread = None

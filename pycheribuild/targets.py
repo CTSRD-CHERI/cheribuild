@@ -32,7 +32,7 @@ import sys
 import time
 import typing
 from collections import OrderedDict
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 from .config.chericonfig import CheriConfig
 from .config.target_info import CrossCompileTarget, AbstractProject
@@ -131,7 +131,7 @@ class Target(object):
         return self.project_class(config, crosscompile_target=self.xtarget)
 
     # noinspection PyProtectedMember
-    def _do_run(self, config, msg: str, func: "typing.Callable[[SimpleProject], typing.Any]"):
+    def _do_run(self, config, msg: str, func: "Callable[[SimpleProject], typing.Any]"):
         # instantiate the project and run it
         starttime = time.time()
         with add_error_context(coloured(AnsiColour.yellow, "(in target ", self.name, ")", sep="")):
