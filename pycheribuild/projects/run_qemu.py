@@ -634,7 +634,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             config_filters = {}
             if self.kernel_abi:
                 if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                    config_filters["kABI"] = self.kernel_abi
+                    config_filters["kernel_abi"] = self.kernel_abi
                 else:
                     self.warning("Can not select kernel ABI to run for non-CHERI target, ignoring --kernel-abi")
             self.kernel_config = self.kernel_project.default_kernel_config(ConfigPlatform.QEMU, **config_filters)

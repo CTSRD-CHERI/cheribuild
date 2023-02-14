@@ -111,11 +111,11 @@ class CheriBSDConfig:
     Cheribuild configuration descriptor for a CheriBSD kernel configuration file
     """
 
-    def __init__(self, kernconf: str, platforms: "set[ConfigPlatform]", kABI=KernelABI.NOCHERI, default=False,
+    def __init__(self, kernconf: str, platforms: "set[ConfigPlatform]", kernel_abi=KernelABI.NOCHERI, default=False,
                  caprevoke=False, mfsroot=False, debug=False, benchmark=False, fuzzing=False, fett=False):
         self.kernconf = kernconf
         self.platforms = platforms
-        self.kABI = kABI
+        self.kernel_abi = kernel_abi
         self.default = default
         self.caprevoke = caprevoke
         self.mfsroot = mfsroot
@@ -126,8 +126,8 @@ class CheriBSDConfig:
 
     def __repr__(self) -> str:
         flags = [key for key, val in self.__dict__.items() if type(val) == bool and val]
-        return "CheriBSDConfig({kernconf} {platform}:{kABI} [{flags}])".format(
-            kernconf=self.kernconf, platform=self.platforms, kABI=self.kABI.value, flags=" ".join(flags))
+        return "CheriBSDConfig({kernconf} {platform}:{kernel_abi} [{flags}])".format(
+            kernconf=self.kernconf, platform=self.platforms, kernel_abi=self.kernel_abi.value, flags=" ".join(flags))
 
 
 class KernelConfigFactory:
@@ -136,12 +136,12 @@ class KernelConfigFactory:
     separator: str = "_"
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {}
 
-    def get_kabi_name(self, kABI) -> Optional[str]:
-        if kABI == KernelABI.NOCHERI:
+    def get_kabi_name(self, kernel_abi) -> Optional[str]:
+        if kernel_abi == KernelABI.NOCHERI:
             return None
-        elif kABI == KernelABI.HYBRID:
+        elif kernel_abi == KernelABI.HYBRID:
             return "CHERI"
-        elif kABI == KernelABI.PURECAP:
+        elif kernel_abi == KernelABI.PURECAP:
             return "CHERI{sep}PURECAP".format(sep=self.separator)
 
     def get_platform_name(self, platforms: "set[ConfigPlatform]") -> Optional[str]:
@@ -151,7 +151,7 @@ class KernelConfigFactory:
                 return self.platform_name_map[platform]
         assert False, "Should not be reached..."
 
-    def get_flag_names(self, platforms: "set[ConfigPlatform]", kABI: KernelABI, mfsroot=False, fuzzing=False,
+    def get_flag_names(self, platforms: "set[ConfigPlatform]", kernel_abi: KernelABI, mfsroot=False, fuzzing=False,
                        benchmark=False, default=False, caprevoke=False):
         flags = []
         if mfsroot:
@@ -162,27 +162,27 @@ class KernelConfigFactory:
             flags.append("NODEBUG")
         return flags
 
-    def _prepare_kernconf_context(self, platforms: "set[ConfigPlatform]", kABI, base_context=None, **kwargs):
+    def _prepare_kernconf_context(self, platforms: "set[ConfigPlatform]", kernel_abi, base_context=None, **kwargs):
         if base_context is None:
             base_context = self.kernconf_components
         ctx: "typing.OrderedDict[str, Optional[str]]" = OrderedDict(base_context)
         if "kabi_name" in ctx:
-            ctx["kabi_name"] = self.get_kabi_name(kABI)
+            ctx["kabi_name"] = self.get_kabi_name(kernel_abi)
         if "platform_name" in ctx:
             ctx["platform_name"] = self.get_platform_name(platforms)
         if "caprevoke" in ctx and kwargs.get("caprevoke", False):
             ctx["caprevoke"] = "CAPREVOKE"
         if "flags" in ctx:
-            flag_list = self.get_flag_names(platforms, kABI, **kwargs)
+            flag_list = self.get_flag_names(platforms, kernel_abi, **kwargs)
             if flag_list:
                 ctx["flags"] = self.separator.join(flag_list)
         return ctx
 
-    def make_config(self, platforms: "set[ConfigPlatform]", kABI, base_context=None, **kwargs):
-        kernconf_ctx = self._prepare_kernconf_context(platforms, kABI, base_context=base_context, **kwargs)
+    def make_config(self, platforms: "set[ConfigPlatform]", kernel_abi, base_context=None, **kwargs):
+        kernconf_ctx = self._prepare_kernconf_context(platforms, kernel_abi, base_context=base_context, **kwargs)
         valid_ctx_items = (v for v in kernconf_ctx.values() if v is not None)
         kernconf = self.separator.join(valid_ctx_items)
-        return CheriBSDConfig(kernconf, platforms, kABI=kABI, **kwargs)
+        return CheriBSDConfig(kernconf, platforms, kernel_abi=kernel_abi, **kwargs)
 
 
 class RISCVKernelConfigFactory(KernelConfigFactory):
@@ -195,7 +195,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         ConfigPlatform.AWS: None
     }
 
-    def get_flag_names(self, platforms: "set[ConfigPlatform]", kABI: KernelABI, default=False, caprevoke=False,
+    def get_flag_names(self, platforms: "set[ConfigPlatform]", kernel_abi: KernelABI, default=False, caprevoke=False,
                        mfsroot=False, debug=False, benchmark=False, fuzzing=False, fett=False):
         if ConfigPlatform.GFE in platforms:
             # Suppress mfsroot flag as it is implied for GFE configurations
@@ -203,36 +203,40 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         flags = []
         if fett:
             flags.append("FETT")
-        flags += super().get_flag_names(platforms, kABI, mfsroot=mfsroot, fuzzing=fuzzing, benchmark=benchmark,
+        flags += super().get_flag_names(platforms, kernel_abi, mfsroot=mfsroot, fuzzing=fuzzing, benchmark=benchmark,
                                         caprevoke=caprevoke)
         return flags
 
     def make_all(self) -> "list[CheriBSDConfig]":
         configs = []
         # Generate QEMU kernels
-        for kABI in KernelABI:
-            configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, default=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, benchmark=True, default=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, mfsroot=True, default=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, mfsroot=True, benchmark=True, default=True))
+        for kernel_abi in KernelABI:
+            configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, default=True))
+            configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, benchmark=True, default=True))
+            configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, mfsroot=True, default=True))
+            configs.append(
+                self.make_config({ConfigPlatform.QEMU}, kernel_abi, mfsroot=True, benchmark=True, default=True))
         # Generate FPGA kernels
-        for kABI in KernelABI:
-            configs.append(self.make_config({ConfigPlatform.GFE}, kABI, mfsroot=True, default=True))
-            configs.append(self.make_config({ConfigPlatform.GFE}, kABI, mfsroot=True, benchmark=True, default=True))
-            configs.append(self.make_config({ConfigPlatform.AWS}, kABI, fett=True))
-            configs.append(self.make_config({ConfigPlatform.AWS}, kABI, fett=True, benchmark=True))
+        for kernel_abi in KernelABI:
+            configs.append(self.make_config({ConfigPlatform.GFE}, kernel_abi, mfsroot=True, default=True))
+            configs.append(
+                self.make_config({ConfigPlatform.GFE}, kernel_abi, mfsroot=True, benchmark=True, default=True))
+            configs.append(self.make_config({ConfigPlatform.AWS}, kernel_abi, fett=True))
+            configs.append(self.make_config({ConfigPlatform.AWS}, kernel_abi, fett=True, benchmark=True))
 
         # Generate default FETT kernels
         configs.append(self.make_config({ConfigPlatform.QEMU}, KernelABI.HYBRID, fett=True, default=True))
 
         # Caprevoke kernels
-        for kABI in KernelABI:
-            configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, caprevoke=True, default=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, caprevoke=True, benchmark=True, default=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU}, kABI, caprevoke=True, benchmark=True, mfsroot=True,
-                                            default=True))
-            configs.append(self.make_config({ConfigPlatform.GFE}, kABI, caprevoke=True, mfsroot=True))
-            configs.append(self.make_config({ConfigPlatform.AWS}, kABI, fett=True, caprevoke=True))
+        for kernel_abi in KernelABI:
+            configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, caprevoke=True, default=True))
+            configs.append(
+                self.make_config({ConfigPlatform.QEMU}, kernel_abi, caprevoke=True, benchmark=True, default=True))
+            configs.append(
+                self.make_config({ConfigPlatform.QEMU}, kernel_abi, caprevoke=True, benchmark=True, mfsroot=True,
+                                 default=True))
+            configs.append(self.make_config({ConfigPlatform.GFE}, kernel_abi, caprevoke=True, mfsroot=True))
+            configs.append(self.make_config({ConfigPlatform.AWS}, kernel_abi, fett=True, caprevoke=True))
 
         return configs
 
@@ -246,37 +250,37 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
         ConfigPlatform.FVP: "GENERIC"
     }
 
-    def get_kabi_name(self, kABI) -> Optional[str]:
-        if kABI == KernelABI.NOCHERI:
+    def get_kabi_name(self, kernel_abi) -> Optional[str]:
+        if kernel_abi == KernelABI.NOCHERI:
             return None
-        elif kABI == KernelABI.HYBRID:
+        elif kernel_abi == KernelABI.HYBRID:
             return "MORELLO"
-        elif kABI == KernelABI.PURECAP:
+        elif kernel_abi == KernelABI.PURECAP:
             return "MORELLO{sep}PURECAP".format(sep=self.separator)
 
     def make_all(self) -> "list[CheriBSDConfig]":
         configs = []
         # Generate QEMU/FVP kernels
-        for kABI in KernelABI:
-            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
+        for kernel_abi in KernelABI:
+            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True))
+            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
                                             benchmark=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
+            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
                                             mfsroot=True))
         # Caprevoke kernels
-        for kABI in KernelABI:
-            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
+        for kernel_abi in KernelABI:
+            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
                                             caprevoke=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
+            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
                                             caprevoke=True, benchmark=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kABI, default=True,
+            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
                                             caprevoke=True, mfsroot=True))
 
         return configs
 
 
 def filter_kernel_configs(configs: "list[CheriBSDConfig]", *, platform: "Optional[ConfigPlatform]",
-                          kABI: Optional[KernelABI], **filter_kwargs) -> "typing.Sequence[CheriBSDConfig]":
+                          kernel_abi: Optional[KernelABI], **filter_kwargs) -> "typing.Sequence[CheriBSDConfig]":
     """
     Helper function to filter kernel configuration lists.
     Keyword filter arguments are mapped to CheriBSDConfig properties.
@@ -285,8 +289,8 @@ def filter_kernel_configs(configs: "list[CheriBSDConfig]", *, platform: "Optiona
     """
     if platform is not None:
         configs = [c for c in configs if platform in c.platforms]
-    if kABI is not None:
-        configs = [c for c in configs if c.kABI == kABI]
+    if kernel_abi is not None:
+        configs = [c for c in configs if c.kernel_abi == kernel_abi]
     for key, val in filter_kwargs.items():
         if val == "*" or val == "any":
             # Match any attribute value, skip
@@ -336,19 +340,19 @@ class CheriBSDConfigTable:
         return None
 
     @classmethod
-    def get_default(cls, xtarget, platform: ConfigPlatform, kABI: KernelABI, **filter_kwargs) -> CheriBSDConfig:
+    def get_default(cls, xtarget, platform: ConfigPlatform, kernel_abi: KernelABI, **filter_kwargs) -> CheriBSDConfig:
         """
         Return an unique default configuration for the given platform/kernelABI
         with optional extra filters.
         It is a fatal failure if 0 or more than one configurations exist.
         """
-        configs = cls.get_configs(xtarget, platform=platform, kABI=kABI, default=True, **filter_kwargs)
+        configs = cls.get_configs(xtarget, platform=platform, kernel_abi=kernel_abi, default=True, **filter_kwargs)
         assert len(configs) != 0, "No matching default kernel configuration"
         assert len(configs) == 1, "Too many default kernel configurations {}".format(configs)
         return configs[0]
 
     @classmethod
-    def get_configs(cls, xtarget, *, platform: "Optional[ConfigPlatform]", kABI: "Optional[KernelABI]",
+    def get_configs(cls, xtarget, *, platform: "Optional[ConfigPlatform]", kernel_abi: "Optional[KernelABI]",
                     **filter_kwargs):
         """
         Return all configurations for a combination of target, platform and kernel ABI.
@@ -361,16 +365,17 @@ class CheriBSDConfigTable:
         filter_kwargs.setdefault("fett", False)
         filter_kwargs.setdefault("fuzzing", False)
         filter_kwargs.setdefault("mfsroot", False)
-        return cls.get_all_configs(xtarget, platform=platform, kABI=kABI, **filter_kwargs)
+        return cls.get_all_configs(xtarget, platform=platform, kernel_abi=kernel_abi, **filter_kwargs)
 
     @classmethod
-    def get_all_configs(cls, xtarget, *, platform: "Optional[ConfigPlatform]", kABI: "Optional[KernelABI]",
+    def get_all_configs(cls, xtarget, *, platform: "Optional[ConfigPlatform]", kernel_abi: "Optional[KernelABI]",
                         **filter_kwargs):
         """
         Return all available configurations for a combination of
         target, group and kernel ABI filtered using kwargs.
         """
-        return filter_kernel_configs(cls.get_target_configs(xtarget), platform=platform, kABI=kABI, **filter_kwargs)
+        return filter_kernel_configs(cls.get_target_configs(xtarget), platform=platform, kernel_abi=kernel_abi,
+                                     **filter_kwargs)
 
 
 class BuildFreeBSDBase(Project):
@@ -1420,7 +1425,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         """
         config = CheriBSDConfigTable.get_entry(self.crosscompile_target, self.kernel_config)
         assert config is not None, "Invalid configuration name"
-        return [c.kernconf for c in filter_kernel_configs([config], platform=platform, kABI=None)]
+        return [c.kernconf for c in filter_kernel_configs([config], platform=platform, kernel_abi=None)]
 
 
 # Build FreeBSD with the default options (build the bundled clang instead of using the SDK one)
@@ -1608,38 +1613,38 @@ class BuildCHERIBSD(BuildFreeBSD):
         # in the base class and thus still inherited by non-purecap-kernel
         # targets
         if self.crosscompile_target in self.purecap_kernel_targets:
-            kernABI = self.default_kernel_abi
+            kernel_abi = self.default_kernel_abi
         elif self.crosscompile_target.is_hybrid_or_purecap_cheri():
-            kernABI = KernelABI.HYBRID
+            kernel_abi = KernelABI.HYBRID
         else:
-            kernABI = KernelABI.NOCHERI
-        return kernABI
+            kernel_abi = KernelABI.NOCHERI
+        return kernel_abi
 
-    def _get_config_variants(self, platforms: "set[ConfigPlatform]", kernABIs: "list[KernelABI]",
+    def _get_config_variants(self, platforms: "set[ConfigPlatform]", kernel_abis: "list[KernelABI]",
                              combine_flags: list, **filter_kwargs) -> "list[CheriBSDConfig]":
         flag_values = itertools.product([True, False], repeat=len(combine_flags))
-        combine_tuples = list(itertools.product(platforms, kernABIs, flag_values))
+        combine_tuples = list(itertools.product(platforms, kernel_abis, flag_values))
         configs = []
-        for platform, kernABI, flag_tuple in combine_tuples:
+        for platform, kernel_abi, flag_tuple in combine_tuples:
             combined_filter = {flag: v for flag, v in zip(combine_flags, flag_tuple)}
             filter_kwargs.update(combined_filter)
-            configs += CheriBSDConfigTable.get_configs(self.crosscompile_target, platform=platform, kABI=kernABI,
-                                                       **filter_kwargs)
+            configs += CheriBSDConfigTable.get_configs(self.crosscompile_target, platform=platform,
+                                                       kernel_abi=kernel_abi, **filter_kwargs)
         return configs
 
-    def _get_kABIs_to_build(self) -> "list[KernelABI]":
-        default_kABI = self.get_default_kernel_abi()
-        kernABIs = [default_kABI]
+    def _get_kernel_abis_to_build(self) -> "list[KernelABI]":
+        default_kernel_abi = self.get_default_kernel_abi()
+        kernel_abis = [default_kernel_abi]
         # XXX: Because the config option has _allow_unknown_targets it exists
         # in the base class and thus still inherited by non-purecap-kernel
         # targets
         if self.crosscompile_target in self.purecap_kernel_targets and self.build_alternate_abi_kernels:
-            otherABI = KernelABI.PURECAP if default_kABI != KernelABI.PURECAP else KernelABI.HYBRID
-            kernABIs.append(otherABI)
-        return kernABIs
+            other_abi = KernelABI.PURECAP if default_kernel_abi != KernelABI.PURECAP else KernelABI.HYBRID
+            kernel_abis.append(other_abi)
+        return kernel_abis
 
     def _get_all_kernel_configs(self) -> "list[CheriBSDConfig]":
-        kernABIs = self._get_kABIs_to_build()
+        kernel_abis = self._get_kernel_abis_to_build()
         platform = self.get_default_kernel_platform()
         combinations = []
         if self.build_bench_kernels:
@@ -1650,9 +1655,9 @@ class BuildCHERIBSD(BuildFreeBSD):
             if not self.compiling_for_riscv(include_purecap=True):
                 self.warning("Unsupported architecture for FETT kernels")
             combinations.append("fett")
-        configs = self._get_config_variants({platform}, kernABIs, combinations)
+        configs = self._get_config_variants({platform}, kernel_abis, combinations)
         if self.build_fpga_kernels:
-            configs += self._get_config_variants(ConfigPlatform.fpga_platforms(), kernABIs,
+            configs += self._get_config_variants(ConfigPlatform.fpga_platforms(), kernel_abis,
                                                  combinations + ["mfsroot"])
         return configs
 
@@ -1663,11 +1668,11 @@ class BuildCHERIBSD(BuildFreeBSD):
         # Handle CheriBSD hybrid and purecap configs
         if platform is None:
             platform = self.get_default_kernel_platform()
-        kABI = filter_kwargs.pop("kABI", self.get_default_kernel_abi())
+        kernel_abi = filter_kwargs.pop("kernel_abi", self.get_default_kernel_abi())
         if xtarget.is_riscv(include_purecap=True):
             filter_kwargs.setdefault("fett", self.build_fett_kernels)
         filter_kwargs.setdefault("caprevoke", self.caprevoke_kernel)
-        config = CheriBSDConfigTable.get_default(xtarget, platform, kABI, **filter_kwargs)
+        config = CheriBSDConfigTable.get_default(xtarget, platform, kernel_abi, **filter_kwargs)
         return config.kernconf
 
     def extra_kernel_configs(self) -> "list[CheriBSDConfig]":
@@ -1678,7 +1683,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "list[str]":
         default = super().get_kernel_configs(platform)
-        extra = filter_kernel_configs(self.extra_kernel_configs(), platform=platform, kABI=None)
+        extra = filter_kernel_configs(self.extra_kernel_configs(), platform=platform, kernel_abi=None)
         return default + [c.kernconf for c in extra]
 
     def setup(self) -> None:
@@ -1795,34 +1800,34 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
                     self.install_file(dbg_info_kernel, fullkernel_install_path, force=True, print_verbose_only=False)
 
     def _get_all_kernel_configs(self) -> list:
-        kernABIs = self._get_kABIs_to_build()
+        kernel_abis = self._get_kernel_abis_to_build()
         platform = self.get_default_kernel_platform()
         combinations = []
         if self.build_bench_kernels:
             combinations.append("benchmark")
         if self.caprevoke_kernel:
             combinations.append("caprevoke")
-        configs = self._get_config_variants({platform}, kernABIs, combinations, mfsroot=True)
+        configs = self._get_config_variants({platform}, kernel_abis, combinations, mfsroot=True)
         if self.build_fpga_kernels:
-            configs += self._get_config_variants(ConfigPlatform.fpga_platforms(), kernABIs,
+            configs += self._get_config_variants(ConfigPlatform.fpga_platforms(), kernel_abis,
                                                  combinations, mfsroot=True)
         return configs
 
     def default_kernel_config(self, platform: "Optional[ConfigPlatform]" = None, **filter_kwargs) -> str:
         if platform is None:
             platform = self.get_default_kernel_platform()
-        kABI = filter_kwargs.pop("kABI", self.get_default_kernel_abi())
+        kernel_abi = filter_kwargs.pop("kernel_abi", self.get_default_kernel_abi())
         filter_kwargs.setdefault("caprevoke", self.caprevoke_kernel)
         filter_kwargs.setdefault("benchmark", self.build_bench_kernels)
         filter_kwargs["mfsroot"] = True
-        config = CheriBSDConfigTable.get_default(self.crosscompile_target, platform, kABI, **filter_kwargs)
+        config = CheriBSDConfigTable.get_default(self.crosscompile_target, platform, kernel_abi, **filter_kwargs)
         return config.kernconf
 
     def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "list[str]":
         if self.kernel_config is not None:
             return [self.kernel_config]
         configs = self._get_all_kernel_configs()
-        return [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kABI=None)]
+        return [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kernel_abi=None)]
 
     def get_kernel_install_path(self, kernconf: "Optional[str]" = None) -> Path:
         """ Get the installed kernel path for an MFS kernel config that has been built. """
