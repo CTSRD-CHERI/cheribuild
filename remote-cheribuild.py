@@ -35,16 +35,16 @@ import sys
 import tempfile
 from pathlib import Path
 
-scriptDir = Path(__file__).resolve().parent
+script_dir = Path(__file__).resolve().parent
 host = sys.argv[1]
-cheribuildArgs = sys.argv[2:]
-cheribuildArgs = list(map(shlex.quote, cheribuildArgs))
+cheribuild_args = sys.argv[2:]
+cheribuild_args = list(map(shlex.quote, cheribuild_args))
 
 with tempfile.NamedTemporaryFile(prefix="cheribuild-", suffix=".py") as tmp:
-    combineScript = scriptDir / "combine-files.py"
-    assert combineScript.is_file()
-    subprocess.check_call([sys.executable, str(combineScript)], stdout=tmp)
-    print("About to run cheribuild on host '" + host + "' with the following arguments:", cheribuildArgs)
+    combine_script = script_dir / "combine-files.py"
+    assert combine_script.is_file()
+    subprocess.check_call([sys.executable, str(combine_script)], stdout=tmp)
+    print("About to run cheribuild on host '" + host + "' with the following arguments:", cheribuild_args)
     print("Note: file that will be run is located at", tmp.name)
     tty_option = ["-tt"] if sys.__stdin__.isatty() else []
     if "-f" not in sys.argv:
@@ -60,7 +60,7 @@ with tempfile.NamedTemporaryFile(prefix="cheribuild-", suffix=".py") as tmp:
 scp "$script" "${host}:~/.remote-py3-script.py" > /dev/null && \
     ssh -tt "$host" python3 '$HOME/.remote-py3-script.py' "$@"
 """
-    remoteFile = "$HOME/.remote-py3-script.py"
-    subprocess.check_call(["scp", tmp.name, host + ":" + remoteFile])
+    remote_file = "$HOME/.remote-py3-script.py"
+    subprocess.check_call(["scp", tmp.name, host + ":" + remote_file])
     # call execvp so that we get "^CExiting due to Ctrl+C" instead of a CalledProcessError
-    os.execvp("ssh", ["ssh"] + tty_option + [host, "--", "python3", remoteFile] + cheribuildArgs)
+    os.execvp("ssh", ["ssh"] + tty_option + [host, "--", "python3", remote_file] + cheribuild_args)
