@@ -88,7 +88,7 @@ def add_args(parser: argparse.ArgumentParser):
 
 class MesonTestInfo(typing.NamedTuple):
     name: str
-    command: typing.List[str]
+    command: "list[str]"
     cwd: Optional[str]
     env_vars: typing.Dict[str, str]
     timeout: Optional[int]

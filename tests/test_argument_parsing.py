@@ -48,7 +48,7 @@ def _get_cheribsd_instance(target_name: str, config) -> BuildCHERIBSD:
 
 
 # noinspection PyProtectedMember
-def _parse_arguments(args: typing.List[str], *, config_file=Path("/this/does/not/exist"),
+def _parse_arguments(args: "list[str]", *, config_file=Path("/this/does/not/exist"),
                      allow_unknown_options=False) -> DefaultCheriConfig:
     assert isinstance(args, list)
     assert all(isinstance(arg, str) for arg in args), "Invalid argv " + str(args)
@@ -861,7 +861,7 @@ def test_default_rootfs_and_sysroot_dir(target: str, args: list, expected_sysroo
     assert str(rootfs_dir.relative_to(config.output_root)) == expected_rootfs
 
 
-def _check_source_dir(target: str, expected: str, config_file: bytes, cmdline: typing.List[str]):
+def _check_source_dir(target: str, expected: str, config_file: bytes, cmdline: "list[str]"):
     config = _parse_config_file_and_args(config_file, *cmdline)
     project = _get_target_instance(target, config)
     # noinspection PyProtectedMember

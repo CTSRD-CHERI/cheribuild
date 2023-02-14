@@ -197,7 +197,7 @@ class LaunchQEMUBase(SimpleProject):
         self.rootfs_path = None  # type:Optional[Path]
         self._after_disk_options = []
 
-    def get_riscv_bios_args(self) -> typing.List[str]:
+    def get_riscv_bios_args(self) -> "list[str]":
         # Explicit bios args no longer needed now that qemu defaults to a different file name for CHERI
         return riscv_bios_arguments(self.crosscompile_target, self)
 
@@ -797,7 +797,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
                 self.run_cmd("dd", "if=/dev/zero", "of=" + str(self.disk_image), size_flag, "count=1")
         super().process()
 
-    def get_riscv_bios_args(self) -> typing.List[str]:
+    def get_riscv_bios_args(self) -> "list[str]":
         # CheriOS bundles its kernel with its own bootloader
         return ["-bios", "none"]
 

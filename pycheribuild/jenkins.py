@@ -34,7 +34,6 @@ import os
 import pprint
 import shutil
 import sys
-import typing
 # noinspection PyUnresolvedReferences
 from pathlib import Path
 from typing import Optional
@@ -115,7 +114,7 @@ class SdkArchive(object):
         return str(self.archive)
 
 
-def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List[SdkArchive]":
+def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "list[SdkArchive]":
     clang_archive = SdkArchive(cheri_config, cheri_config.compiler_archive_name,
                                output_dir=cheri_config.compiler_archive_output_path,
                                required_globs=["bin/clang"], extra_args=["--strip-components", "1"])
@@ -147,7 +146,7 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List
     return all_archives
 
 
-def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[SdkArchive]"):
+def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "list[SdkArchive]"):
     expected_bindir = cheri_config.compiler_archive_output_path / "bin"
     if expected_bindir.is_dir():
         status_update(expected_bindir, "already exists, not extracting SDK archives")

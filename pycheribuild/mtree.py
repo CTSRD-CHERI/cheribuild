@@ -79,7 +79,7 @@ class MtreeEntry(object):
         # FIXME: use contents=
 
     @classmethod
-    def parse_all_dirs_in_mtree(cls, mtree_file: Path) -> "typing.List[MtreeEntry]":
+    def parse_all_dirs_in_mtree(cls, mtree_file: Path) -> "list[MtreeEntry]":
         with mtree_file.open("r", encoding="utf-8") as f:
             result = []
             for line in f.readlines():

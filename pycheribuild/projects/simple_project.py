@@ -267,7 +267,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return "_xtarget",
 
     @classmethod
-    def all_dependency_names(cls, config: CheriConfig) -> "typing.List[str]":
+    def all_dependency_names(cls, config: CheriConfig) -> "list[str]":
         assert cls._xtarget is not None
         if cls.__dict__.get("_cached_full_deps", None) is None:
             cls._cache_full_dependencies(config)
@@ -360,7 +360,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             return False
 
     @classmethod
-    def recursive_dependencies(cls, config: CheriConfig) -> "typing.List[Target]":
+    def recursive_dependencies(cls, config: CheriConfig) -> "list[Target]":
         """
         Returns the list of recursive depdencies. If filtered is False this returns all dependencies, if True the result
         is filtered based on various parameters such as config.include_dependencies.
@@ -423,7 +423,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return result
 
     @classmethod
-    def cached_full_dependencies(cls) -> "typing.List[Target]":
+    def cached_full_dependencies(cls) -> "list[Target]":
         # look only in __dict__ to avoid parent class lookup
         _cached: "Optional[list[Target]]" = cls.__dict__.get("_cached_full_deps", None)
         if _cached is None:
@@ -980,7 +980,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     def __run_process_with_filtered_output(self, proc: subprocess.Popen, logfile: "Optional[typing.IO]",
                                            stdout_filter: "typing.Callable[[bytes], None]",
-                                           args: "typing.List[str]"):
+                                           args: "list[str]"):
         logfile_lock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
         stderr_thread = None
         if logfile:
@@ -1058,7 +1058,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                 else:
                     self.delete_file(p)
 
-    def _cleanup_renamed_files(self, current_path: Path, current_suffix: str, old_suffixes: typing.List[str]):
+    def _cleanup_renamed_files(self, current_path: Path, current_suffix: str, old_suffixes: "list[str]"):
         """Remove old build directories/disk-images, etc. to avoid wasted disk space after renaming targets"""
         if not old_suffixes:
             return

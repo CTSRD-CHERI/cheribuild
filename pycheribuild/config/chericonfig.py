@@ -449,7 +449,7 @@ class CheriConfig(ConfigBase):
             "remote-morello-board", help="SSH hostname of a Morello board. When set, some projects will run their "
                                          "test suites on the remote board instead of QEMU.")
 
-        self.targets = None  # type: Optional[typing.List[str]]
+        self.targets: "Optional[list[str]]" = None
         self.__optional_properties = ["internet_connection_last_checked_at", "start_after", "start_with"]
 
     def load(self) -> None:

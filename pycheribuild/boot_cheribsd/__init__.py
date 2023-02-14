@@ -332,7 +332,7 @@ class QemuCheriBSDInstance(CheriBSDInstance):
                        "-o", "ControlPersist=600"]
         return result
 
-    def run_command_via_ssh(self, command: typing.List[str], *, stdout=None, stderr=None, check=True, verbose=False,
+    def run_command_via_ssh(self, command: "list[str]", *, stdout=None, stderr=None, check=True, verbose=False,
                             use_controlmaster=False, **kwargs) -> "subprocess.CompletedProcess[bytes]":
         assert self.ssh_port is not None
         ssh_command = ["ssh", "{user}@{host}".format(user=self.ssh_user, host="localhost"),
@@ -392,7 +392,7 @@ def success(*args, **kwargs):
     print("\n", MESSAGE_PREFIX, "\033[0;32m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
 
 
-def print_cmd(cmd: typing.List[str], **kwargs):
+def print_cmd(cmd: "list[str]", **kwargs):
     args_str = " ".join((shlex.quote(i) for i in list(cmd)))
     if kwargs:
         print("\033[0;33mRunning ", args_str, " with ", kwargs.copy(), "\033[0m", sep="", file=sys.stderr, flush=True)
@@ -413,7 +413,7 @@ def failure(*args, exit: bool, **kwargs):
     return False
 
 
-def run_host_command(cmd: typing.List[str], **kwargs):
+def run_host_command(cmd: "list[str]", **kwargs):
     print_cmd(cmd, **kwargs)
     if PRETEND:
         return

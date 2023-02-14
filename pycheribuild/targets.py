@@ -444,13 +444,13 @@ class TargetManager(object):
         return target
 
     @staticmethod
-    def sort_in_dependency_order(targets: "typing.Iterable[Target]") -> "typing.List[Target]":
+    def sort_in_dependency_order(targets: "typing.Iterable[Target]") -> "list[Target]":
         # pythons sorted() is guaranteed to be stable:
         sorted_targets = list(sorted(targets))
         # remove duplicates (insert into an orderdict to keep order
         return list(OrderedDict((x, True) for x in sorted_targets).keys())
 
-    def get_all_targets(self, explicit_targets: "typing.List[Target]", config: CheriConfig) -> "typing.List[Target]":
+    def get_all_targets(self, explicit_targets: "list[Target]", config: CheriConfig) -> "list[Target]":
         chosen_targets: "list[Target]" = []
         for t in explicit_targets:
             if isinstance(t, SimpleTargetAlias):

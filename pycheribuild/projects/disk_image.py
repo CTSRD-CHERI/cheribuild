@@ -33,7 +33,6 @@ import os
 import shutil
 import sys
 import tempfile
-import typing
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -193,7 +192,7 @@ class BuildDiskImageBase(SimpleProject):
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
         self.manifest_file = None  # type: Optional[Path]
-        self.extra_files = []  # type: typing.List[Path]
+        self.extra_files: "list[Path]" = []
         self.auto_prefixes = ["usr/local/", "opt/", "extra/", "bin/bash"]
         self.makefs_cmd = None  # type: Optional[Path]
         self.mkimg_cmd = None  # type: Optional[Path]
@@ -925,7 +924,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         return False
 
     @staticmethod
-    def _have_cplusplus_support(_: "typing.List[str]"):
+    def _have_cplusplus_support(_: "list[str]"):
         # C++ runtime was not available for RISC-V purecap due to https://github.com/CTSRD-CHERI/llvm-project/issues/379
         # This has now been fixed, but could be an issue again in the future so keep this function around.
         return True
@@ -1022,7 +1021,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             self.verbose_print("Boot files:\n\t", "\n\t".join(map(str, sorted(extra_files))))
         self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
 
-    def add_required_libraries(self, libdirs: "typing.List[str]"):
+    def add_required_libraries(self, libdirs: "list[str]"):
         optional_libs = []
         required_libs = [
             "libc.so.7",

@@ -1400,7 +1400,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return "kern.module_path={}".format(kerndir)
         return None
 
-    def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "typing.List[str]":
+    def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "list[str]":
         """
         Get all the kernel configurations to build. This can be used by external targets to
         fetch the set of kernel configurations that have been built and filter them to account
@@ -1756,7 +1756,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
                         self.verbose_print("Cleaning ", kernel_dir)
         self._build_and_install_kernel_binaries(kernconfs=kernel_configs, image=self.image)
 
-    def _build_and_install_kernel_binaries(self, kernconfs: "typing.List[str]", image: Path):
+    def _build_and_install_kernel_binaries(self, kernconfs: "list[str]", image: Path):
         # Install to a temporary directory and then copy the kernel to OUTPUT_ROOT
         # noinspection PyProtectedMember
         # Don't bother with modules for the MFS kernels:
@@ -1807,7 +1807,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         config = CheriBSDConfigTable.get_default(self.crosscompile_target, platform, kABI, **filter_kwargs)
         return config.kernconf
 
-    def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "typing.List[str]":
+    def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "list[str]":
         if self.kernel_config is not None:
             return [self.kernel_config]
         configs = self._get_all_kernel_configs()
