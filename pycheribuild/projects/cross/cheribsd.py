@@ -37,7 +37,7 @@ import typing
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
-from typing import Optional, ClassVar
+from typing import Optional, ClassVar, Union
 
 from .crosscompileproject import CrossCompileProject
 from .llvm import BuildLLVMMonoRepoBase
@@ -647,7 +647,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self._show_line_stdout_filter(line)
 
     @property
-    def arch_build_flags(self) -> "dict[str, typing.Union[str, bool]]":
+    def arch_build_flags(self) -> "dict[str, Union[str, bool]]":
         assert isinstance(self.target_info, FreeBSDTargetInfo)
         result = {
             "TARGET": self.target_info.freebsd_target,

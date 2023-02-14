@@ -49,7 +49,7 @@ import time
 import traceback
 import typing
 from pathlib import Path
-from typing import Optional, Callable
+from typing import Optional, Callable, Union
 
 from pycheribuild.colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
@@ -214,7 +214,7 @@ if typing.TYPE_CHECKING:
     MixinBase = pexpect.spawn
 else:
     MixinBase = object
-PatternListType = typing.List[typing.Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]
+PatternListType = typing.List[Union[str, typing.Pattern, typing.Type[pexpect.ExceptionPexpect]]]
 
 
 class CheriBSDSpawnMixin(MixinBase):

@@ -31,6 +31,7 @@
 import os
 import typing
 from pathlib import Path
+from typing import Union
 
 from ..cmake_project import CMakeProject
 from ..meson_project import MesonProject
@@ -97,11 +98,11 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     _configure_understands_enable_static = True
     _define_ld = True  # override to not define LD
 
-    def add_configure_and_make_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
+    def add_configure_and_make_env_arg(self, arg: str, value: "Union[str,Path]"):
         self.add_configure_env_arg(arg, value)
         self.make_args.set_env(**{arg: str(value)})
 
-    def add_configure_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
+    def add_configure_env_arg(self, arg: str, value: "Union[str,Path]"):
         super().add_configure_env_arg(arg, value)
         if self._configure_supports_variables_on_cmdline:
             self.configure_args.append(arg + "=" + str(value))
