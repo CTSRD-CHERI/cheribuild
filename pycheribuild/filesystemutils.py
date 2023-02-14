@@ -34,7 +34,7 @@ import subprocess
 import threading
 import typing
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from .processutils import print_command, run_command
 from .utils import AnsiColour, ConfigBase, fatal_error, status_update, ThreadJoiner, warning_message
@@ -285,7 +285,7 @@ class FileSystemUtils(object):
             print_command("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
             dest.chmod(mode)
 
-    def rewrite_file(self, file: Path, rewrite: typing.Callable[[typing.Iterable[str]], typing.Iterable[str]]):
+    def rewrite_file(self, file: Path, rewrite: "Callable[[typing.Iterable[str]], typing.Iterable[str]]"):
         if self.config.pretend:
             return
         if not file.is_absolute():

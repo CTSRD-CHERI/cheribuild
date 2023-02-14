@@ -40,7 +40,7 @@ import traceback
 import typing
 from pathlib import Path
 from threading import RLock
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 from .colour import AnsiColour, coloured
 
@@ -67,7 +67,7 @@ except ImportError:
 
 # noinspection PyPep8Naming
 class classproperty(typing.Generic[Type_T]):
-    def __init__(self, f: "typing.Callable[[typing.Any], Type_T]") -> None:
+    def __init__(self, f: "Callable[[typing.Any], Type_T]") -> None:
         self.f = f
 
     def __get__(self, obj, owner) -> Type_T:
@@ -121,7 +121,7 @@ else:
 
     # noinspection PyPep8Naming
     class cached_property(typing.Generic[Type_T]):  # noqa: N801
-        def __init__(self, func: "typing.Callable[[typing.Any], Type_T]") -> None:
+        def __init__(self, func: "Callable[[typing.Any], Type_T]") -> None:
             self.func = func
             self.attrname = func.__name__ if sys.version_info < (3, 6) else None
             self.__doc__ = func.__doc__
@@ -349,7 +349,7 @@ def is_case_sensitive_dir(d: Path) -> bool:
 
 
 class InstallInstructions:
-    def __init__(self, message: "Union[str, typing.Callable[[], str]]",
+    def __init__(self, message: "Union[str, Callable[[], str]]",
                  cheribuild_target: "Optional[str]" = None, alternative: "Optional[str]" = None):
         self._message = message
         self.cheribuild_target = cheribuild_target
