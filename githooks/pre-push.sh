@@ -69,6 +69,10 @@ do
 		# Check for DNM (do-not-merge) commit
 		check_bad_commit_msg "$range" '^DNM' "do-not-merge"
 
+		if command -v ruff > /dev/null 2>/dev/null; then
+			ruff check .
+		fi
+
 		# git hooks run from the root of the repository, so ./tests should work
 		sh -e "./tests/run_basic_tests.sh" || exit 1
 
