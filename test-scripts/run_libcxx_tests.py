@@ -45,6 +45,7 @@ from typing import Optional
 
 import run_remote_lit_test
 from run_remote_lit_test import mp_debug
+
 # To combine the test result xmls
 from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 

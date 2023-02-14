@@ -31,8 +31,8 @@ import datetime
 import os
 import subprocess
 
-from .cross.cheribsd import BuildCHERIBSD
 from .cmake_project import CMakeProject
+from .cross.cheribsd import BuildCHERIBSD
 from .project import CheriConfig, CPUArchitecture, DefaultInstallDir, GitRepository
 from .simple_project import SimpleProject, TargetAliasWithDependencies
 from ..targets import target_manager

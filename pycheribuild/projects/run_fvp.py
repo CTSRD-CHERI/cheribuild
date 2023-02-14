@@ -41,7 +41,7 @@ from .simple_project import SimpleProject
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue
 from ..config.compilation_targets import CompilationTargets
 from ..processutils import extract_version, popen
-from ..utils import (AnsiColour, cached_property, classproperty, coloured, find_free_port, OSInfo, SocketAndPort)
+from ..utils import AnsiColour, OSInfo, SocketAndPort, cached_property, classproperty, coloured, find_free_port
 
 
 class InstallMorelloFVP(SimpleProject):

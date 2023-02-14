@@ -34,12 +34,12 @@ import subprocess
 from pathlib import Path
 from typing import Optional, Sequence
 
+from .project import MakeCommandKind, Project, _CMakeAndMesonSharedLogic
 from .simple_project import _default_stdout_filter
-from .project import _CMakeAndMesonSharedLogic, MakeCommandKind, Project
 from ..config.chericonfig import BuildType
 from ..processutils import commandline_to_str, run_command
 from ..targets import target_manager
-from ..utils import include_local_file, InstallInstructions, OSInfo
+from ..utils import InstallInstructions, OSInfo, include_local_file
 
 __all__ = ["CMakeProject"]  # no-combine
 

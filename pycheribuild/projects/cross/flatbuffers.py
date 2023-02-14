@@ -23,7 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from .crosscompileproject import CrossCompileCMakeProject, GitRepository, CompilationTargets, DefaultInstallDir
+from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 
 
 class BuildFlatbuffers(CrossCompileCMakeProject):

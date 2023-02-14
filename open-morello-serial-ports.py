@@ -5,7 +5,6 @@ import os
 import shlex
 import shutil
 import sys
-
 from enum import Enum
 from typing import Optional
 

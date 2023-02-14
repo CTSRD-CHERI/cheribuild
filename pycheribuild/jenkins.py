@@ -34,23 +34,26 @@ import os
 import pprint
 import shutil
 import sys
+
 # noinspection PyUnresolvedReferences
 from pathlib import Path
 from typing import Optional
 
 from .config.jenkinsconfig import JenkinsAction, JenkinsConfig
-from .config.loader import CommandLineConfigOption, CommandLineConfigLoader
+from .config.loader import CommandLineConfigLoader, CommandLineConfigOption
+from .processutils import get_program_version, run_and_kill_children_on_exit, run_command
+
 # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
 from .projects import *  # noqa: F401,F403
+
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # noqa: F401,F403
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project
 from .projects.simple_project import SimpleProject
 from .targets import SimpleTargetAlias, Target, target_manager
-from .processutils import get_program_version, run_and_kill_children_on_exit, run_command
-from .utils import fatal_error, init_global_config, OSInfo, status_update, ThreadJoiner, warning_message
+from .utils import OSInfo, ThreadJoiner, fatal_error, init_global_config, status_update, warning_message
 
 EXTRACT_SDK_TARGET: str = "extract-sdk"
 RUN_EVERYTHING_TARGET: str = "__run_everything__"

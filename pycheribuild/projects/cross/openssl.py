@@ -30,7 +30,7 @@
 #
 import shutil
 
-from .crosscompileproject import (CrossCompileProject, DefaultInstallDir, GitRepository)
+from .crosscompileproject import CrossCompileProject, DefaultInstallDir, GitRepository
 
 
 class BuildOpenSSL(CrossCompileProject):

@@ -35,14 +35,20 @@ from pathlib import Path
 from typing import Optional
 
 from .benchmark_mixin import BenchmarkMixin
-from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, CrossCompileProject,
-                                  DefaultInstallDir, GitRepository, MakeCommandKind)
+from .crosscompileproject import (
+    CompilationTargets,
+    CrossCompileAutotoolsProject,
+    CrossCompileProject,
+    DefaultInstallDir,
+    GitRepository,
+    MakeCommandKind,
+)
 from .llvm_test_suite import BuildLLVMTestSuite, BuildLLVMTestSuiteBase
 from ..project import ReuseOtherProjectRepository
 from ...config.target_info import CPUArchitecture
 from ...processutils import get_program_version
 from ...targets import target_manager
-from ...utils import is_jenkins_build, OSInfo, replace_one
+from ...utils import OSInfo, is_jenkins_build, replace_one
 
 
 class BuildMibench(BenchmarkMixin, CrossCompileProject):

@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 import typing
-from typing import Union, Callable, Any
+from typing import Any, Callable, Union
 
 T = typing.TypeVar("T")
 if typing.TYPE_CHECKING:

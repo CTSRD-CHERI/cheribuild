@@ -30,8 +30,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from .crosscompileproject import CrossCompileAutotoolsProject, \
-    CrossCompileCMakeProject, CrossCompileMesonProject
+from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
 from .freetype import BuildFreeType2
 from ..project import DefaultInstallDir, GitRepository, Project
 from ...config.chericonfig import BuildType

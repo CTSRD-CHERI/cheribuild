@@ -38,16 +38,23 @@ from pathlib import Path
 from typing import Optional
 
 from .chericonfig import CheriConfig
-from .config_loader_base import ConfigOptionBase, ConfigLoaderBase
-from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi,
-                          TargetInfo, AArch64FloatSimdOptions, DefaultInstallDir)
+from .config_loader_base import ConfigLoaderBase, ConfigOptionBase
+from .target_info import (
+    AArch64FloatSimdOptions,
+    AutoVarInit,
+    BasicCompilationTargets,
+    CPUArchitecture,
+    CrossCompileTarget,
+    DefaultInstallDir,
+    MipsFloatAbi,
+    TargetInfo,
+)
 from ..projects.project import Project
 from ..utils import cached_property, is_jenkins_build
 
-
 if typing.TYPE_CHECKING:  # no-combine
-    from ..projects.run_qemu import AbstractLaunchFreeBSD  # no-combine
     from ..projects.cross.llvm import BuildLLVMMonoRepoBase  # no-combine
+    from ..projects.run_qemu import AbstractLaunchFreeBSD  # no-combine
 
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):

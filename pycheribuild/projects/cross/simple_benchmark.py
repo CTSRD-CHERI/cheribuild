@@ -31,8 +31,8 @@
 import tempfile
 from pathlib import Path
 
-from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 from .benchmark_mixin import BenchmarkMixin
+from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 
 
 class BuildSimpleCheriBenchmarks(BenchmarkMixin, CrossCompileCMakeProject):

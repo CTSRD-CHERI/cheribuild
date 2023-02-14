@@ -33,7 +33,7 @@ import argparse
 import shutil
 from pathlib import Path
 
-from run_tests_common import junitparser, run_tests_main, boot_cheribsd
+from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 
 
 def output_to_junit_suite(xml, output_path, suite_name, good=True):

@@ -4,6 +4,7 @@ import re
 import sys
 import tempfile
 import typing
+
 # noinspection PyUnresolvedReferences
 from pathlib import Path
 from typing import Optional
@@ -15,20 +16,26 @@ import pytest
 from pycheribuild.config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
 from pycheribuild.config.loader import ConfigLoaderBase, ConfigOptionBase, JsonAndCommandLineConfigOption
+
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # noqa: F401, F403
 from pycheribuild.projects.cross import *  # noqa: F401, F403
-from pycheribuild.projects.cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD,
-                                                  FreeBSDToolchainKind)
+from pycheribuild.projects.cross.cheribsd import (
+    BuildCHERIBSD,
+    BuildCheriBsdMfsKernel,
+    BuildFreeBSD,
+    FreeBSDToolchainKind,
+)
 from pycheribuild.projects.cross.llvm import BuildCheriLLVM
 from pycheribuild.projects.cross.qt5 import BuildQtBase
+
 # noinspection PyProtectedMember
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase
+from pycheribuild.projects.run_qemu import LaunchCheriBSD
+
 # Override the default config loader:
 from pycheribuild.projects.simple_project import SimpleProject
-from pycheribuild.projects.run_qemu import LaunchCheriBSD
 from pycheribuild.targets import MultiArchTargetAlias, Target, target_manager
-
 
 Target.instantiating_targets_should_warn = False
 

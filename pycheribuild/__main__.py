@@ -35,25 +35,37 @@ import subprocess
 import sys
 import traceback
 from collections import OrderedDict
+
 # noinspection PyUnresolvedReferences
 from pathlib import Path
 
-from .config.defaultconfig import CheribuildAction, DefaultCheriConfig, DefaultCheribuildConfigLoader
+from .config.defaultconfig import CheribuildAction, DefaultCheribuildConfigLoader, DefaultCheriConfig
+
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
-from .config.loader import MyJsonEncoder, ConfigOptionBase
+from .config.loader import ConfigOptionBase, MyJsonEncoder
+from .processutils import get_program_version, print_command, run_and_kill_children_on_exit, run_command
+
 # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
 from .projects import *  # noqa: F401,F403
+
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # noqa: F401,F403
-from .projects.simple_project import SimpleProject
 from .projects.repository import GitRepository
-from .targets import target_manager, Target
-from .processutils import (get_program_version, print_command, run_and_kill_children_on_exit, run_command)
-from .utils import (AnsiColour, coloured, fatal_error, have_working_internet_connection, init_global_config,
-                    status_update, query_yes_no)
+from .projects.simple_project import SimpleProject
+from .targets import Target, target_manager
+from .utils import (
+    AnsiColour,
+    coloured,
+    fatal_error,
+    have_working_internet_connection,
+    init_global_config,
+    query_yes_no,
+    status_update,
+)
+
 DIRS_TO_CHECK_FOR_UPDATES: "list[Path]" = [Path(__file__).parent.parent]
 
 

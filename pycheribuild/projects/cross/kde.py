@@ -33,15 +33,20 @@ from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
-from .wayland import BuildWayland, BuildLinux_Input_H
+from .wayland import BuildLinux_Input_H, BuildWayland
 from .x11 import BuildLibXCB
-from ..project import (DefaultInstallDir, GitRepository, MakeCommandKind, default_source_dir_in_subdir,
-                       ReuseOtherProjectRepository)
+from ..project import (
+    DefaultInstallDir,
+    GitRepository,
+    MakeCommandKind,
+    ReuseOtherProjectRepository,
+    default_source_dir_in_subdir,
+)
 from ..simple_project import TargetAliasWithDependencies
 from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
-from ...utils import is_case_sensitive_dir, OSInfo
+from ...utils import OSInfo, is_case_sensitive_dir
 
 
 class KDECMakeProject(CrossCompileCMakeProject):

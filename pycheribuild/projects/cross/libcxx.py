@@ -32,9 +32,14 @@ import platform
 import sys
 import typing
 
-from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
-                                  GitRepository)
-from .llvm import BuildCheriLLVM, BuildUpstreamLLVM, BuildLLVMMonoRepoBase
+from .crosscompileproject import (
+    CheriConfig,
+    CompilationTargets,
+    CrossCompileCMakeProject,
+    DefaultInstallDir,
+    GitRepository,
+)
+from .llvm import BuildCheriLLVM, BuildLLVMMonoRepoBase, BuildUpstreamLLVM
 from ..build_qemu import BuildQEMU
 from ..cmake_project import CMakeProject
 from ..project import ReuseOtherProjectDefaultTargetRepository

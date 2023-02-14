@@ -35,8 +35,20 @@ from typing import Union
 
 from ..cmake_project import CMakeProject
 from ..meson_project import MesonProject
-from ..project import (AutotoolsProject, BuildType, CheriConfig, commandline_to_str, CrossCompileTarget, GitRepository,
-                       DefaultInstallDir, Linkage, MakeCommandKind, MakefileProject, Project, SubversionRepository)
+from ..project import (
+    AutotoolsProject,
+    BuildType,
+    CheriConfig,
+    CrossCompileTarget,
+    DefaultInstallDir,
+    GitRepository,
+    Linkage,
+    MakeCommandKind,
+    MakefileProject,
+    Project,
+    SubversionRepository,
+    commandline_to_str,
+)
 from ..simple_project import SimpleProject
 from ...config.compilation_targets import CompilationTargets
 from ...utils import AnsiColour, coloured

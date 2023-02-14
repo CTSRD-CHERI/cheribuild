@@ -34,8 +34,13 @@ import datetime
 import os
 from pathlib import Path
 
-from run_tests_common import (boot_cheribsd, finish_and_write_junit_xml_report, get_default_junit_xml_name, junitparser,
-                              run_tests_main)
+from run_tests_common import (
+    boot_cheribsd,
+    finish_and_write_junit_xml_report,
+    get_default_junit_xml_name,
+    junitparser,
+    run_tests_main,
+)
 
 
 def setup_qtbase_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace):

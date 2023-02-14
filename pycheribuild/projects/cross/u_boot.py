@@ -32,8 +32,16 @@ from pathlib import Path
 from typing import Optional
 
 from ..build_qemu import BuildQEMU
-from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompileTarget, DefaultInstallDir,
-                       GitRepository, MakeCommandKind, Project)
+from ..project import (
+    BuildType,
+    CheriConfig,
+    ComputedDefaultValue,
+    CrossCompileTarget,
+    DefaultInstallDir,
+    GitRepository,
+    MakeCommandKind,
+    Project,
+)
 from ...config.compilation_targets import CompilationTargets
 
 

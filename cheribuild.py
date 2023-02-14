@@ -32,8 +32,9 @@
 
 # https://stackoverflow.com/questions/1112618/import-python-package-from-local-directory-into-interpreter
 # https://stackoverflow.com/questions/14500183/in-python-can-i-call-the-main-of-an-imported-module
-from pathlib import Path
 import sys
+from pathlib import Path
+
 module_dir = Path(__file__).resolve().parent
 sys.path.append(str(module_dir))
 # noinspection PyPep8

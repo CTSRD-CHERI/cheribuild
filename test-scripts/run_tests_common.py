@@ -50,6 +50,7 @@ sys.path.insert(1, str(_ptyprocess_dir))
 sys.path.insert(1, str(_cheribuild_root))
 import junitparser  # noqa: E402
 import pexpect  # noqa: E402
+
 from pycheribuild import boot_cheribsd  # noqa: E402
 from pycheribuild.config.target_info import CrossCompileTarget  # noqa: E402
 from pycheribuild.processutils import commandline_to_str  # noqa: E402

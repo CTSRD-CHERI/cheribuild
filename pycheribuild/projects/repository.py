@@ -37,7 +37,8 @@ from typing import Optional
 from .simple_project import SimpleProject
 from ..config.target_info import CrossCompileTarget
 from ..processutils import get_program_version, run_command
-from ..utils import (AnsiColour, coloured, remove_prefix, status_update)
+from ..utils import AnsiColour, coloured, remove_prefix, status_update
+
 if typing.TYPE_CHECKING:
     from .project import Project
 

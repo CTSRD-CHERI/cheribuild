@@ -33,14 +33,18 @@ from pathlib import Path
 from typing import ClassVar, Iterable
 
 from ..cmake_project import CMakeProject
-from ..project import BuildType, DefaultInstallDir, GitRepository, ComputedDefaultValue
+from ..project import BuildType, ComputedDefaultValue, DefaultInstallDir, GitRepository
 from ..simple_project import SimpleProject
 from ...config.chericonfig import CheriConfig
-from ...config.compilation_targets import (CheriBSDMorelloTargetInfo, CheriBSDTargetInfo, CompilationTargets,
-                                           FreeBSDTargetInfo)
-from ...config.target_info import CompilerType, CrossCompileTarget, AbstractProject
+from ...config.compilation_targets import (
+    CheriBSDMorelloTargetInfo,
+    CheriBSDTargetInfo,
+    CompilationTargets,
+    FreeBSDTargetInfo,
+)
+from ...config.target_info import AbstractProject, CompilerType, CrossCompileTarget
 from ...processutils import CompilerInfo
-from ...utils import is_jenkins_build, OSInfo, ThreadJoiner, remove_duplicates, InstallInstructions
+from ...utils import InstallInstructions, OSInfo, ThreadJoiner, is_jenkins_build, remove_duplicates
 
 _true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
                                                   as_string="True unless build-everything is set")

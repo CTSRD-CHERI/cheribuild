@@ -33,7 +33,6 @@ from pathlib import Path
 from .cross.llvm import BuildLLVMMonoRepoBase
 from .project import DefaultInstallDir, GitRepository
 
-
 # install_to_soaap_dir = ComputedDefaultValue(function=lambda config, project: config.output_root / "soaap",
 #                                            as_string="$INSTALL_ROOT/soaap")
 from ..config.chericonfig import CheriConfig

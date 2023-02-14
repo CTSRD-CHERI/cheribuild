@@ -32,9 +32,18 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
-                                  CrossCompileCMakeProject, CrossCompileMesonProject, CrossCompileProject,
-                                  DefaultInstallDir, GitRepository, MakeCommandKind)
+from .crosscompileproject import (
+    BuildType,
+    CheriConfig,
+    CompilationTargets,
+    CrossCompileAutotoolsProject,
+    CrossCompileCMakeProject,
+    CrossCompileMesonProject,
+    CrossCompileProject,
+    DefaultInstallDir,
+    GitRepository,
+    MakeCommandKind,
+)
 from .wayland import BuildWayland
 from .x11 import BuildLibXCB
 from ..project import default_source_dir_in_subdir

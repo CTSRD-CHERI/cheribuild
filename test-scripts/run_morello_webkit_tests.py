@@ -28,8 +28,13 @@
 import argparse
 import datetime
 
-from run_tests_common import (boot_cheribsd, finish_and_write_junit_xml_report, get_default_junit_xml_name, junitparser,
-                              run_tests_main)
+from run_tests_common import (
+    boot_cheribsd,
+    finish_and_write_junit_xml_report,
+    get_default_junit_xml_name,
+    junitparser,
+    run_tests_main,
+)
 
 
 def setup_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> None:

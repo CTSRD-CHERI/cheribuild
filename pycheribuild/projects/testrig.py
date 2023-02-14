@@ -35,8 +35,8 @@ from .project import DefaultInstallDir, MakefileProject, Project
 from .repository import GitRepository
 from .sail import BuildSailCheriRISCV
 from .simple_project import SimpleProject
-from ..processutils import popen, commandline_to_str, FakePopen
-from ..utils import find_free_port, cached_property
+from ..processutils import FakePopen, commandline_to_str, popen
+from ..utils import cached_property, find_free_port
 
 
 # This repository contains various implementations and QuickCheckVEngine

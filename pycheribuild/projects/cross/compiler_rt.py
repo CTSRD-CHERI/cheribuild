@@ -32,7 +32,7 @@ from pathlib import Path
 
 from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
 from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
-from ..project import ReuseOtherProjectDefaultTargetRepository, Linkage
+from ..project import Linkage, ReuseOtherProjectDefaultTargetRepository
 from ...config.target_info import CPUArchitecture
 from ...utils import classproperty, is_jenkins_build
 

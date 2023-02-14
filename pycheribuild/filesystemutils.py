@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from .processutils import print_command, run_command
-from .utils import AnsiColour, ConfigBase, fatal_error, status_update, ThreadJoiner, warning_message
+from .utils import AnsiColour, ConfigBase, ThreadJoiner, fatal_error, status_update, warning_message
 
 
 class FileSystemUtils(object):

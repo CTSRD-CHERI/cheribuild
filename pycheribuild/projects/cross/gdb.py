@@ -29,8 +29,16 @@
 #
 import shutil
 
-from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
-                                  DefaultInstallDir, GitRepository, Linkage, MakeCommandKind)
+from .crosscompileproject import (
+    BuildType,
+    CheriConfig,
+    CompilationTargets,
+    CrossCompileAutotoolsProject,
+    DefaultInstallDir,
+    GitRepository,
+    Linkage,
+    MakeCommandKind,
+)
 from .gmp import BuildGmp
 from ..project import ComputedDefaultValue
 from ...utils import OSInfo

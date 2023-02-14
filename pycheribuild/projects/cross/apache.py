@@ -28,10 +28,15 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, DefaultInstallDir
-from .crosscompileproject import GitRepository, SubversionRepository
-from ..project import ReuseOtherProjectRepository
+from .crosscompileproject import (
+    CrossCompileAutotoolsProject,
+    CrossCompileCMakeProject,
+    DefaultInstallDir,
+    GitRepository,
+    SubversionRepository,
+)
 from .expat import BuildExpat
+from ..project import ReuseOtherProjectRepository
 
 
 class BuildPcre(CrossCompileAutotoolsProject):

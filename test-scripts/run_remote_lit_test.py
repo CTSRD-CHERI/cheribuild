@@ -41,7 +41,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from run_tests_common import boot_cheribsd, pexpect, commandline_to_str
+from run_tests_common import boot_cheribsd, commandline_to_str, pexpect
 
 KERNEL_PANIC = False
 COMPLETED = "COMPLETED"

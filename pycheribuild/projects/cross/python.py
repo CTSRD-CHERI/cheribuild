@@ -30,8 +30,13 @@
 
 import os
 
-from .crosscompileproject import (BuildType, CompilationTargets, CrossCompileAutotoolsProject,
-                                  DefaultInstallDir, GitRepository)
+from .crosscompileproject import (
+    BuildType,
+    CompilationTargets,
+    CrossCompileAutotoolsProject,
+    DefaultInstallDir,
+    GitRepository,
+)
 from ...utils import is_case_sensitive_dir
 
 

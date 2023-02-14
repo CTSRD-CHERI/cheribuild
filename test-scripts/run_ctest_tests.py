@@ -29,7 +29,7 @@
 import argparse
 from pathlib import Path
 
-from run_tests_common import boot_cheribsd, run_tests_main, get_default_junit_xml_name
+from run_tests_common import boot_cheribsd, get_default_junit_xml_name, run_tests_main
 
 
 def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
