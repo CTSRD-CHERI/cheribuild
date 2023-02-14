@@ -76,7 +76,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         return self._get_compiler_project().get_native_install_path(self.config)
 
     @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         return [cls._get_compiler_project().get_class_for_target(BasicCompilationTargets.NATIVE).target]
 
     def _rootfs_path(self) -> Path:
@@ -355,11 +355,11 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return mapping[self.target.cpu_architecture]
 
     @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         return ["freebsd"]
 
     @property
-    def pkgconfig_dirs(self) -> "typing.List[str]":
+    def pkgconfig_dirs(self) -> "list[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
         # FreeBSD uses /usr/libdata/pkgconfig for the native ABI.
         return [str(self.sysroot_dir / "usr/libdata/pkgconfig"),
@@ -575,7 +575,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         return base + purecap_suffix
 
     @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         return ["cheribsd"]  # Pick the matching sysroot (-purecap for purecap, -hybrid for hybrid etc.)
 
     @property
@@ -592,7 +592,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         return result
 
     @property
-    def pkgconfig_dirs(self) -> "typing.List[str]":
+    def pkgconfig_dirs(self) -> "list[str]":
         assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
         # For CheriBSD we install most packages to /usr/local/<arch>/, but some packages installed by pkg
         # need to be in the default search path under /usr/local or /usr/local64.
@@ -698,12 +698,12 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
         return True
 
     @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         # Otherwise pick the matching sysroot
         return ["cherios"]
 
     @property
-    def pkgconfig_dirs(self) -> "typing.List[str]":
+    def pkgconfig_dirs(self) -> "list[str]":
         return []
 
 
@@ -747,7 +747,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
         return True  # only static linking works
 
     @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         if target.is_riscv(include_purecap=True):
             return ["newlib", "compiler-rt-builtins", "rtems"]
         else:
@@ -807,10 +807,10 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
         assert False, "Other baremetal cases have not been tested yet!"
 
     @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         return ["newlib", "compiler-rt-builtins"]
 
-    def default_initial_compile_flags(self) -> typing.List[str]:
+    def default_initial_compile_flags(self) -> "list[str]":
         # Currently we need these flags to build anything against newlib baremetal
         if self.target.is_mips(include_purecap=True):
             return [
@@ -881,7 +881,7 @@ class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
         assert False, "Other baremetal cases have not been tested yet!"
 
     @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         return ["picolibc"]
 
     @property
@@ -918,11 +918,11 @@ class MorelloBaremetalTargetInfo(BaremetalClangTargetInfo):
         assert False, "Other baremetal cases have not been tested yet!"
 
     @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         return []
 
     @classmethod
-    def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs) -> typing.List[str]:
+    def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs) -> "list[str]":
         if xtarget.cpu_architecture == CPUArchitecture.ARM32 or xtarget.is_aarch64(include_purecap=True):
             return super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs)
         raise ValueError("Other baremetal cases have not been tested yet!")
@@ -930,7 +930,7 @@ class MorelloBaremetalTargetInfo(BaremetalClangTargetInfo):
 
 class ArmNoneEabiGccTargetInfo(TargetInfo):
     @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         return []  # TODO: add a target to download the tarball and extract it
 
     def get_target_triple(self, *, include_version: bool) -> str:

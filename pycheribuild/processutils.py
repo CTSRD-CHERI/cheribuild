@@ -242,7 +242,7 @@ def print_command(arg1: "Union[str, typing.Sequence[typing.Any]]", *remaining_ar
         print(coloured(colour, prefix, sep=sep), coloured(colour, new_args, sep=sep), flush=True, **kwargs)
 
 
-def get_interpreter(cmdline: "typing.Sequence[str]") -> "Optional[typing.List[str]]":
+def get_interpreter(cmdline: "typing.Sequence[str]") -> "Optional[list[str]]":
     """
     :param cmdline: The command to check
     :return: The interpreter command if the executable does not have execute permissions
@@ -269,7 +269,7 @@ def _make_called_process_error(retcode, args, *, stdout=None, stderr=None, cwd=N
     return err
 
 
-def check_call_handle_noexec(cmdline: "typing.List[str]", **kwargs):
+def check_call_handle_noexec(cmdline: "list[str]", **kwargs):
     try:
         with keep_terminal_sane(command=cmdline):
             return subprocess.check_call(cmdline, **kwargs)
@@ -285,7 +285,7 @@ def check_call_handle_noexec(cmdline: "typing.List[str]", **kwargs):
                                          stderr=str(e).encode("utf-8")) from e
 
 
-def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Popen:
+def popen_handle_noexec(cmdline: "list[str]", **kwargs) -> subprocess.Popen:
     try:
         return subprocess.Popen(cmdline, **kwargs)
     except PermissionError as e:

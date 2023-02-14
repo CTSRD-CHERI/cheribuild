@@ -352,26 +352,26 @@ class TargetInfo(ABC):
 
     @classmethod
     @abstractmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: CheriConfig) -> typing.List[str]:
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: CheriConfig) -> "list[str]":
         """returns e.g. [llvm]/[upstream-llvm], or an empty list"""
         ...
 
     @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: CheriConfig) -> typing.List[str]:
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: CheriConfig) -> "list[str]":
         """returns a list of targets that need to be built for a minimal sysroot"""
         return []
 
-    def default_initial_compile_flags(self) -> typing.List[str]:
+    def default_initial_compile_flags(self) -> "list[str]":
         """Flags that need to be passed to cc/c++/cpp in all cases"""
         return []
 
     # noinspection PyMethodMayBeStatic
-    def required_link_flags(self) -> typing.List[str]:
+    def required_link_flags(self) -> "list[str]":
         """Flags that need to be passed to cc/c++ for linking"""
         return []
 
     @property
-    def pkgconfig_dirs(self) -> "typing.List[str]":
+    def pkgconfig_dirs(self) -> "list[str]":
         return []  # whatever the default is
 
     @property
@@ -518,11 +518,11 @@ class NativeTargetInfo(TargetInfo):
         raise ValueError("Should not be called for native")
 
     @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: CheriConfig) -> typing.List[str]:
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: CheriConfig) -> "list[str]":
         raise ValueError("Should not be called for native")
 
     @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: CheriConfig) -> typing.List[str]:
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: CheriConfig) -> "list[str]":
         if config.use_sdk_clang_for_native_xbuild:
             return ["llvm-native"]
         return []  # use host tools -> no target needed
@@ -655,7 +655,7 @@ class NativeTargetInfo(TargetInfo):
         return None  # use the default value for non-CheriBSD
 
     @property
-    def pkgconfig_dirs(self) -> "typing.List[str]":
+    def pkgconfig_dirs(self) -> "list[str]":
         # We need to add the bootstrap tools pkgconfig dirs to PKG_CONFIG_PATH to find e.g. libxml2, etc.
         # Note: some packages also install to libdata/pkgconfig or share/pkgconfig
         # NB: We don't want to look in this directory when building forced hybrid targets such as GDB:

@@ -38,7 +38,6 @@ import sys
 import tempfile
 import time
 import traceback
-import typing
 from multiprocessing import Barrier, Process, Queue
 from pathlib import Path
 from queue import Empty
@@ -225,12 +224,12 @@ def wait_or_terminate_all_shards(processes, max_time, timed_out):
             boot_cheribsd.failure("ERROR: Could not kill child process ", p.name, ", pid=", p.pid, exit=False)
 
 
-def dump_processes(processes: "typing.List[LitShardProcess]"):
+def dump_processes(processes: "list[LitShardProcess]"):
     for i, p in enumerate(processes):
         boot_cheribsd.info("Subprocess ", i + 1, " ", p, " -- current stage: ", p.stage.value)
 
 
-def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[LitShardProcess]", mp_q: Queue,
+def run_parallel_impl(args: argparse.Namespace, processes: "list[LitShardProcess]", mp_q: Queue,
                       mp_barrier: Barrier,
                       ssh_port_queue: Queue):
     timed_out = False

@@ -1,6 +1,5 @@
 import copy
 import inspect
-import typing
 # noinspection PyUnresolvedReferences
 from pathlib import Path
 
@@ -31,8 +30,8 @@ from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
 
 
 # noinspection PyProtectedMember
-def _sort_targets(targets: "typing.List[str]", *, add_dependencies=False, add_toolchain=True,
-                  skip_sdk=False, build_morello_from_source=False, only_dependencies=False) -> "typing.List[str]":
+def _sort_targets(targets: "list[str]", *, add_dependencies=False, add_toolchain=True,
+                  skip_sdk=False, build_morello_from_source=False, only_dependencies=False) -> "list[str]":
     target_manager.reset()
     # print(real_targets)
     global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
