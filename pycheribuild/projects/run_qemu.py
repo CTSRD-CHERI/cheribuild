@@ -66,8 +66,8 @@ class QEMUType(Enum):
 
 
 class ChosenQEMU(object):
-    def __init__(self, cls: typing.Optional[typing.Type[BuildQEMUBase]], binary: typing.Optional[Path],
-                 can_provide_src_via_smb: typing.Optional[bool]):
+    def __init__(self, cls: Optional[typing.Type[BuildQEMUBase]], binary: Optional[Path],
+                 can_provide_src_via_smb: Optional[bool]):
         self.cls = cls
         self._binary = binary
         self._can_provide_src_via_smb = can_provide_src_via_smb
@@ -130,11 +130,11 @@ class LaunchQEMUBase(SimpleProject):
     # Add a virtio RNG to speed up random number generation
     _add_virtio_rng = True
     _enable_smbfs_support = True
-    _cached_chosen_qemu = None  # type: typing.Optional[ChosenQEMU]
+    _cached_chosen_qemu = None  # type: Optional[ChosenQEMU]
     use_qemu: QEMUType
     custom_qemu_path: Optional[Path]
-    kernel_project: typing.Optional[Project] = None
-    disk_image_project: typing.Optional[Project] = None
+    kernel_project: Optional[Project] = None
+    disk_image_project: Optional[Project] = None
     _uses_disk_image = True
 
     @classmethod
@@ -187,14 +187,14 @@ class LaunchQEMUBase(SimpleProject):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.current_kernel = None  # type: typing.Optional[Path]
-        self.disk_image = None  # type: typing.Optional[Path]
+        self.current_kernel = None  # type: Optional[Path]
+        self.disk_image = None  # type: Optional[Path]
         self.disk_image_format = "raw"
         self._project_specific_options = []
         self.bios_flags = []
         self.qemu_options = QemuOptions(self.crosscompile_target, want_debugger=self.config.wait_for_debugger)
         self.qemu_user_networking = True
-        self.rootfs_path = None  # type:typing.Optional[Path]
+        self.rootfs_path = None  # type:Optional[Path]
         self._after_disk_options = []
 
     def get_riscv_bios_args(self) -> typing.List[str]:
@@ -582,8 +582,8 @@ class LaunchQEMUBase(SimpleProject):
 
 class AbstractLaunchFreeBSD(LaunchQEMUBase):
     do_not_add_to_targets = True
-    kernel_project: typing.Optional[BuildFreeBSD]
-    disk_image_project: typing.Optional[BuildDiskImageBase]
+    kernel_project: Optional[BuildFreeBSD]
+    disk_image_project: Optional[BuildDiskImageBase]
 
     kernel_config: Optional[str]
 
@@ -673,8 +673,8 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
 class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     do_not_add_to_targets = True
     include_os_in_target_suffix = False
-    _freebsd_class: typing.Optional[BuildFreeBSD] = None
-    _disk_image_class: typing.Optional[BuildDiskImageBase] = None
+    _freebsd_class: Optional[BuildFreeBSD] = None
+    _disk_image_class: Optional[BuildDiskImageBase] = None
     kyua_test_files = ("/usr/tests/Kyuafile",)
 
     @classproperty

@@ -221,7 +221,7 @@ class TargetInfo(ABC):
         ...
 
     @property
-    def toolchain_system_version(self) -> "typing.Optional[str]":
+    def toolchain_system_version(self) -> "Optional[str]":
         return None
 
     def cmake_prefix_paths(self, config: "CheriConfig") -> "list[Path]":
@@ -375,7 +375,7 @@ class TargetInfo(ABC):
         return []  # whatever the default is
 
     @property
-    def pkg_config_libdir_override(self) -> "typing.Optional[str]":
+    def pkg_config_libdir_override(self) -> "Optional[str]":
         raise ValueError("Should only be called for native")
 
     @property
@@ -643,7 +643,7 @@ class NativeTargetInfo(TargetInfo):
         raise NotImplementedError("Should only be called for FreeBSD targets")
 
     @cached_property
-    def pkg_config_libdir_override(self) -> "typing.Optional[str]":
+    def pkg_config_libdir_override(self) -> "Optional[str]":
         if OSInfo.is_cheribsd():
             # When building natively on CheriBSD with pkg-config installed using pkg64, the default pkg-config
             # search path will use the non-CHERI libraries in /usr/local64. We could avoid this override in cases
@@ -766,7 +766,7 @@ class CrossCompileTarget(object):
                 getattr(other_target, attr)._set_from(self)
 
     # Set the related targets:
-    def _set_for(self, other_target: "typing.Optional[CrossCompileTarget]", also_set_other=True) -> None:
+    def _set_for(self, other_target: "Optional[CrossCompileTarget]", also_set_other=True) -> None:
         if other_target is not None and self is not other_target:
             if self._is_cheri_hybrid:
                 if self._rootfs_target is not None:
@@ -852,7 +852,7 @@ class CrossCompileTarget(object):
         assert self.target_info_cls is not None
         return self.target_info_cls.is_native()
 
-    def _check_arch(self, arch: CPUArchitecture, include_purecap: "typing.Optional[bool]") -> bool:
+    def _check_arch(self, arch: CPUArchitecture, include_purecap: "Optional[bool]") -> bool:
         if self.cpu_architecture is not arch:
             return False
         if include_purecap is None:

@@ -174,7 +174,7 @@ class MtreeFile(object):
             return "0600"
         return result
 
-    def add_file(self, file: "typing.Optional[Path]", path_in_image, mode=None, uname="root", gname="wheel",
+    def add_file(self, file: "Optional[Path]", path_in_image, mode=None, uname="root", gname="wheel",
                  print_status=True, parent_dir_mode=None, symlink_dest: "Optional[str]" = None):
         if isinstance(path_in_image, Path):
             path_in_image = str(path_in_image)

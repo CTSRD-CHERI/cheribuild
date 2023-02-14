@@ -32,6 +32,7 @@ import sys
 import time
 import typing
 from collections import OrderedDict
+from typing import Optional
 
 from .config.chericonfig import CheriConfig
 from .config.target_info import CrossCompileTarget, AbstractProject
@@ -49,7 +50,7 @@ class Target(object):
     def __init__(self, name, _project_class: "typing.Type[SimpleProject]"):
         self.name = name
         self._project_class = _project_class
-        self.__project: typing.Optional[SimpleProject] = None
+        self.__project: Optional[SimpleProject] = None
         self._completed = False
         self._tests_have_run = False
         self._benchmarks_have_run = False
@@ -69,12 +70,12 @@ class Target(object):
         assert result._xtarget is not None
         return result._xtarget
 
-    def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config,
+    def get_real_target(self, cross_target: Optional[CrossCompileTarget], config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> "Target":
         return self
 
-    def _get_or_create_project_no_setup(self, _: typing.Optional[CrossCompileTarget], config,
-                                        caller: "typing.Optional[AbstractProject]") -> "SimpleProject":
+    def _get_or_create_project_no_setup(self, _: Optional[CrossCompileTarget], config,
+                                        caller: "Optional[AbstractProject]") -> "SimpleProject":
         # Note: MultiArchTarget uses cross_target to select the right project (e.g. libcxxrt-native needs
         # libunwind-native path)
         if self.__project is None:
@@ -85,8 +86,8 @@ class Target(object):
 
     # noinspection PyProtectedMember
     @final
-    def get_or_create_project(self, cross_target: typing.Optional[CrossCompileTarget], config,
-                              caller: "typing.Optional[SimpleProject]") -> "SimpleProject":
+    def get_or_create_project(self, cross_target: Optional[CrossCompileTarget], config,
+                              caller: "Optional[SimpleProject]") -> "SimpleProject":
         if caller is not None:
             # noinspection PyProtectedMember
             assert caller._init_called, "Cannot call this inside __init__()"
@@ -254,12 +255,12 @@ class _TargetAliasBase(Target):
     def _create_project(self, config: CheriConfig) -> "SimpleProject":
         raise ValueError("Should not be called!")
 
-    def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config,
+    def get_real_target(self, cross_target: Optional[CrossCompileTarget], config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
         raise NotImplementedError()
 
-    def _get_or_create_project_no_setup(self, cross_target: typing.Optional[CrossCompileTarget], config,
-                                        caller: "typing.Optional[AbstractProject]") -> "SimpleProject":
+    def _get_or_create_project_no_setup(self, cross_target: Optional[CrossCompileTarget], config,
+                                        caller: "Optional[AbstractProject]") -> "SimpleProject":
         if caller is not None:
             # noinspection PyProtectedMember
             assert caller._init_called, "Cannot call this inside __init__()"
@@ -300,7 +301,7 @@ class MultiArchTargetAlias(_TargetAliasBase):
             raise ValueError("ERROR:", self.name, "does not have a default_architecture value!")
         return cross_target
 
-    def get_real_target(self, cross_target: "typing.Optional[CrossCompileTarget]", config,
+    def get_real_target(self, cross_target: "Optional[CrossCompileTarget]", config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
         assert self.derived_targets, "derived targets must not be empty"
         if cross_target is None:
@@ -337,7 +338,7 @@ class SimpleTargetAlias(_TargetAliasBase):
     def xtarget(self):
         return self._real_target.xtarget
 
-    def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config,
+    def get_real_target(self, cross_target: Optional[CrossCompileTarget], config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
         return self._real_target
 
@@ -346,7 +347,7 @@ class SimpleTargetAlias(_TargetAliasBase):
 
 
 class DeprecatedTargetAlias(SimpleTargetAlias):
-    def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config: "CheriConfig",
+    def get_real_target(self, cross_target: Optional[CrossCompileTarget], config: "CheriConfig",
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
         warning_message("Using deprecated target ", coloured(AnsiColour.red, self.name),
                         coloured(AnsiColour.magenta, ". Please use "),
@@ -391,7 +392,7 @@ class TargetManager(object):
             tgt.project_class.setup_config_options()
 
     @staticmethod
-    def target_disabled_reason(target: Target, config: CheriConfig) -> typing.Optional[str]:
+    def target_disabled_reason(target: Target, config: CheriConfig) -> Optional[str]:
         if not config.enable_hybrid_targets:
             xtarget = target.xtarget
             # NB: We allow hybrid for baremetal targets (for now...)
@@ -401,27 +402,27 @@ class TargetManager(object):
                        "doing. If you are still sure you want to build this, use --enable-hybrid-targets."
         return None
 
-    def enabled_target_items(self, config: typing.Optional[CheriConfig]):
+    def enabled_target_items(self, config: Optional[CheriConfig]):
         items = self._all_targets.items()
         if config is not None:
             items = filter(lambda item: not self.target_disabled_reason(item[1], config), items)
         return items
 
-    def target_names(self, config: typing.Optional[CheriConfig]):
+    def target_names(self, config: Optional[CheriConfig]):
         for name, value in self.enabled_target_items(config):
             yield name
 
-    def non_alias_target_names(self, config: typing.Optional[CheriConfig]) -> "typing.Iterator[str]":
+    def non_alias_target_names(self, config: Optional[CheriConfig]) -> "typing.Iterator[str]":
         for name, value in self.enabled_target_items(config):
             if not isinstance(value, _TargetAliasBase):
                 yield name
 
-    def non_deprecated_target_names(self, config: typing.Optional[CheriConfig]) -> "typing.Iterator[str]":
+    def non_deprecated_target_names(self, config: Optional[CheriConfig]) -> "typing.Iterator[str]":
         for name, value in self.enabled_target_items(config):
             if not isinstance(value, DeprecatedTargetAlias):
                 yield name
 
-    def targets(self, config: typing.Optional[CheriConfig]) -> "typing.Iterator[Target]":
+    def targets(self, config: Optional[CheriConfig]) -> "typing.Iterator[Target]":
         for name, value in self.enabled_target_items(config):
             yield value
 
@@ -432,7 +433,7 @@ class TargetManager(object):
         except KeyError:
             return self._targets_for_command_line_options_only[name]
 
-    def get_target(self, name: str, arch: typing.Optional[CrossCompileTarget], config: CheriConfig,
+    def get_target(self, name: str, arch: Optional[CrossCompileTarget], config: CheriConfig,
                    caller: "typing.Union[AbstractProject, str]") -> Target:
         target = self.get_target_raw(name)
         # print("get_target", name, arch, end="")

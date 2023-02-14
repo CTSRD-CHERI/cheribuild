@@ -80,7 +80,7 @@ def set_env(*, print_verbose_only=True, config: ConfigBase, **environ):
     False
 
     """
-    changed_values: dict[str, typing.Optional[str]] = dict()
+    changed_values: dict[str, Optional[str]] = dict()
     if environ:
         should_print_update = not print_verbose_only or config.verbose
         for k, v in environ.items():
@@ -242,7 +242,7 @@ def print_command(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remai
         print(coloured(colour, prefix, sep=sep), coloured(colour, new_args, sep=sep), flush=True, **kwargs)
 
 
-def get_interpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.List[str]]":
+def get_interpreter(cmdline: "typing.Sequence[str]") -> "Optional[typing.List[str]]":
     """
     :param cmdline: The command to check
     :return: The interpreter command if the executable does not have execute permissions
@@ -340,7 +340,7 @@ class FakePopen:
         pass
 
     @staticmethod
-    def poll() -> typing.Optional[int]:
+    def poll() -> Optional[int]:
         return None
 
     def __enter__(self) -> "FakePopen":
@@ -481,7 +481,7 @@ class CompilerInfo(object):
         self.version_str = version_str
         self.default_target = default_target
         self.config = config
-        self._resource_dir: "typing.Optional[Path]" = None
+        self._resource_dir: "Optional[Path]" = None
         self._supported_warning_flags: "dict[str, bool]" = {}
         self._supported_sanitizer_flags: "dict[tuple[str, tuple[str]], bool]" = {}
         self._include_dirs: "dict[tuple[str], list[Path]]" = {}
@@ -591,7 +591,7 @@ class CompilerInfo(object):
         result.append("--ld-path=" + str(linker))
         return result
 
-    def get_matching_binutil(self, binutil) -> typing.Optional[Path]:
+    def get_matching_binutil(self, binutil) -> Optional[Path]:
         assert self.is_clang
         name = self.path.name
         version_suffix = ""
@@ -766,7 +766,7 @@ def ssh_host_accessible(host: str) -> bool:
 
 
 def latest_system_clang_tool(config: ConfigBase, basename: str,
-                             fallback_basename: "typing.Optional[str]") -> typing.Optional[Path]:
+                             fallback_basename: "Optional[str]") -> Optional[Path]:
     if "_ARGCOMPLETE" in os.environ:  # Avoid expensive lookup when tab-completing
         return None if fallback_basename is None else Path(fallback_basename)
 

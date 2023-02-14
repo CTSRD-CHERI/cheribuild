@@ -179,7 +179,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
 
 
 @functools.lru_cache(maxsize=20)
-def _cached_get_homebrew_prefix(package: "typing.Optional[str]", config: CheriConfig):
+def _cached_get_homebrew_prefix(package: "Optional[str]", config: CheriConfig):
     assert OSInfo.IS_MAC, "Should only be called on macos"
     command = ["brew", "--prefix"]
     if package:
@@ -366,7 +366,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         is filtered based on various parameters such as config.include_dependencies.
         """
         # look only in __dict__ to avoid parent class lookup
-        result: "typing.Optional[list[Target]]" = cls.__dict__.get("_cached_filtered_deps", None)
+        result: "Optional[list[Target]]" = cls.__dict__.get("_cached_filtered_deps", None)
         if result is None:
             with_toolchain_deps = config.include_toolchain_dependencies and not cls.skip_toolchain_dependencies
             with_sdk_deps = not config.skip_sdk
@@ -439,7 +439,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     @classmethod
     def get_instance(cls: typing.Type[T], caller: "Optional[AbstractProject]", config: "Optional[CheriConfig]" = None,
-                     cross_target: typing.Optional[CrossCompileTarget] = None) -> T:
+                     cross_target: Optional[CrossCompileTarget] = None) -> T:
         # TODO: assert that target manager has been initialized
         if caller is not None:
             if config is None:
@@ -454,7 +454,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     @classmethod
     def _get_instance_no_setup(cls: typing.Type[T], caller: AbstractProject,
-                               cross_target: typing.Optional[CrossCompileTarget] = None) -> T:
+                               cross_target: Optional[CrossCompileTarget] = None) -> T:
         if cross_target is None:
             cross_target = caller.crosscompile_target
         target = target_manager.get_target(cls.target, cross_target, caller.config, caller=caller)
@@ -482,7 +482,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return result
 
     @classproperty
-    def default_architecture(self) -> "typing.Optional[CrossCompileTarget]":
+    def default_architecture(self) -> "Optional[CrossCompileTarget]":
         return self._default_architecture
 
     def get_host_triple(self) -> str:
@@ -546,7 +546,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def compiling_for_aarch64(self, include_purecap: bool) -> bool:
         return self.crosscompile_target.is_aarch64(include_purecap=include_purecap)
 
-    def build_configuration_suffix(self, target: typing.Optional[CrossCompileTarget] = None) -> str:
+    def build_configuration_suffix(self, target: Optional[CrossCompileTarget] = None) -> str:
         """
         :param target: the target to use
         :return: a string such as -128/-native-asan that identifies the build configuration
@@ -786,7 +786,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         assert not self._setup_late_called, "Should only be called once"
         self._setup_late_called = True
 
-    def _validate_cheribuild_target_for_system_deps(self, cheribuild_target: "typing.Optional[str]"):
+    def _validate_cheribuild_target_for_system_deps(self, cheribuild_target: "Optional[str]"):
         if not cheribuild_target:
             return
         # Check that the target actually exists
@@ -931,7 +931,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         """
         print_command(args, cwd=cwd, env=env)
         # make sure that env is either None or a os.environ with the updated entries entries
-        new_env: "typing.Optional[dict[str, str]]" = None
+        new_env: "Optional[dict[str, str]]" = None
         if env:
             new_env = os.environ.copy()
             env = {k: str(v) for k, v in env.items()}  # make sure everything is a string
@@ -978,7 +978,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                                            stdin=stdin, env=new_env)
                 self.__run_process_with_filtered_output(make, logfile, stdout_filter, args)
 
-    def __run_process_with_filtered_output(self, proc: subprocess.Popen, logfile: "typing.Optional[typing.IO]",
+    def __run_process_with_filtered_output(self, proc: subprocess.Popen, logfile: "Optional[typing.IO]",
                                            stdout_filter: "typing.Callable[[bytes], None]",
                                            args: "typing.List[str]"):
         logfile_lock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
@@ -1130,7 +1130,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         """
         self._system_deps_checked = True
 
-    def get_homebrew_prefix(self, package: "typing.Optional[str]" = None) -> Path:
+    def get_homebrew_prefix(self, package: "Optional[str]" = None) -> Path:
         prefix = _cached_get_homebrew_prefix(package, self.config)
         if not prefix:
             prefix = Path("/fake/homebrew/prefix/when/pretending")

@@ -192,16 +192,16 @@ class BuildDiskImageBase(SimpleProject):
         super().__init__(*args, **kwargs)
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
-        self.manifest_file = None  # type: typing.Optional[Path]
+        self.manifest_file = None  # type: Optional[Path]
         self.extra_files = []  # type: typing.List[Path]
         self.auto_prefixes = ["usr/local/", "opt/", "extra/", "bin/bash"]
-        self.makefs_cmd = None  # type: typing.Optional[Path]
-        self.mkimg_cmd = None  # type: typing.Optional[Path]
+        self.makefs_cmd = None  # type: Optional[Path]
+        self.mkimg_cmd = None  # type: Optional[Path]
         self.minimum_image_size = "1g"  # minimum image size = 1GB
         self.mtree = MtreeFile(verbose=self.config.verbose)
         self.input_metalogs = []
         # used during process to generated files
-        self.tmpdir = None  # type: typing.Optional[Path]
+        self.tmpdir = None  # type: Optional[Path]
         self.file_templates = _AdditionalFileTemplates()
         self.hostname = os.path.expandvars(self.hostname)  # Expand env vars in hostname to allow $CHERI_BITS
         # MIPS needs big-endian disk images
@@ -758,7 +758,7 @@ class BuildDiskImageBase(SimpleProject):
         self.__process()
 
     @staticmethod
-    def path_from_env(var, default=None) -> typing.Optional[Path]:
+    def path_from_env(var, default=None) -> Optional[Path]:
         s = os.getenv(var)
         if s:
             return Path(s)

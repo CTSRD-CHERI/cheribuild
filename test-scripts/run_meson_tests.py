@@ -31,6 +31,7 @@ import datetime
 import json
 import typing
 from pathlib import Path
+from typing import Optional
 
 from run_tests_common import (boot_cheribsd, commandline_to_str, finish_and_write_junit_xml_report,
                               get_default_junit_xml_name, junitparser, run_tests_main)
@@ -88,9 +89,9 @@ def add_args(parser: argparse.ArgumentParser):
 class MesonTestInfo(typing.NamedTuple):
     name: str
     command: typing.List[str]
-    cwd: typing.Optional[str]
+    cwd: Optional[str]
     env_vars: typing.Dict[str, str]
-    timeout: typing.Optional[int]
+    timeout: Optional[int]
 
 
 def adjust_args(args: argparse.Namespace):

@@ -37,7 +37,6 @@ import subprocess
 import sys
 import threading
 import time
-import typing
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -96,7 +95,7 @@ def mp_debug(cmdline_args: argparse.Namespace, *args, **kwargs):
 
 
 def notify_main_process(cmdline_args: argparse.Namespace, stage: MultiprocessStages, mp_q: multiprocessing.Queue,
-                        barrier: "typing.Optional[multiprocessing.Barrier]" = None):
+                        barrier: "Optional[multiprocessing.Barrier]" = None):
     if mp_q:
         global CURRENT_STAGE
         mp_debug(cmdline_args, "Next stage: ", CURRENT_STAGE, "->", stage)
@@ -257,7 +256,7 @@ Host cheribsd-test-instance
         lit_cmd.append("--debug")
     # This does not work since it doesn't handle running ssh commands....
     lit_cmd.append("--timeout=120")  # 2 minutes max per test (in case there is an infinite loop)
-    xunit_file: "typing.Optional[Path]" = None
+    xunit_file: "Optional[Path]" = None
     if args.xunit_output:
         lit_cmd.append("--xunit-xml-output")
         xunit_file = Path(args.xunit_output).absolute()

@@ -30,7 +30,6 @@
 import functools
 import shutil
 import subprocess
-import typing
 from pathlib import Path
 from typing import Optional
 
@@ -149,7 +148,7 @@ class QemuOptions:
         network_device_kind = self._qemu_network_config()[0]
         return ["-device", network_device_kind + ",netdev=net0", "-netdev", "user,id=net0" + extra_options]
 
-    def get_qemu_binary(self) -> "typing.Optional[Path]":
+    def get_qemu_binary(self) -> "Optional[Path]":
         found_in_path = shutil.which("qemu-system-" + self.qemu_arch_sufffix)
         return Path(found_in_path) if found_in_path is not None else None
 

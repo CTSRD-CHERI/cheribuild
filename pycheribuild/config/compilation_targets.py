@@ -35,6 +35,7 @@ import sys
 import typing
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
+from typing import Optional
 
 from .chericonfig import CheriConfig
 from .config_loader_base import ConfigOptionBase, ConfigLoaderBase
@@ -54,7 +55,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
 
     def __init__(self, target, project) -> None:
         super().__init__(target, project)
-        self._sdk_root_dir: typing.Optional[Path] = None
+        self._sdk_root_dir: Optional[Path] = None
 
     @property
     def _compiler_dir(self) -> Path:
@@ -609,7 +610,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         from ..projects.cross.cheribsd import BuildCHERIBSD
         return BuildCHERIBSD.get_class_for_target(xtarget)
 
-    def cheribsd_version(self) -> "typing.Optional[int]":
+    def cheribsd_version(self) -> "Optional[int]":
         pattern = re.compile(r"#define\s+__CheriBSD_version\s+([0-9]+)")
         try:
             with open(self.sysroot_dir / "usr/include/sys/param.h") as f:
