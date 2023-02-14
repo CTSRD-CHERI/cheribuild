@@ -53,7 +53,7 @@ class BuildQEMUBase(AutotoolsProject):
     default_build_type = BuildType.RELEASE
     lto_by_default = True
     use_smbd: bool
-    smbd_path: typing.Optional[Path]
+    smbd_path: Optional[Path]
     qemu_targets: "str"
 
     @classmethod

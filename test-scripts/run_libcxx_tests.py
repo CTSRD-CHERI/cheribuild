@@ -115,7 +115,7 @@ def libcxx_main(barrier: "Optional[Barrier]" = None, mp_queue: "Optional[Queue]"
 
 
 class LitShardProcess(Process):
-    stage: typing.Optional[run_remote_lit_test.MultiprocessStages] = None
+    stage: Optional[run_remote_lit_test.MultiprocessStages] = None
     ssh_port = -1
     error_message = ""
 

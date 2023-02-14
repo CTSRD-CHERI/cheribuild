@@ -292,8 +292,8 @@ class QemuCheriBSDInstance(CheriBSDInstance):
     smb_dirs: "list[SmbMount]" = None
     flush_interval = None
 
-    def __init__(self, qemu_config: QemuOptions, *args, ssh_port: typing.Optional[int],
-                 ssh_pubkey: typing.Optional[Path], **kwargs):
+    def __init__(self, qemu_config: QemuOptions, *args, ssh_port: Optional[int],
+                 ssh_pubkey: Optional[Path], **kwargs):
         super().__init__(qemu_config.xtarget, *args, **kwargs)
         self.qemu_config = qemu_config
         self.should_quit = False
@@ -744,9 +744,9 @@ def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
     qemu.expect_prompt(timeout=30)
 
 
-def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path], kernel_image: Path,
-                  disk_image: typing.Optional[Path], ssh_port: typing.Optional[int],
-                  ssh_pubkey: typing.Optional[Path], *, write_disk_image_changes: bool,
+def boot_cheribsd(qemu_options: QemuOptions, qemu_command: Optional[Path], kernel_image: Path,
+                  disk_image: Optional[Path], ssh_port: Optional[int],
+                  ssh_pubkey: Optional[Path], *, write_disk_image_changes: bool,
                   smp_args: "list[str]", smb_dirs: "Optional[list[SmbMount]]" = None, kernel_init_only=False,
                   trap_on_unrepresentable=False, skip_ssh_setup=False, bios_path: "Optional[Path]" = None,
                   boot_alternate_kernel_dir: "Optional[Path]" = None) -> QemuCheriBSDInstance:
@@ -817,7 +817,7 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
 
 
 def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=False,
-                   network_iface: typing.Optional[str],
+                   network_iface: Optional[str],
                    boot_alternate_kernel_dir: "Optional[Path]" = None) -> None:
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it

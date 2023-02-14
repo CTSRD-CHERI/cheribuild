@@ -32,6 +32,7 @@ import shutil
 import tempfile
 import typing
 from pathlib import Path
+from typing import Optional
 
 from .benchmark_mixin import BenchmarkMixin
 from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, CrossCompileProject,
@@ -284,7 +285,7 @@ class BuildOlden(BenchmarkMixin, CrossCompileProject):
 class BuildSpec2006New(BuildLLVMTestSuiteBase):
     repository = ReuseOtherProjectRepository(source_project=BuildLLVMTestSuite, do_update=True)
     target = "spec2006"
-    spec_iso_path: "typing.ClassVar[typing.Optional[Path]]"
+    spec_iso_path: "typing.ClassVar[Optional[Path]]"
     _config_file_aliases = ("spec2006-new",)
 
     @classmethod

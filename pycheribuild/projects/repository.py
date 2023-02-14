@@ -85,7 +85,7 @@ class ReuseOtherProjectRepository(SourceRepository):
                                              "cheribuild.py " + self.source_project.target +
                                              "--no-skip-update --skip-configure --skip-build --skip-install`")
 
-    def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: typing.Optional[Path]) -> Path:
+    def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Optional[Path]) -> Path:
         if base_project_source_dir is not None:
             return base_project_source_dir
         return self.source_project.get_source_dir(caller, cross_target=self.repo_for_target) / self.subdirectory
@@ -119,8 +119,8 @@ _PRETEND_RUN_GIT_COMMANDS = os.getenv("_TEST_SKIP_GIT_COMMANDS") is None
 # TODO: can use dataclasses once we depend on python 3.7+
 class GitBranchInfo(typing.NamedTuple):
     local_branch: str
-    upstream_branch: typing.Optional[str] = None
-    remote_name: typing.Optional[str] = None
+    upstream_branch: Optional[str] = None
+    remote_name: Optional[str] = None
 
 
 class GitRepository(SourceRepository):
@@ -154,7 +154,7 @@ class GitRepository(SourceRepository):
         return self._default_branch
 
     @staticmethod
-    def get_branch_info(src_dir: Path) -> "typing.Optional[GitBranchInfo]":
+    def get_branch_info(src_dir: Path) -> "Optional[GitBranchInfo]":
         try:
             status = run_command("git", "status", "-b", "-s", "--porcelain=v2", "-u", "no",
                                  capture_output=True, print_verbose_only=True, cwd=src_dir,
@@ -476,7 +476,7 @@ class MercurialRepository(SourceRepository):
         self.force_branch = force_branch
 
     @staticmethod
-    def run_hg(src_dir: "typing.Optional[Path]", *args, project: "Project", **kwargs):
+    def run_hg(src_dir: "Optional[Path]", *args, project: "Project", **kwargs):
         assert src_dir is None or isinstance(src_dir, Path)
         command = ["hg"]
         project.check_required_system_tool("hg", default="mercurial")
