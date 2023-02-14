@@ -457,7 +457,7 @@ class OSInfo(object):
                     def command_not_found():
                         hint = subprocess.getoutput(shutil.which("command-not-found") + " " + name)
                         print(hint)
-                        if hint and not name + ": command not found" in hint:
+                        if hint and name + ": command not found" not in hint:
                             msg_start = hint.find("The program")
                             if msg_start:
                                 hint = hint[msg_start:]
