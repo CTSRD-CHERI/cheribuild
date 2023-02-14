@@ -38,11 +38,32 @@ jobs:
                     # Use the system-provided python3 instead of actions/setup-python@v4
                     python3 --version
                     python3 -m pip install --upgrade pip
-                    python3 -m pip install --upgrade flake8 pytest
+                    python3 -m pip install --upgrade flake8 pytest ruff
                     if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
             -   name: Lint with flake8
-                # stop the build if there are any flake8 warnings
                 run: flake8
+            -   name: Lint with ruff
+                run: ruff check .
+            -   name: Run basic regression tests
+                run: tests/run_basic_tests.sh
+    build-latest:
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: actions/checkout@v2
+            -   name: Set up Python 3.11
+                uses: actions/setup-python@v4
+                with:
+                    python-version: '3.11'
+                    cache: 'pip'
+            -   name: Install dependencies
+                run: |
+                    python -m pip install --upgrade pip
+                    pip install --upgrade flake8 ruff
+                    if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+            -   name: Lint with flake8
+                run: flake8
+            -   name: Lint with ruff
+                run: ruff check .
             -   name: Run basic regression tests
                 run: tests/run_basic_tests.sh
     typecheck:
@@ -57,7 +78,6 @@ jobs:
                     cache: 'pip'
             -   name: Install dependencies
                 run: |
-                    id
                     python -m pip install --upgrade pip
                     pip install --upgrade pytype
                     if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
