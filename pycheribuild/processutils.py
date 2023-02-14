@@ -47,7 +47,7 @@ import termios
 import typing
 from pathlib import Path
 from subprocess import CompletedProcess
-from typing import Optional
+from typing import Optional, Union
 
 from .colour import AnsiColour, coloured
 from .utils import (ConfigBase, fatal_error, get_global_config, OSInfo, status_update, Type_T, warning_message)
@@ -212,7 +212,7 @@ def keep_terminal_sane(gave_tty_control=False, command: list = None):
             stderr_state.restore()
 
 
-def print_command(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remaining_args, output_file=None,
+def print_command(arg1: "Union[str, typing.Sequence[typing.Any]]", *remaining_args, output_file=None,
                   colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", print_verbose_only=False,
                   config: ConfigBase = None, **kwargs):
     if config is None:
@@ -363,7 +363,7 @@ def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, confi
 
 
 # noinspection PyShadowingBuiltins
-def run_command(*args, capture_output=False, capture_error=False, input: "typing.Union[str, bytes]" = None,
+def run_command(*args, capture_output=False, capture_error=False, input: "Union[str, bytes]" = None,
                 timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
                 no_print=False, replace_env=False, give_tty_control=False, expected_exit_code=0,
                 allow_unexpected_returncode=False, config: ConfigBase = None, **kwargs) -> "CompletedProcess[bytes]":
@@ -468,7 +468,7 @@ def _quote(s) -> str:
     return str(s) if isinstance(s, DoNotQuoteStr) else shlex.quote(str(s))
 
 
-def commandline_to_str(args: "typing.Iterable[typing.Union[str,Path]]") -> str:
+def commandline_to_str(args: "typing.Iterable[Union[str,Path]]") -> str:
     return " ".join((_quote(s) for s in args))
 
 
@@ -630,7 +630,7 @@ class CompilerInfo(object):
 _cached_compiler_infos: "dict[Path, CompilerInfo]" = {}
 
 
-def get_compiler_info(compiler: "typing.Union[str, Path]", *, config: ConfigBase) -> CompilerInfo:
+def get_compiler_info(compiler: "Union[str, Path]", *, config: ConfigBase) -> CompilerInfo:
     assert compiler is not None
     compiler = Path(compiler)
     if not compiler.is_absolute():

@@ -32,7 +32,7 @@ import sys
 import time
 import typing
 from collections import OrderedDict
-from typing import Optional
+from typing import Optional, Union
 
 from .config.chericonfig import CheriConfig
 from .config.target_info import CrossCompileTarget, AbstractProject
@@ -71,7 +71,7 @@ class Target(object):
         return result._xtarget
 
     def get_real_target(self, cross_target: Optional[CrossCompileTarget], config,
-                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> "Target":
+                        caller: "Union[SimpleProject, str]" = "<unknown>") -> "Target":
         return self
 
     def _get_or_create_project_no_setup(self, _: Optional[CrossCompileTarget], config,
@@ -256,7 +256,7 @@ class _TargetAliasBase(Target):
         raise ValueError("Should not be called!")
 
     def get_real_target(self, cross_target: Optional[CrossCompileTarget], config,
-                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
+                        caller: "Union[SimpleProject, str]" = "<unknown>") -> Target:
         raise NotImplementedError()
 
     def _get_or_create_project_no_setup(self, cross_target: Optional[CrossCompileTarget], config,
@@ -302,7 +302,7 @@ class MultiArchTargetAlias(_TargetAliasBase):
         return cross_target
 
     def get_real_target(self, cross_target: "Optional[CrossCompileTarget]", config,
-                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
+                        caller: "Union[SimpleProject, str]" = "<unknown>") -> Target:
         assert self.derived_targets, "derived targets must not be empty"
         if cross_target is None:
             # Use the default target:
@@ -339,7 +339,7 @@ class SimpleTargetAlias(_TargetAliasBase):
         return self._real_target.xtarget
 
     def get_real_target(self, cross_target: Optional[CrossCompileTarget], config,
-                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
+                        caller: "Union[SimpleProject, str]" = "<unknown>") -> Target:
         return self._real_target
 
     def __repr__(self) -> str:
@@ -348,7 +348,7 @@ class SimpleTargetAlias(_TargetAliasBase):
 
 class DeprecatedTargetAlias(SimpleTargetAlias):
     def get_real_target(self, cross_target: Optional[CrossCompileTarget], config: "CheriConfig",
-                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
+                        caller: "Union[SimpleProject, str]" = "<unknown>") -> Target:
         warning_message("Using deprecated target ", coloured(AnsiColour.red, self.name),
                         coloured(AnsiColour.magenta, ". Please use "),
                         coloured(AnsiColour.yellow, self.real_target_name),
@@ -434,7 +434,7 @@ class TargetManager(object):
             return self._targets_for_command_line_options_only[name]
 
     def get_target(self, name: str, arch: Optional[CrossCompileTarget], config: CheriConfig,
-                   caller: "typing.Union[AbstractProject, str]") -> Target:
+                   caller: "Union[AbstractProject, str]") -> Target:
         target = self.get_target_raw(name)
         # print("get_target", name, arch, end="")
         if isinstance(target, MultiArchTargetAlias):

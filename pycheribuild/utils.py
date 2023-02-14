@@ -40,7 +40,7 @@ import traceback
 import typing
 from pathlib import Path
 from threading import RLock
-from typing import Optional
+from typing import Optional, Union
 
 from .colour import AnsiColour, coloured
 
@@ -349,7 +349,7 @@ def is_case_sensitive_dir(d: Path) -> bool:
 
 
 class InstallInstructions:
-    def __init__(self, message: "typing.Union[str, typing.Callable[[], str]]",
+    def __init__(self, message: "Union[str, typing.Callable[[], str]]",
                  cheribuild_target: "Optional[str]" = None, alternative: "Optional[str]" = None):
         self._message = message
         self.cheribuild_target = cheribuild_target

@@ -633,7 +633,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return set_env(print_verbose_only=print_verbose_only, config=self.config, **environ)
 
     @staticmethod
-    def commandline_to_str(args: "typing.Iterable[typing.Union[str,Path]]") -> str:
+    def commandline_to_str(args: "typing.Iterable[Union[str,Path]]") -> str:
         return commandline_to_str(args)
 
     @classmethod
