@@ -252,9 +252,9 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     _always_add_suffixed_targets: bool = False  # add a suffixed target only if more than one variant is supported
 
     # List of system tools/headers/pkg-config files that have been checked so far (to avoid duplicate work)
-    __checked_system_tools = {}  # type: typing.Dict[str, InstallInstructions]
-    __checked_system_headers = {}  # type: typing.Dict[str, InstallInstructions]
-    __checked_pkg_config = {}  # type: typing.Dict[str, InstallInstructions]
+    __checked_system_tools: "dict[str, InstallInstructions]" = {}
+    __checked_system_headers: "dict[str, InstallInstructions]" = {}
+    __checked_pkg_config: "dict[str, InstallInstructions]" = {}
 
     custom_target_name: "Optional[typing.Callable[[str, CrossCompileTarget], str]]" = None
 

@@ -90,7 +90,7 @@ class MesonTestInfo(typing.NamedTuple):
     name: str
     command: "list[str]"
     cwd: Optional[str]
-    env_vars: typing.Dict[str, str]
+    env_vars: "dict[str, str]"
     timeout: Optional[int]
 
 

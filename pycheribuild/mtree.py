@@ -43,7 +43,7 @@ from .utils import status_update, warning_message
 
 
 class MtreeEntry(object):
-    def __init__(self, path: str, attributes: "typing.Dict[str, str]"):
+    def __init__(self, path: str, attributes: "dict[str, str]"):
         self.path = path
         self.attributes = attributes
 
