@@ -703,7 +703,7 @@ class CrossCompileTarget(object):
     # Currently the same for all targets
     DEFAULT_SUBOBJECT_BOUNDS: str = "conservative"
 
-    def __init__(self, arch_suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[TargetInfo]",
+    def __init__(self, arch_suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "type[TargetInfo]",
                  *, is_cheri_purecap=False, is_cheri_hybrid=False, extra_target_suffix: str = "",
                  check_conflict_with: "CrossCompileTarget" = None, rootfs_target: "CrossCompileTarget" = None,
                  non_cheri_target: "CrossCompileTarget" = None, hybrid_target: "CrossCompileTarget" = None,

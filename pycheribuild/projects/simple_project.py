@@ -351,7 +351,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                 continue
             yield dep_target
 
-    def is_exact_instance(self, class_type: "typing.Type[typing.Any]") -> bool:
+    def is_exact_instance(self, class_type: "type[typing.Any]") -> bool:
         if self.__class__ == class_type or getattr(self, "synthetic_base", object) == class_type:
             self.verbose_print(self, "is exact instance of", class_type)
             return True
@@ -438,7 +438,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                                                                  include_sdk_dependencies=True)
 
     @classmethod
-    def get_instance(cls: typing.Type[T], caller: "Optional[AbstractProject]", config: "Optional[CheriConfig]" = None,
+    def get_instance(cls: "type[T]", caller: "Optional[AbstractProject]", config: "Optional[CheriConfig]" = None,
                      cross_target: Optional[CrossCompileTarget] = None) -> T:
         # TODO: assert that target manager has been initialized
         if caller is not None:
@@ -453,7 +453,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return cls.get_instance_for_cross_target(cross_target, config, caller=caller)
 
     @classmethod
-    def _get_instance_no_setup(cls: typing.Type[T], caller: AbstractProject,
+    def _get_instance_no_setup(cls: "type[T]", caller: AbstractProject,
                                cross_target: Optional[CrossCompileTarget] = None) -> T:
         if cross_target is None:
             cross_target = caller.crosscompile_target
@@ -464,8 +464,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return result
 
     @classmethod
-    def get_instance_for_cross_target(cls: typing.Type[T], cross_target: CrossCompileTarget,
-                                      config: CheriConfig, caller: "Optional[AbstractProject]" = None) -> T:
+    def get_instance_for_cross_target(cls: "type[T]", cross_target: CrossCompileTarget, config: CheriConfig,
+                                      caller: "Optional[AbstractProject]" = None) -> T:
         # Also need to handle calling self.get_instance_for_cross_target() on a target-specific instance
         # In that case cls.target returns e.g. foo-mips, etc. and target_manager will always return the MIPS version
         if caller is not None:
@@ -591,7 +591,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                                                                include_os=self.include_os_in_target_suffix) + ")"
 
     @classmethod
-    def get_class_for_target(cls: "typing.Type[T]", arch: CrossCompileTarget) -> "typing.Type[T]":
+    def get_class_for_target(cls: "type[T]", arch: CrossCompileTarget) -> "type[T]":
         target = target_manager.get_target_raw(cls.target)
         if isinstance(target, MultiArchTarget):
             # check for exact match
@@ -644,7 +644,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     @classmethod
     def add_config_option(cls, name: str, *, show_help=False, altname: "Optional[str]" = None,
-                          kind: "Union[typing.Type[T], Callable[[str], T]]" = str,
+                          kind: "Union[type[T], Callable[[str], T]]" = str,
                           default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], T], T, None]"
                           = None, only_add_for_targets: "Optional[list[CrossCompileTarget]]" = None,
                           extra_fallback_config_names: "Optional[list[str]]" = None, _allow_unknown_targets=False,
@@ -744,7 +744,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     ) -> Path:
         return typing.cast(Path, cls.add_config_option(name, kind=Path, default=default, **kwargs))
 
-    __config_options_set: "dict[typing.Type[SimpleProject], bool]" = dict()
+    __config_options_set: "dict[type[SimpleProject], bool]" = dict()
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:

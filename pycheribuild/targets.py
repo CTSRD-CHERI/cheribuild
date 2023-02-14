@@ -47,7 +47,7 @@ if typing.TYPE_CHECKING:  # no-combine
 class Target(object):
     instantiating_targets_should_warn: bool = True
 
-    def __init__(self, name, _project_class: "typing.Type[SimpleProject]"):
+    def __init__(self, name, _project_class: "type[SimpleProject]"):
         self.name = name
         self._project_class = _project_class
         self.__project: Optional[SimpleProject] = None
@@ -57,7 +57,7 @@ class Target(object):
         self._creating_project = False  # avoid cycles
 
     @property
-    def project_class(self) -> "typing.Type[SimpleProject]":
+    def project_class(self) -> "type[SimpleProject]":
         result = self._project_class
         # noinspection PyProtectedMember
         assert result._xtarget is not None
@@ -217,7 +217,7 @@ class Target(object):
 
 # XXX: can't call this CrossCompileTarget since that is already the name of the enum
 class MultiArchTarget(Target):
-    def __init__(self, name, project_class: "typing.Type[SimpleProject]", target_arch: "CrossCompileTarget",
+    def __init__(self, name, project_class: "type[SimpleProject]", target_arch: "CrossCompileTarget",
                  base_target: "MultiArchTargetAlias"):
         super().__init__(name, project_class)
         assert target_arch is not None
@@ -226,7 +226,7 @@ class MultiArchTarget(Target):
         base_target.derived_targets.append(self)
 
     @property
-    def project_class(self) -> "typing.Type[SimpleProject]":
+    def project_class(self) -> "type[SimpleProject]":
         assert self.target_arch is not None
         return self._project_class
 
@@ -244,7 +244,7 @@ class MultiArchTarget(Target):
 
 class _TargetAliasBase(Target):
     @property
-    def project_class(self) -> "typing.Type[SimpleProject]":
+    def project_class(self) -> "type[SimpleProject]":
         assert self._project_class is not None
         return self._project_class
 

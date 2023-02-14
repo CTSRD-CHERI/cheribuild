@@ -68,7 +68,7 @@ class ExternallyManagedSourceRepository(SourceRepository):
 
 
 class ReuseOtherProjectRepository(SourceRepository):
-    def __init__(self, source_project: "typing.Type[Project]", *, subdirectory=".",
+    def __init__(self, source_project: "type[Project]", *, subdirectory=".",
                  repo_for_target: "Optional[CrossCompileTarget]" = None, do_update=False):
         self.source_project = source_project
         self.subdirectory = subdirectory
@@ -100,7 +100,7 @@ class ReuseOtherProjectRepository(SourceRepository):
 
 
 class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
-    def __init__(self, source_project: "typing.Type[Project]", *, subdirectory=".", do_update=False):
+    def __init__(self, source_project: "type[Project]", *, subdirectory=".", do_update=False):
         super().__init__(source_project, subdirectory=subdirectory, do_update=do_update,
                          repo_for_target=source_project.supported_architectures[0])
 

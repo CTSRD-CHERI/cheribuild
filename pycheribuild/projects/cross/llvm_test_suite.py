@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 import shutil
-import typing
 from pathlib import Path
 
 from .benchmark_mixin import BenchmarkMixin
@@ -51,7 +50,7 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
 
     # noinspection PyMethodParameters
     @classproperty
-    def llvm_project(cls) -> typing.Type[BuildLLVMBase]:
+    def llvm_project(cls) -> "type[BuildLLVMBase]":
         target_info = cls.get_crosscompile_target().target_info_cls
         if issubclass(target_info, FreeBSDTargetInfo):
             # noinspection PyProtectedMember
