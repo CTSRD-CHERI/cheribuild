@@ -220,7 +220,7 @@ def print_command(arg1: "Union[str, typing.Sequence[typing.Any]]", *remaining_ar
     if config.quiet or (print_verbose_only and not config.verbose):
         return
     # also allow passing a single string
-    if not type(arg1) is str:
+    if type(arg1) is not str:
         all_args = arg1
         arg1 = all_args[0]
         remaining_args = all_args[1:]
