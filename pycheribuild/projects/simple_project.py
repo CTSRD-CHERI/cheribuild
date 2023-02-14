@@ -512,32 +512,32 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     # noinspection PyPep8Naming
     @property
-    def CC(self) -> Path:
+    def CC(self) -> Path:  # noqa: N802
         return self.target_info.c_compiler
 
     # noinspection PyPep8Naming
     @property
-    def CXX(self) -> Path:
+    def CXX(self) -> Path:  # noqa: N802
         return self.target_info.cxx_compiler
 
     # noinspection PyPep8Naming
     @property
-    def CPP(self) -> Path:
+    def CPP(self) -> Path:  # noqa: N802
         return self.target_info.c_preprocessor
 
     # noinspection PyPep8Naming
     @property
-    def host_CC(self) -> Path:
+    def host_CC(self) -> Path:  # noqa: N802
         return TargetInfo.host_c_compiler(self.config)
 
     # noinspection PyPep8Naming
     @property
-    def host_CXX(self) -> Path:
+    def host_CXX(self) -> Path:  # noqa: N802
         return TargetInfo.host_cxx_compiler(self.config)
 
     # noinspection PyPep8Naming
     @property
-    def host_CPP(self) -> Path:
+    def host_CPP(self) -> Path:  # noqa: N802
         return TargetInfo.host_c_preprocessor(self.config)
 
     @property
@@ -897,7 +897,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     @staticmethod
     def _handle_stderr(outfile, stream, file_lock, project: "SimpleProject"):
-        for errLine in stream:
+        for err_line in stream:
             with file_lock:
                 try:
                     # noinspection PyProtectedMember
@@ -905,10 +905,10 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                         sys.stdout.buffer.write(b"\n")
                         flush_stdio(sys.stdout)
                         project._last_stdout_line_can_be_overwritten = False
-                    sys.stderr.buffer.write(errLine)
+                    sys.stderr.buffer.write(err_line)
                     flush_stdio(sys.stderr)
                     if project.config.write_logfile:
-                        outfile.write(errLine)
+                        outfile.write(err_line)
                 except ValueError:
                     # Don't print a backtrace on ctrl+C (since that will exit the main thread and close the file)
                     # ValueError: write to closed file

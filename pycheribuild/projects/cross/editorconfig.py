@@ -29,6 +29,7 @@
 from .crosscompileproject import CrossCompileCMakeProject, GitRepository
 
 
-class BuildEditorconfig_Core_C(CrossCompileCMakeProject):
+class BuildEditorconfigCoreC(CrossCompileCMakeProject):
+    target = "editorconfig-core-c"
     repository = GitRepository("https://github.com/editorconfig/editorconfig-core-c.git")
     dependencies = ["pcre2"]

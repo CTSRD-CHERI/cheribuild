@@ -166,7 +166,7 @@ class PretendSpawn(pexpect.spawn):
         super().sendline(s)
 
 
-class CheriBSDCommandFailed(Exception):
+class CheriBSDCommandFailed(Exception):  # noqa: N818
     def __init__(self, *args, execution_time: datetime.timedelta):
         super().__init__(*args)
         self.execution_time = execution_time

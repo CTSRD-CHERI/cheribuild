@@ -314,9 +314,9 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption[T]):
         json_key = json_path[-1]  # last item is the key (e.g. llvm/build-type -> build-type)
         json_path = json_path[:-1]  # all but the last item is the path (e.g. llvm/build-type -> llvm)
         json_object = self._loader._json
-        for objRef in json_path:
+        for obj_ref in json_path:
             # Return an empty dict if it is not found
-            json_object = json_object.get(objRef, None)
+            json_object = json_object.get(obj_ref, None)
             if json_object is None:
                 return None
             json_object = json_object.value
@@ -326,9 +326,9 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption[T]):
         result = self._lookup_key_in_json(full_option_name)
         # See if any of the other long option names is a valid key name:
         if result is None:
-            for optionName in self.action.option_strings:
-                if optionName.startswith("--"):
-                    json_key = optionName[2:]
+            for option_name in self.action.option_strings:
+                if option_name.startswith("--"):
+                    json_key = option_name[2:]
                     result = self._lookup_key_in_json(json_key)
                     if result is not None:
                         warning_message("Old JSON key", json_key, "used, please use", full_option_name, "instead")

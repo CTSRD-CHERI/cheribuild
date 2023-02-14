@@ -1,5 +1,5 @@
 [tool.ruff]
-select = ["E", "F", "I"]
+select = ["E", "F", "I", "N"]
 
 exclude = [
     ".git",

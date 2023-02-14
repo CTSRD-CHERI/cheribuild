@@ -84,7 +84,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
                                                    only_add_for_targets=[CompilationTargets.NATIVE])
 
     @property
-    def CC(self):
+    def CC(self):  # noqa: N802
         if self.use_effectivesan:
             return BuildEffectiveSan.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang"
         if self.use_softboundcets:
@@ -92,7 +92,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         return super().CC
 
     @property
-    def CXX(self):
+    def CXX(self):  # noqa: N802
         if self.use_effectivesan:
             return BuildEffectiveSan.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang++"
         if self.use_softboundcets:

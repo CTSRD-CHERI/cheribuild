@@ -879,13 +879,13 @@ class BuildDiskImageBase(SimpleProject):
         # -t type Specifies the type of key to create.  The possible values are "rsa1" for protocol version 1
         #  and "dsa", "ecdsa","ed25519", or "rsa" for protocol version 2.
 
-        for keyType in ("rsa", "dsa", "ecdsa", "ed25519"):
+        for key_type in ("rsa", "dsa", "ecdsa", "ed25519"):
             # SSH1 protocol uses just /etc/ssh/ssh_host_key without the type
-            private_key_name = "ssh_host_key" if keyType == "rsa1" else "ssh_host_" + keyType + "_key"
+            private_key_name = "ssh_host_key" if key_type == "rsa1" else "ssh_host_" + key_type + "_key"
             private_key = ssh_dir / private_key_name
             public_key = ssh_dir / (private_key_name + ".pub")
             if not private_key.is_file():
-                self.run_cmd("ssh-keygen", "-t", keyType,
+                self.run_cmd("ssh-keygen", "-t", key_type,
                              "-N", "",  # no passphrase
                              "-f", str(private_key))
             self.add_file_to_image(private_key, base_directory=self.extra_files_dir, mode="0600")

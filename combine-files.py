@@ -195,10 +195,10 @@ from_imports = sorted(set(from_imports))
 # print(imports, file=sys.stderr)
 # print(from_imports, file=sys.stderr)
 
-fullFile = ("#!/usr/bin/env python3\n" +
-            "# PYTHON_ARGCOMPLETE_OK\n" +
-            "".join(imports) +
-            "".join(from_imports) +
-            "\n# See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri\n" +
-            "".join(lines))
-print(fullFile)
+full_file = ("#!/usr/bin/env python3\n" +
+             "# PYTHON_ARGCOMPLETE_OK\n" +
+             "".join(imports) +
+             "".join(from_imports) +
+             "\n# See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri\n" +
+             "".join(lines))
+print(full_file)

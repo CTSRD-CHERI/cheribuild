@@ -33,7 +33,7 @@ from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject
 from .qt5 import BuildQtBase, BuildSharedMimeInfo
-from .wayland import BuildLinux_Input_H, BuildWayland
+from .wayland import BuildLinuxInputH, BuildWayland
 from .x11 import BuildLibXCB
 from ..project import (
     DefaultInstallDir,
@@ -220,7 +220,7 @@ class BuildKWayland(KDECMakeProject):
     def setup(self):
         super().setup()
         if self.target_info.is_freebsd():
-            self.CFLAGS.append("-I" + str(BuildLinux_Input_H.get_instance(self).include_install_dir))
+            self.CFLAGS.append("-I" + str(BuildLinuxInputH.get_instance(self).include_install_dir))
 
 
 class BuildBreezeIcons(KDECMakeProject):

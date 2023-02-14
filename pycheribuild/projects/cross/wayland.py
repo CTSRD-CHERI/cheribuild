@@ -75,7 +75,7 @@ class BuildLibUdevDevd(CrossCompileMesonProject):
 
     def setup(self):
         super().setup()
-        self.CFLAGS.append("-I" + str(BuildLinux_Input_H.get_instance(self).include_install_dir))
+        self.CFLAGS.append("-I" + str(BuildLinuxInputH.get_instance(self).include_install_dir))
 
 
 # Some projects unconditionally include linux/input.h to exist. For FreeBSD dev/evdev/input.h provides a
@@ -83,7 +83,8 @@ class BuildLibUdevDevd(CrossCompileMesonProject):
 # XXX: the evdev-proto port downloads the Linux headers and patches those instead, but it seems to me that creating
 # a file that includes the native dev/evdev/*.h is less fragile since it doesn't rely on ioctl() numbers being
 # compatible, etc.
-class BuildLinux_Input_H(SimpleProject):
+class BuildLinuxInputH(SimpleProject):
+    target = "linux-input-h"
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
 
     def process(self):
@@ -123,7 +124,7 @@ class BuildMtdev(CrossCompileAutotoolsProject):
         self.COMMON_FLAGS.append("-fPIC")  # need a pic archive since it's linked into a .so
         self.cross_warning_flags.append("-Wno-error=format")
         if self.target_info.is_freebsd():
-            self.CFLAGS.append("-I" + str(BuildLinux_Input_H.get_instance(self).include_install_dir))
+            self.CFLAGS.append("-I" + str(BuildLinuxInputH.get_instance(self).include_install_dir))
 
 
 class BuildLibEvdev(CrossCompileMesonProject):
