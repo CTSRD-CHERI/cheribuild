@@ -1254,7 +1254,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 class TargetAlias(SimpleProject):
     do_not_add_to_targets: bool = True
     dependencies_must_be_built: bool = False
-    hasSourceFiles: bool = False
     is_alias: bool = True
 
     def process(self) -> None:
@@ -1268,4 +1267,3 @@ class TargetAlias(SimpleProject):
 class TargetAliasWithDependencies(TargetAlias):
     do_not_add_to_targets: bool = True
     dependencies_must_be_built: bool = True
-    hasSourceFiles: bool = False
