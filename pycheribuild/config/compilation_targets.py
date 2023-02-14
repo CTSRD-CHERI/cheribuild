@@ -69,7 +69,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         return self._sdk_root_dir
 
     @classmethod
-    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
         raise NotImplementedError()
 
     def _get_sdk_root_dir_lazy(self) -> Path:
@@ -395,7 +395,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return Path("usr/local")
 
     @classmethod
-    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
         from ..projects.cross.llvm import BuildUpstreamLLVM
         return BuildUpstreamLLVM
 
@@ -406,7 +406,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
         raise NotImplementedError("Only implemented for CheriBSD")
 
-    def _get_run_project(self) -> "typing.Type[AbstractLaunchFreeBSD]":
+    def _get_run_project(self) -> "type[AbstractLaunchFreeBSD]":
         from ..projects.run_qemu import LaunchFreeBSD
         return LaunchFreeBSD
 
@@ -539,11 +539,11 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     FREEBSD_VERSION: int = 13
 
     @classmethod
-    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
         from ..projects.cross.llvm import BuildCheriLLVM
         return BuildCheriLLVM
 
-    def _get_run_project(self) -> "typing.Type[AbstractLaunchFreeBSD]":
+    def _get_run_project(self) -> "type[AbstractLaunchFreeBSD]":
         from ..projects.run_qemu import LaunchCheriBSD
         return LaunchCheriBSD
 
@@ -628,7 +628,7 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     uses_morello_llvm: bool = True
 
     @classmethod
-    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
         from ..projects.cross.llvm import BuildMorelloLLVM
         return BuildMorelloLLVM
 
@@ -677,7 +677,7 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
         return self._get_compiler_project().get_native_install_path(self.config)
 
     @classmethod
-    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
         from ..projects.cross.llvm import BuildCheriOSLLVM
         return BuildCheriOSLLVM
 
@@ -738,7 +738,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
                 "sysroot-" + self.target.get_rootfs_target().generic_arch_suffix) / self.target_triple
 
     @classmethod
-    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
         from ..projects.cross.llvm import BuildCheriLLVM
         return BuildCheriLLVM
 
@@ -792,7 +792,7 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
         return sysroot_dir / "baremetal" / suffix / self.target_triple
 
     @classmethod
-    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
         from ..projects.cross.llvm import BuildCheriLLVM
         return BuildCheriLLVM
 
@@ -855,7 +855,7 @@ class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
         return sysroot_dir / "picolibc" / self.target.get_rootfs_target().generic_arch_suffix
 
     @classmethod
-    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
         from ..projects.cross.llvm import BuildUpstreamLLVM
         return BuildUpstreamLLVM
 
@@ -899,7 +899,7 @@ class MorelloBaremetalTargetInfo(BaremetalClangTargetInfo):
     uses_morello_llvm: bool = True
 
     @classmethod
-    def _get_compiler_project(cls) -> "typing.Type[BuildLLVMMonoRepoBase]":
+    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
         from ..projects.cross.llvm import BuildMorelloLLVM
         return BuildMorelloLLVM
 

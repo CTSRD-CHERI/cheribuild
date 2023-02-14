@@ -66,7 +66,7 @@ class QEMUType(Enum):
 
 
 class ChosenQEMU(object):
-    def __init__(self, cls: Optional[typing.Type[BuildQEMUBase]], binary: Optional[Path],
+    def __init__(self, cls: "Optional[type[BuildQEMUBase]]", binary: Optional[Path],
                  can_provide_src_via_smb: Optional[bool]):
         self.cls = cls
         self._binary = binary
@@ -699,7 +699,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         return self._disk_image_class.default_architecture
 
     @classmethod
-    def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "list[str]":
+    def dependencies(cls: "type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "list[str]":
         xtarget = cls.get_crosscompile_target()
         result = []
         chosen_qemu = cls.get_chosen_qemu(config)
