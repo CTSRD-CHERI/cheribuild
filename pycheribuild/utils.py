@@ -66,7 +66,7 @@ except ImportError:
 
 
 # noinspection PyPep8Naming
-class classproperty(typing.Generic[Type_T]):
+class classproperty(typing.Generic[Type_T]):  # noqa: N801
     def __init__(self, f: "Callable[[typing.Any], Type_T]") -> None:
         self.f = f
 

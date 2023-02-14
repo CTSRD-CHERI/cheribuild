@@ -39,11 +39,13 @@ class BuildSDL(CrossCompileCMakeProject):
             self.add_cmake_options(SDL_TEST=False, SDL_TESTS=False)
 
 
-class BuildSDL_Mixer(CrossCompileAutotoolsProject):
+class BuildSDLMixer(CrossCompileAutotoolsProject):
+    target = "sdl-mixer"
     repository = GitRepository("https://github.com/libsdl-org/SDL_mixer.git")
     dependencies = ["sdl"]
 
 
-class BuildSDL_Net(CrossCompileAutotoolsProject):
+class BuildSDLNet(CrossCompileAutotoolsProject):
+    target = "sdl-net"
     repository = GitRepository("https://github.com/libsdl-org/SDL_net.git")
     dependencies = ["sdl"]

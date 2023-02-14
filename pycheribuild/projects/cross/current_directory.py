@@ -55,28 +55,33 @@ class CurrentDirectoryMixin(object):
     source_dir = ComputedDefaultValue(function=_cwd_source_dir, as_string="$CWD")
 
 
-class BuildCurrent_Directory_Autotools(CurrentDirectoryMixin, CrossCompileAutotoolsProject):
+# noinspection PyPep8Naming
+class BuildCurrent_Directory_Autotools(CurrentDirectoryMixin, CrossCompileAutotoolsProject):  # noqa: N801
     autodetect_files = ["configure"]
 
 
-class BuildCurrent_Directory_CMake(CurrentDirectoryMixin, CrossCompileCMakeProject):
+# noinspection PyPep8Naming
+class BuildCurrent_Directory_CMake(CurrentDirectoryMixin, CrossCompileCMakeProject):  # noqa: N801
     autodetect_files = ["CMakeLists.txt"]
 
 
-class BuildCurrent_Directory_Makefile(CurrentDirectoryMixin, CrossCompileMakefileProject):
+# noinspection PyPep8Naming
+class BuildCurrent_Directory_Makefile(CurrentDirectoryMixin, CrossCompileMakefileProject):  # noqa: N801
     autodetect_files = ["GNUmakefile", "makefile", "Makefile"]
 
 
-class BuildCurrent_Directory_Meson(CurrentDirectoryMixin, CrossCompileMesonProject):
+# noinspection PyPep8Naming
+class BuildCurrent_Directory_Meson(CurrentDirectoryMixin, CrossCompileMesonProject):  # noqa: N801
     autodetect_files = ["meson.build"]
 
 
-class BuildCurrent_Directory(CurrentDirectoryMixin, CrossCompileSimpleProject):
+# noinspection PyPep8Naming
+class BuildCurrent_Directory(CurrentDirectoryMixin, CrossCompileSimpleProject):  # noqa: N801
     dependencies_must_be_built = True
     direct_dependencies_only = True
 
     @classmethod
-    def dependencies(cls, config):
+    def dependencies(cls, _):
         classes = [
                 BuildCurrent_Directory_Autotools,
                 BuildCurrent_Directory_CMake,
