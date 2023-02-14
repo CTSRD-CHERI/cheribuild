@@ -25,8 +25,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-import sys
 import subprocess
+import sys
 
 from .crosscompileproject import CompilationTargets, CrossCompileMesonProject, GitRepository
 from ...utils import InstallInstructions

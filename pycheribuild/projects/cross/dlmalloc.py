@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import (CrossCompileProject, DefaultInstallDir, GitRepository, MakeCommandKind)
+from .crosscompileproject import CrossCompileProject, DefaultInstallDir, GitRepository, MakeCommandKind
 from ...processutils import commandline_to_str
 
 

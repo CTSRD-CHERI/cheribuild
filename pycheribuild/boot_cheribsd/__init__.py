@@ -49,7 +49,7 @@ import time
 import traceback
 import typing
 from pathlib import Path
-from typing import Optional, Callable, Union
+from typing import Callable, Optional, Union
 
 from pycheribuild.colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget

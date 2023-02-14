@@ -29,10 +29,10 @@
 # SUCH DAMAGE.
 #
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
-import shlex
 from pathlib import Path
 
 scriptDir = Path(__file__).resolve().parent

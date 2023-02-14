@@ -1,17 +1,24 @@
 import copy
 import inspect
+
 # noinspection PyUnresolvedReferences
 from pathlib import Path
 
 import pytest
+
+from pycheribuild.config.compilation_targets import CompilationTargets, enable_hybrid_for_purecap_rootfs_targets
+from pycheribuild.config.target_info import CrossCompileTarget
 
 # Make sure all projects are loaded so that target_manager gets populated
 from pycheribuild.projects import *  # noqa: F401, F403
 from pycheribuild.projects.cmake import BuildCrossCompiledCMake
 from pycheribuild.projects.cross import *  # noqa: F401, F403
 from pycheribuild.projects.cross.benchmarks import BenchmarkMixin
-from pycheribuild.projects.cross.cheribsd import (BuildCHERIBSD, BuildCheriBsdMfsImageAndKernels,
-                                                  BuildCheriBsdSysrootArchive)
+from pycheribuild.projects.cross.cheribsd import (
+    BuildCHERIBSD,
+    BuildCheriBsdMfsImageAndKernels,
+    BuildCheriBsdSysrootArchive,
+)
 from pycheribuild.projects.cross.gdb import BuildGDBBase
 from pycheribuild.projects.cross.gmp import BuildGmp
 from pycheribuild.projects.cross.llvm import BuildCheriLLVM, BuildMorelloLLVM
@@ -20,12 +27,10 @@ from pycheribuild.projects.disk_image import BuildDiskImageBase
 from pycheribuild.projects.project import DefaultInstallDir, Project
 from pycheribuild.projects.run_fvp import LaunchFVPBase
 from pycheribuild.projects.run_qemu import BuildAll, BuildAndRunCheriBSD, LaunchCheriBSD
-from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.projects.sdk import BuildCheriBSDSdk, BuildSdk
+from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.projects.spike import RunCheriSpikeBase
 from pycheribuild.targets import Target, target_manager
-from pycheribuild.config.compilation_targets import enable_hybrid_for_purecap_rootfs_targets, CompilationTargets
-from pycheribuild.config.target_info import CrossCompileTarget
 from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
 
 

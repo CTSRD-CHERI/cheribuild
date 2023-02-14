@@ -34,9 +34,18 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Optional
 
-from .project import (AutotoolsProject, BuildType, CheriConfig, CPUArchitecture, CrossCompileTarget, DefaultInstallDir,
-                      GitRepository, MakeCommandKind, ComputedDefaultValue)
-from .simple_project import _cached_get_homebrew_prefix, SimpleProject
+from .project import (
+    AutotoolsProject,
+    BuildType,
+    CheriConfig,
+    ComputedDefaultValue,
+    CPUArchitecture,
+    CrossCompileTarget,
+    DefaultInstallDir,
+    GitRepository,
+    MakeCommandKind,
+)
+from .simple_project import SimpleProject, _cached_get_homebrew_prefix
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
 
 

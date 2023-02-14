@@ -37,17 +37,28 @@ import typing
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
-from typing import Optional, ClassVar, Union
+from typing import ClassVar, Optional, Union
 
 from .crosscompileproject import CrossCompileProject
 from .llvm import BuildLLVMMonoRepoBase
-from ..project import (BuildType, CheriConfig, CPUArchitecture, DefaultInstallDir, GitRepository,
-                       MakeCommandKind, MakeOptions, Project, ReuseOtherProjectRepository, ComputedDefaultValue)
-from ..simple_project import _clear_line_sequence, flush_stdio, SimpleProject, TargetAliasWithDependencies
+from ..project import (
+    BuildType,
+    CheriConfig,
+    ComputedDefaultValue,
+    CPUArchitecture,
+    DefaultInstallDir,
+    GitRepository,
+    MakeCommandKind,
+    MakeOptions,
+    Project,
+    ReuseOtherProjectRepository,
+)
+from ..simple_project import SimpleProject, TargetAliasWithDependencies, _clear_line_sequence, flush_stdio
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
-from ...config.target_info import AutoVarInit, CompilerType as FreeBSDToolchainKind, CrossCompileTarget
+from ...config.target_info import AutoVarInit, CrossCompileTarget
+from ...config.target_info import CompilerType as FreeBSDToolchainKind
 from ...processutils import latest_system_clang_tool, print_command
-from ...utils import cached_property, classproperty, include_local_file, is_jenkins_build, OSInfo, ThreadJoiner
+from ...utils import OSInfo, ThreadJoiner, cached_property, classproperty, include_local_file, is_jenkins_build
 
 
 def _arch_suffixed_custom_install_dir(prefix: str) -> "ComputedDefaultValue[Path]":

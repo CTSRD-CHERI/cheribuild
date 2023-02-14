@@ -31,9 +31,15 @@
 # SUCH DAMAGE.
 #
 from .cmake_project import CMakeProject
-from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository,
-                      MakeCommandKind, ReuseOtherProjectDefaultTargetRepository)
 from .cross.crosscompileproject import CrossCompileCMakeProject
+from .project import (
+    AutotoolsProject,
+    CheriConfig,
+    DefaultInstallDir,
+    GitRepository,
+    MakeCommandKind,
+    ReuseOtherProjectDefaultTargetRepository,
+)
 from ..config.chericonfig import BuildType, Linkage
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..targets import target_manager

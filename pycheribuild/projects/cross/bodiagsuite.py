@@ -29,8 +29,13 @@
 #
 import shutil
 
-from .crosscompileproject import (BuildType, CompilationTargets, CrossCompileCMakeProject,
-                                  DefaultInstallDir, GitRepository)
+from .crosscompileproject import (
+    BuildType,
+    CompilationTargets,
+    CrossCompileCMakeProject,
+    DefaultInstallDir,
+    GitRepository,
+)
 from ..effectivesan import BuildEffectiveSan
 from ..softboundcets import BuildSoftBoundCETS
 from ...utils import OSInfo

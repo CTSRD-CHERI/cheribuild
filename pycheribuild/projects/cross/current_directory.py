@@ -26,10 +26,14 @@
 import os
 from pathlib import Path
 
-from .crosscompileproject import (CrossCompileSimpleProject, CrossCompileAutotoolsProject, CrossCompileCMakeProject,
-                                  CrossCompileMakefileProject, CrossCompileMesonProject)
-from ..project import ExternallyManagedSourceRepository, ComputedDefaultValue
-
+from .crosscompileproject import (
+    CrossCompileAutotoolsProject,
+    CrossCompileCMakeProject,
+    CrossCompileMakefileProject,
+    CrossCompileMesonProject,
+    CrossCompileSimpleProject,
+)
+from ..project import ComputedDefaultValue, ExternallyManagedSourceRepository
 
 _cwd_path = Path(os.getcwd())
 

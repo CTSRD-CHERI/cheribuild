@@ -26,7 +26,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-from .crosscompileproject import CrossCompileMesonProject, GitRepository, CompilationTargets
+from .crosscompileproject import CompilationTargets, CrossCompileMesonProject, GitRepository
 
 
 # Prefer the CMake build over autotools since autotools does not work out-of-the-box

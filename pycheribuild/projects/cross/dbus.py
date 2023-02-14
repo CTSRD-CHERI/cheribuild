@@ -22,7 +22,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from .crosscompileproject import CrossCompileCMakeProject, GitRepository, CompilationTargets
+from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, GitRepository
 
 
 class BuildDBus(CrossCompileCMakeProject):

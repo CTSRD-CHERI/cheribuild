@@ -33,8 +33,14 @@ import typing
 from pathlib import Path
 from typing import Optional
 
-from run_tests_common import (boot_cheribsd, commandline_to_str, finish_and_write_junit_xml_report,
-                              get_default_junit_xml_name, junitparser, run_tests_main)
+from run_tests_common import (
+    boot_cheribsd,
+    commandline_to_str,
+    finish_and_write_junit_xml_report,
+    get_default_junit_xml_name,
+    junitparser,
+    run_tests_main,
+)
 
 
 def do_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):

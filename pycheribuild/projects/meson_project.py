@@ -33,10 +33,10 @@ import shutil
 from pathlib import Path
 from typing import Sequence
 
-from .project import _CMakeAndMesonSharedLogic, MakeCommandKind
+from .project import MakeCommandKind, _CMakeAndMesonSharedLogic
 from ..config.chericonfig import BuildType
 from ..config.target_info import BasicCompilationTargets, NativeTargetInfo
-from ..utils import include_local_file, InstallInstructions, OSInfo, remove_duplicates
+from ..utils import InstallInstructions, OSInfo, include_local_file, remove_duplicates
 
 __all__ = ["MesonProject"]  # no-combine
 

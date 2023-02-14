@@ -34,7 +34,7 @@ import os
 import sys
 from pathlib import Path
 
-from run_tests_common import junitparser, run_tests_main, boot_cheribsd
+from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 
 LONG_NAME_FOR_BUILDDIR = "/build-dir-with-long-name-to-ensure-cwd-causes-buffer-overflow"
 

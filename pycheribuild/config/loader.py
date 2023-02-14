@@ -34,19 +34,20 @@ import os
 import shutil
 import sys
 import typing
-from typing import Optional, Union, Any, Callable
+from typing import Any, Callable, Optional, Union
 
 try:
     import argcomplete
 except ImportError:
     argcomplete: Optional[Any] = None
 
+from enum import Enum
+from pathlib import Path
+
 from .computed_default_value import ComputedDefaultValue
 from .config_loader_base import ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption, _LoadedConfigValue
-from ..utils import fatal_error, status_update, warning_message, error_message, ConfigBase
 from ..colour import AnsiColour, coloured
-from pathlib import Path
-from enum import Enum
+from ..utils import ConfigBase, error_message, fatal_error, status_update, warning_message
 
 T = typing.TypeVar('T')
 EnumTy = typing.TypeVar('EnumTy', bound=Enum)

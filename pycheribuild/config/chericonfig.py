@@ -38,11 +38,17 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from .config_loader_base import ConfigLoaderBase
 from .computed_default_value import ComputedDefaultValue
+from .config_loader_base import ConfigLoaderBase
 from ..processutils import latest_system_clang_tool, run_command
-from ..utils import (cached_property, ConfigBase, DoNotUseInIfStmt, have_working_internet_connection, status_update,
-                     warning_message)
+from ..utils import (
+    ConfigBase,
+    DoNotUseInIfStmt,
+    cached_property,
+    have_working_internet_connection,
+    status_update,
+    warning_message,
+)
 
 
 class BuildType(Enum):

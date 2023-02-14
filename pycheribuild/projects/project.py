@@ -40,20 +40,50 @@ import typing
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Callable, Union, Sequence
+from typing import Callable, Optional, Sequence, Union
 
+from .repository import (
+    ExternallyManagedSourceRepository,
+    GitRepository,
+    MercurialRepository,
+    ReuseOtherProjectDefaultTargetRepository,
+    ReuseOtherProjectRepository,
+    SourceRepository,
+    SubversionRepository,
+    TargetBranchInfo,
+)
 from .simple_project import SimpleProject, _default_stdout_filter
-from .repository import (ExternallyManagedSourceRepository, GitRepository, MercurialRepository,
-                         ReuseOtherProjectRepository, ReuseOtherProjectDefaultTargetRepository, SourceRepository,
-                         SubversionRepository, TargetBranchInfo)
 from ..config.chericonfig import BuildType, CheriConfig, ComputedDefaultValue, Linkage, supported_build_type_strings
 from ..config.config_loader_base import ConfigOptionBase
-from ..config.target_info import (AbstractProject, AutoVarInit, BasicCompilationTargets, CPUArchitecture,
-                                  CrossCompileTarget, DefaultInstallDir, TargetInfo)
-from ..processutils import (commandline_to_str, CompilerInfo, get_program_version,
-                            get_version_output, run_command, ssh_host_accessible)
-from ..utils import (AnsiColour, cached_property, classproperty, coloured, InstallInstructions,
-                     is_jenkins_build, OSInfo, status_update, ThreadJoiner, remove_duplicates)
+from ..config.target_info import (
+    AbstractProject,
+    AutoVarInit,
+    BasicCompilationTargets,
+    CPUArchitecture,
+    CrossCompileTarget,
+    DefaultInstallDir,
+    TargetInfo,
+)
+from ..processutils import (
+    CompilerInfo,
+    commandline_to_str,
+    get_program_version,
+    get_version_output,
+    run_command,
+    ssh_host_accessible,
+)
+from ..utils import (
+    AnsiColour,
+    InstallInstructions,
+    OSInfo,
+    ThreadJoiner,
+    cached_property,
+    classproperty,
+    coloured,
+    is_jenkins_build,
+    remove_duplicates,
+    status_update,
+)
 
 __all__ = ["Project", "AutotoolsProject", "CheriConfig", "MakeOptions", "MakeCommandKind",  # no-combine
            "MercurialRepository", "CrossCompileTarget", "CPUArchitecture", "GitRepository",  # no-combine

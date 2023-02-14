@@ -29,12 +29,12 @@ import shutil
 from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileCMakeProject, CrossCompileMesonProject
-from ..project import DefaultInstallDir, GitRepository, AutotoolsProject
+from ..project import AutotoolsProject, DefaultInstallDir, GitRepository
 from ..simple_project import SimpleProject
 from ...config.chericonfig import CheriConfig, Linkage
 from ...config.compilation_targets import CompilationTargets
-from ...utils import OSInfo
 from ...processutils import get_program_version, ssh_config_parameters
+from ...utils import OSInfo
 
 
 class BuildEPollShim(CrossCompileCMakeProject):

@@ -37,7 +37,7 @@ from .crosscompileproject import CompilationTargets
 from ..project import Project
 from ...config.chericonfig import BuildType
 from ...processutils import commandline_to_str
-from ...utils import find_free_port, SocketAndPort
+from ...utils import SocketAndPort, find_free_port
 
 if typing.TYPE_CHECKING:
     _BenchmarkMixinBase = Project

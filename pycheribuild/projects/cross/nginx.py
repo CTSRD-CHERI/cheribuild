@@ -29,8 +29,7 @@
 #
 import re
 
-from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDir,
-                                  GitRepository, MakeCommandKind)
+from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind
 
 
 class BuildNginx(CrossCompileAutotoolsProject):

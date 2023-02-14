@@ -42,7 +42,7 @@ import time
 from pathlib import Path
 
 from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_generated_junit_xml
-from run_tests_common import boot_cheribsd, CrossCompileTarget, pexpect, run_tests_main
+from run_tests_common import CrossCompileTarget, boot_cheribsd, pexpect, run_tests_main
 
 
 def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_binary_names,

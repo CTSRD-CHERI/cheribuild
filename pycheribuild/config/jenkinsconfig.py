@@ -36,7 +36,7 @@ from .chericonfig import CheriConfig
 from .config_loader_base import ComputedDefaultValue, ConfigLoaderBase
 from .target_info import CompilerType
 from ..filesystemutils import FileSystemUtils
-from ..utils import default_make_jobs_count, fatal_error, OSInfo, warning_message
+from ..utils import OSInfo, default_make_jobs_count, fatal_error, warning_message
 
 
 def default_install_prefix(conf: "JenkinsConfig", _):

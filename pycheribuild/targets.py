@@ -35,10 +35,18 @@ from collections import OrderedDict
 from typing import Callable, Optional, Union
 
 from .config.chericonfig import CheriConfig
-from .config.target_info import CrossCompileTarget, AbstractProject
+from .config.target_info import AbstractProject, CrossCompileTarget
 from .processutils import set_env
-from .utils import (add_error_context, AnsiColour, coloured, fatal_error, status_update, warning_message, query_yes_no,
-                    final)
+from .utils import (
+    AnsiColour,
+    add_error_context,
+    coloured,
+    fatal_error,
+    final,
+    query_yes_no,
+    status_update,
+    warning_message,
+)
 
 if typing.TYPE_CHECKING:  # no-combine
     from .projects.simple_project import SimpleProject  # no-combine

@@ -34,7 +34,7 @@ import os
 from pathlib import Path
 
 from .build_qemu import BuildQEMU
-from .cross.cheribsd import BuildCHERIBSD, ConfigPlatform, CheriBSDConfigTable
+from .cross.cheribsd import BuildCHERIBSD, CheriBSDConfigTable, ConfigPlatform
 from .cross.crosscompileproject import CompilationTargets, CrossCompileProject
 from .disk_image import BuildCheriBSDDiskImage
 from .project import DefaultInstallDir, GitRepository, MakeCommandKind

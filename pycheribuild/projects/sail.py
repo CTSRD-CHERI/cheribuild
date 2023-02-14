@@ -39,7 +39,7 @@ from .project import AutotoolsProject, DefaultInstallDir, GitRepository, MakeCom
 from .simple_project import SimpleProject
 from ..processutils import get_program_version
 from ..targets import target_manager
-from ..utils import AnsiColour, coloured, OSInfo, ThreadJoiner
+from ..utils import AnsiColour, OSInfo, ThreadJoiner, coloured
 
 if typing.TYPE_CHECKING:
     _MixinBase = Project

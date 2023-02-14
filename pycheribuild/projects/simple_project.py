@@ -38,19 +38,40 @@ import sys
 import threading
 import time
 import typing
-from abc import abstractmethod, ABCMeta
+from abc import ABCMeta, abstractmethod
 from pathlib import Path
-from typing import Callable, Union, Optional
+from typing import Callable, Optional, Union
 
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue
 from ..config.config_loader_base import ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption
-from ..config.target_info import (AbstractProject, AutoVarInit, BasicCompilationTargets, CPUArchitecture,
-                                  CrossCompileTarget, TargetInfo)
-from ..processutils import (check_call_handle_noexec, commandline_to_str, keep_terminal_sane, popen_handle_noexec,
-                            print_command, run_command, set_env)
+from ..config.target_info import (
+    AbstractProject,
+    AutoVarInit,
+    BasicCompilationTargets,
+    CPUArchitecture,
+    CrossCompileTarget,
+    TargetInfo,
+)
+from ..processutils import (
+    check_call_handle_noexec,
+    commandline_to_str,
+    keep_terminal_sane,
+    popen_handle_noexec,
+    print_command,
+    run_command,
+    set_env,
+)
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
-from ..utils import (classproperty, fatal_error, InstallInstructions, is_jenkins_build, OSInfo, replace_one,
-                     status_update, query_yes_no)
+from ..utils import (
+    InstallInstructions,
+    OSInfo,
+    classproperty,
+    fatal_error,
+    is_jenkins_build,
+    query_yes_no,
+    replace_one,
+    status_update,
+)
 
 __all__ = ["_cached_get_homebrew_prefix", "_clear_line_sequence", "_default_stdout_filter",  # no-combine
            "flush_stdio", "SimpleProject", "TargetAlias", "TargetAliasWithDependencies"]  # no-combine

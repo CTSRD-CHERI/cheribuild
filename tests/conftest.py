@@ -1,10 +1,11 @@
 import argparse
-import pytest
 import sys
 from pathlib import Path
 
+import pytest
+
+from pycheribuild.config.defaultconfig import DefaultCheribuildConfigLoader, DefaultCheriConfig
 from pycheribuild.config.loader import ConfigLoaderBase
-from pycheribuild.config.defaultconfig import DefaultCheriConfig, DefaultCheribuildConfigLoader
 from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.targets import target_manager
 

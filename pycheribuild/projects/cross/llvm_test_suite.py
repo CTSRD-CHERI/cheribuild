@@ -31,12 +31,17 @@ import shutil
 from pathlib import Path
 
 from .benchmark_mixin import BenchmarkMixin
-from .crosscompileproject import (BuildType, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
-                                  GitRepository)
-from .llvm import BuildCheriLLVM, BuildUpstreamLLVM, BuildLLVMBase
+from .crosscompileproject import (
+    BuildType,
+    CompilationTargets,
+    CrossCompileCMakeProject,
+    DefaultInstallDir,
+    GitRepository,
+)
+from .llvm import BuildCheriLLVM, BuildLLVMBase, BuildUpstreamLLVM
 from ..project import ReuseOtherProjectRepository
-from ...utils import cached_property, is_jenkins_build, classproperty
 from ...config.compilation_targets import FreeBSDTargetInfo
+from ...utils import cached_property, classproperty, is_jenkins_build
 
 
 class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):

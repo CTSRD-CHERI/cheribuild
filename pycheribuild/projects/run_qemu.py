@@ -42,13 +42,18 @@ from .cherios import BuildCheriOS
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.gdb import BuildGDB
 from .cross.u_boot import BuildUBoot
-from .disk_image import (BuildCheriBSDDiskImage, BuildDiskImageBase, BuildFreeBSDImage,
-                         BuildFreeBSDWithDefaultOptionsDiskImage, BuildMinimalCheriBSDDiskImage)
-from .project import CheriConfig, CPUArchitecture, Project, ComputedDefaultValue
+from .disk_image import (
+    BuildCheriBSDDiskImage,
+    BuildDiskImageBase,
+    BuildFreeBSDImage,
+    BuildFreeBSDWithDefaultOptionsDiskImage,
+    BuildMinimalCheriBSDDiskImage,
+)
+from .project import CheriConfig, ComputedDefaultValue, CPUArchitecture, Project
 from .simple_project import SimpleProject, TargetAliasWithDependencies
 from ..config.compilation_targets import CompilationTargets
-from ..qemu_utils import qemu_supports_9pfs, QemuOptions, riscv_bios_arguments
-from ..utils import AnsiColour, classproperty, coloured, find_free_port, OSInfo, fatal_error
+from ..qemu_utils import QemuOptions, qemu_supports_9pfs, riscv_bios_arguments
+from ..utils import AnsiColour, OSInfo, classproperty, coloured, fatal_error, find_free_port
 
 
 def get_default_ssh_forwarding_port(addend: int):

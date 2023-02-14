@@ -30,8 +30,7 @@
 
 from enum import Enum
 
-from pycheribuild.projects.cross.crosscompileproject import (CrossCompileCMakeProject,
-                                                             DefaultInstallDir, GitRepository)
+from pycheribuild.projects.cross.crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 
 
 class JsBackend(Enum):

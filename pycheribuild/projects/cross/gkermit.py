@@ -25,8 +25,8 @@
 from pathlib import Path
 from typing import Optional
 
-from ..project import ExternallyManagedSourceRepository
 from .crosscompileproject import CrossCompileMakefileProject, DefaultInstallDir
+from ..project import ExternallyManagedSourceRepository
 
 
 class BuildGKermit(CrossCompileMakefileProject):

@@ -29,7 +29,7 @@
 #
 
 from .cmake_project import CMakeProject
-from .project import BuildType, GitRepository, ComputedDefaultValue
+from .project import BuildType, ComputedDefaultValue, GitRepository
 from ..config.compilation_targets import CompilationTargets
 
 

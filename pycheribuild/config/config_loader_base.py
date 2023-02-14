@@ -32,12 +32,12 @@ import os
 import shlex
 import sys
 import typing
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional, Union, Callable
+from typing import Callable, Optional, Union
 
 from .computed_default_value import ComputedDefaultValue
-from ..utils import fatal_error, warning_message, ConfigBase
+from ..utils import ConfigBase, fatal_error, warning_message
 
 T = typing.TypeVar('T')
 

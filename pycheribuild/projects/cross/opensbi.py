@@ -31,11 +31,20 @@
 from pathlib import Path
 
 from ..build_qemu import BuildQEMU
-from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CPUArchitecture, DefaultInstallDir, GitRepository,
-                       MakeCommandKind, Project, ReuseOtherProjectRepository)
+from ..project import (
+    BuildType,
+    CheriConfig,
+    ComputedDefaultValue,
+    CPUArchitecture,
+    DefaultInstallDir,
+    GitRepository,
+    MakeCommandKind,
+    Project,
+    ReuseOtherProjectRepository,
+)
 from ...config.compilation_targets import CompilationTargets
-from ...utils import classproperty, OSInfo
 from ...qemu_utils import QemuOptions
+from ...utils import OSInfo, classproperty
 
 
 def opensbi_install_dir(config: CheriConfig, project: "Project") -> Path:
