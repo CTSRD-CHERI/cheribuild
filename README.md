@@ -42,13 +42,13 @@ the most commonly used cheribuild targets:
 ```shell
 dnf install libtool clang-devel bison cmake mercurial ninja-build samba flex texinfo glib2-devel pixman-devel libarchive-devel bsdtar bzip2-devel libattr-devel libcap-ng-devel expat-devel
 ```
-    
+
 #### FreeBSD
 If you are building CHERI on a FreeBSD machine, the following command will install the packages required for
 the most commonly used cheribuild targets:
 
 ```shell
-pkg install autoconf automake bison cmake expat glib gsed llvm mercurial meson ninja pkgconf pixman samba 
+pkg install autoconf automake bison cmake expat glib gsed llvm mercurial meson ninja pkgconf pixman samba
 ```
 
 #### Arch Linux
@@ -249,7 +249,7 @@ Host cheribsd-riscv
   ControlPath ~/.ssh/controlmasters/%r@%h:%p
   ControlMaster auto
   StrictHostKeyChecking no
-  
+
 Host cheribsd-riscv-purecap
   User root
   Port 12346
