@@ -86,6 +86,9 @@ class BuildQEMUBase(AutotoolsProject):
                                       help="Build a the graphical UI bits for QEMU (SDL,VNC)")
         cls.build_profiler = cls.add_bool_option("build-profiler", show_help=False, default=False,
                                                  help="Enable QEMU internal profiling")
+        cls.enable_plugins = cls.add_bool_option("enable-plugins", show_help=False, default=False,
+                                                 help="Enable QEMU TCG plugins")
+
         cls.qemu_targets = typing.cast(str, cls.add_config_option(
             "targets", show_help=True, help="Build QEMU for the following targets", default=cls.default_targets))
         cls.prefer_full_lto_over_thin_lto = cls.add_bool_option("full-lto", show_help=False, default=True,
@@ -137,6 +140,9 @@ class BuildQEMUBase(AutotoolsProject):
 
         if self.build_profiler:
             self.configure_args.extend(["--enable-profiler"])
+
+        if self.enable_plugins:
+            self.configure_args.append("--enable-plugins")
 
         # QEMU now builds with python3
         self.configure_args.append("--python=" + sys.executable)
