@@ -3,7 +3,7 @@
 exclude: "^3rdparty/.*"
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
+    rev: v4.4.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -12,3 +12,7 @@ repos:
       - id: mixed-line-ending
         args: [ "--fix=lf" ]
       - id: check-case-conflict
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: 'v0.0.249' # Ruff version.
+    hooks:
+      - id: ruff
