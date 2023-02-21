@@ -9,4 +9,3 @@ RUN pip install -r /tmp/requirements.txt && rm -f /tmp/requirements.txt
 # https://github.com/jenkinsci/docker/issues/519
 ENV GIT_COMMITTER_NAME cheribuild
 ENV GIT_COMMITTER_EMAIL cheribuild@cl.cam.ac.uk
-

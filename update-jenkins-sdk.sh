@@ -17,7 +17,7 @@ if [ -z "$SKIP_DOWNLOAD" ]; then
     # for cpu in mips cheri128 cheri256; do
     #     curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/Toolchain/job/CHERIBSD-WORLD/CPU=${cpu},ISA=cap-table-pcrel/lastSuccessfulBuild/artifact/${cpu}-cap-table-pcrel-cheribsd-world.tar.xz
     # done
-    # 
+    #
     # # minimal kernel images:
     # curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/CheriBSD/job/CheriBSD-allkernels-multi/BASE_ABI=n64,CPU=mips,ISA=vanilla,label=freebsd/lastSuccessfulBuild/artifact/ctsrd/cheribsd/trunk/bsdtools/freebsd-malta64-mfs-root-jenkins_bluehive-kernel.bz2
     # curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/CheriBSD/job/CheriBSD-allkernels-multi/BASE_ABI=n64,CPU=cheri128,ISA=vanilla,label=freebsd/lastSuccessfulBuild/artifact/ctsrd/cheribsd/trunk/bsdtools/cheribsd128-cheri128-malta64-mfs-root-jenkins_bluehive-kernel.bz2
