@@ -150,7 +150,8 @@ class RunTestRIG(SimpleProject):
         with popen(self.get_reference_implementation_command(reference_impl_port), config=self.config,
                    stdin=subprocess.DEVNULL, cwd="/") as reference_cmd:
             with self.get_test_impl(test_impl_port) as test_cmd:
-                time.sleep(1)  # wait 1 second for the implementations to start up.
+                if not self.config.pretend:
+                    time.sleep(1)  # wait 1 second for the implementations to start up.
                 if reference_cmd.poll() is not None:
                     test_cmd.kill()  # kill the other implementation so that the with statement can complete.
                     self.fatal("Reference implementation failed to start correctly. Command was:",
