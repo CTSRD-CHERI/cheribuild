@@ -47,12 +47,6 @@ fi
 #echo "PRE_COMMIT_REMOTE_BRANCH=$PRE_COMMIT_REMOTE_BRANCH"
 #echo "PRE_COMMIT_LOCAL_BRANCH=$PRE_COMMIT_LOCAL_BRANCH"
 
-
-# skip expensive metalog checks in pre-push hook
-export _TEST_SKIP_METALOG=1
-# Also skip `git status`, etc. invocations
-export _TEST_SKIP_GIT_COMMANDS=1
-export CHERIBUILD_DEBUG=1
 if [ "$PRE_COMMIT_FROM_REF" = $z40 ]
 then
     # New branch, examine all commits

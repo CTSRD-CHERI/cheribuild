@@ -16,6 +16,12 @@ try_run() {
     fi
 }
 
+# skip expensive metalog checks in pre-push hook
+export _TEST_SKIP_METALOG=1
+# Also skip `git status`, etc. invocations
+export _TEST_SKIP_GIT_COMMANDS=1
+export CHERIBUILD_DEBUG=1
+
 # check that there are no obvious mistakes:
 try_run ./cheribuild.py --help
 try_run ./jenkins-cheri-build.py --help
