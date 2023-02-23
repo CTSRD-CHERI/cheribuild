@@ -61,6 +61,15 @@ pacman -Syu autoconf automake libtool pkgconf clang bison cmake ninja samba flex
 
 These package used approx 350MiB, though you probably have most already installed.
 
+# Contributing
+
+If you would like to make a change to cheribuild, please submit it as a GitHub pull request to
+https://github.com/CTSRD-CHERI/cheribuild.
+Cheribuild includes some pre-commit and pre-push hooks (using
+[pre-commit](https://github.com/pre-commit/pre-commit)) that can catch issues that will
+fail the pull request CI checks. To install the hooks, run the following command
+`python3 -m pip install -U --user pre-commit && pre-commit install -t pre-commit -t pre-push`.
+
 # Basic usage
 
 In these examples the `cheribuild.py` program is run from within the

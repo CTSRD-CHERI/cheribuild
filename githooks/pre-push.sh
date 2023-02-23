@@ -18,10 +18,6 @@
 #
 # This sample shows how to prevent push of commits where the log message starts
 # with "WIP" (work in progress).
-
-remote="$1"
-url="$2"
-
 z40=0000000000000000000000000000000000000000
 
 check_bad_commit_msg() {
@@ -39,44 +35,37 @@ check_bad_commit_msg() {
     fi
 }
 
+# The PRE_COMMIT_* environment variables are set by pre-commit
+if [ -z "$PRE_COMMIT_TO_REF" ]; then
+    echo "This script should be run by pre-commit, please run \"pre-commit install -t pre-push -f\""
+fi
+# Uncomment to debug unexpectedly checked commit
+#echo "PRE_COMMIT_FROM_REF=$PRE_COMMIT_FROM_REF"
+#echo "PRE_COMMIT_TO_REF=$PRE_COMMIT_TO_REF"
+#echo "PRE_COMMIT_REMOTE_NAME=$PRE_COMMIT_REMOTE_NAME"
+#echo "PRE_COMMIT_REMOTE_URL=$PRE_COMMIT_REMOTE_URL"
+#echo "PRE_COMMIT_REMOTE_BRANCH=$PRE_COMMIT_REMOTE_BRANCH"
+#echo "PRE_COMMIT_LOCAL_BRANCH=$PRE_COMMIT_LOCAL_BRANCH"
+
 
 # skip expensive metalog checks in pre-push hook
 export _TEST_SKIP_METALOG=1
 # Also skip `git status`, etc. invocations
 export _TEST_SKIP_GIT_COMMANDS=1
 export CHERIBUILD_DEBUG=1
+if [ "$PRE_COMMIT_FROM_REF" = $z40 ]
+then
+    # New branch, examine all commits
+    range="$PRE_COMMIT_TO_REF"
+else
+    # Update to existing branch, examine new commits
+    range="$PRE_COMMIT_FROM_REF..$PRE_COMMIT_TO_REF"
+fi
 
-while read -r local_ref local_sha remote_ref remote_sha
-do
-	if [ "$local_sha" = $z40 ]
-	then
-		# Handle delete
-		:
-	else
-		if [ "$remote_sha" = $z40 ]
-		then
-			# New branch, examine all commits
-			range="$local_sha"
-		else
-			# Update to existing branch, examine new commits
-			range="$remote_sha..$local_sha"
-		fi
-		# Check for WIP commit
-		check_bad_commit_msg "$range" '^WIP' "work-in-progress"
-		# Check for rebase/fixup commit
-		check_bad_commit_msg "$range" '^rebase' "rebase/fixup"
-		check_bad_commit_msg "$range" '^fixup' "rebase/fixup"
-		# Check for DNM (do-not-merge) commit
-		check_bad_commit_msg "$range" '^DNM' "do-not-merge"
-
-		if command -v ruff > /dev/null 2>/dev/null; then
-			ruff check .
-		fi
-
-		# git hooks run from the root of the repository, so ./tests should work
-		sh -e "./tests/run_basic_tests.sh" || exit 1
-
-	fi
-done
-
-exit 0
+# Check for WIP commit
+check_bad_commit_msg "$range" '^WIP' "work-in-progress"
+# Check for rebase/fixup commit
+check_bad_commit_msg "$range" '^rebase' "rebase/fixup"
+check_bad_commit_msg "$range" '^fixup' "rebase/fixup"
+# Check for DNM (do-not-merge) commit
+check_bad_commit_msg "$range" '^DNM' "do-not-merge"
