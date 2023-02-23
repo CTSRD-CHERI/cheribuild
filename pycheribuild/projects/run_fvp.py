@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2020 Alex Richardson
+# Copyright (c) 2023 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # This work was supported by Innovate UK project 105694, "Digital Security by
 # Design (DSbD) Technology Platform Prototype".
@@ -485,6 +486,7 @@ class LaunchFVPBase(SimpleProject):
                                                  help="Force headless use of the FVP")
         cls.fvp_trace = cls.add_optional_path_option("trace",
                                                      help="Enable FVP tracing plugin to output to the given file")
+        cls.fvp_trace_unbuffered = cls.add_bool_option("trace-unbuffered", help="Don't buffer FVP trace output")
         cls.fvp_trace_mmu = cls.add_bool_option("trace-mmu", default=False, help="Emit FVP MMU trace events")
         cls.fvp_trace_icount = cls.add_config_option("trace-start-icount",
                                                      help="Instruction count from which to start Tarmac trace")
@@ -666,6 +668,8 @@ class LaunchFVPBase(SimpleProject):
                     "-C", "css.cluster1.cpu0.trace_special_hlt_imm16=0xbeef",
                     "-C", "css.cluster1.cpu1.trace_special_hlt_imm16=0xbeef"
                 ]
+                if self.fvp_trace_unbuffered:
+                    fvp_args += ["-C", "TRACE.TarmacTrace.unbuffered=true"]
                 if self.fvp_trace_icount:
                     fvp_args += ["-C", "TRACE.TarmacTrace.start-instruction-count={}".format(self.fvp_trace_icount)]
 
