@@ -47,8 +47,8 @@ else:
 
 # We also build benchmarks for hybrid to see whether those compilation flags change the results
 class BenchmarkMixin(_BenchmarkMixinBase):
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID_FOR_PURECAP_ROOTFS + [
-        CompilationTargets.NATIVE]
+    supported_architectures = (CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID_FOR_PURECAP_ROOTFS +
+                               CompilationTargets.ALL_NATIVE)
     default_build_type = BuildType.RELEASE
     prefer_full_lto_over_thin_lto = True
 
