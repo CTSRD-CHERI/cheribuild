@@ -34,6 +34,7 @@ from .crosscompileproject import (
     CheriConfig,
     CompilationTargets,
     CrossCompileAutotoolsProject,
+    CrossCompileTarget,
     DefaultInstallDir,
     GitRepository,
     Linkage,
@@ -58,6 +59,13 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
                                [CompilationTargets.NATIVE_NON_PURECAP])
     default_architecture = CompilationTargets.NATIVE_NON_PURECAP
     prefer_full_lto_over_thin_lto = True
+
+    @staticmethod
+    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
+        if xtarget is CompilationTargets.NATIVE_NON_PURECAP and xtarget != CompilationTargets.NATIVE:
+            assert xtarget.generic_target_suffix == "native-hybrid", xtarget.generic_target_suffix
+            return base_target + "-native"
+        return base_target + "-" + xtarget.generic_target_suffix
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
