@@ -1028,6 +1028,6 @@ class BasicCompilationTargets:
         NATIVE = CrossCompileTarget("native", _native_cpu_arch(), NativeTargetInfo)
         NATIVE_NON_PURECAP = NATIVE
         ALL_NATIVE = [NATIVE]
-    NATIVE_IF_FREEBSD = [NATIVE] if OSInfo.IS_FREEBSD else []
-    NATIVE_IF_LINUX = [NATIVE] if OSInfo.IS_LINUX else []
-    NATIVE_IF_MACOS = [NATIVE] if OSInfo.IS_MAC else []
+    NATIVE_IF_FREEBSD = ALL_NATIVE if OSInfo.IS_FREEBSD else []
+    NATIVE_IF_LINUX = ALL_NATIVE if OSInfo.IS_LINUX else []
+    NATIVE_IF_MACOS = ALL_NATIVE if OSInfo.IS_MAC else []
