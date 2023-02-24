@@ -185,7 +185,7 @@ def test_run_disk_image():
 
 
 def test_remove_duplicates():
-    assert _sort_targets(["binutils", "llvm"], add_dependencies=True) == ["llvm-native"]
+    assert _sort_targets(["llvm-native", "llvm"], add_dependencies=True) == ["llvm-native"]
 
 
 def test_mfs_root_run():

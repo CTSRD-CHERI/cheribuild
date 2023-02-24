@@ -35,7 +35,6 @@ from .cmake_project import CMakeProject
 from .cross.cheribsd import BuildCHERIBSD
 from .project import CheriConfig, CPUArchitecture, DefaultInstallDir, GitRepository
 from .simple_project import SimpleProject, TargetAliasWithDependencies
-from ..targets import target_manager
 from ..utils import classproperty, include_local_file
 
 
@@ -106,10 +105,6 @@ class BuildFreestandingMorelloSdk(TargetAliasWithDependencies):
     dependencies = ["morello-llvm-native", "qemu"]  # "morello-gdb-native" does not exist
     dependencies_must_be_built = True
     is_sdk_target = True
-
-
-# Binutils now just builds LLVM since we don't need GNU binutils or Elftoolchain any more
-target_manager.add_target_alias("binutils", "llvm-native")
 
 
 class StartCheriSDKShell(SimpleProject):
