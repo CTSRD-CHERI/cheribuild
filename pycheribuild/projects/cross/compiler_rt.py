@@ -63,7 +63,8 @@ class BuildCompilerRt(CrossCompileCMakeProject):
         if is_jenkins_build():
             llvm_tools_bindir = self.llvm_project.get_native_install_path(self.config) / "bin"
         else:
-            llvm_tools_bindir = self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin"
+            llvm_tools_bindir = self.llvm_project.get_build_dir(
+                self, cross_target=CompilationTargets.NATIVE_NON_PURECAP) / "bin"
         self.add_cmake_options(
             LLVM_CONFIG_PATH=llvm_tools_bindir / "llvm-config",
             LLVM_EXTERNAL_LIT=llvm_tools_bindir / "llvm-lit",
@@ -159,12 +160,16 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if self.target_info.is_rtems() or self.target_info.is_baremetal():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")  # RTEMS only needs static libs
 
+        if is_jenkins_build() and not self.compiling_for_host():
+            llvm_config_path = self.sdk_bindir / "llvm-config"
+            llvm_lit_path = self.sdk_bindir / "llvm-lit"
+        else:
+            llvm_build_dir = self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP)
+            llvm_config_path = llvm_build_dir / "bin/llvm-config",
+            llvm_lit_path = llvm_build_dir / "bin/llvm-lit",
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=self.sdk_bindir / "llvm-config" if is_jenkins_build() and not self.compiling_for_host()
-            else
-            self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
-            LLVM_EXTERNAL_LIT=self.sdk_bindir / "llvm-lit" if is_jenkins_build() and not self.compiling_for_host() else
-            self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
+            LLVM_CONFIG_PATH=llvm_config_path,
+            LLVM_EXTERNAL_LIT=llvm_lit_path,
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=False,
             COMPILER_RT_BUILD_XRAY=False,

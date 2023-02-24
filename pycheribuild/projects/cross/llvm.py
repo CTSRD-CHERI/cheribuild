@@ -62,6 +62,9 @@ class BuildLLVMBase(CMakeProject):
     is_large_source_repository = True
     # Linking all the debug info takes forever
     default_build_type = BuildType.RELEASE
+    # LLVM does not yet compile for purecap.
+    supported_architectures = [CompilationTargets.NATIVE_NON_PURECAP]
+    default_architecture = CompilationTargets.NATIVE_NON_PURECAP
 
     included_projects: "ClassVar[list[str]]"
     add_default_sysroot: "ClassVar[bool]"
@@ -74,6 +77,13 @@ class BuildLLVMBase(CMakeProject):
     dylib: "ClassVar[bool]"
     install_toolchain_only: "ClassVar[bool]"
     build_minimal_toolchain: "ClassVar[bool]"
+
+    @staticmethod
+    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
+        if xtarget is CompilationTargets.NATIVE_NON_PURECAP and xtarget != CompilationTargets.NATIVE:
+            assert xtarget.generic_target_suffix == "native-hybrid", xtarget.generic_target_suffix
+            return base_target + "-native"
+        return base_target + "-" + xtarget.generic_target_suffix
 
     @classmethod
     def is_toolchain_target(cls):
@@ -485,10 +495,10 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     is_sdk_target = True
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    default_architecture = CompilationTargets.NATIVE
     # NB: remove_duplicates is needed for --enable-hybrid-for-purecap-rootfs targets.
-    supported_architectures = remove_duplicates(CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS +
-                                                CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
+    supported_architectures = remove_duplicates(CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS +
+                                                CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS +
+                                                [CompilationTargets.NATIVE_NON_PURECAP])
     build_all_targets: "ClassVar[bool]"
 
     @classmethod
@@ -551,11 +561,11 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
     is_sdk_target = True
     native_install_dir = DefaultInstallDir.MORELLO_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    default_architecture = CompilationTargets.NATIVE
 
     # NB: remove_duplicates is needed for --enable-hybrid-for-purecap-rootfs targets.
-    supported_architectures = remove_duplicates(CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS +
-                                                CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS)
+    supported_architectures = remove_duplicates(CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS +
+                                                CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS +
+                                                [CompilationTargets.NATIVE_NON_PURECAP])
 
     @property
     def triple_prefixes_for_binaries(self) -> "Iterable[str]":

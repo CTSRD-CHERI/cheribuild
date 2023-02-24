@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 from .cmake_project import CMakeProject
+from .cross.llvm import BuildCheriLLVM
 from .project import BuildType, DefaultInstallDir, GitRepository
 from .simple_project import SimpleProject
 
@@ -55,6 +56,7 @@ class BuildKDevelop(CMakeProject):
     default_build_type = BuildType.DEBUG
     repository = GitRepository("https://github.com/arichardson/kdevelop.git", default_branch="cheri")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
+    supported_architectures = [BuildCheriLLVM.default_architecture]
 
     def setup(self):
         super().setup()

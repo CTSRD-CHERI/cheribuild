@@ -384,7 +384,8 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         if not cls.get_crosscompile_target().is_native():
             return super().dependencies(config)
-        return super().dependencies(config) + [cls.llvm_project.get_class_for_target(CompilationTargets.NATIVE).target]
+        return super().dependencies(config) + [
+            cls.llvm_project.get_class_for_target(CompilationTargets.NATIVE_NON_PURECAP).target]
 
     @classproperty
     def repository(self):
@@ -393,19 +394,22 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
     @property
     def custom_c_preprocessor(self):
         if self.compiling_for_host():
-            return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang-cpp"
+            return self.llvm_project.get_install_dir(
+                self, cross_target=CompilationTargets.NATIVE_NON_PURECAP) / "bin/clang-cpp"
         return None
 
     @property
     def custom_c_compiler(self):
         if self.compiling_for_host():
-            return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang"
+            return self.llvm_project.get_install_dir(
+                self, cross_target=CompilationTargets.NATIVE_NON_PURECAP) / "bin/clang"
         return None
 
     @property
     def custom_cxx_compiler(self):
         if self.compiling_for_host():
-            return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang++"
+            return self.llvm_project.get_install_dir(
+                self, cross_target=CompilationTargets.NATIVE_NON_PURECAP) / "bin/clang++"
         return None
 
     def setup(self):

@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+from .cross.llvm import BuildCheriLLVM
 from .project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 
 
@@ -34,6 +35,7 @@ class BuildQtCreator(Project):
     dependencies = ["llvm"]
     repository = GitRepository("https://code.qt.io/qt-creator/qt-creator.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
+    supported_architectures = [BuildCheriLLVM.default_architecture]
 
     def setup(self):
         super().setup()

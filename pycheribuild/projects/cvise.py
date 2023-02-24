@@ -26,6 +26,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 from .cmake_project import CMakeProject
+from .cross.llvm import BuildCheriLLVM
 from .project import DefaultInstallDir, GitRepository
 
 
@@ -34,4 +35,5 @@ class BuildCVise(CMakeProject):
     target = "cvise"
     repository = GitRepository("https://github.com/marxin/cvise")
     dependencies = ["llvm"]
+    supported_architectures = [BuildCheriLLVM.default_architecture]
     default_install_dir = DefaultInstallDir.CHERI_SDK

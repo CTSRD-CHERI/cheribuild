@@ -51,7 +51,7 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        return [cls.llvm_project.get_class_for_target(CompilationTargets.NATIVE).target]
+        return [cls.llvm_project.get_class_for_target(CompilationTargets.NATIVE_NON_PURECAP).target]
 
     # noinspection PyMethodParameters
     @classproperty
@@ -70,7 +70,7 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
                                                 help="Collect statistics from the compiler")
 
     def __find_in_sdk_or_llvm_build_dir(self, name) -> Path:
-        llvm_project = self.llvm_project.get_instance(self, cross_target=CompilationTargets.NATIVE)
+        llvm_project = self.llvm_project.get_instance(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP)
         if (llvm_project.build_dir / "bin" / name).exists():
             return llvm_project.build_dir / "bin" / name
         if is_jenkins_build() and not self.compiling_for_host():
@@ -150,12 +150,14 @@ class BuildLLVMTestSuiteCheriBSDUpstreamLLVM(BuildLLVMTestSuite):
 
     @property
     def custom_c_preprocessor(self):
-        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang-cpp"
+        return self.llvm_project.get_install_dir(
+            self, cross_target=CompilationTargets.NATIVE_NON_PURECAP) / "bin/clang-cpp"
 
     @property
     def custom_c_compiler(self):
-        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang"
+        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP) / "bin/clang"
 
     @property
     def custom_cxx_compiler(self):
-        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang++"
+        return self.llvm_project.get_install_dir(
+            self, cross_target=CompilationTargets.NATIVE_NON_PURECAP) / "bin/clang++"
