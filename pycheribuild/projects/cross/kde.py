@@ -542,12 +542,14 @@ class BuildKBookmarks(KDECMakeProject):
 
 
 class BuildKCMUtils(KDECMakeProject):
-    dependencies = ["kitemviews", "kconfigwidgets", "kservice", "kxmlgui", "kdeclarative", "kauth", "kcmutils-tools"]
+    dependencies = ["kitemviews", "kconfigwidgets", "kservice", "kxmlgui", "kdeclarative", "kauth",
+                    "kcmutils-tools-native"]
     repository = GitRepository("https://invent.kde.org/frameworks/kcmutils.git")
 
 
 class BuildKCMUtilsTools(KDECMakeProject):
     target = "kcmutils-tools"
+    _always_add_suffixed_targets = True
     dependencies = ["kitemviews", "kconfigwidgets", "kservice", "kxmlgui", "kdeclarative", "kauth"]
     supported_architectures = CompilationTargets.ALL_NATIVE
     repository = ReuseOtherProjectRepository(source_project=BuildKCMUtils, do_update=True)
