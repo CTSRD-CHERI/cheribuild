@@ -255,7 +255,10 @@ class BuildGDB(BuildGDBBase):
 
 
 class BuildKGDB(BuildGDB):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/gdb.git",
-                               # Branch name is changed for every major GDB release:
-                               default_branch="mips_cheri-8.3-kgdb", force_branch=True,
-                               old_urls=[b'https://github.com/bsdjhb/gdb.git'])
+    default_branch = "cheri-12-kgdb"
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/gdb.git",
+        # Branch name is changed for every major GDB release:
+        default_branch=default_branch,
+        old_branches={"mips_cheri-8.3-kgdb": default_branch},
+        old_urls=[b'https://github.com/bsdjhb/gdb.git'])
