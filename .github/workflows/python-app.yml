@@ -15,7 +15,7 @@ jobs:
         container:
           image: python:3.6.0
         steps:
-            -   uses: actions/checkout@v2
+            -   uses: actions/checkout@v3
             -   name: Install dependencies
                 run: |
                     # Run as a non-root user to avoid cheribuild errors
@@ -32,7 +32,7 @@ jobs:
     build-macos:
         runs-on: macos-latest
         steps:
-            -   uses: actions/checkout@v2
+            -   uses: actions/checkout@v3
             -   name: Install dependencies
                 run: |
                     # Use the system-provided python3 instead of actions/setup-python@v4
@@ -51,7 +51,7 @@ jobs:
     build-latest:
         runs-on: ubuntu-latest
         steps:
-            -   uses: actions/checkout@v2
+            -   uses: actions/checkout@v3
             -   name: Set up Python 3.11
                 uses: actions/setup-python@v4
                 with:
@@ -73,7 +73,7 @@ jobs:
     typecheck:
         runs-on: ubuntu-latest
         steps:
-            -   uses: actions/checkout@v2
+            -   uses: actions/checkout@v3
             # Need at least python 3.8 to allow pytype to parse all the features we make use of
             -   name: Set up Python 3.8
                 uses: actions/setup-python@v4
