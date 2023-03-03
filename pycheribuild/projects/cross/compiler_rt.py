@@ -127,8 +127,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     is_sdk_target = True
     root_cmakelists_subdirectory = Path("lib/builtins")
     needs_sysroot = False  # We don't need a complete sysroot
-    supported_architectures = \
-        CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
+    supported_architectures = (CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS +
+                               CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS +
+                               CompilationTargets.ALL_NATIVE)
 
     # Note: needs to be @classproperty since it is called before __init__
     @classproperty
@@ -151,7 +152,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
 
     def setup(self):
         super().setup()
-        assert self.target_info.is_baremetal() or self.target_info.is_rtems(), "No other targets supported yet"
+        assert self.target_info.is_baremetal() or self.target_info.is_rtems() or self.target_info.is_native()
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
         if self.compiling_for_mips(include_purecap=False):
@@ -165,9 +166,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         self.add_cmake_options(
             COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN=False,
             COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal(),
-            COMPILER_RT_DEFAULT_TARGET_ONLY=True,
-            TARGET_TRIPLE=self.target_info.target_triple,
         )
+        if not self.compiling_for_host():
+            self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ONLY=True, TARGET_TRIPLE=self.target_info.target_triple)
         if self.target_info.is_baremetal():
             self.add_cmake_options(COMPILER_RT_OS_DIR="baremetal")
         if self.should_include_debug_info:
