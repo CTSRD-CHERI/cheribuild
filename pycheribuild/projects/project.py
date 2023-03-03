@@ -1699,8 +1699,8 @@ class _CMakeAndMesonSharedLogic(Project):
                 value = self._bool_to_str(value)
             if (not str(value) or not value) and not _include_empty_vars:
                 continue
-            assert _implicitly_convert_lists or not isinstance(value, list), \
-                "Lists must be converted to strings explicitly: " + str(value)
+            if not _implicitly_convert_lists and isinstance(value, list):
+                raise ValueError(f"Lists must be converted to strings explicitly: {value}")
             assert value is not None
             self.configure_args.append("-D" + option + "=" + str(value))
 
