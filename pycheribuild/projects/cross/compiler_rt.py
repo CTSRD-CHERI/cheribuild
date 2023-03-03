@@ -165,8 +165,8 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             llvm_lit_path = self.sdk_bindir / "llvm-lit"
         else:
             llvm_build_dir = self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP)
-            llvm_config_path = llvm_build_dir / "bin/llvm-config",
-            llvm_lit_path = llvm_build_dir / "bin/llvm-lit",
+            llvm_config_path = llvm_build_dir / "bin/llvm-config"
+            llvm_lit_path = llvm_build_dir / "bin/llvm-lit"
         self.add_cmake_options(
             LLVM_CONFIG_PATH=llvm_config_path,
             LLVM_EXTERNAL_LIT=llvm_lit_path,
