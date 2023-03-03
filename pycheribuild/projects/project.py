@@ -1681,8 +1681,8 @@ class _CMakeAndMesonSharedLogic(Project):
             COMMENT_IF_NATIVE="#" if self.compiling_for_host() else "",
             **kwargs)
 
-    def _add_configure_options(self, *, _include_empty_vars=False, _replace=True, _implicitly_convert_lists=False,
-                               _config_file_options: "list[str]", **kwargs) -> None:
+    def _add_configure_options(self, *, _include_empty_vars=False, _replace=True, _config_file_options: "list[str]",
+                               **kwargs) -> None:
         for option, value in kwargs.items():
             existing_option = next((x for x in self.configure_args if x.startswith("-D" + option + "=")), None)
             if any(x.startswith("-D" + option) for x in _config_file_options):
@@ -1699,8 +1699,9 @@ class _CMakeAndMesonSharedLogic(Project):
                 value = self._bool_to_str(value)
             if (not str(value) or not value) and not _include_empty_vars:
                 continue
-            if not _implicitly_convert_lists and isinstance(value, list):
-                raise ValueError(f"Lists must be converted to strings explicitly: {value}")
+            # Only allow a known list of types to be converted to strings:
+            if not isinstance(value, (str, Path, int)):
+                raise TypeError(f"Unsupported type {type(value)}: {value}")
             assert value is not None
             self.configure_args.append("-D" + option + "=" + str(value))
 

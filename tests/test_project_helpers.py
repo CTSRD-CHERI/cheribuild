@@ -33,10 +33,15 @@ def test_add_cmake_option():
     add_options_test(["-DINT_OPTION=2"], INT_OPTION=2)
     add_options_test(["-DBOOL_OPTION1=TRUE", "-DBOOL_OPTION2=FALSE"], BOOL_OPTION1=True, BOOL_OPTION2=False)
     add_options_test(["-DPATH_OPTION=/some/path"], PATH_OPTION=Path("/some/path"))
-    # TODO: float should give an error and needs to be converted manually
-    add_options_test(["-DFLOAT_OPTION=0.1"], FLOAT_OPTION=0.1)
-
     # Lists need to be converted manually
-    with pytest.raises(ValueError, match=re.escape("Lists must be converted to strings explicitly: ['a', 'b', 'c']")):
+    with pytest.raises(TypeError, match=re.escape("Unsupported type <class 'list'>: ['a', 'b', 'c']")):
         add_options_test(["-DLIST_OPTION_1=a;b;c", "-DLIST_OPTION_2=a", "-DLIST_OPTION_3="],
                          LIST_OPTION_1=["a", "b", "c"], LIST_OPTION_2=["a"], LIST_OPTION_3=[])
+    # Floats need to be converted manually
+    with pytest.raises(TypeError, match=re.escape("Unsupported type <class 'float'>: 0.1")):
+        add_options_test([], FLOAT_OPTION=0.1)
+    # Check that tuples and bytes are rejected
+    with pytest.raises(TypeError, match=re.escape("Unsupported type <class 'bytes'>: b'abc'")):
+        add_options_test([], BYTE_OPTION=b"abc")
+    with pytest.raises(TypeError, match=re.escape("Unsupported type <class 'tuple'>: ('abc',)")):
+        add_options_test([], TUPLE_OPTION=("abc",))

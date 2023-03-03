@@ -115,9 +115,9 @@ class BuildMesa(CrossCompileMesonProject):
         if self.compiling_for_aarch64(include_purecap=True):
             meson_args["gallium-drivers"].append("panfrost")
             # Does not compile yet: meson_args["vulkan-drivers"].append("panfrost")
+        meson_args = {k: str(v) for k, v in meson_args.items()}
         self.add_meson_options(gbm="enabled", egl="enabled", glvnd=True, llvm="disabled", osmesa=False,
-                               platforms=platforms,
-                               _include_empty_vars=True, _implicitly_convert_lists=True, **meson_args)
+                               platforms=str(platforms), _include_empty_vars=True, **meson_args)
         # threads_posix.h:274:13: error: releasing mutex 'mtx' that was not held [-Werror,-Wthread-safety-analysis]
         self.cross_warning_flags.append("-Wno-thread-safety-analysis")
         # There are quite a lot of -Wcheri-capability-misuse warnings, but for now we just want the library to exist
