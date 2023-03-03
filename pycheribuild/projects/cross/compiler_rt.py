@@ -160,25 +160,14 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if self.target_info.is_rtems() or self.target_info.is_baremetal():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")  # RTEMS only needs static libs
 
-        if is_jenkins_build() and not self.compiling_for_host():
-            llvm_config_path = self.sdk_bindir / "llvm-config"
-            llvm_lit_path = self.sdk_bindir / "llvm-lit"
-        else:
-            llvm_build_dir = self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP)
-            llvm_config_path = llvm_build_dir / "bin/llvm-config"
-            llvm_lit_path = llvm_build_dir / "bin/llvm-lit"
+        llvm_config = self.get_compiler_info(self.CC).get_matching_binutil("llvm-config")
+        if llvm_config is None:
+            self.dependency_error(f"Could not find matching llvm-config for {self.CC}")
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=llvm_config_path,
-            LLVM_EXTERNAL_LIT=llvm_lit_path,
-            COMPILER_RT_BUILD_BUILTINS=True,
-            COMPILER_RT_BUILD_SANITIZERS=False,
-            COMPILER_RT_BUILD_XRAY=False,
-            COMPILER_RT_BUILD_LIBFUZZER=False,
-            COMPILER_RT_BUILD_PROFILE=False,
+            LLVM_CONFIG_PATH=llvm_config,
             COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN=False,
             COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal(),
             COMPILER_RT_DEFAULT_TARGET_ONLY=True,
-            # BUILTIN_SUPPORTED_ARCH="mips64",
             TARGET_TRIPLE=self.target_info.target_triple,
             )
         if self.target_info.is_baremetal():
