@@ -160,16 +160,14 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if self.target_info.is_rtems() or self.target_info.is_baremetal():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")  # RTEMS only needs static libs
 
-        llvm_config = self.get_compiler_info(self.CC).get_matching_binutil("llvm-config")
-        if llvm_config is None:
-            self.dependency_error(f"Could not find matching llvm-config for {self.CC}")
+        # Set some variables to allow building without llvm-config:
+        self.add_cmake_options(LLVM_CONFIG_PATH="NOTFOUND", CMAKE_DISABLE_FIND_PACKAGE_LLVM=True)
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=llvm_config,
             COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN=False,
             COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal(),
             COMPILER_RT_DEFAULT_TARGET_ONLY=True,
             TARGET_TRIPLE=self.target_info.target_triple,
-            )
+        )
         if self.target_info.is_baremetal():
             self.add_cmake_options(COMPILER_RT_OS_DIR="baremetal")
         if self.should_include_debug_info:
