@@ -712,9 +712,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Don't build manpages by default
             self.make_args.set_with_options(MAN=self.with_manpages)
             # we want to build makefs for the disk image (makefs depends on libnetbsd which will not be
-            # bootstrapped on FreeBSD)
+            # bootstrapped on FreeBSD, and the same goes for libsbuf in recent versions since config(8) no longer
+            # depends on it)
             # TODO: upstream a patch to bootstrap them by default
-            self.make_args.set(LOCAL_XTOOL_DIRS="lib/libnetbsd usr.sbin/makefs usr.bin/mkimg")
+            self.make_args.set(LOCAL_XTOOL_DIRS="lib/libnetbsd lib/libsbuf usr.sbin/makefs usr.bin/mkimg")
             # Enable MALLOC_PRODUCTION by default unless --<tgt>/build-type=Debug is passed.
             self.make_args.set_with_options(MALLOC_PRODUCTION=self.build_type.is_release)
 
