@@ -856,7 +856,14 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             return  # already checked
         self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
         try:
-            self.run_cmd(["pkg-config", "--modversion", package], capture_output=True)
+            env = {}
+            # Support keg-only homebrew formulae, like libarchive
+            if OSInfo.IS_MAC:
+                brew_prefix = self.get_homebrew_prefix(homebrew if homebrew is not None else package, optional=True)
+                if brew_prefix is not None:
+                    env["PKG_CONFIG_PATH"] = os.getenv("PKG_CONFIG_PATH", "") + ":" + str(brew_prefix / "lib/pkgconfig")
+            with self.set_env(**env):
+                self.run_cmd(["pkg-config", "--modversion", package], capture_output=True)
         except subprocess.CalledProcessError as e:
             self.dependency_error("Required pkg-config file for", package, "is missing:", e,
                                   install_instructions=instructions,
@@ -1151,9 +1158,9 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         """
         self._system_deps_checked = True
 
-    def get_homebrew_prefix(self, package: "Optional[str]" = None) -> Path:
+    def get_homebrew_prefix(self, package: "Optional[str]" = None, optional: bool = False) -> Path:
         prefix = _cached_get_homebrew_prefix(package, self.config)
-        if not prefix:
+        if not prefix and not optional:
             prefix = Path("/fake/homebrew/prefix/when/pretending")
             if package:
                 self.dependency_error("Could not find homebrew package", package,
