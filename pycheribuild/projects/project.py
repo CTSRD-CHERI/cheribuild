@@ -1080,7 +1080,6 @@ class Project(SimpleProject):
             compdb_extra_args = []
             using_intercept_build = "intercept-build" in self._compiledb_tool
             if using_intercept_build:
-                # compdb_extra_args = ["--cdb", self.build_dir / compilation_db_name, "--append", make_command]
                 compdb_extra_args = ["--cdb", self.build_dir / compilation_db_name, "--append", make_command]
             elif self._compiledb_tool == "compiledb":
                 compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "make", "--cmd", make_command]
