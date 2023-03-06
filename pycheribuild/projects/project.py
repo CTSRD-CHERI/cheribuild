@@ -391,7 +391,7 @@ class Project(SimpleProject):
     git_revision: Optional[str] = None
     needs_full_history: bool = False  # Some projects need the full git history when cloning
     skip_git_submodules: bool = False
-    compile_db_requires_bear: bool = True
+    compile_db_requires_intercept_build: bool = True
     do_not_add_to_targets: bool = True
     set_pkg_config_path: bool = True  # set the PKG_CONFIG_* environment variables when building
     can_run_parallel_install: bool = False  # Most projects don't work well with parallel installation
@@ -541,18 +541,24 @@ class Project(SimpleProject):
         else:
             return False
 
+    def get_intercept_build_path(self) -> str:
+        return os.path.realpath(os.path.join(self.source_dir, "..", "morello-llvm-project", "clang", "tools",
+                                             "scan-build-py", "bin", "intercept-build"))
+
     def check_system_dependencies(self) -> None:
         # Check that the make command exists (this will also add it to the required system tools)
         if self.make_args.command is None:
             self.fatal("Make command not set!")
-        if self.config.create_compilation_db and self.compile_db_requires_bear:
+        if self.config.create_compilation_db and self.compile_db_requires_intercept_build:
             if self.make_args.is_gnu_make and False:
                 # use compiledb instead of bear for gnu make
                 self.check_required_system_tool("compiledb",
                                                 instructions=InstallInstructions("Run `pip install --user compiledb``"))
             else:
-                self.check_required_system_tool("bear", homebrew="bear", cheribuild_target="bear")
-                self._compiledb_tool = "bear"
+                # An early make command sets PATH to exclude /usr/local/bin, but intercept-build uses python
+                self.check_required_system_tool("/usr/bin/python",
+                                                instructions=InstallInstructions("Run `ln -s /usr/local/bin/python /usr/bin/python`"))
+                self._compiledb_tool = self.get_intercept_build_path()
         super().check_system_dependencies()
 
     lto_by_default: bool = False  # Don't default to LTO
@@ -816,14 +822,14 @@ class Project(SimpleProject):
         self._last_stdout_line_can_be_overwritten = False
         self.make_args = MakeOptions(self.make_kind, self)
         self._compiledb_tool: Optional[str] = None
-        if self.config.create_compilation_db and self.compile_db_requires_bear:
+        if self.config.create_compilation_db and self.compile_db_requires_intercept_build:
             # CompileDB seems to generate broken compile_commands,json
             if self.make_args.is_gnu_make and False:
                 # use compiledb instead of bear for gnu make
                 # https://blog.jetbrains.com/clion/2018/08/working-with-makefiles-in-clion-using-compilation-db/
                 self._compiledb_tool = "compiledb"
             else:
-                self._compiledb_tool = "bear"
+                self._compiledb_tool = self.get_intercept_build_path()
         self._force_clean = False
         self._prevent_assign = True
 
@@ -1068,11 +1074,14 @@ class Project(SimpleProject):
         assert options is not None
         assert make_command is not None
         options = options.copy()
-        if compilation_db_name is not None and self.config.create_compilation_db and self.compile_db_requires_bear:
+        using_intercept_build = False
+        if compilation_db_name is not None and self.config.create_compilation_db and self.compile_db_requires_intercept_build:
             assert self._compiledb_tool is not None
             compdb_extra_args = []
-            if self._compiledb_tool == "bear":
-                compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "--append", "--", make_command]
+            using_intercept_build = "intercept-build" in self._compiledb_tool
+            if using_intercept_build:
+                # compdb_extra_args = ["--cdb", self.build_dir / compilation_db_name, "--append", make_command]
+                compdb_extra_args = ["--cdb", self.build_dir / compilation_db_name, "--append", make_command]
             elif self._compiledb_tool == "compiledb":
                 compdb_extra_args = ["--output", self.build_dir / compilation_db_name, "make", "--cmd", make_command]
             else:
@@ -1083,8 +1092,14 @@ class Project(SimpleProject):
                     "Cannot find '" + self._compiledb_tool + "' which is needed to create a compilation DB")
                 tool_path = self._compiledb_tool
             options.set_command(tool_path, can_pass_j_flag=options.can_pass_jflag, early_args=compdb_extra_args)
-            # Ensure that recursive make invocations reuse the compilation DB tool
-            options.set(MAKE=commandline_to_str([options.command] + compdb_extra_args))
+
+            if not using_intercept_build:
+                # Ensure that recursive make invocations reuse the compilation DB tool
+                options.set(MAKE=commandline_to_str([options.command] + compdb_extra_args))
+            else:
+                # Using intercept-build will cause an early command to fail, but still tracks recursive calls
+                # so just make the MAKE envvar the regular make command so that early command succeeds
+                options.set(MAKE=commandline_to_str([make_command]))
             make_command = options.command
 
         all_args = [make_command] + options.get_commandline_args(

@@ -51,7 +51,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     and checks that CMake is installed
     """
     do_not_add_to_targets: bool = True
-    compile_db_requires_bear: bool = False  # cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON does it
+    compile_db_requires_intercept_build: bool = False  # cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON does it
     generate_cmakelists: bool = False  # There is already a CMakeLists.txt
     make_kind: MakeCommandKind = MakeCommandKind.CMake
     _default_cmake_generator_arg: str = "-GNinja"  # We default to using the Ninja generator since it's faster
