@@ -557,7 +557,8 @@ class Project(SimpleProject):
             else:
                 # An early make command sets PATH to exclude /usr/local/bin, but intercept-build uses python
                 self.check_required_system_tool("/usr/bin/python",
-                                                instructions=InstallInstructions("Run `ln -s /usr/local/bin/python /usr/bin/python`"))
+                                                instructions=InstallInstructions("Run `ln -s /usr/local/bin/python "
+                                                                                 "/usr/bin/python`"))
                 self._compiledb_tool = self.get_intercept_build_path()
         super().check_system_dependencies()
 
@@ -1075,7 +1076,8 @@ class Project(SimpleProject):
         assert make_command is not None
         options = options.copy()
         using_intercept_build = False
-        if compilation_db_name is not None and self.config.create_compilation_db and self.compile_db_requires_intercept_build:
+        if compilation_db_name is not None and self.config.create_compilation_db \
+                and self.compile_db_requires_intercept_build:
             assert self._compiledb_tool is not None
             compdb_extra_args = []
             using_intercept_build = "intercept-build" in self._compiledb_tool
