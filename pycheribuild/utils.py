@@ -422,10 +422,12 @@ class OSInfo(object):
         return d
 
     @classmethod
-    def package_manager(cls) -> str:
+    def package_manager(cls, compat_abi=False) -> str:
         if cls.IS_MAC:
             return "brew"
         elif cls.IS_FREEBSD:
+            if cls.is_cheribsd():
+                return "pkg64" if compat_abi else "pkg64c"
             return "pkg"
         elif cls.IS_LINUX:
             if cls.uses_zypper():
@@ -436,7 +438,7 @@ class OSInfo(object):
 
     @classmethod
     def install_instructions(cls, name, is_lib, default=None, homebrew=None, apt=None, zypper=None, freebsd=None,
-                             cheribuild_target=None, alternative=None) -> InstallInstructions:
+                             cheribuild_target=None, alternative=None, compat_abi=False) -> InstallInstructions:
         guessed_package = False
         if cls.IS_MAC and homebrew:
             install_name = homebrew
@@ -476,11 +478,11 @@ class OSInfo(object):
 
         if guessed_package:
             # not sure if the package name is correct:
-            return InstallInstructions("Possibly running `" + cls.package_manager() + " install " + install_name +
-                                       "` fixes this. Note: package name may not be correct.", cheribuild_target,
+            return InstallInstructions(f"Possibly running `{cls.package_manager(compat_abi)} install {install_name}"
+                                       f"` fixes this. Note: package name may not be correct.", cheribuild_target,
                                        alternative)
         else:
-            return InstallInstructions("Run `" + cls.package_manager() + " install " + install_name + "`",
+            return InstallInstructions(f"Run `{cls.package_manager(compat_abi)} install " + install_name + "`",
                                        cheribuild_target, alternative)
 
     @classmethod

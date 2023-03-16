@@ -821,11 +821,14 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                                    default: "Optional[str]" = None, freebsd: "Optional[str]" = None,
                                    apt: "Optional[str]" = None, zypper: "Optional[str]" = None,
                                    homebrew: "Optional[str]" = None, cheribuild_target: "Optional[str]" = None,
-                                   alternative_instructions: "Optional[str]" = None):
+                                   alternative_instructions: "Optional[str]" = None,
+                                   compat_abi: "Optional[bool]" = None):
         if instructions is None:
+            if compat_abi is None:
+                compat_abi = self.compiling_for_host() and self.compiling_for_cheri_hybrid()
             instructions = OSInfo.install_instructions(
                 executable, is_lib=False, default=default, freebsd=freebsd, zypper=zypper, apt=apt, homebrew=homebrew,
-                cheribuild_target=cheribuild_target, alternative=alternative_instructions)
+                cheribuild_target=cheribuild_target, alternative=alternative_instructions, compat_abi=compat_abi)
         if executable in self.__checked_system_tools:
             # If we already checked for this tool, the install instructions should match
             assert instructions.fixit_hint() == self.__checked_system_tools[executable].fixit_hint(), executable
