@@ -64,6 +64,11 @@ class BuildPython(CrossCompileAutotoolsProject):
 
         # fails to cross-compile and does weird stuff on host (uses wrong python version?)
         self.configure_args.append("--without-ensurepip")
+        if self.compiling_for_host() and self.compiling_for_cheri():
+            self.check_required_system_tool("/usr/local64/bin/python3.8", freebsd="python38", compat_abi=True)
+            # Can't use the local python build for bootstrapping tasks yet:
+            self.add_configure_vars(PYTHON_FOR_BUILD="/usr/local64/bin/python3.8")
+            self.add_configure_vars(PYTHON_FOR_REGEN="/usr/local64/bin/python3.8")
 
         if not self.compiling_for_host():
             self.configure_args.append("--without-doc-strings")  # should reduce size
@@ -71,7 +76,7 @@ class BuildPython(CrossCompileAutotoolsProject):
                                                                self.config).install_dir / "bin/python3"
             if not native_python.exists():
                 self.dependency_error("Native python3 doesn't exist, you must build the `python-native` target first.",
-                                      cheribuild_target="python-native",
+                                      cheribuild_target="python",
                                       cheribuild_xtarget=CompilationTargets.NATIVE_NON_PURECAP)
             self.add_configure_vars(
                 ac_cv_buggy_getaddrinfo="no",
