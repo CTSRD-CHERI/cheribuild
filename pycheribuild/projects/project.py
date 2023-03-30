@@ -1445,7 +1445,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                            "-- Compilation will fail!")
         install_dir_kind = self.get_default_install_dir_kind()
         if install_dir_kind != DefaultInstallDir.DO_NOT_INSTALL and self._check_install_dir_conflict:
-            xtarget = self._xtarget  # type: CrossCompileTarget
+            xtarget: CrossCompileTarget = self._xtarget
             # If the conflicting target is also in supported_architectures, check for conficts:
             if xtarget.check_conflict_with is not None and xtarget.check_conflict_with in self.supported_architectures:
                 # Check that we are not installing to the same directory as MIPS to avoid conflicts
