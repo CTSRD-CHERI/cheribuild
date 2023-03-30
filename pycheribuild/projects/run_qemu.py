@@ -135,7 +135,7 @@ class LaunchQEMUBase(SimpleProject):
     # Add a virtio RNG to speed up random number generation
     _add_virtio_rng = True
     _enable_smbfs_support = True
-    _cached_chosen_qemu = None  # type: Optional[ChosenQEMU]
+    _cached_chosen_qemu: Optional[ChosenQEMU] = None
     use_qemu: QEMUType
     custom_qemu_path: Optional[Path]
     kernel_project: Optional[Project] = None
@@ -192,14 +192,14 @@ class LaunchQEMUBase(SimpleProject):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.current_kernel = None  # type: Optional[Path]
-        self.disk_image = None  # type: Optional[Path]
+        self.current_kernel: Optional[Path] = None
+        self.disk_image: Optional[Path] = None
         self.disk_image_format = "raw"
         self._project_specific_options = []
         self.bios_flags = []
         self.qemu_options = QemuOptions(self.crosscompile_target, want_debugger=self.config.wait_for_debugger)
         self.qemu_user_networking = True
-        self.rootfs_path = None  # type:Optional[Path]
+        self.rootfs_path: Optional[Path] = None
         self._after_disk_options = []
 
     def get_riscv_bios_args(self) -> "list[str]":
@@ -528,7 +528,7 @@ class LaunchQEMUBase(SimpleProject):
                 if len(sessions) != 1:
                     raise Exception("There should be only one tmux session running")
                 session = server.list_sessions()[0]
-                window = session.attached_window  # type: libtmux.Window
+                window: libtmux.Window = session.attached_window
                 pane = window.attached_pane
                 # Note: multiply by two since most monospace fonts are taller than wide
                 vertical = int(pane.height) * 2 > int(pane.width)

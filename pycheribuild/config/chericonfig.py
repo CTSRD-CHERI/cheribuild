@@ -227,7 +227,7 @@ class CheriConfig(ConfigBase):
         self.allow_running_as_root = loader.add_bool_option("allow-running-as-root", help_hidden=True, default=False,
                                                             help="Allow running cheribuild as root (not recommended!)")
         # Attributes for code completion:
-        self.verbose = None  # type: Optional[bool]
+        self.verbose: Optional[bool] = None
         self.debug_output = loader.add_commandline_only_bool_option("debug-output", "vv",
                                                                     help="Extremely verbose output")
         self.quiet: "Optional[bool] " = None
@@ -292,11 +292,11 @@ class CheriConfig(ConfigBase):
             help="When building with --include-dependencies ignore the SDK dependencies. Saves a lot of time "
                  "when building libc++, etc. with dependencies but the sdk is already up-to-date. "
                  "This is like --no-include-toolchain-depedencies but also skips the target that builds the sysroot.")
-        self.skip_dependency_filters = loader.add_option(
+        self.skip_dependency_filters: "list[re.Pattern]" = loader.add_option(
             "skip-dependency-filter", group=loader.dependencies_group, action="append", default=[],
             type=_skip_dependency_filter_arg, metavar="REGEX",
             help="A regular expression to match against to target names that should be skipped when using"
-                 "--include-dependency. Can be passed multiple times to add more patterns.")  # type: list[re.Pattern]
+                 "--include-dependency. Can be passed multiple times to add more patterns.")
         self.trap_on_unrepresentable = loader.add_bool_option(
             "trap-on-unrepresentable", default=False, group=loader.run_group,
             help="Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for "
@@ -307,28 +307,28 @@ class CheriConfig(ConfigBase):
         self.qemu_debug_program = loader.add_option(
             "qemu-gdb-debug-userspace-program", group=loader.run_group,
             help="Print the command to debug the following userspace program in GDB attaced to QEMU")
-        self.include_dependencies = None  # type: Optional[bool]
+        self.include_dependencies: Optional[bool] = None
         self.include_toolchain_dependencies = True
         self.enable_hybrid_targets = False
         self.only_dependencies = loader.add_bool_option("only-dependencies",
                                                         help="Only build dependencies of targets, "
                                                              "not the targets themselves")
-        self.start_with = None  # type: Optional[str]
-        self.start_after = None  # type: Optional[str]
-        self.make_without_nice = None  # type: Optional[bool]
+        self.start_with: Optional[str] = None
+        self.start_after: Optional[str] = None
+        self.make_without_nice: Optional[bool] = None
 
         self.mips_cheri_bits = 128  # Backwards compat
-        self.make_jobs = None  # type: Optional[int]
+        self.make_jobs: Optional[int] = None
 
-        self.source_root = None  # type: Optional[Path]
-        self.output_root = None  # type: Optional[Path]
-        self.build_root = None  # type: Optional[Path]
+        self.source_root: Optional[Path] = None
+        self.output_root: Optional[Path] = None
+        self.build_root: Optional[Path] = None
         # Path to kernel/disk images (this is the same as output_root by default but different in Jenkins)
-        self.cheribsd_image_root = None  # type: Optional[Path]
-        self.cheri_sdk_dir = None  # type: Optional[Path]
-        self.morello_sdk_dir = None  # type: Optional[Path]
-        self.other_tools_dir = None  # type: Optional[Path]
-        self.sysroot_output_root = None  # type: Optional[Path]
+        self.cheribsd_image_root: Optional[Path] = None
+        self.cheri_sdk_dir: Optional[Path] = None
+        self.morello_sdk_dir: Optional[Path] = None
+        self.other_tools_dir: Optional[Path] = None
+        self.sysroot_output_root: Optional[Path] = None
         self.docker = loader.add_bool_option("docker", help="Run the build inside a docker container",
                                              group=loader.docker_group)
         self.docker_container = loader.add_option("docker-container", help="Name of the docker container to use",

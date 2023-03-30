@@ -131,11 +131,11 @@ class FileSystemType(Enum):
 
 class BuildDiskImageBase(SimpleProject):
     do_not_add_to_targets = True
-    disk_image_path = None  # type: Path
+    disk_image_path: Path = None
     _source_class: "Optional[type[SimpleProject]]" = None
     strip_binaries = False  # True by default for minimal disk-image
     is_minimal = False  # To allow building a much smaller image
-    disk_image_prefix = None  # type: str
+    disk_image_prefix: str = None
     default_disk_image_path = ComputedDefaultValue(
         function=lambda conf, proj: _default_disk_image_name(conf, conf.output_root, proj),
         as_string=lambda cls: "$OUTPUT_ROOT/" + cls.disk_image_prefix + "-<TARGET>-disk.img depending on architecture")
@@ -198,16 +198,16 @@ class BuildDiskImageBase(SimpleProject):
         super().__init__(*args, **kwargs)
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
-        self.manifest_file = None  # type: Optional[Path]
+        self.manifest_file: Optional[Path] = None
         self.extra_files: "list[Path]" = []
         self.auto_prefixes = ["usr/local/", "opt/", "extra/", "bin/bash"]
-        self.makefs_cmd = None  # type: Optional[Path]
-        self.mkimg_cmd = None  # type: Optional[Path]
+        self.makefs_cmd: Optional[Path] = None
+        self.mkimg_cmd: Optional[Path] = None
         self.minimum_image_size = "1g"  # minimum image size = 1GB
         self.mtree = MtreeFile(verbose=self.config.verbose)
         self.input_metalogs = []
         # used during process to generated files
-        self.tmpdir = None  # type: Optional[Path]
+        self.tmpdir: Optional[Path] = None
         self.file_templates = _AdditionalFileTemplates()
         self.hostname = os.path.expandvars(self.hostname)  # Expand env vars in hostname to allow $CHERI_BITS
         # MIPS needs big-endian disk images
@@ -943,7 +943,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                 continue
             assert not line.startswith("/")
             # Otherwise find the file in the rootfs
-            file_path = self.rootfs_dir / line  # type: Path
+            file_path: Path = self.rootfs_dir / line
             if not file_path.exists():
                 self.fatal("Required file", line, "missing from rootfs")
             if file_path.is_dir():
@@ -996,8 +996,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
 
         if self.include_cheribsdtest:
             for i in [("cheribsdtest-hybrid", "cheritest"), ("cheribsdtest-purecap", "cheriabitest")]:
-                test_binary = self.rootfs_dir / "bin" / i[0]  # type: Path
-                old_test_binary = self.rootfs_dir / "bin" / i[1]  # type: Path
+                test_binary: Path = self.rootfs_dir / "bin" / i[0]
+                old_test_binary: Path = self.rootfs_dir / "bin" / i[1]
                 if test_binary.exists():
                     self.add_file_to_image(test_binary, base_directory=self.rootfs_dir)
                 elif old_test_binary.exists():
