@@ -37,7 +37,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from .build_qemu import BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
+from .build_qemu import BuildBsdUserQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
 from .cherios import BuildCheriOS
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.gdb import BuildGDB
@@ -447,16 +447,12 @@ class LaunchQEMUBase(SimpleProject):
             self._after_disk_options += ["-snapshot"]
 
         # input("Press enter to continue")
-        qemu_command = self.qemu_options.get_commandline(qemu_command=self.chosen_qemu.binary,
-                                                         kernel_file=qemu_loader_or_kernel,
-                                                         disk_image=self.disk_image,
-                                                         disk_image_format=self.disk_image_format,
-                                                         add_network_device=self.qemu_user_networking,
-                                                         bios_args=self.bios_flags,
-                                                         user_network_args=user_network_options,
-                                                         trap_on_unrepresentable=self.config.trap_on_unrepresentable,
-                                                         debugger_on_cheri_trap=self.config.debugger_on_cheri_trap,
-                                                         add_virtio_rng=self._add_virtio_rng)
+        qemu_command = self.qemu_options.get_system_commandline(
+            qemu_command=self.chosen_qemu.binary, kernel_file=qemu_loader_or_kernel, disk_image=self.disk_image,
+            disk_image_format=self.disk_image_format, add_network_device=self.qemu_user_networking,
+            bios_args=self.bios_flags, user_network_args=user_network_options,
+            trap_on_unrepresentable=self.config.trap_on_unrepresentable,
+            debugger_on_cheri_trap=self.config.debugger_on_cheri_trap, add_virtio_rng=self._add_virtio_rng)
         qemu_command += self._project_specific_options + self._after_disk_options + monitor_options
         qemu_command += logfile_options + self.extra_qemu_options + virtfs_args
         if self.disk_image is None:
@@ -583,6 +579,78 @@ class LaunchQEMUBase(SimpleProject):
                 return True
         except OSError:
             return False
+
+
+class LaunchBsdUserQEMUBase(SimpleProject):
+    do_not_add_to_targets = True
+    _source_class = BuildCHERIBSD
+    _freebsd_class = BuildCHERIBSD
+    _always_add_suffixed_targets = True
+    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP]
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.chroot = cls.add_bool_option("chroot", default=False, show_help=True,
+                                         help="Change the root directory to a sysroot before executing a command.")
+        cls.interpreter_path = cls.add_path_option("interpreter", metavar="PATH", default="/libexec/ld-elf.so.1",
+                                              show_help=True, help="ELF interpreter path relative to a sysroot")
+        cls.jail = cls.add_bool_option("jail", default=False, show_help=True,
+                                       help="Enter a jail with a sysroot before executing a command.")
+        cls.jail_extra_args = cls.add_config_option("jail-extra-args", metavar="ARGS", kind=list, show_help=True,
+                                                    help="Extra jail parameters to pass to jail(8).")
+
+    @classmethod
+    def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "list[str]":
+        xtarget = cls.get_crosscompile_target()
+        result = ["bsd-user-qemu", cls._source_class.get_class_for_target(xtarget).target]
+        return result
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.qemu_binary = None  # type: typing.Optional[Path]
+        self.qemu_options = QemuOptions(self.crosscompile_target)
+        self.rootfs_path = self._source_class.get_rootfs_dir(self)
+
+    def setup(self):
+        super().setup()
+        absolute_path = not self.chroot and not self.jail
+        xtarget = self.crosscompile_target
+        if xtarget.is_riscv(include_purecap=True):
+            self.qemu_binary = BuildBsdUserQEMU.qemu_cheri_binary(self, absolute_path=absolute_path)
+        else:
+            assert False, "Unknown target " + str(xtarget)
+
+    def process(self):
+        assert self.qemu_binary is not None
+        assert self.rootfs_path is not None
+        assert self.interpreter_path is not None
+        assert self.command is not None
+
+        if self.chroot and self.jail:
+            self.fatal("Chroot and jail options are mutually exclusive.")
+        elif self.chroot:
+            command = ["chroot", self.rootfs_path]
+            qemu_command = self.qemu_binary
+            rootfs_path = None
+        elif self.jail:
+            command = ["jail", "-c", "path={}".format(self.rootfs_path)]
+            if self.jail_extra_args:
+                command.extend(self.jail_extra_args)
+            qemu_command = "command={}".format(self.qemu_binary)
+            rootfs_path = None
+        else:
+            command = []
+            qemu_command = self.qemu_binary
+            rootfs_path = self.rootfs_path
+
+        command.extend(self.qemu_options.get_user_commandline(qemu_command=qemu_command,
+                       rootfs_path=rootfs_path, interpreter_path=self.interpreter_path,
+                       user_command=self.command))
+
+        self.info("About to run '{}' with the QEMU user mode".format(" ".join(self.command)))
+
+        self.run_cmd(command, stdout=sys.stdout, stderr=sys.stderr, give_tty_control=True)
 
 
 class AbstractLaunchFreeBSD(LaunchQEMUBase):
@@ -755,6 +823,31 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             result.append("bbl-baremetal-riscv64-purecap")
         return result
+
+
+class LaunchUserShell(LaunchBsdUserQEMUBase):
+    target = "run-user-shell"
+
+    def process(self):
+        assert self.rootfs_path is not None
+
+        command = "/bin/sh"
+        if self.chroot or self.jail:
+            self.command = [command]
+        else:
+            self.command = [str(self.rootfs_path) + command]
+        super().process()
+
+
+class LaunchUser(LaunchBsdUserQEMUBase):
+    target = "run-user"
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.command = cls.add_config_option("command", metavar="COMMAND", show_help=True, kind=list,
+                                            help="Command to execute (default: '<ROOTFS>/bin/sh').",
+                                            default=lambda _, p: str(p.rootfs_path) + "/bin/sh")
 
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):

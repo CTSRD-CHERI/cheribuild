@@ -193,6 +193,7 @@ class DefaultCheriConfig(CheriConfig):
         super().load()
         # now set some generic derived config options
         self.cheri_sdk_dir = self.tools_root / self.default_cheri_sdk_directory_name
+        self.bsd_user_sdk_dir = self.tools_root / self.default_bsd_user_sdk_directory_name
         self.other_tools_dir = self.tools_root / "bootstrap"
         self.cheribsd_image_root = self.output_root  # TODO: allow this to be different?
 

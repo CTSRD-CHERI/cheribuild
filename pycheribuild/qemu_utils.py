@@ -152,16 +152,19 @@ class QemuOptions:
         found_in_path = shutil.which("qemu-system-" + self.qemu_arch_sufffix)
         return Path(found_in_path) if found_in_path is not None else None
 
-    def get_commandline(self, *, qemu_command=None, kernel_file: "Optional[Path]" = None,
-                        disk_image: "Optional[Path]" = None, disk_image_format: str = "raw",
-                        user_network_args: str = "", add_network_device=True, bios_args: "Optional[list[str]]" = None,
-                        trap_on_unrepresentable=False, debugger_on_cheri_trap=False, add_virtio_rng=False,
-                        write_disk_image_changes=True, gui_options: "Optional[list[str]]" = None) -> "list[str]":
-        if kernel_file is None and disk_image is None:
-            raise ValueError("Must pass kernel and/or disk image path when launching QEMU")
+    def get_common_commandline(self, *, qemu_command=None):
         if qemu_command is None:
             qemu_command = self.get_qemu_binary()
-        result = [str(qemu_command)]
+        return [str(qemu_command)]
+
+    def get_system_commandline(self, *, qemu_command=None, kernel_file: "Optional[Path]" = None,
+                               disk_image: "Optional[Path]" = None, disk_image_format: str = "raw",
+                               user_network_args: str = "", add_network_device=True, bios_args: "Optional[list[str]]" = None,
+                               trap_on_unrepresentable=False, debugger_on_cheri_trap=False, add_virtio_rng=False,
+                               write_disk_image_changes=True, gui_options: "Optional[list[str]]" = None) -> "list[str]":
+        if kernel_file is None and disk_image is None:
+            raise ValueError("Must pass kernel and/or disk image path when launching QEMU")
+        result = self.get_common_commandline()
         result.extend(self.machine_flags)
         result.extend(["-m", self.memory_size])
         if gui_options is None:
@@ -187,6 +190,20 @@ class QemuOptions:
             result.extend(self.user_network_args(user_network_args))
         if add_virtio_rng:
             result.extend(["-device", "virtio-rng-pci"])
+        return result
+
+    def get_user_commandline(self, *, qemu_command=None, rootfs_path: Path = None,
+                             interpreter_path: Path = None, user_command: Path = None):
+        result = self.get_common_commandline(qemu_command=qemu_command)
+        if rootfs_path:
+            result.extend(["-L", rootfs_path])
+        if interpreter_path:
+            result.extend(["-interpreter", interpreter_path])
+        # Map a guest address space at 0x100000000 not to overlap with a host
+        # address space.
+        result.extend(["-B", "4294967296"])
+        if user_command:
+            result.extend(user_command)
         return result
 
 

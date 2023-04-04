@@ -55,6 +55,7 @@ class MockConfig(CheriConfig):
         self.source_root = source_root
         self.build_root = source_root / "build"
         self.output_root = source_root / "output"
+        self.bsd_user_sdk_dir = self.output_root / "bsd-user-sdk"
         self.cheri_sdk_dir = self.output_root / "sdk"
         self.morello_sdk_dir = self.output_root / "morello-sdk"
         self.sysroot_output_root = self.output_root

@@ -772,13 +772,14 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: Optional[Path], kerne
         bios_args = riscv_bios_arguments(qemu_options.xtarget, None)
     else:
         bios_args = []
-    qemu_args = qemu_options.get_commandline(qemu_command=qemu_command, kernel_file=kernel_image, disk_image=disk_image,
-                                             bios_args=bios_args, user_network_args=user_network_args,
-                                             write_disk_image_changes=write_disk_image_changes,
-                                             add_network_device=True,
-                                             trap_on_unrepresentable=trap_on_unrepresentable,  # For debugging
-                                             add_virtio_rng=True  # faster entropy gathering
-                                             )
+    qemu_args = qemu_options.get_system_commandline(qemu_command=qemu_command, kernel_file=kernel_image,
+                                                    disk_image=disk_image, bios_args=bios_args,
+                                                    user_network_args=user_network_args,
+                                                    write_disk_image_changes=write_disk_image_changes,
+                                                    add_network_device=True,
+                                                    trap_on_unrepresentable=trap_on_unrepresentable,  # For debugging
+                                                    add_virtio_rng=True  # faster entropy gathering
+                                                    )
     qemu_args.extend(smp_args)
     kernel_commandline = []
     if kernel_init_only:

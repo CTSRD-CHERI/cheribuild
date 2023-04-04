@@ -131,6 +131,7 @@ class DefaultInstallDir(Enum):
     ROOTFS_LOCALBASE = "The sysroot for this target (<rootfs>/usr/local/<arch> by default)"
     KDE_PREFIX = "The sysroot for this target (<rootfs>/opt/<arch>/kde by default)"
     CHERI_SDK = "The CHERI SDK directory"
+    BSD_USER_SDK = "The QEMU BSD user mode SDK directory"
     MORELLO_SDK = "The Morello SDK directory"
     BOOTSTRAP_TOOLS = "The bootstap tools directory"
     CUSTOM_INSTALL_DIR = "Custom install directory"
@@ -541,6 +542,8 @@ class NativeTargetInfo(TargetInfo):
             if self._is_libcompat_target:
                 return config.output_root / ("local" + self._compat_abi_suffix)
             return config.output_root / "local"
+        elif install_dir == DefaultInstallDir.BSD_USER_SDK:
+            return config.bsd_user_sdk_dir
         elif install_dir == DefaultInstallDir.CHERI_SDK:
             return config.cheri_sdk_dir
         elif install_dir == DefaultInstallDir.MORELLO_SDK:
