@@ -30,16 +30,15 @@
 import argparse
 import os
 import sys
-from enum import Enum
 from pathlib import Path
 
-from .chericonfig import CheriConfig
+from .chericonfig import CheribuildActionEnum, CheriConfig
 from .config_loader_base import ComputedDefaultValue, ConfigLoaderBase
 from .loader import JsonAndCommandLineConfigLoader, argcomplete
 from ..utils import default_make_jobs_count
 
 
-class CheribuildAction(Enum):
+class CheribuildAction(CheribuildActionEnum):
     BUILD = ("--build", "Run (usually build+install) chosen targets (default)")
     TEST = ("--test", "Run tests for the passed targets instead of building them", "--run-tests")
     BENCHMARK = ("--benchmark", "Run tests for the passed targets instead of building them")

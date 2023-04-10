@@ -45,6 +45,7 @@ from ..utils import (
     ConfigBase,
     DoNotUseInIfStmt,
     cached_property,
+    fatal_error,
     have_working_internet_connection,
     status_update,
     warning_message,
@@ -141,8 +142,15 @@ def _skip_dependency_filter_arg(values: "list[str]") -> "list[re.Pattern]":
     return result
 
 
+class CheribuildActionEnum(Enum):
+    option_name: str
+    help_message: str
+    altname: str
+    actions: "list[CheribuildActionEnum]"
+
+
 class CheriConfig(ConfigBase):
-    def __init__(self, loader, action_class) -> None:
+    def __init__(self, loader, action_class: "type[CheribuildActionEnum]") -> None:
         super().__init__(pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt(),
                          force=DoNotUseInIfStmt())
         self._cached_deps = collections.defaultdict(dict)
@@ -154,9 +162,10 @@ class CheriConfig(ConfigBase):
                                                                help="Only print the commands instead of running them")
 
         # add the actions:
+        self._action_class = action_class
         self.action = loader.add_option("action", default=[], action="append", type=action_class, help_hidden=True,
                                         help="The action to perform by cheribuild", group=loader.action_group)
-        self.default_action = None
+        self.default_action: Optional[CheribuildActionEnum] = None
         # Add aliases (e.g. --test = --action=test):
         for action in action_class:
             if action.altname:
@@ -456,7 +465,8 @@ class CheriConfig(ConfigBase):
                                          "test suites on the remote board instead of QEMU.")
 
         self.targets: "Optional[list[str]]" = None
-        self.__optional_properties = ["internet_connection_last_checked_at", "start_after", "start_with"]
+        self.__optional_properties = ["internet_connection_last_checked_at", "start_after", "start_with",
+                                      "default_action"]
 
     def load(self) -> None:
         self.loader.load()
@@ -482,7 +492,9 @@ class CheriConfig(ConfigBase):
 
         # flatten the potentially nested list
         if not self.action:
-            assert self.default_action is not None
+            if self.default_action is None:
+                fatal_error("Missing action, please pass one of",
+                            ", ".join([str(action.option_name) for action in self._action_class]), pretend=False)
             self.action = [self.default_action]
         else:
             assert isinstance(self.action, list)

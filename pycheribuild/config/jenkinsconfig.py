@@ -29,10 +29,9 @@
 #
 
 import os
-from enum import Enum
 from pathlib import Path
 
-from .chericonfig import CheriConfig
+from .chericonfig import CheribuildActionEnum, CheriConfig
 from .config_loader_base import ComputedDefaultValue, ConfigLoaderBase
 from .target_info import CompilerType
 from ..filesystemutils import FileSystemUtils
@@ -49,7 +48,7 @@ def default_jenkins_make_jobs_count(conf: "JenkinsConfig", _):
     return default_make_jobs_count()
 
 
-class JenkinsAction(Enum):
+class JenkinsAction(CheribuildActionEnum):
     BUILD = ("--build", "Run (usually build+install) chosen targets (default)")
     CREATE_TARBALL = ("--create-tarball", "Create an archive of the installed files", "--tarball")
     TEST = ("--test", "Run tests")
@@ -90,8 +89,6 @@ def _infer_compiler_output_path(config: "JenkinsConfig", _):
 class JenkinsConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, available_targets: list) -> None:
         super().__init__(loader, action_class=JenkinsAction)
-        self.default_action = ""  # error if no action set
-
         self.cpu = loader.add_commandline_only_option(
             "cpu", default=os.getenv("CPU", "default"),
             help="Only used for backwards compatibility with old jenkins jobs")
