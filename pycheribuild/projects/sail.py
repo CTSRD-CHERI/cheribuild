@@ -298,7 +298,7 @@ class RunSailShell(OpamMixin, SimpleProject):
                 # Otherwise set the VIRTUAL_ENV environment variable if not already present (this should hopefully
                 # be visualized by many custom shell prompts)
                 prompt_env["VIRTUAL_ENV"] = os.getenv("VIRTUAL_ENV", "sail-opam-env"),
-            with self.set_env(PATH=str(self.config.cheri_sdk_bindir) + ":" + os.getenv("PATH", ""), **prompt_env):
+            with self.set_env(**prompt_env):
                 self.run_command_in_ocaml_env(
                     [shell, "-c", f"echo 'Entering sail environment, send CTRL+D to exit'; exec {shell} -i"],
                     cwd=os.getcwd())
