@@ -586,7 +586,12 @@ class LaunchBsdUserQEMUBase(SimpleProject):
     _source_class = BuildCHERIBSD
     _freebsd_class = BuildCHERIBSD
     _always_add_suffixed_targets = True
-    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIBSD_MORELLO_NO_CHERI,
+                               CompilationTargets.CHERIBSD_MORELLO_HYBRID,
+                               CompilationTargets.CHERIBSD_MORELLO_PURECAP,
+                               CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                               CompilationTargets.CHERIBSD_RISCV_HYBRID,
+                               CompilationTargets.CHERIBSD_RISCV_PURECAP]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -616,10 +621,7 @@ class LaunchBsdUserQEMUBase(SimpleProject):
         super().setup()
         absolute_path = not self.chroot and not self.jail
         xtarget = self.crosscompile_target
-        if xtarget.is_riscv(include_purecap=True):
-            self.qemu_binary = BuildBsdUserQEMU.qemu_cheri_binary(self, absolute_path=absolute_path)
-        else:
-            assert False, "Unknown target " + str(xtarget)
+        self.qemu_binary = BuildBsdUserQEMU.qemu_cheri_binary(self, absolute_path=absolute_path)
 
     def process(self):
         assert self.qemu_binary is not None

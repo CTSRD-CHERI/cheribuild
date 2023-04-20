@@ -402,7 +402,7 @@ class BuildBsdUserQEMU(BuildQEMUBase):
                                default_branch="qemu-cheri-bsd-user",
                                force_branch=True)
     native_install_dir = DefaultInstallDir.BSD_USER_SDK
-    default_targets = "aarch64-bsd-user,morello-bsd-user,riscv64-bsd-user,riscv64cheri-bsd-user"
+    default_targets = "aarch64-bsd-user,morello-bsd-user,morello_hybrid-bsd-user,riscv64-bsd-user,riscv64cheri-bsd-user,riscv64cheri_hybrid-bsd-user"
     default_use_smbd = False
     target = "bsd-user-qemu"
     hide_options_from_help = True
@@ -411,8 +411,20 @@ class BuildBsdUserQEMU(BuildQEMUBase):
     def qemu_cheri_binary(cls, caller: SimpleProject, xtarget: CrossCompileTarget = None, absolute_path=True):
         if xtarget is None:
             xtarget = caller.get_crosscompile_target()
-        if xtarget.is_riscv(include_purecap=True):
-            binary_name = "qemu-riscv64cheri"
+        if xtarget.is_aarch64(include_purecap=True):
+            if xtarget.is_cheri_purecap():
+                binary_name = "qemu-aarch64c-static"
+            elif xtarget.is_cheri_hybrid():
+                binary_name = "qemu-aarch64c-hybrid-static"
+            else:
+                binary_name = "qemu-aarch64-static"
+        elif xtarget.is_riscv(include_purecap=True):
+            if xtarget.is_cheri_purecap():
+                binary_name = "qemu-riscv64c-static"
+            elif xtarget.is_cheri_hybrid():
+                binary_name = "qemu-riscv64c-hybrid-static"
+            else:
+                binary_name = "qemu-riscv64-static"
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
         if absolute_path:
