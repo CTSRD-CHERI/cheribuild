@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import inspect
 import itertools
 import os
 import shutil
@@ -55,6 +56,7 @@ from ..project import (
 )
 from ..simple_project import SimpleProject, TargetAliasWithDependencies, _clear_line_sequence, flush_stdio
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
+from ...config.loader import ConfigOptionBase
 from ...config.target_info import AutoVarInit, CrossCompileTarget
 from ...config.target_info import CompilerType as FreeBSDToolchainKind
 from ...processutils import latest_system_clang_tool, print_command
@@ -1681,6 +1683,10 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def extra_kernel_configs(self) -> "list[CheriBSDConfig]":
         # Everything that is not the default kernconf
+        option = inspect.getattr_static(self, "kernel_config")
+        assert isinstance(option, ConfigOptionBase)
+        if self.has_default_buildkernel_kernel_config and not option.is_default_value:
+            return []
         configs = self._get_all_kernel_configs()
         default_kernconf = self.default_kernel_config()
         return [c for c in configs if c.kernconf != default_kernconf]
