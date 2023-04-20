@@ -699,6 +699,11 @@ def test_disk_image_path(target, expected_name):
                   "CHERI-PURECAP-QEMU",
                   "CHERI-FETT",
                   "CHERI-PURECAP-FETT"]),
+    pytest.param("cheribsd-riscv64-purecap",
+                 ["--cheribsd-riscv64-purecap/kernel-config",
+                  "CUSTOM-KERNEL-CONFIG"],
+                 "CUSTOM-KERNEL-CONFIG",
+                 []),
     # Morello kernconf tests
     pytest.param("cheribsd-aarch64",
                  [],
@@ -712,6 +717,11 @@ def test_disk_image_path(target, expected_name):
                  [],
                  "GENERIC-MORELLO",
                  ["GENERIC-MORELLO-PURECAP"]),
+    pytest.param("cheribsd-morello-purecap",
+                 ["--cheribsd-morello-purecap/kernel-config",
+                  "CUSTOM-KERNEL-CONFIG"],
+                 "CUSTOM-KERNEL-CONFIG",
+                 []),
     # FreeBSD kernel configs
     pytest.param("freebsd-i386", [], "GENERIC", []),
     pytest.param("freebsd-aarch64", [], "GENERIC", []),

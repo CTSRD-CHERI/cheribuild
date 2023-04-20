@@ -151,6 +151,7 @@ class ConfigLoaderBase(ABC):
     def reset(self) -> None:
         for option in self.options.values():
             option._cached = None
+            option._is_default_value = False
 
     def debug_msg(self, *args, sep=" ", **kwargs) -> None:
         pass
