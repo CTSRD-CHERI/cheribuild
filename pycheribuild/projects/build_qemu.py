@@ -44,6 +44,7 @@ from .project import (
     DefaultInstallDir,
     GitRepository,
     MakeCommandKind,
+    Project,
 )
 from .simple_project import SimpleProject, _cached_get_homebrew_prefix
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
@@ -275,6 +276,24 @@ class BuildQEMUBase(AutotoolsProject):
             self.check_required_system_tool(str(self.smbd_path), cheribuild_target="samba", freebsd="samba416",
                                             apt="samba", homebrew="samba")
         super().process()
+
+
+class RunMorelloQEMUTests(Project):
+    target = "morello-qemu-tests"
+    repository = GitRepository("https://github.com/rems-project/morello-generated-tests.git")
+    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+
+    def compile(self, **kwargs):
+        self.info("No compile step needed, tests are all binaries.")
+
+    def run_tests(self) -> None:
+        # TODO: suggest installing pytest-xdist
+        qemu = BuildQEMU.get_instance(self)
+        self.run_cmd(sys.executable, "-m", "pytest", qemu.source_dir / "tests/morello",
+                     f"--morello-tests-dir={self.source_dir}",
+                     f"--qemu={qemu.qemu_binary_for_target(CompilationTargets.MORELLO_BAREMETAL_PURECAP, self.config)}",
+                     f"--junit-xml={self.build_dir}/morello-generated-tests-result.xml",
+                     cwd=qemu.source_dir / "tests/morello")
 
 
 # noinspection PyAbstractClass
