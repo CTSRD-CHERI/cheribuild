@@ -995,13 +995,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                 self.add_required_libraries(["usr/" + libcompat_dir])
 
         if self.include_cheribsdtest:
-            for i in [("cheribsdtest-hybrid", "cheritest"), ("cheribsdtest-purecap", "cheriabitest")]:
-                test_binary: Path = self.rootfs_dir / "bin" / i[0]
-                old_test_binary: Path = self.rootfs_dir / "bin" / i[1]
-                if test_binary.exists():
-                    self.add_file_to_image(test_binary, base_directory=self.rootfs_dir)
-                elif old_test_binary.exists():
-                    self.add_file_to_image(old_test_binary, base_directory=self.rootfs_dir)
+            for test_binary in (self.rootfs_dir / "bin").glob("cheribsdtest-*"):
+                self.add_file_to_image(test_binary, base_directory=self.rootfs_dir)
 
         # These dirs seem to be needed
         self.mtree.add_dir("var/db", print_status=self.config.verbose)
