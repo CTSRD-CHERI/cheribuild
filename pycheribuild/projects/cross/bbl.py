@@ -59,6 +59,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     kernel_class = None
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     without_payload = False
+    enable_zero_bss = False
     custom_payload: Optional[str] = None
     mem_start = "0x80000000"
 
@@ -114,6 +115,10 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
             kernel_config = kernel_project.default_kernel_config(ConfigPlatform.QEMU)
             kernel_path = kernel_project.get_kernel_install_path(kernel_config)
             self.configure_args.append("--with-payload=" + str(kernel_path))
+
+        # XXX: Should this explicitly disable once updated bbl is widespread?
+        if self.enable_zero_bss:
+            self.configure_args.append("--enable-zero-bss")
 
     def compile(self, **kwargs):
         self.run_make("bbl")
@@ -182,6 +187,7 @@ class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
     target = "bbl-gfe"
     default_directory_basename = "bbl"  # reuse same source dir
     build_dir_suffix = "-gfe"  # but not the build dir
+    enable_zero_bss = True
 
     _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
                                                    as_string="$SDK_ROOT/bbl-gfe/riscv{32,64}{,-purecap}")
