@@ -74,7 +74,7 @@ class _EnumArgparseType(typing.Generic[EnumTy]):
 
     def __call__(self, astring: "Union[str, list[str], EnumTy]") -> "Union[EnumTy, list[EnumTy]]":
         if isinstance(astring, list):
-            return [self.__call__(a) for a in astring]
+            return typing.cast(typing.List[EnumTy], [self.__call__(a) for a in astring])
         if isinstance(astring, self.enums):
             return typing.cast(EnumTy, astring)  # Allow passing an enum instance
         name = self.enums.__name__
