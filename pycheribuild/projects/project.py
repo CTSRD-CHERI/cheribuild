@@ -732,6 +732,7 @@ class Project(SimpleProject):
                 self.fatal("Cannot use CFI without LTO!")
             assert not self.compiling_for_cheri()
             result.append("-fsanitize=cfi")
+            result.append("-fsanitize-cfi-cross-dso")
             result.append("-fvisibility=hidden")
         result.extend(self.essential_compiler_and_linker_flags)
         result.extend(self.optimization_flags)
@@ -765,6 +766,7 @@ class Project(SimpleProject):
         if self.use_cfi:
             assert not self.compiling_for_cheri()
             result.append("-fsanitize=cfi")
+            result.append("-fsanitize-cfi-cross-dso")
         if self.compiling_for_host():
             return result
 
