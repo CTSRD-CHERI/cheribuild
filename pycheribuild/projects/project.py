@@ -464,6 +464,10 @@ class Project(SimpleProject):
         return self._xtarget is None or not self._xtarget.is_cheri_purecap()
 
     @classproperty
+    def can_build_with_cfi(self) -> bool:
+        return self._xtarget is None or not self._xtarget.is_cheri_purecap()
+
+    @classproperty
     def can_build_with_ccache(self) -> bool:
         return False
 
@@ -635,7 +639,10 @@ class Project(SimpleProject):
                                                         default=cls.repository.url, metavar="REPOSITORY")
         cls.use_lto = cls.add_bool_option("use-lto", help="Build with link-time optimization (LTO)",
                                           default=cls.lto_by_default)
-        cls.use_cfi = False  # doesn't work yet
+        if cls.can_build_with_cfi:
+            cls.use_cfi = cls.add_bool_option("use-cfi", help="Build with LLVM CFI (requires LTO)", default=False)
+        else:
+            cls.use_cfi = False
         cls._linkage = cls.add_config_option("linkage", default=Linkage.DEFAULT, kind=Linkage,
                                              help="Build static or dynamic (or use the project default)")
 
