@@ -144,7 +144,7 @@ def get_argcomplete_prefix() -> str:
 class BooleanNegatableAction(argparse.Action):
     # noinspection PyShadowingBuiltins
     def __init__(self, option_strings: "list[str]", dest, default=None, type=None, choices=None, required=False,
-                 help=None, metavar=None, alias_names=None):
+                 help=None, metavar=None):
         # Add the negated option, placing the "no" after the / instead of the start -> --cheribsd/no-build-tests
         def collect_option_strings(original_strings):
             for opt in original_strings:
@@ -162,8 +162,6 @@ class BooleanNegatableAction(argparse.Action):
         collect_option_strings(option_strings)
         # Don't show the alias options in --help output
         self.displayed_option_count = len(all_option_strings)
-        if alias_names is not None:
-            collect_option_strings(alias_names)
         super().__init__(option_strings=all_option_strings, dest=dest, nargs=0,
                          default=default, type=type, choices=choices, required=required, help=help, metavar=metavar)
 
@@ -179,12 +177,10 @@ class BooleanNegatableAction(argparse.Action):
 class StoreActionWithPossibleAliases(argparse.Action):
     # noinspection PyShadowingBuiltins
     def __init__(self, option_strings: "list[str]", dest, nargs=None, default=None, type=None, choices=None,
-                 required=False, help=None, metavar=None, alias_names=None):
+                 required=False, help=None, metavar=None):
         if nargs == 1:
             raise ValueError("nargs for store actions must be 1")
         self.displayed_option_count = len(option_strings)
-        if alias_names is not None:
-            option_strings = option_strings + alias_names
         super().__init__(option_strings=option_strings, dest=dest, nargs=nargs, default=default, type=type,
                          choices=choices, required=required, help=help, metavar=metavar)
 
