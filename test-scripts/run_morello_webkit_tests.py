@@ -37,7 +37,7 @@ from run_tests_common import (
 )
 
 
-def setup_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> None:
+def setup_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace) -> None:
     qemu.checked_run("export LD_LIBRARY_PATH=/opt/{ta}/webkit/lib:/usr/local/{ta}/lib/"
                      .format(ta=qemu.xtarget.generic_arch_suffix))
 

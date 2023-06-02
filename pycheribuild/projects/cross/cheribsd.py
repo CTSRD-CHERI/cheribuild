@@ -1996,7 +1996,7 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         return self.rootfs_source_class.supported_architectures
 
     @classmethod
-    def dependencies(cls, config: CheriConfig) -> "list[str]":
+    def dependencies(cls, _: CheriConfig) -> "list[str]":
         return [cls.rootfs_source_class.target]
 
     def __init__(self, *args, **kwargs) -> None:
