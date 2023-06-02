@@ -112,6 +112,14 @@ class ConfigLoaderBase(ABC):
         if option_cls is None:
             option_cls = self.__option_cls
 
+        # If there is a option this one inherits the value from (e.g. cheribsd-riscv64-purecap/foo -> cheribsd/foo),
+        # we register the fallback option when we first encounter a usage.
+        if _fallback_names:
+            for fallback_name in _fallback_names:
+                fallback_option = self.options.get(fallback_name)
+                if fallback_option is None:
+                    # Do not assign an owning class or a default value to this implicitly added fallback option.
+                    fallback_option = self.add_option(fallback_name, type=type, option_cls=option_cls)
         result = option_cls(name, shortname, default, type, _owning_class, _loader=self,
                             _fallback_names=_fallback_names, **kwargs)
         assert name not in self.options  # make sure we don't add duplicate options
@@ -187,6 +195,9 @@ class ConfigOptionBase(typing.Generic[T]):
         self._loader = _loader
         # if none it means the global CheriConfig is the class containing this option
         self._owning_class = _owning_class
+        if _fallback_names:
+            for name in _fallback_names:
+                assert _loader.options.get(name) is not None
         self._fallback_names = _fallback_names  # for targets such as gdb-mips, etc
         self.alias_names = _legacy_alias_names  # for targets such as gdb-mips, etc
         self._is_default_value = False

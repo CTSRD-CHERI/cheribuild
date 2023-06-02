@@ -392,12 +392,8 @@ class TargetManager:
         # RuntimeError: super(): empty __class__ cell
         # https://stackoverflow.com/questions/13126727/how-is-super-in-python-3-implemented/28605694#28605694
         for tgt in self._all_targets.values():
-            if not isinstance(tgt, SimpleTargetAlias):
+            if not isinstance(tgt, _TargetAliasBase):
                 tgt.project_class.setup_config_options()
-        # Ugly hack to keep registering the command line arguments for the fallback option name: for example,
-        # cherisd-mips64-hybrid/foo loads the value from cheribsd/foo if it's not found.
-        for tgt in self._targets_for_command_line_options_only.values():
-            tgt.project_class.setup_config_options()
 
     @staticmethod
     def target_disabled_reason(target: Target, config: CheriConfig) -> Optional[str]:
