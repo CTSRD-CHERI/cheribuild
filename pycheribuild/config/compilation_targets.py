@@ -786,7 +786,7 @@ class BaremetalClangTargetInfo(_ClangBasedTargetInfo, metaclass=ABCMeta):
 
 class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
     shortname = "Newlib"
-    os_prefix = "baremetal-"
+    os_prefix = "baremetal-newlib-"
 
     @property
     def sysroot_dir(self) -> Path:
@@ -900,7 +900,30 @@ class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
         return BuildPicoLibc.get_instance(self.project, cross_target=xtarget)
 
 
-class MorelloBaremetalTargetInfo(BaremetalClangTargetInfo):
+class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
+    shortname: str = "Baremetal"
+    os_prefix: str = "baremetal-"
+
+    @classmethod
+    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
+        from ..projects.cross.llvm import BuildCheriLLVM
+        return BuildCheriLLVM
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
+        return []
+
+    @classmethod
+    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", *, include_version: bool) -> str:
+        return target.cpu_architecture.value + "-unknown-elf"
+
+    @property
+    def sysroot_dir(self) -> Path:
+        sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
+        return sysroot_dir / "baremetal" / self.target.get_rootfs_target().generic_arch_suffix
+
+
+class MorelloBaremetalTargetInfo(BaremetalFreestandingTargetInfo):
     shortname: str = "Morello-Baremetal"
     os_prefix: str = "baremetal-"
     uses_morello_llvm: bool = True
@@ -923,10 +946,6 @@ class MorelloBaremetalTargetInfo(BaremetalClangTargetInfo):
         if target.is_aarch64(include_purecap=True):
             return "aarch64-unknown-elf"
         assert False, "Other baremetal cases have not been tested yet!"
-
-    @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
-        return []
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs) -> "list[str]":
@@ -1107,16 +1126,52 @@ class CompilationTargets(BasicCompilationTargets):
     BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64,
                                                           NewlibBaremetalTargetInfo, is_cheri_purecap=True,
                                                           hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
-
-    MORELLO_BAREMETAL_NO_CHERI = CrossCompileTarget("morello-aarch64", CPUArchitecture.AARCH64,
-                                                    MorelloBaremetalTargetInfo, is_cheri_hybrid=False,
-                                                    is_cheri_purecap=False)
-    MORELLO_BAREMETAL_HYBRID = CrossCompileTarget("morello-hybrid", CPUArchitecture.AARCH64,
-                                                  MorelloBaremetalTargetInfo, is_cheri_hybrid=True,
-                                                  is_cheri_purecap=False)
-    MORELLO_BAREMETAL_PURECAP = CrossCompileTarget("morello-purecap", CPUArchitecture.AARCH64,
-                                                   MorelloBaremetalTargetInfo, is_cheri_hybrid=False,
-                                                   is_cheri_purecap=True)
+    ALL_NEWLIB_TARGETS = [
+        BAREMETAL_NEWLIB_MIPS64,
+        BAREMETAL_NEWLIB_MIPS64_PURECAP,
+        BAREMETAL_NEWLIB_RISCV32,
+        BAREMETAL_NEWLIB_RISCV32_HYBRID,
+        BAREMETAL_NEWLIB_RISCV32_PURECAP,
+        BAREMETAL_NEWLIB_RISCV64,
+        BAREMETAL_NEWLIB_RISCV64_HYBRID,
+        BAREMETAL_NEWLIB_RISCV64_PURECAP
+    ]
+    FREESTANDING_MIPS64 = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, BaremetalFreestandingTargetInfo)
+    FREESTANDING_MORELLO_NO_CHERI = CrossCompileTarget("morello-aarch64", CPUArchitecture.AARCH64,
+                                                       MorelloBaremetalTargetInfo, is_cheri_hybrid=False,
+                                                       is_cheri_purecap=False)
+    FREESTANDING_MORELLO_HYBRID = CrossCompileTarget("morello-hybrid", CPUArchitecture.AARCH64,
+                                                     MorelloBaremetalTargetInfo, is_cheri_hybrid=True,
+                                                     is_cheri_purecap=False)
+    FREESTANDING_MORELLO_PURECAP = CrossCompileTarget("morello-purecap", CPUArchitecture.AARCH64,
+                                                      MorelloBaremetalTargetInfo, is_cheri_hybrid=False,
+                                                      is_cheri_purecap=True)
+    FREESTANDING_RISCV32 = CrossCompileTarget("riscv32", CPUArchitecture.RISCV32, BaremetalFreestandingTargetInfo)
+    FREESTANDING_RISCV32_HYBRID = CrossCompileTarget("riscv32-hybrid", CPUArchitecture.RISCV32,
+                                                     BaremetalFreestandingTargetInfo, is_cheri_hybrid=True,
+                                                     non_cheri_target=FREESTANDING_RISCV32)
+    FREESTANDING_RISCV32_PURECAP = CrossCompileTarget("riscv32-purecap", CPUArchitecture.RISCV32,
+                                                      BaremetalFreestandingTargetInfo, is_cheri_purecap=True,
+                                                      hybrid_target=FREESTANDING_RISCV32_HYBRID)
+    FREESTANDING_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, BaremetalFreestandingTargetInfo)
+    FREESTANDING_RISCV64_HYBRID = CrossCompileTarget("riscv64-hybrid", CPUArchitecture.RISCV64,
+                                                     BaremetalFreestandingTargetInfo, is_cheri_hybrid=True,
+                                                     non_cheri_target=FREESTANDING_RISCV64)
+    FREESTANDING_RISCV64_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64,
+                                                      BaremetalFreestandingTargetInfo, is_cheri_purecap=True,
+                                                      hybrid_target=FREESTANDING_RISCV64_HYBRID)
+    ALL_FREESTANDING_TARGETS = [
+        FREESTANDING_MIPS64,
+        FREESTANDING_MORELLO_NO_CHERI,
+        FREESTANDING_MORELLO_HYBRID,
+        FREESTANDING_MORELLO_PURECAP,
+        FREESTANDING_RISCV32,
+        FREESTANDING_RISCV32_HYBRID,
+        FREESTANDING_RISCV32_PURECAP,
+        FREESTANDING_RISCV64,
+        FREESTANDING_RISCV64_HYBRID,
+        FREESTANDING_RISCV64_PURECAP,
+    ]
     ARM_NONE_EABI = CrossCompileTarget("arm-none-eabi", CPUArchitecture.ARM32, ArmNoneEabiGccTargetInfo,
                                        is_cheri_hybrid=False, is_cheri_purecap=False)  # For 32-bit firmrware
 
@@ -1167,17 +1222,7 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + BasicCompilationTargets.ALL_NATIVE
     ALL_FREEBSD_AND_CHERIBSD_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + ALL_SUPPORTED_FREEBSD_TARGETS
 
-    ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64,
-                                       BAREMETAL_NEWLIB_MIPS64_PURECAP,
-                                       BAREMETAL_NEWLIB_RISCV32,
-                                       BAREMETAL_NEWLIB_RISCV32_HYBRID,
-                                       BAREMETAL_NEWLIB_RISCV32_PURECAP,
-                                       BAREMETAL_NEWLIB_RISCV64,
-                                       BAREMETAL_NEWLIB_RISCV64_HYBRID,
-                                       BAREMETAL_NEWLIB_RISCV64_PURECAP,
-                                       MORELLO_BAREMETAL_NO_CHERI,
-                                       MORELLO_BAREMETAL_HYBRID,
-                                       MORELLO_BAREMETAL_PURECAP] + ALL_PICOLIBC_TARGETS
+    ALL_SUPPORTED_BAREMETAL_TARGETS = ALL_NEWLIB_TARGETS + ALL_PICOLIBC_TARGETS
     ALL_SUPPORTED_RTEMS_TARGETS = [RTEMS_RISCV64, RTEMS_RISCV64_PURECAP]
     ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = \
         ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + ALL_SUPPORTED_BAREMETAL_TARGETS

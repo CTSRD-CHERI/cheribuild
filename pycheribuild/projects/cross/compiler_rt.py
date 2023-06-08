@@ -46,8 +46,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     _check_install_dir_conflict = False
     supported_architectures = \
-        CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
-        CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + \
+        CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS + \
         CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
 
     def setup(self):
@@ -129,6 +128,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = (CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS +
                                CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS +
+                               CompilationTargets.ALL_FREESTANDING_TARGETS +
                                CompilationTargets.ALL_NATIVE)
 
     # Note: needs to be @classproperty since it is called before __init__

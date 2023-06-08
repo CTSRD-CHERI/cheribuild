@@ -36,11 +36,12 @@ from ...utils import classproperty
 class BuildLittleKernel(CrossCompileMakefileProject):
     target = "littlekernel"
     default_directory_basename = "lk"
-    dependencies = ["compiler-rt-builtins"]
-    supported_architectures = [CompilationTargets.MORELLO_BAREMETAL_NO_CHERI,
-                               CompilationTargets.MORELLO_BAREMETAL_PURECAP,
-                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
-                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP]
+    supported_architectures = [
+        CompilationTargets.FREESTANDING_MORELLO_NO_CHERI,
+        CompilationTargets.FREESTANDING_MORELLO_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64,
+        CompilationTargets.FREESTANDING_RISCV64_PURECAP,
+    ]
     repository = GitRepository("https://github.com/littlekernel/lk",
                                temporary_url_override="https://github.com/arichardson/lk.git",
                                url_override_reason="Fixes to allow building with Clang")
@@ -50,6 +51,15 @@ class BuildLittleKernel(CrossCompileMakefileProject):
     build_in_source_dir = False
     # We have to override CC, etc. on the command line rather than in the environment:
     set_commands_on_cmdline = True
+    include_os_in_target_suffix = False  # Avoid adding -baremetal
+
+    @classmethod
+    def needs_compiler_rt(cls):
+        return cls.get_crosscompile_target().cpu_architecture.is_32bit()
+
+    @classmethod
+    def dependencies(cls, _) -> "list[str]":
+        return ["compiler-rt-builtins"] if cls.needs_compiler_rt() else []
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -69,32 +79,29 @@ class BuildLittleKernel(CrossCompileMakefileProject):
                                   cheribuild_target="compiler-rt-builtins")
         return path
 
+    @property
+    def essential_compiler_and_linker_flags(self) -> "list[str]":
+        if self.compiling_for_cheri():
+            return self.target_info.get_essential_compiler_and_linker_flags(softfloat=False) + [
+                "-Werror=cheri-capability-misuse", "-Werror=shorten-cap-to-int"]
+        return ["--target=" + self.target_info.target_triple]
+
     def setup(self):
         super().setup()
+        self.make_args.remove_var("CCLD")
+        self.make_args.remove_var("CXXLD")
         self.make_args.set(BUILDROOT=self.build_dir)
         if self.config.verbose:
             self.make_args.set(NOECHO="")
         for var in ["CFLAGS", "CPPFLAGS", "CXXFLAGS", "LDFLAGS"]:
             del self.make_args.env_vars[var]
         toolchain_prefix = str(self.sdk_bindir) + "/"
-        if self.compiling_for_aarch64(include_purecap=True):
-            args = ["-target", "aarch64-unknown-elf"]
-        elif self.compiling_for_riscv(include_purecap=True):
-            args = ["-target", "riscv64-unknown-elf"]
+        if self.compiling_for_riscv(include_purecap=True):
             # Use hardfloat to avoid libgcc deps
             self.make_args.set(RISCV_FPU=True)
-            if self.compiling_for_cheri():
-                self.make_args.set(ARCH_COMPILEFLAGS="")
-                args = self.target_info.get_essential_compiler_and_linker_flags(softfloat=False)
-        else:
-            return self.fatal("unsupported arch")
         if self.compiling_for_cheri():
-            args.append("-Werror=cheri-capability-misuse")
-            args.append("-Werror=shorten-cap-to-int")
+            self.make_args.set(ARCH_COMPILEFLAGS="")  # dont' override the default -mabi=
 
-        self.set_make_cmd_with_args("CC", self.CC, args)
-        self.set_make_cmd_with_args("CPP", self.CPP, args)
-        self.set_make_cmd_with_args("CXX", self.CXX, args)
         self.set_make_cmd_with_args("LD", self.target_info.linker, ["--unresolved-symbols=report-all"])
         if self.crosscompile_target.is_riscv(include_purecap=True):
             if self.use_mmu:
@@ -104,7 +111,7 @@ class BuildLittleKernel(CrossCompileMakefileProject):
 
     def setup_late(self) -> None:
         super().setup_late()
-        self.make_args.set(LIBGCC=self.compiler_rt_builtins_path())
+        self.make_args.set(LIBGCC=str(self.compiler_rt_builtins_path()) if self.needs_compiler_rt() else "")
 
     @property
     def kernel_path(self) -> Path:

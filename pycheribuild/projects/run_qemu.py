@@ -310,9 +310,9 @@ class LaunchQEMUBase(SimpleProject):
             uboot_xtarget = None
             if xtarget.cpu_architecture == CPUArchitecture.RISCV64:
                 if xtarget.is_hybrid_or_purecap_cheri():
-                    uboot_xtarget = CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID
+                    uboot_xtarget = CompilationTargets.FREESTANDING_RISCV64_HYBRID
                 else:
-                    uboot_xtarget = CompilationTargets.BAREMETAL_NEWLIB_RISCV64
+                    uboot_xtarget = CompilationTargets.FREESTANDING_RISCV64
 
             if uboot_xtarget is not None:
                 qemu_loader_or_kernel = BuildUBoot.get_firmware_path(self, self.config, cross_target=uboot_xtarget)
