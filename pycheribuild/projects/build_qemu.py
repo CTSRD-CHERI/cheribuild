@@ -47,7 +47,7 @@ from .project import (
     Project,
 )
 from .simple_project import SimpleProject, _cached_get_homebrew_prefix
-from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
+from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
 
 
 class BuildQEMUBase(AutotoolsProject):
@@ -289,9 +289,10 @@ class RunMorelloQEMUTests(Project):
     def run_tests(self) -> None:
         # TODO: suggest installing pytest-xdist
         qemu = BuildQEMU.get_instance(self)
+        qemu_binary = qemu.qemu_binary_for_target(CompilationTargets.FREESTANDING_MORELLO_PURECAP, self.config)
         self.run_cmd(sys.executable, "-m", "pytest", qemu.source_dir / "tests/morello",
                      f"--morello-tests-dir={self.source_dir}",
-                     f"--qemu={qemu.qemu_binary_for_target(CompilationTargets.MORELLO_BAREMETAL_PURECAP, self.config)}",
+                     f"--qemu={qemu_binary}",
                      f"--junit-xml={self.build_dir}/morello-generated-tests-result.xml",
                      cwd=qemu.source_dir / "tests/morello")
 
@@ -388,9 +389,9 @@ class BuildQEMU(BuildQEMUBase):
             fake_project.warning = self.warning
             fake_project.target = "qemu-tcg-tests"
             # noinspection PyTypeChecker
-            tgt_info_mips = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_MIPS64, fake_project)
+            tgt_info_mips = BaremetalFreestandingTargetInfo(CompilationTargets.FREESTANDING_MIPS64, fake_project)
             # noinspection PyTypeChecker
-            tgt_info_riscv64 = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_RISCV64, fake_project)
+            tgt_info_riscv64 = BaremetalFreestandingTargetInfo(CompilationTargets.FREESTANDING_RISCV64, fake_project)
             self.configure_args.extend([
                 "--cross-cc-mips=" + str(tgt_info_mips.c_compiler),
                 "--cross-cc-cflags-mips=" + self.commandline_to_str(

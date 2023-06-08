@@ -88,7 +88,7 @@ class ArmNoneEabiToolchain(SimpleProject):
 
 class MorelloFirmwareBase(CrossCompileMakefileProject):
     do_not_add_to_targets = True
-    supported_architectures = [CompilationTargets.MORELLO_BAREMETAL_HYBRID]
+    supported_architectures = [CompilationTargets.FREESTANDING_MORELLO_HYBRID]
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR  # TODO: install it
     needs_sysroot = False  # We don't need a complete sysroot
     default_build_type = BuildType.RELEASE
@@ -327,7 +327,7 @@ build -n {make_jobs} -a AARCH64 -t CLANG38 -p {platform_desc} \
 
     @classmethod
     def uefi_bin(cls, caller):
-        return cls.get_install_dir(caller, cross_target=CompilationTargets.MORELLO_BAREMETAL_HYBRID) / "uefi.bin"
+        return cls.get_install_dir(caller, cross_target=CompilationTargets.FREESTANDING_MORELLO_HYBRID) / "uefi.bin"
 
 
 class BuildMorelloFlashImages(Project):

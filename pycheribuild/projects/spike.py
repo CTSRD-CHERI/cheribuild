@@ -67,7 +67,7 @@ class BuildCheriSpike(AutotoolsProject):
 
 class RunCheriSpikeBase(SimpleProject):
     do_not_add_to_targets = True
-    _bbl_xtarget = CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP
+    _bbl_xtarget = CompilationTargets.FREESTANDING_RISCV64_PURECAP
     _bbl_class = BuildBBLNoPayload.get_class_for_target(_bbl_xtarget)
     _source_class = None
 

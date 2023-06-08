@@ -449,6 +449,8 @@ def test_no_dependencies_in_build_dir(config: CheriConfig, native_target: Target
     pytest.param(CompilationTargets.CHERIBSD_MORELLO_NO_CHERI, ["morello-llvm-native"]),
     pytest.param(CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP, ["llvm-native"]),
     pytest.param(CompilationTargets.BAREMETAL_NEWLIB_RISCV64, ["llvm-native"]),
+    pytest.param(CompilationTargets.FREESTANDING_RISCV64_PURECAP, ["llvm-native"]),
+    pytest.param(CompilationTargets.FREESTANDING_MORELLO_NO_CHERI, ["morello-llvm-native"]),
     pytest.param(CompilationTargets.RTEMS_RISCV64_PURECAP, ["llvm-native"]),
     pytest.param(CompilationTargets.ARM_NONE_EABI, []),
     pytest.param(CompilationTargets.CHERIOS_RISCV_PURECAP, ["cherios-llvm"]),

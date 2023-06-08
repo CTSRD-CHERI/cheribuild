@@ -58,9 +58,9 @@ class BuildOpenSBI(Project):
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELWITHDEBINFO
     supported_architectures = [
-        CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID,
-        CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
-        # Won't compile yet: CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP
+        CompilationTargets.FREESTANDING_RISCV64_HYBRID,
+        CompilationTargets.FREESTANDING_RISCV64,
+        # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_PURECAP
         ]
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
@@ -147,12 +147,12 @@ class BuildOpenSBI(Project):
     @classmethod
     def get_nocap_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":
         assert cpu_arch == CPUArchitecture.RISCV64, "RISCV32 not supported yet"
-        return cls.get_instance(caller, cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64)
+        return cls.get_instance(caller, cross_target=CompilationTargets.FREESTANDING_RISCV64)
 
     @classmethod
     def get_hybrid_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":
         assert cpu_arch == CPUArchitecture.RISCV64, "RISCV32 not supported yet"
-        return cls.get_instance(caller, cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID)
+        return cls.get_instance(caller, cross_target=CompilationTargets.FREESTANDING_RISCV64_HYBRID)
 
     @classmethod
     def get_nocap_bios(cls, caller) -> Path:
@@ -179,7 +179,7 @@ class BuildUpstreamOpenSBI(BuildOpenSBI):
         function=lambda config, p: config.cheri_sdk_dir / "upstream-opensbi/riscv64",
         as_string="$SDK_ROOT/upstream-opensbi/riscv64")
     repository = GitRepository("https://github.com/riscv-software-src/opensbi.git")
-    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
+    supported_architectures = [CompilationTargets.FREESTANDING_RISCV64]
 
     def run_tests(self):
         options = QemuOptions(self.crosscompile_target)
