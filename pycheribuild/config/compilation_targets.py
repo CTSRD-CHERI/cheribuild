@@ -807,7 +807,7 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
     def triple_for_target(cls, target, config, include_version: bool) -> str:
         if target.is_mips(include_purecap=True):
             if target.is_cheri_purecap():
-                return "mips64c{}-qemu-elf-purecap".format(config.mips_cheri_bits)
+                return f"mips64c{config.mips_cheri_bits}-qemu-elf-purecap"
             return "mips64-qemu-elf"
         if target.is_riscv(include_purecap=True):
             return target.cpu_architecture.value + "-unknown-elf"

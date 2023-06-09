@@ -87,7 +87,7 @@ class KDECMakeProject(CrossCompileCMakeProject):
                 # And of course QtCore/QtTest
                 "--extra-library-path", "/sysroot" + str(BuildQtBase.get_instance(self).install_prefix) + "/lib",
                 "--test-setup-command",
-                "mkdir -p {} && ln -sn /sysroot{} {}".format(kde_prefix.parent, kde_prefix, kde_prefix),
+                f"mkdir -p {kde_prefix.parent} && ln -sn /sysroot{kde_prefix} {kde_prefix}",
                 "--test-setup-command", ". /build/prefix.sh && env | sort"]
 
     def setup(self):

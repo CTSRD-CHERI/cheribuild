@@ -57,7 +57,7 @@ class BODiagTestsuite:
         self.expected_test_names = []
         assert name in ("basic", "basic-heap")
         for i in range(291, 0, -1):
-            prefix = "{}-{:0>5}".format(name, i)
+            prefix = f"{name}-{i:0>5}"
             self.expected_test_names.append(prefix + "-min")
             self.expected_test_names.append(prefix + "-med")
             self.expected_test_names.append(prefix + "-large")
@@ -167,7 +167,7 @@ def _create_junit_xml(builddir: Path, name, tools):
     # There are 291 tests, we want to check that all of them were run
     for base_prefix in ("basic", "basic-heap"):
         for i in range(291, 0, -1):
-            prefix = "{}-{:0>5}".format(base_prefix, i)
+            prefix = f"{base_prefix}-{i:0>5}"
             expected_test_names.append(prefix + "-min")
             expected_test_names.append(prefix + "-med")
             expected_test_names.append(prefix + "-large")
@@ -204,11 +204,11 @@ def run_bodiagsuite(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
     assert not args.use_valgrind, "Not support for CheriBSD"
 
     if not args.junit_xml_only:
-        qemu.checked_run("rm -rf {}/run".format(LONG_NAME_FOR_BUILDDIR))
-        qemu.checked_run("cd {} && mkdir -p run".format(LONG_NAME_FOR_BUILDDIR))
+        qemu.checked_run(f"rm -rf {LONG_NAME_FOR_BUILDDIR}/run")
+        qemu.checked_run(f"cd {LONG_NAME_FOR_BUILDDIR} && mkdir -p run")
         # Don't log all the CHERI traps while running (should speed up the tests a bit and produce shorter logfiles)
         qemu.run("sysctl machdep.log_user_cheri_exceptions=0 || true")
-        qemu.checked_run("{} -r -f {}/Makefile.bsd-run all".format(args.bmake_path, LONG_NAME_FOR_BUILDDIR),
+        qemu.checked_run(f"{args.bmake_path} -r -f {LONG_NAME_FOR_BUILDDIR}/Makefile.bsd-run all",
                          timeout=120 * 60, ignore_cheri_trap=True)
         # restore old behaviour
         qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || true")

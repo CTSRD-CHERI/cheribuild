@@ -252,7 +252,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             cross_tools_prefix = self.target_info.get_target_triple(include_version=False)
             self.configure_args.extend([
                 "-device", "freebsd-generic-clang",
-                "-device-option", "CROSS_COMPILE={}/{}-".format(self.sdk_bindir, cross_tools_prefix),
+                "-device-option", f"CROSS_COMPILE={self.sdk_bindir}/{cross_tools_prefix}-",
                 "-device-option", "COMPILER_FLAGS=" + self.commandline_to_str(compiler_flags),
                 "-device-option", "LINKER_FLAGS=" + self.commandline_to_str(linker_flags),
                 "-sysroot", self.cross_sysroot_path,

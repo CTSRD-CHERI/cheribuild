@@ -93,12 +93,12 @@ def copy_qt_libs_to_tmpfs_and_set_libpath(qemu: boot_cheribsd.QemuCheriBSDInstan
             if os.path.pathsep in linkpath:
                 boot_cheribsd.failure("Unexpected link path for ", lib.absolute(), ": ", linkpath, exit=False)
                 continue
-            qemu.checked_run("ln -sfn {} /tmp/qt-libs/{}".format(linkpath, lib.name))
+            qemu.checked_run(f"ln -sfn {linkpath} /tmp/qt-libs/{lib.name}")
         else:
             if args.copy_libraries_to_tmpfs_using_scp:
                 qemu.scp_to_guest(lib, "/tmp/qt-libs/" + lib.name)
             else:
-                qemu.checked_run("cp -fav /build/lib/{} /tmp/qt-libs/".format(lib.name))
+                qemu.checked_run(f"cp -fav /build/lib/{lib.name} /tmp/qt-libs/")
             num_libs += 1
     boot_cheribsd.success("Copied ", num_libs, " files to tmpfs")
     boot_cheribsd.prepend_ld_library_path(qemu, "/tmp/qt-libs")

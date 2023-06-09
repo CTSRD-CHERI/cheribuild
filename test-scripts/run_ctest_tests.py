@@ -80,9 +80,9 @@ def run_ctest_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
     if args.verbose:
         ctest_args = "-VV " + ctest_args
     # First list all tests and then try running them.
-    qemu.checked_run("cd {} && /cmake/bin/ctest --show-only -V".format(args.build_dir), timeout=5 * 60)
+    qemu.checked_run(f"cd {args.build_dir} && /cmake/bin/ctest --show-only -V", timeout=5 * 60)
     try:
-        qemu.checked_run("cd {} && /cmake/bin/ctest {}".format(args.build_dir, ctest_args),
+        qemu.checked_run(f"cd {args.build_dir} && /cmake/bin/ctest {ctest_args}",
                          timeout=int(args.test_timeout * 1.05), pretend_result=0,
                          ignore_cheri_trap=args.ignore_cheri_trap)
     except boot_cheribsd.CheriBSDCommandFailed as e:

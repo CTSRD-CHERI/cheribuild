@@ -83,7 +83,7 @@ def _infer_compiler_output_path(config: "JenkinsConfig", _):
     elif config.compiler_type == CompilerType.UPSTREAM_LLVM:
         return config.workspace / "upstream-llvm-sdk"
     else:
-        raise ValueError("Unsupported compiler type: {}".format(config.compiler_type))
+        raise ValueError(f"Unsupported compiler type: {config.compiler_type}")
 
 
 class JenkinsConfig(CheriConfig):

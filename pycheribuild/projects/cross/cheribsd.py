@@ -142,7 +142,7 @@ class KernelConfigFactory:
         elif kernel_abi == KernelABI.HYBRID:
             return "CHERI"
         elif kernel_abi == KernelABI.PURECAP:
-            return "CHERI{sep}PURECAP".format(sep=self.separator)
+            return f"CHERI{self.separator}PURECAP"
 
     def get_platform_name(self, platforms: "set[ConfigPlatform]") -> Optional[str]:
         for platform in platforms:
@@ -155,7 +155,7 @@ class KernelConfigFactory:
                        benchmark=False, default=False, caprevoke=False):
         flags = []
         if mfsroot:
-            flags.append("MFS{sep}ROOT".format(sep=self.separator))
+            flags.append(f"MFS{self.separator}ROOT")
         if fuzzing:
             flags.append("FUZZ")
         if benchmark:
@@ -256,7 +256,7 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
         elif kernel_abi == KernelABI.HYBRID:
             return "MORELLO"
         elif kernel_abi == KernelABI.PURECAP:
-            return "MORELLO{sep}PURECAP".format(sep=self.separator)
+            return f"MORELLO{self.separator}PURECAP"
 
     def make_all(self) -> "list[CheriBSDConfig]":
         configs = []
@@ -348,7 +348,7 @@ class CheriBSDConfigTable:
         """
         configs = cls.get_configs(xtarget, platform=platform, kernel_abi=kernel_abi, default=True, **filter_kwargs)
         assert len(configs) != 0, "No matching default kernel configuration"
-        assert len(configs) == 1, "Too many default kernel configurations {}".format(configs)
+        assert len(configs) == 1, f"Too many default kernel configurations {configs}"
         return configs[0]
 
     @classmethod
@@ -1414,7 +1414,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         """
         kerndir = self.get_kern_module_path(kernconf)
         if kerndir:
-            return "kern.module_path={}".format(kerndir)
+            return f"kern.module_path={kerndir}"
         return None
 
     def get_kernel_configs(self, platform: "Optional[ConfigPlatform]") -> "list[str]":

@@ -266,7 +266,7 @@ class BuildOlden(BenchmarkMixin, CrossCompileProject):
             self.fatal("running x86 tests is not implemented yet")
             return
         # testing, not benchmarking -> run only once: (-s small / -s large?)
-        test_command = "cd /build/bin && ./run_jenkins-bluehive.sh -d0 -r1 {tgt}".format(tgt=self.test_arch_suffix)
+        test_command = f"cd /build/bin && ./run_jenkins-bluehive.sh -d0 -r1 {self.test_arch_suffix}"
         self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
                                                   "--test-timeout", str(120 * 60),
                                                   mount_builddir=True)
@@ -584,7 +584,7 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
     def configure(self, **kwargs):
         self.configure_args.append("--enable-unixdomain")
         if self.hw_counters:
-            self.configure_args.append("--enable-pmc={}".format(self.hw_counters))
+            self.configure_args.append(f"--enable-pmc={self.hw_counters}")
         self.add_configure_vars(ac_cv_func_setpgrp_void="yes")
         super().configure(**kwargs)
 

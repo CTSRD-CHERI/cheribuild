@@ -340,7 +340,7 @@ class SimpleTargetAlias(_TargetAliasBase):
         if self.name not in config_aliases:
             real_cls._config_file_aliases = config_aliases + (self.name,)
             if len(set(real_cls._config_file_aliases)) != len(real_cls._config_file_aliases):
-                raise ValueError("Duplicate aliases for {}: {}".format(self.name, real_cls._config_file_aliases))
+                raise ValueError(f"Duplicate aliases for {self.name}: {real_cls._config_file_aliases}")
 
     @property
     def xtarget(self):

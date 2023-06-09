@@ -42,7 +42,7 @@ def run_postgres_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.
     qemu.checked_run("ls /usr/share/locale/C.UTF-8")
     # TODO: copy over the logfile and enable coredumps?
     # Run tests with a two-hour timeout:
-    qemu.checked_run("cd '{}' && sh -xe ./run-postgres-tests.sh".format(qemu.smb_dirs[0].in_target), timeout=240 * 60)
+    qemu.checked_run(f"cd '{qemu.smb_dirs[0].in_target}' && sh -xe ./run-postgres-tests.sh", timeout=240 * 60)
     return True
 
 

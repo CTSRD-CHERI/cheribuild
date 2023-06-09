@@ -286,7 +286,7 @@ class RunSailShell(OpamMixin, SimpleProject):
 
     def process(self):
         shell = os.getenv("SHELL", "bash")
-        self.info("Starting sail shell (using {})... ".format(shell))
+        self.info(f"Starting sail shell (using {shell})... ")
         import subprocess
         try:
             prompt_env = {}

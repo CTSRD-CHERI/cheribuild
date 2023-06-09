@@ -169,11 +169,11 @@ def run_tests_main(test_function: Callable[[boot_cheribsd.QemuCheriBSDInstance, 
 
     def default_setup_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace):
         if should_mount_builddir or args.build_dir:
-            qemu.checked_run("ln -sf '{}' /build".format(args.build_dir), timeout=60)
+            qemu.checked_run(f"ln -sf '{args.build_dir}' /build", timeout=60)
         if should_mount_srcdir or args.source_dir:
             assert args.source_dir
-            qemu.run("mkdir -p '{}'".format(Path(args.source_dir).parent))
-            qemu.checked_run("ln -sf /source '{}'".format(args.source_dir), timeout=60)
+            qemu.run(f"mkdir -p '{Path(args.source_dir).parent}'")
+            qemu.checked_run(f"ln -sf /source '{args.source_dir}'", timeout=60)
             boot_cheribsd.success("Mounted source directory using host path")
         # Finally call the custom test setup function
         if test_setup_function:

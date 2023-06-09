@@ -326,7 +326,7 @@ class QemuCheriBSDInstance(CheriBSDInstance):
             # XXX: always use controlmaster for faster connections?
             controlmaster_dir = Path.home() / ".ssh/controlmasters"
             controlmaster_dir.mkdir(exist_ok=True)
-            result += ["-o", "ControlPath={control_dir}/%r@%h:%p".format(control_dir=controlmaster_dir),
+            result += ["-o", f"ControlPath={controlmaster_dir}/%r@%h:%p",
                        "-o", "ControlMaster=auto",
                        # Keep socket open for 10 min (600) or indefinitely (yes)
                        "-o", "ControlPersist=600"]
@@ -668,8 +668,8 @@ def _set_pexpect_sh_prompt(child):
     # TODO: stty rows 40 cols 500? to avoid stupid line wrapping
     # Note: it seems like sending all three at once does not always work, so we set them in reverse order.
     child.sendline("PROMPT_COMMAND=''")
-    child.sendline("PS2='{0}'".format(PEXPECT_CONTINUATION_PROMPT_SET_STR))
-    child.sendline("PS1='{0}'".format(PEXPECT_PROMPT_SET_STR))
+    child.sendline(f"PS2='{PEXPECT_CONTINUATION_PROMPT_SET_STR}'")
+    child.sendline(f"PS1='{PEXPECT_PROMPT_SET_STR}'")
     # Find the prompt
     child.expect_prompt(timeout=60)
     success("===> successfully set PS1/PS2")
@@ -740,7 +740,7 @@ def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
         qemu.run("ifconfig -a")
         failure("Expected network interface ", bad_iface, " does not exist ", str(qemu), exit=True)
 
-    success("===> {} bound to QEMU networking".format(network_iface))
+    success(f"===> {network_iface} bound to QEMU networking")
     qemu.expect_prompt(timeout=30)
 
 
@@ -992,8 +992,8 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
             ld_preload_target_paths.append(str(Path("/tmp/preload", lib.name)))
 
     for index, d in enumerate(smb_dirs):
-        qemu.run("mkdir -p '{}'".format(d.in_target))
-        mount_command = "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{} '{}'".format(index + 1, d.in_target)
+        qemu.run(f"mkdir -p '{d.in_target}'")
+        mount_command = f"mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{index + 1} '{d.in_target}'"
         for trial in range(MAX_SMBFS_RETRY if not PRETEND else 1):  # maximum of 3 trials
             try:
                 checked_run_cheribsd_command(qemu, mount_command,
@@ -1020,7 +1020,7 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
 
     for lib in ld_preload_target_paths:
         # Ensure that the libraries exist
-        checked_run_cheribsd_command(qemu, "test -x '{}'".format(lib))
+        checked_run_cheribsd_command(qemu, f"test -x '{lib}'")
     if ld_preload_target_paths:
         checked_run_cheribsd_command(qemu, "export '{}={}'".format(args.test_ld_preload_variable,
                                                                    ":".join(ld_preload_target_paths)))

@@ -234,7 +234,7 @@ class RunSyzkaller(SimpleProject):
             self.verbose_print("Using syzkaller configuration", template)
             if not self.config.pretend:
                 with syz_config.open("w+") as fp:
-                    print("Emit syzkaller configuration to {}".format(syz_config))
+                    print(f"Emit syzkaller configuration to {syz_config}")
                     json.dump(template, fp, indent=4)
 
             return syz_config

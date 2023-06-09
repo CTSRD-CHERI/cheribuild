@@ -40,7 +40,7 @@ from run_tests_common import boot_cheribsd, run_tests_main
 def setup_libunwind_env(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace):
     # We also need libdl and libcxxrt from the sysroot:
     libdir = "libcheri" if qemu.xtarget.is_cheri_purecap() else "lib64"
-    qemu.checked_run("ln -sfv /build/lib/libunwind.so* /usr/{libdir}/".format(libdir=libdir))
+    qemu.checked_run(f"ln -sfv /build/lib/libunwind.so* /usr/{libdir}/")
     qemu.checked_run("ln -sfv /sysroot/usr/{libdir}/libcxxrt.so* /sysroot/usr/{libdir}/libdl.so* /usr/{libdir}/".format(
         libdir=libdir))
     # Add a fake libgcc_s link to libunwind (this works now that we build libunwind with version info)

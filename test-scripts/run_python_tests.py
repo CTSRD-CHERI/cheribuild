@@ -44,17 +44,17 @@ def run_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) ->
         # copy python libs from smb to tmpfs:
         install_prefix = Path(args.install_prefix)
         qemu.checked_run("time cp -a '{pfx}' '{pfx}.tmpfs'".format(pfx=install_prefix))
-        qemu.checked_run("umount '{pfx}'".format(pfx=install_prefix))
+        qemu.checked_run(f"umount '{install_prefix}'")
         qemu.checked_run("rmdir '{pfx}' && mv '{pfx}.tmpfs' '{pfx}'".format(pfx=install_prefix))
 
     # run basic sanity check:
     build_python_exe = "python" + args.buildexe_suffix
-    qemu.checked_run("/build/{} --version".format(build_python_exe))
-    qemu.checked_run("/build/{} -E -c 'import sys; sys.exit(0)'".format(build_python_exe))
+    qemu.checked_run(f"/build/{build_python_exe} --version")
+    qemu.checked_run(f"/build/{build_python_exe} -E -c 'import sys; sys.exit(0)'")
 
     if args.full_test:
         # Run the full test suite:
-        qemu.checked_run("cd /build && ./{} -m test -v --junit-xml=python-tests.xml".format(build_python_exe))
+        qemu.checked_run(f"cd /build && ./{build_python_exe} -m test -v --junit-xml=python-tests.xml")
     return True
 
 

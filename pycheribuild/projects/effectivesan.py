@@ -63,8 +63,8 @@ class BuildEffectiveSan(BuildLLVMMonoRepoBase):
 
         with tempfile.TemporaryDirectory() as td:
             version = "0.1.1-alpha"
-            filename = "effectivesan-{}.tar.xz".format(version)
-            url = "https://github.com/GJDuck/EffectiveSan/releases/download/v{}/{}".format(version, filename)
+            filename = f"effectivesan-{version}.tar.xz"
+            url = f"https://github.com/GJDuck/EffectiveSan/releases/download/v{version}/{filename}"
             self.download_file(Path(td, filename), url)
             self.clean_directory(self.install_dir, ensure_dir_exists=True)
             self.run_cmd("tar", "xvf", filename, "-C", self.install_dir, "--strip-components=1", cwd=td)
