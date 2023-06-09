@@ -795,7 +795,6 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: Optional[Path], kerne
             warn("Cannot pass kernel command line when booting disk image: ", kernel_commandline)
     success("Starting QEMU: ", " ".join(qemu_args))
     qemu_starttime = datetime.datetime.now()
-    global _SSH_SOCKET_PLACEHOLDER
     if _SSH_SOCKET_PLACEHOLDER is not None:
         _SSH_SOCKET_PLACEHOLDER.close()
     qemu_cls = QemuCheriBSDInstance
@@ -1185,7 +1184,7 @@ def _main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespac
         temp_ssh_port = find_free_port()
         args.ssh_port = temp_ssh_port.port
         # keep the socket open until just before we start QEMU to prevent other parallel jobs from reusing the same port
-        global _SSH_SOCKET_PLACEHOLDER
+        global _SSH_SOCKET_PLACEHOLDER  # noqa: PLW0603
         _SSH_SOCKET_PLACEHOLDER = temp_ssh_port.socket
     if args.use_smb_instead_of_ssh:
         # Skip all ssh setup by default if we are using smb instead
@@ -1216,12 +1215,12 @@ def _main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespac
         if args.qemu_cmd is None:
             failure("ERROR: Cannot find QEMU binary for target ", qemu_options.qemu_arch_sufffix, exit=True)
 
-    global PRETEND, INTERACT_ON_KERNEL_PANIC
+    global PRETEND, INTERACT_ON_KERNEL_PANIC  # noqa: PLW0603
     if args.pretend:
         PRETEND = True
     if args.interact_on_kernel_panic:
         INTERACT_ON_KERNEL_PANIC = True
-    global QEMU_LOGFILE
+    global QEMU_LOGFILE  # noqa: PLW0603
     if args.qemu_logfile:
         QEMU_LOGFILE = args.qemu_logfile
 

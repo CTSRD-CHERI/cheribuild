@@ -1,10 +1,12 @@
 [tool.ruff]
-select = ["E", "F", "I", "N", "W", "U", "COM", "RUF"]
+select = ["E", "F", "I", "N", "W", "U", "COM", "RUF", "PLC", "PLE", "PLW"]
 # Ensure suggested fixes are compatible with our minimum supported version
 # XXX: Currently this is py36, but the minimum supported by ruff is py37.
 target-version = "py37"
 ignore = [
-    "UP036" # 'Version block is outdated for minimum Python version' to be removed when we set the minimum to 3.8
+    "UP036", # 'Version block is outdated for minimum Python version' to be removed when we set the minimum to 3.8
+    "PLC1901", # using not instead of == "" does not seem particularly useful
+    "PLW2901", # `for` loop variable `value` overwritten by assignment target
 ]
 exclude = [
     ".git",

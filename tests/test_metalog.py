@@ -34,7 +34,7 @@ def _create_symlink(parent: Path, name: str, target: str, mode: int) -> Path:
     try:
         p.lchmod(mode)
     except NotImplementedError:
-        global HAVE_LCHMOD
+        global HAVE_LCHMOD  # noqa: PLW0603
         HAVE_LCHMOD = False
         pass
     return p
