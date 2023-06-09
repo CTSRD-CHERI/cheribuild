@@ -83,7 +83,7 @@ def adjust_common_cmdline_args(args: argparse.Namespace):
         # If we have a shared directory use that to massively speed up running tests
         tmpdir_name = "local-tmp" if not args.internal_shard else "local-tmp-shard-" + str(args.internal_shard)
         shared_tmpdir = Path(args.build_dir, tmpdir_name)
-        os.makedirs(str(shared_tmpdir), exist_ok=True)
+        shared_tmpdir.mkdir(parents=True, exist_ok=True)
         args.shared_tmpdir_local = shared_tmpdir
         args.smb_mount_directories.append(
             boot_cheribsd.SmbMount(str(shared_tmpdir), readonly=False, in_target="/shared-tmpdir"))

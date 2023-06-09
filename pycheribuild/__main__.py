@@ -270,7 +270,7 @@ def real_main() -> None:
         if not cheri_config.pretend:
             if cheri_config.verbose:
                 print_command("mkdir", "-p", str(d))
-            os.makedirs(str(d), exist_ok=True)
+            d.mkdir(parents=True, exist_ok=True)
 
     # Don't do the update check when tab-completing (otherwise it freezes)
     if "_ARGCOMPLETE" not in os.environ and not cheri_config.skip_update:  # no-combine
