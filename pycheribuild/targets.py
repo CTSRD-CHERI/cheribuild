@@ -338,7 +338,7 @@ class SimpleTargetAlias(_TargetAliasBase):
         # Note: we can't modify _config_file_aliases since otherwise we change it for all classes
         config_aliases = real_cls.__dict__.get("_config_file_aliases", tuple())
         if self.name not in config_aliases:
-            real_cls._config_file_aliases = config_aliases + (self.name,)
+            real_cls._config_file_aliases = (*config_aliases, self.name)
             if len(set(real_cls._config_file_aliases)) != len(real_cls._config_file_aliases):
                 raise ValueError(f"Duplicate aliases for {self.name}: {real_cls._config_file_aliases}")
 

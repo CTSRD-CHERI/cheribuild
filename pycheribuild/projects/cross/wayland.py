@@ -113,7 +113,7 @@ class BuildMtdev(CrossCompileAutotoolsProject):
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         if cls.get_crosscompile_target().target_info_cls.is_freebsd():
-            return super().dependencies(config) + ["linux-input-h"]
+            return [*super().dependencies(config), "linux-input-h"]
         return super().dependencies(config)
 
     def linkage(self):
@@ -150,7 +150,7 @@ class BuildLibInput(CrossCompileMesonProject):
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        result = super().dependencies(config) + ["mtdev", "libevdev"]
+        result = [*super().dependencies(config), "mtdev", "libevdev"]
         if cls.get_crosscompile_target().target_info_cls.is_freebsd():
             result.extend(["libudev-devd", "epoll-shim"])
         return result

@@ -512,8 +512,8 @@ class Project(SimpleProject):
     __can_use_lld_map: "dict[str, bool]" = dict()
 
     def can_use_lld(self, compiler: Path) -> bool:
-        command = [str(compiler)] + self.essential_compiler_and_linker_flags + ["-fuse-ld=lld", "-xc", "-o",
-                                                                                "/dev/null", "-"]
+        command = [str(compiler), *self.essential_compiler_and_linker_flags,
+                   "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"]
         command_str = commandline_to_str(command)
         if command_str not in Project.__can_use_lld_map:
             assert compiler.is_absolute(), compiler
@@ -955,7 +955,7 @@ class Project(SimpleProject):
                 # We have to add the boostrap tools pkgconfig directory to PKG_CONFIG_PATH so that it is searched in
                 # addition to the default paths. Note: We do not set PKG_CONFIG_LIBDIR since that overrides the default.
                 pkg_config_args = dict(
-                    PKG_CONFIG_PATH=":".join(self.pkgconfig_dirs + [os.getenv("PKG_CONFIG_PATH", "")]))
+                    PKG_CONFIG_PATH=":".join([*self.pkgconfig_dirs, os.getenv("PKG_CONFIG_PATH", "")]))
                 if self.target_info.pkg_config_libdir_override is not None:
                     pkg_config_args["PKG_CONFIG_LIBDIR"] = self.target_info.pkg_config_libdir_override
             elif self.needs_sysroot:
@@ -1053,7 +1053,7 @@ class Project(SimpleProject):
 
     @property
     def _no_overwrite_allowed(self) -> "Sequence[str]":
-        return super()._no_overwrite_allowed + ("configure_args", "configure_environment", "make_args")
+        return (*super()._no_overwrite_allowed, "configure_args", "configure_environment", "make_args")
 
     # Make sure that API is used properly
     def __setattr__(self, name, value) -> None:
@@ -1093,16 +1093,15 @@ class Project(SimpleProject):
                 tool_path = self._compiledb_tool
             options.set_command(tool_path, can_pass_j_flag=options.can_pass_jflag, early_args=compdb_extra_args)
             # Ensure that recursive make invocations reuse the compilation DB tool
-            options.set(MAKE=commandline_to_str([options.command] + compdb_extra_args))
+            options.set(MAKE=commandline_to_str([options.command, *compdb_extra_args]))
             make_command = options.command
 
-        all_args = [make_command] + options.get_commandline_args(
+        all_args = [make_command, *options.get_commandline_args(
             targets=[make_target] if isinstance(make_target, str) and make_target else make_target,
-            jobs=self.config.make_jobs if parallel else None, config=self.config,
-            verbose=self.config.verbose, continue_on_error=self.config.pass_dash_k_to_make,
-        )
+            jobs=self.config.make_jobs if parallel else None, config=self.config, verbose=self.config.verbose,
+            continue_on_error=self.config.pass_dash_k_to_make)]
         if not self.config.make_without_nice:
-            all_args = ["nice"] + all_args
+            all_args = ["nice", *all_args]
         return all_args
 
     def get_make_commandline(self, make_target: "Union[str, list[str]]", make_command: "Optional[str]" = None,
@@ -1168,7 +1167,7 @@ class Project(SimpleProject):
             git_dir = self.source_dir
         # just use git clean for cleanup
         self.warning(self.target, "does not support out-of-source builds, using git clean to remove build artifacts.")
-        git_clean_cmd = ["git", "clean", "-dfx", "--exclude=.*"] + self._extra_git_clean_excludes
+        git_clean_cmd = ["git", "clean", "-dfx", "--exclude=.*", *self._extra_git_clean_excludes]
         # Try to keep project files for IDEs and other dotfiles:
         self.run_cmd(git_clean_cmd, cwd=git_dir)
 
@@ -1240,7 +1239,7 @@ class Project(SimpleProject):
             assert configure_path, "configure_command should not be empty!"
             if not Path(configure_path).exists():
                 self.fatal("Configure command ", configure_path, "does not exist!")
-            self.run_with_logfile([str(configure_path)] + self.configure_args, logfile_name="configure", cwd=cwd,
+            self.run_with_logfile([str(configure_path), *self.configure_args], logfile_name="configure", cwd=cwd,
                                   env=self.configure_environment)
 
     def compile(self, cwd: "Optional[Path]" = None, parallel: bool = True) -> None:

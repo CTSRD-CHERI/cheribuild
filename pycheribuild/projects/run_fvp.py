@@ -125,7 +125,7 @@ class InstallMorelloFVP(SimpleProject):
             # to avoid prompts from the installer)
             self.clean_directory(self.install_dir, ensure_dir_exists=False)
             # Even when using docker, we extract on the host first to show the EULA and install the documentation
-            self.run_cmd([installer_sh, "--destination", self.install_dir] + eula_args,
+            self.run_cmd([installer_sh, "--destination", self.install_dir, *eula_args],
                          print_verbose_only=False)
             if self.use_docker_container:
                 if installer_sh.parent != Path(td):
@@ -149,7 +149,7 @@ VOLUME /diskimg
                 if self.with_clean:
                     build_flags.append("--no-cache")
                 image_latest = self.container_name + ":latest"
-                self.run_cmd(["docker", "build"] + build_flags + ["-t", image_latest, "."], cwd=td,
+                self.run_cmd(["docker", "build", *build_flags, "-t", image_latest, "."], cwd=td,
                              print_verbose_only=False)
                 # get the version from the newly-built image (don't use the cached_property)
                 version = self._get_version(docker_image=image_latest, result_if_invalid=None)
@@ -232,7 +232,7 @@ VOLUME /diskimg
             extra_args = []
 
             def fvp_cmdline():
-                return pre_cmd + [fvp_path] + self._plugin_args() + args + extra_args
+                return [*pre_cmd, fvp_path, *self._plugin_args(), *args, *extra_args]
 
             if not interactive_headless:
                 return self.run_cmd(fvp_cmdline(), **kwargs)
@@ -375,7 +375,7 @@ VOLUME /diskimg
     def _get_version(self, docker_image=None, *, result_if_invalid) -> "tuple[int, ...]":
         pre_cmd, fvp_path = self._fvp_base_command(need_tty=False, docker_image=docker_image)
         try:
-            version_out = self.run_cmd(pre_cmd + [fvp_path, "--version"], capture_output=True, run_in_pretend_mode=True)
+            version_out = self.run_cmd([*pre_cmd, fvp_path, "--version"], capture_output=True, run_in_pretend_mode=True)
             result = extract_version(version_out.stdout,
                                      regex=re.compile(rb"Fast Models \[(\d+)\.(\d+)\.?(\d+)? \(.+\)]"))
             self.info("Morello FVP version detected as", result)
@@ -524,7 +524,7 @@ class LaunchFVPBase(SimpleProject):
 
         add_hostbridge_params(
             "userNetworking=true",
-            "userNetPorts=" + ",".join([str(self.ssh_port) + "=22"] + self.extra_tcp_forwarding))
+            "userNetPorts=" + ",".join([str(self.ssh_port) + "=22", *self.extra_tcp_forwarding]))
 
         # NB: Set transport even if virtio_net is disabled since it still shows
         # up and is detected, just doesn't have any queues.
@@ -561,7 +561,7 @@ class LaunchFVPBase(SimpleProject):
                     "bp.secureflashloader.fname=" + str(bl1_bin),
                 ]
                 fvp_args = [x for param in model_params for x in ("-C", param)]
-                self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number"] + fvp_args)
+                self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number", *fvp_args])
         else:
             if self.fvp_project.fvp_revision < self.required_fvp_version:
                 self.dependency_error("FVP is too old, please update to the latest version",

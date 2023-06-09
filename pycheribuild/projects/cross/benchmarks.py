@@ -329,7 +329,7 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
             "473.astar",  # 3 runs = 0:31:41  -> ~10:30 mins per run
             "483.xalancbmk",  # 3 runs = 0:00:55 -> ~20 secs per run"
             ]
-        self.complete_benchmark_list = self.working_benchmark_list + ["400.perlbench", "403.gcc", "429.mcf"]
+        self.complete_benchmark_list = [*self.working_benchmark_list, "400.perlbench", "403.gcc", "429.mcf"]
         self.fast_list = ["471.omnetpp", "483.xalancbmk", "456.hmmer", "462.libquantum"]
         if self.benchmark_override:
             self.benchmark_list = self.benchmark_override
@@ -540,7 +540,7 @@ class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
                     self.make_args.set(ARCHNAME="mips64")
 
             # link with libstatcounters
-            cflags = self.default_compiler_flags + ["-lstatcounters"]
+            cflags = [*self.default_compiler_flags, "-lstatcounters"]
             if self.fixed_iterations:
                 cflags += ["-DUNIXBENCH_FIXED_ITER"]
             self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(cflags))

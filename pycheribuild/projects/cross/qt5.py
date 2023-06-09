@@ -244,7 +244,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = self.default_compiler_flags
-            linker_flags = self.default_ldflags + ["-target", self.target_info.target_triple]
+            linker_flags = [*self.default_ldflags, "-target", self.target_info.target_triple]
 
             # The build system already passes these:
             linker_flags = filter(lambda s: not s.startswith("--sysroot"), linker_flags)

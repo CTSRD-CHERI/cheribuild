@@ -127,7 +127,7 @@ class FileSystemUtils:
                     all_entries = all_entries_new
                 all_entries = list(map(str, all_entries))
                 if all_entries:
-                    run_command(["mv"] + all_entries + [str(tempdir)], print_verbose_only=True)
+                    run_command(["mv", *all_entries, str(tempdir)], print_verbose_only=True)
             else:
                 # rename the directory, create a new dir and then delete it in a background thread
                 run_command("mv", path, tempdir)
@@ -258,7 +258,7 @@ class FileSystemUtils:
         cmd = ["mv", "-f"] if force else ["mv"]
         if create_dirs and not dest.parent.exists():
             self.makedirs(dest.parent)
-        run_command(cmd + [str(src), str(dest)])
+        run_command([*cmd, str(src), str(dest)])
 
     def install_file(self, src: Path, dest: Path, *, force=False, create_dirs=True, print_verbose_only=True,
                      mode=None) -> None:
@@ -300,7 +300,7 @@ class FileSystemUtils:
 
     def add_unique_line_to_file(self, file: Path, line: str) -> None:
         status_update("Adding '", line, "' to ", file, sep="")
-        self.rewrite_file(file, lambda lines: lines if line in lines else (lines + [line]))
+        self.rewrite_file(file, lambda lines: lines if line in lines else ([*lines, line]))
 
     def replace_in_file(self, file: Path, replacements: "dict[str, str]"):
         def do_replace(old_lines: "typing.Iterable[str]"):

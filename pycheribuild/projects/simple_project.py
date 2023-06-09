@@ -171,7 +171,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                 new_dict["target"] = new_name
                 new_dict["synthetic_base"] = cls  # We are already adding it here
                 # noinspection PyTypeChecker
-                new_cls = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
+                new_cls = type(cls.__name__ + "_" + arch.name, (cls, *cls.__bases__), new_dict)
                 assert issubclass(new_cls, SimpleProject)
                 target_manager.add_target(MultiArchTarget(new_name, new_cls, arch, base_target))
                 # Handle old names for FreeBSD/CheriBSD targets in the config file:
@@ -406,7 +406,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         if not include_dependencies:
             return []
         if dependency_chain:
-            new_dependency_chain = dependency_chain + [cls]
+            new_dependency_chain = [*dependency_chain, cls]
             if cls in dependency_chain:
                 cycle = new_dependency_chain[new_dependency_chain.index(cls):]
                 fatal_error("Cyclic dependency found:", " -> ".join(map(lambda c: c.target, cycle)), pretend=False)

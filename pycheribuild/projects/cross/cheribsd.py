@@ -523,8 +523,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
     needs_sysroot: bool = False  # We are building the full OS so we don't need a sysroot
     # We still allow building FreeBSD for MIPS64. While the main branch no longer has support, this allows building
     # the stable/13 branch using cheribuild. However, MIPS is no longer included in ALL_SUPPORTED_FREEBSD_TARGETS.
-    supported_architectures: "list[CrossCompileTarget]" = CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS + [
-        CompilationTargets.FREEBSD_MIPS64]
+    supported_architectures: "list[CrossCompileTarget]" = [
+        *CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS,
+        CompilationTargets.FREEBSD_MIPS64,
+    ]
 
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("freebsd")
     add_custom_make_options: bool = True
@@ -1142,18 +1144,18 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 return None
             query_args = args.copy()
             query_args.set_command(bmake_binary)
-            bw_flags = query_args.all_commandline_args(self.config) + [
-                "BUILD_WITH_STRICT_TMPPATH=0",
-                "-f", self.source_dir / "Makefile.inc1",
-                "-m", self.source_dir / "share/mk",
-                "showconfig",
-                "-D_NO_INCLUDE_COMPILERMK",  # avoid calling ${CC} --version
-                "-V", var]
+            bw_flags = [*query_args.all_commandline_args(self.config),
+                        "BUILD_WITH_STRICT_TMPPATH=0",
+                        "-f", self.source_dir / "Makefile.inc1",
+                        "-m", self.source_dir / "share/mk",
+                        "showconfig",
+                        "-D_NO_INCLUDE_COMPILERMK",  # avoid calling ${CC} --version
+                        "-V", var]
             if not self.source_dir.exists():
                 assert self.config.pretend, "This should only happen when running in a test environment"
                 return None
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
-            cmd = self.run_cmd([bmake_binary] + bw_flags, env=args.env_vars, cwd=self.source_dir,
+            cmd = self.run_cmd([bmake_binary, *bw_flags], env=args.env_vars, cwd=self.source_dir,
                                run_in_pretend_mode=True, capture_output=True, print_verbose_only=True)
             lines = cmd.stdout.strip().split(b"\n")
             last_line = lines[-1].decode("utf-8").strip()
@@ -1324,7 +1326,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             buildenv_target = "buildenv"
             if self.config.libcompat_buildenv and self.libcompat_name():
                 buildenv_target = self.libcompat_name() + "buildenv"
-            self.run_cmd([self.make_args.command] + args.all_commandline_args(self.config) + [buildenv_target],
+            self.run_cmd([self.make_args.command, *args.all_commandline_args(self.config), buildenv_target],
                          env=args.env_vars, cwd=self.source_dir)
         else:
             super().process()
@@ -1376,7 +1378,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.info("Skipping default ABI build of", subdir, "since --libcompat-buildenv was passed.")
         else:
             self.info("Building", subdir, "using buildenv target")
-            self.run_cmd([self.make_args.command] + make_args.all_commandline_args(self.config) + ["buildenv"],
+            self.run_cmd([self.make_args.command, *make_args.all_commandline_args(self.config), "buildenv"],
                          env=make_args.env_vars, cwd=self.source_dir)
         # If we are building a library, we want to build both the CHERI and the mips version (unless the
         # user explicitly specified --libcompat-buildenv)
@@ -1384,8 +1386,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
             compat_target = self.libcompat_name() + "buildenv"
             self.info("Building", subdir, "using", compat_target, "target")
             extra_flags = ["MK_TESTS=no"]  # don't build tests since they will overwrite the non-compat ones
-            self.run_cmd([self.make_args.command] + make_args.all_commandline_args(self.config) + extra_flags + [
-                compat_target], env=make_args.env_vars, cwd=self.source_dir)
+            self.run_cmd(
+                [self.make_args.command, *make_args.all_commandline_args(self.config), *extra_flags, compat_target],
+                env=make_args.env_vars, cwd=self.source_dir)
 
     def get_kernel_install_path(self, kernconf: "Optional[str]" = None) -> Path:
         """
@@ -1659,7 +1662,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         configs = self._get_config_variants({platform}, kernel_abis, combinations)
         if self.build_fpga_kernels:
             configs += self._get_config_variants(ConfigPlatform.fpga_platforms(), kernel_abis,
-                                                 combinations + ["mfsroot"])
+                                                 [*combinations, "mfsroot"])
         return configs
 
     def default_kernel_config(self, platform: "Optional[ConfigPlatform]" = None, **filter_kwargs) -> str:
@@ -1719,7 +1722,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def install(self, **kwargs) -> None:
         # If we build the FPGA kernels also install them into boot:
-        available_kernconfs = [self.kernel_config] + self.extra_kernels
+        available_kernconfs = [self.kernel_config, *self.extra_kernels]
         if self.mfs_root_image:
             available_kernconfs += self.extra_kernels_with_mfs
         super().install(all_kernel_configs=" ".join(available_kernconfs), sysroot_only=self.sysroot_only, **kwargs)
@@ -1729,10 +1732,11 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     target: str = "cheribsd-mfs-root-kernel"
     dependencies: "list[str]" = ["disk-image-mfs-root"]
     repository: ReuseOtherProjectRepository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD, do_update=True)
-    supported_architectures: "list[CrossCompileTarget]" = \
-        [CompilationTargets.CHERIBSD_AARCH64] + \
-        CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS + \
-        CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS
+    supported_architectures: "list[CrossCompileTarget]" = [
+        CompilationTargets.CHERIBSD_AARCH64,
+        *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS,
+        *CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS,
+    ]
     default_build_dir: ComputedDefaultValue[Path] = \
         ComputedDefaultValue(function=cheribsd_reuse_build_dir,
                              as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())

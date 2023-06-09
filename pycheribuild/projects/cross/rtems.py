@@ -58,7 +58,7 @@ class BuildRtems(CrossCompileProject):
             self.rtems_bsps = ["rv64imafdc_medany"]
 
     def _run_waf(self, *args, **kwargs):
-        cmdline = [self.source_dir / "waf", "-t", self.source_dir, "-o", self.build_dir] + list(args)
+        cmdline = [self.source_dir / "waf", "-t", self.source_dir, "-o", self.build_dir, *list(args)]
         if self.config.verbose:
             cmdline.append("-v")
         return self.run_cmd(cmdline, cwd=self.source_dir, **kwargs)

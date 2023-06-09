@@ -142,5 +142,5 @@ class BenchmarkMixin(_BenchmarkMixinBase):
             if qemu_ssh_socket is not None:
                 qemu_ssh_socket.socket.close()
         self.run_cmd(
-            [str(cheribuild_path / "vcu118-bsd-boot.py")] + basic_args + ["-vvvvv", "runbench"] + runbench_args,
+            [str(cheribuild_path / "vcu118-bsd-boot.py"), *basic_args, "-vvvvv", "runbench", *runbench_args],
             give_tty_control=True)

@@ -220,9 +220,8 @@ class RunSyzkaller(SimpleProject):
                 "type": vm_type,
                 "vm": {
                     "qemu": str(qemu_binary),
-                    "qemu_args": commandline_to_str(qemu_opts.machine_flags +
-                                                    ["-device", "virtio-rng-pci",
-                                                     "-D", "syz-trace.log"]),
+                    "qemu_args": commandline_to_str(
+                        [*qemu_opts.machine_flags, "-device", "virtio-rng-pci", "-D", "syz-trace.log"]),
                     "kernel": str(kernel_path),
                     "image_device": "drive index=0,media=disk,format=raw,file=",
                     "count": 1,

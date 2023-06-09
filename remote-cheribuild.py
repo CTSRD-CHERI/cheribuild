@@ -63,4 +63,4 @@ scp "$script" "${host}:~/.remote-py3-script.py" > /dev/null && \
     remote_file = "$HOME/.remote-py3-script.py"
     subprocess.check_call(["scp", tmp.name, host + ":" + remote_file])
     # call execvp so that we get "^CExiting due to Ctrl+C" instead of a CalledProcessError
-    os.execvp("ssh", ["ssh"] + tty_option + [host, "--", "python3", remote_file] + cheribuild_args)
+    os.execvp("ssh", ["ssh", *tty_option, host, "--", "python3", remote_file, *cheribuild_args])

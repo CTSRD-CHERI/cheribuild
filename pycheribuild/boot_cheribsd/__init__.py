@@ -122,7 +122,7 @@ class PretendSpawn(pexpect.spawn):
         # Just start cat for --pretend mode
         kwargs["timeout"] = 1
         super().__init__("cat", use_poll=True, **kwargs)
-        self.cmd = [command] + args
+        self.cmd = [command, *args]
         info("Spawning (fake) ", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
 
     def expect(self, *args, pretend_result=None, **kwargs):
@@ -428,7 +428,7 @@ def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, c
     info("Extracting ", archive)
     if keep_archive:
         cmd += ["-k"]
-    run_host_command(cmd + [str(archive)])
+    run_host_command([*cmd, str(archive)])
     return result
 
 
@@ -835,10 +835,10 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         # TODO: it would be nice if we had a message to detect userspace startup without requiring bootverbose
         bootverbose = False
         # noinspection PyTypeChecker
-        init_messages = [STARTING_INIT, BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3] + FATAL_ERROR_MESSAGES
-        boot_messages = init_messages + [TRYING_TO_MOUNT_ROOT]
-        loader_boot_prompt_messages = boot_messages + [BOOT_LOADER_PROMPT]
-        loader_boot_messages = loader_boot_prompt_messages + [AUTOBOOT_PROMPT]
+        init_messages = [STARTING_INIT, BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3, *FATAL_ERROR_MESSAGES]
+        boot_messages = [*init_messages, TRYING_TO_MOUNT_ROOT]
+        loader_boot_prompt_messages = [*boot_messages, BOOT_LOADER_PROMPT]
+        loader_boot_messages = [*loader_boot_prompt_messages, AUTOBOOT_PROMPT]
         i = child.expect(loader_boot_messages, timeout=20 * 60, timeout_msg="timeout before loader or kernel")
         if i >= len(boot_messages):
             # Skip 10s wait from loader(8) if we see the autoboot message
@@ -871,7 +871,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         userspace_starttime = datetime.datetime.now()
         boot_expect_strings: PatternListType = [LOGIN, LOGIN_AS_ROOT_MINIMAL, SHELL_OPEN, BOOT_FAILURE,
                                                 BOOT_FAILURE2, BOOT_FAILURE3]
-        i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=60 * 60,
+        i = child.expect([*boot_expect_strings, "DHCPACK from ", *FATAL_ERROR_MESSAGES], timeout=60 * 60,
                          timeout_msg="timeout awaiting login prompt")
         if i == len(boot_expect_strings):  # DHCPACK from
             have_dhclient = True

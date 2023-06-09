@@ -59,14 +59,14 @@ def _sort_targets(targets: "list[str]", *, add_dependencies=False, add_toolchain
 
 
 freestanding_deps = ["llvm-native", "qemu", "gdb-native", "freestanding-cheri-sdk"]
-cheribsd_sdk_deps = freestanding_deps + ["cheribsd-riscv64-hybrid", "cheribsd-sdk-riscv64-hybrid"]
+cheribsd_sdk_deps = [*freestanding_deps, "cheribsd-riscv64-hybrid", "cheribsd-sdk-riscv64-hybrid"]
 
 
 @pytest.mark.parametrize("target_name,expected_list", [
     pytest.param("freestanding-cheri-sdk", freestanding_deps, id="freestanding-sdk"),
     # Ensure that cheribsd is added to deps even on Linux/Mac
     pytest.param("cheribsd-sdk-riscv64-hybrid", cheribsd_sdk_deps, id="cheribsd-sdk"),
-    pytest.param("sdk-riscv64-hybrid", cheribsd_sdk_deps + ["sdk-riscv64-hybrid"], id="sdk"),
+    pytest.param("sdk-riscv64-hybrid", [*cheribsd_sdk_deps, "sdk-riscv64-hybrid"], id="sdk"),
     pytest.param("sdk-morello-purecap", ["morello-llvm-native", "qemu", "freestanding-morello-sdk",
                                          "cheribsd-morello-purecap", "cheribsd-sdk-morello-purecap",
                                          "sdk-morello-purecap"], id="morello-purecap"),
@@ -129,7 +129,7 @@ def test_cheribsd_default_aliases():
     pytest.param("build-and-run-freebsd-amd64", ["freebsd-amd64", "disk-image-freebsd-amd64", "run-freebsd-amd64"]),
 ])
 def test_build_and_run(target_name: str, expected_list: "list[str]"):
-    assert _sort_targets([target_name], add_dependencies=False) == expected_list + [target_name]
+    assert _sort_targets([target_name], add_dependencies=False) == [*expected_list, target_name]
 
 
 @pytest.mark.parametrize("target,add_toolchain,expected_deps", [
@@ -172,7 +172,7 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
 ])
 def test_all_run_deps(target: str, add_toolchain: bool, expected_deps: "list[str]"):
     assert _sort_targets([target], add_dependencies=True, add_toolchain=add_toolchain,
-                         build_morello_from_source=False) == expected_deps + [target]
+                         build_morello_from_source=False) == [*expected_deps, target]
     assert _sort_targets([target], add_dependencies=True, add_toolchain=add_toolchain,
                          build_morello_from_source=False, only_dependencies=True) == expected_deps
 
@@ -261,14 +261,15 @@ def test_webkit_cached_deps():
     assert inspect.getattr_static(webkit_riscv, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
 
     cheri_target_names = list(sorted(webkit_purecap.all_dependency_names(config)))
-    expected_cheri_names = sorted(["llvm-native", "cheribsd-riscv64-purecap"] + _qtbase_x11_deps("riscv64-purecap") + [
-        "qtbase-riscv64-purecap", "icu4c-native", "icu4c-riscv64-purecap", "libxml2-riscv64-purecap"])
+    expected_cheri_names = sorted(["llvm-native", "cheribsd-riscv64-purecap", *_qtbase_x11_deps("riscv64-purecap"),
+                                   "qtbase-riscv64-purecap", "icu4c-native", "icu4c-riscv64-purecap",
+                                   "libxml2-riscv64-purecap"])
     assert cheri_target_names == expected_cheri_names
     _check_deps_not_cached([webkit_native, webkit_riscv])
     _check_deps_cached([webkit_purecap])
     mips_target_names = list(sorted(webkit_riscv.all_dependency_names(config)))
-    expected_mips_names = sorted(["llvm-native", "cheribsd-riscv64"] + _qtbase_x11_deps("riscv64") + [
-        "qtbase-riscv64", "icu4c-native", "icu4c-riscv64", "libxml2-riscv64"])
+    expected_mips_names = sorted(["llvm-native", "cheribsd-riscv64", *_qtbase_x11_deps("riscv64"), "qtbase-riscv64",
+                                  "icu4c-native", "icu4c-riscv64", "libxml2-riscv64"])
     assert mips_target_names == expected_mips_names
     _check_deps_cached([webkit_purecap, webkit_riscv])
     _check_deps_not_cached([webkit_native])
@@ -293,11 +294,12 @@ def test_webkit_deps_2():
         "shared-mime-info-native", "sqlite-native", "qtbase-native", "icu4c-native", "libxml2-native",
         "qtwebkit-native"]
 
-    assert _sort_targets(["qtwebkit-riscv64"], add_dependencies=True, skip_sdk=True) == _qtbase_x11_deps(
-        "riscv64") + ["qtbase-riscv64", "icu4c-native", "icu4c-riscv64", "libxml2-riscv64", "qtwebkit-riscv64"]
-    assert _sort_targets(["qtwebkit-riscv64-purecap"], add_dependencies=True, skip_sdk=True) == _qtbase_x11_deps(
-        "riscv64-purecap") + ["qtbase-riscv64-purecap", "icu4c-native", "icu4c-riscv64-purecap",
-                              "libxml2-riscv64-purecap", "qtwebkit-riscv64-purecap"]
+    assert _sort_targets(["qtwebkit-riscv64"], add_dependencies=True, skip_sdk=True) == [
+        *_qtbase_x11_deps("riscv64"), "qtbase-riscv64", "icu4c-native", "icu4c-riscv64", "libxml2-riscv64",
+        "qtwebkit-riscv64"]
+    assert _sort_targets(["qtwebkit-riscv64-purecap"], add_dependencies=True, skip_sdk=True) == [
+        *_qtbase_x11_deps("riscv64-purecap"), "qtbase-riscv64-purecap", "icu4c-native", "icu4c-riscv64-purecap",
+        "libxml2-riscv64-purecap", "qtwebkit-riscv64-purecap"]
 
 
 def test_riscv():

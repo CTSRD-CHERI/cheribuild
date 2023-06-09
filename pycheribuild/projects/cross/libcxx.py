@@ -138,7 +138,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         result = super().dependencies(config)
-        return result + ["libunwind"]
+        return [*result, "libunwind"]
 
     def setup(self):
         super().setup()
@@ -384,8 +384,8 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
     def dependencies(cls, config: CheriConfig) -> "list[str]":
         if not cls.get_crosscompile_target().is_native():
             return super().dependencies(config)
-        return super().dependencies(config) + [
-            cls.llvm_project.get_class_for_target(CompilationTargets.NATIVE_NON_PURECAP).target]
+        return [*super().dependencies(config),
+                cls.llvm_project.get_class_for_target(CompilationTargets.NATIVE_NON_PURECAP).target]
 
     @classproperty
     def repository(self):

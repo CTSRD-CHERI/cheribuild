@@ -69,7 +69,7 @@ class KDECMakeProject(CrossCompileCMakeProject):
     @classmethod
     def dependencies(cls, config) -> "list[str]":
         result = super().dependencies(config)
-        return result + ["qtbase", "extra-cmake-modules"]
+        return [*result, "qtbase", "extra-cmake-modules"]
 
     @property
     def ctest_script_extra_args(self):
@@ -211,8 +211,8 @@ class BuildKWayland(KDECMakeProject):
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        result = super().dependencies(config) + ["libglvnd", "wayland-protocols", "qtwayland",
-                                                 "plasma-wayland-protocols"]
+        result = [*super().dependencies(config), "libglvnd", "wayland-protocols", "qtwayland",
+                  "plasma-wayland-protocols"]
         if cls.get_crosscompile_target().target_info_cls.is_freebsd():
             result.append("linux-input-h")
         return result
@@ -358,7 +358,7 @@ class BuildKConfig(KDECMakeProject):
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        return super().dependencies(config) + ["qtdeclarative"]
+        return [*super().dependencies(config), "qtdeclarative"]
 
 
 class BuildKDBusAddons(KDECMakeProject):
@@ -368,7 +368,7 @@ class BuildKDBusAddons(KDECMakeProject):
     def dependencies(cls, config) -> "list[str]":
         if cls.get_crosscompile_target().target_info_cls.is_macos():
             return super().dependencies(config)
-        return super().dependencies(config) + ["qtx11extras"]
+        return [*super().dependencies(config), "qtx11extras"]
 
 
 class BuildKGuiAddons(KDECMakeProject):
@@ -378,7 +378,7 @@ class BuildKGuiAddons(KDECMakeProject):
     def dependencies(cls, config) -> "list[str]":
         if cls.get_crosscompile_target().target_info_cls.is_macos():
             return super().dependencies(config)
-        return super().dependencies(config) + ["qtx11extras"]
+        return [*super().dependencies(config), "qtx11extras"]
 
     def setup(self):
         super().setup()
@@ -396,7 +396,7 @@ class BuildKItemModels(KDECMakeProject):
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        return super().dependencies(config) + ["qtdeclarative"]
+        return [*super().dependencies(config), "qtdeclarative"]
 
 
 class BuildKI18N(KDECMakeProject):
@@ -404,7 +404,7 @@ class BuildKI18N(KDECMakeProject):
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        return super().dependencies(config) + ["libintl-lite"]
+        return [*super().dependencies(config), "libintl-lite"]
 
     def setup(self):
         super().setup()
@@ -425,7 +425,7 @@ class BuildKWindowSystem(KDECMakeProject):
     def dependencies(cls, config) -> "list[str]":
         if cls.get_crosscompile_target().target_info_cls.is_macos():
             return super().dependencies(config)
-        return super().dependencies(config) + ["qtx11extras", "libxfixes", "libxrender"]
+        return [*super().dependencies(config), "qtx11extras", "libxfixes", "libxrender"]
 
 
 class BuildLibQREncode(KDECMakeProject):
@@ -506,8 +506,8 @@ class BuildKNotifications(KDECMakeProject):
         result = ["qtdeclarative", "kwindowsystem", "kconfig", "kconfig-native", "kcoreaddons", "kcoreaddons-native",
                   "phonon"]
         if cls.get_crosscompile_target().target_info_cls.is_macos():
-            return result + ["qtmacextras"]
-        return result + ["qtx11extras"]
+            return [*result, "qtmacextras"]
+        return [*result, "qtx11extras"]
 
 
 class BuildKPackage(KDECMakeProject):
@@ -866,9 +866,8 @@ class BuildKWin(KDECMakeProject):
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        result = super().dependencies(config) + ["kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker",
-                                                 "plasma-framework", "libinput", "qttools", "libepoxy", "libxcvt",
-                                                 "lcms2"]
+        result = [*super().dependencies(config), "kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker",
+                  "plasma-framework", "libinput", "qttools", "libepoxy", "libxcvt", "lcms2"]
         if cls.use_mesa:
             result.append("mesa")
         if cls.get_crosscompile_target().target_info_cls.is_freebsd():

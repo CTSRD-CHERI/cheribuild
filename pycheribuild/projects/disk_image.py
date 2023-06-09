@@ -442,7 +442,7 @@ class BuildDiskImageBase(SimpleProject):
         # for i in ("boot/entropy", "entropy"):
         # We need at least three 4KB entropy files for dhclient to not block on the first arc4random():
         var_db_entrop_files = ["var/db/entropy/entropy." + str(i) for i in range(2)]
-        for i in ["boot/entropy"] + var_db_entrop_files:
+        for i in ["boot/entropy", *var_db_entrop_files]:
             # "dd if=/dev/random of="$i" bs=4096 count=1"
             entropy_file = self.tmpdir / i
             self.makedirs(entropy_file.parent)
@@ -516,7 +516,7 @@ class BuildDiskImageBase(SimpleProject):
         if not self.mkimg_cmd or not self.mkimg_cmd.exists():
             self.fatal(f"Missing mkimg command ('{self.mkimg_cmd}')! Should be found in FreeBSD build dir.",
                        fixit_hint="Pass an explicit path to mkimg by setting the MKIMG_CMD environment variable")
-        self.run_cmd([self.mkimg_cmd] + cmd, **kwargs)
+        self.run_cmd([self.mkimg_cmd, *cmd], **kwargs)
 
     @property
     def include_efi_partition(self):
@@ -695,13 +695,13 @@ class BuildDiskImageBase(SimpleProject):
                 "-B", "be" if self.big_endian else "le",  # byte order
             ]
         try:
-            self.run_cmd([self.makefs_cmd] + makefs_flags + [
-                "-N", self.user_group_db_dir,
-                # use master.passwd from the cheribsd source not the current systems passwd file
-                # which makes sure that the numeric UID values are correct
-                rootfs_img,  # output file
-                self.manifest_file,  # use METALOG as the manifest for the disk image
-            ], cwd=self.rootfs_dir)
+            self.run_cmd([self.makefs_cmd, *makefs_flags,
+                          "-N", self.user_group_db_dir,
+                          # use master.passwd from the cheribsd source not the current systems passwd file
+                          # which makes sure that the numeric UID values are correct
+                          rootfs_img,  # output file
+                          self.manifest_file,  # use METALOG as the manifest for the disk image
+                          ], cwd=self.rootfs_dir)
         except Exception:
             self.warning("makefs failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
                          " or cheribsd) and attach the METALOG file.")

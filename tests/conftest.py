@@ -28,7 +28,7 @@ def _register_targets():
     sys.argv = ["cheribuild.py"]
     loader = DefaultCheribuildConfigLoader(argparser_class=TestArgumentParser)
     loader._config_path = Path("/dev/null")
-    all_target_names = list(sorted(target_manager.target_names(None))) + ["__run_everything__"]
+    all_target_names = [*list(sorted(target_manager.target_names(None))), "__run_everything__"]
     ConfigLoaderBase._cheri_config = DefaultCheriConfig(loader, all_target_names)
     ConfigLoaderBase._cheri_config.TEST_MODE = True
     SimpleProject._config_loader = loader

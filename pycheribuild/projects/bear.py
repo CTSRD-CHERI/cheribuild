@@ -40,7 +40,7 @@ class BuildBear(CMakeProject):
     @property
     def pkgconfig_dirs(self) -> "list[str]":
         if self.target_info.is_macos():
-            return [str(self.get_homebrew_prefix("openssl") / "lib/pkgconfig")] + super().pkgconfig_dirs
+            return [str(self.get_homebrew_prefix("openssl") / "lib/pkgconfig"), *super().pkgconfig_dirs]
         return super().pkgconfig_dirs
 
     # def install(self, **kwargs):

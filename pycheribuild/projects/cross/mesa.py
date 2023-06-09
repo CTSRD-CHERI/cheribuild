@@ -84,7 +84,7 @@ class BuildMesa(CrossCompileMesonProject):
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
-        result = super().dependencies(config) + ["libdrm", "libglvnd"]
+        result = [*super().dependencies(config), "libdrm", "libglvnd"]
         if cls.include_wayland:
             result.extend(["wayland", "wayland-protocols"])
         if cls.include_x11:

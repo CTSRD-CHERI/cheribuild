@@ -82,7 +82,7 @@ class BuildRos2(CrossCompileCMakeProject):
 
     @property
     def cmake_prefix_paths(self):
-        return super().cmake_prefix_paths + [self.install_dir]
+        return [*super().cmake_prefix_paths, self.install_dir]
 
     def _set_env(self):
         # create cheri_setup.csh and cheri_setup.sh files in self.source_dir which can be source'ed

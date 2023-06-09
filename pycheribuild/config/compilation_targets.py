@@ -853,8 +853,8 @@ class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs) -> "list[str]":
         # We are linking baremetal binaries -> always use local-exec TLS
-        return super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs) + [
-            "-ftls-model=local-exec"]
+        return [*super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs),
+                "-ftls-model=local-exec"]
 
     @property
     def sysroot_dir(self) -> Path:
@@ -1194,7 +1194,7 @@ class CompilationTargets(BasicCompilationTargets):
                                                is_cheri_purecap=True, non_cheri_target=RTEMS_RISCV64)
 
     ALL_CHERIBSD_RISCV_TARGETS = [CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI]
-    ALL_CHERIBSD_NON_MORELLO_TARGETS = ALL_CHERIBSD_RISCV_TARGETS + [CHERIBSD_AARCH64, CHERIBSD_X86_64]
+    ALL_CHERIBSD_NON_MORELLO_TARGETS = [*ALL_CHERIBSD_RISCV_TARGETS, CHERIBSD_AARCH64, CHERIBSD_X86_64]
     ALL_CHERIBSD_MORELLO_TARGETS = [CHERIBSD_MORELLO_PURECAP, CHERIBSD_MORELLO_HYBRID]
     ALL_CHERIBSD_HYBRID_TARGETS = [CHERIBSD_RISCV_HYBRID, CHERIBSD_MORELLO_HYBRID]
     ALL_CHERIBSD_PURECAP_TARGETS = [CHERIBSD_RISCV_PURECAP, CHERIBSD_MORELLO_PURECAP]
