@@ -514,7 +514,7 @@ class BuildDiskImageBase(SimpleProject):
 
     def run_mkimg(self, cmd: list, **kwargs):
         if not self.mkimg_cmd or not self.mkimg_cmd.exists():
-            self.fatal("Missing mkimg command ('{}')! Should be found in FreeBSD build dir.".format(self.mkimg_cmd),
+            self.fatal(f"Missing mkimg command ('{self.mkimg_cmd}')! Should be found in FreeBSD build dir.",
                        fixit_hint="Pass an explicit path to mkimg by setting the MKIMG_CMD environment variable")
         self.run_cmd([self.mkimg_cmd] + cmd, **kwargs)
 
@@ -1131,7 +1131,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             self.mtree.write(sys.stderr, pretend=self.config.pretend)
         if self.config.verbose:
             self.run_cmd("du", "-ah", self.tmpdir)
-            self.run_cmd("sh", "-c", "du -ah '{}' | sort -h".format(self.tmpdir))
+            self.run_cmd("sh", "-c", f"du -ah '{self.tmpdir}' | sort -h")
         super().make_rootfs_image(rootfs_img)
 
 

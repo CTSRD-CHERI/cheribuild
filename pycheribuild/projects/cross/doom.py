@@ -46,7 +46,7 @@ class BuildFreedoom(CrossCompileProject):
     dependencies = ["chocolate-doom"]
 
     version = "0.12.1"
-    url_prefix: str = "https://github.com/freedoom/freedoom/releases/download/v{0}/".format(version)
+    url_prefix: str = f"https://github.com/freedoom/freedoom/releases/download/v{version}/"
     packages: "dict[str, list[str]]" = {
         'freedoom': ['freedoom1', 'freedoom2'],
         'freedm': ['freedm']

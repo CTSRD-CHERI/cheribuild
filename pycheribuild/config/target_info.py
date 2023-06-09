@@ -207,7 +207,7 @@ class TargetInfo(ABC):
     def cmake_processor_id(self) -> str:
         if self.target.is_mips(include_purecap=True):
             if self.target.is_cheri_purecap():
-                return "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.mips_cheri_bits_str)
+                return f"CHERI (MIPS IV compatible) with {self.config.mips_cheri_bits_str}-bit capabilities"
             else:
                 return "BERI (MIPS IV compatible)"
         if self.target.is_aarch64(include_purecap=True):

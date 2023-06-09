@@ -95,7 +95,7 @@ def run_juliet_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
         run_command = "/build/juliet-run.sh {} {}".format(args.testcase_timeout, "/build/" + preload_path.name)
 
     else:
-        run_command = "/build/juliet-run.sh {}".format(args.testcase_timeout)
+        run_command = f"/build/juliet-run.sh {args.testcase_timeout}"
 
     build_dir = Path(args.build_dir)
     qemu.checked_run(run_command, ignore_cheri_trap=True, timeout=60000)

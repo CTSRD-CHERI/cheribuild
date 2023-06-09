@@ -393,7 +393,7 @@ class LaunchQEMUBase(SimpleProject):
                 if share_name is not None:
                     share_name_option = "<<<" + share_name
                 else:
-                    share_name = "qemu{}".format(smb_dir_count)
+                    share_name = f"qemu{smb_dir_count}"
                 user_network_options += str(directory) + share_name_option + ("@ro" if readonly else "")
                 guest_cmd = coloured(AnsiColour.yellow,
                                      "mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name}"
@@ -486,7 +486,7 @@ class LaunchQEMUBase(SimpleProject):
                 # Once the file has been loaded set a breakpoint on panic() and connect to the remote host
                 if bp:
                     result.append("--eval-command=break " + bp)
-                result.append("--eval-command=target remote localhost:{}".format(gdb_port))
+                result.append(f"--eval-command=target remote localhost:{gdb_port}")
                 result.append("--eval-command=continue")
                 if extra_binary:
                     result.append("--init-eval-command=add-symbol-file -o 0 " + str(extra_binary))
@@ -549,10 +549,10 @@ class LaunchQEMUBase(SimpleProject):
                 except ImportError:
                     self.info(coloured(AnsiColour.red, "libtmux not installed, impossible to automatically start gdb"))
                 except Exception as e:
-                    self.info(coloured(AnsiColour.red, "Unable to start gdb in tmux: {}".format(e)))
+                    self.info(coloured(AnsiColour.red, f"Unable to start gdb in tmux: {e}"))
 
             gdb_socket_placeholder.socket.close()  # the port is now available for qemu
-            qemu_command += ["-gdb", "tcp::{}".format(gdb_port),  # wait for gdb on localhost:1234
+            qemu_command += ["-gdb", f"tcp::{gdb_port}",  # wait for gdb on localhost:1234
                              "-S"  # freeze CPU at startup (use 'c' to start execution)
                              ]
         # We want stdout/stderr here even when running with --quiet

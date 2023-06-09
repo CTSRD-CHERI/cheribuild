@@ -132,7 +132,7 @@ jtag newtap $_CHIPNAME cpu -irlen 18 -ignore-version -expected-id 0x04B31093
     if num_cores > 0:
         openocd_script += "\ntarget smp"
         for core in range(num_cores):
-            openocd_script += " $_TARGETNAME_{:d}".format(core)
+            openocd_script += f" $_TARGETNAME_{core:d}"
 
     openocd_script += """
 
@@ -330,7 +330,7 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
     if num_cores > 1:
         args += ["-ex", "set $entry_point = $pc"]  # Record the entry point to the bios
         for core in range(1, num_cores):
-            args += ["-ex", "thread {:d}".format(core + 1)]  # switch to thread (core + 1) (GDB counts from 1)
+            args += ["-ex", f"thread {core + 1:d}"]  # switch to thread (core + 1) (GDB counts from 1)
             args += ["-ex", "si 5"]  # execute bootrom on every other core
             args += ["-ex", "set $pc=$entry_point"]  # set every other core to the start of the bios
         args += ["-ex", "thread 1"]  # switch back to core 0
@@ -341,7 +341,7 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
         gdb = pexpect.spawn(str(gdb_cmd), args, timeout=60, logfile=sys.stdout, encoding="utf-8")
     gdb.expect_exact(["Reading symbols from"])
     # openOCD should acknowledge the GDB connection:
-    openocd.expect_exact(["Info : accepting 'gdb' connection on tcp/{}".format(openocd_gdb_port)])
+    openocd.expect_exact([f"Info : accepting 'gdb' connection on tcp/{openocd_gdb_port}"])
     success("openocd accepted GDB connection")
     gdb.expect_exact(["Remote debugging using :" + str(openocd_gdb_port)])
     success("GDB connected to openocd")

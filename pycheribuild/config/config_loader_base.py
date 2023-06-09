@@ -296,7 +296,7 @@ class ConfigOptionBase(typing.Generic[T]):
         return result
 
     def __repr__(self) -> str:
-        return "<{}({}) type={} cached={}>".format(self.__class__.__name__, self.name, self.value_type, self._cached)
+        return f"<{self.__class__.__name__}({self.name}) type={self.value_type} cached={self._cached}>"
 
 
 class DefaultValueOnlyConfigOption(ConfigOptionBase[T]):

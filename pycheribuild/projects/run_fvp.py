@@ -637,12 +637,12 @@ class LaunchFVPBase(SimpleProject):
                     "--allow-debug-plugin",
                     "--plugin", self.fvp_project.plugin_dir / "GDBRemoteConnection.so",
                     "-C", "REMOTE_CONNECTION.GDBRemoteConnection.listen_address=127.0.0.1",
-                    "-C", "REMOTE_CONNECTION.GDBRemoteConnection.port={}".format(gdb_port)]
+                    "-C", f"REMOTE_CONNECTION.GDBRemoteConnection.port={gdb_port}"]
 
             if self.fvp_trace:
                 fvp_args += [
                     "--plugin", self.fvp_project.plugin_dir / "TarmacTrace.so",
-                    "-C", "TRACE.TarmacTrace.trace-file={}".format(self.fvp_trace),
+                    "-C", f"TRACE.TarmacTrace.trace-file={self.fvp_trace}",
                     "-C", "TRACE.TarmacTrace.quantum-size=0x1",
                     "-C", "TRACE.TarmacTrace.trace_mmu={}".format("true" if self.fvp_trace_mmu else "false"),
                     "-C", "TRACE.TarmacTrace.trace_loads_stores=false",
@@ -671,7 +671,7 @@ class LaunchFVPBase(SimpleProject):
                 if self.fvp_trace_unbuffered:
                     fvp_args += ["-C", "TRACE.TarmacTrace.unbuffered=true"]
                 if self.fvp_trace_icount:
-                    fvp_args += ["-C", "TRACE.TarmacTrace.start-instruction-count={}".format(self.fvp_trace_icount)]
+                    fvp_args += ["-C", f"TRACE.TarmacTrace.start-instruction-count={self.fvp_trace_icount}"]
 
             # Update the Generic Timer counter at a real-time base frequency instead of simulator time
             # This should fix the extremely slow countdown in the loader (30 minutes instead of 10s) and might also

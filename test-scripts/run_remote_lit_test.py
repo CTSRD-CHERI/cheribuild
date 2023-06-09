@@ -229,8 +229,8 @@ Host cheribsd-test-instance
     if args.pretend:
         time.sleep(2.5)
 
-    extra_ssh_args = commandline_to_str(("-n", "-4", "-F", "{tempdir}/config".format(tempdir=tempdir)))
-    extra_scp_args = commandline_to_str(("-F", "{tempdir}/config".format(tempdir=tempdir)))
+    extra_ssh_args = commandline_to_str(("-n", "-4", "-F", f"{tempdir}/config"))
+    extra_scp_args = commandline_to_str(("-F", f"{tempdir}/config"))
     ssh_executor_args = [args.ssh_executor_script, "--host", "cheribsd-test-instance",
                          "--extra-ssh-args=" + extra_ssh_args]
     if args.use_shared_mount_for_tests:

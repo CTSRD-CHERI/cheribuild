@@ -189,7 +189,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                             new_cls._config_file_aliases += (replace_one(new_name, "-amd64", "-x86"),
                                                              replace_one(new_name, "-amd64", "-x86_64"))
                 if len(set(new_cls._config_file_aliases)) != len(new_cls._config_file_aliases):
-                    raise ValueError("Duplicate aliases for {}: {}".format(new_name, new_cls._config_file_aliases))
+                    raise ValueError(f"Duplicate aliases for {new_name}: {new_cls._config_file_aliases}")
         else:
             assert len(supported_archs) == 1
             # Only one target is supported:
