@@ -1065,7 +1065,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                         cmd += ["-o", output_path]
                     run_command(cmd, print_verbose_only=print_verbose_only)
                     return True
-        except IOError as e:
+        except OSError as e:
             self.warning("Failed to detect file type for", file, e)
         return False
 
