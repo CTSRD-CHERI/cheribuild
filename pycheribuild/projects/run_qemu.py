@@ -257,7 +257,7 @@ class LaunchQEMUBase(SimpleProject):
             elif cls.use_qemu in (QEMUType.CHERI, QEMUType.MORELLO, QEMUType.UPSTREAM):
                 qemu_class = {
                     QEMUType.CHERI: BuildQEMU,
-                    QEMUType.UPSTREAM: BuildUpstreamQEMU
+                    QEMUType.UPSTREAM: BuildUpstreamQEMU,
                 }[cls.use_qemu]
                 if qemu_class not in supported_qemu_classes:
                     fatal_error("Cannot use", cls.use_qemu.value, "QEMU with target", xtarget.generic_target_suffix,
@@ -553,7 +553,7 @@ class LaunchQEMUBase(SimpleProject):
 
             gdb_socket_placeholder.socket.close()  # the port is now available for qemu
             qemu_command += ["-gdb", f"tcp::{gdb_port}",  # wait for gdb on localhost:1234
-                             "-S"  # freeze CPU at startup (use 'c' to start execution)
+                             "-S",  # freeze CPU at startup (use 'c' to start execution)
                              ]
         # We want stdout/stderr here even when running with --quiet
         # FIXME: it seems like QEMU often breaks the line wrapping state: https://bugs.launchpad.net/qemu/+bug/1857449

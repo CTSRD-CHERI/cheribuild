@@ -284,8 +284,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return False
 
     @property
-    def _no_overwrite_allowed(self) -> "typing.Tuple[str]":
-        return "_xtarget",
+    def _no_overwrite_allowed(self) -> "tuple[str]":
+        return ("_xtarget", )
 
     @classmethod
     def all_dependency_names(cls, config: CheriConfig) -> "list[str]":
@@ -761,7 +761,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     @classmethod
     def add_path_option(
         cls, name: str, *,
-        default: "Union[ComputedDefaultValue[Path], Callable[[CheriConfig, SimpleProject], Path], Path]", **kwargs
+        default: "Union[ComputedDefaultValue[Path], Callable[[CheriConfig, SimpleProject], Path], Path]", **kwargs,
     ) -> Path:
         return typing.cast(Path, cls.add_config_option(name, kind=Path, default=default, **kwargs))
 

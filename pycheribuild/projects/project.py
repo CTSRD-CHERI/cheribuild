@@ -969,7 +969,7 @@ class Project(SimpleProject):
                 pkg_config_args = dict(
                     PKG_CONFIG_PATH=pkgconfig_dirs,
                     PKG_CONFIG_LIBDIR=pkgconfig_dirs,
-                    PKG_CONFIG_SYSROOT_DIR=str(self.target_info.sysroot_dir)
+                    PKG_CONFIG_SYSROOT_DIR=str(self.target_info.sysroot_dir),
                 )
             if pkg_config_args:
                 self.configure_environment.update(pkg_config_args)
@@ -1099,7 +1099,7 @@ class Project(SimpleProject):
         all_args = [make_command] + options.get_commandline_args(
             targets=[make_target] if isinstance(make_target, str) and make_target else make_target,
             jobs=self.config.make_jobs if parallel else None, config=self.config,
-            verbose=self.config.verbose, continue_on_error=self.config.pass_dash_k_to_make
+            verbose=self.config.verbose, continue_on_error=self.config.pass_dash_k_to_make,
         )
         if not self.config.make_without_nice:
             all_args = ["nice"] + all_args

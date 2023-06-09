@@ -666,7 +666,7 @@ class LaunchFVPBase(SimpleProject):
                     "-C", "css.cluster0.cpu0.trace_special_hlt_imm16=0xbeef",
                     "-C", "css.cluster0.cpu1.trace_special_hlt_imm16=0xbeef",
                     "-C", "css.cluster1.cpu0.trace_special_hlt_imm16=0xbeef",
-                    "-C", "css.cluster1.cpu1.trace_special_hlt_imm16=0xbeef"
+                    "-C", "css.cluster1.cpu1.trace_special_hlt_imm16=0xbeef",
                 ]
                 if self.fvp_trace_unbuffered:
                     fvp_args += ["-C", "TRACE.TarmacTrace.unbuffered=true"]

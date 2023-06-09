@@ -562,7 +562,7 @@ class BuildDiskImageBase(SimpleProject):
                             "-b", self.rootfs_dir / "boot/pmbr",  # bootload (MBR)
                             *mkimg_bootfs_args,
                             *mkimg_rootfs_args,
-                            "-o", out_img  # output file
+                            "-o", out_img,  # output file
                             ], cwd=self.rootfs_dir)
         finally:
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
@@ -596,7 +596,7 @@ class BuildDiskImageBase(SimpleProject):
                             *mkimg_efi_args,
                             *mkimg_rootfs_args,
                             *mkimg_swap_args,
-                            "-o", out_img  # output file
+                            "-o", out_img,  # output file
                             ], cwd=self.rootfs_dir)
         finally:
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
@@ -665,7 +665,7 @@ class BuildDiskImageBase(SimpleProject):
             makefs_flags = [
                 "-t", "zfs",
                 "-o", "poolname=zroot,rootpath=/,bootfs=zroot",
-                "-s", "5g"
+                "-s", "5g",
             ]
         elif self.rootfs_type == FileSystemType.UFS:
             debug_options = []
@@ -692,7 +692,7 @@ class BuildDiskImageBase(SimpleProject):
                 # minimum 1024 free inodes for minimal, otherwise at least 1M
                 "-R", "4m",  # round up size to the next 4m multiple
                 "-M", self.minimum_image_size,
-                "-B", "be" if self.big_endian else "le"  # byte order
+                "-B", "be" if self.big_endian else "le",  # byte order
             ]
         try:
             self.run_cmd([self.makefs_cmd] + makefs_flags + [
@@ -1042,7 +1042,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         # required, but versions were bumped with changes to ncurses
         optional_libs += [
             # needed by /bin/sh & /bin/csh (if we included the purecap sh/csh)
-            "libedit.so.7", "libedit.so.8"
+            "libedit.so.7", "libedit.so.8",
         ]
         # additional cheribsdbox dependencies (PAM+SSL+BSM)
         # We don't know what ABI cheribsdbox is built for so let's just add the libraries for all ABIs
@@ -1066,7 +1066,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         # Libraries to include if they exist
         optional_libs += [
             # Needed for most benchmarks, but not supported on all architectures
-            "libstatcounters.so.3"
+            "libstatcounters.so.3",
         ]
 
         if self._have_cplusplus_support(libdirs):

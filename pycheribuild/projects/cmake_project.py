@@ -152,7 +152,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             assert self.destdir, "custom install prefix requires DESTDIR being set!"
             self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.install_prefix)
             if self.target_info.is_baremetal() and str(self.install_prefix) == "/":
-                self.add_cmake_options(CMAKE_INSTALL_INCLUDEDIR="/include"),  # Don't add the extra /usr in the sysroot
+                self.add_cmake_options(CMAKE_INSTALL_INCLUDEDIR="/include")  # Don't add the extra /usr in the sysroot
         else:
             self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.install_dir)
         if not self.compiling_for_host():

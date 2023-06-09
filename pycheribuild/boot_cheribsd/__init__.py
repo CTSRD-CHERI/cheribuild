@@ -777,7 +777,7 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: Optional[Path], kerne
                                              write_disk_image_changes=write_disk_image_changes,
                                              add_network_device=True,
                                              trap_on_unrepresentable=trap_on_unrepresentable,  # For debugging
-                                             add_virtio_rng=True  # faster entropy gathering
+                                             add_virtio_rng=True,  # faster entropy gathering
                                              )
     qemu_args.extend(smp_args)
     kernel_commandline = []

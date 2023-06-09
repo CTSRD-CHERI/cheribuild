@@ -198,7 +198,7 @@ def default_make_jobs_count() -> Optional[int]:
 def maybe_add_space(msg, sep) -> tuple:
     if sep == "":
         return msg, " "
-    return msg,
+    return (msg, )
 
 
 def status_update(*args, sep=" ", **kwargs) -> None:

@@ -155,7 +155,7 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
                                               # (ZW_PROG_COMPILER_DEPENDENCIES([CC])) -> for gcc3 mode which seems
                                               # correct
                                               am_cv_CC_dependencies_compiler_type="gcc3",
-                                              MAKEINFO="/bin/false"
+                                              MAKEINFO="/bin/false",
                                               )
             self.configure_args.append("--with-gmp=" + str(BuildGmp.get_install_dir(self)))
             # GDB > 12 only uses --with-gmp

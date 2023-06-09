@@ -185,7 +185,7 @@ class BuildQEMUBase(AutotoolsProject):
                                 # silence this warning that comes lots of times (it's fine on x86)
                                 "-Wno-address-of-packed-member",
                                 "-Wextra", "-Wno-sign-compare", "-Wno-unused-parameter",
-                                "-Wno-missing-field-initializers"
+                                "-Wno-missing-field-initializers",
                                 ])
         if ccinfo.compiler == "clang" and ccinfo.version >= (13, 0, 0):
             self.CFLAGS.append("-Wno-null-pointer-subtraction")
@@ -398,7 +398,7 @@ class BuildQEMU(BuildQEMUBase):
                     tgt_info_mips.get_essential_compiler_and_linker_flags()).replace("=", " "),
                 "--cross-cc-riscv64=" + str(tgt_info_riscv64.c_compiler),
                 "--cross-cc-cflags-riscv64=" + self.commandline_to_str(
-                    tgt_info_riscv64.get_essential_compiler_and_linker_flags()).replace("=", " ")
+                    tgt_info_riscv64.get_essential_compiler_and_linker_flags()).replace("=", " "),
             ])
 
     def install(self, **kwargs):
