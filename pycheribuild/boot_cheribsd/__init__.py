@@ -1270,8 +1270,9 @@ def _main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespac
     force_decompression: bool = not args.reuse_image
     keep_compressed_images: bool = args.keep_compressed_images
     if args.extract_images_to:
-        os.makedirs(args.extract_images_to, exist_ok=True)
-        new_kernel_path = os.path.join(args.extract_images_to, Path(args.kernel).name)
+        extract_path = Path(args.extract_images_to)
+        extract_path.mkdir(parents=True, exist_ok=True)
+        new_kernel_path = extract_path / Path(args.kernel).name
         shutil.copy(args.kernel, new_kernel_path)
         args.kernel = new_kernel_path
         if args.disk_image:
