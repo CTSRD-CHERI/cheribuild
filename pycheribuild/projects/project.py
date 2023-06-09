@@ -1422,8 +1422,8 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.generate_cmakelists:
             self._do_generate_cmakelists()
         if self.config.verbose:
-            print(self.target, "directories: source=%s, build=%s, install=%s" %
-                  (self.source_dir, self.build_dir, self.install_dir))
+            print(self.target, " directories: source=", self.source_dir, " build=", self.build_dir, " install=",
+                  self.install_dir, sep="")
 
         if self.use_asan and self.compiling_for_mips(include_purecap=False):
             # copy the ASAN lib into the right directory:

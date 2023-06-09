@@ -960,7 +960,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             files_to_add.append(include_local_file("files/minimal-image/need-cplusplus.files"))
         if self.include_boot_kernel:
             for k in self.kernels:
-                files_to_add.append("boot/%s/kernel" % ("kernel" if k == "" or k == "/" else ("kernel.%s" % (k,)),))
+                kernel_dir = "kernel" if k in ("", "/") else f"kernel.{k}"
+                files_to_add.append(f"boot/{kernel_dir}/kernel")
         elif self.kernels is not None:
             self.warning("This disk image is not installing kernels, yet kernel names given.")
 

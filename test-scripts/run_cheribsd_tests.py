@@ -62,8 +62,8 @@ def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_
             else:
                 if i == 1:
                     test_command = f"se {test_command}; fi"
-                test_command = "if [ -x {0} ]; then {1}; el{2}".format(path, cmd, test_command)
-        test_command = "{0} > /tmp/{1}.xml".format(test_command, binary_name)
+                test_command = f"if [ -x {path} ]; then {cmd}; el{test_command}"
+        test_command = f"{test_command} > /tmp/{binary_name}.xml"
         qemu.run(test_command, ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
         qemu.sendline("echo EXITCODE=$?")
         qemu.expect(["EXITCODE=(\\d+)\r"], timeout=5, pretend_result=0)

@@ -88,7 +88,7 @@ class _EnumArgparseType(typing.Generic[EnumTy]):
             v = self.enums[enum_value_name]
         except KeyError:
             msg = ', '.join([t.name.lower() for t in self.enums])
-            msg = '%s: use one of {%s}' % (name, msg)
+            msg = f'{name}: use one of {{{msg}}}'
             raise argparse.ArgumentTypeError(msg)
         #       else:
         #           self.action.choices = None  # hugly hack to prevent post validation from choices
@@ -96,7 +96,7 @@ class _EnumArgparseType(typing.Generic[EnumTy]):
 
     def __repr__(self) -> str:
         astr = ', '.join([t.name.lower() for t in self.enums])
-        return '%s(%s)' % (self.enums.__name__, astr)
+        return f'{self.enums.__name__}({astr})'
 
 
 # custom encoder to handle pathlib.Path and _LoadedConfigValue objects
@@ -368,7 +368,7 @@ def dict_raise_on_duplicates_and_store_src(ordered_pairs, src_file) -> "dict[Any
     d = {}
     for k, v in ordered_pairs:
         if k in d:
-            raise SyntaxError("duplicate key: %r" % (k,))
+            raise SyntaxError(f"duplicate key: {k!r}")
         else:
             # Ensure all values store the source file
             d[k] = _LoadedConfigValue(v, src_file, used_key=k)
