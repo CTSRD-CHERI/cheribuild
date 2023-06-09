@@ -469,7 +469,7 @@ def _quote(s) -> str:
 
 
 def commandline_to_str(args: "typing.Iterable[Union[str,Path]]") -> str:
-    return " ".join((_quote(s) for s in args))
+    return " ".join(_quote(s) for s in args)
 
 
 class CompilerInfo:

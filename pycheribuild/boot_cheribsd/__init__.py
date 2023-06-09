@@ -393,7 +393,7 @@ def success(*args, **kwargs):
 
 
 def print_cmd(cmd: "list[str]", **kwargs):
-    args_str = " ".join((shlex.quote(i) for i in list(cmd)))
+    args_str = " ".join(shlex.quote(i) for i in list(cmd))
     if kwargs:
         print("\033[0;33mRunning ", args_str, " with ", kwargs.copy(), "\033[0m", sep="", file=sys.stderr, flush=True)
     else:
