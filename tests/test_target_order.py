@@ -10,9 +10,9 @@ from pycheribuild.config.compilation_targets import CompilationTargets, enable_h
 from pycheribuild.config.target_info import CrossCompileTarget
 
 # Make sure all projects are loaded so that target_manager gets populated
-from pycheribuild.projects import *  # noqa: F401, F403
+from pycheribuild.projects import *  # noqa: F401, F403, RUF100
 from pycheribuild.projects.cmake import BuildCrossCompiledCMake
-from pycheribuild.projects.cross import *  # noqa: F401, F403
+from pycheribuild.projects.cross import *  # noqa: F401, F403, RUF100
 from pycheribuild.projects.cross.benchmarks import BenchmarkMixin
 from pycheribuild.projects.cross.cheribsd import (
     BuildCHERIBSD,

@@ -8,8 +8,8 @@ import sys
 from enum import Enum
 from typing import Optional
 
-from serial.tools.list_ports import comports  # noqa: E402
-from serial.tools.list_ports_common import ListPortInfo  # noqa: E402
+from serial.tools.list_ports import comports
+from serial.tools.list_ports_common import ListPortInfo
 
 
 def find_morello_board_ttys(pretend: bool, board_index: "Optional[int]" = None) -> "list[ListPortInfo]":

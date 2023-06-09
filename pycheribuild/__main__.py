@@ -49,10 +49,10 @@ from .processutils import get_program_version, print_command, run_and_kill_child
 
 # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
-from .projects import *  # noqa: F401,F403
+from .projects import *  # noqa: F401, F403, RUF100
 
 # noinspection PyUnresolvedReferences
-from .projects.cross import *  # noqa: F401,F403
+from .projects.cross import *  # noqa: F401, F403, RUF100
 from .projects.repository import GitRepository
 from .projects.simple_project import SimpleProject
 from .targets import Target, target_manager
