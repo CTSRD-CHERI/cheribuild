@@ -1,5 +1,5 @@
 [tool.ruff]
-select = ["E", "F", "I", "N", "W", "U", "COM"]
+select = ["E", "F", "I", "N", "W", "U", "COM", "RUF"]
 # Ensure suggested fixes are compatible with our minimum supported version
 # XXX: Currently this is py36, but the minimum supported by ruff is py37.
 target-version = "py37"
