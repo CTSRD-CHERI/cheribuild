@@ -1,6 +1,11 @@
 [tool.ruff]
-select = ["E", "F", "I", "N"]
-
+select = ["E", "F", "I", "N", "W", "U"]
+# Ensure suggested fixes are compatible with our minimum supported version
+# XXX: Currently this is py36, but the minimum supported by ruff is py37.
+target-version = "py37"
+ignore = [
+    "UP036" # 'Version block is outdated for minimum Python version' to be removed when we set the minimum to 3.8
+]
 exclude = [
     ".git",
     ".idea",
