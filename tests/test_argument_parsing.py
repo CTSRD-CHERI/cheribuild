@@ -18,8 +18,8 @@ from pycheribuild.config.defaultconfig import DefaultCheriConfig
 from pycheribuild.config.loader import ConfigLoaderBase, ConfigOptionBase, JsonAndCommandLineConfigOption
 
 # noinspection PyUnresolvedReferences
-from pycheribuild.projects import *  # noqa: F401, F403
-from pycheribuild.projects.cross import *  # noqa: F401, F403
+from pycheribuild.projects import *  # noqa: F401, F403, RUF100
+from pycheribuild.projects.cross import *  # noqa: F401, F403, RUF100
 from pycheribuild.projects.cross.cheribsd import (
     BuildCHERIBSD,
     BuildCheriBsdMfsKernel,

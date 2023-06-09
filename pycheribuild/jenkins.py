@@ -45,10 +45,10 @@ from .processutils import get_program_version, run_and_kill_children_on_exit, ru
 
 # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
-from .projects import *  # noqa: F401,F403
+from .projects import *  # noqa: F401, F403, RUF100
 
 # noinspection PyUnresolvedReferences
-from .projects.cross import *  # noqa: F401,F403
+from .projects.cross import *  # noqa: F401, F403, RUF100
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project
 from .projects.simple_project import SimpleProject
