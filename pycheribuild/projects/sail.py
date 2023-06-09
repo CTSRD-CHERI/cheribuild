@@ -139,7 +139,7 @@ class OpamMixin(_MixinBase):
         opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         # for opam commands we don't need to prepend opam exec --
         if command[0] != self.opam_binary:
-            command = [self.opam_binary, "--cli=2.1", "exec", "--root=" + str(self.opamroot), "--"] + command
+            command = [self.opam_binary, "--cli=2.1", "exec", "--root=" + str(self.opamroot), "--", *command]
         assert isinstance(self, SimpleProject)
         return self.run_cmd(command, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
 
@@ -269,8 +269,8 @@ class BuildSailCheriMips(ProjectUsingOpam):
     def compile(self, **kwargs):
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
-        cmd = [self.make_args.command, self.config.make_j_flag,
-               "all"] + self.make_args.all_commandline_args(self.config)
+        cmd = [self.make_args.command, self.config.make_j_flag, "all",
+               *self.make_args.all_commandline_args(self.config)]
         self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
@@ -322,8 +322,8 @@ class BuildSailRISCV(ProjectUsingOpam):
 
     def compile(self, **kwargs):
         for arch in ("RV64", "RV32"):
-            cmd = [self.make_args.command, self.config.make_j_flag, "ARCH=" + arch,
-                   "csim", "osim", "rvfi"] + self.make_args.all_commandline_args(self.config)
+            cmd = [self.make_args.command, self.config.make_j_flag, "ARCH=" + arch, "csim", "osim", "rvfi",
+                   *self.make_args.all_commandline_args(self.config)]
             self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
@@ -346,8 +346,8 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
 
     def compile(self, **kwargs):
         for arch in ("RV64", "RV32"):
-            cmd = [self.make_args.command, self.config.make_j_flag, "ARCH=" + arch,
-                   "csim", "osim", "rvfi"] + self.make_args.all_commandline_args(self.config)
+            cmd = [self.make_args.command, self.config.make_j_flag, "ARCH=" + arch, "csim", "osim", "rvfi",
+                   *self.make_args.all_commandline_args(self.config)]
             self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
@@ -369,6 +369,6 @@ class BuildSailMorello(ProjectUsingOpam):
         self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     def compile(self, **kwargs):
-        cmd = [self.make_args.command, self.config.make_j_flag,
-               "gen_c", "check_sail"] + self.make_args.all_commandline_args(self.config)
+        cmd = [self.make_args.command, self.config.make_j_flag, "gen_c", "check_sail",
+               *self.make_args.all_commandline_args(self.config)]
         self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)

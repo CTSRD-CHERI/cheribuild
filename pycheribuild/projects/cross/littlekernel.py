@@ -82,8 +82,8 @@ class BuildLittleKernel(CrossCompileMakefileProject):
     @property
     def essential_compiler_and_linker_flags(self) -> "list[str]":
         if self.compiling_for_cheri():
-            return self.target_info.get_essential_compiler_and_linker_flags(softfloat=False) + [
-                "-Werror=cheri-capability-misuse", "-Werror=shorten-cap-to-int"]
+            return [*self.target_info.get_essential_compiler_and_linker_flags(softfloat=False),
+                    "-Werror=cheri-capability-misuse", "-Werror=shorten-cap-to-int"]
         return ["--target=" + self.target_info.target_triple]
 
     def setup(self):
@@ -132,9 +132,8 @@ class BuildLittleKernel(CrossCompileMakefileProject):
             bios_args = ["-bios", "none"]
             if self.use_mmu:
                 bios_args = riscv_bios_arguments(self.crosscompile_target, self)
-            cmd = [self.config.qemu_bindir / "qemu-system-riscv64cheri", "-cpu",
-                   "rv64", "-m", "512", "-smp", "1", "-machine", "virt",
-                   "-net", "none", "-nographic", "-kernel", self.kernel_path] + bios_args
+            cmd = [self.config.qemu_bindir / "qemu-system-riscv64cheri", "-cpu", "rv64", "-m", "512", "-smp", "1",
+                   "-machine", "virt", "-net", "none", "-nographic", "-kernel", self.kernel_path, *bios_args]
         else:
             return self.fatal("Unsupported arch")
         self.run_cmd(cmd, cwd=self.build_dir, give_tty_control=True)

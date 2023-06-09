@@ -54,7 +54,7 @@ def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_
         #     ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
         # Generate JUnit XML:
         test_command = None
-        for i, name in enumerate(reversed([binary_name] + old_binary_names)):
+        for i, name in enumerate(reversed([binary_name, *old_binary_names])):
             path = f"/bin/{name}"
             cmd = f"{path} -a -x"
             if i == 0:

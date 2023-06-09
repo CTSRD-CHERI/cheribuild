@@ -48,7 +48,7 @@ class BuildCheriBSDSdk(TargetAliasWithDependencies):
             deps = ["freestanding-morello-sdk"]
         else:
             deps = ["freestanding-cheri-sdk"]
-        return deps + ["cheribsd"]
+        return [*deps, "cheribsd"]
 
     @classproperty
     def supported_architectures(self):

@@ -96,12 +96,12 @@ args.append(output_root / "build")
 args.append("--disk-image/extra-files")
 args.append(output_root / "extra-files")
 
-command = [str((Path(__file__).parent / "cheribuild.py").absolute()), *args] + remaining
+command = [str((Path(__file__).parent / "cheribuild.py").absolute()), *args, *remaining]
 with tempfile.NamedTemporaryFile() as tf:
     Path(tf.name).write_text("{}")
     command.append("--config-file=" + tf.name)  # default values please
     if not cmdline.skip_build:
-        run_command([sys.executable, "-u"] + command, give_tty_control=True)
+        run_command([sys.executable, "-u", *command], give_tty_control=True)
 
 # Add missing files to tarball
 cheribuild_dir = Path(output_root, "sources/cheribuild")

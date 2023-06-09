@@ -578,10 +578,10 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
                 continue
             if key in a:
                 if a[key].is_nested_dict() and b[key].is_nested_dict():
-                    self.merge_dict_recursive(a[key].value, b[key].value, included_file, base_file, path + [str(key)])
+                    self.merge_dict_recursive(a[key].value, b[key].value, included_file, base_file, [*path, str(key)])
                 elif a[key] != b[key]:
                     if self._parsed_args:
-                        self.debug_msg("Overriding '" + '.'.join(path + [str(key)]) + "' value", b[key], " from",
+                        self.debug_msg("Overriding '" + '.'.join([*path, str(key)]) + "' value", b[key], " from",
                                        included_file, "with value ", a[key], "from", base_file)
                 else:
                     pass  # same leaf value

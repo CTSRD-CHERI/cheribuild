@@ -157,7 +157,7 @@ class BuildSSLProcApache(BuildApache):
 
     repository = ReuseOtherProjectRepository(BuildApache, do_update=True)
 
-    dependencies = BuildApache.dependencies + ["sslproc"]
+    dependencies = [*BuildApache.dependencies, "sslproc"]
 
     def setup(self):
         super().setup()

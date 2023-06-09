@@ -106,7 +106,7 @@ def _update_check(config: DefaultCheriConfig, d: Path) -> None:
             # Use the autostash flag for Git >= 2.14
             # https://stackoverflow.com/a/30209750/894271
             autostash_flag = ["--autostash"] if git_version >= (2, 14) else []
-            run_command(["git", "pull", "--rebase"] + autostash_flag, cwd=project_dir, config=config)
+            run_command(["git", "pull", "--rebase", *autostash_flag], cwd=project_dir, config=config)
             os.execv(sys.argv[0], sys.argv)
 
 
@@ -152,7 +152,7 @@ def real_main() -> None:
         all_target_names = list(sorted(target_manager.target_names(None)))
     run_everything_target = "__run_everything__"
     # Register all command line options
-    cheri_config = DefaultCheriConfig(config_loader, all_target_names + [run_everything_target])
+    cheri_config = DefaultCheriConfig(config_loader, [*all_target_names, run_everything_target])
     # Make sure nothing other than the config loader uses this as it will include disabled target names
     del all_target_names
     SimpleProject._config_loader = config_loader
@@ -222,7 +222,7 @@ def real_main() -> None:
                 "-v", str(cheri_config.build_root.absolute()) + ":/build",
                 "-v", str(cheri_config.output_root.absolute()) + ":/output",
                 ]
-            cheribuild_args = ["/cheribuild/cheribuild.py", "--skip-update"] + filtered_cheribuild_args
+            cheribuild_args = ["/cheribuild/cheribuild.py", "--skip-update", *filtered_cheribuild_args]
             if cheri_config.docker_reuse_container:
                 # Use docker restart + docker exec instead of docker run
                 # FIXME: docker restart doesn't work for some reason
@@ -232,11 +232,11 @@ def real_main() -> None:
                 start_cmd = ["docker", "start", cheri_config.docker_container]
                 print_command(start_cmd)
                 subprocess.check_call(start_cmd)
-                docker_run_cmd = ["docker", "exec", cheri_config.docker_container] + cheribuild_args
+                docker_run_cmd = ["docker", "exec", cheri_config.docker_container, *cheribuild_args]
             else:
-                docker_run_cmd = ["docker", "run", "--user", str(os.getuid()) + ":" + str(os.getgid()),
-                                  "--rm", "--interactive", "--tty"] + docker_dir_mappings
-                docker_run_cmd += [cheri_config.docker_container] + cheribuild_args
+                docker_run_cmd = ["docker", "run", "--user", str(os.getuid()) + ":" + str(os.getgid()), "--rm",
+                                  "--interactive", "--tty", *docker_dir_mappings]
+                docker_run_cmd += [cheri_config.docker_container, *cheribuild_args]
             run_command(docker_run_cmd, config=cheri_config, give_tty_control=True)
         except subprocess.CalledProcessError as e:
             # if the image is missing print a helpful error message:

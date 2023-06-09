@@ -63,7 +63,7 @@ def _parse_arguments(args: "list[str]", *, config_file=Path("/this/does/not/exis
     assert isinstance(ConfigLoaderBase._cheri_config, DefaultCheriConfig)
     target_manager.reset()
     ConfigLoaderBase._cheri_config.loader._config_path = config_file
-    sys.argv = ["cheribuild.py"] + args
+    sys.argv = ["cheribuild.py", *args]
     ConfigLoaderBase._cheri_config.loader.reset()
     ConfigLoaderBase._cheri_config.loader.is_running_unit_tests = True
     ConfigLoaderBase._cheri_config.loader.unknown_config_option_is_error = not allow_unknown_options

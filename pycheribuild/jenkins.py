@@ -68,7 +68,7 @@ class JenkinsConfigLoader(CommandLineConfigLoader):
     def finalize_options(self, available_targets: list, **kwargs) -> None:
         target_option = self._parser.add_argument(
             "targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE, help="The target to build",
-            choices=available_targets + [EXTRACT_SDK_TARGET, RUN_EVERYTHING_TARGET])
+            choices=[*available_targets, EXTRACT_SDK_TARGET, RUN_EVERYTHING_TARGET])
         if self.is_completing_arguments:
             try:
                 import argcomplete
@@ -95,7 +95,7 @@ class SdkArchive:
     def extract(self) -> None:
         assert self.archive.exists(), str(self.archive)
         self.cheri_config.FS.makedirs(self.output_dir)
-        run_command(["tar", "xf", self.archive, "-C", self.output_dir] + self.extra_args,
+        run_command(["tar", "xf", self.archive, "-C", self.output_dir, *self.extra_args],
                     cwd=self.cheri_config.workspace)
         self.check_required_files()
 
@@ -339,7 +339,7 @@ def create_tarball(cheri_config) -> None:
             project = target.get_or_create_project(None, cheri_config, caller=None)
             strip_binaries(cheri_config, project, cheri_config.workspace / "tarball")
         run_command(
-            [tar_cmd, "--create", "--xz"] + tar_flags + ["-f", cheri_config.tarball_name, "-C", "tarball", "."],
+            [tar_cmd, "--create", "--xz", *tar_flags, "-f", cheri_config.tarball_name, "-C", "tarball", "."],
             cwd=cheri_config.workspace)
         run_command("du", "-sh", cheri_config.workspace / cheri_config.tarball_name)
 

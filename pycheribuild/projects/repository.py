@@ -249,7 +249,7 @@ class GitRepository(SourceRepository):
             clone_branch = self.get_default_branch(current_project, include_per_target=False)
             if self._default_branch:
                 clone_cmd += ["--branch", clone_branch]
-            current_project.run_cmd(clone_cmd + [self.url, base_project_source_dir], cwd="/")
+            current_project.run_cmd([*clone_cmd, self.url, base_project_source_dir], cwd="/")
             # Could also do this but it seems to fetch more data than --no-single-branch
             # if self.config.shallow_clone:
             #    current_project.run_cmd(["git", "config", "remote.origin.fetch",
@@ -452,7 +452,7 @@ class GitRepository(SourceRepository):
         if not skip_submodules:
             pull_cmd.append("--recurse-submodules")
         rebase_flag = "--rebase=merges" if git_version >= (2, 18) else "--rebase=preserve"
-        run_command(pull_cmd + [rebase_flag], cwd=src_dir, print_verbose_only=True)
+        run_command([*pull_cmd, rebase_flag], cwd=src_dir, print_verbose_only=True)
         if not skip_submodules:
             run_command("git", "submodule", "update", "--init", "--recursive", cwd=src_dir, print_verbose_only=True)
         if has_changes and not has_autostash:
@@ -530,7 +530,7 @@ class MercurialRepository(SourceRepository):
             clone_cmd = ["clone"]
             if self.default_branch:
                 clone_cmd += ["--branch", self.default_branch]
-            self.run_hg(None, clone_cmd + [self.url, base_project_source_dir], cwd="/", project=current_project)
+            self.run_hg(None, [*clone_cmd, self.url, base_project_source_dir], cwd="/", project=current_project)
         assert src_dir == base_project_source_dir, "Worktrees only supported with git"
 
     def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: "Optional[Path]" = None,
@@ -627,7 +627,7 @@ class SubversionRepository(SourceRepository):
             return
 
         checkout_cmd = ["svn", "checkout"]
-        current_project.run_cmd(checkout_cmd + [checkout_url, src_dir], cwd="/")
+        current_project.run_cmd([*checkout_cmd, checkout_url, src_dir], cwd="/")
 
     def update(self, current_project: "Project", *, src_dir: Path, **kwargs):
         self.ensure_cloned(current_project, src_dir=src_dir)

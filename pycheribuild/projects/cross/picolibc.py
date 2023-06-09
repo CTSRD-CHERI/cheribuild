@@ -83,7 +83,7 @@ class BuildPicoLibc(CrossCompileMesonProject):
             # codegen isn't referencing the GOT, so until https://reviews.llvm.org/D107280 lands, we have to use -fpie
             # See also https://github.com/ClangBuiltLinux/linux/issues/1409 and
             # https://github.com/riscv-non-isa/riscv-elf-psabi-doc/pull/201
-            return super().default_compiler_flags + ["-fpie"]
+            return [*super().default_compiler_flags, "-fpie"]
         return super().default_compiler_flags
 
     @property

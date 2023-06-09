@@ -47,16 +47,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
     _configure_supports_variables_on_cmdline = True
     # CC,CFLAGS, etc. are the compilers for the build host not the target -> don't set automatically
     _autotools_add_default_compiler_args = False
-    supported_architectures = \
-        [CompilationTargets.BAREMETAL_NEWLIB_MIPS64,
-         CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP,
-         CompilationTargets.BAREMETAL_NEWLIB_RISCV32,
-         CompilationTargets.BAREMETAL_NEWLIB_RISCV32_HYBRID,
-         CompilationTargets.BAREMETAL_NEWLIB_RISCV32_PURECAP,
-         CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
-         CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID,
-         CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP] + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
-
+    supported_architectures = [*CompilationTargets.ALL_NEWLIB_TARGETS, *CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS]
     locale_support: "ClassVar[bool]"
     # build_in_source_dir = True  # we have to build in the source directory
 
@@ -202,8 +193,8 @@ int main(int argc, char** argv) {
             # FIXME: CHERI helloworld
             compiler_flags = self.essential_compiler_and_linker_flags + self.COMMON_FLAGS + [
                 "-Wl,-T,qemu-malta.ld", "-Wl,-verbose", "--sysroot=" + str(self.sdk_sysroot)]
-            self.run_cmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe] + compiler_flags + ["-###"], cwd=td)
-            self.run_cmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe] + compiler_flags, cwd=td)
+            self.run_cmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe, *compiler_flags, "-###"], cwd=td)
+            self.run_cmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe, *compiler_flags], cwd=td)
             self.run_cmd(self.sdk_bindir / "llvm-readobj", "-h", test_exe)
             from ..build_qemu import BuildQEMU
             self.run_cmd(self.sdk_sysroot / "bin/run_with_qemu.py", "--qemu", BuildQEMU.qemu_binary(self),

@@ -868,7 +868,7 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
     def supported_architectures(self):
         arches = super().supported_architectures
         return list(set(arches) -
-                    set([CompilationTargets.CHERIBSD_AARCH64] + CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS))
+                    set([CompilationTargets.CHERIBSD_AARCH64, *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS]))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

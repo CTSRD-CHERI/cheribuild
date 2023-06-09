@@ -232,7 +232,7 @@ def print_command(arg1: "Union[str, typing.Sequence[typing.Any]]", *remaining_ar
             envvars = coloured(AnsiColour.cyan, commandline_to_str(k + "=" + str(v) for k, v in new_env_vars.items()))
             prefix += ("env", envvars)
     # comma in tuple is required otherwise it creates a tuple of string chars
-    new_args = (shlex.quote(str(arg1)),) + tuple(map(shlex.quote, map(str, remaining_args)))
+    new_args = (shlex.quote(str(arg1)), *tuple(map(shlex.quote, map(str, remaining_args))))
     if output_file:
         new_args += (">", str(output_file))
     # Avoid a space before the actual command if there is no prefic:
@@ -550,7 +550,7 @@ class CompilerInfo:
         if result is None:
             assert sanitzer_flag.startswith("-fsanitize")
             result = self._supports_flag(sanitzer_flag,
-                                         arch_flags + ["-c", "-xc", "/dev/null", "-Werror", "-o", "/dev/null"])
+                                         [*arch_flags, "-c", "-xc", "/dev/null", "-Werror", "-o", "/dev/null"])
             self._supported_sanitizer_flags[(sanitzer_flag, tuple(arch_flags))] = result
         return result
 
@@ -711,7 +711,7 @@ def get_version_output(program: Path, command_args: tuple = None, *, config: Con
         command_args = ["--version"]
     if program == Path():
         raise ValueError("Empty path?")
-    prog = run_command([str(program)] + list(command_args), config=config, stdin=subprocess.DEVNULL,
+    prog = run_command([str(program), *list(command_args)], config=config, stdin=subprocess.DEVNULL,
                        stderr=subprocess.STDOUT, capture_output=True, run_in_pretend_mode=True)
     return prog.stdout
 
