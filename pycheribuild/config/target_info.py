@@ -698,7 +698,7 @@ class NativeTargetInfo(TargetInfo):
         return result  # default host compiler should not need any extra flags
 
 
-class CrossCompileTarget(object):
+class CrossCompileTarget:
     # Currently the same for all targets
     DEFAULT_SUBOBJECT_BOUNDS: str = "conservative"
 

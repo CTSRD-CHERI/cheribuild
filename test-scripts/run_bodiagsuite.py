@@ -39,7 +39,7 @@ from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 LONG_NAME_FOR_BUILDDIR = "/build-dir-with-long-name-to-ensure-cwd-causes-buffer-overflow"
 
 
-class BODiagTestsuite(object):
+class BODiagTestsuite:
     def __init__(self, name: str, xml: "junitparser.JUnitXml"):
         self.test_prefix = name
         self.min_suite = junitparser.TestSuite(name=name + "-min-overflow")

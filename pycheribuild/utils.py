@@ -165,7 +165,7 @@ def is_jenkins_build() -> bool:
     return os.getenv("_CHERIBUILD_JENKINS_BUILD") is not None
 
 
-class SocketAndPort(object):
+class SocketAndPort:
     def __init__(self, sock: socket.socket, port: int):
         self.socket = sock
         self.port = port
@@ -372,7 +372,7 @@ class InstallInstructions:
         return result
 
 
-class OSInfo(object):
+class OSInfo:
     IS_LINUX: bool = sys.platform.startswith("linux")
     IS_FREEBSD: bool = sys.platform.startswith("freebsd")
     IS_MAC: bool = sys.platform.startswith("darwin")
@@ -494,7 +494,7 @@ class OSInfo(object):
         return cls.is_suse()
 
 
-class ThreadJoiner(object):
+class ThreadJoiner:
     def __init__(self, thread: "Optional[threading.Thread]"):
         self.thread = thread
 

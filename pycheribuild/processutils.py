@@ -472,7 +472,7 @@ def commandline_to_str(args: "typing.Iterable[Union[str,Path]]") -> str:
     return " ".join((_quote(s) for s in args))
 
 
-class CompilerInfo(object):
+class CompilerInfo:
     def __init__(self, path: Path, compiler: str, version: "tuple[int, ...]", version_str: str, default_target: str,
                  *, config: ConfigBase):
         self.path = path

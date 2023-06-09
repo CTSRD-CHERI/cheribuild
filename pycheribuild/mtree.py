@@ -42,7 +42,7 @@ from typing import Optional, Union
 from .utils import status_update, warning_message
 
 
-class MtreeEntry(object):
+class MtreeEntry:
     def __init__(self, path: str, attributes: "dict[str, str]"):
         self.path = path
         self.attributes = attributes
@@ -102,7 +102,7 @@ class MtreeEntry(object):
         return "<MTREE entry: " + str(self) + ">"
 
 
-class MtreeFile(object):
+class MtreeFile:
     def __init__(self, *, verbose: bool, file: "Union[io.StringIO, Path, typing.IO, None]" = None,
                  contents_root: "Optional[Path]" = None):
         self.verbose = verbose

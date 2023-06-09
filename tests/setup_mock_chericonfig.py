@@ -8,7 +8,7 @@ from pycheribuild.targets import Target
 from pycheribuild.utils import init_global_config
 
 
-class MockArgs(object):
+class MockArgs:
     targets = []
 
 
