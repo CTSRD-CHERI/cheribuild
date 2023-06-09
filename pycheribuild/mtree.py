@@ -161,7 +161,7 @@ class MtreeFile:
     def infer_mode_string(path: Path, should_be_dir) -> str:
         try:
             result = f"0{stat.S_IMODE(path.lstat().st_mode):o}"  # format as octal with leading 0 prefix
-        except IOError as e:
+        except OSError as e:
             default = "0755" if should_be_dir else "0644"
             warning_message("Failed to stat", path, "assuming mode", default, e)
             result = default

@@ -177,7 +177,7 @@ def find_free_port(preferred_port: "Optional[int]" = None) -> SocketAndPort:
         try:
             s.bind(("127.0.0.1", preferred_port))
             return SocketAndPort(s, s.getsockname()[1])
-        except socket.error as e:
+        except OSError as e:
             import errno
             if e.errno != errno.EADDRINUSE:
                 warning_message("Got unexpected error when checking whether port", preferred_port, "is free:", e)
