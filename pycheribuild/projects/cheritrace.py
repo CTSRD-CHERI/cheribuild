@@ -51,7 +51,7 @@ class BuildCheriTrace(CMakeProject):
         super().setup()
         self.add_cmake_options(
             LLVM_CONFIG=self.llvm_config_path,
-            PYTHON_BINDINGS=self.include_python_bindings
+            PYTHON_BINDINGS=self.include_python_bindings,
         )
 
     def process(self) -> None:

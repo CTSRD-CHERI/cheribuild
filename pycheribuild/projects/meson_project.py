@@ -176,7 +176,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
                 # To find native packages we have to add the bootstrap tools to PKG_CONFIG_PATH and CMAKE_PREFIX_PATH.
                 NATIVE_PKG_CONFIG_PATH=remove_duplicates(host_pkg_config_dirs),
                 NATIVE_CMAKE_PREFIX_PATH=remove_duplicates(
-                    host_prefixes + host_target_info.cmake_prefix_paths(self.config))
+                    host_prefixes + host_target_info.cmake_prefix_paths(self.config)),
             )
 
         if self.install_prefix != self.install_dir:

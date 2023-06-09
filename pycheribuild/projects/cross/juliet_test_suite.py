@@ -122,7 +122,7 @@ class BuildJulietCWE121(BuildJulietCWESubdir):
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
                                              subdirectory="testcases/CWE121_Stack_Based_Buffer_Overflow")
     cwe_setup_commands = [
-                "echo 500 > /tmp/in.txt"
+                "echo 500 > /tmp/in.txt",
             ]
 
 
@@ -132,7 +132,7 @@ class BuildJulietCWE122(BuildJulietCWESubdir):
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
                                              subdirectory="testcases/CWE122_Heap_Based_Buffer_Overflow")
     cwe_setup_commands = [
-                "echo 500 > /tmp/in.txt"
+                "echo 500 > /tmp/in.txt",
             ]
 
 
@@ -142,7 +142,7 @@ class BuildJulietCWE124(BuildJulietCWESubdir):
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
                                              subdirectory="testcases/CWE124_Buffer_Underwrite")
     cwe_setup_commands = [
-                "echo -500 > /tmp/in.txt"
+                "echo -500 > /tmp/in.txt",
             ]
 
 
@@ -152,7 +152,7 @@ class BuildJulietCWE126(BuildJulietCWESubdir):
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
                                              subdirectory="testcases/CWE126_Buffer_Overread")
     cwe_setup_commands = [
-                "echo 500 > /tmp/in.txt"
+                "echo 500 > /tmp/in.txt",
             ]
 
 
@@ -162,7 +162,7 @@ class BuildJulietCWE127(BuildJulietCWESubdir):
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
                                              subdirectory="testcases/CWE127_Buffer_Underread")
     cwe_setup_commands = [
-                "echo -500 > /tmp/in.txt"
+                "echo -500 > /tmp/in.txt",
             ]
 
 
@@ -175,7 +175,7 @@ class BuildJulietCWE134(BuildJulietCWESubdir):
     cwe_setup_commands = [
                 "export ADD=%s%d%s",
                 "echo Format string: %s %d %s > /tmp/file.txt",
-                "echo Format string: %s %d %s > /tmp/in.txt"
+                "echo Format string: %s %d %s > /tmp/in.txt",
             ]
 
 

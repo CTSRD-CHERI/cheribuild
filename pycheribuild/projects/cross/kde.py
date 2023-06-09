@@ -171,7 +171,7 @@ class BuildGettext(CrossCompileAutotoolsProject):
             "--disable-openmp",
             "--without-emacs",
             "--with-included-gettext",
-            "ac_cv_lib_rt_sched_yield=no"
+            "ac_cv_lib_rt_sched_yield=no",
         ])
 
     def clean(self):
@@ -793,7 +793,7 @@ class BuildPlasmaFramework(KDECMakeProject):
 class BuildKRunner(KDECMakeProject):
     target = "krunner"
     dependencies = ["kio", "solid", "kconfig", "kcompletion", "kservice", "threadweaver", "ki18n", "plasma-framework"]
-    repository = GitRepository("https://invent.kde.org/frameworks/krunner.git",)
+    repository = GitRepository("https://invent.kde.org/frameworks/krunner.git")
 
 
 class BuildKDecoration(KDECMakeProject):

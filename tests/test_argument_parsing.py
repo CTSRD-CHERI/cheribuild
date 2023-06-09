@@ -917,7 +917,7 @@ def test_expand_tilde_and_env_vars(monkeypatch):
 def test_source_dir_option_when_reusing_git_repo(monkeypatch):
     """Passing the --foo/source-dir=/some/path should also work if the target reuses another target's source dir"""
     # By default, compiler-rt-native should reuse the LLVM source dir.
-    config = _parse_config_file_and_args(b'{ "llvm/source-directory": "/custom/llvm/dir" }', )
+    config = _parse_config_file_and_args(b'{ "llvm/source-directory": "/custom/llvm/dir" }')
     assert str(_get_target_instance("llvm-native", config).source_dir) == "/custom/llvm/dir"
     assert str(_get_target_instance("compiler-rt-native", config).source_dir) == "/custom/llvm/dir/compiler-rt"
     assert str(_get_target_instance("compiler-rt-riscv64", config).source_dir) == "/custom/llvm/dir/compiler-rt"

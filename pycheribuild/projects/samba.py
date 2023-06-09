@@ -97,7 +97,7 @@ class BuildSamba(Project):
             self.configure_args.extend([
                 # Avoid depending on libraries from the build tree:
                 "--bundled-libraries=ALL", "--with-static-modules=ALL",
-                "--enable-debug"
+                "--enable-debug",
             ])
         else:
             self.configure_args.extend([

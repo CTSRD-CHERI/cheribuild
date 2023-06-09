@@ -122,7 +122,7 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
         super().setup()
         self.add_meson_options(**{
             "update-mimedb": True,
-            "build-tools": self._can_build_tools
+            "build-tools": self._can_build_tools,
         })
         if not self._can_build_tools:
             # Ensure that we have update-mime-database available as it will be used in a post-install action.
@@ -286,7 +286,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             "-no-headersclean",
             # Don't embed the mimetype DB in libQt5Core.so. It's huge and results in lots XML parsing. Instead, we just
             # ensure that the binary cache exists in the disk image.
-            "-no-mimetype-database"
+            "-no-mimetype-database",
         ])
         if self.build_tests:
             self.configure_args.append("-developer-build")
@@ -869,7 +869,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                QT_STATIC_BUILD=True,  # we always build qt static for now
                                QT_BUNDLED_PNG=True,  # use libpng from Qt
                                # QT_BUNDLED_JPEG=True,  # use libjpeg from Qt
-                               QTWEBKIT_LINK_STATIC_ONLY=self.force_static_linkage
+                               QTWEBKIT_LINK_STATIC_ONLY=self.force_static_linkage,
                                )
         if not self.compiling_for_host():
             # we need to find the installed Qt

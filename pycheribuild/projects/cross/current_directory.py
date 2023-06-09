@@ -86,7 +86,7 @@ class BuildCurrent_Directory(CurrentDirectoryMixin, CrossCompileSimpleProject): 
                 BuildCurrent_Directory_Autotools,
                 BuildCurrent_Directory_CMake,
                 BuildCurrent_Directory_Makefile,
-                BuildCurrent_Directory_Meson
+                BuildCurrent_Directory_Meson,
             ]
         for c in classes:
             for f in c.autodetect_files:

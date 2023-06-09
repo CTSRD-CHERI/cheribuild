@@ -163,7 +163,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         elif self.target_info.is_rtems():
             self.configure_args.extend([
                 "--enable-newlib-io-c99-formats",
-                "--disable-libstdcxx"  # not sure if this is needed
+                "--disable-libstdcxx",  # not sure if this is needed
                 ])
 
         if self.locale_support:

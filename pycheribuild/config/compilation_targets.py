@@ -1134,7 +1134,7 @@ class CompilationTargets(BasicCompilationTargets):
         BAREMETAL_NEWLIB_RISCV32_PURECAP,
         BAREMETAL_NEWLIB_RISCV64,
         BAREMETAL_NEWLIB_RISCV64_HYBRID,
-        BAREMETAL_NEWLIB_RISCV64_PURECAP
+        BAREMETAL_NEWLIB_RISCV64_PURECAP,
     ]
     FREESTANDING_MIPS64 = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, BaremetalFreestandingTargetInfo)
     FREESTANDING_MORELLO_NO_CHERI = CrossCompileTarget("morello-aarch64", CPUArchitecture.AARCH64,

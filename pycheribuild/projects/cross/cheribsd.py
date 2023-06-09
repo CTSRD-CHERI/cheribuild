@@ -192,7 +192,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {
         ConfigPlatform.QEMU: "QEMU",
         ConfigPlatform.GFE: "GFE",
-        ConfigPlatform.AWS: None
+        ConfigPlatform.AWS: None,
     }
 
     def get_flag_names(self, platforms: "set[ConfigPlatform]", kernel_abi: KernelABI, default=False, caprevoke=False,
@@ -247,7 +247,7 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
     separator: str = "-"
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {
         ConfigPlatform.QEMU: "GENERIC",
-        ConfigPlatform.FVP: "GENERIC"
+        ConfigPlatform.FVP: "GENERIC",
     }
 
     def get_kabi_name(self, kernel_abi) -> Optional[str]:
@@ -313,10 +313,10 @@ class CheriBSDConfigTable:
     """
 
     X86_CONFIGS: "list[CheriBSDConfig]" = [
-        CheriBSDConfig("GENERIC", {ConfigPlatform.QEMU}, default=True)
+        CheriBSDConfig("GENERIC", {ConfigPlatform.QEMU}, default=True),
     ]
     MIPS_CONFIGS: "list[CheriBSDConfig]" = [
-        CheriBSDConfig("MALTA64", {ConfigPlatform.QEMU}, default=True)
+        CheriBSDConfig("MALTA64", {ConfigPlatform.QEMU}, default=True),
     ]
 
     @classmethod
@@ -866,11 +866,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # If WITH_LD_IS_LLD is set (e.g. by reading src.conf) the symlink ld -> ld.bfd in $BUILD_DIR/tmp/ won't be
             # created and the build system will then fall back to using /usr/bin/ld which won't work!
             self.cross_toolchain_config.set_with_options(LLD_IS_LD=False)
-            self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.bfd"),
+            self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.bfd")
         else:
             assert self.linker_for_world == "lld"
             # Don't set XLD when using bfd since it will pick up ld.bfd from the build directory
-            self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld"),
+            self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld")
 
         if target_flags:
             self.cross_toolchain_config.set_env(XCFLAGS=target_flags)
@@ -1107,7 +1107,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     "libexec/ld-elf.so.1", "sbin/init", "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass",
                     "usr/bin/ypchfn", "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
                     "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab", "usr/lib/librt.so.1",
-                    "var/empty"
+                    "var/empty",
                 )
             # We keep 3rd-party programs (anything installed in /usr/local + /opt), but delete everything else prior
             # to installworld to avoid having stale files in the generated disk images

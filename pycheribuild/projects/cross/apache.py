@@ -67,7 +67,7 @@ class BuildApr(CrossCompileAutotoolsProject):
             "--enable-threads",
             "--enable-posix-shm",
             "--with-devrandom",
-            "--with-expat=" + str(BuildExpat.get_install_dir(self))
+            "--with-expat=" + str(BuildExpat.get_install_dir(self)),
             ])
         if self.build_type.is_debug:
             self.configure_args.append("--enable-debug")
@@ -162,5 +162,5 @@ class BuildSSLProcApache(BuildApache):
     def setup(self):
         super().setup()
         self.configure_args.append(
-            "--with-sslproc=" + str(BuildSSLProc.get_install_dir(self))
+            "--with-sslproc=" + str(BuildSSLProc.get_install_dir(self)),
             )

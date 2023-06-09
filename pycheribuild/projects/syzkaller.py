@@ -228,8 +228,8 @@ class RunSyzkaller(SimpleProject):
                     "count": 1,
                     "cpu": 1,
                     "mem": 2048,
-                    "timeout": 60
-                    }
+                    "timeout": 60,
+                    },
                 }
             self.verbose_print("Using syzkaller configuration", template)
             if not self.config.pretend:

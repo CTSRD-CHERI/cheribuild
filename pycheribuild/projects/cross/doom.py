@@ -49,7 +49,7 @@ class BuildFreedoom(CrossCompileProject):
     url_prefix: str = f"https://github.com/freedoom/freedoom/releases/download/v{version}/"
     packages: "dict[str, list[str]]" = {
         'freedoom': ['freedoom1', 'freedoom2'],
-        'freedm': ['freedm']
+        'freedm': ['freedm'],
     }
 
     def compile(self, **kwargs):
