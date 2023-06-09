@@ -97,7 +97,7 @@ def mp_debug(cmdline_args: argparse.Namespace, *args, **kwargs):
 def notify_main_process(cmdline_args: argparse.Namespace, stage: MultiprocessStages, mp_q: multiprocessing.Queue,
                         barrier: "Optional[multiprocessing.Barrier]" = None):
     if mp_q:
-        global CURRENT_STAGE
+        global CURRENT_STAGE  # noqa: PLW0603
         mp_debug(cmdline_args, "Next stage: ", CURRENT_STAGE, "->", stage)
         mp_q.put((NEXT_STAGE, cmdline_args.internal_shard, stage))
         CURRENT_STAGE = stage
@@ -123,7 +123,7 @@ def flush_thread(f, qemu: boot_cheribsd.QemuCheriBSDInstance, should_exit_event:
         elif i == 1:
             boot_cheribsd.failure("GOT KERNEL PANIC!", exit=False)
             boot_cheribsd.debug_kernel_panic(qemu)
-            global KERNEL_PANIC
+            global KERNEL_PANIC  # noqa: PLW0603
             KERNEL_PANIC = True  # TODO: tell lit to abort now....
         elif i == 2:
             boot_cheribsd.failure("GOT QEMU EOF!", exit=False)

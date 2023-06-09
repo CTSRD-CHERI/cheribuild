@@ -101,7 +101,7 @@ GlobalConfig: ConfigBase = ConfigBase(pretend=DoNotUseInIfStmt(), verbose=DoNotU
 
 
 def init_global_config(config: ConfigBase, *, test_mode: bool = False) -> None:
-    global GlobalConfig
+    global GlobalConfig  # noqa: PLW0603
     GlobalConfig = config
     GlobalConfig.TEST_MODE = test_mode
     assert not (GlobalConfig.verbose and GlobalConfig.quiet), "mutually exclusive"
@@ -195,7 +195,7 @@ def default_make_jobs_count() -> Optional[int]:
     return make_jobs
 
 
-def maybe_add_space(msg, sep) -> tuple:
+def maybe_add_space(msg: str, sep: str) -> "tuple[str, ...]":
     if sep == "":
         return msg, " "
     return (msg, )

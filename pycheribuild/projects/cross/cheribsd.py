@@ -1253,7 +1253,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     new = []
                     for line in old:
                         fields = line.split(':')
-                        if len(fields) == 10 and fields[0] == "toor" and fields[1] == "*" and fields[9] == "":
+                        if len(fields) == 10 and fields[0] == "toor" and fields[1] == "*" and not fields[9]:
                             fields[1] = ""
                             fields[9] = "/bin/sh"
                             line = ':'.join(fields)
