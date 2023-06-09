@@ -54,7 +54,7 @@ class BuildFreedoom(CrossCompileProject):
 
     def compile(self, **kwargs):
         for pkgname, wads in self.packages.items():
-            filename = "{0}-{1}.zip".format(pkgname, self.version)
+            filename = f"{pkgname}-{self.version}.zip"
             wadfiles = ['*/' + wad + ".wad" for wad in wads]
             if not (self.build_dir / filename).is_file():
                 self.download_file(self.build_dir / filename, self.url_prefix + filename)
