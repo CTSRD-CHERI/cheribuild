@@ -91,7 +91,7 @@ class BuildMtools(AutotoolsProject):
 
 
 # noinspection PyMethodMayBeStatic
-class _AdditionalFileTemplates(object):
+class _AdditionalFileTemplates:
     def get_fstab_template(self):
         return include_local_file("files/cheribsd/fstab.in")
 

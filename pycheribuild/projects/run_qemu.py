@@ -70,7 +70,7 @@ class QEMUType(Enum):
     CUSTOM = "custom"
 
 
-class ChosenQEMU(object):
+class ChosenQEMU:
     def __init__(self, cls: "Optional[type[BuildQEMUBase]]", binary: Optional[Path],
                  can_provide_src_via_smb: Optional[bool]):
         self.cls = cls

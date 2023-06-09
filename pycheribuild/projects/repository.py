@@ -47,7 +47,7 @@ __all__ = ["GitRepository", "ExternallyManagedSourceRepository", "MercurialRepos
            "SubversionRepository", "TargetBranchInfo", "SourceRepository"]  # no-combine
 
 
-class SourceRepository(object):
+class SourceRepository:
     def ensure_cloned(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path,
                       skip_submodules=False) -> None:
         raise NotImplementedError
@@ -107,7 +107,7 @@ class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
 
 
 # Use git-worktree to handle per-target branches:
-class TargetBranchInfo(object):
+class TargetBranchInfo:
     def __init__(self, branch: str, directory_name: str, url: "Optional[str]" = None):
         self.branch = branch
         self.directory_name = directory_name

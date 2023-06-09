@@ -183,7 +183,7 @@ class CheriBSDMatchedErrorOutput(CheriBSDCommandFailed):
     pass
 
 
-class SmbMount(object):
+class SmbMount:
     def __init__(self, hostdir: str, readonly: bool, in_target: str):
         self.readonly = readonly
         self.hostdir = str(Path(hostdir).absolute())

@@ -52,7 +52,7 @@ if typing.TYPE_CHECKING:  # no-combine
     from .projects.simple_project import SimpleProject  # no-combine
 
 
-class Target(object):
+class Target:
     instantiating_targets_should_warn: bool = True
 
     def __init__(self, name, _project_class: "type[SimpleProject]"):
@@ -366,7 +366,7 @@ class DeprecatedTargetAlias(SimpleTargetAlias):
         return self._real_target
 
 
-class TargetManager(object):
+class TargetManager:
     def __init__(self) -> None:
         self._all_targets: "dict[str, Target]" = {}
         self._targets_for_command_line_options_only: "dict[str, MultiArchTargetAlias]" = {}

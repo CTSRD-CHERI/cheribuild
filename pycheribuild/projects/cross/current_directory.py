@@ -46,7 +46,7 @@ def _cwd_directory_basename(_, _1):
     return _cwd_path.name
 
 
-class CurrentDirectoryMixin(object):
+class CurrentDirectoryMixin:
     do_not_add_to_targets = True
     default_directory_basename = ComputedDefaultValue(function=_cwd_directory_basename,
                                                       as_string="$SOURCE_DIR_NAME")

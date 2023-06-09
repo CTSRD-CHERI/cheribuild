@@ -111,7 +111,7 @@ class MakeCommandKind(Enum):
     CustomMakeTool = "custom make tool"
 
 
-class MakeOptions(object):
+class MakeOptions:
     def __init__(self, kind: MakeCommandKind, project: SimpleProject, **kwargs) -> None:
         self.__project = project
         self._vars: "typing.OrderedDict[str, str]" = OrderedDict()

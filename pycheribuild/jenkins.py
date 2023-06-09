@@ -83,7 +83,7 @@ class JenkinsConfigLoader(CommandLineConfigLoader):
                 )
 
 
-class SdkArchive(object):
+class SdkArchive:
     def __init__(self, cheri_config: JenkinsConfig, name, *, required_globs: "Optional[list[str]]" = None,
                  extra_args: "Optional[list[str]]" = None, output_dir: Path):
         self.output_dir = output_dir

@@ -40,7 +40,7 @@ from .processutils import print_command, run_command
 from .utils import AnsiColour, ConfigBase, ThreadJoiner, fatal_error, status_update, warning_message
 
 
-class FileSystemUtils(object):
+class FileSystemUtils:
     def __init__(self, config: ConfigBase) -> None:
         self.config = config
 
