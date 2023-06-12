@@ -40,6 +40,7 @@ import time
 import typing
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
+from types import MappingProxyType
 from typing import Callable, Optional, Union
 
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue
@@ -134,6 +135,8 @@ class ProjectSubclassDefinitionHook(ABCMeta):
         if not target_name:
             die("target name is not set and cannot infer from class " + name +
                 " -- set target= or do_not_add_to_targets=True")
+        # Make the local config options dictionary read-only
+        cls._local_config_options = MappingProxyType(cls._local_config_options)
 
         # The default source/build/install directory name defaults to the target unless explicitly overwritten.
         if "default_directory_basename" not in clsdict and not cls.inherit_default_directory_basename:
