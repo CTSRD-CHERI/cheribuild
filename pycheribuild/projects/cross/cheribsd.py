@@ -600,7 +600,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         if kernel_only_target:
             cls.build_lib32 = False
-            cls.with_manpages = False
+            cls.build_drm_kmod = False
             cls.with_manpages = False
             return  # The remaining options only affect the userspace build
 
