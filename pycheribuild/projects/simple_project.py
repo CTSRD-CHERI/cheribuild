@@ -73,8 +73,10 @@ from ..utils import (
     status_update,
 )
 
-__all__ = ["_cached_get_homebrew_prefix", "_clear_line_sequence", "_default_stdout_filter",  # no-combine
-           "flush_stdio", "SimpleProject", "TargetAlias", "TargetAliasWithDependencies"]  # no-combine
+__all__ = [  # no-combine
+    "_cached_get_homebrew_prefix", "_clear_line_sequence", "_default_stdout_filter",  # no-combine
+    "flush_stdio", "SimpleProject", "TargetAlias", "TargetAliasWithDependencies", "BoolConfigOption",  # no-combine
+]  # no-combine
 
 T = typing.TypeVar("T")
 
@@ -96,8 +98,19 @@ def _default_stdout_filter(_: bytes) -> "typing.NoReturn":
     raise NotImplementedError("Should never be called, this is a dummy")
 
 
+# noinspection PyProtectedMember
 class ProjectSubclassDefinitionHook(ABCMeta):
-    # noinspection PyProtectedMember
+    def __new__(cls, name, bases, dct):
+        # We have to set _local_config_options to a new dict here, as this is the first hook that runs before
+        # the __set_name__ function on class members is called (__init_subclass__ is too late).
+        for base in bases:
+            old = getattr(base, "_local_config_options", None)
+            if old is not None:
+                # Create a copy of the dictionary so that modifying it does not change the value in the base class.
+                dct = dict(dct)
+                dct["_local_config_options"] = dict(old)
+        return super().__new__(cls, name, bases, dct)
+
     def __init__(cls, name: str, bases, clsdict) -> None:
         super().__init__(name, bases, clsdict)
         if typing.TYPE_CHECKING:
@@ -199,6 +212,30 @@ class ProjectSubclassDefinitionHook(ABCMeta):
         # print("Adding target", target_name, "with deps:", cls.dependencies)
 
 
+class PerProjectConfigOption:
+    def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionBase:
+        raise NotImplementedError()
+
+    # noinspection PyProtectedMember
+    def __set_name__(self, owner: "type[SimpleProject]", name: str):
+        owner._local_config_options[name] = self
+
+    def __get__(self, instance: "SimpleProject", owner: "type[SimpleProject]"):
+        return ValueError("Should have been replaced!")
+
+
+class BoolConfigOption(PerProjectConfigOption):
+    def __init__(self, name: str, help: str, default: "bool | ComputedDefaultValue[bool]" = False, **kwargs):
+        self._name = name
+        self._default = default
+        self._help = help
+        self._kwargs = kwargs
+
+    def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionBase:
+        return typing.cast(ConfigOptionBase,
+                           owner.add_bool_option(self._name, default=self._default, help=self._help, **self._kwargs))
+
+
 @functools.lru_cache(maxsize=20)
 def _cached_get_homebrew_prefix(package: "Optional[str]", config: CheriConfig):
     assert OSInfo.IS_MAC, "Should only be called on macos"
@@ -231,6 +268,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     # inherited as normal, so can be set in a base class).
     default_directory_basename: Optional[str] = None
     inherit_default_directory_basename: bool = False
+    _local_config_options: "typing.ClassVar[dict[str, PerProjectConfigOption]]" = dict()
     # Old names in the config file (per-architecture) for backwards compat
     _config_file_aliases: "tuple[str, ...]" = tuple()
     dependencies: "list[str]" = []
@@ -766,16 +804,22 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return typing.cast(Path, cls.add_config_option(name, kind=Path, default=default, **kwargs))
 
     __config_options_set: "dict[type[SimpleProject], bool]" = dict()
+    with_clean = BoolConfigOption(
+        "clean",
+        default=ComputedDefaultValue(lambda config, proj: config.clean, "the value of the global --clean option"),
+        help="Override --clean/--no-clean for this target only",
+    )
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
         # assert cls not in cls.__config_options_set, "Setup called twice?"
         cls.__config_options_set[cls] = True
-
-        cls.with_clean = cls.add_bool_option("clean",
-                                             default=ComputedDefaultValue(lambda config, proj: config.clean,
-                                                                          "the value of the global --clean option"),
-                                             help="Override --clean/--no-clean for this target only")
+        for k, v in cls._local_config_options.items():
+            # If the option has been overwritten to be a constant in a subclass we should not register it - check the
+            # type of the ClassVar to determine if this is actually needed.
+            option = inspect.getattr_static(cls, k)
+            if isinstance(option, PerProjectConfigOption):
+                setattr(cls, k, v.register_config_option(cls))
 
     def __init__(self, config: CheriConfig, *, crosscompile_target: CrossCompileTarget) -> None:
         assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)

@@ -36,7 +36,7 @@ from subprocess import CalledProcessError
 from typing import Any, Dict, Tuple, Union
 
 from .project import AutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind, Project
-from .simple_project import SimpleProject
+from .simple_project import BoolConfigOption, SimpleProject
 from ..processutils import get_program_version
 from ..targets import target_manager
 from ..utils import AnsiColour, OSInfo, ThreadJoiner, coloured
@@ -194,17 +194,12 @@ class BuildSailFromOpam(ProjectUsingOpam):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
+    use_git_version = BoolConfigOption("use-git-version",
+                                       help="Install sail from github instead of using the latest released version")
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
         self.check_required_system_tool("z3", homebrew="z3 --without-python@2 --with-python")
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.use_git_version = cls.add_bool_option("use-git-version", show_help=False,
-                                                  help="Install sail from github instead of using the latest released "
-                                                       "version")
 
     def clean(self) -> ThreadJoiner:
         return ThreadJoiner(None)
@@ -254,17 +249,14 @@ class BuildSailCheriMips(ProjectUsingOpam):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
+    with_trace_support = BoolConfigOption(
+        "trace-support",
+        help="Build sail-cheri-mips simulators with tracing support (slow, but useful to debug failing tests)",
+    )
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
         self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.with_trace_support = cls.add_bool_option(
-            "trace-support", show_help=False,
-            help="Build sail-cheri-mips simulators with tracing support (slow, but useful to debug failing tests)")
 
     def compile(self, **kwargs):
         if self.with_trace_support:

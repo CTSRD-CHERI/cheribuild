@@ -40,6 +40,7 @@ from .crosscompileproject import (
 )
 from .llvm import BuildCheriLLVM, BuildLLVMBase, BuildUpstreamLLVM
 from ..project import ReuseOtherProjectRepository
+from ..simple_project import BoolConfigOption
 from ...config.compilation_targets import FreeBSDTargetInfo
 from ...utils import cached_property, classproperty, is_jenkins_build
 
@@ -48,6 +49,7 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
     do_not_add_to_targets = True
     default_build_type = BuildType.RELEASE
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    collect_stats = BoolConfigOption("collect-stats", help="Collect statistics from the compiler")
 
     @classmethod
     def dependencies(cls, config) -> "list[str]":
@@ -62,12 +64,6 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
             return target_info._get_compiler_project()
         else:
             return BuildCheriLLVM
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.collect_stats = cls.add_bool_option("collect-stats", default=False,
-                                                help="Collect statistics from the compiler")
 
     def __find_in_sdk_or_llvm_build_dir(self, name) -> Path:
         llvm_project = self.llvm_project.get_instance(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP)
