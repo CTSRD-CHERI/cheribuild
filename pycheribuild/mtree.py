@@ -191,21 +191,21 @@ class MtreeFile:
         if symlink_dest is not None:
             assert file is None
             reference_dir = None
-        else:
-            reference_dir = file.parent
-        self.add_dir(str(Path(path_in_image).parent), mode=parent_dir_mode, uname=uname, gname=gname,
-                     reference_dir=reference_dir, print_status=print_status)
-        if symlink_dest is not None:
             mtree_type = "link"
             last_attrib = ("link", str(symlink_dest))
-        elif file.is_symlink():
-            mtree_type = "link"
-            last_attrib = ("link", os.readlink(str(file)))
         else:
-            mtree_type = "file"
-            # now add the actual entry (with contents=/path/to/file)
-            contents_path = str(file.absolute())
-            last_attrib = ("contents", contents_path)
+            assert file is not None
+            reference_dir = file.parent
+            if file.is_symlink():
+                mtree_type = "link"
+                last_attrib = ("link", os.readlink(str(file)))
+            else:
+                mtree_type = "file"
+                # now add the actual entry (with contents=/path/to/file)
+                contents_path = str(file.absolute())
+                last_attrib = ("contents", contents_path)
+        self.add_dir(str(Path(path_in_image).parent), mode=parent_dir_mode, uname=uname, gname=gname,
+                     reference_dir=reference_dir, print_status=print_status)
         attribs = OrderedDict([("type", mtree_type), ("uname", uname), ("gname", gname), ("mode", mode), last_attrib])
         if print_status:
             if "link" in attribs:
