@@ -52,7 +52,7 @@ from .projects.cross import *  # noqa: F401, F403, RUF100
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project
 from .projects.simple_project import SimpleProject
-from .targets import SimpleTargetAlias, Target, target_manager
+from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
 from .utils import OSInfo, ThreadJoiner, fatal_error, init_global_config, status_update, warning_message
 
 EXTRACT_SDK_TARGET: str = "extract-sdk"
@@ -250,7 +250,7 @@ def _jenkins_main() -> None:
             if isinstance(tgt, SimpleTargetAlias):
                 continue
             cls = tgt.project_class
-            if issubclass(cls, Project):
+            if issubclass(cls, Project) and not isinstance(tgt, MultiArchTargetAlias):
                 cls._default_install_dir_fn = Path(
                     str(cheri_config.output_root) + str(cheri_config.installation_prefix))
                 i = inspect.getattr_static(cls, "_install_dir")
