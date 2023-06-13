@@ -1,13 +1,17 @@
 #!/bin/sh
 
+set -e
 SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
-cd "$SCRIPT_DIR/.." || exit 1
+cd "$SCRIPT_DIR/.."
 
 try_run() {
+    echo "Running: $*"
     if [ -n "$VERBOSE" ]; then
-        try_run_verbose "$@"
+        if ! "$@" ; then
+            echo >&2 "Failed to run $*, don't push this!"
+            exit 1
+        fi
     else
-        echo "Running: $*"
         if ! "$@" 2>/dev/null >/dev/null; then
             echo >&2 "Failed to run $*, don't push this!"
             # Run it again with stderr/stdout available:
