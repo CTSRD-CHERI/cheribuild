@@ -62,7 +62,7 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     # The makefiles here can't support any other tagets:
-    supported_architectures = [CompilationTargets.NATIVE]
+    supported_architectures = (CompilationTargets.NATIVE,)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -203,7 +203,7 @@ class BuildOlden(BenchmarkMixin, CrossCompileProject):
     # and we have to build in the source directory
     build_in_source_dir = True
     # The makefiles here can't support any other tagets:
-    supported_architectures = [CompilationTargets.NATIVE]
+    supported_architectures = (CompilationTargets.NATIVE,)
 
     def compile(self, **kwargs):
         new_env = dict()
@@ -419,7 +419,7 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     # The makefiles here can't support any other tagets:
-    supported_architectures = [CompilationTargets.NATIVE]
+    supported_architectures = (CompilationTargets.NATIVE,)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -500,7 +500,7 @@ class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     # The makefiles here can't support any other tagets:
-    supported_architectures = [CompilationTargets.NATIVE]
+    supported_architectures = (CompilationTargets.NATIVE,)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -570,9 +570,9 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     # The makefiles here can't support any other tagets:
-    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+    supported_architectures = (CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
                                CompilationTargets.CHERIBSD_RISCV_HYBRID,
-                               CompilationTargets.CHERIBSD_RISCV_PURECAP]
+                               CompilationTargets.CHERIBSD_RISCV_PURECAP)
 
     @classmethod
     def setup_config_options(cls, **kwargs):

@@ -35,6 +35,7 @@ from .cmake_project import CMakeProject
 from .cross.cheribsd import BuildCHERIBSD
 from .project import CheriConfig, CPUArchitecture, DefaultInstallDir, GitRepository
 from .simple_project import SimpleProject, TargetAliasWithDependencies
+from ..config.target_info import CrossCompileTarget
 from ..utils import classproperty, include_local_file
 
 
@@ -51,7 +52,7 @@ class BuildCheriBSDSdk(TargetAliasWithDependencies):
         return (*deps, "cheribsd")
 
     @classproperty
-    def supported_architectures(self):
+    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
         return BuildCHERIBSD.supported_architectures
 
 
@@ -61,7 +62,7 @@ class BuildSdk(TargetAliasWithDependencies):
     is_sdk_target = True
 
     @classproperty
-    def supported_architectures(self):
+    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
         return BuildCheriBSDSdk.supported_architectures
 
 

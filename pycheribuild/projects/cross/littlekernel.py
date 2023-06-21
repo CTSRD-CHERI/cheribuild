@@ -29,6 +29,7 @@ from .compiler_rt import BuildCompilerRtBuiltins
 from .crosscompileproject import CompilationTargets, CrossCompileMakefileProject, GitRepository
 from ..project import DefaultInstallDir
 from ..run_qemu import LaunchQEMUBase
+from ...config.target_info import CrossCompileTarget
 from ...qemu_utils import riscv_bios_arguments
 from ...utils import classproperty
 
@@ -36,12 +37,12 @@ from ...utils import classproperty
 class BuildLittleKernel(CrossCompileMakefileProject):
     target = "littlekernel"
     default_directory_basename = "lk"
-    supported_architectures = [
+    supported_architectures = (
         CompilationTargets.FREESTANDING_MORELLO_NO_CHERI,
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP,
-    ]
+    )
     repository = GitRepository("https://github.com/littlekernel/lk",
                                temporary_url_override="https://github.com/arichardson/lk.git",
                                url_override_reason="Fixes to allow building with Clang")
@@ -157,7 +158,7 @@ class LaunchLittlekernelQEMU(LaunchQEMUBase):
     _uses_disk_image = False
 
     @classproperty
-    def supported_architectures(self):
+    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
         return BuildLittleKernel.supported_architectures
 
     def setup(self):

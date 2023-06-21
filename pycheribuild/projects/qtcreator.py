@@ -35,7 +35,7 @@ class BuildQtCreator(Project):
     dependencies = ("llvm",)
     repository = GitRepository("https://code.qt.io/qt-creator/qt-creator.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    supported_architectures = [BuildCheriLLVM.default_architecture]
+    supported_architectures = (BuildCheriLLVM.default_architecture,)
 
     def setup(self):
         super().setup()

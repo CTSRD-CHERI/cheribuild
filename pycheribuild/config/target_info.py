@@ -1023,11 +1023,11 @@ class BasicCompilationTargets:
         NATIVE_HYBRID = CrossCompileTarget("native-hybrid", _native_cpu_arch(), NativeTargetInfo, is_cheri_hybrid=True,
                                            purecap_target=NATIVE, check_conflict_with=NATIVE)
         NATIVE_NON_PURECAP = NATIVE_HYBRID
-        ALL_NATIVE = [NATIVE, NATIVE_HYBRID]
+        ALL_NATIVE = (NATIVE, NATIVE_HYBRID)
     else:
         NATIVE = CrossCompileTarget("native", _native_cpu_arch(), NativeTargetInfo)
         NATIVE_NON_PURECAP = NATIVE
-        ALL_NATIVE = [NATIVE]
-    NATIVE_IF_FREEBSD = ALL_NATIVE if OSInfo.IS_FREEBSD else []
-    NATIVE_IF_LINUX = ALL_NATIVE if OSInfo.IS_LINUX else []
-    NATIVE_IF_MACOS = ALL_NATIVE if OSInfo.IS_MAC else []
+        ALL_NATIVE = (NATIVE, )
+    NATIVE_IF_FREEBSD = ALL_NATIVE if OSInfo.IS_FREEBSD else tuple()
+    NATIVE_IF_LINUX = ALL_NATIVE if OSInfo.IS_LINUX else tuple()
+    NATIVE_IF_MACOS = ALL_NATIVE if OSInfo.IS_MAC else tuple()

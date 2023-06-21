@@ -525,10 +525,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
     needs_sysroot: bool = False  # We are building the full OS so we don't need a sysroot
     # We still allow building FreeBSD for MIPS64. While the main branch no longer has support, this allows building
     # the stable/13 branch using cheribuild. However, MIPS is no longer included in ALL_SUPPORTED_FREEBSD_TARGETS.
-    supported_architectures: "list[CrossCompileTarget]" = [
+    supported_architectures: "typing.ClassVar[tuple[CrossCompileTarget, ...]]" = (
         *CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS,
         CompilationTargets.FREEBSD_MIPS64,
-    ]
+    )
 
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("freebsd")
     add_custom_make_options: bool = True
@@ -1550,7 +1550,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     repository: GitRepository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git",
                                               old_branches={"master": "main"})
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("rootfs")
-    supported_architectures: "list[CrossCompileTarget]" = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
+    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
     is_sdk_target: bool = True
     hide_options_from_help: bool = False  # FreeBSD options are hidden, but this one should be visible
     use_llvm_binutils: bool = True
@@ -1738,11 +1738,11 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     target: str = "cheribsd-mfs-root-kernel"
     dependencies: "tuple[str, ...]" = ("disk-image-mfs-root",)
     repository: ReuseOtherProjectRepository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD, do_update=True)
-    supported_architectures: "list[CrossCompileTarget]" = [
+    supported_architectures: "typing.ClassVar[tuple[CrossCompileTarget, ...]]" = (
         CompilationTargets.CHERIBSD_AARCH64,
         *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS,
         *CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS,
-    ]
+    )
     default_build_dir: ComputedDefaultValue[Path] = \
         ComputedDefaultValue(function=cheribsd_reuse_build_dir,
                              as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
@@ -1854,7 +1854,7 @@ class BuildCheriBsdMfsImageAndKernels(TargetAliasWithDependencies):
     direct_dependencies_only: bool = True
 
     @classproperty
-    def supported_architectures(self):
+    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
         return BuildCheriBsdMfsKernel.supported_architectures
 
 
@@ -1992,7 +1992,7 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
     install_dir_override: "ClassVar[Optional[Path]]"
 
     @classproperty
-    def supported_architectures(self):
+    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
         return self.rootfs_source_class.supported_architectures
 
     @classmethod
@@ -2125,7 +2125,7 @@ class BuildDrmKMod(CrossCompileProject):
     target: str = "drm-kmod"
     repository: GitRepository = GitRepository("https://github.com/freebsd/drm-kmod",
                                               default_branch="master", force_branch=True)
-    supported_architectures: "list[CrossCompileTarget]" = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS
+    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS
     build_in_source_dir: bool = False
     use_buildenv: bool = False  # doesn't quite work yet (MAKEOBJDIRPREFIX isn't set)
     freebsd_project: BuildFreeBSD

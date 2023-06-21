@@ -57,11 +57,11 @@ class BuildOpenSBI(Project):
     repository = GitRepository("https://github.com/CTSRD-CHERI/opensbi")
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELWITHDEBINFO
-    supported_architectures = [
+    supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64_HYBRID,
         CompilationTargets.FREESTANDING_RISCV64,
         # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_PURECAP
-        ]
+        )
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
     _default_install_dir_fn = ComputedDefaultValue(function=opensbi_install_dir,
@@ -179,7 +179,7 @@ class BuildUpstreamOpenSBI(BuildOpenSBI):
         function=lambda config, p: config.cheri_sdk_dir / "upstream-opensbi/riscv64",
         as_string="$SDK_ROOT/upstream-opensbi/riscv64")
     repository = GitRepository("https://github.com/riscv-software-src/opensbi.git")
-    supported_architectures = [CompilationTargets.FREESTANDING_RISCV64]
+    supported_architectures = (CompilationTargets.FREESTANDING_RISCV64,)
 
     def run_tests(self):
         options = QemuOptions(self.crosscompile_target)

@@ -87,7 +87,7 @@ class BuildRtems(CrossCompileProject):
 class LaunchRtemsQEMU(LaunchQEMUBase):
     target = "run-rtems"
     dependencies = ("rtems",)
-    supported_architectures = [CompilationTargets.RTEMS_RISCV64_PURECAP]
+    supported_architectures = (CompilationTargets.RTEMS_RISCV64_PURECAP,)
     forward_ssh_port = False
     qemu_user_networking = False
     _enable_smbfs_support = False

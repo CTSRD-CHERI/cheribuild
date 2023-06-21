@@ -41,6 +41,7 @@ from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, Buil
 from .simple_project import SimpleProject
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue
 from ..config.compilation_targets import CompilationTargets
+from ..config.target_info import CrossCompileTarget
 from ..processutils import extract_version, popen
 from ..utils import AnsiColour, OSInfo, SocketAndPort, cached_property, classproperty, coloured, find_free_port
 
@@ -442,7 +443,7 @@ class LaunchFVPBase(SimpleProject):
         return "install-morello-fvp", cls._source_class.target, "morello-firmware"
 
     @classproperty
-    def supported_architectures(self):
+    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
         return self._source_class.supported_architectures
 
     def __init__(self, *args, **kwargs):
@@ -711,10 +712,10 @@ class LaunchFVPBase(SimpleProject):
 class LaunchFVPCheriBSD(LaunchFVPBase):
     target = "run-fvp"
     _source_class = BuildCheriBSDDiskImage
-    supported_architectures = [CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP]
+    supported_architectures = (CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP)
 
 
 class LaunchFVPFreeBsd(LaunchFVPBase):
     target = "run-fvp-freebsd"
     _source_class = BuildFreeBSDImage
-    supported_architectures = [CompilationTargets.FREEBSD_AARCH64]
+    supported_architectures = (CompilationTargets.FREEBSD_AARCH64,)

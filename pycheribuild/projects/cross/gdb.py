@@ -52,11 +52,13 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
     do_not_add_to_targets = True
     is_sdk_target = True
     default_build_type = BuildType.RELEASE
-    supported_architectures = (CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS +
-                               CompilationTargets.ALL_CHERIBSD_HYBRID_TARGETS +
-                               CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS +
-                               CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS +
-                               [CompilationTargets.NATIVE_NON_PURECAP])
+    supported_architectures = (
+        *CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS,
+        *CompilationTargets.ALL_CHERIBSD_HYBRID_TARGETS,
+        *CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS,
+        *CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS,
+        CompilationTargets.NATIVE_NON_PURECAP,
+    )
     default_architecture = CompilationTargets.NATIVE_NON_PURECAP
     prefer_full_lto_over_thin_lto = True
 

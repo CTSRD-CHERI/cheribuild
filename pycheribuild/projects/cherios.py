@@ -42,7 +42,7 @@ class BuildCheriOS(CMakeProject):
                                                          p.crosscompile_target.build_suffix(config, include_os=False)),
         as_string="$OUTPUT_ROOT/cherios-{mips64,riscv64}")
     needs_sysroot = False
-    supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP]
+    supported_architectures = (CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP)
 
     @classmethod
     def setup_config_options(cls, **kwargs):

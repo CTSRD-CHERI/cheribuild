@@ -145,7 +145,7 @@ class BuildDiskImageBase(SimpleProject):
         return self._source_class.default_architecture
 
     @classproperty
-    def supported_architectures(self):
+    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
         return self._source_class.supported_architectures
 
     @classmethod

@@ -44,7 +44,7 @@ from ...config.compilation_targets import (
 )
 from ...config.target_info import AbstractProject, CompilerType, CrossCompileTarget
 from ...processutils import CompilerInfo
-from ...utils import InstallInstructions, OSInfo, ThreadJoiner, is_jenkins_build, remove_duplicates
+from ...utils import InstallInstructions, OSInfo, ThreadJoiner, is_jenkins_build, remove_tuple_duplicates
 
 _true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
                                                   as_string="True unless build-everything is set")
@@ -63,7 +63,7 @@ class BuildLLVMBase(CMakeProject):
     # Linking all the debug info takes forever
     default_build_type = BuildType.RELEASE
     # LLVM does not yet compile for purecap.
-    supported_architectures = [CompilationTargets.NATIVE_NON_PURECAP]
+    supported_architectures = (CompilationTargets.NATIVE_NON_PURECAP,)
     default_architecture = CompilationTargets.NATIVE_NON_PURECAP
 
     included_projects: "ClassVar[list[str]]"
@@ -496,9 +496,11 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     # NB: remove_duplicates is needed for --enable-hybrid-for-purecap-rootfs targets.
-    supported_architectures = remove_duplicates(CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS +
-                                                CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS +
-                                                [CompilationTargets.NATIVE_NON_PURECAP])
+    supported_architectures = remove_tuple_duplicates((
+        *CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS,
+        *CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS,
+        CompilationTargets.NATIVE_NON_PURECAP,
+    ))
     build_all_targets: "ClassVar[bool]"
 
     @classmethod
@@ -563,9 +565,11 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     # NB: remove_duplicates is needed for --enable-hybrid-for-purecap-rootfs targets.
-    supported_architectures = remove_duplicates(CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS +
-                                                CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS +
-                                                [CompilationTargets.NATIVE_NON_PURECAP])
+    supported_architectures = remove_tuple_duplicates((
+        *CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS,
+        *CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS,
+        CompilationTargets.NATIVE_NON_PURECAP,
+    ))
 
     @property
     def triple_prefixes_for_binaries(self) -> "Iterable[str]":

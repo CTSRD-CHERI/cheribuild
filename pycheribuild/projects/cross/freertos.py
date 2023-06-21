@@ -46,9 +46,9 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     dependencies = ("newlib", "compiler-rt-builtins")
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot
-    supported_architectures = [
+    supported_architectures = (
         CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
-        CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV64)
     default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     # FreeRTOS Demos to build
@@ -159,8 +159,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     target = "run-freertos"
     dependencies = ("freertos",)
-    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
-                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
+    supported_architectures = (CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64)
     forward_ssh_port = False
     qemu_user_networking = False
     _enable_smbfs_support = False

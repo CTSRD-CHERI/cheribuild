@@ -52,6 +52,7 @@ from .disk_image import (
 from .project import CheriConfig, ComputedDefaultValue, CPUArchitecture, Project
 from .simple_project import SimpleProject, TargetAliasWithDependencies
 from ..config.compilation_targets import CompilationTargets
+from ..config.target_info import CrossCompileTarget
 from ..qemu_utils import QemuOptions, qemu_supports_9pfs, riscv_bios_arguments
 from ..utils import AnsiColour, OSInfo, classproperty, coloured, fatal_error, find_free_port
 
@@ -683,7 +684,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     kyua_test_files = ("/usr/tests/Kyuafile",)
 
     @classproperty
-    def supported_architectures(self):
+    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
         if self._freebsd_class is not None:
             return self._freebsd_class.supported_architectures
         return self._disk_image_class.supported_architectures
@@ -760,7 +761,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
 class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
     dependencies = ("qemu", "cherios")
-    supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP]
+    supported_architectures = (CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP)
     forward_ssh_port = False
     qemu_user_networking = False
     hide_options_from_help = True
@@ -865,10 +866,9 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
 
     # XXX: Existing code isn't reqdy to run these but we want to support building them
     @classproperty
-    def supported_architectures(self):
-        arches = super().supported_architectures
-        return list(set(arches) -
-                    set([CompilationTargets.CHERIBSD_AARCH64, *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS]))
+    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
+        return tuple(set(super().supported_architectures) -
+                     {CompilationTargets.CHERIBSD_AARCH64, *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS})
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -887,7 +887,7 @@ class BuildAndRunCheriBSD(TargetAliasWithDependencies):
     direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
 
     @classproperty
-    def supported_architectures(self):
+    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
         return LaunchCheriBSD.supported_architectures
 
 
@@ -898,7 +898,7 @@ class BuildAndRunFreeBSD(TargetAliasWithDependencies):
     direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
 
     @classproperty
-    def supported_architectures(self):
+    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
         return LaunchFreeBSD.supported_architectures
 
 
@@ -907,5 +907,5 @@ class BuildAll(TargetAliasWithDependencies):
     dependencies = ("qemu", "sdk", "disk-image", "run")
 
     @classproperty
-    def supported_architectures(self):
+    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
         return LaunchCheriBSD.supported_architectures

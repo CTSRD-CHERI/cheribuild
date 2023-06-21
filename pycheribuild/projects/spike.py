@@ -88,5 +88,5 @@ class RunCheriSpikeBase(SimpleProject):
 class RunCheriBsdSpike(RunCheriSpikeBase):
     target = "run-spike"
     _source_class = BuildCheriBsdMfsKernel
-    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
-                               CompilationTargets.CHERIBSD_RISCV_HYBRID]
+    supported_architectures = (CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                               CompilationTargets.CHERIBSD_RISCV_HYBRID)

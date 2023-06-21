@@ -40,7 +40,7 @@ class BuildRiscvArchTestsBase(MakefileProject):
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     make_kind = MakeCommandKind.GnuMake
     needs_sysroot = False
-    supported_architectures = [CompilationTargets.NATIVE]  # Not really but works for now
+    supported_architectures = (CompilationTargets.NATIVE,)  # Not really but works for now
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()

@@ -34,7 +34,7 @@ from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, D
 class MRS(CrossCompileCMakeProject):
     target = "mrs"
     repository = GitRepository("https://github.com/CTSRD-CHERI/mrs")
-    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_MORELLO_PURECAP]
+    supported_architectures = (CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_MORELLO_PURECAP)
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     # set --mrs/build-type <type> to control build type, default is RelWithDebInfo

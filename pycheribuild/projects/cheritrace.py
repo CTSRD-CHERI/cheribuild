@@ -34,7 +34,7 @@ from .project import DefaultInstallDir, GitRepository
 
 class BuildCheriTrace(CMakeProject):
     dependencies = ("llvm",)
-    supported_architectures = [BuildCheriLLVM.default_architecture]
+    supported_architectures = (BuildCheriLLVM.default_architecture,)
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheritrace.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
 

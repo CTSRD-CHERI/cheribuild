@@ -142,7 +142,7 @@ class BuildBBLTestPayload(BuildBBLBase):
     default_directory_basename = "bbl"  # reuse same source dir
     build_dir_suffix = "-test-payload"  # but not the build dir
     cross_install_dir = DefaultInstallDir.DO_NOT_INSTALL
-    supported_architectures = [CompilationTargets.FREESTANDING_RISCV64_PURECAP, CompilationTargets.FREESTANDING_RISCV64]
+    supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_PURECAP, CompilationTargets.FREESTANDING_RISCV64)
     custom_payload = "dummy_payload"
 
     def setup(self):
@@ -164,7 +164,7 @@ class BuildBBLNoPayload(BuildBBLBase):
     default_directory_basename = "bbl"
     without_payload = True
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
-    supported_architectures = [CompilationTargets.FREESTANDING_RISCV64_PURECAP, CompilationTargets.FREESTANDING_RISCV64]
+    supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_PURECAP, CompilationTargets.FREESTANDING_RISCV64)
     _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
                                                    as_string="$SDK_ROOT/bbl/riscv{32,64}{,-purecap}")
 

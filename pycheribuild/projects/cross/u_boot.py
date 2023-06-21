@@ -57,11 +57,11 @@ class BuildUBoot(Project):
     needs_sysroot = False  # We don't need a complete sysroot
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELWITHDEBINFO
-    supported_architectures = [
+    supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64_HYBRID,
         CompilationTargets.FREESTANDING_RISCV64,
         # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_PURECAP
-    ]
+    )
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
     _default_install_dir_fn: ComputedDefaultValue[Path] = \

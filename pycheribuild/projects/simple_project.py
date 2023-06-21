@@ -151,7 +151,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
         supported_archs = cls.supported_architectures
         assert supported_archs, "Must not be empty: " + str(supported_archs)
-        assert isinstance(supported_archs, list)
+        assert isinstance(supported_archs, tuple)
         assert len(set(supported_archs)) == len(
             supported_archs), "Duplicates in supported archs for " + cls.__name__ + ": " + str(supported_archs)
         # TODO: if len(cls.supported_architectures) > 1:
@@ -303,7 +303,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     # Project subclasses will automatically have a target based on their name generated unless they add this:
     do_not_add_to_targets: bool = True
     # Default to NATIVE only
-    supported_architectures: "list[CrossCompileTarget]" = [BasicCompilationTargets.NATIVE]
+    supported_architectures: "typing.ClassVar[tuple[CrossCompileTarget, ...]]" = (BasicCompilationTargets.NATIVE,)
     # The architecture to build for the unsuffixed target name (defaults to supported_architectures[0] if no match)
     _default_architecture: "Optional[CrossCompileTarget]" = None
 
