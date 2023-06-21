@@ -13,7 +13,7 @@ repos:
         args: [ "--fix=lf" ]
       - id: check-case-conflict
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.0.272' # Ruff version.
+    rev: 'v0.0.274' # Ruff version.
     hooks:
       - id: ruff
         stages: [ push, commit ]
