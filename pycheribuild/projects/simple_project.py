@@ -706,7 +706,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def add_config_option(cls, name: str, *, show_help=False, altname: "Optional[str]" = None,
                           kind: "Union[type[T], Callable[[str], T]]" = str,
                           default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], T], T, None]"
-                          = None, only_add_for_targets: "Optional[list[CrossCompileTarget]]" = None,
+                          = None, only_add_for_targets: "Optional[tuple[CrossCompileTarget, ...]]" = None,
                           extra_fallback_config_names: "Optional[list[str]]" = None, _allow_unknown_targets=False,
                           use_default_fallback_config_names=True, **kwargs) -> Optional[T]:
         fullname = cls.target + "/" + name
@@ -783,7 +783,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     @classmethod
     def add_bool_option(cls, name: str, *, altname=None,
-                        only_add_for_targets: "Optional[list[CrossCompileTarget]]" = None,
+                        only_add_for_targets: "Optional[tuple[CrossCompileTarget, ...]]" = None,
                         default: "Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
         return typing.cast(bool, cls.add_config_option(name, default=default, kind=bool, altname=altname,
                                                        only_add_for_targets=only_add_for_targets, **kwargs))

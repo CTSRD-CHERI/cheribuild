@@ -1557,10 +1557,12 @@ class BuildCHERIBSD(BuildFreeBSD):
     has_installsysroot_target: bool = True
 
     # NB: Full CHERI-MIPS purecap kernel support was never merged
-    purecap_kernel_targets: "list[CrossCompileTarget]" = [CompilationTargets.CHERIBSD_RISCV_HYBRID,
-                                                          CompilationTargets.CHERIBSD_RISCV_PURECAP,
-                                                          CompilationTargets.CHERIBSD_MORELLO_HYBRID,
-                                                          CompilationTargets.CHERIBSD_MORELLO_PURECAP]
+    purecap_kernel_targets: "tuple[CrossCompileTarget, ...]" = (
+        CompilationTargets.CHERIBSD_RISCV_HYBRID,
+        CompilationTargets.CHERIBSD_RISCV_PURECAP,
+        CompilationTargets.CHERIBSD_MORELLO_HYBRID,
+        CompilationTargets.CHERIBSD_MORELLO_PURECAP,
+    )
 
     @classmethod
     def setup_config_options(cls, kernel_only_target=False, install_directory_help=None, **kwargs) -> None:
