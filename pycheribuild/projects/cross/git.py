@@ -37,7 +37,7 @@ class BuildGit(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/git/git")
     build_via_symlink_farm = True
     builds_docbook_xml = True
-    dependencies = ["curl", "libexpat"]
+    dependencies = ("curl", "libexpat")
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()

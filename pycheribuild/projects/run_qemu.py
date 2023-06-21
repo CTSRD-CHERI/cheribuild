@@ -704,16 +704,16 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         return self._disk_image_class.default_architecture
 
     @classmethod
-    def dependencies(cls: "type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "list[str]":
+    def dependencies(cls: "type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "tuple[str, ...]":
         xtarget = cls.get_crosscompile_target()
-        result = []
+        result = tuple()
         chosen_qemu = cls.get_chosen_qemu(config)
         if chosen_qemu.cls:
-            result.append(chosen_qemu.cls.target)
+            result += (chosen_qemu.cls.target,)
         if cls._freebsd_class is not None:
-            result.append(cls._freebsd_class.get_class_for_target(xtarget).target)
+            result += (cls._freebsd_class.get_class_for_target(xtarget).target,)
         if cls._disk_image_class is not None:
-            result.append(cls._disk_image_class.get_class_for_target(xtarget).target)
+            result += (cls._disk_image_class.get_class_for_target(xtarget).target,)
         return result
 
     def __init__(self, *args, **kwargs):
@@ -748,18 +748,18 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
             super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(add_to_port), **kwargs)
 
     @classmethod
-    def dependencies(cls, config: CheriConfig) -> "list[str]":
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         result = super().dependencies(config)
         # RISCV needs OpenSBI/BBL to run:
         # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            result.append("bbl-baremetal-riscv64-purecap")
+            result += ("bbl-baremetal-riscv64-purecap",)
         return result
 
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
-    dependencies = ["qemu", "cherios"]
+    dependencies = ("qemu", "cherios")
     supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP]
     forward_ssh_port = False
     qemu_user_networking = False
@@ -883,7 +883,7 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
 class BuildAndRunCheriBSD(TargetAliasWithDependencies):
     target = "build-and-run-cheribsd"
     include_os_in_target_suffix = False
-    dependencies = ["cheribsd", "disk-image", "run"]
+    dependencies = ("cheribsd", "disk-image", "run")
     direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
 
     @classproperty
@@ -894,7 +894,7 @@ class BuildAndRunCheriBSD(TargetAliasWithDependencies):
 class BuildAndRunFreeBSD(TargetAliasWithDependencies):
     target = "build-and-run-freebsd"
     include_os_in_target_suffix = False
-    dependencies = ["freebsd", "disk-image-freebsd", "run-freebsd"]
+    dependencies = ("freebsd", "disk-image-freebsd", "run-freebsd")
     direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
 
     @classproperty
@@ -904,7 +904,7 @@ class BuildAndRunFreeBSD(TargetAliasWithDependencies):
 
 class BuildAll(TargetAliasWithDependencies):
     target = "all"
-    dependencies = ["qemu", "sdk", "disk-image", "run"]
+    dependencies = ("qemu", "sdk", "disk-image", "run")
 
     @classproperty
     def supported_architectures(self):

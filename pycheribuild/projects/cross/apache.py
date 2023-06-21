@@ -57,7 +57,7 @@ class BuildApr(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/apr.git",
                                default_branch="cheri")
 
-    dependencies = ["libexpat"]
+    dependencies = ("libexpat",)
 
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
@@ -101,7 +101,7 @@ class BuildApache(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/apache-httpd.git",
                                default_branch="2.4.x-cheri")
 
-    dependencies = ["apr", "pcre"]
+    dependencies = ("apr", "pcre")
 
     def setup(self):
         super().setup()
@@ -157,7 +157,7 @@ class BuildSSLProcApache(BuildApache):
 
     repository = ReuseOtherProjectRepository(BuildApache, do_update=True)
 
-    dependencies = [*BuildApache.dependencies, "sslproc"]
+    dependencies = (*BuildApache.dependencies, "sslproc")
 
     def setup(self):
         super().setup()

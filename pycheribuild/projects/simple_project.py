@@ -274,7 +274,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     _local_config_options: "typing.ClassVar[dict[str, PerProjectConfigOption]]" = dict()
     # Old names in the config file (per-architecture) for backwards compat
     _config_file_aliases: "tuple[str, ...]" = tuple()
-    dependencies: "list[str]" = []
+    dependencies: "tuple[str, ...]" = tuple()
     dependencies_must_be_built: bool = False
     direct_dependencies_only: bool = False
     # skip_toolchain_dependencies can be set to true for target aliases to skip the toolchain dependecies by default.
@@ -355,10 +355,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             else:
                 # noinspection PyCallingNonCallable  (false positive, we used if callable() above)
                 dependencies = dependencies(cls, config)
-        else:
-            # TODO: assert that dependencies is a tuple
-            dependencies = list(dependencies)  # avoid mutating the class variable
-        assert isinstance(dependencies, list), "Expected a list and not " + str(type(dependencies))
+        assert isinstance(dependencies, tuple), "Expected a list and not " + str(type(dependencies))
+        dependencies = list(dependencies)  # mutable copy to append transitive dependencies
         # Also add the toolchain targets (e.g. llvm-native) and sysroot targets if needed:
         if not explicit_dependencies_only:
             if include_toolchain_dependencies:

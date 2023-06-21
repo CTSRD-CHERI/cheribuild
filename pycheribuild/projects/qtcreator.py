@@ -32,7 +32,7 @@ from .project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 
 
 class BuildQtCreator(Project):
-    dependencies = ["llvm"]
+    dependencies = ("llvm",)
     repository = GitRepository("https://code.qt.io/qt-creator/qt-creator.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
     supported_architectures = [BuildCheriLLVM.default_architecture]

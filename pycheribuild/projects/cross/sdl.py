@@ -29,7 +29,7 @@ from ..project import GitRepository
 
 class BuildSDL(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/libsdl-org/SDL.git")
-    dependencies = ["libx11", "libxext", "libxrandr", "libxrender", "libxcursor", "libxi", "libxscrnsaver"]
+    dependencies = ("libx11", "libxext", "libxrandr", "libxrender", "libxcursor", "libxi", "libxscrnsaver")
 
     def setup(self):
         super().setup()
@@ -42,10 +42,10 @@ class BuildSDL(CrossCompileCMakeProject):
 class BuildSDLMixer(CrossCompileAutotoolsProject):
     target = "sdl-mixer"
     repository = GitRepository("https://github.com/libsdl-org/SDL_mixer.git")
-    dependencies = ["sdl"]
+    dependencies = ("sdl",)
 
 
 class BuildSDLNet(CrossCompileAutotoolsProject):
     target = "sdl-net"
     repository = GitRepository("https://github.com/libsdl-org/SDL_net.git")
-    dependencies = ["sdl"]
+    dependencies = ("sdl",)

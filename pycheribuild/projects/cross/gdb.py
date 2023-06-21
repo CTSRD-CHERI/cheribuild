@@ -68,11 +68,11 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         return base_target + "-" + xtarget.generic_target_suffix
 
     @classmethod
-    def dependencies(cls, config: CheriConfig) -> "list[str]":
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         deps = super().dependencies(config)
         # For the native and native-hybrid builds gmp must be installed via ports.
         if not cls.get_crosscompile_target().is_native():
-            deps.append("gmp")
+            deps += ("gmp",)
         return deps
 
     @classmethod

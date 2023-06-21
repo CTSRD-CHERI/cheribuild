@@ -149,8 +149,8 @@ class BuildDiskImageBase(SimpleProject):
         return self._source_class.supported_architectures
 
     @classmethod
-    def dependencies(cls, config: CheriConfig) -> "list[str]":
-        return [cls._source_class.get_class_for_target(cls.get_crosscompile_target()).target]
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        return (cls._source_class.get_class_for_target(cls.get_crosscompile_target()).target,)
 
     @classmethod
     def setup_config_options(cls, *, default_hostname, extra_files_suffix="", **kwargs):
@@ -1162,12 +1162,12 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
     disk_image_prefix = "cheribsd"
 
     @classmethod
-    def dependencies(cls, config) -> "list[str]":
+    def dependencies(cls, config) -> "tuple[str, ...]":
         result = super().dependencies(config)
         # GDB is not strictly a dependency, but having it in the disk image makes life a lot easier
         xtarget = cls.get_crosscompile_target()
         gdb_xtarget = xtarget.get_cheri_hybrid_for_purecap_rootfs_target() if xtarget.is_cheri_purecap() else xtarget
-        result.append(BuildGDB.get_class_for_target(gdb_xtarget).target)
+        result += (BuildGDB.get_class_for_target(gdb_xtarget).target,)
         return result
 
     @classmethod

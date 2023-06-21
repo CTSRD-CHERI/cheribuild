@@ -43,7 +43,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/FreeRTOS-mirror",
                                force_branch=True, default_branch="cheri")
     target = "freertos"
-    dependencies = ["newlib", "compiler-rt-builtins"]
+    dependencies = ("newlib", "compiler-rt-builtins")
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = [
@@ -158,7 +158,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
 class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     target = "run-freertos"
-    dependencies = ["freertos"]
+    dependencies = ("freertos",)
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
                                CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
     forward_ssh_port = False

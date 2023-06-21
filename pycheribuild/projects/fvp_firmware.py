@@ -104,7 +104,7 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
     repository = GitRepository("https://git.morello-project.org/morello/scp-firmware.git")
     target = "morello-scp-firmware"
     default_directory_basename = "morello-scp-firmware"
-    dependencies = ["arm-none-eabi-toolchain"]
+    dependencies = ("arm-none-eabi-toolchain",)
     supported_architectures = [CompilationTargets.ARM_NONE_EABI]
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
 
@@ -233,7 +233,7 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
         old_urls=[b"git@git.morello-project.org:morello/edk2-platforms.git",
                   b"git@git.morello-project.org:university-of-cambridge/edk2-platforms.git",
                   b"https://git.morello-project.org/university-of-cambridge/edk2-platforms.git"])
-    dependencies = ["gdb-native", "morello-acpica"]  # To get ld.bfd
+    dependencies = ("gdb-native", "morello-acpica")  # To get ld.bfd
     target = "morello-uefi"
     default_directory_basename = "morello-edk2"
     _extra_git_clean_excludes = ["--exclude=edk2-platforms"]  # Don't delete edk2-platforms, we do it manually
@@ -332,7 +332,7 @@ build -n {make_jobs} -a AARCH64 -t CLANG38 -p {platform_desc} \
 
 class BuildMorelloFlashImages(Project):
     target = "morello-flash-images"
-    dependencies = ["morello-scp-firmware", "morello-trusted-firmware"]
+    dependencies = ("morello-scp-firmware", "morello-trusted-firmware")
     _default_install_dir_fn = ComputedDefaultValue(function=_morello_firmware_build_outputs_dir,
                                                    as_string="$MORELLO_SDK_ROOT/fvp-firmware/morello/build-outputs")
     repository = ReuseOtherProjectDefaultTargetRepository(source_project=BuildMorelloScpFirmware)
@@ -364,12 +364,12 @@ class BuildMorelloFirmware(SimpleProject):
     skip_toolchain_dependencies = True  # Don't rebuild morello-llvm unless it's also a depenency of another target
 
     @classmethod
-    def dependencies(cls, config: CheriConfig) -> "list[str]":
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         # Note: can't make this a per-target option (using setup_config_options) since dependencies() is called before
         # we have loaded the per-target config options.
         if config.build_morello_firmware_from_source:
-            return ["morello-scp-firmware", "morello-trusted-firmware", "morello-flash-images", "morello-uefi"]
-        return []
+            return ("morello-scp-firmware", "morello-trusted-firmware", "morello-flash-images", "morello-uefi")
+        return tuple()
 
     def process(self):
         if self.config.build_morello_firmware_from_source:

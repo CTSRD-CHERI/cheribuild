@@ -58,8 +58,8 @@ class BuildLittleKernel(CrossCompileMakefileProject):
         return cls.get_crosscompile_target().cpu_architecture.is_32bit()
 
     @classmethod
-    def dependencies(cls, _) -> "list[str]":
-        return ["compiler-rt-builtins"] if cls.needs_compiler_rt() else []
+    def dependencies(cls, _) -> "tuple[str, ...]":
+        return ("compiler-rt-builtins",) if cls.needs_compiler_rt() else tuple()
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -149,7 +149,7 @@ class BuildLittleKernel(CrossCompileMakefileProject):
 
 class LaunchLittlekernelQEMU(LaunchQEMUBase):
     target = "run-littlekernel"
-    dependencies = ["littlekernel"]
+    dependencies = ("littlekernel",)
     forward_ssh_port = False
     qemu_user_networking = False
     _enable_smbfs_support = False

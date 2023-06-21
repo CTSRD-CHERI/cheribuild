@@ -28,4 +28,4 @@ from .crosscompileproject import CrossCompileAutotoolsProject, GitRepository
 
 class BuildTmux(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/tmux/tmux")
-    dependencies = ["libevent"]
+    dependencies = ("libevent",)

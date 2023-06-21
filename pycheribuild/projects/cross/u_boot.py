@@ -53,7 +53,7 @@ class BuildUBoot(Project):
     target = "u-boot"
     repository = GitRepository("https://github.com/CTSRD-CHERI/u-boot",
                                default_branch="cheri")
-    dependencies = ["compiler-rt-builtins"]
+    dependencies = ("compiler-rt-builtins",)
     needs_sysroot = False  # We don't need a complete sysroot
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELWITHDEBINFO

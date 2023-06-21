@@ -191,7 +191,7 @@ class RunTestRIG(SimpleProject):
 
 class TestRigSailQemuRV64(RunTestRIG):
     target = "testrig-sail-qemu-cheri-rv64"
-    dependencies = ["quickcheckvengine", "sail-cheri-riscv", "qemu"]
+    dependencies = ("quickcheckvengine", "sail-cheri-riscv", "qemu")
     # NB: can't use GC here since that implicitly enables ihpm in QCVengine and QEMU does not support mcountinhibit
     # util we have updated to b1675eeb3e6e38b042a23a9647559c9c548c733d.
     verification_archstring = "rv64imafdc_s_xcheri_zicsr_zifencei"

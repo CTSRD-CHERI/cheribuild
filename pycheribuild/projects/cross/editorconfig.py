@@ -32,4 +32,4 @@ from .crosscompileproject import CrossCompileCMakeProject, GitRepository
 class BuildEditorconfigCoreC(CrossCompileCMakeProject):
     target = "editorconfig-core-c"
     repository = GitRepository("https://github.com/editorconfig/editorconfig-core-c.git")
-    dependencies = ["pcre2"]
+    dependencies = ("pcre2",)

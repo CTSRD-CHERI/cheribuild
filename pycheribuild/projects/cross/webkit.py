@@ -44,7 +44,7 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
                                default_branch="master")
     default_directory_basename = "webkit"
     target = "morello-webkit"
-    dependencies = ["icu4c"]
+    dependencies = ("icu4c",)
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 

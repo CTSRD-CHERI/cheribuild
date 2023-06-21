@@ -34,7 +34,7 @@ class BuildChocolateDoom(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/chocolate-doom/chocolate-doom.git",
                                old_urls=[b"https://github.com/jrtc27/chocolate-doom.git"],
                                default_branch="master", force_branch=True)
-    dependencies = ["sdl", "sdl-mixer", "sdl-net", "libpng"]
+    dependencies = ("sdl", "sdl-mixer", "sdl-net", "libpng")
 
     def configure(self, **kwargs):
         self.run_cmd("autoreconf", "-fi", cwd=self.source_dir)
@@ -43,7 +43,7 @@ class BuildChocolateDoom(CrossCompileAutotoolsProject):
 
 class BuildFreedoom(CrossCompileProject):
     repository = ExternallyManagedSourceRepository()
-    dependencies = ["chocolate-doom"]
+    dependencies = ("chocolate-doom",)
 
     version = "0.12.1"
     url_prefix: str = f"https://github.com/freedoom/freedoom/releases/download/v{version}/"

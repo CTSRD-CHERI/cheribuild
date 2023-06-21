@@ -75,7 +75,7 @@ class BuildXorgMacros(X11Mixin, CrossCompileAutotoolsProject):
 
 class X11AutotoolsProject(X11Mixin, CrossCompileAutotoolsProject):
     do_not_add_to_targets = True
-    dependencies = ["xorg-macros"]
+    dependencies = ("xorg-macros",)
 
     def setup(self):
         super().setup()
@@ -124,7 +124,7 @@ class BuildXorgProto(X11AutotoolsProject):
 
 class BuildLibXau(X11AutotoolsProject):
     target = "libxau"
-    dependencies = ["xorgproto", "xorg-macros"]
+    dependencies = ("xorgproto", "xorg-macros")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxau.git")
 
 
@@ -135,37 +135,37 @@ class BuildLibXCBPthreadStubs(X11AutotoolsProject):
 
 class BuildLibXCB(X11AutotoolsProject):
     target = "libxcb"
-    dependencies = ["xcbproto", "libxau", "xorg-pthread-stubs"]
+    dependencies = ("xcbproto", "libxau", "xorg-pthread-stubs")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb.git")
 
 
 class BuildLibXCBUtil(X11AutotoolsProject):
     target = "libxcb-util"
-    dependencies = ["libxcb"]
+    dependencies = ("libxcb",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-util.git")
 
 
 class BuildLibXCBWM(X11AutotoolsProject):
     target = "libxcb-wm"
-    dependencies = ["libxcb"]
+    dependencies = ("libxcb",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-wm.git")
 
 
 class BuildLibXCBImage(X11AutotoolsProject):
     target = "libxcb-image"
-    dependencies = ["libxcb-util"]
+    dependencies = ("libxcb-util",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-image.git")
 
 
 class BuildLibXCBRenderUtil(X11AutotoolsProject):
     target = "libxcb-render-util"
-    dependencies = ["libxcb"]
+    dependencies = ("libxcb",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-render-util.git")
 
 
 class BuildLibXCBCursor(X11AutotoolsProject):
     target = "libxcb-cursor"
-    dependencies = ["libxcb-render-util", "libxcb-image"]
+    dependencies = ("libxcb-render-util", "libxcb-image")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-cursor.git")
 
     def check_system_dependencies(self) -> None:
@@ -181,7 +181,7 @@ class BuildLibXCBCursor(X11AutotoolsProject):
 
 class BuildLibXCBKeysyms(X11AutotoolsProject):
     target = "libxcb-keysyms"
-    dependencies = ["xorgproto"]
+    dependencies = ("xorgproto",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcb-keysyms.git")
 
 
@@ -192,7 +192,7 @@ class BuildLibXTrans(X11AutotoolsProject):
 
 class BuildLibX11(X11AutotoolsProject):
     target = "libx11"
-    dependencies = ["xorgproto", "libxcb", "libxtrans"]
+    dependencies = ("xorgproto", "libxcb", "libxtrans")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libx11.git")
 
     # pkg-config doesn't handle" "--sysroot very well, specify the path explicitly
@@ -211,51 +211,51 @@ class BuildLibX11(X11AutotoolsProject):
 
 class BuildLibXext(X11AutotoolsProject):
     target = "libxext"
-    dependencies = ["libx11"]
+    dependencies = ("libx11",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxext.git")
 
 
 class BuildLibXfixes(X11AutotoolsProject):
     target = "libxfixes"
-    dependencies = ["libx11"]
+    dependencies = ("libx11",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxfixes.git")
 
 
 class BuildLibXi(X11AutotoolsProject):
     target = "libxi"
-    dependencies = ["libxext", "libxfixes"]
+    dependencies = ("libxext", "libxfixes")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxi.git")
     builds_docbook_xml = True
 
 
 class BuildLibXrender(X11AutotoolsProject):
     target = "libxrender"
-    dependencies = ["libx11"]
+    dependencies = ("libx11",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxrender.git")
 
 
 class BuildLibXrandr(X11AutotoolsProject):
     target = "libxrandr"
-    dependencies = ["libxext", "libxrender"]
+    dependencies = ("libxext", "libxrender")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxrandr.git")
 
 
 # One of the simplest programs:
 class BuildXEv(X11AutotoolsProject):
     target = "xev"
-    dependencies = ["libxrandr"]
+    dependencies = ("libxrandr",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xev.git")
 
 
 class BuildLibSM(X11AutotoolsProject):
     target = "libsm"
-    dependencies = ["libx11", "libice"]
+    dependencies = ("libx11", "libice")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libsm.git")
 
 
 class BuildLibIce(X11AutotoolsProject):
     target = "libice"
-    dependencies = ["libx11"]
+    dependencies = ("libx11",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libice.git")
 
     def setup(self):
@@ -266,19 +266,19 @@ class BuildLibIce(X11AutotoolsProject):
 
 class BuildLibXt(X11AutotoolsProject):
     target = "libxt"
-    dependencies = ["libice", "libsm"]
+    dependencies = ("libice", "libsm")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxt.git")
 
 
 class BuildLibXDamage(X11AutotoolsProject):
     target = "libxdamage"
-    dependencies = ["libx11", "libxfixes"]
+    dependencies = ("libx11", "libxfixes")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxdamage.git")
 
 
 class BuildLibXmu(X11AutotoolsProject):
     target = "libxmu"
-    dependencies = ["libxext", "libxrender", "libxt"]
+    dependencies = ("libxext", "libxrender", "libxt")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxmu.git")
 
     def setup(self):
@@ -289,19 +289,19 @@ class BuildLibXmu(X11AutotoolsProject):
 
 class BuildXWinInfo(X11AutotoolsProject):
     target = "xwininfo"
-    dependencies = ["libx11", "libxext", "libxmu", "libxcb", "xorgproto"]
+    dependencies = ("libx11", "libxext", "libxmu", "libxcb", "xorgproto")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xwininfo.git")
 
 
 class BuildXHost(X11AutotoolsProject):
     target = "xhost"
-    dependencies = ["libxau", "libx11"]
+    dependencies = ("libxau", "libx11")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xhost.git")
 
 
 class BuildXAuth(X11AutotoolsProject):
     target = "xauth"
-    dependencies = ["libx11", "libxau", "libxext", "libxmu", "xorgproto"]
+    dependencies = ("libx11", "libxau", "libxext", "libxmu", "xorgproto")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xauth")
 
     def install(self, **kwargs):
@@ -314,13 +314,13 @@ class BuildXAuth(X11AutotoolsProject):
 
 class BuildXEyes(X11AutotoolsProject):
     target = "xeyes"
-    dependencies = ["libxi", "libxmu", "libxrender"]
+    dependencies = ("libxi", "libxmu", "libxrender")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xeyes.git")
 
 
 class BuildLibXKBCommon(X11MesonProject):
     target = "libxkbcommon"
-    dependencies = ["libxcb", "xkeyboard-config"]
+    dependencies = ("libxcb", "xkeyboard-config")
     repository = GitRepository("https://github.com/xkbcommon/libxkbcommon.git")
 
     def setup(self):
@@ -349,7 +349,7 @@ class BuildXorgFontUtil(X11AutotoolsProject):
 
 class BuildPixman(X11MesonProject):
     target = "pixman"
-    dependencies = ["libpng"]
+    dependencies = ("libpng",)
     repository = GitRepository("https://gitlab.freedesktop.org/pixman/pixman.git",
                                old_urls=[b"https://gitlab.freedesktop.org/arichardson/pixman.git"])
 
@@ -362,13 +362,13 @@ class BuildPixman(X11MesonProject):
 
 class BuildLibFontenc(X11AutotoolsProject):
     target = "libfontenc"
-    dependencies = ["xorg-font-util"]
+    dependencies = ("xorg-font-util",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libfontenc.git")
 
 
 class BuildLibXFont(X11AutotoolsProject):
     target = "libxfont"
-    dependencies = ["libfontenc", "freetype2"]
+    dependencies = ("libfontenc", "freetype2")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxfont.git")
 
     def setup(self):
@@ -384,13 +384,13 @@ class BuildLibcvt(X11MesonProject):
 
 class BuildLibXFt(X11AutotoolsProject):
     target = "libxft"
-    dependencies = ["fontconfig", "freetype2", "libxrender"]
+    dependencies = ("fontconfig", "freetype2", "libxrender")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxft.git")
 
 
 class BuildLibXTst(X11AutotoolsProject):
     target = "libxtst"
-    dependencies = ["libxext", "libx11", "libxi"]
+    dependencies = ("libxext", "libx11", "libxi")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxtst.git")
     builds_docbook_xml = True
 
@@ -402,13 +402,13 @@ class BuildLibXTst(X11AutotoolsProject):
 
 class BuildLibXKBFile(X11AutotoolsProject):
     target = "libxkbfile"
-    dependencies = ["libx11"]
+    dependencies = ("libx11",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxkbfile.git")
 
 
 class BuildLibXScrnSaver(X11AutotoolsProject):
     target = "libxscrnsaver"
-    dependencies = ["libx11", "libxext"]
+    dependencies = ("libx11", "libxext")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxscrnsaver.git")
 
 
@@ -426,7 +426,7 @@ class BuildLibJpegTurbo(X11CMakeProject):
 class BuildTigerVNC(X11CMakeProject):
     target = "tigervnc"
     repository = GitRepository("https://github.com/TigerVNC/tigervnc")
-    dependencies = ["pixman", "libxext", "libxfixes", "libxdamage", "libxtst", "libjpeg-turbo"]
+    dependencies = ("pixman", "libxext", "libxfixes", "libxdamage", "libxtst", "libjpeg-turbo")
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
@@ -441,7 +441,7 @@ class BuildTigerVNC(X11CMakeProject):
 
 class BuildXKeyboardConfig(X11MesonProject):
     target = "xkeyboard-config"
-    dependencies = ["libx11"]
+    dependencies = ("libx11",)
     repository = GitRepository("https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config.git")
 
     def install(self, **kwargs):
@@ -453,19 +453,19 @@ class BuildXKeyboardConfig(X11MesonProject):
 
 class BuildXKkbcomp(X11AutotoolsProject):
     target = "xkbcomp"
-    dependencies = ["libx11"]
+    dependencies = ("libx11",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xkbcomp.git")
 
 
 class BuildXProp(X11AutotoolsProject):
     target = "xprop"
-    dependencies = ["libx11"]
+    dependencies = ("libx11",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xprop.git")
 
 
 class BuildLibXCursor(X11AutotoolsProject):
     target = "libxcursor"
-    dependencies = ["libx11", "libxfixes", "libxrender"]
+    dependencies = ("libx11", "libxfixes", "libxrender")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcursor.git")
 
 
@@ -476,7 +476,7 @@ class BuildXBitMaps(X11AutotoolsProject):
 
 class BuildXSetRoot(X11AutotoolsProject):
     target = "xsetroot"
-    dependencies = ["libx11", "libxmu", "libxcursor", "xbitmaps"]
+    dependencies = ("libx11", "libxmu", "libxcursor", "xbitmaps")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/xsetroot.git")
 
 
@@ -484,8 +484,8 @@ class BuildXVncServer(X11AutotoolsProject):
     target = "xvnc-server"
     # The actual XVnc source code is part of TigerVNC and not included in the xserver repository.
     # It also depends on build artifacts from an existing tigervnc build
-    dependencies = ["libx11", "xorg-font-util", "libxrender", "libxfont", "libxkbfile", "tigervnc", "xkeyboard-config",
-                    "xkbcomp", "dbus"]
+    dependencies = ("libx11", "xorg-font-util", "libxrender", "libxfont", "libxkbfile", "tigervnc", "xkeyboard-config",
+                    "xkbcomp", "dbus")
     # The tigervnc code requires the 1.20 release
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/xserver.git",
                                default_branch="server-1.20-branch", force_branch=True,
@@ -560,7 +560,7 @@ class BuildXVncServer(X11AutotoolsProject):
 
 class BuildXServer(X11MesonProject):
     target = "xserver"
-    dependencies = ["libx11", "dbus", "pixman", "libxshmfence", "libxkbfile", "libxfont", "libxcvt", "libxext"]
+    dependencies = ("libx11", "dbus", "pixman", "libxshmfence", "libxkbfile", "libxfont", "libxcvt", "libxext")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/xserver.git")
 
     def setup(self):
@@ -579,7 +579,7 @@ class BuildTWM(X11AutotoolsProject):
     # Simple window manager to use with XVnc (KWin has too many dependencies)
     target = "twm"
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/app/twm.git")
-    dependencies = ["libx11", "libxt", "libsm", "libice", "libxext", "libxrandr", "libxmu"]
+    dependencies = ("libx11", "libxt", "libsm", "libice", "libxext", "libxrandr", "libxmu")
 
     def setup(self):
         super().setup()
@@ -589,14 +589,14 @@ class BuildTWM(X11AutotoolsProject):
 
 class BuildLibXcomposite(X11AutotoolsProject):
     target = "libxcomposite"
-    dependencies = ["libxfixes"]
+    dependencies = ("libxfixes",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxcomposite.git")
     builds_docbook_xml = True
 
 
 class BuildLibXpm(X11AutotoolsProject):
     target = "libxpm"
-    dependencies = ["libx11", "libxt", "libxext"]
+    dependencies = ("libx11", "libxt", "libxext")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxpm.git")
 
     def setup(self):
@@ -608,8 +608,8 @@ class BuildLibXpm(X11AutotoolsProject):
 # Slightly more functional window manager than TWM
 class BuildIceWM(X11CMakeProject):
     target = "icewm"
-    dependencies = ["fontconfig", "libxcomposite", "libxdamage", "libpng", "libjpeg-turbo",
-                    "libxpm", "libxft", "libxrandr"]
+    dependencies = ("fontconfig", "libxcomposite", "libxdamage", "libpng", "libjpeg-turbo",
+                    "libxpm", "libxft", "libxrandr")
     repository = GitRepository("https://github.com/bbidulock/icewm",
                                old_urls=[b"https://github.com/arichardson/icewm"])
 
@@ -627,11 +627,11 @@ class BuildLibPCIAccess(X11MesonProject):
 
 class BuildLibXshmFence(X11AutotoolsProject):
     target = "libxshmfence"
-    dependencies = ["xorgproto"]
+    dependencies = ("xorgproto",)
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxshmfence.git")
 
 
 class BuildLibXxf86vm(X11AutotoolsProject):
     target = "libxxf86vm"
-    dependencies = ["xorgproto", "libxext"]
+    dependencies = ("xorgproto", "libxext")
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxxf86vm.git")

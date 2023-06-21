@@ -50,7 +50,7 @@ class BuildRiscvArchTestsBase(MakefileProject):
 
 class BuildRiscvArchTestsSail(BuildRiscvArchTestsBase):
     target = "riscv-arch-test-sail"
-    dependencies = ["sail-riscv"]
+    dependencies = ("sail-riscv",)
     build_in_source_dir = True
 
     def setup(self):

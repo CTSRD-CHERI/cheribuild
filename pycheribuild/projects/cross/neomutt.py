@@ -29,7 +29,7 @@ from ..project import GitRepository
 
 class BuildNeomutt(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/neomutt/neomutt.git")
-    dependencies = ['libxml2']
+    dependencies = ('libxml2',)
 
     def setup(self):
         super().setup()

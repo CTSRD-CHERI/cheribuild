@@ -159,13 +159,13 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             return self.build_dir / "qt-host-tools"
 
     @classmethod
-    def dependencies(cls, config: CheriConfig) -> "list[str]":
-        deps = super().dependencies(config)
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        deps = list(super().dependencies(config))
         rootfs_target = cls.get_crosscompile_target().get_rootfs_target()
         deps.append(BuildSharedMimeInfo.get_class_for_target(rootfs_target).target)
         deps.append("sqlite")  # TODO: minimal should probably not include QtSql
         if cls.minimal:
-            return deps
+            return tuple(deps)
         if cls.use_x11:
             # The system X11 libraries might be too old, so add the cheribuild-provided ones as a dependency
             deps.extend(["libx11", "libxcb", "libxkbcommon", "libxcb-cursor", "libxcb-util", "libxcb-image", "libice",
@@ -181,7 +181,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             deps.extend(["dbus", "fontconfig", "libinput"])
             if cls.use_opengl:
                 deps.extend(["libglvnd", "libdrm"])
-        return deps
+        return tuple(deps)
 
     @classmethod
     def can_build_with_ccache(cls):
@@ -602,7 +602,7 @@ class BuildQtModuleWithQMake(CrossCompileProject):
     native_install_dir = BuildQtBase.native_install_dir
     do_not_add_to_targets = True
     can_run_parallel_install = True
-    dependencies = ["qtbase"]
+    dependencies = ("qtbase",)
     default_source_dir = default_source_dir_in_subdir(Path("qt5"))
 
     def setup(self):
@@ -664,7 +664,7 @@ class BuildQtDeclarative(BuildQtModuleWithQMake):
 
 class BuildQtTools(BuildQtModuleWithQMake):
     target = "qttools"
-    dependencies = ["qtbase"]
+    dependencies = ("qtbase",)
     repository = GitRepository("https://code.qt.io/qt/qttools.git",
                                # "https://invent.kde.org/qt/qt/qttools.git",
                                default_branch="5.15", force_branch=True)
@@ -685,7 +685,7 @@ class BuildQtTools(BuildQtModuleWithQMake):
 
 class BuildQtWayland(BuildQtModuleWithQMake):
     target = "qtwayland"
-    dependencies = ["qtbase", "wayland", "wayland-native"]
+    dependencies = ("qtbase", "wayland", "wayland-native")
     repository = GitRepository("https://code.qt.io/qt/qtwayland.git",
                                temporary_url_override="https://github.com/CTSRD-CHERI/qtwayland",
                                url_override_reason="Needs a patch to build on FreeBSD",
@@ -710,7 +710,7 @@ class BuildQtWayland(BuildQtModuleWithQMake):
 
 class BuildQtQuickControls2(BuildQtModuleWithQMake):
     target = "qtquickcontrols2"
-    dependencies = ["qtdeclarative"]
+    dependencies = ("qtdeclarative",)
     repository = GitRepository("https://invent.kde.org/qt/qt/qtquickcontrols2.git",
                                old_urls=[b"https://code.qt.io/qt/qtquickcontrols2.git"],
                                default_branch="kde/5.15", force_branch=True)
@@ -721,7 +721,7 @@ class BuildQtQuickControls2(BuildQtModuleWithQMake):
 
 class BuildQtQuickControls(BuildQtModuleWithQMake):
     target = "qtquickcontrols"
-    dependencies = ["qtdeclarative"]
+    dependencies = ("qtdeclarative",)
     repository = GitRepository("https://code.qt.io/qt/qtquickcontrols.git",
                                # "https://invent.kde.org/qt/qt/qtquickcontrols.git",
                                default_branch="5.15", force_branch=True)
@@ -732,7 +732,7 @@ class BuildQtQuickControls(BuildQtModuleWithQMake):
 
 class BuildQtGraphicalEffects(BuildQtModuleWithQMake):
     target = "qtgraphicaleffects"
-    dependencies = ["qtdeclarative"]
+    dependencies = ("qtdeclarative",)
     # Depends on OpenGL to be useful, https://github.com/CTSRD-CHERI/qtgraphicaleffects allows compiling without OpenGL
     repository = GitRepository("https://code.qt.io/qt/qtgraphicaleffects.git",
                                old_urls=[b"https://github.com/CTSRD-CHERI/qtgraphicaleffects"],
@@ -804,7 +804,7 @@ class BuildLibXml2(CrossCompileCMakeProject):
 
 class BuildLibXslt(CrossCompileCMakeProject):
     repository = GitRepository("https://gitlab.gnome.org/GNOME/libxslt.git")
-    dependencies = ["libxml2"]
+    dependencies = ("libxml2",)
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
@@ -818,7 +818,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtwebkit",
                                default_branch="qtwebkit-5.212-cheri", force_branch=True)
     is_large_source_repository = True
-    dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
+    dependencies = ("qtbase", "icu4c", "libxml2", "sqlite")
     # webkit is massive if we include debug info
     default_build_type = BuildType.RELWITHDEBINFO
     native_install_dir = DefaultInstallDir.CHERI_SDK

@@ -136,9 +136,9 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
 
     @classmethod
-    def dependencies(cls, config: CheriConfig) -> "list[str]":
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         result = super().dependencies(config)
-        return [*result, "libunwind"]
+        return (*result, "libunwind")
 
     def setup(self):
         super().setup()
@@ -193,7 +193,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libcxx")
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
-    dependencies = ["libcxxrt"]
+    dependencies = ("libcxxrt",)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -381,11 +381,11 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
         return list(self._enabled_runtimes)
 
     @classmethod
-    def dependencies(cls, config: CheriConfig) -> "list[str]":
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         if not cls.get_crosscompile_target().is_native():
             return super().dependencies(config)
-        return [*super().dependencies(config),
-                cls.llvm_project.get_class_for_target(CompilationTargets.NATIVE_NON_PURECAP).target]
+        return (*super().dependencies(config),
+                cls.llvm_project.get_class_for_target(CompilationTargets.NATIVE_NON_PURECAP).target)
 
     @classproperty
     def repository(self):

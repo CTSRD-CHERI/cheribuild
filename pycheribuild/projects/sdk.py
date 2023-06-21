@@ -43,12 +43,12 @@ class BuildCheriBSDSdk(TargetAliasWithDependencies):
     is_sdk_target = True
 
     @classmethod
-    def dependencies(cls, _: CheriConfig) -> "list[str]":
+    def dependencies(cls, _: CheriConfig) -> "tuple[str, ...]":
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-            deps = ["freestanding-morello-sdk"]
+            deps = ("freestanding-morello-sdk",)
         else:
-            deps = ["freestanding-cheri-sdk"]
-        return [*deps, "cheribsd"]
+            deps = ("freestanding-cheri-sdk",)
+        return (*deps, "cheribsd")
 
     @classproperty
     def supported_architectures(self):
@@ -57,7 +57,7 @@ class BuildCheriBSDSdk(TargetAliasWithDependencies):
 
 class BuildSdk(TargetAliasWithDependencies):
     target = "sdk"
-    dependencies = ["cheribsd-sdk"]
+    dependencies = ("cheribsd-sdk",)
     is_sdk_target = True
 
     @classproperty
@@ -73,7 +73,7 @@ class BuildCheriCompressedCaps(CMakeProject):
 
 class BuildFreestandingSdk(SimpleProject):
     target = "freestanding-cheri-sdk"
-    dependencies = ["llvm-native", "qemu", "gdb-native"]
+    dependencies = ("llvm-native", "qemu", "gdb-native")
     dependencies_must_be_built = True
     is_sdk_target = True
 
@@ -102,7 +102,7 @@ class BuildFreestandingSdk(SimpleProject):
 
 class BuildFreestandingMorelloSdk(TargetAliasWithDependencies):
     target = "freestanding-morello-sdk"
-    dependencies = ["morello-llvm-native", "qemu"]  # "morello-gdb-native" does not exist
+    dependencies = ("morello-llvm-native", "qemu")  # "morello-gdb-native" does not exist
     dependencies_must_be_built = True
     is_sdk_target = True
 

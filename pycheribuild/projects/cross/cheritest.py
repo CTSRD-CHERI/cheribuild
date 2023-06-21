@@ -75,7 +75,7 @@ class _BuildCheriMipsTestBase(Project):
 class BuildCheriMipsTestQEMU(_BuildCheriMipsTestBase):
     target = "cheritest-qemu"
     default_directory_basename = "cheritest"  # reuse source and build dirs
-    dependencies = ["qemu"]
+    dependencies = ("qemu",)
 
     def setup(self):
         super().setup()
@@ -95,7 +95,7 @@ class BuildCheriMipsTestQEMU(_BuildCheriMipsTestBase):
 class BuildCheriMipsTestSail(_BuildCheriMipsTestBase):
     target = "cheritest-sail"
     default_directory_basename = "cheritest"  # reuse source and build dirs
-    dependencies = ["sail-cheri-mips"]
+    dependencies = ("sail-cheri-mips",)
 
     def setup(self):
         super().setup()

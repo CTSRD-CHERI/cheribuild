@@ -410,10 +410,10 @@ class Project(SimpleProject):
     add_gdb_index = True  # whether to build with -Wl,--gdb-index if the linker supports it
 
     @classmethod
-    def dependencies(cls, config: CheriConfig) -> "list[str]":
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         if cls.needs_native_build_for_crosscompile and not cls.get_crosscompile_target().is_native():
-            return [cls.get_class_for_target(BasicCompilationTargets.NATIVE).target]
-        return []
+            return (cls.get_class_for_target(BasicCompilationTargets.NATIVE).target,)
+        return tuple()
 
     @classmethod
     def project_build_dir_help(cls) -> str:

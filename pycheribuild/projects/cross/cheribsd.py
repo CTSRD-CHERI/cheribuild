@@ -1736,7 +1736,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
 class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     target: str = "cheribsd-mfs-root-kernel"
-    dependencies: "list[str]" = ["disk-image-mfs-root"]
+    dependencies: "tuple[str, ...]" = ("disk-image-mfs-root",)
     repository: ReuseOtherProjectRepository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD, do_update=True)
     supported_architectures: "list[CrossCompileTarget]" = [
         CompilationTargets.CHERIBSD_AARCH64,
@@ -1850,7 +1850,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
 
 class BuildCheriBsdMfsImageAndKernels(TargetAliasWithDependencies):
     target: str = "cheribsd-mfs-kernels"
-    dependencies: "list[str]" = ["disk-image-mfs-root", "cheribsd-mfs-root-kernel"]
+    dependencies: "tuple[str, ...]" = ("disk-image-mfs-root", "cheribsd-mfs-root-kernel")
     direct_dependencies_only: bool = True
 
     @classproperty
@@ -1957,7 +1957,7 @@ class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
 
 class BuildFreeBSDRelease(BuildFreeBSDReleaseMixin, BuildFreeBSD):
     target: str = "freebsd-release"
-    dependencies: "list[str]" = ["freebsd"]
+    dependencies: "tuple[str, ...]" = ("freebsd",)
     repository: ReuseOtherProjectRepository = ReuseOtherProjectRepository(source_project=BuildFreeBSD)
     _always_add_suffixed_targets: bool = True
     default_build_dir: ComputedDefaultValue[Path] = \
@@ -1971,7 +1971,7 @@ class BuildFreeBSDRelease(BuildFreeBSDReleaseMixin, BuildFreeBSD):
 
 class BuildCheriBSDRelease(BuildFreeBSDReleaseMixin, BuildCHERIBSD):
     target: str = "cheribsd-release"
-    dependencies: "list[str]" = ["cheribsd"]
+    dependencies: "tuple[str, ...]" = ("cheribsd",)
     repository: ReuseOtherProjectRepository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD)
     _always_add_suffixed_targets: bool = True
     default_build_dir: ComputedDefaultValue[Path] = \
@@ -1996,8 +1996,8 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         return self.rootfs_source_class.supported_architectures
 
     @classmethod
-    def dependencies(cls, _: CheriConfig) -> "list[str]":
-        return [cls.rootfs_source_class.target]
+    def dependencies(cls, _: CheriConfig) -> "tuple[str, ...]":
+        return (cls.rootfs_source_class.target,)
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)

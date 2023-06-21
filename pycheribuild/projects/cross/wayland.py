@@ -71,7 +71,7 @@ class BuildLibUdevDevd(CrossCompileMesonProject):
     repository = GitRepository("https://github.com/wulf7/libudev-devd",
                                old_urls=[b"https://github.com/FreeBSDDesktop/libudev-devd"])
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
-    dependencies = ["linux-input-h"]
+    dependencies = ("linux-input-h",)
 
     def setup(self):
         super().setup()
@@ -111,9 +111,9 @@ class BuildMtdev(CrossCompileAutotoolsProject):
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     @classmethod
-    def dependencies(cls, config: CheriConfig) -> "list[str]":
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         if cls.get_crosscompile_target().target_info_cls.is_freebsd():
-            return [*super().dependencies(config), "linux-input-h"]
+            return (*super().dependencies(config), "linux-input-h")
         return super().dependencies(config)
 
     def linkage(self):
@@ -149,10 +149,10 @@ class BuildLibInput(CrossCompileMesonProject):
             self.check_required_pkg_config("libudev", apt="libudev-dev")
 
     @classmethod
-    def dependencies(cls, config) -> "list[str]":
-        result = [*super().dependencies(config), "mtdev", "libevdev"]
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        result = (*super().dependencies(config), "mtdev", "libevdev")
         if cls.get_crosscompile_target().target_info_cls.is_freebsd():
-            result.extend(["libudev-devd", "epoll-shim"])
+            result += ("libudev-devd", "epoll-shim")
         return result
 
     def setup(self):
@@ -246,14 +246,14 @@ class BuildWayland(CrossCompileMesonProject):
     needs_native_build_for_crosscompile = True
 
     @classmethod
-    def dependencies(cls, config: CheriConfig) -> "list[str]":
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         deps = super().dependencies(config)
         target = cls.get_crosscompile_target()
         if not target.is_native() or target.target_info_cls.is_cheribsd():
             # For native (non-CheriBSD) builds we use the host libraries
-            deps.extend(["libexpat", "libffi", "libxml2"])
+            deps += ("libexpat", "libffi", "libxml2")
         if target.target_info_cls.is_freebsd():
-            deps += ["epoll-shim"]
+            deps += ("epoll-shim",)
         return deps
     repository = GitRepository("https://gitlab.freedesktop.org/wayland/wayland.git", default_branch="main",
                                force_branch=True, old_urls=[b"https://github.com/CTSRD-CHERI/wayland"])
@@ -282,7 +282,7 @@ class BuildWayland(CrossCompileMesonProject):
 
 class BuildWaylandProtocols(CrossCompileMesonProject):
     target = "wayland-protocols"
-    dependencies = ["wayland", "wayland-native"]  # native wayland-scanner is needed for tests
+    dependencies = ("wayland", "wayland-native")  # native wayland-scanner is needed for tests
     repository = GitRepository("https://gitlab.freedesktop.org/wayland/wayland-protocols.git")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 

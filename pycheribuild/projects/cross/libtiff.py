@@ -30,7 +30,7 @@ class BuildLibtiff(CrossCompileCMakeProject):
     target = "libtiff"
     repository = GitRepository("https://gitlab.com/libtiff/libtiff.git")
     ctest_script_extra_args = ["--test-timeout", str(180 * 60)]  # Tests take a long time to run
-    dependencies = ["libjpeg-turbo"]
+    dependencies = ("libjpeg-turbo",)
 
     def setup(self):
         super().setup()

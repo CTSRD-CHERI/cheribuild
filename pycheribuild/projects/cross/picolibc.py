@@ -45,10 +45,10 @@ class BuildPicoLibc(CrossCompileMesonProject):
     add_gdb_index = False
 
     @classmethod
-    def dependencies(cls, config) -> "list[str]":
+    def dependencies(cls, config) -> "tuple[str, ...]":
         if cls._xtarget and cls._xtarget.is_native():
-            return []
-        return ["upstream-compiler-rt-builtins"]
+            return tuple()
+        return ("upstream-compiler-rt-builtins",)
 
     @property
     def _meson_extra_binaries(self):

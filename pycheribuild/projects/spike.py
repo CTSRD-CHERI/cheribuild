@@ -72,8 +72,8 @@ class RunCheriSpikeBase(SimpleProject):
     _source_class = None
 
     @classmethod
-    def dependencies(cls, _: CheriConfig) -> "list[str]":
-        return [cls._source_class.target, cls._bbl_class.target, BuildCheriSpike.target]
+    def dependencies(cls, _: CheriConfig) -> "tuple[str, ...]":
+        return cls._source_class.target, cls._bbl_class.target, BuildCheriSpike.target
 
     def process(self):
         kernel_project = self._source_class.get_instance(self)

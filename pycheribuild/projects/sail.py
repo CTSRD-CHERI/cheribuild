@@ -245,7 +245,7 @@ target_manager.add_target_alias("sail-from-opam", "sail", deprecated=True)
 class BuildSailCheriMips(ProjectUsingOpam):
     target = "sail-cheri-mips"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-mips")
-    dependencies = ["sail"]
+    dependencies = ("sail",)
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
@@ -273,7 +273,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
 class RunSailShell(OpamMixin, SimpleProject):
     target = "sail-env"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-mips")
-    dependencies = ["sail"]
+    dependencies = ("sail",)
     native_install_dir = DefaultInstallDir.CHERI_SDK
 
     def process(self):
@@ -303,7 +303,7 @@ class RunSailShell(OpamMixin, SimpleProject):
 class BuildSailRISCV(ProjectUsingOpam):
     target = "sail-riscv"
     repository = GitRepository("https://github.com/rems-project/sail-riscv")
-    dependencies = ["sail"]
+    dependencies = ("sail",)
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
@@ -327,7 +327,7 @@ class BuildSailRISCV(ProjectUsingOpam):
 class BuildSailCheriRISCV(ProjectUsingOpam):
     target = "sail-cheri-riscv"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-riscv")
-    dependencies = ["sail"]
+    dependencies = ("sail",)
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
@@ -351,7 +351,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
 class BuildSailMorello(ProjectUsingOpam):
     target = "sail-morello"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-morello")
-    dependencies = ["sail"]
+    dependencies = ("sail",)
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake

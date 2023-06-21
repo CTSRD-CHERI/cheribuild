@@ -28,7 +28,7 @@ from .crosscompileproject import CrossCompileMesonProject, GitRepository
 
 class BuildGlib(CrossCompileMesonProject):
     target = "glib"
-    dependencies = ["pcre2", "libffi", "dbus"]
+    dependencies = ("pcre2", "libffi", "dbus")
     repository = GitRepository("https://gitlab.gnome.org/GNOME/glib.git",
                                temporary_url_override="https://gitlab.gnome.org/arichardson/glib.git",
                                old_urls=[b"https://github.com/CTSRD-CHERI/glib.git"],

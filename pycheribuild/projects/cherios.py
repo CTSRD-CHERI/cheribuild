@@ -34,7 +34,7 @@ from ..config.compilation_targets import CompilationTargets
 
 
 class BuildCheriOS(CMakeProject):
-    dependencies = ["cherios-llvm", "makefs-linux"]
+    dependencies = ("cherios-llvm", "makefs-linux")
     default_build_type = BuildType.DEBUG
     repository = GitRepository("https://github.com/CTSRD-CHERI/cherios.git", default_branch="master")
     _default_install_dir_fn = ComputedDefaultValue(

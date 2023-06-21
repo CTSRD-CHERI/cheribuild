@@ -81,7 +81,7 @@ class BuildCurrent_Directory(CurrentDirectoryMixin, CrossCompileSimpleProject): 
     direct_dependencies_only = True
 
     @classmethod
-    def dependencies(cls, _):
+    def dependencies(cls, _) -> "tuple[str, ...]":
         classes = [
                 BuildCurrent_Directory_Autotools,
                 BuildCurrent_Directory_CMake,
@@ -91,8 +91,8 @@ class BuildCurrent_Directory(CurrentDirectoryMixin, CrossCompileSimpleProject): 
         for c in classes:
             for f in c.autodetect_files:
                 if (_cwd_path / f).is_file():
-                    return [c.target]
-        return []
+                    return (c.target,)
+        return tuple()
 
     def process(self):
         if not self.dependencies(self.config):

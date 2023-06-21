@@ -34,7 +34,7 @@ from ...utils import InstallInstructions
 
 class BuildLibDrm(CrossCompileMesonProject):
     target = "libdrm"
-    dependencies = ["libpciaccess", "xorg-pthread-stubs"]
+    dependencies = ("libpciaccess", "xorg-pthread-stubs")
     repository = GitRepository("https://gitlab.freedesktop.org/mesa/drm.git",
                                temporary_url_override="https://gitlab.freedesktop.org/arichardson/drm.git",
                                url_override_reason="Lots of uinptr_t != u64 fun")
@@ -54,7 +54,7 @@ class BuildLibDrm(CrossCompileMesonProject):
 
 class BuildLibGlvnd(CrossCompileMesonProject):
     target = "libglvnd"
-    dependencies = ["libx11", "libxext"]
+    dependencies = ("libx11", "libxext")
     repository = GitRepository("https://gitlab.freedesktop.org/glvnd/libglvnd.git",
                                old_urls=[b"https://gitlab.freedesktop.org/arichardson/libglvnd.git"])
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
@@ -83,12 +83,12 @@ class BuildMesa(CrossCompileMesonProject):
     include_wayland = True
 
     @classmethod
-    def dependencies(cls, config) -> "list[str]":
-        result = [*super().dependencies(config), "libdrm", "libglvnd"]
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        result = (*super().dependencies(config), "libdrm", "libglvnd")
         if cls.include_wayland:
-            result.extend(["wayland", "wayland-protocols"])
+            result += ("wayland", "wayland-protocols")
         if cls.include_x11:
-            result.extend(["libx11", "libxshmfence", "libxxf86vm", "libxrandr", "libxfixes"])
+            result += ("libx11", "libxshmfence", "libxxf86vm", "libxrandr", "libxfixes")
         return result
 
     def check_system_dependencies(self):
@@ -130,7 +130,7 @@ class BuildMesa(CrossCompileMesonProject):
 
 class BuildLibEpoxy(CrossCompileMesonProject):
     target = "libepoxy"
-    dependencies = ["libglvnd"]
+    dependencies = ("libglvnd",)
     repository = GitRepository("https://github.com/anholt/libepoxy",
                                old_urls=[b"https://github.com/arichardson/libepoxy"])
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
@@ -143,7 +143,7 @@ class BuildLibEpoxy(CrossCompileMesonProject):
 
 class BuildVirglRenderer(CrossCompileMesonProject):
     target = "virglrenderer"
-    dependencies = ["libepoxy", "libx11"]
+    dependencies = ("libepoxy", "libx11")
     repository = GitRepository("https://gitlab.freedesktop.org/virgl/virglrenderer")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 

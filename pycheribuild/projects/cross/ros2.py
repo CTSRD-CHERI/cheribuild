@@ -38,7 +38,7 @@ class BuildRos2(CrossCompileCMakeProject):
     # as a library for building other applications using cheribuild
     # therefore, the _install_dir doesn't do anything, but cheribuild requires them
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    dependencies = ["poco"]
+    dependencies = ("poco",)
 
     def _ignore_packages(self):
         packages = ["src/ros2/rcl_logging/rcl_logging_log4cxx"]  # relative to self.source_dir

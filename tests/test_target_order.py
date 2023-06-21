@@ -256,9 +256,9 @@ def test_webkit_cached_deps():
     webkit_riscv = target_manager.get_target_raw("qtwebkit-riscv64").project_class
     # Check that the deps are not cached yet
     _check_deps_not_cached((webkit_native, webkit_purecap, webkit_riscv))
-    assert inspect.getattr_static(webkit_native, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
-    assert inspect.getattr_static(webkit_purecap, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
-    assert inspect.getattr_static(webkit_riscv, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
+    assert inspect.getattr_static(webkit_native, "dependencies") == ("qtbase", "icu4c", "libxml2", "sqlite")
+    assert inspect.getattr_static(webkit_purecap, "dependencies") == ("qtbase", "icu4c", "libxml2", "sqlite")
+    assert inspect.getattr_static(webkit_riscv, "dependencies") == ("qtbase", "icu4c", "libxml2", "sqlite")
 
     cheri_target_names = list(sorted(webkit_purecap.all_dependency_names(config)))
     expected_cheri_names = sorted(["llvm-native", "cheribsd-riscv64-purecap", *_qtbase_x11_deps("riscv64-purecap"),
@@ -278,9 +278,9 @@ def test_webkit_cached_deps():
     assert native_target_names == ["icu4c-native", "libxml2-native", "qtbase-native", "shared-mime-info-native",
                                    "sqlite-native"]
     _check_deps_cached([webkit_purecap, webkit_riscv, webkit_native])
-    assert inspect.getattr_static(webkit_native, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
-    assert inspect.getattr_static(webkit_purecap, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
-    assert inspect.getattr_static(webkit_riscv, "dependencies") == ["qtbase", "icu4c", "libxml2", "sqlite"]
+    assert inspect.getattr_static(webkit_native, "dependencies") == ("qtbase", "icu4c", "libxml2", "sqlite")
+    assert inspect.getattr_static(webkit_purecap, "dependencies") == ("qtbase", "icu4c", "libxml2", "sqlite")
+    assert inspect.getattr_static(webkit_riscv, "dependencies") == ("qtbase", "icu4c", "libxml2", "sqlite")
 
 
 def test_webkit_deps_2():

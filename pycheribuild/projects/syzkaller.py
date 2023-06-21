@@ -45,7 +45,7 @@ from ..utils import ThreadJoiner
 
 
 class BuildSyzkaller(CrossCompileProject):
-    dependencies = ["go"]
+    dependencies = ("go",)
     target = "cheri-syzkaller"
     github_base_url = "https://github.com/CTSRD-CHERI/"
     repository = GitRepository(github_base_url + "cheri-syzkaller.git")

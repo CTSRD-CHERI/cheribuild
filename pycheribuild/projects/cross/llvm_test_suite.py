@@ -52,8 +52,8 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
     collect_stats = BoolConfigOption("collect-stats", help="Collect statistics from the compiler")
 
     @classmethod
-    def dependencies(cls, config) -> "list[str]":
-        return [cls.llvm_project.get_class_for_target(CompilationTargets.NATIVE_NON_PURECAP).target]
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        return (cls.llvm_project.get_class_for_target(CompilationTargets.NATIVE_NON_PURECAP).target,)
 
     # noinspection PyMethodParameters
     @classproperty

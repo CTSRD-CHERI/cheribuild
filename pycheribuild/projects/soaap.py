@@ -52,7 +52,7 @@ class BuildSoaapLLVM(BuildLLVMSplitRepoBase):
 
 
 class BuildSoaap(CMakeProject):
-    dependencies = ["soaap-llvm"]
+    dependencies = ("soaap-llvm",)
     repository = GitRepository("https://github.com/CTSRD-SOAAP/soaap")
     _default_install_dir_fn = install_to_soaap_dir
 
