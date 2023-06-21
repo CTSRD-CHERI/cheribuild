@@ -228,7 +228,8 @@ class PerProjectConfigOption:
 
 
 class BoolConfigOption(PerProjectConfigOption):
-    def __init__(self, name: str, help: str, default: "bool | ComputedDefaultValue[bool]" = False, **kwargs):
+    def __init__(self, name: str, help: str, default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False,
+                 **kwargs):
         self._name = name
         self._default = default
         self._help = help
