@@ -528,7 +528,6 @@ def remove_tuple_duplicates(items: "typing.Iterable[Type_T]") -> "tuple[Type_T, 
     return tuple(dict.fromkeys(items))
 
 
-
 def remove_prefix(s: str, prefix: str, prefix_required=False) -> str:
     if not s.startswith(prefix):
         if prefix_required:
