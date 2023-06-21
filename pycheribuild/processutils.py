@@ -193,7 +193,7 @@ def suppress_sigttou(suppress=True):
 
 
 @contextlib.contextmanager
-def keep_terminal_sane(gave_tty_control=False, command: list = None):
+def keep_terminal_sane(gave_tty_control=False, command: Optional[list] = None):
     # Programs such as QEMU can change the terminal state and if they don't exit cleanly this state is
     # propagated to the shell that invoked cheribuild.
     # This function attempts to restore the stdin/stdout/stderr state in those cases:
@@ -214,7 +214,7 @@ def keep_terminal_sane(gave_tty_control=False, command: list = None):
 
 def print_command(arg1: "Union[str, typing.Sequence[typing.Any]]", *remaining_args, output_file=None,
                   colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", print_verbose_only=False,
-                  config: ConfigBase = None, **kwargs):
+                  config: Optional[ConfigBase] = None, **kwargs):
     if config is None:
         config = get_global_config()  # TODO: remove
     if config.quiet or (print_verbose_only and not config.verbose):
@@ -350,7 +350,7 @@ class FakePopen:
         pass
 
 
-def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, config: ConfigBase = None,
+def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, config: Optional[ConfigBase] = None,
           **kwargs) -> subprocess.Popen:
     if config is None:
         config = get_global_config()  # TODO: remove
@@ -366,7 +366,8 @@ def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, confi
 def run_command(*args, capture_output=False, capture_error=False, input: "Union[str, bytes]" = None,
                 timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
                 no_print=False, replace_env=False, give_tty_control=False, expected_exit_code=0,
-                allow_unexpected_returncode=False, config: ConfigBase = None, **kwargs) -> "CompletedProcess[bytes]":
+                allow_unexpected_returncode=False, config: Optional[ConfigBase] = None,
+                **kwargs) -> "CompletedProcess[bytes]":
     if config is None:
         config = get_global_config()  # TODO: remove
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
@@ -704,7 +705,8 @@ def get_compiler_info(compiler: "Union[str, Path]", *, config: ConfigBase) -> Co
 
 # Cache the versions
 @functools.lru_cache(maxsize=20)
-def get_version_output(program: Path, command_args: tuple = None, *, config: ConfigBase = None) -> "bytes":
+def get_version_output(program: Path, command_args: Optional[tuple] = None, *,
+                       config: Optional[ConfigBase] = None) -> "bytes":
     if config is None:
         config = get_global_config()  # TODO: remove
     if command_args is None:
@@ -717,8 +719,9 @@ def get_version_output(program: Path, command_args: tuple = None, *, config: Con
 
 
 @functools.lru_cache(maxsize=20)
-def get_program_version(program: Path, command_args: tuple = None, component_kind: "type[Type_T]" = int,
-                        regex=None, program_name: bytes = None, *, config: ConfigBase) -> "tuple[Type_T, ...]":
+def get_program_version(program: Path, command_args: Optional[tuple] = None, component_kind: "type[Type_T]" = int,
+                        regex=None, program_name: Optional[bytes] = None, *,
+                        config: ConfigBase) -> "tuple[Type_T, ...]":
     if config is None:
         config = get_global_config()  # TODO: remove
     if program_name is None:

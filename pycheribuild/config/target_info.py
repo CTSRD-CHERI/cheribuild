@@ -302,7 +302,7 @@ class TargetInfo(ABC):
     @abstractmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
                                                  perform_sanity_checks=True, default_flags_only=False,
-                                                 softfloat: bool = None) -> "list[str]":
+                                                 softfloat: Optional[bool] = None) -> "list[str]":
         """
         :return: flags such as -target + -mabi which are needed for both compiler and linker
         """
@@ -310,7 +310,7 @@ class TargetInfo(ABC):
 
     def get_essential_compiler_and_linker_flags(self, xtarget: "CrossCompileTarget" = None,
                                                 perform_sanity_checks=True, default_flags_only=False,
-                                                softfloat: bool = None) -> "list[str]":
+                                                softfloat: Optional[bool] = None) -> "list[str]":
         return self.essential_compiler_and_linker_flags_impl(self, perform_sanity_checks=perform_sanity_checks,
                                                              xtarget=xtarget if xtarget is not None else self.target,
                                                              default_flags_only=default_flags_only, softfloat=softfloat)
@@ -675,7 +675,7 @@ class NativeTargetInfo(TargetInfo):
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
                                                  perform_sanity_checks=True, default_flags_only=False,
-                                                 softfloat: bool = None) -> "list[str]":
+                                                 softfloat: Optional[bool] = None) -> "list[str]":
         result = []
         if instance.project.auto_var_init != AutoVarInit.NONE:
             compiler = instance.project.get_compiler_info(instance.c_compiler)
@@ -862,28 +862,28 @@ class CrossCompileTarget:
         return True
 
     # Querying the CPU architecture:
-    def is_mips(self, include_purecap: bool = None) -> bool:
+    def is_mips(self, include_purecap: Optional[bool] = None) -> bool:
         return self._check_arch(CPUArchitecture.MIPS64, include_purecap)
 
-    def is_riscv32(self, include_purecap: bool = None) -> bool:
+    def is_riscv32(self, include_purecap: Optional[bool] = None) -> bool:
         return self._check_arch(CPUArchitecture.RISCV32, include_purecap)
 
-    def is_riscv64(self, include_purecap: bool = None) -> bool:
+    def is_riscv64(self, include_purecap: Optional[bool] = None) -> bool:
         return self._check_arch(CPUArchitecture.RISCV64, include_purecap)
 
-    def is_riscv(self, include_purecap: bool = None) -> bool:
+    def is_riscv(self, include_purecap: Optional[bool] = None) -> bool:
         return self.is_riscv32(include_purecap) or self.is_riscv64(include_purecap)
 
-    def is_aarch64(self, include_purecap: bool = None) -> bool:
+    def is_aarch64(self, include_purecap: Optional[bool] = None) -> bool:
         return self._check_arch(CPUArchitecture.AARCH64, include_purecap)
 
-    def is_i386(self, include_purecap: bool = None) -> bool:
+    def is_i386(self, include_purecap: Optional[bool] = None) -> bool:
         return self._check_arch(CPUArchitecture.I386, include_purecap)
 
-    def is_x86_64(self, include_purecap: bool = None) -> bool:
+    def is_x86_64(self, include_purecap: Optional[bool] = None) -> bool:
         return self._check_arch(CPUArchitecture.X86_64, include_purecap)
 
-    def is_any_x86(self, include_purecap: bool = None) -> bool:
+    def is_any_x86(self, include_purecap: Optional[bool] = None) -> bool:
         return self.is_i386(include_purecap) or self.is_x86_64(include_purecap)
 
     def is_cheri_purecap(self, valid_cpu_archs: "Optional[list[CPUArchitecture]]" = None) -> bool:

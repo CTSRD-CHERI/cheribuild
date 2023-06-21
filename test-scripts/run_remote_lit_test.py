@@ -135,8 +135,9 @@ def flush_thread(f, qemu: boot_cheribsd.QemuCheriBSDInstance, should_exit_event:
 
 
 def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
-                         mp_q: multiprocessing.Queue = None, barrier: multiprocessing.Barrier = None,
-                         llvm_lit_path: "Optional[str]" = None, lit_extra_args: list = None) -> bool:
+                         mp_q: Optional[multiprocessing.Queue] = None,
+                         barrier: Optional[multiprocessing.Barrier] = None,
+                         llvm_lit_path: "Optional[str]" = None, lit_extra_args: Optional[list] = None) -> bool:
     try:
         import psutil  # noqa: F401
     except ImportError:
@@ -158,8 +159,9 @@ def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, a
 
 
 def run_remote_lit_tests_impl(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace,
-                              tempdir: str, mp_q: multiprocessing.Queue = None, barrier: multiprocessing.Barrier = None,
-                              llvm_lit_path: "Optional[str]" = None, lit_extra_args: list = None) -> bool:
+                              tempdir: str, mp_q: Optional[multiprocessing.Queue] = None,
+                              barrier: Optional[multiprocessing.Barrier] = None,
+                              llvm_lit_path: "Optional[str]" = None, lit_extra_args: Optional[list] = None) -> bool:
     qemu.EXIT_ON_KERNEL_PANIC = False  # since we run multiple threads we shouldn't use sys.exit()
     boot_cheribsd.info("PID of QEMU: ", qemu.pid)
 

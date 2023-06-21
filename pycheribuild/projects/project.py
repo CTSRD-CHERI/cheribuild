@@ -1278,7 +1278,7 @@ class Project(SimpleProject):
         return self._install_dir
 
     def run_make_install(self, *, options: "Optional[MakeOptions]" = None, _stdout_filter=_default_stdout_filter,
-                         cwd: "Optional[Path]" = None, parallel: bool = None,
+                         cwd: "Optional[Path]" = None, parallel: Optional[bool] = None,
                          target: "Union[str, list[str]]" = "install", make_install_env=None, **kwargs):
         if parallel is None:
             parallel = self.can_run_parallel_install

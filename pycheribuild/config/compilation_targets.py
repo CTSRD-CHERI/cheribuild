@@ -147,7 +147,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, instance: "_ClangBasedTargetInfo", *,
-                                                 xtarget: "CrossCompileTarget", softfloat: bool = None,
+                                                 xtarget: "CrossCompileTarget", softfloat: Optional[bool] = None,
                                                  perform_sanity_checks=True, default_flags_only=False):
         assert xtarget is not None
         if softfloat is None:

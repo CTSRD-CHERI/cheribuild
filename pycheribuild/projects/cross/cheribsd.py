@@ -547,8 +547,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return cls.get_install_dir(caller, cross_target)
 
     @classmethod
-    def setup_config_options(cls, bootstrap_toolchain=False, use_upstream_llvm: bool = None, debug_info_by_default=True,
-                             kernel_only_target=False, **kwargs) -> None:
+    def setup_config_options(cls, bootstrap_toolchain=False, use_upstream_llvm: Optional[bool] = None,
+                             debug_info_by_default=True, kernel_only_target=False, **kwargs) -> None:
         super().setup_config_options(kernel_only_target=kernel_only_target, **kwargs)
         if cls._xtarget:
             # KERNCONF always depends on the target, so we don't inherit this config option. The only exception is
