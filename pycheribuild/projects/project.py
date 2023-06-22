@@ -408,6 +408,7 @@ class Project(SimpleProject):
     default_build_tests: bool = True  # whether to build tests by default
     show_optional_tests_in_help: bool = True  # whether to show the --foo/build-tests in --help
     add_gdb_index = True  # whether to build with -Wl,--gdb-index if the linker supports it
+    _initial_source_dir: Optional[Path]
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
@@ -822,7 +823,6 @@ class Project(SimpleProject):
         # non-assignable variables:
         self.configure_args: "list[str]" = []
         self.configure_environment: "dict[str, str]" = {}
-        self._last_stdout_line_can_be_overwritten = False
         self.make_args = MakeOptions(self.make_kind, self)
         self._compiledb_tool: Optional[str] = None
         if self.config.create_compilation_db and self.compile_db_requires_bear:

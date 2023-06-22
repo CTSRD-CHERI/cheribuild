@@ -80,7 +80,8 @@ class _EnumArgparseType(typing.Generic[EnumTy]):
         name = self.enums.__name__
         try:
             # convert the passed value to the enum name
-            enum_value_name: str = astring.upper()
+            assert isinstance(astring, str)
+            enum_value_name = str(astring).upper()
             enum_value_name = enum_value_name.replace("-", "_")
             for e in self.enums:
                 if e.value == astring:

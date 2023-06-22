@@ -339,7 +339,7 @@ class TargetInfo(ABC):
             return _DO_NOT_INSTALL_PATH
         elif install_dir == DefaultInstallDir.IN_BUILD_DIRECTORY:
             # noinspection PyUnresolvedReferences
-            return self.project.build_dir / "test-install-prefix"
+            return self.project.build_dir / "test-install-prefix"  # pytype: disable=attribute-error
         elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
             return _INVALID_INSTALL_DIR
         raise NotImplementedError(f"Unsupported {install_dir} for {self}")

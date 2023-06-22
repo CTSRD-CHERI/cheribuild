@@ -835,6 +835,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         self._system_deps_checked = False
         self._setup_called = False
         self._setup_late_called = False
+        self._last_stdout_line_can_be_overwritten = False
         assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
 
     def setup(self) -> None:

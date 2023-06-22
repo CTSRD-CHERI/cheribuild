@@ -196,6 +196,7 @@ class ConfigOptionBase(typing.Generic[T]):
         # if none it means the global CheriConfig is the class containing this option
         self._owning_class = _owning_class
         if _fallback_names:
+            assert _loader is not None
             for name in _fallback_names:
                 assert _loader.options.get(name) is not None
         self._fallback_names = _fallback_names  # for targets such as gdb-mips, etc
