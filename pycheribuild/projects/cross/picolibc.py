@@ -57,6 +57,18 @@ class BuildPicoLibc(CrossCompileMesonProject):
             return "exe_wrapper = ['sh', '-c', 'test -z \"$PICOLIBC_TEST\" || run-riscv \"$@\"', 'run-riscv']"
         return ""
 
+    @property
+    def _meson_extra_properties(self):
+        if not self.compiling_for_host():
+            assert self.compiling_for_riscv(include_purecap=True), "Only tested riscv so far"
+            return """
+default_flash_addr = '0x80000000'
+default_flash_size = '0x00200000'
+default_ram_addr   = '0x80200000'
+default_ram_size   = '0x00200000'
+"""
+        return ""
+
     def setup(self):
         super().setup()
         self.add_meson_options(tests=True, multilib=False, **{
