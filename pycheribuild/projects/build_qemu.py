@@ -48,6 +48,7 @@ from .project import (
 )
 from .simple_project import SimpleProject, _cached_get_homebrew_prefix
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
+from ..utils import OSInfo
 
 
 class BuildQEMUBase(AutotoolsProject):
@@ -190,7 +191,7 @@ class BuildQEMUBase(AutotoolsProject):
         if ccinfo.compiler == "clang" and ccinfo.version >= (13, 0, 0):
             self.CFLAGS.append("-Wno-null-pointer-subtraction")
         # This would have cought some problems in the past
-        self.common_warning_flags.append("-Werror=return-type")
+        self.common_warning_flags.append("-Wno-error=return-type")
         if self.use_smbd:
             self.smbd_path = Path("/usr/sbin/smbd")
             if self.target_info.is_freebsd():
@@ -222,8 +223,6 @@ class BuildQEMUBase(AutotoolsProject):
 
         self.configure_args.extend([
             "--target-list=" + self.qemu_targets,
-            "--disable-linux-user",
-            "--disable-bsd-user",
             "--disable-xen",
             "--disable-docs",
             "--disable-rdma",
@@ -304,8 +303,21 @@ class BuildUpstreamQEMU(BuildQEMUBase):
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.output_root / "upstream-qemu",
         as_string="$INSTALL_ROOT/upstream-qemu")
+    if OSInfo.IS_FREEBSD:
+        user_targets = ",arm-bsd-user,i386-bsd-user,x86_64-bsd-user"
+    elif OSInfo.IS_LINUX:
+        user_targets = ",arm-linux-user,aarch64-linux-user,i386-linux-user,x86_64-linux-user,riscv64-linux-user"
+    else:
+        user_targets = ""
     default_targets = "arm-softmmu,aarch64-softmmu,mips64-softmmu," \
-                      "riscv64-softmmu,riscv32-softmmu,x86_64-softmmu"
+                      "riscv64-softmmu,riscv32-softmmu,x86_64-softmmu" + user_targets
+
+    def setup(self):
+        super().setup()
+        if OSInfo.IS_LINUX:
+            self.configure_args.append("--enable-linux-user")
+        elif OSInfo.IS_FREEBSD:
+            self.configure_args.append("--enable-bsd-user")
 
     @classmethod
     def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
@@ -379,6 +391,9 @@ class BuildQEMU(BuildQEMUBase):
             self.COMMON_FLAGS.append("-DENABLE_CHERI_SANITIY_CHECKS=1")
         # the capstone disassembler doesn't support CHERI instructions:
         self.configure_args.append("--disable-capstone")
+        # Linux/BSD-user is not supported for CHERI (yet)
+        self.configure_args.append("--disable-bsd-user")
+        self.configure_args.append("--disable-linux-user")
         # TODO: tests:
         # noinspection PyUnreachableCode
         if False:
