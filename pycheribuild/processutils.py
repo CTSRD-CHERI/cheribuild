@@ -363,7 +363,7 @@ def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, confi
 
 
 # noinspection PyShadowingBuiltins
-def run_command(*args, capture_output=False, capture_error=False, input: "Union[str, bytes]" = None,
+def run_command(*args, capture_output=False, capture_error=False, input: "Optional[Union[str, bytes]]" = None,
                 timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
                 no_print=False, replace_env=False, give_tty_control=False, expected_exit_code=0,
                 allow_unexpected_returncode=False, config: Optional[ConfigBase] = None,
@@ -735,7 +735,7 @@ def get_program_version(program: Path, command_args: Optional[tuple] = None, com
 
 
 # extract the version component from program output such as "git version 2.7.4"
-def extract_version(output: bytes, component_kind: "type[Type_T]" = int, regex: "typing.Pattern" = None,
+def extract_version(output: bytes, component_kind: "type[Type_T]" = int, regex: "Optional[typing.Pattern]" = None,
                     program_name: bytes = b"") -> "tuple[Type_T, ...]":
     if regex is None:
         prefix = re.escape(program_name) + b" " if program_name else b""

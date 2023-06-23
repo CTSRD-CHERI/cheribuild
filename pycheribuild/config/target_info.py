@@ -308,7 +308,7 @@ class TargetInfo(ABC):
         """
         ...
 
-    def get_essential_compiler_and_linker_flags(self, xtarget: "CrossCompileTarget" = None,
+    def get_essential_compiler_and_linker_flags(self, xtarget: "Optional[CrossCompileTarget]" = None,
                                                 perform_sanity_checks=True, default_flags_only=False,
                                                 softfloat: Optional[bool] = None) -> "list[str]":
         return self.essential_compiler_and_linker_flags_impl(self, perform_sanity_checks=perform_sanity_checks,
@@ -397,7 +397,7 @@ class TargetInfo(ABC):
 
     @final
     def get_rootfs_project(self, *, t: "type[_AnyProject]", caller: AbstractProject,
-                           xtarget: "CrossCompileTarget" = None) -> _AnyProject:
+                           xtarget: "Optional[CrossCompileTarget]" = None) -> _AnyProject:
         if xtarget is None:
             xtarget = self.target
         xtarget = xtarget.get_rootfs_target()
@@ -704,13 +704,15 @@ class CrossCompileTarget:
 
     def __init__(self, arch_suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "type[TargetInfo]",
                  *, is_cheri_purecap=False, is_cheri_hybrid=False, extra_target_suffix: str = "",
-                 check_conflict_with: "CrossCompileTarget" = None, rootfs_target: "CrossCompileTarget" = None,
-                 non_cheri_target: "CrossCompileTarget" = None, hybrid_target: "CrossCompileTarget" = None,
-                 purecap_target: "CrossCompileTarget" = None,
-                 non_cheri_for_hybrid_rootfs_target: "CrossCompileTarget" = None,
-                 non_cheri_for_purecap_rootfs_target: "CrossCompileTarget" = None,
-                 hybrid_for_purecap_rootfs_target: "CrossCompileTarget" = None,
-                 purecap_for_hybrid_rootfs_target: "CrossCompileTarget" = None) -> None:
+                 check_conflict_with: "Optional[CrossCompileTarget]" = None,
+                 rootfs_target: "Optional[CrossCompileTarget]" = None,
+                 non_cheri_target: "Optional[CrossCompileTarget]" = None,
+                 hybrid_target: "Optional[CrossCompileTarget]" = None,
+                 purecap_target: "Optional[CrossCompileTarget]" = None,
+                 non_cheri_for_hybrid_rootfs_target: "Optional[CrossCompileTarget]" = None,
+                 non_cheri_for_purecap_rootfs_target: "Optional[CrossCompileTarget]" = None,
+                 hybrid_for_purecap_rootfs_target: "Optional[CrossCompileTarget]" = None,
+                 purecap_for_hybrid_rootfs_target: "Optional[CrossCompileTarget]" = None) -> None:
         assert not arch_suffix.startswith("-"), arch_suffix
         assert not extra_target_suffix or extra_target_suffix.startswith("-"), extra_target_suffix
         name_prefix = target_info_cls.shortname

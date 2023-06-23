@@ -40,7 +40,7 @@ class ComputedDefaultValue(typing.Generic[T]):
     def __init__(self, function: "Callable[[ConfigTy, Any], T]",
                  as_string: "Union[str, Callable[[Any], str]]",
                  as_readme_string: "Union[str, Callable[[Any], str], None]" = None,
-                 inherit: "ComputedDefaultValue[T]" = None):
+                 inherit: "typing.Optional[ComputedDefaultValue[T]]" = None):
         if inherit is not None:
             def inheriting_function(config, project):
                 val = function(config, project)
