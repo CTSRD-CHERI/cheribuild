@@ -227,17 +227,24 @@ class PerProjectConfigOption:
         return ValueError("Should have been replaced!")
 
 
-class BoolConfigOption(PerProjectConfigOption):
-    def __init__(self, name: str, help: str, default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False,
-                 **kwargs):
-        self._name = name
-        self._default = default
-        self._help = help
-        self._kwargs = kwargs
+if typing.TYPE_CHECKING:
+    # noinspection PyPep8Naming
+    def BoolConfigOption(name: str, help: str,  # noqa: N802
+                         default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
+        ...
+else:
+    class BoolConfigOption(PerProjectConfigOption):
+        def __init__(self, name: str, help: str, default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False,
+                     **kwargs):
+            self._name = name
+            self._default = default
+            self._help = help
+            self._kwargs = kwargs
 
-    def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionBase:
-        return typing.cast(ConfigOptionBase,
-                           owner.add_bool_option(self._name, default=self._default, help=self._help, **self._kwargs))
+        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionBase:
+            return typing.cast(ConfigOptionBase,
+                               owner.add_bool_option(self._name, default=self._default, help=self._help,
+                                                     **self._kwargs))
 
 
 @functools.lru_cache(maxsize=20)
