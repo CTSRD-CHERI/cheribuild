@@ -227,7 +227,8 @@ class CheriBSDSpawnMixin(MixinBase):
                log_patterns=True, timeout_msg="timeout", **kwargs):
         assert isinstance(patterns, list), "expected list and not " + str(patterns)
         if log_patterns:
-            info("Expecting regex ", coloured(AnsiColour.blue, str(patterns)))
+            info("Expecting regex ", coloured(AnsiColour.cyan, str(patterns)),
+                 f" with timeout {timeout}" if timeout > 0 else "")
         return self._expect_and_handle_panic_impl(patterns, timeout_msg, ignore_timeout=ignore_timeout,
                                                   timeout=timeout, expect_fn=super().expect, **kwargs)
 
