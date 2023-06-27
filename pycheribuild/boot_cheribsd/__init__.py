@@ -871,7 +871,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         userspace_starttime = datetime.datetime.now()
         boot_expect_strings: PatternListType = [LOGIN, LOGIN_AS_ROOT_MINIMAL, SHELL_OPEN, BOOT_FAILURE,
                                                 BOOT_FAILURE2, BOOT_FAILURE3]
-        i = child.expect([*boot_expect_strings, "DHCPACK from ", *FATAL_ERROR_MESSAGES], timeout=60 * 60,
+        i = child.expect([*boot_expect_strings, "DHCPACK from ", *FATAL_ERROR_MESSAGES], timeout=90 * 60,
                          timeout_msg="timeout awaiting login prompt")
         if i == len(boot_expect_strings):  # DHCPACK from
             have_dhclient = True
