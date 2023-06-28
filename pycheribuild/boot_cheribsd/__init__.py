@@ -227,8 +227,7 @@ class CheriBSDSpawnMixin(MixinBase):
                log_patterns=True, timeout_msg="timeout", **kwargs):
         assert isinstance(patterns, list), "expected list and not " + str(patterns)
         if log_patterns:
-            info("Expecting regex ", coloured(AnsiColour.cyan, str(patterns)),
-                 f" with timeout {timeout}" if timeout > 0 else "")
+            info("Expecting regex ", coloured(AnsiColour.cyan, str(patterns)))
         return self._expect_and_handle_panic_impl(patterns, timeout_msg, ignore_timeout=ignore_timeout,
                                                   timeout=timeout, expect_fn=super().expect, **kwargs)
 
@@ -248,15 +247,15 @@ class CheriBSDSpawnMixin(MixinBase):
         time.sleep(0.05)  # give QEMU a bit of time after printing the prompt (otherwise we might lose some input)
         return result
 
-    def _expect_and_handle_panic_impl(self, options: PatternListType, timeout_msg, *, ignore_timeout=True, expect_fn,
-                                      **kwargs):
+    def _expect_and_handle_panic_impl(self, options: PatternListType, timeout_msg, *, ignore_timeout=True,
+                                      expect_fn, timeout, **kwargs):
         assert PANIC not in options
         assert STOPPED not in options
         assert PANIC_KDB not in options
         assert PANIC_PAGE_FAULT not in options
         panic_regexes = [PANIC, STOPPED, PANIC_KDB, PANIC_PAGE_FAULT]
         try:
-            i = expect_fn(options + panic_regexes, **kwargs)
+            i = expect_fn(options + panic_regexes, timeout=timeout, **kwargs)
             if i > len(options):
                 debug_kernel_panic(self)
                 if INTERACT_ON_KERNEL_PANIC:
@@ -265,6 +264,7 @@ class CheriBSDSpawnMixin(MixinBase):
                 failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
             return i
         except pexpect.TIMEOUT as e:
+            info("Timeout reached after ", timeout if timeout > 0 else self.timeout, " seconds")
             if ignore_timeout:
                 failure(timeout_msg, ": ", str(e), exit=False)
             else:
@@ -658,7 +658,7 @@ def setup_ssh_for_root_login(qemu: QemuCheriBSDInstance):
         qemu.expect(["service: not found", "Starting sshd.", "Cannot 'restart' sshd."], timeout=240)
     except pexpect.TIMEOUT:
         failure("Timed out setting up SSH keys", exit=True)
-    qemu.expect_prompt(timeout=60)
+    qemu.expect_prompt(timeout=120)
     time.sleep(2)  # sleep for two seconds to avoid a rejection
     success("===> SSH authorized_keys set up")
 
