@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import os
 import shutil
 
 from .crosscompileproject import (
@@ -146,6 +147,14 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         self.cross_warning_flags.append("-Wno-error=incompatible-pointer-types")
         self.configure_args.append("--enable-targets=all")
         if self.compiling_for_host():
+            # GDB can't target macOS/arm64 so use a macOS/amd64 triple
+            if self.target_info.is_macos() and self.crosscompile_target.is_aarch64():
+                x86_target = "x86_64-apple-darwin" + os.uname().release
+                self.configure_args.append("--target=" + x86_target)
+                self.native_target_prefix = x86_target + "-"
+            else:
+                self.native_target_prefix = None
+
             if self.target_info.is_freebsd():
                 self.LDFLAGS.append(f"-L{self.target_info.localbase}/lib")  # Expat/GMP are in $LOCALBASE
             self.configure_args.append("--with-expat")
@@ -217,6 +226,7 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         # Install the binutils prefixed with g (like homebrew does it on MacOS)
         # objdump is useful for cases where CHERI llvm-objdump doesn't print sensible source lines
         # Also install most of the other tools in case they work better than elftoolchain
+        # Also symlink macOS/amd64 triple prefixed gdb files to their unprefixed names on macOS/arm64
         if self.compiling_for_host():
             binutils = ("objdump", "objcopy", "addr2line", "readelf", "ar", "ranlib", "size", "strings")
             bindir = self.install_dir / "bin"
@@ -226,6 +236,14 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
             self.install_file(self.build_dir / "binutils/cxxfilt", bindir / "gc++filt")
             self.install_file(self.build_dir / "binutils/nm-new", bindir / "gnm")
             self.install_file(self.build_dir / "binutils/strip-new", bindir / "gstrip")
+
+            if self.native_target_prefix is not None:
+                gdbfiles = ("man/man5/gdbinit.5", "man/man1/gdbserver.1", "man/man1/gdb.1", "man/man1/gdb-add-index.1",
+                            "bin/gdb", "bin/gdb-add-index")
+                for file in gdbfiles:
+                    dst = self.install_dir / file
+                    src = dst.parent / (self.native_target_prefix + dst.name)
+                    self.create_symlink(src, dst)
 
 
 class BuildUpstreamGDB(BuildGDBBase):
