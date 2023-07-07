@@ -16,7 +16,7 @@ repos:
     rev: 'v0.0.274' # Ruff version.
     hooks:
       - id: ruff
-        stages: [ push, commit ]
+        stages: [ push, commit, manual ]
   - repo: local
     hooks:
       - id: cheribuild-commit-messages
@@ -26,7 +26,7 @@ repos:
         always_run: true
         pass_filenames: false
         verbose: true
-        stages: [push]
+        stages: [ push ]
       - id: cheribuild-pytest
         name: cheribuild pytest
         entry: sh -c 'python3 -m pytest -q . >&2'
@@ -34,7 +34,7 @@ repos:
         always_run: true
         pass_filenames: false
         verbose: true
-        stages: [ push ]
+        stages: [ push, manual ]
       - id: cheribuild-smoke-test
         name: cheribuild smoke test
         entry: tests/run_smoke_tests.sh
@@ -42,4 +42,4 @@ repos:
         always_run: true
         pass_filenames: false
         verbose: true
-        stages: [ push ]
+        stages: [ push, manual ]
