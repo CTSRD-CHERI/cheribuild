@@ -1178,7 +1178,10 @@ class CompilationTargets(BasicCompilationTargets):
     # Picolibc targets
     BAREMETAL_PICOLIBC_RISCV32 = CrossCompileTarget("riscv32", CPUArchitecture.RISCV32, PicolibcBaremetalTargetInfo)
     BAREMETAL_PICOLIBC_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, PicolibcBaremetalTargetInfo)
-    ALL_PICOLIBC_TARGETS = (BAREMETAL_PICOLIBC_RISCV32, BAREMETAL_PICOLIBC_RISCV64)
+    BAREMETAL_PICOLIBC_RISCV64_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64,
+                                                            PicolibcBaremetalTargetInfo, is_cheri_purecap=True,
+                                                            non_cheri_target=BAREMETAL_PICOLIBC_RISCV64)
+    ALL_PICOLIBC_TARGETS = (BAREMETAL_PICOLIBC_RISCV32, BAREMETAL_PICOLIBC_RISCV64, BAREMETAL_PICOLIBC_RISCV64_PURECAP)
 
     # FreeBSD targets
     FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, FreeBSDTargetInfo)
