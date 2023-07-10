@@ -33,9 +33,7 @@ from ...config.compilation_targets import CompilationTargets
 
 class BuildPicoLibc(CrossCompileMesonProject):
     target = "picolibc"
-    repository = GitRepository("https://github.com/picolibc/picolibc.git",
-                               temporary_url_override="https://github.com/arichardson/picolibc.git",
-                               url_override_reason="https://github.com/picolibc/picolibc/pull/376")
+    repository = GitRepository("https://github.com/picolibc/picolibc.git")
     supported_architectures = CompilationTargets.ALL_NATIVE + CompilationTargets.ALL_PICOLIBC_TARGETS
     # Installing the native headers and libraries to <output>/local breaks other native project builds.
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
