@@ -30,6 +30,7 @@
 
 from .cmake_project import CMakeProject
 from .project import BuildType, ComputedDefaultValue, GitRepository
+from .simple_project import BoolConfigOption, IntConfigOption
 from ..config.compilation_targets import CompilationTargets
 
 
@@ -44,11 +45,8 @@ class BuildCheriOS(CMakeProject):
     needs_sysroot = False
     supported_architectures = (CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP)
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.smp_cores = cls.add_config_option("smp-cores", default=1, kind=int)
-        cls.build_net = cls.add_bool_option("build-net", default=False)
+    smp_cores = IntConfigOption("smp-cores", default=1, help="Number of cores to use")
+    build_net = BoolConfigOption("build-net", default=False, help="Include networking support")
 
     def setup(self):
         super().setup()

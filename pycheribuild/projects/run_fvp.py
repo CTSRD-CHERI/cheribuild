@@ -38,7 +38,7 @@ from typing import Optional
 
 from .disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase, BuildFreeBSDImage
 from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
-from .simple_project import SimpleProject
+from .simple_project import BoolConfigOption, IntConfigOption, SimpleProject
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue
 from ..config.compilation_targets import CompilationTargets
 from ..config.target_info import CrossCompileTarget
@@ -461,6 +461,16 @@ class LaunchFVPBase(SimpleProject):
         # chose a different port for each user (hopefully it isn't in use yet)
         return 12345 + ((os.getuid() - 1000) % 10000)
 
+    ssh_port = IntConfigOption("ssh-port", default=default_ssh_port(), help="SSH port to use to connect to guest")
+    force_headless = BoolConfigOption("force-headless", default=False, help="Force headless use of the FVP")
+    # Allow using the architectural FVP:
+    use_architectureal_fvp = BoolConfigOption("use-architectural-fvp",
+                                              help="Use the architectural FVP that requires a license.")
+    fvp_trace_unbuffered = BoolConfigOption("trace-unbuffered", help="Don't buffer FVP trace output")
+    fvp_trace_mmu = BoolConfigOption("trace-mmu", default=False, help="Emit FVP MMU trace events")
+    smp = BoolConfigOption("smp", help="Simulate multiple CPU cores in the FVP", default=True)
+
+
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
@@ -472,23 +482,14 @@ class LaunchFVPBase(SimpleProject):
         cls.remote_disk_image_path = cls.add_config_option("remote-disk-image-path",
                                                            help="When set rsync will be used to update the image from "
                                                                 "the remote server prior to running it.")
-        cls.ssh_port = cls.add_config_option("ssh-port", default=cls.default_ssh_port(), kind=int)
         cls.extra_tcp_forwarding = cls.add_list_option(
             "extra-tcp-forwarding",
             help="Additional TCP bridge ports beyond ssh/22; list of [hostip:]port=[guestip:]port")
-        # Allow using the architectural FVP:
-        cls.use_architectureal_fvp = cls.add_bool_option("use-architectural-fvp",
-                                                         help="Use the architectural FVP that requires a license.")
         cls.license_server = cls.add_config_option("license-server", help="License server to use for the model")
         cls.arch_model_path = cls.add_path_option("simulator-path", help="Path to the FVP Model",
                                                   default=Path("/usr/local/FVP_Base_RevC-Rainier"))
-        cls.smp = cls.add_bool_option("smp", help="Simulate multiple CPU cores in the FVP", default=True)
-        cls.force_headless = cls.add_bool_option("force-headless", default=False,
-                                                 help="Force headless use of the FVP")
         cls.fvp_trace = cls.add_optional_path_option("trace",
                                                      help="Enable FVP tracing plugin to output to the given file")
-        cls.fvp_trace_unbuffered = cls.add_bool_option("trace-unbuffered", help="Don't buffer FVP trace output")
-        cls.fvp_trace_mmu = cls.add_bool_option("trace-mmu", default=False, help="Emit FVP MMU trace events")
         cls.fvp_trace_icount = cls.add_config_option("trace-start-icount",
                                                      help="Instruction count from which to start Tarmac trace")
 

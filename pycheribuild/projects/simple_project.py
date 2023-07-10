@@ -216,6 +216,12 @@ class ProjectSubclassDefinitionHook(ABCMeta):
 
 
 class PerProjectConfigOption:
+    def __init__(self, name: str, help: str, default: "typing.Any", **kwargs):
+        self._name = name
+        self._default = default
+        self._help = help
+        self._kwargs = kwargs
+
     def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionBase:
         raise NotImplementedError()
 
@@ -232,19 +238,46 @@ if typing.TYPE_CHECKING:
     def BoolConfigOption(name: str, help: str,  # noqa: N802
                          default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
         ...
+
+    # noinspection PyPep8Naming
+    def IntConfigOption(name: str, help: str,  # noqa: N802
+                        default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs) -> int:
+        ...
+
+    # noinspection PyPep8Naming
+    def OptionalIntConfigOption(name: str, help: str,  # noqa: N802
+                                default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]",
+                                **kwargs) -> "Optional[int]":
+        ...
 else:
     class BoolConfigOption(PerProjectConfigOption):
         def __init__(self, name: str, help: str, default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False,
                      **kwargs):
-            self._name = name
-            self._default = default
-            self._help = help
-            self._kwargs = kwargs
+            super().__init__(name, help, default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionBase:
             return typing.cast(ConfigOptionBase,
                                owner.add_bool_option(self._name, default=self._default, help=self._help,
                                                      **self._kwargs))
+
+    class IntConfigOption(PerProjectConfigOption):
+        def __init__(self, name: str, help: str, default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs):
+            super().__init__(name, help, default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionBase:
+            return typing.cast(ConfigOptionBase,
+                               owner.add_config_option(self._name, default=self._default, help=self._help, kind=int,
+                                                       **self._kwargs))
+
+    class OptionalIntConfigOption(PerProjectConfigOption):
+        def __init__(self, name: str, help: str,
+                     default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]" = None, **kwargs):
+            super().__init__(name, help, default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionBase:
+            return typing.cast(ConfigOptionBase,
+                               owner.add_config_option(self._name, default=self._default, help=self._help, kind=int,
+                                                       **self._kwargs))
 
 
 @functools.lru_cache(maxsize=20)
