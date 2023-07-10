@@ -26,7 +26,7 @@
 import os
 
 from .crosscompileproject import CrossCompileMesonProject, GitRepository
-from ..build_qemu import BuildUpstreamQEMU
+from ..build_qemu import BuildQEMU
 from ..project import DefaultInstallDir
 from ...config.compilation_targets import CompilationTargets
 
@@ -48,7 +48,7 @@ class BuildPicoLibc(CrossCompileMesonProject):
     def dependencies(cls, config) -> "tuple[str, ...]":
         if cls._xtarget and cls._xtarget.is_native():
             return tuple()
-        return ("upstream-compiler-rt-builtins",)
+        return ("compiler-rt-builtins",)
 
     @property
     def _meson_extra_binaries(self):
@@ -124,7 +124,7 @@ default_ram_size   = '0x00200000'
 
     def run_tests(self):
         if not self.compiling_for_host():
-            qemu = BuildUpstreamQEMU.qemu_binary_for_target(self.crosscompile_target, self.config)
+            qemu = BuildQEMU.qemu_binary_for_target(self.crosscompile_target, self.config)
             with self.set_env(PATH=str(qemu.parent) + ":" + os.getenv("PATH", ""), print_verbose_only=False):
                 self.run_cmd(self.configure_command, "test", "--print-errorlogs", cwd=self.build_dir)
         else:

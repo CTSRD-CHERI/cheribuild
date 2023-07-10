@@ -863,8 +863,8 @@ class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
-        from ..projects.cross.llvm import BuildUpstreamLLVM
-        return BuildUpstreamLLVM
+        from ..projects.cross.llvm import BuildCheriLLVM
+        return BuildCheriLLVM
 
     def semihosting_ldflags(self):
         stack_size = "4k"
