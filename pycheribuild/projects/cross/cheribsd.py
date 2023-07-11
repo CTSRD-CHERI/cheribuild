@@ -1107,7 +1107,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if os.getuid() == 0:
                 # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
                 self._remove_schg_flag(
-                    "lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3", "libexec/ld-cheri-elf.so.1",
+                    "lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3",
                     "libexec/ld-elf.so.1", "sbin/init", "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass",
                     "usr/bin/ypchfn", "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
                     "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab", "usr/lib/librt.so.1",
