@@ -526,7 +526,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         if self.config.test_ld_preload:
             cmd.append("--test-ld-preload=" + str(self.config.test_ld_preload))
             if xtarget.is_cheri_purecap() and not rootfs_xtarget.is_cheri_purecap():
-                cmd.append("--test-ld-preload-variable=LD_CHERI_PRELOAD")
+                cmd.append("--test-ld-preload-variable=LD_64C_PRELOAD")
             elif not xtarget.is_cheri_purecap() and rootfs_xtarget.is_cheri_purecap():
                 cmd.append("--test-ld-preload-variable=LD_64_PRELOAD")
             else:

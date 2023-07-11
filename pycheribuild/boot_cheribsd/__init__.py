@@ -441,6 +441,7 @@ def is_newer(path1: Path, path2: Path):
 
 def prepend_ld_library_path(qemu: CheriBSDInstance, path: str):
     qemu.run("export LD_LIBRARY_PATH=" + path + ":$LD_LIBRARY_PATH; echo \"$LD_LIBRARY_PATH\"", timeout=3)
+    qemu.run("export LD_64C_LIBRARY_PATH=" + path + ":$LD_64C_LIBRARY_PATH; echo \"$LD_64C_LIBRARY_PATH\"", timeout=3)
     qemu.run("export LD_CHERI_LIBRARY_PATH=" + path + ":$LD_CHERI_LIBRARY_PATH; echo \"$LD_CHERI_LIBRARY_PATH\"",
              timeout=3)
 
@@ -461,7 +462,7 @@ def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
     nocheri_install_prefix = "usr/local/" + qemu.xtarget.get_non_cheri_target().generic_arch_suffix
 
     noncheri_ld_lib_path_var = "LD_LIBRARY_PATH" if not qemu.xtarget.is_cheri_purecap() else "LD_64_LIBRARY_PATH"
-    cheri_ld_lib_path_var = "LD_LIBRARY_PATH" if qemu.xtarget.is_cheri_purecap() else "LD_CHERI_LIBRARY_PATH"
+    cheri_ld_lib_path_var = "LD_LIBRARY_PATH" if qemu.xtarget.is_cheri_purecap() else "LD_64C_LIBRARY_PATH"
     qemu.run("export {var}=/{lib}:/usr/{lib}:/usr/local/{lib}:/sysroot/{lib}:/sysroot/usr/{lib}:/sysroot/{hybrid}/lib:"
              "/sysroot/usr/local/{lib}:/sysroot/{noncheri}/lib:${var}".format(
                 lib=non_cheri_libdir, hybrid=hybrid_install_prefix, noncheri=nocheri_install_prefix,
@@ -469,6 +470,10 @@ def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
     qemu.run("export {var}=/{l}:/usr/{l}:/usr/local/{l}:/sysroot/{l}:/sysroot/usr/{l}:/sysroot/usr/local/{l}:"
              "/sysroot/{prefix}/lib:${var}".format(prefix=purecap_install_prefix, l=cheri_libdir,
                                                    var=cheri_ld_lib_path_var), timeout=3)
+    if cheri_ld_lib_path_var == "LD_64C_LIBRARY_PATH":
+        qemu.run("export {var}=/{l}:/usr/{l}:/usr/local/{l}:/sysroot/{l}:/sysroot/usr/{l}:/sysroot/usr/local/{l}:"
+                 "/sysroot/{prefix}/lib:${var}".format(prefix=purecap_install_prefix, l=cheri_libdir,
+                                                       var="LD_CHERI_LIBRARY_PATH"), timeout=3)
 
 
 def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True,
@@ -1024,6 +1029,9 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
     if ld_preload_target_paths:
         checked_run_cheribsd_command(qemu, "export '{}={}'".format(args.test_ld_preload_variable,
                                                                    ":".join(ld_preload_target_paths)))
+        if args.test_ld_preload_variable == "LD_64C_PRELOAD":
+            checked_run_cheribsd_command(qemu, "export '{}={}'".format("LD_CHERI_PRELOAD",
+                                                                       ":".join(ld_preload_target_paths)))
 
     if args.extra_library_paths:
         prepend_ld_library_path(qemu, ":".join(args.extra_library_paths))
@@ -1138,7 +1146,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
                         help="Add DIR as an additional LD_LIBRARY_PATH before running tests")
     parser.add_argument('--test-ld-preload-variable', type=str, default=None,
                         help="The environment variable to set to LD_PRELOAD a library. should be set to either "
-                             "LD_PRELOAD or LD_CHERI_PRELOAD")
+                             "LD_PRELOAD or LD_64C_PRELOAD")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60,
                         help="Timeout in seconds for running tests")
     parser.add_argument("--qemu-logfile", help="File to write all interactions with QEMU to", type=Path)

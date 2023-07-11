@@ -95,13 +95,16 @@ class BenchmarkMixin(_BenchmarkMixinBase):
         if self.config.benchmark_ld_preload:
             runbench_args.append("--extra-input-files=" + str(self.config.benchmark_ld_preload))
             if xtarget.is_cheri_purecap() and not xtarget.get_rootfs_target().is_cheri_purecap():
-                env_var = "LD_CHERI_PRELOAD"
+                env_var = "LD_64C_PRELOAD"
             elif not xtarget.is_cheri_purecap() and xtarget.get_rootfs_target().is_cheri_purecap():
                 env_var = "LD_64_PRELOAD"
             else:
                 env_var = "LD_PRELOAD"
             pre_cmd = "export {}={};".format(env_var,
                                              shlex.quote("/tmp/benchdir/" + self.config.benchmark_ld_preload.name))
+            if env_var == "LD_64C_PRELOAD":
+                pre_cmd += "export {}={};".format("LD_CHERI_PRELOAD",
+                                                  shlex.quote("/tmp/benchdir/" + self.config.benchmark_ld_preload.name))
             runbench_args.append("--pre-command=" + pre_cmd)
         if self.config.benchmark_fpga_extra_args:
             basic_args.extend(self.config.benchmark_fpga_extra_args)
