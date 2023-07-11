@@ -103,9 +103,9 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
     qemu.checked_run("kenv")
     # unchecked since mount_smbfs returns non-zero for --help:
     qemu.run("mount_smbfs --help", cheri_trap_fatal=True)
-    # same for ld-cheri-elf.so (but do check for CHERI traps):
+    # same for ld-elf64c.so.1 (but do check for CHERI traps):
     if qemu.xtarget.is_cheri_hybrid():
-        qemu.run("/libexec/ld-cheri-elf.so.1 -h", cheri_trap_fatal=True)
+        qemu.run("/libexec/ld-elf64c.so.1 -h", cheri_trap_fatal=True)
     qemu.run("/libexec/ld-elf.so.1 -h", cheri_trap_fatal=True)
 
     tests_successful = True
