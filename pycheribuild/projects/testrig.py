@@ -92,6 +92,7 @@ class BuildQuickCheckVengine(Project):
 
 class RunTestRIGBase(SimpleProject):
     do_not_add_to_targets = True
+    dependencies = ("quickcheckvengine", "testrig-traces-repository")
     verification_archstring: "typing.ClassVar[str]"
     existing_test_impl_port = OptionalIntConfigOption("test-implementation-port",
                                                       help="Use a running test implementation instead.")
@@ -133,6 +134,12 @@ class RunTestRIGBase(SimpleProject):
         reference_impl_tmpsock = find_free_port()
         reference_impl_tmpsock.socket.close()  # allow sail to use the socket
         reference_impl_port = reference_impl_tmpsock.port
+        trace_base_dir = TestRigTraces.get_instance(self).source_dir
+        if not trace_base_dir.is_dir():
+            self.dependency_error("Missing TestRIG-traces source directory",
+                                  cheribuild_target="testrig-traces-repo")
+        log_dir = trace_base_dir / self.target
+        self.makedirs(log_dir)
         if self.existing_test_impl_port is not None:
             test_impl_port = self.existing_test_impl_port
         else:
@@ -159,10 +166,7 @@ class RunTestRIGBase(SimpleProject):
                 vengine_instance = BuildQuickCheckVengine.get_instance(self)
                 vengine_args = ["-a", str(reference_impl_port), "-b", str(test_impl_port),
                                 "-r", self.verification_archstring]
-                log_dir = vengine_instance.source_dir / "traces" / self.target
-                self.makedirs(log_dir)
                 vengine_args.extend(self._get_vengine_action_args(log_dir))
-
                 vengine_instance.run_qcvengine(*vengine_args, *self.extra_vengine_args, cwd=log_dir)
                 reference_cmd.kill()
                 test_cmd.kill()
@@ -228,7 +232,6 @@ class RunTestRIGRegression(RunTestRIGBase, ABC):
     do_not_add_to_targets = True
     stop_on_error = BoolConfigOption("stop-on-error", help="Stop the run once the first error is encountered")
     rerun_last_failure = BoolConfigOption("rerun-last-failure", help="Re-run last failure instead of fuzzing")
-    dependencies = (*RunTestRIGBase.dependencies, "testrig-traces-repository")
 
     def _get_vengine_action_args(self, log_dir: Path) -> "list[str]":
         trace_dir = TestRigTraces.get_instance(self).source_dir / "QEMU"  # TODO: run all of them
@@ -246,7 +249,7 @@ class RunTestRIGRegression(RunTestRIGBase, ABC):
 
 class _TestRigQEMURV64Base:
     target = "testrig-sail-qemu-cheri-rv64"
-    dependencies = ("quickcheckvengine", "sail-cheri-riscv", "qemu")
+    dependencies = (*RunTestRIGBase.dependencies, "sail-cheri-riscv", "qemu")
     # NB: can't use GC here since that implicitly enables ihpm in QCVengine and QEMU does not support mcountinhibit
     # util we have updated to b1675eeb3e6e38b042a23a9647559c9c548c733d.
     verification_archstring = "rv64imafdc_s_xcheri_zicsr_zifencei"
