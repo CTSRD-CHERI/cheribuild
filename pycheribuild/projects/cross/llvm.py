@@ -41,6 +41,8 @@ from ...config.compilation_targets import (
     CheriBSDTargetInfo,
     CompilationTargets,
     FreeBSDTargetInfo,
+    Sel4MorelloTargetInfo,
+    Sel4TargetInfo,
 )
 from ...config.target_info import AbstractProject, CompilerType, CrossCompileTarget
 from ...processutils import CompilerInfo
@@ -547,6 +549,8 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
                                                  include_version=False),
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_X86_64, self.config,
                                                  include_version=False),
+            Sel4TargetInfo.triple_for_target(CompilationTargets.SEL4_RISCV64, self.config,
+                                             include_version=False),
             ]
         return [x + "-" for x in triples]
 
@@ -576,6 +580,8 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
         triples = [
             CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config,
                                                         include_version=False),
+            Sel4MorelloTargetInfo.triple_for_target(CompilationTargets.SEL4_MORELLO_NO_CHERI, self.config,
+                                                    include_version=False),
             ]
         return [x + "-" for x in triples]
 
