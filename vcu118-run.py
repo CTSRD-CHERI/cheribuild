@@ -295,7 +295,7 @@ def get_console(tty_info: ListPortInfo) -> SerialConnection:
 
 def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path, kernel_image: "Optional[Path]" = None,
                           kernel_debug_file: "Optional[Path]" = None, tty_info: ListPortInfo,
-                          num_cores: int) -> FpgaConnection:
+                          num_cores: int, extra_gdb_commands : str = "") -> FpgaConnection:
     # Open the serial connection first to check that it's available:
     serial_conn = get_console(tty_info)
     success("Connected to TTY")
@@ -334,6 +334,11 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
             args += ["-ex", "si 5"]  # execute bootrom on every other core
             args += ["-ex", "set $pc=$entry_point"]  # set every other core to the start of the bios
         args += ["-ex", "thread 1"]  # switch back to core 0
+    if extra_gdb_commands != "":
+        extra_args = extra_gdb_commands.split(";")
+        for arg in extra_args:
+            args += ["-ex", arg]
+    args += ["-ex", "echo ready to continue\n"]
     print_command(str(gdb_cmd), *args, config=get_global_config())
     if get_global_config().pretend:
         gdb = PretendSpawn(str(gdb_cmd), args, timeout=60)
@@ -370,6 +375,7 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
         for core in range(1, num_cores):
             gdb.expect_exact(["0x0000000044000000"])
         success("Done executing bootrom on all other cores")
+    gdb.expect_exact(["ready to continue"])
     gdb.sendline("continue")
     success("Starting CheriBSD after ", datetime.datetime.utcnow() - gdb_start_time)
     i = serial_conn.cheribsd.expect_exact(["bbl loader", "---<<BOOT>>---", pexpect.TIMEOUT], timeout=30)
@@ -411,6 +417,8 @@ def main():
     parser.add_argument("--num-cores", type=int, default=1, help="Number of harts on bitstream")
     parser.add_argument("--test-command", action='append',
                         help="Run a command non-interactively before possibly opening a console")
+    parser.add_argument("--extra-gdb-commands", default="",
+                        help="Semicolon-separated list of commands to run in gdb after loading kernel")
     parser.add_argument("--test-timeout", type=int, default=60 * 60, help="Timeout for the test command")
     parser.add_argument("--benchmark-config", help="Configure for benchmarking before running commands",
                         action="store_true")
@@ -444,7 +452,8 @@ def main():
     else:
         conn = load_and_start_kernel(gdb_cmd=args.gdb, openocd_cmd=args.openocd, bios_image=args.bios,
                                      kernel_image=args.kernel, kernel_debug_file=args.kernel_debug_file,
-                                     tty_info=tty_info, num_cores=args.num_cores)
+                                     tty_info=tty_info, num_cores=args.num_cores,
+                                     extra_gdb_commands = args.extra_gdb_commands)
         console = conn.serial
         if args.action == "boot":
             sys.exit(0)
