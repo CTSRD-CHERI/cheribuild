@@ -264,9 +264,20 @@ class _TestRigQEMURV64Base:
 
     def get_test_implementation_command(self, port: int) -> "list[str]":
         assert isinstance(self, RunTestRIGBase)
+        qemu_cpu_options = [
+            "rv64",
+            "g=true",
+            "c=true",
+            "Counters=false",
+            "Zifencei=true",
+            "s=true",
+            "u=true",
+            "Zicsr=true",
+            "Xcheri=true",
+            "Xcheri_v9=true",  # Needs https://github.com/CTSRD-CHERI/qemu/pull/226 to enable ISAv9 semantics
+        ]
         result = [str(BuildQEMU.get_build_dir(self) / "qemu-system-riscv64cheri"), "--rvfi-dii-port", str(port),
-                  "-cpu", "rv64,g=true,c=true,Counters=false,Zifencei=true,s=true,u=true,Zicsr=true,Xcheri=true",
-                  "-bios", "none"]
+                  "-cpu", ",".join(qemu_cpu_options), "-bios", "none"]
         if self.run_implementations_with_tracing:
             result.extend(["-d", "instr,int"])
         return result
