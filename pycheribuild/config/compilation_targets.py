@@ -779,9 +779,50 @@ class BaremetalClangTargetInfo(_ClangBasedTargetInfo, metaclass=ABCMeta):
         return True
 
     @classmethod
+    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", *, include_version: bool):
+        return target.cpu_architecture.value + "-none-elf"
+
+    @classmethod
     def uses_softfloat_by_default(cls, xtarget: "CrossCompileTarget"):
         # Note: RISC-V Baremetal/FreeRTOS currently only supports softfloat
         return xtarget.is_riscv(include_purecap=True)
+
+
+class Sel4TargetInfo(BaremetalClangTargetInfo):
+    shortname: str = "sel4"
+
+    @classmethod
+    def is_sel4(cls) -> bool:
+        return True
+
+    @property
+    def sysroot_dir(self):
+        return self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name / (
+                 self.target.get_rootfs_target().generic_arch_suffix) / self.target_triple
+
+    @classmethod
+    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
+        from ..projects.cross.llvm import BuildCheriLLVM
+        return BuildCheriLLVM
+
+
+class Sel4MorelloTargetInfo(BaremetalClangTargetInfo):
+    shortname: str = "sel4"
+    uses_morello_llvm: bool = True
+
+    @classmethod
+    def is_sel4(cls) -> bool:
+        return True
+
+    @property
+    def sysroot_dir(self):
+        return self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name / (
+                 self.target.get_rootfs_target().generic_arch_suffix) / self.target_triple
+
+    @classmethod
+    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
+        from ..projects.cross.llvm import BuildMorelloLLVM
+        return BuildMorelloLLVM
 
 
 class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
@@ -1192,6 +1233,11 @@ class CompilationTargets(BasicCompilationTargets):
     RTEMS_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, RTEMSTargetInfo)
     RTEMS_RISCV64_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, RTEMSTargetInfo,
                                                is_cheri_purecap=True, non_cheri_target=RTEMS_RISCV64)
+    # seL4 targets
+    SEL4_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, Sel4TargetInfo)
+    SEL4_MORELLO_NO_CHERI = CrossCompileTarget("morello-aarch64", CPUArchitecture.AARCH64,
+                                               Sel4MorelloTargetInfo)
+    ALL_SUPPORTED_SEL4_TARGETS = (SEL4_RISCV64, SEL4_MORELLO_NO_CHERI)
 
     ALL_CHERIBSD_RISCV_TARGETS = (CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI)
     ALL_CHERIBSD_NON_MORELLO_TARGETS = (*ALL_CHERIBSD_RISCV_TARGETS, CHERIBSD_AARCH64, CHERIBSD_X86_64)
@@ -1222,7 +1268,7 @@ class CompilationTargets(BasicCompilationTargets):
     ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + BasicCompilationTargets.ALL_NATIVE
     ALL_FREEBSD_AND_CHERIBSD_TARGETS = ALL_SUPPORTED_CHERIBSD_TARGETS + ALL_SUPPORTED_FREEBSD_TARGETS
 
-    ALL_SUPPORTED_BAREMETAL_TARGETS = ALL_NEWLIB_TARGETS + ALL_PICOLIBC_TARGETS
+    ALL_SUPPORTED_BAREMETAL_TARGETS = ALL_NEWLIB_TARGETS + ALL_PICOLIBC_TARGETS + ALL_SUPPORTED_SEL4_TARGETS
     ALL_SUPPORTED_RTEMS_TARGETS = (RTEMS_RISCV64, RTEMS_RISCV64_PURECAP)
     ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = \
         ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + ALL_SUPPORTED_BAREMETAL_TARGETS
