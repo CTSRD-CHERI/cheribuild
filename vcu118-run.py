@@ -295,7 +295,7 @@ def get_console(tty_info: ListPortInfo) -> SerialConnection:
 
 def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path, kernel_image: "Optional[Path]" = None,
                           kernel_debug_file: "Optional[Path]" = None, tty_info: ListPortInfo,
-                          num_cores: int, extra_gdb_commands : str = "") -> FpgaConnection:
+                          num_cores: int, extra_gdb_commands: "Optional[list[str]]" = None) -> FpgaConnection:
     # Open the serial connection first to check that it's available:
     serial_conn = get_console(tty_info)
     success("Connected to TTY")
@@ -334,9 +334,8 @@ def load_and_start_kernel(*, gdb_cmd: Path, openocd_cmd: Path, bios_image: Path,
             args += ["-ex", "si 5"]  # execute bootrom on every other core
             args += ["-ex", "set $pc=$entry_point"]  # set every other core to the start of the bios
         args += ["-ex", "thread 1"]  # switch back to core 0
-    if extra_gdb_commands != "":
-        extra_args = extra_gdb_commands.split(";")
-        for arg in extra_args:
+    if extra_gdb_commands is not None:
+        for arg in extra_gdb_commands:
             args += ["-ex", arg]
     args += ["-ex", "echo ready to continue\n"]
     print_command(str(gdb_cmd), *args, config=get_global_config())
@@ -417,8 +416,8 @@ def main():
     parser.add_argument("--num-cores", type=int, default=1, help="Number of harts on bitstream")
     parser.add_argument("--test-command", action='append',
                         help="Run a command non-interactively before possibly opening a console")
-    parser.add_argument("--extra-gdb-commands", default="",
-                        help="Semicolon-separated list of commands to run in gdb after loading kernel")
+    parser.add_argument("--extra-gdb-command", action='append',
+                        help="Run a command in gdb after loading kernel")
     parser.add_argument("--test-timeout", type=int, default=60 * 60, help="Timeout for the test command")
     parser.add_argument("--benchmark-config", help="Configure for benchmarking before running commands",
                         action="store_true")
@@ -453,7 +452,7 @@ def main():
         conn = load_and_start_kernel(gdb_cmd=args.gdb, openocd_cmd=args.openocd, bios_image=args.bios,
                                      kernel_image=args.kernel, kernel_debug_file=args.kernel_debug_file,
                                      tty_info=tty_info, num_cores=args.num_cores,
-                                     extra_gdb_commands = args.extra_gdb_commands)
+                                     extra_gdb_commands=args.extra_gdb_command)
         console = conn.serial
         if args.action == "boot":
             sys.exit(0)
