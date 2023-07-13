@@ -72,7 +72,10 @@ SUPPORTED_ARCHITECTURES = {x.generic_target_suffix: x for x in (CompilationTarge
                                                                 CompilationTargets.CHERIBSD_MORELLO_PURECAP,
                                                                 )}
 
-AUTOBOOT_PROMPT = re.compile(r"(H|, h)it \[Enter] to boot ")
+# boot loader without lua: "Hit [Enter] to boot "
+# menu.lua before Sep 2019: ", hit [Enter] to boot "
+# menu.lua: "[Space] to pause"
+AUTOBOOT_PROMPT = re.compile(r"((H|, h)it \[Enter] to boot |\[Space] to pause)")
 BOOT_LOADER_PROMPT = "OK "
 
 STARTING_INIT = "start_init: trying /sbin/init"
