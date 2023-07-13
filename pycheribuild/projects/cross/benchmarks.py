@@ -483,8 +483,7 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
             self.fatal("running x86 tests is not implemented yet")
             return
         # testing, not benchmarking -> run only once
-        test_command = "cd '/build/{dirname}' && ./run_jenkins-bluehive.sh -d0 -r1 -s".format(
-            dirname=self.bundle_dir.name)
+        test_command = f"cd '/build/{self.bundle_dir.name}' && ./run_jenkins-bluehive.sh -d0 -r1 -s"
         self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
                                                   "--test-timeout", str(120 * 60), mount_builddir=True)
 
