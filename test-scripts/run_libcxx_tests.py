@@ -314,8 +314,7 @@ def run_parallel_impl(args: argparse.Namespace, processes: "list[LitShardProcess
                     if len(not_booted_processes) == 0:
                         boot_cheribsd.success("All shards have booted succesfully. Releasing barrier (num_waiting = ",
                                               mp_barrier.n_waiting, ")")
-                        assert mp_barrier.n_waiting == len(processes), "{} != {}".format(mp_barrier.n_waiting,
-                                                                                         len(processes))
+                        assert mp_barrier.n_waiting == len(processes), f"{mp_barrier.n_waiting} != {len(processes)}"
                         mp_barrier.wait(timeout=10)
                         boot_cheribsd.success("Barrier has been released, tests should run now.")
                 # assert target_process.stage < shard_result[2], "STAGE WENT BACKWARDS?"

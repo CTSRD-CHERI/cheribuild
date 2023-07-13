@@ -330,16 +330,13 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         elif self.nfs_mounted_path:
             self.libcxx_lit_jobs = " -j1"  # We can only run one job here since we are using scp
             self.fatal("nfs_mounted_path not portend to new libc++ test infrastructure yet")
-            executor = "SSHExecutorWithNFSMount(\\\"{host}\\\", nfs_dir=\\\"{nfs_dir}\\\"," \
-                       "path_in_target=\\\"{nfs_in_target}\\\", config=self, username=\\\"{user}\\\"," \
-                       " port={port})".format(host=self.qemu_host, user=self.qemu_user, port=self.qemu_port,
-                                              nfs_dir=self.nfs_mounted_path, nfs_in_target=self.nfs_path_in_qemu)
+            executor = f"SSHExecutorWithNFSMount(\\\"{self.qemu_host}\\\", nfs_dir=\\\"{self.nfs_mounted_path}\\\"," \
+                       f"path_in_target=\\\"{self.nfs_path_in_qemu}\\\", config=self," \
+                       f"username=\\\"{self.qemu_user}\\\", port={self.qemu_port})"
         else:
             self.libcxx_lit_jobs = " -j1"  # We can only run one job here since we are using scp
             executor = self.commandline_to_str([self.source_dir / "utils/ssh.py",
-                                                "--host", "{user}@{host}:{port}".format(host=self.qemu_host,
-                                                                                        user=self.qemu_user,
-                                                                                        port=self.qemu_port)])
+                                                "--host", f"{self.qemu_user}@{self.qemu_host}:{self.qemu_port}"])
         if self.target_info.is_baremetal():
             target_info = "libcxx.test.target_info.BaremetalNewlibTI"
         else:
