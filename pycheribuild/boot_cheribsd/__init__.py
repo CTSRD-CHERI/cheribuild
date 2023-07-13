@@ -845,6 +845,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         loader_boot_prompt_messages = [*boot_messages, BOOT_LOADER_PROMPT]
         loader_boot_messages = [*loader_boot_prompt_messages, AUTOBOOT_PROMPT]
         i = child.expect(loader_boot_messages, timeout=20 * 60, timeout_msg="timeout before loader or kernel")
+        ran_manual_boot = False
         if i >= len(boot_messages):
             # Skip 10s wait from loader(8) if we see the autoboot message
             if i == loader_boot_messages.index(AUTOBOOT_PROMPT):  # Hit Enter
@@ -855,7 +856,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
                     i = child.expect(loader_boot_prompt_messages, timeout=60,
                                      timeout_msg="timeout before loader prompt")
                     if i != loader_boot_prompt_messages.index(BOOT_LOADER_PROMPT):
-                        failure("failed to enter boot loader prompt", exit=True)
+                        failure("failed to enter boot loader prompt after stopping autoboot", exit=True)
                         # Fall through to BOOT_LOADER_PROMPT
                 else:
                     child.sendline("\r")
@@ -863,7 +864,10 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
                 success("===> loader(8) waiting boot commands")
                 # Just boot the default kernel if no alternate kernel directory is given
                 child.sendline("boot {}".format(boot_alternate_kernel_dir or ""))
+                ran_manual_boot = True
             i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before kernel")
+        if boot_alternate_kernel_dir and not ran_manual_boot:
+            failure("failed to enter boot loader prompt", exit=True)
         if i == boot_messages.index(TRYING_TO_MOUNT_ROOT):
             success("===> mounting rootfs")
             if bootverbose:
