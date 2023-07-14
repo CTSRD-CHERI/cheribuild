@@ -136,8 +136,7 @@ class RunTestRIGBase(SimpleProject):
         reference_impl_port = reference_impl_tmpsock.port
         trace_base_dir = TestRigTraces.get_instance(self).source_dir
         if not trace_base_dir.is_dir():
-            self.dependency_error("Missing TestRIG-traces source directory",
-                                  cheribuild_target="testrig-traces-repo")
+            self.dependency_error("Missing TestRIG-traces source directory", cheribuild_target=TestRigTraces.target)
         log_dir = trace_base_dir / self.target
         self.makedirs(log_dir)
         if self.existing_test_impl_port is not None:
@@ -235,8 +234,7 @@ class RunTestRIGRegression(RunTestRIGBase, ABC):
     def _get_vengine_action_args(self, log_dir: Path) -> "list[str]":
         trace_dir = TestRigTraces.get_instance(self).source_dir / "QEMU"  # TODO: run all of them
         if not trace_dir.is_dir():
-            self.dependency_error("Missing TestRIG-traces source directory",
-                                  cheribuild_target="testrig-traces-repo")
+            self.dependency_error("Missing TestRIG-traces source directory", cheribuild_target=TestRigTraces.target)
         if self.rerun_last_failure:
             last_failure = log_dir / "last_failure.S"
             if not last_failure.is_file():
