@@ -171,7 +171,6 @@ class RunTestRIGBase(SimpleProject):
                 reference_cmd.kill()
                 test_cmd.kill()
 
-
     def process(self):
         self.run_testrig()
 

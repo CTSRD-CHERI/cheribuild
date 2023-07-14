@@ -470,7 +470,6 @@ class LaunchFVPBase(SimpleProject):
     fvp_trace_mmu = BoolConfigOption("trace-mmu", default=False, help="Emit FVP MMU trace events")
     smp = BoolConfigOption("smp", help="Simulate multiple CPU cores in the FVP", default=True)
 
-
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
