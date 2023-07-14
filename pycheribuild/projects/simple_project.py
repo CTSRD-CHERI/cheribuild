@@ -237,18 +237,18 @@ if typing.TYPE_CHECKING:
     # noinspection PyPep8Naming
     def BoolConfigOption(name: str, help: str,  # noqa: N802
                          default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
-        ...
+        return typing.cast(bool, default)
 
     # noinspection PyPep8Naming
     def IntConfigOption(name: str, help: str,  # noqa: N802
                         default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs) -> int:
-        ...
+        return typing.cast(int, default)
 
     # noinspection PyPep8Naming
     def OptionalIntConfigOption(name: str, help: str,  # noqa: N802
-                                default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]",
+                                default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]" = None,
                                 **kwargs) -> "Optional[int]":
-        ...
+        return typing.cast(Optional[int], default)
 else:
     class BoolConfigOption(PerProjectConfigOption):
         def __init__(self, name: str, help: str, default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False,
