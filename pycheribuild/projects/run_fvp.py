@@ -433,6 +433,11 @@ VOLUME /diskimg
         self.execute_fvp(["--cyclelimit", "1000"], x11=False, interactive=False)
 
 
+def _default_fvp_ssh_port():
+    # chose a different port for each user (hopefully it isn't in use yet)
+    return 12345 + ((os.getuid() - 1000) % 10000)
+
+
 class LaunchFVPBase(SimpleProject):
     do_not_add_to_targets = True
     _source_class: typing.ClassVar[BuildDiskImageBase] = None
@@ -456,12 +461,7 @@ class LaunchFVPBase(SimpleProject):
         if not self.use_architectureal_fvp:
             self.fvp_project = InstallMorelloFVP.get_instance(self, cross_target=CompilationTargets.NATIVE)
 
-    @staticmethod
-    def default_ssh_port():
-        # chose a different port for each user (hopefully it isn't in use yet)
-        return 12345 + ((os.getuid() - 1000) % 10000)
-
-    ssh_port = IntConfigOption("ssh-port", default=default_ssh_port(), help="SSH port to use to connect to guest")
+    ssh_port = IntConfigOption("ssh-port", default=_default_fvp_ssh_port(), help="SSH port to use to connect to guest")
     force_headless = BoolConfigOption("force-headless", default=False, help="Force headless use of the FVP")
     # Allow using the architectural FVP:
     use_architectureal_fvp = BoolConfigOption("use-architectural-fvp",
