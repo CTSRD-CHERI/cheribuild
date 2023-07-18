@@ -54,7 +54,7 @@ from .simple_project import BoolConfigOption, SimpleProject, TargetAliasWithDepe
 from ..config.compilation_targets import CompilationTargets
 from ..config.target_info import CrossCompileTarget
 from ..qemu_utils import QemuOptions, qemu_supports_9pfs, riscv_bios_arguments
-from ..utils import AnsiColour, OSInfo, classproperty, coloured, fatal_error, find_free_port
+from ..utils import AnsiColour, OSInfo, classproperty, coloured, fatal_error, find_free_port, is_jenkins_build
 
 
 def get_default_ssh_forwarding_port(addend: int):
@@ -728,6 +728,11 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         extra_args = []
         if self.kyua_test_files and "--kyua-tests-files" not in self.config.test_extra_args:
             extra_args.extend("--kyua-tests-files=" + x for x in self.kyua_test_files)
+        if not is_jenkins_build():
+            # Jenkins expects the test outputs to be saved to the CWD, otherwise we save them in the build root
+            tests_dir = self.config.build_root / "test-results" / self.target
+            self.makedirs(tests_dir)
+            extra_args.append(f"--test-output-dir={tests_dir}")
         self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", *extra_args,
                                                   disk_image_path=self.disk_image, kernel_path=self.current_kernel,
                                                   rootfs_alternate_kernel_dir=rootfs_kernel_bootdir)
