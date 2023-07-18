@@ -285,11 +285,7 @@ class _TestRigQEMURV64Base:
 
 class TestRigSailQemuRV64(_TestRigQEMURV64Base, RunTestRIGFuzz):
     target = "testrig-sail-qemu-cheri-rv64"
-
-    @classmethod
-    def setup_config_options(cls, **kwargs) -> None:
-        super().setup_config_options(**kwargs)
-        cls.test_cheri_only = cls.add_bool_option("test-cheri-only", help="Only run the CHERI-specific passes")
+    test_cheri_only = BoolConfigOption("test-cheri-only", help="Only run the CHERI-specific passes")
 
     @property
     def extra_vengine_args(self):

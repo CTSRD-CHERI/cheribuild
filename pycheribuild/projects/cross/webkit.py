@@ -31,6 +31,7 @@
 from enum import Enum
 
 from pycheribuild.projects.cross.crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
+from pycheribuild.projects.simple_project import BoolConfigOption
 
 
 class JsBackend(Enum):
@@ -47,6 +48,16 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
     dependencies = ("icu4c",)
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    tier2ptrliterals = BoolConfigOption(
+        "tier2ptrliterals", default=True, show_help=True,
+        help="When true pointers are represented as atomic literals and loaded as data and when false pointers "
+             "are represented as numeric values which can be splitted and are encoded into instructions. "
+             "This option only affects the non-purecap tier2 backend.")
+    jsheapoffsets = BoolConfigOption(
+        "jsheapoffsets", default=False, show_help=True,
+        help="Use offsets into the JS heap for object references instead of capabilities. "
+             "This option only affects the purecap backends.")
+
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -55,15 +66,6 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
             "backend", kind=JsBackend,
             default=JsBackend.CLOOP, enum_choice_strings=[t.value for t in JsBackend],
             show_help=True, help="The JavaScript backend to use for building WebKit")
-        cls.tier2ptrliterals = cls.add_bool_option(
-            "tier2ptrliterals", default=True, show_help=True,
-            help="When true pointers are represented as atomic literals and loaded as data and when false pointers "
-                 "are represented as numeric values which can be splitted and are encoded into instructions. "
-                 "This option only affects the non-purecap tier2 backend.")
-        cls.jsheapoffsets = cls.add_bool_option(
-            "jsheapoffsets", default=False, show_help=True,
-            help="Use offsets into the JS heap for object references instead of capabilities. "
-                 "This option only affects the purecap backends.")
 
     @property
     def build_dir_suffix(self):

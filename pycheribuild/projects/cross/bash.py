@@ -27,6 +27,7 @@ from pathlib import Path
 
 from .cheribsd import BuildFreeBSD
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
+from ..simple_project import BoolConfigOption
 
 
 class BuildBash(CrossCompileAutotoolsProject):
@@ -34,6 +35,8 @@ class BuildBash(CrossCompileAutotoolsProject):
                                default_branch="cheri")
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     path_in_rootfs = "/usr/local"
+    set_as_root_shell = BoolConfigOption("set-as-root-shell", show_help=True,
+                                         help="Set root's shell to bash (in the target rootfs)")
 
     def setup(self):
         super().setup()
@@ -50,12 +53,6 @@ class BuildBash(CrossCompileAutotoolsProject):
         # Bash is horrible K&R C in many places and deliberately uses
         # declarations with no protoype. Hopefully it gets everything right.
         self.cross_warning_flags.append("-Wno-error=cheri-prototypes")
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.set_as_root_shell = cls.add_bool_option("set-as-root-shell", show_help=True,
-                                                    help="Set root's shell to bash (in the target rootfs)")
 
     def install(self, **kwargs):
         if self.destdir:

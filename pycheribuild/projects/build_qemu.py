@@ -46,7 +46,7 @@ from .project import (
     MakeCommandKind,
     Project,
 )
-from .simple_project import SimpleProject, _cached_get_homebrew_prefix
+from .simple_project import BoolConfigOption, SimpleProject, _cached_get_homebrew_prefix
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
 from ..utils import OSInfo
 
@@ -63,9 +63,20 @@ class BuildQEMUBase(AutotoolsProject):
     default_targets: str = "some-invalid-target"
     default_build_type = BuildType.RELEASE
     lto_by_default = True
-    use_smbd: bool
     smbd_path: Optional[Path]
     qemu_targets: "str"
+
+    use_smbd = BoolConfigOption("use-smbd", show_help=False, default=True,
+                                       help="Don't require SMB support when building QEMU (warning: most --test "
+                                            "targets will fail without smbd support)")
+    gui = BoolConfigOption("gui", show_help=False, default=False,
+                                  help="Build a the graphical UI bits for QEMU (SDL,VNC)")
+    build_profiler = BoolConfigOption("build-profiler", show_help=False, default=False,
+                                             help="Enable QEMU internal profiling")
+    enable_plugins = BoolConfigOption("enable-plugins", show_help=False, default=False,
+                                             help="Enable QEMU TCG plugins")
+    prefer_full_lto_over_thin_lto = BoolConfigOption("full-lto", show_help=False, default=True,
+                                                            help="Prefer full LTO over LLVM ThinLTO when using LTO")
 
     @classmethod
     def is_toolchain_target(cls):
@@ -80,21 +91,9 @@ class BuildQEMUBase(AutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.use_smbd = cls.add_bool_option("use-smbd", show_help=False, default=True,
-                                           help="Don't require SMB support when building QEMU (warning: most --test "
-                                                "targets will fail without smbd support)")
-
-        cls.gui = cls.add_bool_option("gui", show_help=False, default=False,
-                                      help="Build a the graphical UI bits for QEMU (SDL,VNC)")
-        cls.build_profiler = cls.add_bool_option("build-profiler", show_help=False, default=False,
-                                                 help="Enable QEMU internal profiling")
-        cls.enable_plugins = cls.add_bool_option("enable-plugins", show_help=False, default=False,
-                                                 help="Enable QEMU TCG plugins")
-
         cls.qemu_targets = typing.cast(str, cls.add_config_option(
             "targets", show_help=True, help="Build QEMU for the following targets", default=cls.default_targets))
-        cls.prefer_full_lto_over_thin_lto = cls.add_bool_option("full-lto", show_help=False, default=True,
-                                                                help="Prefer full LTO over LLVM ThinLTO when using LTO")
+
 
     @classmethod
     def qemu_binary(cls, caller: "Optional[SimpleProject]" = None, xtarget: "Optional[CrossCompileTarget]" = None,
@@ -347,15 +346,10 @@ class BuildQEMU(BuildQEMUBase):
                       "mips64-softmmu,mips64cheri128-softmmu," \
                       "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu," \
                       "x86_64-softmmu"
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options()
-        # Turn on unaligned loads/stores by default
-        cls.unaligned = cls.add_bool_option("unaligned", show_help=False, help="Permit un-aligned loads/stores",
-                                            default=False)
-        cls.statistics = cls.add_bool_option("statistics", show_help=True,
-                                             help="Collect statistics on out-of-bounds capability creation.")
+    # Turn on unaligned loads/stores by default
+    unaligned = BoolConfigOption("unaligned", show_help=False, help="Permit un-aligned loads/stores", default=False)
+    statistics = BoolConfigOption("statistics", show_help=True,
+                                  help="Collect statistics on out-of-bounds capability creation.")
 
     @classmethod
     def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):

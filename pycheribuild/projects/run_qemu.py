@@ -50,7 +50,7 @@ from .disk_image import (
     BuildMinimalCheriBSDDiskImage,
 )
 from .project import CheriConfig, ComputedDefaultValue, CPUArchitecture, Project
-from .simple_project import SimpleProject, TargetAliasWithDependencies
+from .simple_project import BoolConfigOption, SimpleProject, TargetAliasWithDependencies
 from ..config.compilation_targets import CompilationTargets
 from ..config.target_info import CrossCompileTarget
 from ..qemu_utils import QemuOptions, qemu_supports_9pfs, riscv_bios_arguments
@@ -143,6 +143,10 @@ class LaunchQEMUBase(SimpleProject):
     disk_image_project: Optional[Project] = None
     _uses_disk_image = True
 
+    use_uboot = BoolConfigOption("use-u-boot", default=False,
+                                 help="Boot using U-Boot for UEFI if supported (only RISC-V)")
+    cvtrace = BoolConfigOption("cvtrace", help="Use binary trace output instead of textual")
+
     @classmethod
     def setup_config_options(cls, default_ssh_port: "Optional[int]" = None, **kwargs):
         super().setup_config_options(**kwargs)
@@ -150,8 +154,6 @@ class LaunchQEMUBase(SimpleProject):
             "use-qemu", kind=QEMUType, default=QEMUType.DEFAULT, enum_choice_strings=[t.value for t in QEMUType],
             help="The QEMU type to run with. When set to 'custom', the 'custom-qemu-path' option must also be set."))
         cls.custom_qemu_path = cls.add_optional_path_option("custom-qemu-path", help="Path to the custom QEMU binary")
-        cls.use_uboot = cls.add_bool_option("use-u-boot", default=False,
-                                            help="Boot using U-Boot for UEFI if supported (only RISC-V)")
         cls.extra_qemu_options = cls.add_list_option("extra-options", metavar="QEMU_OPTIONS",
                                                      help="Additional command line flags to pass to qemu-system")
         cls.logfile = cls.add_optional_path_option("logfile", metavar="LOGFILE",
@@ -168,7 +170,6 @@ class LaunchQEMUBase(SimpleProject):
             "smb-host-directory", metavar="DIR",
             help="If set QEMU will provide this directory over smb with the name //10.0.2.4/qemu for use with "
                  "mount_smbfs")
-        cls.cvtrace = cls.add_bool_option("cvtrace", help="Use binary trace output instead of textual")
         # TODO: -s will no longer work, not sure anyone uses it though
         if cls.forward_ssh_port:
             default_ssh_port_computed = ComputedDefaultValue(function=lambda p, _: default_ssh_port,

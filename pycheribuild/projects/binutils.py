@@ -30,6 +30,7 @@
 import typing
 
 from .project import AutotoolsProject, DefaultInstallDir, GitRepository
+from .simple_project import BoolConfigOption
 
 
 class BuildGnuBinutils(AutotoolsProject):
@@ -37,12 +38,8 @@ class BuildGnuBinutils(AutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/binutils.git", default_branch="cheribsd",
                                force_branch=True)
     native_install_dir = DefaultInstallDir.CHERI_SDK
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options()
-        cls.full_install = cls.add_bool_option("install-all-tools", help="Whether to install all binutils tools instead"
-                                                                         "of only as, ld and objdump")
+    full_install = BoolConfigOption("install-all-tools", help="Whether to install all binutils tools instead"
+                                                              "of only as, ld and objdump")
 
     def setup(self):
         super().setup()

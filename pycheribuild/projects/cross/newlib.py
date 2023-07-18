@@ -30,9 +30,9 @@
 #
 import tempfile
 from pathlib import Path
-from typing import ClassVar
 
 from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject, GitRepository, MakeCommandKind
+from ..simple_project import BoolConfigOption
 from ...processutils import commandline_to_str
 
 
@@ -48,13 +48,8 @@ class BuildNewlib(CrossCompileAutotoolsProject):
     # CC,CFLAGS, etc. are the compilers for the build host not the target -> don't set automatically
     _autotools_add_default_compiler_args = False
     supported_architectures = (*CompilationTargets.ALL_NEWLIB_TARGETS, *CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS)
-    locale_support: "ClassVar[bool]"
+    locale_support = BoolConfigOption("locale-support", show_help=False, help="Build with locale support")
     # build_in_source_dir = True  # we have to build in the source directory
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.locale_support = cls.add_bool_option("locale-support", show_help=False, help="Build with locale support")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

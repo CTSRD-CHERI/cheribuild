@@ -29,6 +29,7 @@ from .compiler_rt import BuildCompilerRtBuiltins
 from .crosscompileproject import CompilationTargets, CrossCompileMakefileProject, GitRepository
 from ..project import DefaultInstallDir
 from ..run_qemu import LaunchQEMUBase
+from ..simple_project import BoolConfigOption
 from ...config.target_info import CrossCompileTarget
 from ...qemu_utils import riscv_bios_arguments
 from ...utils import classproperty
@@ -53,7 +54,7 @@ class BuildLittleKernel(CrossCompileMakefileProject):
     # We have to override CC, etc. on the command line rather than in the environment:
     set_commands_on_cmdline = True
     include_os_in_target_suffix = False  # Avoid adding -baremetal
-
+    use_mmu = BoolConfigOption("use-mmu", help="Compile with MMU support", default=False)
     @classmethod
     def needs_compiler_rt(cls):
         return cls.get_crosscompile_target().cpu_architecture.is_32bit()
@@ -61,11 +62,6 @@ class BuildLittleKernel(CrossCompileMakefileProject):
     @classmethod
     def dependencies(cls, _) -> "tuple[str, ...]":
         return ("compiler-rt-builtins",) if cls.needs_compiler_rt() else tuple()
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.use_mmu = cls.add_bool_option("use-mmu", help="Compile with MMU support", default=False)
 
     @property
     def build_dir_suffix(self):

@@ -38,7 +38,7 @@ from .cross.cheribsd import BuildCHERIBSD, CheriBSDConfigTable, ConfigPlatform
 from .cross.crosscompileproject import CompilationTargets, CrossCompileProject
 from .disk_image import BuildCheriBSDDiskImage
 from .project import DefaultInstallDir, GitRepository, MakeCommandKind
-from .simple_project import SimpleProject
+from .simple_project import BoolConfigOption, SimpleProject
 from ..processutils import commandline_to_str
 from ..qemu_utils import QemuOptions
 from ..utils import ThreadJoiner
@@ -57,13 +57,8 @@ class BuildSyzkaller(CrossCompileProject):
     supported_architectures = (CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS,)
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.sysgen = cls.add_bool_option(
-            "run-sysgen", show_help=True,
-            help="Rerun syz-extract and syz-sysgen to rebuild generated Go "
-                 "syscall descriptions.")
+    sysgen = BoolConfigOption("run-sysgen", show_help=True,
+                              help="Rerun syz-extract and syz-sysgen to rebuild generated Go syscall descriptions.")
 
     def __init__(self, config, *args, **kwargs):
         self._install_prefix = config.cheri_sdk_dir

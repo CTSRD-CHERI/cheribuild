@@ -42,7 +42,7 @@ from ..project import (
     ReuseOtherProjectRepository,
     default_source_dir_in_subdir,
 )
-from ..simple_project import TargetAliasWithDependencies
+from ..simple_project import BoolConfigOption, TargetAliasWithDependencies
 from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
 from ...config.compilation_targets import CompilationTargets
@@ -856,13 +856,8 @@ class BuildKWin(KDECMakeProject):
                                temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
                                url_override_reason="Avoid libdrm/libgbm dependency+a few minor fixes")
     _uses_wayland_scanner = True
-    use_mesa: bool
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.use_mesa = cls.add_bool_option("use-mesa", default=True,
-                                           help="Add a dependency on Mesa to build the wayland DRM backend")
+    use_mesa = BoolConfigOption("use-mesa", default=True,
+                                help="Add a dependency on Mesa to build the wayland DRM backend")
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":

@@ -56,6 +56,10 @@ class InstallMorelloFVP(SimpleProject):
     # Seems like docker containers don't get the full amount configured in the settings so subtract a bit from 5GB/8GB
     min_ram_mb = 4900
     warn_ram_mb = 7900
+    # We can run the FVP on macOS by using docker. FreeBSD might be able to use Linux emulation.
+    use_docker_container = BoolConfigOption("use-docker-container", default=OSInfo.IS_MAC,
+                                            help="Run the FVP inside a docker container")
+    i_agree_to_the_contained_eula = BoolConfigOption("agree-to-the-contained-eula", help="Accept the EULA")
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
@@ -70,10 +74,6 @@ class InstallMorelloFVP(SimpleProject):
         super().setup_config_options(**kwargs)
         cls.installer_path = cls.add_optional_path_option("installer-path",
                                                           help="Path to the FVP installer.sh or installer.tgz")
-        # We can run the FVP on macOS by using docker. FreeBSD might be able to use Linux emulation.
-        cls.use_docker_container = cls.add_bool_option("use-docker-container", default=OSInfo.IS_MAC,
-                                                       help="Run the FVP inside a docker container")
-        cls.i_agree_to_the_contained_eula = cls.add_bool_option("agree-to-the-contained-eula")
 
     @property
     def install_dir(self):

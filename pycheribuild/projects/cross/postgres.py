@@ -30,6 +30,7 @@
 import re
 
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind
+from ..simple_project import BoolConfigOption
 from ...utils import OSInfo
 
 
@@ -40,6 +41,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     # build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
+    enable_assertions = BoolConfigOption("assertions", default=True, help="Build with assertions enabled")
 
     def setup(self):
         super().setup()
@@ -128,8 +130,3 @@ class BuildPostgres(CrossCompileAutotoolsProject):
                                                       # long running test -> speed up by using a kernel without
                                                       # invariants
                                                       use_benchmark_kernel_by_default=True)
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options()
-        cls.enable_assertions = cls.add_bool_option("assertions", default=True, help="Build with assertions enabled")
