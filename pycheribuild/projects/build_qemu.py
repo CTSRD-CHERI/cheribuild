@@ -67,16 +67,16 @@ class BuildQEMUBase(AutotoolsProject):
     qemu_targets: "str"
 
     use_smbd = BoolConfigOption("use-smbd", show_help=False, default=True,
-                                       help="Don't require SMB support when building QEMU (warning: most --test "
-                                            "targets will fail without smbd support)")
+                                help="Don't require SMB support when building QEMU (warning: most --test "
+                                     "targets will fail without smbd support)")
     gui = BoolConfigOption("gui", show_help=False, default=False,
-                                  help="Build a the graphical UI bits for QEMU (SDL,VNC)")
+                           help="Build a the graphical UI bits for QEMU (SDL,VNC)")
     build_profiler = BoolConfigOption("build-profiler", show_help=False, default=False,
-                                             help="Enable QEMU internal profiling")
+                                      help="Enable QEMU internal profiling")
     enable_plugins = BoolConfigOption("enable-plugins", show_help=False, default=False,
-                                             help="Enable QEMU TCG plugins")
+                                      help="Enable QEMU TCG plugins")
     prefer_full_lto_over_thin_lto = BoolConfigOption("full-lto", show_help=False, default=True,
-                                                            help="Prefer full LTO over LLVM ThinLTO when using LTO")
+                                                     help="Prefer full LTO over LLVM ThinLTO when using LTO")
 
     @classmethod
     def is_toolchain_target(cls):
@@ -93,7 +93,6 @@ class BuildQEMUBase(AutotoolsProject):
         super().setup_config_options(**kwargs)
         cls.qemu_targets = typing.cast(str, cls.add_config_option(
             "targets", show_help=True, help="Build QEMU for the following targets", default=cls.default_targets))
-
 
     @classmethod
     def qemu_binary(cls, caller: "Optional[SimpleProject]" = None, xtarget: "Optional[CrossCompileTarget]" = None,

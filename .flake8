@@ -3,6 +3,7 @@ max-line-length = 120
 extend-exclude =
   3rdparty/
   venv/
+  venv310/
   .pytype/
 show-source = true
 statistics = true

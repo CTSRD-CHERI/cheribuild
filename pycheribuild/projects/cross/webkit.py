@@ -58,7 +58,6 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
         help="Use offsets into the JS heap for object references instead of capabilities. "
              "This option only affects the purecap backends.")
 
-
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)

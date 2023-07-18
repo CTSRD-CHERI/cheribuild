@@ -55,6 +55,7 @@ class BuildLittleKernel(CrossCompileMakefileProject):
     set_commands_on_cmdline = True
     include_os_in_target_suffix = False  # Avoid adding -baremetal
     use_mmu = BoolConfigOption("use-mmu", help="Compile with MMU support", default=False)
+
     @classmethod
     def needs_compiler_rt(cls):
         return cls.get_crosscompile_target().cpu_architecture.is_32bit()
