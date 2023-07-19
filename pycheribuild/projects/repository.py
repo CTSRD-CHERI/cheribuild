@@ -298,7 +298,7 @@ class GitRepository(SourceRepository):
                         print_verbose_only=False)
             matching_remote = new_remote
         # Fetch from the remote to ensure that the target ref exists (otherwise git worktree add fails)
-        run_command(["git", "-C", base_project_source_dir, "fetch", matching_remote], print_verbose_only=False)
+        # run_command(["git", "-C", base_project_source_dir, "fetch", matching_remote], print_verbose_only=False)
         while True:
             try:
                 url = run_command(["git", "-C", base_project_source_dir, "remote", "get-url", matching_remote],
@@ -363,7 +363,7 @@ class GitRepository(SourceRepository):
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
         # If there is no upstream, it will just return immediately.
-        run_command(["git", "fetch"], cwd=src_dir)
+        # run_command(["git", "fetch"], cwd=src_dir)
 
         if revision is not None:
             # TODO: do some rev-parse stuff to check if we are on the right revision?

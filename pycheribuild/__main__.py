@@ -82,7 +82,7 @@ def _update_check(config: DefaultCheriConfig, d: Path) -> None:
         return
     # check if new commits are available
     project_dir = str(d)
-    run_command(["git", "fetch"], cwd=project_dir, timeout=5, config=config)
+    # run_command(["git", "fetch"], cwd=project_dir, timeout=5, config=config)
     branch_info = GitRepository.get_branch_info(d)
     if branch_info is not None and branch_info.upstream_branch == "master":
         if query_yes_no(config, f"The local {branch_info.local_branch} branch is tracking the obsolete remote 'master'"
