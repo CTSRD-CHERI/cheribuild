@@ -185,9 +185,6 @@ class ProjectUsingOpam(OpamMixin, Project):
     do_not_add_to_targets = True
 
 
-REMS_OPAM_REPO = "https://github.com/rems-project/opam-repository.git"
-
-
 class BuildSailFromOpam(ProjectUsingOpam):
     target = "sail"
     repository = GitRepository("https://github.com/rems-project/sail", default_branch="sail2")
