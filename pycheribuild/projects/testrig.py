@@ -181,6 +181,7 @@ class RunTestRIGFuzz(RunTestRIGBase, ABC):
     do_not_add_to_targets = True
     noninteractive = BoolConfigOption("non-interactive", help="Run without user interaction")
     rerun_last_failure = BoolConfigOption("rerun-last-failure", help="Re-run last failure instead of fuzzing")
+    reduce_last_failure = BoolConfigOption("reduce-last-failure", help="Try to shrink the last failure")
     replay_current_traces = BoolConfigOption("replay-current-traces",
                                              help="Replay traces captured in the default output directory")
     number_of_runs = IntConfigOption("number-of-runs", default=20, help="Number of QCVEngine runs")
@@ -206,8 +207,9 @@ class RunTestRIGFuzz(RunTestRIGBase, ABC):
             arg = "--trace-directory=" if self.replay_trace.is_dir() else "--trace-file="
             vengine_args.extend([arg + str(self.replay_trace), "--no-save", "--disable-shrink"])
         elif self.rerun_last_failure:
-            vengine_args.extend(["--trace-file=" + str(log_dir / "last_failure.S"),
-                                 "--no-save", "--disable-shrink", "--verbose=2"])
+            vengine_args.extend(["--trace-file=" + str(log_dir / "last_failure.S"), "--verbose=2"])
+            if not self.reduce_last_failure:
+                vengine_args.extend(["--no-save", "--disable-shrink"])
         else:
             if self.noninteractive:
                 vengine_args.extend(["--save-dir", str(log_dir), "--continue-on-fail"])
