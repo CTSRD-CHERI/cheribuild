@@ -367,7 +367,7 @@ def run_command(*args, capture_output=False, capture_error=False, input: "Option
                 timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
                 no_print=False, replace_env=False, give_tty_control=False, expected_exit_code=0,
                 allow_unexpected_returncode=False, config: Optional[ConfigBase] = None,
-                **kwargs) -> "CompletedProcess[bytes]":
+                env: "Optional[dict[str, str]]" = None, **kwargs) -> "CompletedProcess[bytes]":
     if config is None:
         config = get_global_config()  # TODO: remove
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
@@ -405,19 +405,17 @@ def run_command(*args, capture_output=False, capture_error=False, input: "Option
     elif config.quiet and "stdout" not in kwargs:
         kwargs["stdout"] = subprocess.DEVNULL
 
-    if "env" in kwargs:
-        env_arg: "dict[str, str]" = kwargs["env"]
+    if env is not None:
+        env_arg: "dict[str, str]" = {k: str(v) for k, v in env.items()}  # make sure everything is a string
         if not replace_env:
             new_env = os.environ.copy()
-            env = {k: str(v) for k, v in env_arg.items()}  # make sure everything is a string
-            new_env.update(env)
-            kwargs["env"] = new_env
-        else:
-            kwargs["env"] = dict((k, str(v)) for k, v in env_arg.items())
+            new_env.update(env_arg)
+            env_arg = new_env
+        kwargs["env"] = env_arg
     if give_tty_control:
         kwargs["preexec_fn"] = _new_tty_foreground_process_group
-    stdout: bytes = b""
-    stderr: bytes = b""
+    stdout: Union[str, bytes] = b""
+    stderr: Union[str, bytes] = b""
     # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
     with keep_terminal_sane(give_tty_control, command=cmdline):
         with popen_handle_noexec(cmdline, **kwargs) as process:
