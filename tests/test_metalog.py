@@ -101,14 +101,14 @@ def test_add_file_infer_mode():
         print("testlink", oct(testlink.lstat().st_mode))
         mtree.add_file(testfile, "foo/bar/file")
         mtree.add_file(testlink, "foo/bar/link")
-        expected = """#mtree 2.0
+        expected = f"""#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
 ./foo type=dir uname=root gname=wheel mode=0750
 ./foo/bar type=dir uname=root gname=wheel mode=0700
 ./foo/bar/file type=file uname=root gname=wheel mode=0666 contents={testfile}
 ./foo/bar/link type=link uname=root gname=wheel mode={symlink_perms} link=file
 # END
-""".format(testfile=testfile, symlink_perms=symlink_perms)
+"""
         assert expected == _get_as_str(mtree)
 
 
@@ -135,7 +135,7 @@ def test_add_file_infer_ssh_mode():
         mtree.add_file(pubkey, "root/.ssh/id_foo.pub")
         mtree.add_file(testlink, "root/.ssh/link")
 
-        expected = """#mtree 2.0
+        expected = f"""#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
 ./root type=dir uname=root gname=wheel mode=0755
 ./root/.ssh type=dir uname=root gname=wheel mode=0700
@@ -144,7 +144,7 @@ def test_add_file_infer_ssh_mode():
 ./root/.ssh/id_foo.pub type=file uname=root gname=wheel mode=0755 contents={pubkey}
 ./root/.ssh/link type=link uname=root gname=wheel mode=0600 link=authorized_keys
 # END
-""".format(auth_keys=auth_keys, privkey=privkey, pubkey=pubkey)
+"""
         assert expected == _get_as_str(mtree)
 
 
@@ -244,13 +244,13 @@ def test_symlink_symlink(temp_symlink):
     mtree.add_file(temp_symlink[0], "tmp/link", mode=0o755, parent_dir_mode=0o755)
     mtree.add_file(temp_symlink[1], "tmp/testfile", mode=0o755, parent_dir_mode=0o755)
     print(_get_as_str(mtree), file=sys.stderr)
-    expected = """#mtree 2.0
+    expected = f"""#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
 ./tmp type=dir uname=root gname=wheel mode=0755
-./tmp/link type=link uname=root gname=wheel mode=0755 link={target}
-./tmp/testfile type=file uname=root gname=wheel mode=0755 contents={testfile}
+./tmp/link type=link uname=root gname=wheel mode=0755 link={temp_symlink[2]}
+./tmp/testfile type=file uname=root gname=wheel mode=0755 contents={temp_symlink[1]!s}
 # END
-""".format(target=temp_symlink[2], testfile=str(temp_symlink[1]))
+"""
     assert expected == _get_as_str(mtree)
 
 
@@ -262,11 +262,11 @@ def test_symlink_infer_mode(temp_symlink):
     mtree.add_file(temp_symlink[1], "tmp/testfile", parent_dir_mode=0o755)
     print(_get_as_str(mtree), file=sys.stderr)
     symlink_perms = "0644" if HAVE_LCHMOD else "0777"
-    expected = """#mtree 2.0
+    expected = f"""#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
 ./tmp type=dir uname=root gname=wheel mode=0755
-./tmp/link type=link uname=root gname=wheel mode={symlink_perms} link={target}
-./tmp/testfile type=file uname=root gname=wheel mode=0700 contents={testfile}
+./tmp/link type=link uname=root gname=wheel mode={symlink_perms} link={temp_symlink[2]}
+./tmp/testfile type=file uname=root gname=wheel mode=0700 contents={temp_symlink[1]!s}
 # END
-""".format(target=temp_symlink[2], testfile=str(temp_symlink[1]), symlink_perms=symlink_perms)
+"""
     assert expected == _get_as_str(mtree)

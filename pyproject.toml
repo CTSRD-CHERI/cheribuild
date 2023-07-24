@@ -4,6 +4,7 @@ select = ["E", "F", "I", "N", "W", "U", "COM", "RUF", "PLC", "PLE", "PLW"]
 # XXX: Currently this is py36, but the minimum supported by ruff is py37.
 target-version = "py37"
 ignore = [
+    "UP037",  # Remove quotes from type annotation, not possible until we start using 3.7 as the minimum
     "UP036", # 'Version block is outdated for minimum Python version' to be removed when we set the minimum to 3.8
     "PLC1901", # using not instead of == "" does not seem particularly useful
     "PLW2901", # `for` loop variable `value` overwritten by assignment target

@@ -86,7 +86,7 @@ def handle_line(line: str, src_file: Path, continued_import: bool):
         # skip relative imports inside functions
         return "import (" in line and not line.strip().endswith(")")  # continued if there is an opening paren
     if len(line.strip()) == 0:
-        empty_lines += 1  # noqa: PLW0603
+        empty_lines += 1
         if empty_lines > 2:
             return False  # don't add more than 2 empty lines
     else:
