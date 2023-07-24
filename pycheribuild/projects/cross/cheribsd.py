@@ -2080,8 +2080,8 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
             bsdtar_path = str(self.bsdtar_cmd)
         tar_cmd = [bsdtar_path, "cf", "-", "--include=./lib/", "--include=./usr/include/",
                    "--include=./usr/lib/", "--include=./usr/libdata/",
-                   "--include=./usr/libcheri", "--include=./usr/lib32", "--include=./usr/lib64",
-                   "--include=./usr/lib64c", "--include=./usr/lib64cb", "--include=./usr/libsoft",
+                   "--include=./usr/lib32", "--include=./usr/lib64",
+                   "--include=./usr/lib64c", "--include=./usr/lib64cb",
                    # only pack those files that are mentioned in METALOG
                    "@METALOG.world"]
         rootfs_target = self.rootfs_source_class.get_instance(self)
