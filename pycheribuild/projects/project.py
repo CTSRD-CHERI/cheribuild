@@ -546,6 +546,10 @@ class Project(SimpleProject):
         else:
             return False
 
+    def can_use_thinlto(self, ccinfo: CompilerInfo) -> bool:
+        # ThinLTO requires Clang+LLD or Apple Clang+Apple ld.
+        return self.can_use_lto(ccinfo) and ccinfo.compiler != "gcc"
+
     def check_system_dependencies(self) -> None:
         # Check that the make command exists (this will also add it to the required system tools)
         if self.make_args.command is None:

@@ -267,7 +267,7 @@ class BuildLLVMBase(CMakeProject):
         # the build times.
         self._lto_compiler_flags.clear()
         self._lto_linker_flags.clear()
-        if self.can_use_lld(self.CC) and not self.prefer_full_lto_over_thin_lto:
+        if self.can_use_thinlto(ccinfo) and not self.prefer_full_lto_over_thin_lto:
             self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
         else:
             self.add_cmake_options(LLVM_ENABLE_LTO=True)
