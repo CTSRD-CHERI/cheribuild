@@ -1059,3 +1059,13 @@ def test_cmake_options():
     config = _parse_config_file_and_args(b'{ "llvm/cmake-options": ["-DLLVM_ENABLE_PROJECTS=llvm"] }')
     assert enable_projects_flag(_get_target_instance(
         "llvm-native", config, BuildCheriLLVM).configure_args) == "-DLLVM_ENABLE_PROJECTS=llvm"
+
+
+def test_llvm_lto_options():
+    config = _parse_arguments(["--llvm/use-lto"])
+    llvm = _get_target_instance("llvm-native", config, BuildCheriLLVM)
+    assert "-DLLVM_ENABLE_LTO=Thin" in llvm.configure_args
+    args_containing_flto = [x for x in llvm.configure_args if "_FLAGS_INIT=" in x and "-flto" in x]
+    # The LLVM build system includes logic to set the correct LTO flags. It also avoids building tests with LTO to
+    # reduce the build time. Explicitly adding the CFLAGS/LDFLAGS here breaks this optimization.
+    assert args_containing_flto == []

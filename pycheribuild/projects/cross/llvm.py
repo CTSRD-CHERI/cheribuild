@@ -261,6 +261,12 @@ class BuildLLVMBase(CMakeProject):
     def add_lto_build_options(self, ccinfo: CompilerInfo) -> bool:
         if not super().add_lto_build_options(ccinfo):
             return False  # can't use LTO
+        # Use the LLVM build system support for LTO instead of trying to modify CFLAGS/LDFLAGS. The build system
+        # includes logic to avoid building binaries such as unit tests with LTO to reduce build times and explicitly
+        # adding the compilation flags means that those binaries will actually be built with LTO, massively increasing
+        # the build times.
+        self._lto_compiler_flags.clear()
+        self._lto_linker_flags.clear()
         if self.can_use_lld(self.CC) and not self.prefer_full_lto_over_thin_lto:
             self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
         else:
