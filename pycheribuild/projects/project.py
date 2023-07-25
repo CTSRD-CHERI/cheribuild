@@ -543,8 +543,7 @@ class Project(SimpleProject):
         elif ccinfo.compiler == "clang" and (
                 not self.compiling_for_host() or (ccinfo.version >= (4, 0, 0) and self.can_use_lld(ccinfo.path))):
             return True
-        else:
-            return False
+        return self.compiling_for_host() and ccinfo.compiler == "gcc"
 
     def can_use_thinlto(self, ccinfo: CompilerInfo) -> bool:
         # ThinLTO requires Clang+LLD or Apple Clang+Apple ld.
