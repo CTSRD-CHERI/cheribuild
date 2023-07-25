@@ -337,10 +337,9 @@ def create_tarball(cheri_config) -> None:
             target = target_manager.get_target_raw(cheri_config.targets[0])
             Target.instantiating_targets_should_warn = False
             project = target.get_or_create_project(None, cheri_config, caller=None)
-            strip_binaries(cheri_config, project, cheri_config.workspace / "tarball")
-        run_command(
-            [tar_cmd, "--create", "--xz", *tar_flags, "-f", cheri_config.tarball_name, "-C", "tarball", "."],
-            cwd=cheri_config.workspace)
+            strip_binaries(cheri_config, project, cheri_config.output_root)
+        run_command([tar_cmd, "--create", "--xz", *tar_flags, "-f", cheri_config.tarball_name,
+                     "-C", cheri_config.output_root, "."], cwd=cheri_config.workspace)
         run_command("du", "-sh", cheri_config.workspace / cheri_config.tarball_name)
 
 
