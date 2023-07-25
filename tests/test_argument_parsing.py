@@ -1061,11 +1061,17 @@ def test_cmake_options():
         "llvm-native", config, BuildCheriLLVM).configure_args) == "-DLLVM_ENABLE_PROJECTS=llvm"
 
 
-def test_llvm_lto_options():
-    config = _parse_arguments(["--llvm/use-lto"])
+@pytest.mark.parametrize("args", [
+    pytest.param([], id="default-compiler"),
+    pytest.param(["--cc-path=/usr/bin/gcc"], id="gcc"),
+    pytest.param(["--cc-path=/this/compiler/does/not/exist"], id="invalid"),
+])
+def test_llvm_lto_options(args: "list[str]"):
+    config = _parse_arguments(["--llvm/use-lto", *args])
     llvm = _get_target_instance("llvm-native", config, BuildCheriLLVM)
-    # depending on the host compiler we could be using ThinLTO (if supported) or full LTO.
-    assert "-DLLVM_ENABLE_LTO=Thin" in llvm.configure_args or "-DLLVM_ENABLE_LTO=TRUE" in llvm.configure_args
+    if config.clang_path.exists():
+        # depending on the host compiler we could be using ThinLTO (if supported) or full LTO.
+        assert "-DLLVM_ENABLE_LTO=Thin" in llvm.configure_args or "-DLLVM_ENABLE_LTO=TRUE" in llvm.configure_args
     args_containing_flto = [x for x in llvm.configure_args if "_FLAGS_INIT=" in x and "-flto" in x]
     # The LLVM build system includes logic to set the correct LTO flags. It also avoids building tests with LTO to
     # reduce the build time. Explicitly adding the CFLAGS/LDFLAGS here breaks this optimization.

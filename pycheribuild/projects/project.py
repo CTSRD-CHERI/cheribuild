@@ -1029,18 +1029,17 @@ class Project(SimpleProject):
                 return False
             ld = lld if self.lto_set_ld else None
             self.set_lto_binutils(ar=llvm_ar, ranlib=llvm_ranlib, nm=llvm_nm, ld=ld)
-        if self.prefer_full_lto_over_thin_lto:
+        if self.prefer_full_lto_over_thin_lto or not self.can_use_thinlto(ccinfo):
             self._lto_compiler_flags.append("-flto")
             self._lto_linker_flags.append("-flto")
         else:
             self._lto_compiler_flags.append("-flto=thin")
             self._lto_linker_flags.append("-flto=thin")
-            if self.can_use_lld(ccinfo.path):
-                thinlto_cache_flag = "--thinlto-cache-dir="
-            else:
+            if ccinfo.compiler == "apple-clang":
                 # Apple ld uses a different flag for the thinlto cache dir
-                assert ccinfo.compiler == "apple-clang"
                 thinlto_cache_flag = "-cache_path_lto,"
+            else:
+                thinlto_cache_flag = "--thinlto-cache-dir="
             self._lto_linker_flags.append("-Wl," + thinlto_cache_flag + str(self.build_dir / "thinlto-cache"))
         if self.compiling_for_cheri_hybrid([CPUArchitecture.AARCH64]):
             # Hybrid flags are not inferred from the input files, so we have to explicitly pass -mattr= to ld.lld.
