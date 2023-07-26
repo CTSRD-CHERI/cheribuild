@@ -174,8 +174,12 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
                 boot_cheribsd.info("SMB mount has failed, performing normal scp")
                 qemu.scp_from_guest("/tmp/results.db", Path(args.test_output_dir, results_db.name))
             else:
-                qemu.checked_run(f"cp -v /tmp/results.db {results_db}")
-                qemu.checked_run("fsync " + str(results_db))
+                try:
+                    qemu.checked_run(f"cp -v /tmp/results.db {results_db}")
+                except boot_cheribsd.CheriBSDCommandFailed as e:
+                    boot_cheribsd.failure(f"Failed to copy results out of QEMU {e}\nTrying again...", exit=False)
+                    qemu.checked_run(f"cp -v /tmp/results.db {results_db}")
+            qemu.checked_run("fsync " + str(results_db))
             boot_cheribsd.success("Running tests for ", tests_file, " took: ", datetime.datetime.now() - test_start)
 
             # run: kyua report-junit --results-file=test-results.db | vis -os > ${CPU}-${TEST_NAME}-test-results.xml

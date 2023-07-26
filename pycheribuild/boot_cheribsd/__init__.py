@@ -868,7 +868,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
                 # Just boot the default kernel if no alternate kernel directory is given
                 child.sendline("boot {}".format(boot_alternate_kernel_dir or ""))
                 ran_manual_boot = True
-            i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before kernel")
+            i = child.expect(boot_messages, timeout=10 * 60, timeout_msg="timeout before kernel")
         if boot_alternate_kernel_dir and not ran_manual_boot:
             failure("failed to enter boot loader prompt", exit=True)
         if i == boot_messages.index(TRYING_TO_MOUNT_ROOT):
