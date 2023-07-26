@@ -108,7 +108,8 @@ class RunTestRIGBase(SimpleProject):
     dependencies = ("quickcheckvengine", "testrig-traces-repository")
     verification_archstring: "typing.ClassVar[str]"
     existing_test_impl_port = OptionalIntConfigOption(
-        "test-implementation-port", help="Use a running test implementation instead.",
+        "test-implementation-port",
+        help="Use a running test implementation instead.",
     )
 
     @property
@@ -139,7 +140,9 @@ class RunTestRIGBase(SimpleProject):
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
         cls.vengine_options = cls.add_list_option(
-            "extra-vengine-options", metavar="OPTIONS", help="Additional command line options to pass to QCVEngine",
+            "extra-vengine-options",
+            metavar="OPTIONS",
+            help="Additional command line options to pass to QCVEngine",
         )
 
     def get_test_impl(self, port: int):
@@ -147,7 +150,10 @@ class RunTestRIGBase(SimpleProject):
             return FakePopen()
         else:
             return popen(
-                self.get_test_implementation_command(port), config=self.config, stdin=subprocess.DEVNULL, cwd="/",
+                self.get_test_implementation_command(port),
+                config=self.config,
+                stdin=subprocess.DEVNULL,
+                cwd="/",
             )
 
     def run_testrig(self) -> None:
@@ -165,26 +171,40 @@ class RunTestRIGBase(SimpleProject):
             tmp = find_free_port()
             tmp.socket.close()  # allow test implementation to use the socket
             test_impl_port = tmp.port
-        with popen(self.get_reference_implementation_command(reference_impl_port), config=self.config,
-                   stdin=subprocess.DEVNULL, cwd="/") as reference_cmd:
+        with popen(
+            self.get_reference_implementation_command(reference_impl_port),
+            config=self.config,
+            stdin=subprocess.DEVNULL,
+            cwd="/",
+        ) as reference_cmd:
             with self.get_test_impl(test_impl_port) as test_cmd:
                 if not self.config.pretend:
                     time.sleep(1)  # wait 1 second for the implementations to start up.
                 if reference_cmd.poll() is not None:
                     test_cmd.kill()  # kill the other implementation so that the with statement can complete.
-                    self.fatal("Reference implementation failed to start correctly. Command was:",
-                               commandline_to_str(self.get_reference_implementation_command(reference_impl_port)))
+                    self.fatal(
+                        "Reference implementation failed to start correctly. Command was:",
+                        commandline_to_str(self.get_reference_implementation_command(reference_impl_port)),
+                    )
                     return
                 elif self.existing_test_impl_port is not None:
                     self.info("Attaching to implementation running on port", self.existing_test_impl_port)
                 elif test_cmd.poll() is not None:
                     reference_cmd.kill()  # kill the other implementation so that the with statement can complete.
-                    self.fatal("Test implementation failed to start correctly. Command was:",
-                               commandline_to_str(self.get_test_implementation_command(test_impl_port)))
+                    self.fatal(
+                        "Test implementation failed to start correctly. Command was:",
+                        commandline_to_str(self.get_test_implementation_command(test_impl_port)),
+                    )
                     return
                 vengine_instance = BuildQuickCheckVengine.get_instance(self)
-                vengine_args = ["-a", str(reference_impl_port), "-b", str(test_impl_port),
-                                "-r", self.verification_archstring]
+                vengine_args = [
+                    "-a",
+                    str(reference_impl_port),
+                    "-b",
+                    str(test_impl_port),
+                    "-r",
+                    self.verification_archstring,
+                ]
                 vengine_args.extend(self._get_vengine_action_args(log_dir))
                 vengine_instance.run_qcvengine(*vengine_args, *self.extra_vengine_args, cwd=log_dir)
                 reference_cmd.kill()
@@ -204,7 +224,8 @@ class RunTestRIGFuzz(RunTestRIGBase, ABC):
     rerun_last_failure = BoolConfigOption("rerun-last-failure", help="Re-run last failure instead of fuzzing")
     reduce_last_failure = BoolConfigOption("reduce-last-failure", help="Try to shrink the last failure")
     replay_current_traces = BoolConfigOption(
-        "replay-current-traces", help="Replay traces captured in the default output directory",
+        "replay-current-traces",
+        help="Replay traces captured in the default output directory",
     )
     number_of_runs = IntConfigOption("number-of-runs", default=20, help="Number of QCVEngine runs")
     _replay_trace_path: Optional[Path]
