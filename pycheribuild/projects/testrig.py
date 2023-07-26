@@ -82,24 +82,42 @@ class BuildQuickCheckVengine(Project):
         self.run_cmd(self.get_qcv_path(), *args, cwd=cwd or self.build_dir, **kwargs)
 
     def get_qcv_path(self) -> Path:
-        result = self.run_cmd(["cabal", "list-bin", "QCVEngine"],
-                              capture_output=True, cwd=self.build_dir).stdout.decode("utf-8").strip()
+        result = (
+            self.run_cmd(["cabal", "list-bin", "QCVEngine"], capture_output=True, cwd=self.build_dir)
+            .stdout.decode("utf-8")
+            .strip()
+        )
         return Path(result or "/invalid/path/to/QCVEngine")
 
     def run_tests(self):
         self.run_qcvengine("--help", expected_exit_code=1)
 
 
+class TestRigTraces(Project):
+    target = "testrig-traces-repository"
+    default_directory_basename = "TestRIG-traces"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/TestRIG-traces.git")
+    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+
+    def compile(self, **kwargs):
+        pass  # This class only exists to provide the source repository
+
+
 class RunTestRIGBase(SimpleProject):
     do_not_add_to_targets = True
     dependencies = ("quickcheckvengine", "testrig-traces-repository")
     verification_archstring: "typing.ClassVar[str]"
-    existing_test_impl_port = OptionalIntConfigOption("test-implementation-port",
-                                                      help="Use a running test implementation instead.")
+    existing_test_impl_port = OptionalIntConfigOption(
+        "test-implementation-port", help="Use a running test implementation instead.",
+    )
 
     @property
     def extra_vengine_args(self) -> "list[str]":
         return self.vengine_options
+
+    @property
+    def log_dir_name(self) -> str:
+        return self.target
 
     @abstractmethod
     def get_reference_implementation_command(self, port: int) -> "list[str]":
@@ -120,15 +138,17 @@ class RunTestRIGBase(SimpleProject):
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
-        cls.vengine_options = cls.add_list_option("extra-vengine-options", metavar="OPTIONS",
-                                                  help="Additional command line options to pass to QCVEngine")
+        cls.vengine_options = cls.add_list_option(
+            "extra-vengine-options", metavar="OPTIONS", help="Additional command line options to pass to QCVEngine",
+        )
 
     def get_test_impl(self, port: int):
         if self.existing_test_impl_port is not None:
             return FakePopen()
         else:
-            return popen(self.get_test_implementation_command(port), config=self.config, stdin=subprocess.DEVNULL,
-                         cwd="/")
+            return popen(
+                self.get_test_implementation_command(port), config=self.config, stdin=subprocess.DEVNULL, cwd="/",
+            )
 
     def run_testrig(self) -> None:
         reference_impl_tmpsock = find_free_port()
@@ -137,7 +157,7 @@ class RunTestRIGBase(SimpleProject):
         trace_base_dir = TestRigTraces.get_instance(self).source_dir
         if not trace_base_dir.is_dir():
             self.dependency_error("Missing TestRIG-traces source directory", cheribuild_target=TestRigTraces.target)
-        log_dir = trace_base_dir / self.target
+        log_dir = trace_base_dir / self.log_dir_name
         self.makedirs(log_dir)
         if self.existing_test_impl_port is not None:
             test_impl_port = self.existing_test_impl_port
@@ -180,34 +200,48 @@ class RunTestRIGBase(SimpleProject):
 class RunTestRIGFuzz(RunTestRIGBase, ABC):
     do_not_add_to_targets = True
     noninteractive = BoolConfigOption("non-interactive", help="Run without user interaction")
+    stop_on_error = BoolConfigOption("stop-on-error", help="Stop the run once the first error is encountered")
     rerun_last_failure = BoolConfigOption("rerun-last-failure", help="Re-run last failure instead of fuzzing")
     reduce_last_failure = BoolConfigOption("reduce-last-failure", help="Try to shrink the last failure")
-    replay_current_traces = BoolConfigOption("replay-current-traces",
-                                             help="Replay traces captured in the default output directory")
+    replay_current_traces = BoolConfigOption(
+        "replay-current-traces", help="Replay traces captured in the default output directory",
+    )
     number_of_runs = IntConfigOption("number-of-runs", default=20, help="Number of QCVEngine runs")
+    _replay_trace_path: Optional[Path]
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
-        cls.replay_trace = cls.add_optional_path_option("replay-trace", help="Run QCV trace from file/directory")
+        if getattr(cls, "_replay_trace_path", None) is None:
+            cls._replay_trace_path = cls.add_optional_path_option(
+                "replay-trace", help="Run QCV trace from file/directory")
 
     @cached_property
-    def run_implementations_with_tracing(self):
+    def run_implementations_with_tracing(self) -> bool:
         if self.rerun_last_failure:
             return True
-        if self.replay_trace and self.replay_trace.is_file():
+        if self._replay_trace_path and self._replay_trace_path.is_file():
             return True  # Also print trace output for single-file traces
         return super().run_implementations_with_tracing
 
     def _get_vengine_action_args(self, log_dir: Path) -> "list[str]":
         vengine_args = []
-        if self.replay_current_traces:
-            vengine_args.extend(["--trace-directory=" + str(log_dir), "--no-save", "--disable-shrink"])
-        elif self.replay_trace:
-            arg = "--trace-directory=" if self.replay_trace.is_dir() else "--trace-file="
-            vengine_args.extend([arg + str(self.replay_trace), "--no-save", "--disable-shrink"])
-        elif self.rerun_last_failure:
-            vengine_args.extend(["--trace-file=" + str(log_dir / "last_failure.S"), "--verbose=2"])
+        selected_replay_trace_path = None
+        if self.rerun_last_failure:
+            selected_replay_trace_path = log_dir / "last_failure.S"
+        elif self.replay_current_traces:
+            selected_replay_trace_path = log_dir
+        elif self._replay_trace_path is not None:
+            selected_replay_trace_path = self._replay_trace_path
+
+        if selected_replay_trace_path is not None:
+            if selected_replay_trace_path.is_file():
+                # If we are rerunning a single file, run with verbose output
+                vengine_args.extend([f"--trace-file={selected_replay_trace_path}", "--verbose=2"])
+            else:
+                vengine_args.extend([f"--trace-directory={selected_replay_trace_path}", "--verbose=1"])
+            if not self.stop_on_error:
+                vengine_args.append("--continue-on-fail")
             if not self.reduce_last_failure:
                 vengine_args.extend(["--no-save", "--disable-shrink"])
         else:
@@ -218,32 +252,18 @@ class RunTestRIGFuzz(RunTestRIGBase, ABC):
         return vengine_args
 
 
-class TestRigTraces(Project):
-    target = "testrig-traces-repository"
-    default_directory_basename = "TestRIG-traces"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/TestRIG-traces.git")
-    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
-
-    def compile(self, **kwargs):
-        pass  # This class only exists to provide the source repository
-
-
-class RunTestRIGRegression(RunTestRIGBase, ABC):
+class RunTestRIGRegression(RunTestRIGFuzz):
     do_not_add_to_targets = True
-    stop_on_error = BoolConfigOption("stop-on-error", help="Stop the run once the first error is encountered")
-    rerun_last_failure = BoolConfigOption("rerun-last-failure", help="Re-run last failure instead of fuzzing")
+    noninteractive = True
+    replay_current_traces = False
+    number_of_runs = 1
 
-    def _get_vengine_action_args(self, log_dir: Path) -> "list[str]":
+    @property
+    def _replay_trace_path(self) -> Path:
         trace_dir = TestRigTraces.get_instance(self).source_dir / "QEMU"  # TODO: run all of them
         if not trace_dir.is_dir():
             self.dependency_error("Missing TestRIG-traces source directory", cheribuild_target=TestRigTraces.target)
-        if self.rerun_last_failure:
-            last_failure = log_dir / "last_failure.S"
-            if not last_failure.is_file():
-                self.fatal("No last failure trace found, should be saved as", last_failure)
-            return [f"--trace-file={last_failure}", "--no-save", "--disable-shrink", "--verbose=2"]
-        return [f"--trace-directory={trace_dir}", "--no-save", "--disable-shrink",
-                *([] if self.stop_on_error else ["--continue-on-fail"])]
+        return trace_dir
 
 
 class _TestRigQEMURV64Base:
@@ -256,9 +276,14 @@ class _TestRigQEMURV64Base:
 
     def get_reference_implementation_command(self, port: int) -> "list[str]":
         assert isinstance(self, RunTestRIGBase)
-        result = [str(BuildSailCheriRISCV.get_build_dir(self) / "c_emulator/cheri_riscv_rvfi_RV64"),
-                  "--disable-writable-misa", "--mtval-has-illegal-inst-bits",
-                  "--rvfi-dii", str(port), "--enable-misaligned"]  # QEMU always enabled misaligned accesses
+        result = [
+            str(BuildSailCheriRISCV.get_build_dir(self) / "c_emulator/cheri_riscv_rvfi_RV64"),
+            "--disable-writable-misa",
+            "--mtval-has-illegal-inst-bits",
+            "--rvfi-dii",
+            str(port),
+            "--enable-misaligned",
+        ]  # QEMU always enabled misaligned accesses
         if self.run_implementations_with_tracing:
             result.extend(["--trace", "--no-trace=rvfi"])
         else:
@@ -279,8 +304,15 @@ class _TestRigQEMURV64Base:
             "Xcheri=true",
             "Xcheri_v9=true",  # Needs https://github.com/CTSRD-CHERI/qemu/pull/226 to enable ISAv9 semantics
         ]
-        result = [str(BuildQEMU.get_build_dir(self) / "qemu-system-riscv64cheri"), "--rvfi-dii-port", str(port),
-                  "-cpu", ",".join(qemu_cpu_options), "-bios", "none"]
+        result = [
+            str(BuildQEMU.get_build_dir(self) / "qemu-system-riscv64cheri"),
+            "--rvfi-dii-port",
+            str(port),
+            "-cpu",
+            ",".join(qemu_cpu_options),
+            "-bios",
+            "none",
+        ]
         if self.run_implementations_with_tracing:
             result.extend(["-d", "instr,int"])
         return result
@@ -302,3 +334,7 @@ class TestRigSailQemuRV64(_TestRigQEMURV64Base, RunTestRIGFuzz):
 # Run traces that were gathered for previous divergences.
 class TestRigRegressionTestSailQemuRV64(_TestRigQEMURV64Base, RunTestRIGRegression):
     target = "testrig-regression-sail-qemu-cheri-rv64"
+
+    @property
+    def log_dir_name(self) -> str:
+        return TestRigSailQemuRV64.target
