@@ -129,9 +129,6 @@ class BuildQEMUBase(AutotoolsProject):
 
     def setup(self):
         super().setup()
-        if self.build_type == BuildType.DEBUG:
-            self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")
-
         # Disable some more unneeded things (we don't usually need the GUI frontends)
         if not self.gui:
             self.configure_args.extend(["--disable-sdl", "--disable-gtk", "--disable-opengl"])
@@ -146,7 +143,7 @@ class BuildQEMUBase(AutotoolsProject):
 
         # QEMU now builds with python3
         self.configure_args.append("--python=" + sys.executable)
-        if self.build_type == BuildType.DEBUG:
+        if self.build_type.is_debug:
             self.configure_args.extend(["--enable-debug", "--enable-debug-tcg"])
         else:
             # Try to optimize as much as possible:
