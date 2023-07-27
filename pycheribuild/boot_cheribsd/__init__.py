@@ -267,9 +267,9 @@ class CheriBSDSpawnMixin(MixinBase):
                 failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
             return i
         except pexpect.TIMEOUT as e:
-            info("Timeout reached after ", timeout if timeout > 0 else self.timeout, " seconds")
+            failure(timeout_msg, " after ", timeout if timeout > 0 else self.timeout, " seconds", exit=False)
             if ignore_timeout:
-                failure(timeout_msg, ": ", str(e), exit=False)
+                info(str(e))
             else:
                 raise e
 
