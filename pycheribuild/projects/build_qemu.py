@@ -66,17 +66,23 @@ class BuildQEMUBase(AutotoolsProject):
     smbd_path: Optional[Path]
     qemu_targets: "str"
 
-    use_smbd = BoolConfigOption("use-smbd", show_help=False, default=True,
-                                help="Don't require SMB support when building QEMU (warning: most --test "
-                                     "targets will fail without smbd support)")
-    gui = BoolConfigOption("gui", show_help=False, default=False,
-                           help="Build a the graphical UI bits for QEMU (SDL,VNC)")
-    build_profiler = BoolConfigOption("build-profiler", show_help=False, default=False,
-                                      help="Enable QEMU internal profiling")
-    enable_plugins = BoolConfigOption("enable-plugins", show_help=False, default=False,
-                                      help="Enable QEMU TCG plugins")
-    prefer_full_lto_over_thin_lto = BoolConfigOption("full-lto", show_help=False, default=True,
-                                                     help="Prefer full LTO over LLVM ThinLTO when using LTO")
+    use_smbd = BoolConfigOption(
+        "use-smbd",
+        show_help=False,
+        default=True,
+        help="Don't require SMB support when building QEMU (warning: most --test "
+        "targets will fail without smbd support)",
+    )
+    gui = BoolConfigOption(
+        "gui", show_help=False, default=False, help="Build a the graphical UI bits for QEMU (SDL,VNC)",
+    )
+    build_profiler = BoolConfigOption(
+        "build-profiler", show_help=False, default=False, help="Enable QEMU internal profiling",
+    )
+    enable_plugins = BoolConfigOption("enable-plugins", show_help=False, default=False, help="Enable QEMU TCG plugins")
+    prefer_full_lto_over_thin_lto = BoolConfigOption(
+        "full-lto", show_help=False, default=True, help="Prefer full LTO over LLVM ThinLTO when using LTO",
+    )
 
     @classmethod
     def is_toolchain_target(cls):
@@ -91,12 +97,20 @@ class BuildQEMUBase(AutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.qemu_targets = typing.cast(str, cls.add_config_option(
-            "targets", show_help=True, help="Build QEMU for the following targets", default=cls.default_targets))
+        cls.qemu_targets = typing.cast(
+            str,
+            cls.add_config_option(
+                "targets", show_help=True, help="Build QEMU for the following targets", default=cls.default_targets,
+            ),
+        )
 
     @classmethod
-    def qemu_binary(cls, caller: "Optional[SimpleProject]" = None, xtarget: "Optional[CrossCompileTarget]" = None,
-                    config: "Optional[CheriConfig]" = None):
+    def qemu_binary(
+        cls,
+        caller: "Optional[SimpleProject]" = None,
+        xtarget: "Optional[CrossCompileTarget]" = None,
+        config: "Optional[CheriConfig]" = None,
+    ):
         if caller is not None:
             if config is None:
                 config = caller.config
@@ -114,18 +128,22 @@ class BuildQEMUBase(AutotoolsProject):
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
-        self.check_required_system_tool("glibtoolize" if self.target_info.is_macos() else "libtoolize",
-                                        default="libtool")
+        self.check_required_system_tool(
+            "glibtoolize" if self.target_info.is_macos() else "libtoolize", default="libtool",
+        )
         self.check_required_system_tool("autoreconf", default="autoconf")
         self.check_required_system_tool("aclocal", default="automake")
 
-        self.check_required_pkg_config("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel",
-                                       apt="libpixman-1-dev", freebsd="pixman")
-        self.check_required_pkg_config("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
-                                       freebsd="glib")
+        self.check_required_pkg_config(
+            "pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev", freebsd="pixman",
+        )
+        self.check_required_pkg_config(
+            "glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev", freebsd="glib",
+        )
         # Tests require GNU sed
-        self.check_required_system_tool("sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed",
-                                        freebsd="gsed")
+        self.check_required_system_tool(
+            "sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed", freebsd="gsed",
+        )
 
     def setup(self):
         super().setup()
@@ -174,18 +192,23 @@ class BuildQEMUBase(AutotoolsProject):
         ccinfo = self.get_compiler_info(compiler)
         if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
             # Turn implicit function declaration into an error -Wimplicit-function-declaration
-            self.CFLAGS.extend(["-Werror=implicit-function-declaration",
-                                "-Werror=incompatible-pointer-types",
-                                # Also make discarding const an error:
-                                "-Werror=incompatible-pointer-types-discards-qualifiers",
-                                # silence this warning that comes lots of times (it's fine on x86)
-                                "-Wno-address-of-packed-member",
-                                "-Wextra", "-Wno-sign-compare", "-Wno-unused-parameter",
-                                "-Wno-missing-field-initializers",
-                                ])
+            self.CFLAGS.extend(
+                [
+                    "-Werror=implicit-function-declaration",
+                    "-Werror=incompatible-pointer-types",
+                    # Also make discarding const an error:
+                    "-Werror=incompatible-pointer-types-discards-qualifiers",
+                    # silence this warning that comes lots of times (it's fine on x86)
+                    "-Wno-address-of-packed-member",
+                    "-Wextra",
+                    "-Wno-sign-compare",
+                    "-Wno-unused-parameter",
+                    "-Wno-missing-field-initializers",
+                ],
+            )
         if ccinfo.compiler == "clang" and ccinfo.version >= (13, 0, 0):
             self.CFLAGS.append("-Wno-null-pointer-subtraction")
-        # This would have cought some problems in the past
+        # This would have caught some problems in the past
         self.common_warning_flags.append("-Wno-error=return-type")
         if self.use_smbd:
             self.smbd_path = Path("/usr/sbin/smbd")
@@ -208,29 +231,35 @@ class BuildQEMUBase(AutotoolsProject):
                 if self.target_info.is_macos():
                     # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
                     # sources but the macOS /usr/sbin/smbd is incompatible with that:
-                    self.warning("QEMU user-mode samba shares require the samba.org smbd. You will need to install it "
-                                 "using homebrew (`brew install samba`) or build from source (`cheribuild.py samba`) "
-                                 "since the /usr/sbin/smbd shipped by macOS is incompatible with QEMU")
-                self.fatal("Could not find smbd -> QEMU SMB shares networking will not work",
-                           fixit_hint="Either install samba using the system package manager or with cheribuild. "
-                                      "If you really don't need QEMU host shares you can disable the samba dependency "
-                                      "by setting --" + self.target + "/no-use-smbd")
+                    self.warning(
+                        "QEMU user-mode samba shares require the samba.org smbd. You will need to install it "
+                        "using homebrew (`brew install samba`) or build from source (`cheribuild.py samba`) "
+                        "since the /usr/sbin/smbd shipped by macOS is incompatible with QEMU",
+                    )
+                self.fatal(
+                    "Could not find smbd -> QEMU SMB shares networking will not work",
+                    fixit_hint="Either install samba using the system package manager or with cheribuild. "
+                    "If you really don't need QEMU host shares you can disable the samba dependency "
+                    "by setting --" + self.target + "/no-use-smbd",
+                )
 
-        self.configure_args.extend([
-            "--target-list=" + self.qemu_targets,
-            "--disable-xen",
-            "--disable-docs",
-            "--disable-rdma",
-            # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
-            # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
-            "--disable-werror",
-            "--extra-cflags=" + self.commandline_to_str(self.default_compiler_flags + self.CFLAGS),
-            "--cxx=" + str(self.CXX),
-            "--cc=" + str(self.CC),
-            # Using /usr/bin/make on macOS breaks compilation DB creation with bear since SIP prevents it from
-            # injecting shared libraries into any process that is installed as part of the system.
-            "--make=" + self.make_args.command,
-        ])
+        self.configure_args.extend(
+            [
+                "--target-list=" + self.qemu_targets,
+                "--disable-xen",
+                "--disable-docs",
+                "--disable-rdma",
+                # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
+                # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
+                "--disable-werror",
+                "--extra-cflags=" + self.commandline_to_str(self.default_compiler_flags + self.CFLAGS),
+                "--cxx=" + str(self.CXX),
+                "--cc=" + str(self.CC),
+                # Using /usr/bin/make on macOS breaks compilation DB creation with bear since SIP prevents it from
+                # injecting shared libraries into any process that is installed as part of the system.
+                "--make=" + self.make_args.command,
+            ],
+        )
 
         if self.config.create_compilation_db:
             self.make_args.set(V=1)  # Otherwise bear can't parse the compiler output
@@ -267,8 +296,13 @@ class BuildQEMUBase(AutotoolsProject):
 
     def process(self) -> None:
         if self.use_smbd and self.smbd_path is not None:
-            self.check_required_system_tool(str(self.smbd_path), cheribuild_target="samba", freebsd="samba416",
-                                            apt="samba", homebrew="samba")
+            self.check_required_system_tool(
+                str(self.smbd_path),
+                cheribuild_target="samba",
+                freebsd="samba416",
+                apt="samba",
+                homebrew="samba",
+            )
         super().process()
 
 
@@ -284,11 +318,16 @@ class RunMorelloQEMUTests(Project):
         # TODO: suggest installing pytest-xdist
         qemu = BuildQEMU.get_instance(self)
         qemu_binary = qemu.qemu_binary_for_target(CompilationTargets.FREESTANDING_MORELLO_PURECAP, self.config)
-        self.run_cmd(sys.executable, "-m", "pytest", qemu.source_dir / "tests/morello",
-                     f"--morello-tests-dir={self.source_dir}",
-                     f"--qemu={qemu_binary}",
-                     f"--junit-xml={self.build_dir}/morello-generated-tests-result.xml",
-                     cwd=qemu.source_dir / "tests/morello")
+        self.run_cmd(
+            sys.executable,
+            "-m",
+            "pytest",
+            qemu.source_dir / "tests/morello",
+            f"--morello-tests-dir={self.source_dir}",
+            f"--qemu={qemu_binary}",
+            f"--junit-xml={self.build_dir}/morello-generated-tests-result.xml",
+            cwd=qemu.source_dir / "tests/morello",
+        )
 
 
 # noinspection PyAbstractClass
@@ -297,15 +336,17 @@ class BuildUpstreamQEMU(BuildQEMUBase):
     target = "upstream-qemu"
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.output_root / "upstream-qemu",
-        as_string="$INSTALL_ROOT/upstream-qemu")
+        as_string="$INSTALL_ROOT/upstream-qemu",
+    )
     if OSInfo.IS_FREEBSD:
         user_targets = ",arm-bsd-user,i386-bsd-user,x86_64-bsd-user"
     elif OSInfo.IS_LINUX:
         user_targets = ",arm-linux-user,aarch64-linux-user,i386-linux-user,x86_64-linux-user,riscv64-linux-user"
     else:
         user_targets = ""
-    default_targets = "arm-softmmu,aarch64-softmmu,mips64-softmmu," \
-                      "riscv64-softmmu,riscv32-softmmu,x86_64-softmmu" + user_targets
+    default_targets = (
+        "arm-softmmu,aarch64-softmmu,mips64-softmmu," "riscv64-softmmu,riscv32-softmmu,x86_64-softmmu" + user_targets
+    )
 
     def setup(self):
         super().setup()
@@ -338,14 +379,19 @@ class BuildUpstreamQEMU(BuildQEMUBase):
 class BuildQEMU(BuildQEMUBase):
     target = "qemu"
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri")
-    default_targets = "aarch64-softmmu,morello-softmmu," \
-                      "mips64-softmmu,mips64cheri128-softmmu," \
-                      "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu," \
-                      "x86_64-softmmu"
+    default_targets = (
+        "aarch64-softmmu,morello-softmmu,"
+        "mips64-softmmu,mips64cheri128-softmmu,"
+        "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
+        "x86_64-softmmu"
+    )
     # Turn on unaligned loads/stores by default
     unaligned = BoolConfigOption("unaligned", show_help=False, help="Permit un-aligned loads/stores", default=False)
-    statistics = BoolConfigOption("statistics", show_help=True,
-                                  help="Collect statistics on out-of-bounds capability creation.")
+    statistics = BoolConfigOption(
+        "statistics",
+        show_help=True,
+        help="Collect statistics on out-of-bounds capability creation.",
+    )
 
     @classmethod
     def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
@@ -397,25 +443,35 @@ class BuildQEMU(BuildQEMUBase):
             tgt_info_mips = BaremetalFreestandingTargetInfo(CompilationTargets.FREESTANDING_MIPS64, fake_project)
             # noinspection PyTypeChecker
             tgt_info_riscv64 = BaremetalFreestandingTargetInfo(CompilationTargets.FREESTANDING_RISCV64, fake_project)
-            self.configure_args.extend([
-                "--cross-cc-mips=" + str(tgt_info_mips.c_compiler),
-                "--cross-cc-cflags-mips=" + self.commandline_to_str(
-                    tgt_info_mips.get_essential_compiler_and_linker_flags()).replace("=", " "),
-                "--cross-cc-riscv64=" + str(tgt_info_riscv64.c_compiler),
-                "--cross-cc-cflags-riscv64=" + self.commandline_to_str(
-                    tgt_info_riscv64.get_essential_compiler_and_linker_flags()).replace("=", " "),
-            ])
+            self.configure_args.extend(
+                [
+                    "--cross-cc-mips=" + str(tgt_info_mips.c_compiler),
+                    "--cross-cc-cflags-mips="
+                    + self.commandline_to_str(tgt_info_mips.get_essential_compiler_and_linker_flags()).replace(
+                        "=",
+                        " ",
+                    ),
+                    "--cross-cc-riscv64=" + str(tgt_info_riscv64.c_compiler),
+                    "--cross-cc-cflags-riscv64="
+                    + self.commandline_to_str(tgt_info_riscv64.get_essential_compiler_and_linker_flags()).replace(
+                        "=",
+                        " ",
+                    ),
+                ],
+            )
 
     def install(self, **kwargs):
         super().install(**kwargs)
         # Delete the old Morello-QEMU files
-        self._cleanup_old_files(self.config.morello_sdk_dir / "share/qemu",
-                                self.config.morello_sdk_dir / "share/applications/qemu.desktop",
-                                self.config.morello_sdk_dir / "libexec/qemu-bridge-helper",
-                                self.config.morello_sdk_dir / "libexec/virtfs-proxy-helper",
-                                self.config.morello_sdk_dir / "bin/elf2dmp",
-                                self.config.morello_sdk_dir / "bin/symbolize-cheri-trace.py",
-                                *(self.config.morello_sdk_dir / "bin").glob("qemu-*"),
-                                *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.png"),
-                                *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.bmp"),
-                                *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.svg"))
+        self._cleanup_old_files(
+            self.config.morello_sdk_dir / "share/qemu",
+            self.config.morello_sdk_dir / "share/applications/qemu.desktop",
+            self.config.morello_sdk_dir / "libexec/qemu-bridge-helper",
+            self.config.morello_sdk_dir / "libexec/virtfs-proxy-helper",
+            self.config.morello_sdk_dir / "bin/elf2dmp",
+            self.config.morello_sdk_dir / "bin/symbolize-cheri-trace.py",
+            *(self.config.morello_sdk_dir / "bin").glob("qemu-*"),
+            *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.png"),
+            *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.bmp"),
+            *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.svg"),
+        )
