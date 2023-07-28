@@ -198,7 +198,7 @@ class ConfigOptionBase(typing.Generic[T]):
         if _fallback_names:
             assert _loader is not None
             for name in _fallback_names:
-                assert _loader.options.get(name) is not None
+                assert _loader.options.get(name) is not None or _loader.is_completing_arguments
         self._fallback_names = _fallback_names  # for targets such as gdb-mips, etc
         self.alias_names = _legacy_alias_names  # for targets such as gdb-mips, etc
         self._is_default_value = False

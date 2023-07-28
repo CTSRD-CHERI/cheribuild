@@ -37,6 +37,17 @@ try_run ./cheribuild.py -p __run_everything__ --clean --build --test --benchmark
 try_run env PATH=/does/not/exist "$(command -v python3)" ./cheribuild.py -p __run_everything__ --clean --build --test --benchmark
 try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --allow-more-than-one-target --build --test --cpu=default -p __run_everything__
 
+# We were previously hitting an error while argument completing, check that it works now:
+if python3 -c 'import argcomplete'; then
+    # We previously crashed while completing options that inherited their value from a parent class, but that parent
+    # option was not actually registered (an optimization to speed up completion).
+    # In this case --run-riscv64/foo inherits from --run/foo but --run/ was not registered since it cannot match the
+    # "--run-r" prefix:
+    try_run env _ARGCOMPLETE=1 _ARGCOMPLETE_BENCHMARK=1 _ARGCOMPLETE_OUTPUT_PATH=/dev/null \
+        _ARGCOMPLETE_BENCHMARK_PREFIX="run-riscv64-purecap --test --run-ri" ./cheribuild.py
+fi
+
+
 # Various jenkins things that have failed in the past
 try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --test --tarball -p libcxx-riscv64-purecap
 try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p run-morello-purecap
