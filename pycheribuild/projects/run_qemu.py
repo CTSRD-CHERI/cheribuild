@@ -721,11 +721,15 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, freebsd_class=self._freebsd_class, disk_image_class=self._disk_image_class, **kwargs)
 
+    @property
+    def _extra_test_args(self) -> "list[str]":
+        return []
+
     def run_tests(self):
         rootfs_kernel_bootdir = None
         if not self.qemu_options.can_boot_kernel_directly:
             rootfs_kernel_bootdir = self.kernel_project.get_kern_module_path(self.kernel_config)
-        extra_args = []
+        extra_args = self._extra_test_args
         if self.kyua_test_files and "--kyua-tests-files" not in self.config.test_extra_args:
             extra_args.extend("--kyua-tests-files=" + x for x in self.kyua_test_files)
         if not is_jenkins_build():
@@ -733,6 +737,8 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
             tests_dir = self.config.build_root / "test-results" / self.target
             self.makedirs(tests_dir)
             extra_args.append(f"--test-output-dir={tests_dir}")
+        if self.kernel_abi is not None and self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            extra_args.append(f"--expected-kernel-abi={self.kernel_abi.value}")
         self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", *extra_args,
                                                   disk_image_path=self.disk_image, kernel_path=self.current_kernel,
                                                   rootfs_alternate_kernel_dir=rootfs_kernel_bootdir)
@@ -860,8 +866,9 @@ class LaunchMinimalCheriBSD(LaunchCheriBSD):
         add_to_port = cls.get_cross_target_index()
         super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(20 + add_to_port), **kwargs)
 
-    def run_tests(self):
-        self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", "--minimal-image")
+    @property
+    def _extra_test_args(self) -> "list[str]":
+        return ["--minimal-image"]
 
 
 class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):

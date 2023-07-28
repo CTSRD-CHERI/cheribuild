@@ -77,6 +77,8 @@ SUPPORTED_ARCHITECTURES = {x.generic_target_suffix: x for x in (CompilationTarge
 # menu.lua: "[Space] to pause"
 AUTOBOOT_PROMPT = re.compile(r"((H|, h)it \[Enter] to boot |\[Space] to pause)")
 BOOT_LOADER_PROMPT = "OK "
+CHERI_HYBRID_KERNEL_MSG = "CHERI hybrid kernel."
+CHERI_PURECAP_KERNEL_MSG = "CHERI pure-capability kernel."
 
 STARTING_INIT = "start_init: trying /sbin/init"
 TRYING_TO_MOUNT_ROOT = re.compile(r"Trying to mount root from .+\.\.\.")
@@ -755,7 +757,7 @@ def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
 
 def boot_cheribsd(qemu_options: QemuOptions, qemu_command: Optional[Path], kernel_image: Path,
                   disk_image: Optional[Path], ssh_port: Optional[int],
-                  ssh_pubkey: Optional[Path], *, write_disk_image_changes: bool,
+                  ssh_pubkey: Optional[Path], *, write_disk_image_changes: bool, expected_kernel_abi: str,
                   smp_args: "list[str]", smb_dirs: "Optional[list[SmbMount]]" = None, kernel_init_only=False,
                   trap_on_unrepresentable=False, skip_ssh_setup=False, bios_path: "Optional[Path]" = None,
                   boot_alternate_kernel_dir: "Optional[Path]" = None) -> QemuCheriBSDInstance:
@@ -818,15 +820,25 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: Optional[Path], kerne
     else:
         child.logfile_read = sys.stdout
 
-    boot_and_login(child, starttime=qemu_starttime, kernel_init_only=kernel_init_only,
-                   network_iface=qemu_options.network_interface_name(),
-                   boot_alternate_kernel_dir=boot_alternate_kernel_dir)
+    expected_kernel_abi_arg_to_regex = {
+        "hybrid": CHERI_HYBRID_KERNEL_MSG,
+        "purecap": CHERI_PURECAP_KERNEL_MSG,
+        "any": None,
+    }
+    boot_and_login(
+        child,
+        starttime=qemu_starttime,
+        kernel_init_only=kernel_init_only,
+        network_iface=qemu_options.network_interface_name(),
+        expected_kernel_abi_msg=expected_kernel_abi_arg_to_regex[expected_kernel_abi],
+        boot_alternate_kernel_dir=boot_alternate_kernel_dir,
+    )
     return child
 
 
 def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=False,
-                   network_iface: Optional[str],
-                   boot_alternate_kernel_dir: "Optional[Path]" = None) -> None:
+                   network_iface: Optional[str], expected_kernel_abi_msg: Optional[str],
+                   boot_alternate_kernel_dir: "Optional[Path]") -> None:
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -843,7 +855,15 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
         # TODO: it would be nice if we had a message to detect userspace startup without requiring bootverbose
         bootverbose = False
         # noinspection PyTypeChecker
-        init_messages = [STARTING_INIT, BOOT_FAILURE, BOOT_FAILURE2, BOOT_FAILURE3, *FATAL_ERROR_MESSAGES]
+        init_messages = [
+            STARTING_INIT,
+            CHERI_HYBRID_KERNEL_MSG,
+            CHERI_PURECAP_KERNEL_MSG,
+            BOOT_FAILURE,
+            BOOT_FAILURE2,
+            BOOT_FAILURE3,
+            *FATAL_ERROR_MESSAGES,
+        ]
         boot_messages = [*init_messages, TRYING_TO_MOUNT_ROOT]
         loader_boot_prompt_messages = [*boot_messages, BOOT_LOADER_PROMPT]
         loader_boot_messages = [*loader_boot_prompt_messages, AUTOBOOT_PROMPT]
@@ -871,6 +891,18 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
             i = child.expect(boot_messages, timeout=20 * 60, timeout_msg="timeout before kernel")
         if boot_alternate_kernel_dir and not ran_manual_boot:
             failure("failed to enter boot loader prompt", exit=True)
+
+        # Check that we are booting the expected kind of CheriBSD kernel (hybrid/purecap)
+        if expected_kernel_abi_msg is not None:
+            if PRETEND:
+                i = boot_messages.index(expected_kernel_abi_msg)
+            if i == boot_messages.index(expected_kernel_abi_msg):
+                success(f"Booting correct kernel ABI: {expected_kernel_abi_msg}")
+            else:
+                failure(f"Did not find expected kernel ABI message '{expected_kernel_abi_msg}',"
+                        f" got '{child.match.group(0)}' instead.", exit=True)
+            i = child.expect(init_messages, timeout=10 * 60, timeout_msg="timeout before /sbin/init")
+
         if i == boot_messages.index(TRYING_TO_MOUNT_ROOT):
             success("===> mounting rootfs")
             if bootverbose:
@@ -1172,7 +1204,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--alternate-kernel-rootfs-path", type=Path, default=None,
                         help="Path relative to the disk image pointing to the directory " +
                              "containing the alternate kernel to run and related kernel modules")
-
+    parser.add_argument("--expected-kernel-abi", choices=["any", "hybrid", "purecap"], default="any",
+                        help="The kernel kind that is expected ('any' to skip checks)")
     # Ensure that we don't get a race when running multiple shards:
     # If we extract the disk image at the same time we might spawn QEMU just between when the
     # value extracted by one job is unlinked and when it is replaced with a new file
@@ -1314,7 +1347,8 @@ def _main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespac
                          smp_args=["-smp", str(args.qemu_smp)] if args.qemu_smp else [],
                          trap_on_unrepresentable=args.trap_on_unrepresentable, skip_ssh_setup=args.skip_ssh_setup,
                          bios_path=args.bios, write_disk_image_changes=args.write_disk_image_changes,
-                         boot_alternate_kernel_dir=args.alternate_kernel_rootfs_path)
+                         boot_alternate_kernel_dir=args.alternate_kernel_rootfs_path,
+                         expected_kernel_abi=args.expected_kernel_abi)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
     tests_okay = True
