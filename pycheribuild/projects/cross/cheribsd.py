@@ -60,7 +60,7 @@ from ...config.loader import ConfigOptionBase
 from ...config.target_info import AutoVarInit, CrossCompileTarget
 from ...config.target_info import CompilerType as FreeBSDToolchainKind
 from ...processutils import latest_system_clang_tool, print_command
-from ...utils import OSInfo, ThreadJoiner, cached_property, classproperty, include_local_file, is_jenkins_build
+from ...utils import OSInfo, ThreadJoiner, cached_property, classproperty, is_jenkins_build
 
 
 def _arch_suffixed_custom_install_dir(prefix: str) -> "ComputedDefaultValue[Path]":
@@ -2017,14 +2017,6 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         self.bsdtar_cmd = "bsdtar"
         self.install_dir = self.target_info.sdk_root_dir
 
-    def fix_symlinks(self) -> None:
-        # copied from the build_sdk.sh script
-        # TODO: we could do this in python as well, but this method works
-        # FIXME: should no longer be needed
-        fixlinks_src = include_local_file("files/fixlinks.c")
-        self.run_cmd("cc", "-x", "c", "-", "-o", self.install_dir / "bin/fixlinks", input=fixlinks_src)
-        self.run_cmd(self.install_dir / "bin/fixlinks", cwd=self.cross_sysroot_path / "usr/lib")
-
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
         self.check_required_system_tool("bsdtar", cheribuild_target="bsdtar", apt="libarchive-tools")
@@ -2106,9 +2098,6 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         if not (self.cross_sysroot_path / "lib/libc.so.7").is_file():
             self.fatal(self.cross_sysroot_path, "is missing the libc library, install seems to have failed!")
 
-        # fix symbolic links in the sysroot:
-        self.info("Fixing absolute paths in symbolic links inside lib directory...")
-        self.fix_symlinks()
         # create an archive to make it easier to copy the sysroot to another machine
         self.delete_file(self.sysroot_archive, print_verbose_only=True)
         self.run_cmd("tar", "-caf", self.sysroot_archive, self.cross_sysroot_path.name,
