@@ -1433,6 +1433,15 @@ class BuildFreeBSD(BuildFreeBSDBase):
         assert config is not None, "Invalid configuration name"
         return [c.kernconf for c in filter_kernel_configs([config], platform=platform, kernel_abi=None)]
 
+    def prepare_install_dir_for_archiving(self):
+        assert is_jenkins_build(), "Should only be called for jenkins builds"
+        for config in self.get_kernel_configs(None):
+            kernel_elf = self.get_kernel_install_path(config)
+            self.install_file(kernel_elf, self.config.output_root / f"kernel.{config}")
+            kernel_elf_with_dbg = kernel_elf.with_suffix(".full")
+            if kernel_elf_with_dbg.exists():
+                self.install_file(kernel_elf_with_dbg, self.config.output_root / f"kernel.{config}.full")
+
 
 # Build FreeBSD with the default options (build the bundled clang instead of using the SDK one)
 # also don't add any of the default -DWITHOUT/DWITH_FOO options
@@ -1804,7 +1813,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
                 if conf == kernconfs[0]:
                     source_path = Path(td, "boot/kernel/kernel")
                 else:
-                    # All other kernels are installed with a suffixex name:
+                    # All other kernels are installed with a suffixed name:
                     source_path = Path(td, "boot/kernel." + conf, "kernel")
                 self.install_file(source_path, kernel_install_path, force=True, print_verbose_only=False)
                 dbg_info_kernel = source_path.with_suffix(".full")
