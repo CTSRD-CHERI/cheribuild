@@ -901,7 +901,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
             else:
                 failure(f"Did not find expected kernel ABI message '{expected_kernel_abi_msg}',"
                         f" got '{child.match.group(0)}' instead.", exit=True)
-            i = child.expect(init_messages, timeout=10 * 60, timeout_msg="timeout before /sbin/init")
+            i = child.expect(boot_messages, timeout=10 * 60, timeout_msg="timeout mounting rootfs")
 
         if i == boot_messages.index(TRYING_TO_MOUNT_ROOT):
             success("===> mounting rootfs")
