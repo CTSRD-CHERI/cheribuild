@@ -127,7 +127,7 @@ class CheriBSDConfig:
         self.fett = fett
 
     def __repr__(self) -> str:
-        flags = [key for key, val in self.__dict__.items() if type(val) == bool and val]
+        flags = [key for key, val in self.__dict__.items() if isinstance(val, bool) and val]
         return "CheriBSDConfig({kernconf} {platform}:{kernel_abi} [{flags}])".format(
             kernconf=self.kernconf, platform=self.platforms, kernel_abi=self.kernel_abi.value, flags=" ".join(flags))
 

@@ -265,7 +265,7 @@ class MtreeFile:
         """Remove paths matching any pattern in globs (but not matching any in exceptions)"""
         if exceptions is None:
             exceptions = []
-        if type(globs) == str:
+        if isinstance(globs, str):
             globs = [globs]
         for glob in globs + exceptions:
             # glob must be anchored at the root (./) or start with a pattern
