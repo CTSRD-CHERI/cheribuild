@@ -177,7 +177,6 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
 
     def install(self, **kwargs):
         super().install(**kwargs)
-
         libname = "libclang_rt.builtins-" + self.triple_arch + ".a"
         if self.target_info.is_rtems():
             self.move_file(self.install_dir / "lib/rtems5" / libname, self.install_dir / "lib" / libname)

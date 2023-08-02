@@ -49,7 +49,6 @@ from .projects import *  # noqa: F401, F403, RUF100
 
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # noqa: F401, F403, RUF100
-from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project
 from .projects.simple_project import SimpleProject
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
@@ -244,6 +243,7 @@ def _jenkins_main() -> None:
         fatal_error("More than one target is not supported yet.", pretend=False)
         sys.exit()
 
+    expected_install_path = Path(f"{cheri_config.output_root}{cheri_config.installation_prefix}")
     if JenkinsAction.BUILD in cheri_config.action or JenkinsAction.TEST in cheri_config.action:
         # Ugly workaround to override all install dirs to go to the tarball
         for tgt in target_manager.targets(cheri_config):
@@ -251,8 +251,7 @@ def _jenkins_main() -> None:
                 continue
             cls = tgt.project_class
             if issubclass(cls, Project) and not isinstance(tgt, MultiArchTargetAlias):
-                cls._default_install_dir_fn = Path(
-                    str(cheri_config.output_root) + str(cheri_config.installation_prefix))
+                cls._default_install_dir_fn = Path(expected_install_path)
                 i = inspect.getattr_static(cls, "_install_dir")
                 assert isinstance(i, CommandLineConfigOption)
                 # But don't change it if it was specified on the command line. Note: This also does the config
@@ -262,28 +261,33 @@ def _jenkins_main() -> None:
                 if from_cmdline is not None:
                     status_update("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
                 else:
-                    cls._install_dir = Path(str(cheri_config.output_root) + str(cheri_config.installation_prefix))
+                    cls._install_dir = cheri_config.output_root
                     cls._check_install_dir_conflict = False
 
         Target.instantiating_targets_should_warn = False
-        for target in cheri_config.targets:
-            build_target(cheri_config, target_manager.get_target_raw(target))
+        # Override the installation directory for all enabled targets
+        for name in cheri_config.targets:
+            target = target_manager.get_target_raw(name)
+            # noinspection PyProtectedMember
+            project = target._get_or_create_project_no_setup(None, cheri_config, caller=None)
+            if isinstance(project, Project):
+                project._install_prefix = cheri_config.installation_prefix
+                project.destdir = cheri_config.output_root
+                assert project.real_install_root_dir == expected_install_path
+        for tgt in cheri_config.targets:
+            build_target(cheri_config, target_manager.get_target_raw(tgt))
 
     if JenkinsAction.CREATE_TARBALL in cheri_config.action:
         create_tarball(cheri_config)
 
 
 def build_target(cheri_config, target: Target) -> None:
-    # Note: This if exists for now to avoid a large diff.
     target.check_system_deps(cheri_config)
-    # need to set destdir after check_system_deps:
     project = target.get_or_create_project(None, cheri_config, caller=None)
     assert project
     _ = project.all_dependency_names(cheri_config)  # Ensure dependencies are cached.
-    if isinstance(project, CrossCompileMixin):
-        project.destdir = cheri_config.output_root
-        project._install_prefix = cheri_config.installation_prefix
-        project._install_dir = cheri_config.output_root
+    if isinstance(project, Project):
+        assert project.real_install_root_dir == Path(f"{cheri_config.output_root}{cheri_config.installation_prefix}")
 
     if cheri_config.debug_output:
         status_update("Configuration options for building", project.target, file=sys.stderr)
