@@ -275,33 +275,35 @@ def _jenkins_main() -> None:
 
 def build_target(cheri_config, target: Target) -> None:
     # Note: This if exists for now to avoid a large diff.
-    if True:
-        target.check_system_deps(cheri_config)
-        # need to set destdir after check_system_deps:
-        project = target.get_or_create_project(None, cheri_config, caller=None)
-        assert project
-        _ = project.all_dependency_names(cheri_config)  # Ensure dependencies are cached.
-        if isinstance(project, CrossCompileMixin):
-            project.destdir = cheri_config.output_root
-            project._install_prefix = cheri_config.installation_prefix
-            project._install_dir = cheri_config.output_root
+    target.check_system_deps(cheri_config)
+    # need to set destdir after check_system_deps:
+    project = target.get_or_create_project(None, cheri_config, caller=None)
+    assert project
+    _ = project.all_dependency_names(cheri_config)  # Ensure dependencies are cached.
+    if isinstance(project, CrossCompileMixin):
+        project.destdir = cheri_config.output_root
+        project._install_prefix = cheri_config.installation_prefix
+        project._install_dir = cheri_config.output_root
 
-        if cheri_config.debug_output:
-            status_update("Configuration options for building", project.target, file=sys.stderr)
-            for attr in dir(project):
-                if attr.startswith("_"):
-                    continue
-                value = getattr(project, attr)
-                if not callable(value):
-                    print("   ", attr, "=", pprint.pformat(value, width=160, indent=8, compact=True), file=sys.stderr)
-        # delete the install root:
-        if JenkinsAction.BUILD in cheri_config.action:
-            cleaning_task = cheri_config.FS.async_clean_directory(
-                cheri_config.output_root) if not cheri_config.keep_install_dir else ThreadJoiner(None)
-            with cleaning_task:
-                target.execute(cheri_config)
-        if JenkinsAction.TEST in cheri_config.action:
-            target.run_tests(cheri_config)
+    if cheri_config.debug_output:
+        status_update("Configuration options for building", project.target, file=sys.stderr)
+        for attr in dir(project):
+            if attr.startswith("_"):
+                continue
+            value = getattr(project, attr)
+            if not callable(value):
+                print("   ", attr, "=", pprint.pformat(value, width=160, indent=8, compact=True), file=sys.stderr)
+    # delete the install root:
+    if JenkinsAction.BUILD in cheri_config.action:
+        cleaning_task = (
+            cheri_config.FS.async_clean_directory(cheri_config.output_root)
+            if not cheri_config.keep_install_dir
+            else ThreadJoiner(None)
+        )
+        with cleaning_task:
+            target.execute(cheri_config)
+    if JenkinsAction.TEST in cheri_config.action:
+        target.run_tests(cheri_config)
 
 
 def create_tarball(cheri_config) -> None:
