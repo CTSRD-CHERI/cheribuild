@@ -80,11 +80,12 @@ class ReuseOtherProjectRepository(SourceRepository):
         # noinspection PyProtectedMember
         src = self.get_real_source_dir(current_project, current_project._initial_source_dir)
         if not src.exists():
-            current_project.fatal("Source repository for target", current_project.target, "does not exist.",
-                                  fixit_hint="This project uses the sources from the " + self.source_project.target +
-                                             "target so you will have to clone that first. Try running:\n\t`" +
-                                             "cheribuild.py " + self.source_project.target +
-                                             "--no-skip-update --skip-configure --skip-build --skip-install`")
+            current_project.fatal(
+                f"Source repository for target {current_project.target} does not exist.",
+                fixit_hint=f"This project uses the sources from the {self.source_project.target} target so you will"
+                f" have to clone that first. Try running:\n\t`cheribuild.py {self.source_project.target} "
+                f"--no-skip-update --skip-configure --skip-build --skip-install`",
+            )
 
     def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Optional[Path]) -> Path:
         if base_project_source_dir is not None:
