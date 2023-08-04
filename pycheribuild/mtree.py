@@ -71,9 +71,8 @@ class MtreeEntry:
             if k in ("tags", "time"):
                 continue
             # convert relative contents=keys to absolute ones
-            if contents_root and k == "contents":
-                if not os.path.isabs(v):
-                    v = str(contents_root / v)
+            if contents_root and k == "contents" and not os.path.isabs(v):
+                v = str(contents_root / v)
             attr_dict[k] = v
         return MtreeEntry(path, attr_dict)
         # FIXME: use contents=
@@ -239,10 +238,9 @@ class MtreeFile:
                 mode = self.infer_mode_string(reference_dir, True)
         mode = self._ensure_mtree_mode_fmt(mode)
         # Ensure that SSH will work even if the extra-file directory has wrong permissions
-        if path == "root" or path == "root/.ssh":
-            if mode != "0700" and mode != "0755":
-                warning_message("Wrong file mode", mode, "for /", path, " --  it should be 0755, fixing it for image")
-                mode = "0755"
+        if (path == "root" or path == "root/.ssh") and mode != "0700" and mode != "0755":
+            warning_message("Wrong file mode", mode, "for /", path, " --  it should be 0755, fixing it for image")
+            mode = "0755"
         # recursively add all parent dirs that don't exist yet
         parent = str(Path(path).parent)
         if parent != path:  # avoid recursion for path == "."

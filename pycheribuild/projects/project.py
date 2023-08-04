@@ -884,17 +884,13 @@ class Project(SimpleProject):
             if self.should_use_extra_c_compat_flags():
                 self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
 
-        assert self.install_dir, "must be set"
-        self.verbose_print(self.target, "INSTALLDIR = ", self._install_dir, "INSTALL_PREFIX=", self._install_prefix,
-                           "DESTDIR=", self.destdir)
-
-        if self.should_include_debug_info:
-            if not self.target_info.is_macos():
-                self.COMMON_FLAGS.append("-ggdb")
-                if not self.compiling_for_mips(include_purecap=True):
-                    # compressed debug info is broken on big endian until
-                    # we depend on a lld version with the fix.
-                    self.COMMON_FLAGS.append("-gz")
+        assert self._install_dir, "must be set"
+        if self.should_include_debug_info and not self.target_info.is_macos():
+            self.COMMON_FLAGS.append("-ggdb")
+            if not self.compiling_for_mips(include_purecap=True):
+                # compressed debug info is broken on big endian until
+                # we depend on a lld version with the fix.
+                self.COMMON_FLAGS.append("-gz")
         self.CFLAGS: "list[str]" = []
         self.CXXFLAGS: "list[str]" = []
         self.ASMFLAGS: "list[str]" = []
@@ -1541,10 +1537,9 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             # Clean completed
 
             # Configure step
-            if not self.config.skip_configure or self.config.configure_only:
-                if self.should_run_configure():
-                    status_update("Configuring", self.display_name, "... ")
-                    self.configure()
+            if (not self.config.skip_configure or self.config.configure_only) and self.should_run_configure():
+                status_update("Configuring", self.display_name, "... ")
+                self.configure()
             if self.config.configure_only:
                 return
 

@@ -290,9 +290,8 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption[T]):
         # First check the value specified on the command line, then load JSON and then fallback to the default
         from_cmd_line = self._load_from_commandline()
         # config_debug(full_option_name, "from cmdline:", from_cmd_line)
-        if from_cmd_line is not None:
-            if from_cmd_line != self.action.default:
-                return from_cmd_line
+        if from_cmd_line is not None and from_cmd_line != self.action.default:
+            return from_cmd_line
             # config_debug("Command line == default:", from_cmd_line, self.action.default, "-> trying JSON")
         # try loading it from the JSON file:
         from_json = self._load_from_json(target_option_name)
@@ -678,10 +677,9 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
                     if fullname == alternate_name:
                         found_option = option  # fine
                         break
-                if option.alias_names:
-                    if fullname in option.alias_names:
-                        found_option = option  # fine
-                        break
+                if option.alias_names and fullname in option.alias_names:
+                    found_option = option  # fine
+                    break
 
         if found_option is not None:
             # Found an option, now verify that it's not a command-line only option

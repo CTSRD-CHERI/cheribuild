@@ -146,9 +146,8 @@ class ProjectSubclassDefinitionHook(ABCMeta):
             die("project_name should no longer be used, change the definition of class " + name +
                 " to include target and/or default_directory_basename")
 
-        if cls.__dict__.get("dependencies_must_be_built"):
-            if not cls.dependencies:
-                sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
+        if cls.__dict__.get("dependencies_must_be_built") and not cls.dependencies:
+            sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
         supported_archs = cls.supported_architectures
         assert supported_archs, "Must not be empty: " + str(supported_archs)
         assert isinstance(supported_archs, tuple)

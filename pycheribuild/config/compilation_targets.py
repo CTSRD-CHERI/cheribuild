@@ -665,10 +665,9 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
         if version is None or version >= 20220511:
             # Use new var-args ABI
             result.extend(["-Xclang", "-morello-vararg=new"])
-        if xtarget.is_cheri_purecap([CPUArchitecture.AARCH64]):
-            if version is not None and version < 20220511:
-                # Use emulated TLS on older purecap
-                result.append("-femulated-tls")
+        if xtarget.is_cheri_purecap([CPUArchitecture.AARCH64]) and version is not None and version < 20220511:
+            # Use emulated TLS on older purecap
+            result.append("-femulated-tls")
         return result
 
 

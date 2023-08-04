@@ -1347,11 +1347,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # We have to override INSTALL so that the sysroot installations don't end up in METALOG
         # This happens after https://github.com/freebsd/freebsd/commit/5496ab2ac950813edbd55d73c967184e033bea2f
         install_nometalog_cmd = "INSTALL=\"install -N " + str(self.source_dir / "etc") + " -U\" METALOG=/dev/null"
-        if is_lib:
-            if install_to_internal_sysroot:
-                # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
-                sysroot_var = "\"$$$${SYSROOT}\""
-                install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install {i} MK_TESTS=no DESTDIR={sysroot};" \
+        if is_lib and install_to_internal_sysroot:
+            # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
+            sysroot_var = "\"$$$${SYSROOT}\""
+            install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install {i} MK_TESTS=no DESTDIR={sysroot};" \
                                          " fi".format(make=make_in_subdir, sysroot=sysroot_var, i=install_nometalog_cmd)
         if skip_install:
             if install_to_sysroot_cmd:

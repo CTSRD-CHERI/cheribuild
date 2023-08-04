@@ -101,9 +101,8 @@ class BuildLittleKernel(CrossCompileMakefileProject):
             self.make_args.set(ARCH_COMPILEFLAGS="")  # dont' override the default -mabi=
 
         self.set_make_cmd_with_args("LD", self.target_info.linker, ["--unresolved-symbols=report-all"])
-        if self.crosscompile_target.is_riscv(include_purecap=True):
-            if self.use_mmu:
-                self.make_args.set(RISCV_MMU="sv39", RISCV_MODE="supervisor")
+        if self.crosscompile_target.is_riscv(include_purecap=True) and self.use_mmu:
+            self.make_args.set(RISCV_MMU="sv39", RISCV_MODE="supervisor")
         self.make_args.set(TOOLCHAIN_PREFIX=toolchain_prefix, ARCH_arm64_TOOLCHAIN_PREFIX=toolchain_prefix,
                            ARCH_riscv64_TOOLCHAIN_PREFIX=toolchain_prefix)
 
