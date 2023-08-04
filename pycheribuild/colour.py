@@ -46,7 +46,7 @@ class AnsiColour(Enum):
 
 def coloured(col: AnsiColour, *args, end="\x1b[0m", sep=" ") -> str:
     if len(args) == 1:
-        if isinstance(args[0], list) or isinstance(args[0], tuple):
+        if isinstance(args[0], (list, tuple)):
             return col.escape_sequence() + sep.join(map(str, args[0])) + end
         return col.escape_sequence() + str(args[0]) + end
     else:

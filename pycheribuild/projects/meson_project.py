@@ -134,7 +134,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
 
     def _toolchain_file_list_to_str(self, values: list) -> str:
         # The meson toolchain file uses python-style lists
-        assert all(isinstance(x, str) or isinstance(x, Path) for x in values), \
+        assert all(isinstance(x, (str, Path)) for x in values), \
             "All values should be strings/Paths: " + str(values)
         return str(list(map(str, values)))
 
