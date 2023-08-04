@@ -54,8 +54,8 @@ class TestAsyncDelete(TestCase):
         self.config = setup_mock_chericonfig(self.tempRoot, pretend=False)
         self.config.sleep_before_delete = False
 
-        self.assertEqual(self.tempRoot, self.config.source_root)
-        self.assertEqual(self.tempRoot / "build", self.config.build_root)
+        assert self.tempRoot == self.config.source_root
+        assert self.tempRoot / "build" == self.config.build_root
         self.project = MockProject(self.config, "foo")
         assert self.project.source_dir.exists(), self.project.source_dir
 
@@ -69,14 +69,14 @@ class TestAsyncDelete(TestCase):
 
     def _check_stat_times_different(self, path, message):
         stat = path.stat()
-        self.assertNotEqual(stat.st_atime_ns, stat.st_ctime_ns, message + " -> atime and ctime should differ")
+        assert stat.st_atime_ns != stat.st_ctime_ns, message + " -> atime and ctime should differ"
 
     def _check_stat_times_same(self, path, message):
         stat = path.stat()
-        self.assertEqual(stat.st_atime_ns, stat.st_ctime_ns, message + " -> atime and ctime should be the same")
+        assert stat.st_atime_ns == stat.st_ctime_ns, message + " -> atime and ctime should be the same"
 
     def _assert_num_files(self, path, num_files):
-        self.assertEqual(len(list(path.iterdir())), num_files, "expected %d files in %s" % (num_files, path))
+        assert len(list(path.iterdir())) == num_files, "expected %d files in %s" % (num_files, path)
 
     # noinspection PyUnreachableCode
     def test_keeproot(self):

@@ -62,7 +62,7 @@ freestanding_deps = ["llvm-native", "qemu", "gdb-native", "freestanding-cheri-sd
 cheribsd_sdk_deps = [*freestanding_deps, "cheribsd-riscv64-hybrid", "cheribsd-sdk-riscv64-hybrid"]
 
 
-@pytest.mark.parametrize("target_name,expected_list", [
+@pytest.mark.parametrize(("target_name", "expected_list"), [
     pytest.param("freestanding-cheri-sdk", freestanding_deps, id="freestanding-sdk"),
     # Ensure that cheribsd is added to deps even on Linux/Mac
     pytest.param("cheribsd-sdk-riscv64-hybrid", cheribsd_sdk_deps, id="cheribsd-sdk"),
@@ -75,7 +75,7 @@ def test_sdk(target_name: str, expected_list: "list[str]"):
     assert _sort_targets([target_name]) == expected_list
 
 
-@pytest.mark.parametrize("target_name,expected_name", [
+@pytest.mark.parametrize(("target_name", "expected_name"), [
     pytest.param("llvm", "llvm-native"),
     pytest.param("gdb", "gdb-native"),
 ])
@@ -117,7 +117,7 @@ def test_cheribsd_default_aliases():
     assert _sort_targets(["cheribsd-riscv64-hybrid"]) == ["cheribsd-riscv64-hybrid"]
 
 
-@pytest.mark.parametrize("target_name,expected_list", [
+@pytest.mark.parametrize(("target_name", "expected_list"), [
     pytest.param("build-and-run-cheribsd-riscv64", ["cheribsd-riscv64", "disk-image-riscv64", "run-riscv64"]),
     pytest.param("build-and-run-cheribsd-aarch64", ["cheribsd-aarch64", "disk-image-aarch64", "run-aarch64"]),
     pytest.param("build-and-run-cheribsd-riscv64-purecap",
@@ -132,7 +132,7 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
     assert _sort_targets([target_name], add_dependencies=False) == [*expected_list, target_name]
 
 
-@pytest.mark.parametrize("target,add_toolchain,expected_deps", [
+@pytest.mark.parametrize(("target", "add_toolchain", "expected_deps"), [
     # Note: For architectures that CHERI QEMU builds by default we currently
     # explicitly default to using that rather than the system QEMU.
     pytest.param("run-morello-hybrid", True,
@@ -317,7 +317,7 @@ def test_riscv():
 
 # Check that libcxx deps with skip sdk pick the matching -native/-mips versions
 # Also the libcxx target should resolve to libcxx-riscv64-purecap:
-@pytest.mark.parametrize("suffix,expected_suffix", [
+@pytest.mark.parametrize(("suffix", "expected_suffix"), [
     pytest.param("-native", "-native", id="native"),
     pytest.param("-riscv64", "-riscv64", id="riscv64"),
     pytest.param("-riscv64-purecap", "-riscv64-purecap", id="riscv64-purecap"),
@@ -328,7 +328,8 @@ def test_libcxx_deps(suffix: str, expected_suffix: str):
     assert expected == _sort_targets(["libcxx" + suffix], add_dependencies=True, skip_sdk=True)
 
 
-@pytest.mark.parametrize("target_name,include_recursive_deps,include_toolchain,expected_deps,morello_from_source", [
+@pytest.mark.parametrize(("target_name", "include_recursive_deps", "include_toolchain", "expected_deps",
+                          "morello_from_source"), [
     pytest.param("morello-firmware", False, False,
                  ["morello-scp-firmware", "morello-trusted-firmware",
                   "morello-flash-images", "morello-uefi", "morello-firmware"], True,
@@ -419,7 +420,7 @@ def _get_native_targets():
             yield pytest.param(config, target, id=target.name)
 
 
-@pytest.mark.parametrize("config,native_target", list(_get_native_targets()))
+@pytest.mark.parametrize(("config", "native_target"), list(_get_native_targets()))
 def test_no_dependencies_in_build_dir(config: CheriConfig, native_target: Target):
     # Ensure that native targets do not depend on other targets that do not install their libraries, etc.
     assert native_target.xtarget.is_native()
@@ -444,7 +445,7 @@ def test_no_dependencies_in_build_dir(config: CheriConfig, native_target: Target
             f"{proj.target} depends on {dep_project.target} which is not installed!"
 
 
-@pytest.mark.parametrize("xtarget,expected", [
+@pytest.mark.parametrize(("xtarget", "expected"), [
     pytest.param(CompilationTargets.CHERIBSD_RISCV_PURECAP, ["llvm-native"]),
     pytest.param(CompilationTargets.CHERIBSD_X86_64, ["llvm-native"]),
     pytest.param(CompilationTargets.CHERIBSD_MORELLO_PURECAP, ["morello-llvm-native"]),

@@ -106,7 +106,7 @@ def test_skip_update():
         assert not _parse_arguments(["--no-skip-update"], config_file=config).skip_update
 
 
-@pytest.mark.parametrize("args,expected", [
+@pytest.mark.parametrize(("args", "expected"), [
     pytest.param(["--include-dependencies", "run-riscv64-purecap"],
                  ["qemu", "llvm-native", "cheribsd-riscv64-purecap",
                   "gmp-riscv64-hybrid-for-purecap-rootfs", "gdb-riscv64-hybrid-for-purecap-rootfs",
@@ -128,7 +128,7 @@ def test_target_subsets(args: "list[str]", expected):
     assert selected == expected
 
 
-@pytest.mark.parametrize("args,expected", [
+@pytest.mark.parametrize(("args", "expected"), [
     pytest.param(["--include-dependencies", "--skip-sdk", "libx11-amd64"],
                  ["xorg-macros-amd64", "xorgproto-amd64", "xcbproto-amd64", "libxau-amd64", "xorg-pthread-stubs-amd64",
                   "libxcb-amd64", "libxtrans-amd64", "libx11-amd64"],
@@ -168,7 +168,7 @@ def test_invalid_skip_dependency_regex():
         _parse_arguments(["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=abc("])
 
 
-@pytest.mark.parametrize("args,exception_type,errmessage", [
+@pytest.mark.parametrize(("args", "exception_type", "errmessage"), [
     pytest.param(["--include-dependencies", "--skip-sdk", "--start-after=llvm-project", "run-riscv64-purecap"],
                  ValueError, "--start-after/--start-with target 'llvm-project' is not being built",
                  id="run-start-after-skip-sdk"),
@@ -210,7 +210,7 @@ def test_per_project_override():
         assert project.extra_files_dir == Path("/y/extra-files")
 
 
-@pytest.mark.parametrize("target_name,resolved_target", [
+@pytest.mark.parametrize(("target_name", "resolved_target"), [
     pytest.param("llvm", "llvm-native"),
     pytest.param("gdb", "gdb-native"),
     pytest.param("upstream-llvm", "upstream-llvm"),  # no -native target for upstream-llvm
@@ -544,7 +544,7 @@ def test_libcxxrt_dependency_path():
             if i.startswith("-DLIBUNWIND_PATH="):
                 assert i == ("-DLIBUNWIND_PATH=" + str(path)), tgt.configure_args
                 return
-        assert False, "Should have found -DLIBUNWIND_PATH= in " + str(tgt.configure_args)
+        pytest.fail(f"Should have found -DLIBUNWIND_PATH= in {tgt.configure_args}")
 
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
@@ -566,7 +566,7 @@ class SystemClangIfExistsElse:
         self.fallback = fallback
 
 
-@pytest.mark.parametrize("target,expected_path,kind,extra_args", [
+@pytest.mark.parametrize(("target", "expected_path", "kind", "extra_args"), [
     # FreeBSD targets default to system clang if it exists, otherwise LLVM:
     pytest.param("freebsd-riscv64", SystemClangIfExistsElse("$OUTPUT$/upstream-llvm/bin/clang"),
                  FreeBSDToolchainKind.DEFAULT_COMPILER, []),
@@ -614,7 +614,7 @@ def test_freebsd_toolchains(target: str, expected_path: Union[str, SystemClangIf
         assert project.kernel_make_args_for_config("GENERIC", None).env_vars.get("XCC", None) == expected_path
 
 
-@pytest.mark.parametrize("target,expected_name", [
+@pytest.mark.parametrize(("target", "expected_name"), [
     # CheriBSD
     pytest.param("disk-image-riscv64", "cheribsd-riscv64.img"),
     pytest.param("disk-image-riscv64-hybrid", "cheribsd-riscv64-hybrid.img"),
@@ -645,7 +645,7 @@ def test_disk_image_path(target, expected_name):
     assert str(project.disk_image_path) == str(config.output_root / expected_name)
 
 
-@pytest.mark.parametrize("target,config_options,expected_name,extra_kernels", [
+@pytest.mark.parametrize(("target", "config_options", "expected_name", "extra_kernels"), [
     # RISCV kernconf tests
     pytest.param("cheribsd-riscv64-purecap",
                  ["--cheribsd/no-build-alternate-abi-kernels"],
@@ -742,7 +742,7 @@ def test_kernel_configs(target, config_options: "list[str]", expected_name, extr
     assert project.extra_kernels == extra_kernels
 
 
-@pytest.mark.parametrize("target,config_options,expected_kernels", [
+@pytest.mark.parametrize(("target", "config_options", "expected_kernels"), [
     # RISCV kernconf tests
     pytest.param("cheribsd-mfs-root-kernel-riscv64",
                  [],
@@ -788,7 +788,7 @@ def test_freebsd_toolchains_cheribsd_purecap():
                 test_freebsd_toolchains(target, "/wrong/path", i, [])
 
 
-@pytest.mark.parametrize("target,args,expected", [
+@pytest.mark.parametrize(("target", "args", "expected"), [
     pytest.param("cheribsd-riscv64-hybrid", [], "cheribsd-riscv64-hybrid-build"),
     pytest.param("llvm", [], "llvm-project-build"),
     pytest.param("cheribsd-riscv64-purecap", [], "cheribsd-riscv64-purecap-build"),
@@ -819,7 +819,7 @@ def test_default_build_dir(target: str, args: list, expected: str):
     assert builddir.name == expected
 
 
-@pytest.mark.parametrize("target,args,expected_sysroot,expected_rootfs", [
+@pytest.mark.parametrize(("target", "args", "expected_sysroot", "expected_rootfs"), [
     pytest.param("cheribsd-riscv64", [],
                  "sdk/sysroot-riscv64", "rootfs-riscv64"),
     pytest.param("cheribsd-riscv64-hybrid", [],
