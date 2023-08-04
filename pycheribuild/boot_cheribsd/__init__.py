@@ -974,6 +974,8 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
                    test_setup_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], None]]" = None):
     smb_dirs = qemu.smb_dirs
     setup_tests_starttime = datetime.datetime.now()
+    # Print a backtrace and drop into the debugger on panic
+    qemu.run("sysctl debug.debugger_on_panic=1; sysctl debug.trace_on_panic=1")
     # Enable userspace CHERI exception logging to aid debugging
     qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
     if args.enable_coredumps:
