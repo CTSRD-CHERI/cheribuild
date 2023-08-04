@@ -473,32 +473,32 @@ def test_config_file_include():
 
         # Check that the config file is parsed:
         result = _get_config_with_include(config_dir, b'{ "#include": "common.json"}')
-        assert "/this/is/a/unit/test" == str(result.source_root)
+        assert str(result.source_root) == "/this/is/a/unit/test"
 
         # Check that the current file always has precendence
         result = _get_config_with_include(config_dir, b'{ "#include": "256-common.json", "output-root": "/output128"}')
-        assert "/output128" == str(result.output_root)
+        assert str(result.output_root) == "/output128"
         result = _get_config_with_include(config_dir, b'{ "#include": "128-common.json", "output-root": "/output256"}')
-        assert "/output256" == str(result.output_root)
+        assert str(result.output_root) == "/output256"
         # order doesn't matter since the #include is only evaluated after the whole file has been parsed:
         result = _get_config_with_include(config_dir, b'{ "output-root": "/output128", "#include": "256-common.json"}')
-        assert "/output128" == str(result.output_root)
+        assert str(result.output_root) == "/output128"
         result = _get_config_with_include(config_dir, b'{ "output-root": "/output256", "#include": "128-common.json"}')
-        assert "/output256" == str(result.output_root)
+        assert str(result.output_root) == "/output256"
 
         # TODO: handled nested cases: the level closest to the initial file wins
         (config_dir / "change-source-root.json").write_bytes(
             b'{ "source-root": "/source/root/override", "#include": "common.json" }')
         result = _get_config_with_include(config_dir, b'{ "#include": "change-source-root.json"}')
-        assert "/source/root/override" == str(result.source_root)
+        assert str(result.source_root) == "/source/root/override"
         # And again the root file wins:
         result = _get_config_with_include(config_dir,
                                           b'{ "source-root": "/override/twice", "#include": "change-source-root.json"}')
-        assert "/override/twice" == str(result.source_root)
+        assert str(result.source_root) == "/override/twice"
         # no matter in which order it is written:
         result = _get_config_with_include(config_dir,
                                           b'{ "#include": "change-source-root.json", "source-root": "/override/again"}')
-        assert "/override/again" == str(result.source_root)
+        assert str(result.source_root) == "/override/again"
 
         # Test merging of objects:
         (config_dir / "change-smb-dir.json").write_bytes(
@@ -517,13 +517,13 @@ def test_config_file_include():
             relpath = b"../" + str(Path(d).relative_to(Path(d2).parent)).encode("utf-8")
             result = _get_config_with_include(config_dir,
                                               b'{ "#include": "' + relpath + b'/common.json" }', workdir=Path(d2))
-            assert "/this/is/a/unit/test" == str(result.source_root)
+            assert str(result.source_root) == "/this/is/a/unit/test"
 
             # Check that absolute paths work as expected:
             abspath = b"" + str(Path(d)).encode("utf-8")
             result = _get_config_with_include(config_dir,
                                               b'{ "#include": "' + abspath + b'/common.json" }', workdir=Path(d2))
-            assert "/this/is/a/unit/test" == str(result.source_root)
+            assert str(result.source_root) == "/this/is/a/unit/test"
 
         # Nonexistant paths should raise an error
         with pytest.raises(FileNotFoundError, match="No such file or directory"):

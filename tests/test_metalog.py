@@ -55,7 +55,7 @@ def _get_as_str(mtree: MtreeFile) -> str:
 
 def test_empty():
     mtree = MtreeFile(verbose=False)
-    assert "#mtree 2.0\n# END\n" == _get_as_str(mtree)
+    assert _get_as_str(mtree) == "#mtree 2.0\n# END\n"
 
 
 def test_add_dir():
@@ -205,13 +205,13 @@ def test_contents_root():
 # END
 """
     mtree = MtreeFile(file=io.StringIO(file), contents_root=Path("/path/to/rootfs"), verbose=False)
-    assert """#mtree 2.0
+    assert _get_as_str(mtree) == """#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
 ./bin type=dir uname=root gname=wheel mode=0755
 ./bin/cat type=file uname=root gname=wheel mode=0755 contents=/path/to/rootfs/bin/cheribsdbox
 ./bin/cheribsdbox type=file uname=root gname=wheel mode=0755 contents=/path/to/rootfs/bin/cheribsdbox
 # END
-""" == _get_as_str(mtree)
+"""
 
 
 def test_add_file():
