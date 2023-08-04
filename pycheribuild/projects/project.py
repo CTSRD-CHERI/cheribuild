@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import contextlib
 import copy
 import datetime
 import inspect
@@ -918,12 +919,10 @@ class Project(SimpleProject):
             install_dir = project.install_dir
             if install_dir is not None:
                 all_install_dirs[install_dir] = 1
-        try:
-            # Don't add the rootfs directory, since e.g. target_info.pkgconfig_candidates(<rootfs>) will not return the
-            # correct values. For the root directory we rely on the methods in target_info instead.
+        # Don't add the rootfs directory, since e.g. target_info.pkgconfig_candidates(<rootfs>) will not return the
+        # correct values. For the root directory we rely on the methods in target_info instead.
+        with contextlib.suppress(LookupError):  # If there isn't a rootfs, there is no need to skip that project.
             all_install_dirs.pop(self.rootfs_dir, None)
-        except LookupError:
-            pass  # If there isn't a rootfs, there is no need to skip that project.
         return list(all_install_dirs.keys())
 
     @property

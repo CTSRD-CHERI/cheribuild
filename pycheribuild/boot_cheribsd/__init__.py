@@ -34,6 +34,7 @@
 # device.
 #
 import argparse
+import contextlib
 import datetime
 import os
 import random
@@ -410,11 +411,8 @@ def print_cmd(cmd: "list[str]", **kwargs):
 def failure(*args, exit: bool, **kwargs):
     print("\n", MESSAGE_PREFIX, "\033[0;31m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
     if exit:
-        # noinspection PyBroadException
-        try:
+        with contextlib.suppress(Exception):
             time.sleep(1)  # to get the remaining output
-        except Exception:
-            pass
         sys.exit(1)
     return False
 
