@@ -95,6 +95,8 @@ STOPPED = "Stopped at"
 PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
 PANIC_PAGE_FAULT = "panic: Fatal page fault at 0x"
+PANIC_MORELLO_CAP_ABORT = "panic: Capability abort from kernel space"
+PANIC_IN_BACKTRACE = "panic() at panic+0x"
 CHERI_TRAP_MIPS = re.compile(r"USER_CHERI_EXCEPTION: pid \d+ tid \d+ \(.+\)")
 CHERI_TRAP_RISCV = re.compile(r"pid \d+ tid \d+ \(.+\), uid \d+: CHERI fault \(type 0x")
 # SHELL_LINE_CONTINUATION = "\r\r\n> "
@@ -255,11 +257,9 @@ class CheriBSDSpawnMixin(MixinBase):
 
     def _expect_and_handle_panic_impl(self, options: PatternListType, timeout_msg, *, ignore_timeout=True,
                                       expect_fn, timeout, **kwargs):
-        assert PANIC not in options
-        assert STOPPED not in options
-        assert PANIC_KDB not in options
-        assert PANIC_PAGE_FAULT not in options
-        panic_regexes = [PANIC, STOPPED, PANIC_KDB, PANIC_PAGE_FAULT]
+        panic_regexes = [PANIC, STOPPED, PANIC_KDB, PANIC_PAGE_FAULT, PANIC_MORELLO_CAP_ABORT, PANIC_IN_BACKTRACE]
+        for i in panic_regexes:
+            assert i not in options
         try:
             i = expect_fn(options + panic_regexes, timeout=timeout, **kwargs)
             if i > len(options):
