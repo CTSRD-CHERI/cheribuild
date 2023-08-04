@@ -7,7 +7,7 @@ import typing
 
 # noinspection PyUnresolvedReferences
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import pytest
 
@@ -586,7 +586,8 @@ class SystemClangIfExistsElse:
     pytest.param("cheribsd-riscv64", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
                  ["--cheribsd-riscv64/toolchain-path", "/path/to/custom/toolchain"]),
 ])
-def test_freebsd_toolchains(target: str, expected_path, kind: FreeBSDToolchainKind, extra_args):
+def test_freebsd_toolchains(target: str, expected_path: Union[str, SystemClangIfExistsElse],
+                            kind: FreeBSDToolchainKind, extra_args: "list[str]"):
     # Avoid querying bmake for the objdir
     args = ["--" + target + "/toolchain", kind.value, "--build-root=/some/path/that/does/not/exist", "--pretend"]
     args.extend(extra_args)
@@ -773,16 +774,18 @@ def test_mfsroot_kernel_configs(target: str, config_options: "list[str]", expect
     assert project.get_kernel_configs(None) == expected_kernels
 
 
-# noinspection PyTypeChecker
 def test_freebsd_toolchains_cheribsd_purecap():
     # Targets that need CHERI don't have the --toolchain option:
     # Argparse should exit with exit code 2
-    with pytest.raises(KeyError, match=r"error: unknown argument '--[\w-]+/toolchain'"):
-        for i in FreeBSDToolchainKind:
-            test_freebsd_toolchains("cheribsd-riscv64-hybrid", "/wrong/path", i, [])
-            test_freebsd_toolchains("cheribsd-riscv64-purecap", "/wrong/path", i, [])
-            test_freebsd_toolchains("cheribsd-morello-hybrid", "/wrong/path", i, [])
-            test_freebsd_toolchains("cheribsd-morello-purecap", "/wrong/path", i, [])
+    for i in FreeBSDToolchainKind:
+        for target in (
+            "cheribsd-riscv64-hybrid",
+            "cheribsd-riscv64-purecap",
+            "cheribsd-morello-hybrid",
+            "cheribsd-morello-purecap",
+        ):
+            with pytest.raises(KeyError, match=r"error: unknown argument '--[\w-]+/toolchain'"):
+                test_freebsd_toolchains(target, "/wrong/path", i, [])
 
 
 @pytest.mark.parametrize("target,args,expected", [
@@ -924,7 +927,7 @@ def test_expand_tilde_and_env_vars(monkeypatch):
     assert _parse_config_file_and_args(b'{ "build-root": "${HOME}//build//dir" }').build_root == Path("/build/dir")
 
 
-def test_source_dir_option_when_reusing_git_repo(monkeypatch):
+def test_source_dir_option_when_reusing_git_repo():
     """Passing the --foo/source-dir=/some/path should also work if the target reuses another target's source dir"""
     # By default, compiler-rt-native should reuse the LLVM source dir.
     config = _parse_config_file_and_args(b'{ "llvm/source-directory": "/custom/llvm/dir" }')
