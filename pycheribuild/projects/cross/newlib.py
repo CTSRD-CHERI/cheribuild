@@ -33,6 +33,7 @@ from pathlib import Path
 
 from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject, GitRepository, MakeCommandKind
 from ..simple_project import BoolConfigOption
+from ...config.target_info import CrossCompileTarget
 from ...processutils import commandline_to_str
 
 
@@ -50,6 +51,12 @@ class BuildNewlib(CrossCompileAutotoolsProject):
     supported_architectures = (*CompilationTargets.ALL_NEWLIB_TARGETS, *CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS)
     locale_support = BoolConfigOption("locale-support", show_help=False, help="Build with locale support")
     # build_in_source_dir = True  # we have to build in the source directory
+
+    @staticmethod
+    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
+        if xtarget.target_info_cls.is_newlib() and not xtarget.target_info_cls.is_rtems():
+            return base_target + "-baremetal-" + xtarget.base_arch_suffix
+        return base_target + "-" + xtarget.generic_target_suffix
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
