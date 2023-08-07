@@ -1350,8 +1350,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if is_lib and install_to_internal_sysroot:
             # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
             sysroot_var = "\"$$$${SYSROOT}\""
-            install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install {i} MK_TESTS=no DESTDIR={sysroot};" \
-                                         " fi".format(make=make_in_subdir, sysroot=sysroot_var, i=install_nometalog_cmd)
+            install_to_sysroot_cmd = (
+                f"if [ -n {sysroot_var} ]; then"
+                f"  {make_in_subdir} install {install_nometalog_cmd} MK_TESTS=no DESTDIR={sysroot_var}; "
+                f"fi"
+            )
         if skip_install:
             if install_to_sysroot_cmd:
                 install_cmd = install_to_sysroot_cmd
