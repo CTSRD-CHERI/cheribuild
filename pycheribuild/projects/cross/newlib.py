@@ -60,10 +60,9 @@ class BuildNewlib(CrossCompileAutotoolsProject):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._install_prefix = self._install_prefix.parent  # newlib install already appends the triple
-        self._install_dir = self._install_dir.parent  # newlib install already appends the triple
-        self.verbose_print("install_dir=", self.install_dir, "_install_prefix=", self._install_prefix, "_install_dir=",
-                           self._install_dir, "dest=", self.destdir, "real=", self.real_install_root_dir)
+        assert self._install_prefix == Path("/", self.target_info.target_triple)
+        assert self.destdir.name != self.target_info.target_triple
+        self._install_prefix = Path("/")  # newlib install already appends the triple
         self.configure_command = self.source_dir / "configure"
 
     # def install(self, **kwargs):

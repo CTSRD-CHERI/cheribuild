@@ -4,6 +4,7 @@ import re
 import sys
 import tempfile
 import typing
+from enum import Enum
 
 # noinspection PyUnresolvedReferences
 from pathlib import Path
@@ -31,6 +32,7 @@ from pycheribuild.projects.cross.qt5 import BuildQtBase
 
 # noinspection PyProtectedMember
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase
+from pycheribuild.projects.project import Project
 from pycheribuild.projects.run_qemu import LaunchCheriBSD
 
 # Override the default config loader:
@@ -1079,3 +1081,43 @@ def test_llvm_lto_options(args: "list[str]"):
     # The LLVM build system includes logic to set the correct LTO flags. It also avoids building tests with LTO to
     # reduce the build time. Explicitly adding the CFLAGS/LDFLAGS here breaks this optimization.
     assert args_containing_flto == []
+
+
+class InstallDirSplit(Enum):
+    FULL_PATH_IN_DESTDIR = 1
+    FULL_PATH_IN_PREFIX = 2
+
+
+@pytest.mark.parametrize(("target", "expected_default_path", "install_dir_split"), [
+    pytest.param("cheribsd-riscv64-purecap", Path("/default/prefix/output/rootfs-riscv64-purecap"),
+                 InstallDirSplit.FULL_PATH_IN_DESTDIR, id="cheribsd"),
+    pytest.param("llvm-native", Path("/default/prefix/output/sdk"), InstallDirSplit.FULL_PATH_IN_PREFIX, id="llvm"),
+    pytest.param("newlib-baremetal-riscv64-purecap",
+                 Path("/default/prefix/output/sdk/baremetal/baremetal-newlib-riscv64-purecap"),
+                 InstallDirSplit.FULL_PATH_IN_DESTDIR, id="newlib"),
+    pytest.param("newlib-rtems-riscv64-purecap",
+                 Path("/default/prefix/output/sdk/sysroot-rtems-riscv64-purecap"),
+                 InstallDirSplit.FULL_PATH_IN_DESTDIR, id="newlib-rtems"),
+    pytest.param("picolibc-riscv64-purecap",
+                 Path("/default/prefix/output/sdk/picolibc/picolibc-riscv64-purecap"),
+                 InstallDirSplit.FULL_PATH_IN_DESTDIR, id="picolib"),
+])
+def test_install_dir(target: str, expected_default_path: Path, install_dir_split: InstallDirSplit):
+    def _check_install_dirs(args, expected_install_dir):
+        config = _parse_arguments(args)
+        project = _get_target_instance(target, config, Project)
+        assert project.real_install_root_dir == expected_install_dir
+        if install_dir_split is InstallDirSplit.FULL_PATH_IN_DESTDIR:
+            assert project.destdir == expected_install_dir
+            assert project.install_prefix == Path("/")
+        elif install_dir_split is InstallDirSplit.FULL_PATH_IN_PREFIX:
+            assert project.install_prefix == expected_install_dir
+            assert project.destdir is None
+        else:
+            pytest.fail("Invalid InstallDirSplit")
+
+    _check_install_dirs(["--source-root=/default/prefix"], expected_default_path)
+    _check_install_dirs(
+        ["--source-root=/default/prefix", f"--{target}/install-directory=/custom/override"],
+        Path("/custom/override"),
+    )

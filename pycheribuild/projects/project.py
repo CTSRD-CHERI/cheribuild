@@ -845,12 +845,8 @@ class Project(SimpleProject):
             install_dir_kind = self.get_default_install_dir_kind()
             # Install to SDK if CHERIBSD_ROOTFS is the install dir but we are not building for CheriBSD
             if install_dir_kind == DefaultInstallDir.ROOTFS_LOCALBASE:
-                if self.target_info.is_newlib() or self.target_info.is_rtems():
-                    self.destdir = typing.cast(Path, self.sdk_sysroot.parent)
-                    self._install_prefix = Path("/", self.target_info.target_triple)
-                else:
-                    self._install_prefix = Path("/", self.target_info.sysroot_install_prefix_relative)
-                    self.destdir = self._install_dir
+                self._install_prefix = Path("/", self.target_info.sysroot_install_prefix_relative)
+                self.destdir = self._install_dir
             elif install_dir_kind in (DefaultInstallDir.ROOTFS_OPTBASE, DefaultInstallDir.KDE_PREFIX):
                 relative_to_rootfs = os.path.relpath(str(self._install_dir), str(self.rootfs_dir))
                 if relative_to_rootfs.startswith(os.path.pardir):

@@ -741,7 +741,11 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
     def sysroot_dir(self):
         # Install to target triple as RTEMS' LLVM/Clang Driver expects
         return self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name / (
-                "sysroot-" + self.target.get_rootfs_target().generic_arch_suffix) / self.target_triple
+                "sysroot-" + self.target.get_rootfs_target().generic_arch_suffix)
+
+    @property
+    def sysroot_install_prefix_relative(self) -> Path:
+        return Path(self.target_triple)
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
@@ -788,6 +792,10 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
     os_prefix = "baremetal-newlib-"
 
     @property
+    def sysroot_install_prefix_relative(self) -> Path:
+        return Path(self.target_triple)
+
+    @property
     def sysroot_dir(self) -> Path:
         # Install to mips/cheri128 directory
         if self.target.get_rootfs_target().is_cheri_purecap([CPUArchitecture.MIPS64]):
@@ -795,7 +803,7 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
         else:
             suffix = self.target.get_rootfs_target().generic_arch_suffix
         sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
-        return sysroot_dir / "baremetal" / suffix / self.target_triple
+        return sysroot_dir / "baremetal" / suffix
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
