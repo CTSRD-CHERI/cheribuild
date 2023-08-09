@@ -92,23 +92,23 @@ class TestAsyncDelete(TestCase):
         if False:
             self.project.build_dir.mkdir(parents=True)
             self._check_stat_times_same(self.project.build_dir, "initial created")
-            time.sleep(.05)
+            time.sleep(0.05)
             (self.project.build_dir / "something").mkdir()
             self._check_stat_times_different(self.project.build_dir, "subdir created")
             self._assert_num_files(self.project.build_dir, 1)
-            time.sleep(.05)
+            time.sleep(0.05)
             self.project.clean_directory(self.project.build_dir, keep_root=True)
             self._check_stat_times_different(self.project.build_dir, "subdir deleted")
             self._assert_num_files(self.project.build_dir, 0)
 
             # now try again but don't keep the root
-            time.sleep(.05)
+            time.sleep(0.05)
             (self.project.build_dir / "something").mkdir()
             self._check_stat_times_different(self.project.build_dir, "subdir created")
-            time.sleep(.05)
+            time.sleep(0.05)
             self._assert_num_files(self.project.build_dir, 1)
             self.project.clean_directory(self.project.build_dir, keep_root=False)
-            time.sleep(.05)
+            time.sleep(0.05)
             self._assert_num_files(self.project.build_dir, 0)
             self._check_stat_times_same(self.project.build_dir, "dir recreated")
 
@@ -221,5 +221,5 @@ class TestAsyncDelete(TestCase):
         assert not moved_builddir.exists()  # tempdir should be deleted now
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

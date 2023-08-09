@@ -35,8 +35,12 @@ def test_add_cmake_option():
     add_options_test(["-DPATH_OPTION=/some/path"], PATH_OPTION=Path("/some/path"))
     # Lists need to be converted manually
     with pytest.raises(TypeError, match=re.escape("Unsupported type <class 'list'>: ['a', 'b', 'c']")):
-        add_options_test(["-DLIST_OPTION_1=a;b;c", "-DLIST_OPTION_2=a", "-DLIST_OPTION_3="],
-                         LIST_OPTION_1=["a", "b", "c"], LIST_OPTION_2=["a"], LIST_OPTION_3=[])
+        add_options_test(
+            ["-DLIST_OPTION_1=a;b;c", "-DLIST_OPTION_2=a", "-DLIST_OPTION_3="],
+            LIST_OPTION_1=["a", "b", "c"],
+            LIST_OPTION_2=["a"],
+            LIST_OPTION_3=[],
+        )
     # Floats need to be converted manually
     with pytest.raises(TypeError, match=re.escape("Unsupported type <class 'float'>: 0.1")):
         add_options_test([], FLOAT_OPTION=0.1)

@@ -227,8 +227,9 @@ def test_add_file():
     assert expected == _get_as_str(mtree)
 
 
-@pytest.fixture(params=["/usr/bin", "/this/does/not/exist", "./testfile", "testfile",
-                        "/tmp/testfile", "../this/does/not/exist"])
+@pytest.fixture(
+    params=["/usr/bin", "/this/does/not/exist", "./testfile", "testfile", "/tmp/testfile", "../this/does/not/exist"],
+)
 def temp_symlink():
     target = "/usr/bin"
     with tempfile.TemporaryDirectory() as td:

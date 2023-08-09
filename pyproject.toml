@@ -21,6 +21,16 @@ exclude = [
 ]
 line-length = 120
 
+[tool.black]
+line-length = 120
+target-version = ['py36']
+# 'extend-exclude' excludes files or directories in addition to the defaults
+# Currently reformatting pycheribuild/ results in lots of weird formatting, so
+# let's restrict this to the other files for now.
+extend-exclude = '''3rdparty|\.pytype|pycheribuild'''
+preview = true
+required-version = '23.7.0'
+
 [tool.ruff.isort]
 relative-imports-order = "closest-to-furthest"
 known-local-folder = ["pycheribuild"]
