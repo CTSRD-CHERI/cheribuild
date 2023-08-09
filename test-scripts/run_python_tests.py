@@ -43,9 +43,9 @@ def run_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) ->
     if args.full_test:
         # copy python libs from smb to tmpfs:
         install_prefix = Path(args.install_prefix)
-        qemu.checked_run("time cp -a '{pfx}' '{pfx}.tmpfs'".format(pfx=install_prefix))
+        qemu.checked_run(f"time cp -a '{install_prefix}' '{install_prefix}.tmpfs'")
         qemu.checked_run(f"umount '{install_prefix}'")
-        qemu.checked_run("rmdir '{pfx}' && mv '{pfx}.tmpfs' '{pfx}'".format(pfx=install_prefix))
+        qemu.checked_run(f"rmdir '{install_prefix}' && mv '{install_prefix}.tmpfs' '{install_prefix}'")
 
     # run basic sanity check:
     build_python_exe = "python" + args.buildexe_suffix

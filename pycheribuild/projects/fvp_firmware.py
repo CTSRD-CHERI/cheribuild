@@ -308,17 +308,15 @@ subprocess.check_call(["{real_clang}", "-B{fake_dir}"] + args + ["-fuse-ld=bfd",
             platform_desc = "Platform/ARM/Morello/MorelloPlatformFvp.dsc"
             if not (self.source_dir / "edk2-platforms" / platform_desc).exists():
                 self.fatal("Could not find", self.source_dir / "edk2-platforms" / platform_desc)
-            script = """
+            script = f"""
 . edksetup.sh --reconfig
 make -C BaseTools
-export PACKAGES_PATH=:{src}:{src}/edk2-platforms:
-export CLANG38_AARCH64_PREFIX={toolchain_bin}/llvm-
-export CLANG38_BIN={toolchain_bin}/
-build -n {make_jobs} -a AARCH64 -t CLANG38 -p {platform_desc} \
-    -b {build_mode} -s -D EDK2_OUT_DIR=Build/morellofvp -D PLAT_TYPE_FVP \
-    -D ENABLE_MORELLO_CAP -D FIRMWARE_VER={firmware_ver}""".format(
-                src=self.source_dir, make_jobs=self.config.make_jobs, build_mode=self.build_mode,
-                firmware_ver=firmware_ver, toolchain_bin=fake_compiler_dir, platform_desc=platform_desc)
+export PACKAGES_PATH=:{self.source_dir}:{self.source_dir}/edk2-platforms:
+export CLANG38_AARCH64_PREFIX={fake_compiler_dir}/llvm-
+export CLANG38_BIN={fake_compiler_dir}/
+build -n {self.config.make_jobs} -a AARCH64 -t CLANG38 -p {platform_desc} \
+    -b {self.build_mode} -s -D EDK2_OUT_DIR=Build/morellofvp -D PLAT_TYPE_FVP \
+    -D ENABLE_MORELLO_CAP -D FIRMWARE_VER={firmware_ver}"""
             self.run_shell_script(script, shell="bash", cwd=self.source_dir)
 
     def install(self, **kwargs):

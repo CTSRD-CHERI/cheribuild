@@ -398,8 +398,8 @@ class LaunchQEMUBase(SimpleProject):
                     share_name = f"qemu{smb_dir_count}"
                 user_network_options += str(directory) + share_name_option + ("@ro" if readonly else "")
                 guest_cmd = coloured(AnsiColour.yellow,
-                                     "mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name}"
-                                     " {target}".format(target=target, share_name=share_name))
+                                     f"mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name}"
+                                     f" {target}")
                 self.info("Providing ", coloured(AnsiColour.green, str(directory)),
                           coloured(AnsiColour.cyan, " over SMB to the guest. Use `"), guest_cmd,
                           coloured(AnsiColour.cyan, "` to mount it"), sep="")
@@ -470,8 +470,8 @@ class LaunchQEMUBase(SimpleProject):
         if self.config.wait_for_debugger or self.config.debugger_in_tmux_pane:
             gdb_socket_placeholder = find_free_port(preferred_port=1234)
             gdb_port = gdb_socket_placeholder.port if self.config.gdb_random_port else 1234
-            self.info("QEMU is waiting for GDB to attach (using `target remote :{}`)."
-                      " Once connected enter 'continue\\n' to continue booting".format(gdb_port))
+            self.info(f"QEMU is waiting for GDB to attach (using `target remote :{gdb_port}`)."
+                      " Once connected enter 'continue\\n' to continue booting")
 
             def gdb_command(main_binary, bp=None, extra_binary=None) -> str:
                 gdb_cmd = BuildGDB.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"

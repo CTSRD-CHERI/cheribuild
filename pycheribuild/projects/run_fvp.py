@@ -133,17 +133,17 @@ class InstallMorelloFVP(SimpleProject):
                     self.install_file(installer_sh, Path(td, installer_sh.name))
                 # When building the docker container we have to pass --i-agree-to-the-contained-eula since it does
                 # not seem possible to allow interactive prompts
-                self.write_file(Path(td, "Dockerfile"), contents="""
+                self.write_file(Path(td, "Dockerfile"), contents=f"""
 FROM opensuse/leap:15.2
 RUN zypper in -y xterm gzip tar libdbus-1-3 libatomic1 telnet socat
-COPY {installer_name} .
-RUN ./{installer_name} --i-agree-to-the-contained-eula --no-interactive --destination=/opt/FVP_Morello && \
-    rm ./{installer_name}
+COPY {installer_sh.name} .
+RUN ./{installer_sh.name} --i-agree-to-the-contained-eula --no-interactive --destination=/opt/FVP_Morello && \
+    rm ./{installer_sh.name}
 # Run as non-root user to allow X11 to work
 RUN useradd fvp-user
 USER fvp-user
 VOLUME /diskimg
-""".format(installer_name=installer_sh.name), overwrite=True)
+""", overwrite=True)
                 build_flags = []
                 if not self.config.skip_update:
                     build_flags.append("--pull")

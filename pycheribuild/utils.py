@@ -136,7 +136,7 @@ else:
                 self.attrname = name
             elif name != self.attrname:
                 raise TypeError("Cannot assign the same cached_property to two different names "
-                                "({} and {}).".format(self.attrname, name))
+                                f"({self.attrname} and {name}).")
 
         def __get__(self, instance, owner=None) -> Type_T:
             if instance is None:

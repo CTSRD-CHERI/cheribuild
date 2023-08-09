@@ -733,7 +733,7 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
 
 def start_dhclient(qemu: CheriBSDSpawnMixin, network_iface: str):
     success("===> Setting up QEMU networking")
-    qemu.sendline("ifconfig {network_iface} up && dhclient {network_iface}".format(network_iface=network_iface))
+    qemu.sendline(f"ifconfig {network_iface} up && dhclient {network_iface}")
     i = qemu.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running",
                      "interface ([\\w\\d]+) does not exist"], timeout=120)
     if i == 0:  # Timeout

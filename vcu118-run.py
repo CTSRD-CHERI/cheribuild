@@ -122,9 +122,9 @@ jtag newtap $_CHIPNAME cpu -irlen 18 -ignore-version -expected-id 0x04B31093
 """
 
     for core in range(num_cores):
-        openocd_script += "\nset _TARGETNAME_{0:d} $_CHIPNAME.cpu{0:d}".format(core)
-        openocd_script += "\ntarget create $_TARGETNAME_{0:d} riscv -chain-position $_CHIPNAME.cpu" \
-                          " -coreid {0:d}".format(core)
+        openocd_script += f"\nset _TARGETNAME_{core:d} $_CHIPNAME.cpu{core:d}"
+        openocd_script += f"\ntarget create $_TARGETNAME_{core:d} riscv -chain-position $_CHIPNAME.cpu" \
+                          f" -coreid {core:d}"
         if core == 0:
             openocd_script += " -rtos hwthread"
         openocd_script += "\n"
