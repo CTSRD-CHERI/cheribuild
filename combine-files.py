@@ -54,13 +54,13 @@ def insert_local_file(line: str, _: Path):
     relative_path = match.groups()[0]
     # print("Including file", relative_path, "from", src_file.relative_to(script_dir), file=sys.stderr)
     target_file = script_dir / relative_path
-    new_line = line[0:match.start()] + "R\"\"\"\n"  # start raw string
+    new_line = line[0 : match.start()] + 'R"""\n'  # start raw string
     # print("New line is '", new_line, "'", sep="", file=sys.stderr)
     lines.append(new_line)
     with target_file.open() as f:
         for includedline in f.readlines():
             lines.append(includedline)
-    lines.append("\"\"\"" + line[match.end():])
+    lines.append('"""' + line[match.end() :])
 
 
 def handle_line(line: str, src_file: Path, continued_import: bool):
@@ -159,8 +159,10 @@ add_filtered_file(script_dir / "projects/openradtool.py")
 add_filtered_file(script_dir / "projects/cheri_afl.py")
 
 # First three need to be in order, then add all others
-cross_files = [(script_dir / "projects/cross/cheribsd.py").resolve(),
-               (script_dir / "projects/cross/crosscompileproject.py").resolve()]
+cross_files = [
+    (script_dir / "projects/cross/cheribsd.py").resolve(),
+    (script_dir / "projects/cross/crosscompileproject.py").resolve(),
+]
 for file in sorted((script_dir / "projects/cross").glob("*.py")):
     path = file.resolve()
     if path not in cross_files:
@@ -195,10 +197,12 @@ from_imports = sorted(set(from_imports))
 # print(imports, file=sys.stderr)
 # print(from_imports, file=sys.stderr)
 
-full_file = ("#!/usr/bin/env python3\n" +
-             "# PYTHON_ARGCOMPLETE_OK\n" +
-             "".join(imports) +
-             "".join(from_imports) +
-             "\n# See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri\n" +
-             "".join(lines))
+full_file = (
+    "#!/usr/bin/env python3\n"
+    + "# PYTHON_ARGCOMPLETE_OK\n"
+    + "".join(imports)
+    + "".join(from_imports)
+    + "\n# See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri\n"
+    + "".join(lines)
+)
 print(full_file)

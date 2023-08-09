@@ -60,14 +60,17 @@ targets = [
     # Firmware
     Target("arm-none-eabi-toolchain", None),  # no git repo
     Target("morello-acpica", None),  # Already hardcoded
-    Target("morello-uefi", "c70448e3c078dd05d202e770e3c69d53fcabb4df",  # should be "morello/release-1.0",
-           ["--morello-uefi/edk2-platforms-git-revision", "387acd10643b5682398ef9e7c342ad19db6b4dd8"]),
+    Target(
+        "morello-uefi",
+        "c70448e3c078dd05d202e770e3c69d53fcabb4df",  # should be "morello/release-1.0",
+        ["--morello-uefi/edk2-platforms-git-revision", "387acd10643b5682398ef9e7c342ad19db6b4dd8"],
+    ),
     Target("morello-scp-firmware", "6fad1d3e2f82b2ef51e55928ac3a678a75f64ef4"),  # should be "morello/release-1.0"
     Target("morello-trusted-firmware", "89bfc6f40d3195f48e379def8017ce74ba1120ec"),
     Target("morello-flash-images", None),  # no git repo
     # disk image
     Target("disk-image-morello-purecap", None),
-    ]
+]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--output", required=True)
@@ -113,30 +116,40 @@ run_command(["git", "-C", str(cheribuild_dir), "reset", "--hard", "morello-20.10
 run_command("ln", "-sfn", "sources/cheribuild/cheribuild.py", "cheribuild.py", cwd=output_root)
 # TODO: download the fvp installer first?
 install_script = Path(output_root, "install_and_run_fvp.sh")
-install_script.write_text("""#!/bin/sh
+install_script.write_text(
+    """#!/bin/sh
 dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 exec "${dir}/cheribuild.py" install-morello-fvp run-fvp-morello-purecap "$@"
-""")
+""",
+)
 install_script.chmod(0o755)
 
 # Install a config file that will be used by default:
-Path(output_root, "sources/cheribuild/cheribuild.json").write_text("""{
+Path(output_root, "sources/cheribuild/cheribuild.json").write_text(
+    """{
    "source-root": "../../sources",
    "build-root": "../../build",
    "output-root": "../../output",
    "skip-update": true
 }
-""")
+""",
+)
 # Create the tarball
-run_command("bsdtar", "-cavf", output_root / "release.tar.xz", "-C", output_root,
-            "--options=xz:threads=" + str(default_make_jobs_count()),
-            "--options=compression-level=9",  # reduce size a bit more
-            "output/morello-sdk/firmware",
-            "output/cheribsd-morello-purecap.img",
-            "sources/cheribuild",
-            "cheribuild.py",
-            install_script.relative_to(output_root),
-            cwd="/")
+run_command(
+    "bsdtar",
+    "-cavf",
+    output_root / "release.tar.xz",
+    "-C",
+    output_root,
+    "--options=xz:threads=" + str(default_make_jobs_count()),
+    "--options=compression-level=9",  # reduce size a bit more
+    "output/morello-sdk/firmware",
+    "output/cheribsd-morello-purecap.img",
+    "sources/cheribuild",
+    "cheribuild.py",
+    install_script.relative_to(output_root),
+    cwd="/",
+)
 
 run_command("sha256sum", output_root / "release.tar.xz")
 

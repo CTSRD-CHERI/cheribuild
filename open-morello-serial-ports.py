@@ -41,7 +41,7 @@ def find_morello_board_ttys(pretend: bool, board_index: "Optional[int]" = None) 
             raise ValueError(f"Found more than 8 Morello serial ports ({len(ttys)}), please pass --board-index")
         if board_index >= len(ttys) / 8:
             raise ValueError(f"Board index {board_index} is too large, found {len(ttys) // 8} boards")
-        return ttys[8 * board_index:8 * board_index + 8]
+        return ttys[8 * board_index : 8 * board_index + 8]
     return ttys
 
 
@@ -70,8 +70,15 @@ class MorelloUART(Enum):
         # TODO: Handle programs other than picocom
         if not shutil.which("picocom"):
             sys.exit("FATAL: Could not find picocom command, please install it using you system package manager.")
-        return ["picocom", str(morello_ports[self.index].device), "--baud=115200", "--parity=none", "--stopbits=1",
-                "--databits=8", "--flow=none"]
+        return [
+            "picocom",
+            str(morello_ports[self.index].device),
+            "--baud=115200",
+            "--parity=none",
+            "--stopbits=1",
+            "--databits=8",
+            "--flow=none",
+        ]
 
 
 def open_tmux_windows(morello_ports: "list[ListPortInfo]", force: bool, pretend: bool, minimal: bool):
@@ -85,8 +92,12 @@ def open_tmux_windows(morello_ports: "list[ListPortInfo]", force: bool, pretend:
     if server is None:
         raise Exception("Tmux server not found")
     try:
-        session = server.new_session("morello-serial-ports", attach=False, kill_session=force and not pretend,
-                                     start_directory="/")
+        session = server.new_session(
+            "morello-serial-ports",
+            attach=False,
+            kill_session=force and not pretend,
+            start_directory="/",
+        )
     except libtmux.exc.TmuxSessionExists:
         sys.exit("tmux session already exists, if you would like to replace it re-run with `--force`")
     # ensure we get advanced colour/font features
@@ -144,18 +155,33 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--pretend", "-p", action="store_true", help="Don't actually do anything")
     parser.add_argument("--debug", action="store_true", help="Print debug output")
-    parser.add_argument("--board-index", "-b", type=int,
-                        help="The Morello board to connect to (only needed if more than one is attached)")
+    parser.add_argument(
+        "--board-index",
+        "-b",
+        type=int,
+        help="The Morello board to connect to (only needed if more than one is attached)",
+    )
     action_group = parser.add_mutually_exclusive_group(required=True)
-    action_group.add_argument("--list-serial-ports", "--list", "-l", action="store_true",
-                              help="List all serial ports for the chosen board")
+    action_group.add_argument(
+        "--list-serial-ports",
+        "--list",
+        "-l",
+        action="store_true",
+        help="List all serial ports for the chosen board",
+    )
     action_group.add_argument("--tmux", action="store_true", help="Connect to all UARTS in a tmux session")
-    action_group.add_argument("--tmux-minimal", action="store_true",
-                              help="Connect to AP and MCC UARTS in a tmux session")
-    action_group.add_argument("--uart", "-u", help="Connect to a single Morello board UART",
-                              choices=[str(s) for s in range(8)] + [s.name for s in MorelloUART])
-    parser.add_argument("--force", "-f", action="store_true",
-                        help="Kill an existing Morello tmux session if present")
+    action_group.add_argument(
+        "--tmux-minimal",
+        action="store_true",
+        help="Connect to AP and MCC UARTS in a tmux session",
+    )
+    action_group.add_argument(
+        "--uart",
+        "-u",
+        help="Connect to a single Morello board UART",
+        choices=[str(s) for s in range(8)] + [s.name for s in MorelloUART],
+    )
+    parser.add_argument("--force", "-f", action="store_true", help="Kill an existing Morello tmux session if present")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
@@ -178,13 +204,17 @@ def main():
             uart = MorelloUART[args.uart]
         except KeyError:
             uart = MorelloUART.get(int(args.uart))
-        print("Will connect to UART", uart.index, f"({morello_ports[uart.index].device}) which should be the",
-              uart.value)
+        print(
+            "Will connect to UART",
+            uart.index,
+            f"({morello_ports[uart.index].device}) which should be the",
+            uart.value,
+        )
         cmd = uart.serial_command(morello_ports)
         print("Running `", " ".join(map(shlex.quote, cmd)), "`", sep="")
         if not args.pretend:
             os.execvp(cmd[0], cmd)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
