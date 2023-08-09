@@ -51,8 +51,11 @@ from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
-    run_remote_lit_test.add_common_cmdline_args(parser, default_xunit_output="qemu-libcxx-test-results.xml",
-                                                allow_multiprocessing=True)
+    run_remote_lit_test.add_common_cmdline_args(
+        parser,
+        default_xunit_output="qemu-libcxx-test-results.xml",
+        allow_multiprocessing=True,
+    )
 
 
 def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, disk_image, build_dir):
@@ -76,8 +79,12 @@ def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, di
         raise
 
 
-def libcxx_main(barrier: "Optional[Barrier]" = None, mp_queue: "Optional[Queue]" = None,
-                ssh_port_queue: "Optional[Queue]" = None, shard_num: "Optional[int]" = None):
+def libcxx_main(
+    barrier: "Optional[Barrier]" = None,
+    mp_queue: "Optional[Queue]" = None,
+    ssh_port_queue: "Optional[Queue]" = None,
+    shard_num: "Optional[int]" = None,
+):
     def set_cmdline_args(args: argparse.Namespace):
         boot_cheribsd.info("Setting args:", args)
         if mp_queue:
@@ -85,8 +92,12 @@ def libcxx_main(barrier: "Optional[Barrier]" = None, mp_queue: "Optional[Queue]"
             mp_debug(args, "Syncing shard ", shard_num, " with main process. Stage: assign SSH port")
 
             ssh_port_queue.put((args.ssh_port, shard_num))  # check that we don't get a conflict
-            run_remote_lit_test.notify_main_process(args, run_remote_lit_test.MultiprocessStages.BOOTING_CHERIBSD,
-                                                    mp_queue, barrier)
+            run_remote_lit_test.notify_main_process(
+                args,
+                run_remote_lit_test.MultiprocessStages.BOOTING_CHERIBSD,
+                mp_queue,
+                barrier,
+            )
         if args.interact and (shard_num is not None or args.internal_num_shards or args.parallel_jobs):
             boot_cheribsd.failure("Cannot use --interact with multiple shards", exit=True)
             sys.exit()
@@ -96,13 +107,23 @@ def libcxx_main(barrier: "Optional[Barrier]" = None, mp_queue: "Optional[Queue]"
         with tempfile.TemporaryDirectory(prefix="cheribuild-libcxx-tests-") as tempdir:
             # TODO: do we need lit_extra_args=["-Denable_filesystem=False"]?
             # Some of the tests might fail on a SMBFS directory.
-            return run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir, mp_q=mp_queue,
-                                                            barrier=barrier)
+            return run_remote_lit_test.run_remote_lit_tests(
+                "libcxx",
+                qemu,
+                args,
+                tempdir,
+                mp_q=mp_queue,
+                barrier=barrier,
+            )
 
     try:
-        run_tests_main(test_function=run_libcxx_tests, need_ssh=True,  # we need ssh running to execute the tests
-                       should_mount_builddir=True, argparse_setup_callback=add_cmdline_args,
-                       argparse_adjust_args_callback=set_cmdline_args)
+        run_tests_main(
+            test_function=run_libcxx_tests,
+            need_ssh=True,  # we need ssh running to execute the tests
+            should_mount_builddir=True,
+            argparse_setup_callback=add_cmdline_args,
+            argparse_adjust_args_callback=set_cmdline_args,
+        )
     except Exception as e:
         if mp_queue:
             boot_cheribsd.failure("GOT EXCEPTION in shard ", shard_num, ": ", sys.exc_info(), exit=False)
@@ -133,16 +154,30 @@ def run_parallel(args: argparse.Namespace):
     ssh_port_queue = Queue()
     processes: "list[LitShardProcess]" = []
     # Extract the kernel + disk image in the main process to avoid race condition:
-    kernel_path = boot_cheribsd.maybe_decompress(Path(args.kernel), True, True, args,
-                                                 what="kernel") if args.kernel else None
-    disk_image_path = boot_cheribsd.maybe_decompress(Path(args.disk_image), True, True,
-                                                     args, what="disk image") if args.disk_image else None
+    kernel_path = (
+        boot_cheribsd.maybe_decompress(Path(args.kernel), True, True, args, what="kernel") if args.kernel else None
+    )
+    disk_image_path = (
+        boot_cheribsd.maybe_decompress(Path(args.disk_image), True, True, args, what="disk image")
+        if args.disk_image
+        else None
+    )
     for i in range(args.parallel_jobs):
         shard_num = i + 1
         boot_cheribsd.info(args)
-        p = LitShardProcess(target=run_shard, args=(
-            mp_q, mp_barrier, shard_num, args.parallel_jobs, ssh_port_queue, kernel_path, disk_image_path,
-            args.build_dir))
+        p = LitShardProcess(
+            target=run_shard,
+            args=(
+                mp_q,
+                mp_barrier,
+                shard_num,
+                args.parallel_jobs,
+                ssh_port_queue,
+                kernel_path,
+                disk_image_path,
+                args.build_dir,
+            ),
+        )
         p.stage = run_remote_lit_test.MultiprocessStages.FINDING_SSH_PORT
         p.daemon = True  # kill process on parent exit
         p.name = "<LIBCXX test shard " + str(shard_num) + ">"
@@ -179,8 +214,12 @@ def run_parallel(args: argparse.Namespace):
                     error_suite.add_testcase(error_case)
                     result.add_testsuite(error_suite)
                 if processes[i].stage != run_remote_lit_test.MultiprocessStages.EXITED:
-                    error_msg = "ERROR: shard " + str(shard_num) + " did not exit cleanly! Was in stage: " + processes[
-                        i].stage.value
+                    error_msg = (
+                        "ERROR: shard "
+                        + str(shard_num)
+                        + " did not exit cleanly! Was in stage: "
+                        + processes[i].stage.value
+                    )
                     if hasattr(processes[i], "error_message"):
                         error_msg += "\nError message:\n" + processes[i].error_message
                     error_suite = junitparser.TestSuite(name="bad-exit-shard-" + str(shard_num))
@@ -212,8 +251,15 @@ def wait_or_terminate_all_shards(processes, max_time, timed_out):
             try:
                 p.join(timeout=remaining_time.total_seconds())
             except Exception as e:
-                boot_cheribsd.failure("Could not join job ", p.name, " in ", remaining_time.total_seconds(),
-                                      " seconds: ", e, exit=False)
+                boot_cheribsd.failure(
+                    "Could not join job ",
+                    p.name,
+                    " in ",
+                    remaining_time.total_seconds(),
+                    " seconds: ",
+                    e,
+                    exit=False,
+                )
                 timed_out = True
         if p.is_alive():
             boot_cheribsd.failure("Parallel job ", p.name, " did not exit cleanly!", exit=False)
@@ -230,9 +276,13 @@ def dump_processes(processes: "list[LitShardProcess]"):
         boot_cheribsd.info("Subprocess ", i + 1, " ", p, " -- current stage: ", p.stage.value)
 
 
-def run_parallel_impl(args: argparse.Namespace, processes: "list[LitShardProcess]", mp_q: Queue,
-                      mp_barrier: Barrier,
-                      ssh_port_queue: Queue):
+def run_parallel_impl(
+    args: argparse.Namespace,
+    processes: "list[LitShardProcess]",
+    mp_q: Queue,
+    mp_barrier: Barrier,
+    ssh_port_queue: Queue,
+):
     timed_out = False
     starttime = datetime.datetime.now()
     ssh_ports = []  # check that we don't have multiple parallel jobs trying to use the same port
@@ -280,16 +330,30 @@ def run_parallel_impl(args: argparse.Namespace, processes: "list[LitShardProcess
             mp_debug(args, "Still waiting for ", num_shards_not_booted, " shards to boot")
             if loop_start_time > boot_end_time:
                 timed_out = True
-                boot_cheribsd.failure("ERROR: ", num_shards_not_booted, " shards did not boot within ", max_boot_time,
-                                      ". Shards remaining: ", remaining_processes, exit=False)
+                boot_cheribsd.failure(
+                    "ERROR: ",
+                    num_shards_not_booted,
+                    " shards did not boot within ",
+                    max_boot_time,
+                    ". Shards remaining: ",
+                    remaining_processes,
+                    exit=False,
+                )
                 dump_processes(processes)
                 continue
 
         mp_debug(args, "Still waiting for ", remaining_processes, " to finish")
         if boot_end_time > test_end_time:
             timed_out = True
-            boot_cheribsd.failure("Reached test timeout of", max_test_duration, " with ", len(remaining_processes),
-                                  "shards remaining: ", remaining_processes, exit=False)
+            boot_cheribsd.failure(
+                "Reached test timeout of",
+                max_test_duration,
+                " with ",
+                len(remaining_processes),
+                "shards remaining: ",
+                remaining_processes,
+                exit=False,
+            )
             dump_processes(processes)
             continue
         remaining_test_time = test_end_time - loop_start_time
@@ -309,11 +373,18 @@ def run_parallel_impl(args: argparse.Namespace, processes: "list[LitShardProcess
                 mp_debug(args, "===> Shard ", shard_result[1], " reached next stage: ", shard_result[2])
                 if target_process.stage == run_remote_lit_test.MultiprocessStages.BOOTING_CHERIBSD:
                     not_booted_processes.remove(target_process)
-                    boot_cheribsd.success("Shard ", shard_result[1], " has booted successfully afer ",
-                                          loop_start_time - start_time)
+                    boot_cheribsd.success(
+                        "Shard ",
+                        shard_result[1],
+                        " has booted successfully afer ",
+                        loop_start_time - start_time,
+                    )
                     if len(not_booted_processes) == 0:
-                        boot_cheribsd.success("All shards have booted succesfully. Releasing barrier (num_waiting = ",
-                                              mp_barrier.n_waiting, ")")
+                        boot_cheribsd.success(
+                            "All shards have booted succesfully. Releasing barrier (num_waiting = ",
+                            mp_barrier.n_waiting,
+                            ")",
+                        )
                         assert mp_barrier.n_waiting == len(processes), f"{mp_barrier.n_waiting} != {len(processes)}"
                         mp_barrier.wait(timeout=10)
                         boot_cheribsd.success("Barrier has been released, tests should run now.")
@@ -326,13 +397,24 @@ def run_parallel_impl(args: argparse.Namespace, processes: "list[LitShardProcess
                 if target_process in remaining_processes:
                     remaining_processes.remove(target_process)
                 if previous_stage != run_remote_lit_test.MultiprocessStages.RUNNING_TESTS:
-                    boot_cheribsd.failure("===> FATAL: Shard ", target_process, " failed before running tests stage: ",
-                                          previous_stage, " -> Aborting all other shards", exit=False)
+                    boot_cheribsd.failure(
+                        "===> FATAL: Shard ",
+                        target_process,
+                        " failed before running tests stage: ",
+                        previous_stage,
+                        " -> Aborting all other shards",
+                        exit=False,
+                    )
                     timed_out = True
                     break
                 else:
-                    boot_cheribsd.failure("===> ERROR: Shard ", shard_result[1], " failed while running tests: ",
-                                          shard_result[2], exit=True)
+                    boot_cheribsd.failure(
+                        "===> ERROR: Shard ",
+                        shard_result[1],
+                        " failed while running tests: ",
+                        shard_result[2],
+                        exit=True,
+                    )
             else:
                 boot_cheribsd.failure("===> FATAL: Received invalid shard result message: ", shard_result, exit=True)
         except Empty:
@@ -357,8 +439,11 @@ def run_parallel_impl(args: argparse.Namespace, processes: "list[LitShardProcess
 
     if not timed_out:
         if not_booted_processes:
-            boot_cheribsd.failure("FATAL: all processes exited but some still not booted? ", not_booted_processes,
-                                  exit=True)
+            boot_cheribsd.failure(
+                "FATAL: all processes exited but some still not booted? ",
+                not_booted_processes,
+                exit=True,
+            )
         boot_cheribsd.success("All shards have terminated")
     # If we got an error we should not end up here -> all processes should be in stage exited
     dump_processes(processes)
@@ -387,5 +472,5 @@ def main():
         libcxx_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -37,7 +37,12 @@ def run_ros2_tests(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace) 
     return True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # we don't need ssh running to execute the tests
-    run_tests_main(test_function=run_ros2_tests, need_ssh=False, should_mount_builddir=False,
-                   should_mount_srcdir=True, should_mount_sysroot=True)
+    run_tests_main(
+        test_function=run_ros2_tests,
+        need_ssh=False,
+        should_mount_builddir=False,
+        should_mount_srcdir=True,
+        should_mount_sysroot=True,
+    )

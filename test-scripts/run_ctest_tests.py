@@ -53,7 +53,7 @@ def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
         with cmake_cache.open("rb") as f:
             for line in f.readlines():
                 if line.startswith(b"CMAKE_COMMAND:INTERNAL="):
-                    host_cmake_path = line[len(b"CMAKE_COMMAND:INTERNAL="):].strip()
+                    host_cmake_path = line[len(b"CMAKE_COMMAND:INTERNAL=") :].strip()
                     boot_cheribsd.info("Host CMake path is ", host_cmake_path)
                     break
     for ctest_file in Path(args.build_dir).rglob("CTestTestfile.cmake"):
@@ -82,9 +82,12 @@ def run_ctest_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
     # First list all tests and then try running them.
     qemu.checked_run(f"cd {args.build_dir} && /cmake/bin/ctest --show-only -V", timeout=5 * 60)
     try:
-        qemu.checked_run(f"cd {args.build_dir} && /cmake/bin/ctest {ctest_args}",
-                         timeout=int(args.test_timeout * 1.05), pretend_result=0,
-                         ignore_cheri_trap=args.ignore_cheri_trap)
+        qemu.checked_run(
+            f"cd {args.build_dir} && /cmake/bin/ctest {ctest_args}",
+            timeout=int(args.test_timeout * 1.05),
+            pretend_result=0,
+            ignore_cheri_trap=args.ignore_cheri_trap,
+        )
     except boot_cheribsd.CheriBSDCommandFailed as e:
         boot_cheribsd.failure("Failed to run some tests: " + str(e), exit=False)
         return False
@@ -95,20 +98,36 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--cmake-install-dir", help="Installation root for the CMake/CTest commands", required=True)
     parser.add_argument("--junit-xml", required=False, help="Output file name for the JUnit XML results")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose ctest output")
-    parser.add_argument("--ignore-cheri-trap", action="store_true", required=False, default=True,
-                        help="Don't fail the tests when a CHERI trap happens")
-    parser.add_argument("--test-setup-command", action="append", dest="test_setup_commands", metavar="COMMAND",
-                        help="Run COMMAND as an additional test setup step before running the tests")
+    parser.add_argument(
+        "--ignore-cheri-trap",
+        action="store_true",
+        required=False,
+        default=True,
+        help="Don't fail the tests when a CHERI trap happens",
+    )
+    parser.add_argument(
+        "--test-setup-command",
+        action="append",
+        dest="test_setup_commands",
+        metavar="COMMAND",
+        help="Run COMMAND as an additional test setup step before running the tests",
+    )
 
 
 def adjust_args(args: argparse.Namespace):
-    args.smb_mount_directories.append(
-        boot_cheribsd.SmbMount(args.cmake_install_dir, readonly=True, in_target="/cmake"))
+    args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.cmake_install_dir, readonly=True, in_target="/cmake"))
     args.junit_xml = get_default_junit_xml_name(args.junit_xml, args.build_dir)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # we don't need ssh running to execute the tests
-    run_tests_main(test_function=run_ctest_tests, test_setup_function=test_setup,
-                   need_ssh=False, argparse_setup_callback=add_args, argparse_adjust_args_callback=adjust_args,
-                   should_mount_builddir=True, should_mount_srcdir=True, should_mount_sysroot=True)
+    run_tests_main(
+        test_function=run_ctest_tests,
+        test_setup_function=test_setup,
+        need_ssh=False,
+        argparse_setup_callback=add_args,
+        argparse_adjust_args_callback=adjust_args,
+        should_mount_builddir=True,
+        should_mount_srcdir=True,
+        should_mount_sysroot=True,
+    )

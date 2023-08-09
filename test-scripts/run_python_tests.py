@@ -60,13 +60,28 @@ def run_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) ->
 
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--buildexe-suffix", required=False, default="", help="Suffix for build executables")
-    parser.add_argument("--full-test", action="store_true", required=False, dest="full_test",
-                        help="Run the full python test suite")
-    parser.add_argument("--smoketest", action="store_false", required=False, dest="full_test",
-                        help="Don't run full python test suite, only check that a basic program works")
+    parser.add_argument(
+        "--full-test",
+        action="store_true",
+        required=False,
+        dest="full_test",
+        help="Run the full python test suite",
+    )
+    parser.add_argument(
+        "--smoketest",
+        action="store_false",
+        required=False,
+        dest="full_test",
+        help="Don't run full python test suite, only check that a basic program works",
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # we don't need ssh running to execute the tests
-    run_tests_main(test_function=run_tests, need_ssh=False, should_mount_builddir=True, should_mount_srcdir=True,
-                   argparse_setup_callback=add_args)
+    run_tests_main(
+        test_function=run_tests,
+        need_ssh=False,
+        should_mount_builddir=True,
+        should_mount_srcdir=True,
+        argparse_setup_callback=add_args,
+    )

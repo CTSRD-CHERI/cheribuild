@@ -67,8 +67,13 @@ def output_to_junit_suite(xml, output_path, suite_name, good=True):
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--testcase-timeout", required=False, default="1s")
     parser.add_argument("--ld-preload-path", required=False, default=None)
-    parser.add_argument("--test-setup-command", action="append", dest="test_setup_commands", metavar="COMMAND",
-                        help="Run COMMAND as an additional test setup step before running the tests")
+    parser.add_argument(
+        "--test-setup-command",
+        action="append",
+        dest="test_setup_commands",
+        metavar="COMMAND",
+        help="Run COMMAND as an additional test setup step before running the tests",
+    )
 
 
 def setup_juliet_test_environment(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
@@ -81,7 +86,6 @@ def setup_juliet_test_environment(qemu: boot_cheribsd.CheriBSDInstance, args: ar
 def run_juliet_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     # args.ld_preload_path should be a path on the host
     if args.ld_preload_path:
-
         # hack until libcaprevoke is always present in cheribsd and can be added to the disk image via METALOG:
         # copy it into the runtime linker's search path from the sysroot
         qemu.checked_run("cp /sysroot/usr/libcheri/libcheri_caprevoke* /usr/libcheri")
@@ -107,8 +111,14 @@ def run_juliet_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     return True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # we don't need ssh running to execute the tests, but we need both host and source dir mounted
-    run_tests_main(test_function=run_juliet_tests, test_setup_function=setup_juliet_test_environment,
-                   argparse_setup_callback=add_args, need_ssh=False, should_mount_builddir=True,
-                   should_mount_srcdir=True, should_mount_sysroot=True)
+    run_tests_main(
+        test_function=run_juliet_tests,
+        test_setup_function=setup_juliet_test_environment,
+        argparse_setup_callback=add_args,
+        need_ssh=False,
+        should_mount_builddir=True,
+        should_mount_srcdir=True,
+        should_mount_sysroot=True,
+    )

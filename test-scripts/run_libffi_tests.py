@@ -39,7 +39,8 @@ def run_libffi_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Na
     for i in Path(args.build_dir, ".libs").glob("libffi.so*"):
         qemu.scp_to_guest(i, str(Path("/tmp", i.name)))
     qemu.checked_run("ln -sf /tmp/libffi.so* /usr/lib")
-    Path(args.build_dir, "site.exp").write_text(f"""
+    Path(args.build_dir, "site.exp").write_text(
+        f"""
 if ![info exists boards_dir] {{
     set boards_dir {{}}
 }}
@@ -47,9 +48,11 @@ lappend boards_dir "{args.build_dir}"
 verbose "Global Config File: target_triplet is $target_triplet" 2
 global target_list
 set target_list "remote-cheribsd"
-""")
+""",
+    )
     ssh_options = "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes"
-    Path(args.build_dir, "remote-cheribsd.exp").write_text(f"""
+    Path(args.build_dir, "remote-cheribsd.exp").write_text(
+        f"""
 load_generic_config "unix"
 set_board_info connect ssh
 #set_board_info rsh_prog "ssh -i {qemu.ssh_private_key} {ssh_options} -p {qemu.ssh_port}"
@@ -61,15 +64,17 @@ set_board_info port {qemu.ssh_port}
 set_board_info ssh_useropts "-i {qemu.ssh_private_key} {ssh_options}"
 set_board_info ssh_opts "-i {qemu.ssh_private_key} {ssh_options}"
 # set_board_info exec_shell "gdb-run-noninteractive.sh"
-""")
+""",
+    )
     boot_cheribsd.run_host_command(["runtest", "--version"])
     tests_okay = False
     try:
         # Note: we have to use dict(os.environ, **dict(...)) to update env, since env=... overrides it.
-        boot_cheribsd.run_host_command(["make", "check", "RUNTESTFLAGS=-a --target-board remote-cheribsd --xml"],
-                                       env=dict(os.environ, **dict(BOARDSDIR=str(args.build_dir),
-                                                                   DEJAGNU=str(Path(args.build_dir, "site.exp")))),
-                                       cwd=str(args.build_dir))
+        boot_cheribsd.run_host_command(
+            ["make", "check", "RUNTESTFLAGS=-a --target-board remote-cheribsd --xml"],
+            env=dict(os.environ, **dict(BOARDSDIR=str(args.build_dir), DEJAGNU=str(Path(args.build_dir, "site.exp")))),
+            cwd=str(args.build_dir),
+        )
         tests_okay = True
     except subprocess.CalledProcessError:
         boot_cheribsd.failure("Some tests failed", exit=False)
@@ -81,9 +86,13 @@ set_board_info ssh_opts "-i {qemu.ssh_private_key} {ssh_options}"
     return tests_okay
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # we don't need ssh running to execute the tests
-    run_tests_main(test_function=run_libffi_tests, need_ssh=True,
-                   # We don't actually need to mount these directories, but by setting the arguments to true, the
-                   # test script will give an error if --source-dir/--build-dir is not passed. required
-                   should_mount_builddir=True, should_mount_srcdir=False)
+    run_tests_main(
+        test_function=run_libffi_tests,
+        need_ssh=True,
+        # We don't actually need to mount these directories, but by setting the arguments to true, the
+        # test script will give an error if --source-dir/--build-dir is not passed. required
+        should_mount_builddir=True,
+        should_mount_srcdir=False,
+    )

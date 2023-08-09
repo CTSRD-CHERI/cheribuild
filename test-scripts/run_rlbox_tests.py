@@ -55,11 +55,22 @@ def run_rlbox_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
 
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--verbose", action="store_true", help="Enable verbose ctest output")
-    parser.add_argument("--ignore-cheri-trap", action="store_true", required=False, default=True,
-                        help="Don't fail the tests when a CHERI trap happens")
+    parser.add_argument(
+        "--ignore-cheri-trap",
+        action="store_true",
+        required=False,
+        default=True,
+        help="Don't fail the tests when a CHERI trap happens",
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # we don't need ssh running to execute the tests
-    run_tests_main(test_function=run_rlbox_tests, need_ssh=False, argparse_setup_callback=add_args,
-                   should_mount_builddir=True, should_mount_srcdir=True, should_mount_sysroot=True)
+    run_tests_main(
+        test_function=run_rlbox_tests,
+        need_ssh=False,
+        argparse_setup_callback=add_args,
+        should_mount_builddir=True,
+        should_mount_srcdir=True,
+        should_mount_sysroot=True,
+    )

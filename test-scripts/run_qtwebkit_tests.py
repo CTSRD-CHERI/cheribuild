@@ -50,13 +50,17 @@ def setup_qtwebkit_test_environment(qemu: boot_cheribsd.CheriBSDInstance, _: arg
     qemu.checked_run("ln -sf /usr/local/Qt-cheri /usr/local/mips")
     qemu.checked_run("ln -sf /usr/local/Qt-cheri /usr/local/cheri")
     qemu.checked_run("cp /source/LayoutTests/resources/Ahem.ttf /usr/local/Qt-cheri/lib/fonts")
-    qemu.checked_run("cp /source/LayoutTests/fast/writing-mode/resources/DroidSansFallback-reduced.ttf "
-                     "/usr/local/Qt-cheri/lib/fonts")
+    qemu.checked_run(
+        "cp /source/LayoutTests/fast/writing-mode/resources/DroidSansFallback-reduced.ttf "
+        "/usr/local/Qt-cheri/lib/fonts",
+    )
     qemu.checked_run("cp /build/mime.cache /usr/share/mime")
     qemu.checked_run("cp /build/freedesktop.org.xml /usr/share/mime/packages/freedesktop.org.xml")
 
-    boot_cheribsd.success("To debug crashes run: `sysctl kern.corefile=/build/%N.%P.core; sysctl kern.coredump=1`"
-                          " and then run CHERI gdb on the host system.")
+    boot_cheribsd.success(
+        "To debug crashes run: `sysctl kern.corefile=/build/%N.%P.core; sysctl kern.coredump=1`"
+        " and then run CHERI gdb on the host system.",
+    )
 
     # copy the smaller files to /tmp to avoid the smbfs overhead
     qemu.checked_run("cp /build/bin/jsc.stripped /tmp/jsc")
@@ -76,10 +80,11 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
             qemu.checked_run(
                 "/source/Tools/Scripts/run-layout-jsc -j /tmp/jsc -t "
                 "/source/LayoutTests -r /build/results -x /build/results.xml",
-                timeout=None)
+                timeout=None,
+            )
         return True
     finally:
-        tests_xml_path = Path(args.build_dir, 'results.xml')
+        tests_xml_path = Path(args.build_dir, "results.xml")
         try:
             if not args.smoketest and tests_xml_path.exists():
                 # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
@@ -92,14 +97,30 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
 
 
 def add_args(parser: argparse.ArgumentParser):
-    parser.add_argument("--smoketest", action="store_true", required=False, default=True,
-                        help="Don't run full jsc layout tests, only check that jsc and DumpRenderTree work")
-    parser.add_argument("--full-test", action="store_false", required=False, dest="smoketest",
-                        help="Don't run full jsc layout tests, only check that jsc and DumpRenderTree work")
+    parser.add_argument(
+        "--smoketest",
+        action="store_true",
+        required=False,
+        default=True,
+        help="Don't run full jsc layout tests, only check that jsc and DumpRenderTree work",
+    )
+    parser.add_argument(
+        "--full-test",
+        action="store_false",
+        required=False,
+        dest="smoketest",
+        help="Don't run full jsc layout tests, only check that jsc and DumpRenderTree work",
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # we don't need ssh running to execute the tests, but we need both host and source dir mounted
-    run_tests_main(test_function=run_qtwebkit_tests, test_setup_function=setup_qtwebkit_test_environment,
-                   argparse_setup_callback=add_args, need_ssh=False, should_mount_builddir=True,
-                   should_mount_srcdir=True, should_mount_sysroot=True)
+    run_tests_main(
+        test_function=run_qtwebkit_tests,
+        test_setup_function=setup_qtwebkit_test_environment,
+        argparse_setup_callback=add_args,
+        need_ssh=False,
+        should_mount_builddir=True,
+        should_mount_srcdir=True,
+        should_mount_sysroot=True,
+    )

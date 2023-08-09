@@ -45,7 +45,7 @@ sys.path.insert(1, str(_junitparser_dir))
 sys.path.insert(1, str(_pexpect_dir))
 # Pexpect also needs ptyprocess
 _ptyprocess_dir = _cheribuild_root / "3rdparty/ptyprocess"
-assert (_ptyprocess_dir / "ptyprocess/ptyprocess.py").exists(), (_ptyprocess_dir / "ptyprocess/ptyprocess.py")
+assert (_ptyprocess_dir / "ptyprocess/ptyprocess.py").exists(), _ptyprocess_dir / "ptyprocess/ptyprocess.py"
 sys.path.insert(1, str(_ptyprocess_dir))
 sys.path.insert(1, str(_cheribuild_root))
 import junitparser  # noqa: E402
@@ -56,8 +56,16 @@ from pycheribuild.boot_cheribsd import QemuCheriBSDInstance  # noqa: E402
 from pycheribuild.config.target_info import CrossCompileTarget  # noqa: E402
 from pycheribuild.processutils import commandline_to_str  # noqa: E402
 
-__all__ = ["run_tests_main", "boot_cheribsd", "junitparser", "pexpect", "commandline_to_str", "CrossCompileTarget",
-           "finish_and_write_junit_xml_report", "get_default_junit_xml_name"]
+__all__ = [
+    "run_tests_main",
+    "boot_cheribsd",
+    "junitparser",
+    "pexpect",
+    "commandline_to_str",
+    "CrossCompileTarget",
+    "finish_and_write_junit_xml_report",
+    "get_default_junit_xml_name",
+]
 
 
 def get_default_junit_xml_name(from_cmdline: "Optional[str]", default_output_dir: Path):
@@ -71,8 +79,11 @@ def get_default_junit_xml_name(from_cmdline: "Optional[str]", default_output_dir
     return result
 
 
-def finish_and_write_junit_xml_report(all_tests_starttime: datetime.datetime, xml: junitparser.JUnitXml,
-                                      output_file: Path) -> bool:
+def finish_and_write_junit_xml_report(
+    all_tests_starttime: datetime.datetime,
+    xml: junitparser.JUnitXml,
+    output_file: Path,
+) -> bool:
     """
     :param output_file: the host path where to the JUnit XML should be written
     :param all_tests_starttime: the time when the test run started
@@ -89,9 +100,13 @@ def finish_and_write_junit_xml_report(all_tests_starttime: datetime.datetime, xm
         if suite.errors > 0 or suite.failures > 0:
             failed_test_suites.append(suite)
     boot_cheribsd.info("JUnit results:", xml)
-    boot_cheribsd.info("Ran " + str(num_testsuites), " test suites in ",
-                       (datetime.datetime.utcnow() - all_tests_starttime))
+    boot_cheribsd.info(
+        "Ran " + str(num_testsuites),
+        " test suites in ",
+        (datetime.datetime.utcnow() - all_tests_starttime),
+    )
     if failed_test_suites:
+
         def failed_test_info(ts: junitparser.TestSuite):
             result = ts.name
 
@@ -107,11 +122,22 @@ def finish_and_write_junit_xml_report(all_tests_starttime: datetime.datetime, xm
                     break
             return result
 
-        boot_cheribsd.failure("The following ", len(failed_test_suites), " tests failed:\n\t",
-                              "\n\t".join(failed_test_info(x) for x in failed_test_suites), exit=False)
+        boot_cheribsd.failure(
+            "The following ",
+            len(failed_test_suites),
+            " tests failed:\n\t",
+            "\n\t".join(failed_test_info(x) for x in failed_test_suites),
+            exit=False,
+        )
     else:
-        boot_cheribsd.success("All ", xml.tests, " tests (", num_testsuites, " test suites) passed after ",
-                              (datetime.datetime.utcnow() - all_tests_starttime))
+        boot_cheribsd.success(
+            "All ",
+            xml.tests,
+            " tests (",
+            num_testsuites,
+            " test suites) passed after ",
+            (datetime.datetime.utcnow() - all_tests_starttime),
+        )
     # Finally, write the Junit XML file:
     if not boot_cheribsd.PRETEND:
         xml.write(output_file, pretty=True)
@@ -119,12 +145,18 @@ def finish_and_write_junit_xml_report(all_tests_starttime: datetime.datetime, xm
     return not failed_test_suites
 
 
-def run_tests_main(test_function: Optional[Callable[[QemuCheriBSDInstance, argparse.Namespace], bool]] = None,
-                   need_ssh=False, should_mount_builddir=True, should_mount_srcdir=False, should_mount_sysroot=False,
-                   should_mount_installdir=False, build_dir_in_target: "Optional[str]" = None,
-                   test_setup_function: Optional[Callable[[QemuCheriBSDInstance, argparse.Namespace], None]] = None,
-                   argparse_setup_callback: Optional[Callable[[argparse.ArgumentParser], None]] = None,
-                   argparse_adjust_args_callback: Optional[Callable[[argparse.Namespace], None]] = None):
+def run_tests_main(
+    test_function: Optional[Callable[[QemuCheriBSDInstance, argparse.Namespace], bool]] = None,
+    need_ssh=False,
+    should_mount_builddir=True,
+    should_mount_srcdir=False,
+    should_mount_sysroot=False,
+    should_mount_installdir=False,
+    build_dir_in_target: "Optional[str]" = None,
+    test_setup_function: Optional[Callable[[QemuCheriBSDInstance, argparse.Namespace], None]] = None,
+    argparse_setup_callback: Optional[Callable[[argparse.ArgumentParser], None]] = None,
+    argparse_adjust_args_callback: Optional[Callable[[argparse.Namespace], None]] = None,
+):
     def default_add_cmdline_args(parser: argparse.ArgumentParser):
         parser.add_argument("--build-dir", required=should_mount_builddir)
         parser.add_argument("--source-dir", required=should_mount_srcdir)
@@ -150,21 +182,28 @@ def run_tests_main(test_function: Optional[Callable[[QemuCheriBSDInstance, argpa
             # get at the source directory using a relative path (../../my-srcdir ends up resolving to /my-srcdir).
             path_in_target = build_dir_in_target if build_dir_in_target is not None else args.build_dir
             args.smb_mount_directories.append(
-                boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target=path_in_target))
+                boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target=path_in_target),
+            )
         if should_mount_srcdir or args.source_dir:
             args.source_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.source_dir)))
             args.smb_mount_directories.append(
-                boot_cheribsd.SmbMount(args.source_dir, readonly=True, in_target="/source"))
+                boot_cheribsd.SmbMount(args.source_dir, readonly=True, in_target="/source"),
+            )
         if should_mount_sysroot or args.sysroot_dir:
             args.sysroot_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.sysroot_dir)))
             args.smb_mount_directories.append(
-                boot_cheribsd.SmbMount(args.sysroot_dir, readonly=True, in_target="/sysroot"))
+                boot_cheribsd.SmbMount(args.sysroot_dir, readonly=True, in_target="/sysroot"),
+            )
         if should_mount_installdir or args.install_destdir:
             args.install_destdir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.install_destdir)))
             assert args.install_prefix and args.install_prefix[0] == "/"
             args.smb_mount_directories.append(
-                boot_cheribsd.SmbMount(args.install_destdir + args.install_prefix, readonly=True,
-                                       in_target=args.install_prefix))
+                boot_cheribsd.SmbMount(
+                    args.install_destdir + args.install_prefix,
+                    readonly=True,
+                    in_target=args.install_prefix,
+                ),
+            )
         if argparse_adjust_args_callback:
             argparse_adjust_args_callback(args)
 
@@ -182,6 +221,9 @@ def run_tests_main(test_function: Optional[Callable[[QemuCheriBSDInstance, argpa
 
     assert sys.path[0] == str(Path(__file__).parent.absolute()), sys.path
     assert sys.path[1] == str(Path(__file__).parent.parent.absolute()), sys.path
-    boot_cheribsd.main(test_function=test_function, test_setup_function=default_setup_tests,
-                       argparse_setup_callback=default_add_cmdline_args,
-                       argparse_adjust_args_callback=default_setup_args)
+    boot_cheribsd.main(
+        test_function=test_function,
+        test_setup_function=default_setup_tests,
+        argparse_setup_callback=default_add_cmdline_args,
+        argparse_adjust_args_callback=default_setup_args,
+    )

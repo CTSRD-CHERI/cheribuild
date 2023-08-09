@@ -45,8 +45,13 @@ from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_genera
 from run_tests_common import CrossCompileTarget, boot_cheribsd, pexpect, run_tests_main
 
 
-def run_cheribsdtest(qemu: boot_cheribsd.QemuCheriBSDInstance, binary_name, old_binary_names,
-                     optional, args: argparse.Namespace) -> bool:
+def run_cheribsdtest(
+    qemu: boot_cheribsd.QemuCheriBSDInstance,
+    binary_name,
+    old_binary_names,
+    optional,
+    args: argparse.Namespace,
+) -> bool:
     try:
         qemu.checked_run(f"rm -f /tmp/{binary_name}.xml")
         # Run it once with textual output (for debugging)
@@ -127,17 +132,18 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
         # Disable trap dumps while running cheribsdtest (handle both old and new sysctl names until dev is merged):
         qemu.run("sysctl machdep.log_user_cheri_exceptions=0 || sysctl machdep.log_cheri_exceptions=0")
         cheribsdtest_bases = [
-                ("cheribsdtest-hybrid", False),
-                ("cheribsdtest-purecap", False),
-                ("cheribsdtest-purecap-benchmark", True),
-            ]
+            ("cheribsdtest-hybrid", False),
+            ("cheribsdtest-purecap", False),
+            ("cheribsdtest-purecap-benchmark", True),
+        ]
         # The minimal disk image only has the statically linked base variants:
         cheribsdtest_features = ["-dynamic", "-mt"] if not args.minimal_image else []
-        cheribsdtest_features_powerset = \
-            itertools.chain(*map(lambda r: itertools.combinations(cheribsdtest_features, r),
-                                 range(0, len(cheribsdtest_features)+1)))
-        cheribsdtest_tests = \
-            [(b[0] + ''.join(f), b[1]) for f in cheribsdtest_features_powerset for b in cheribsdtest_bases]
+        cheribsdtest_features_powerset = itertools.chain(
+            *map(lambda r: itertools.combinations(cheribsdtest_features, r), range(0, len(cheribsdtest_features) + 1)),
+        )
+        cheribsdtest_tests = [
+            (b[0] + "".join(f), b[1]) for f in cheribsdtest_features_powerset for b in cheribsdtest_bases
+        ]
         cheribsdtest_tests.append(("cheribsdtest-mt-c18n", True))
         for test in cheribsdtest_tests:
             if not run_cheribsdtest(qemu, test[0], [], test[1], args):
@@ -161,8 +167,12 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
             test_start = datetime.datetime.now()
             # Check that the file exists
             qemu.checked_run(f"test -f {shlex.quote(tests_file)}")
-            qemu.run(f"kyua test --results-file=/tmp/results.db -k {shlex.quote(tests_file)}",
-                     ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=24 * 60 * 60)
+            qemu.run(
+                f"kyua test --results-file=/tmp/results.db -k {shlex.quote(tests_file)}",
+                ignore_cheri_trap=True,
+                cheri_trap_fatal=False,
+                timeout=24 * 60 * 60,
+            )
             if i == 0:
                 result_name = "test-results.db"
             else:
@@ -191,16 +201,22 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
                 boot_cheribsd.info("KYUA installed on the host, no need to do slow conversion in QEMU")
             else:
                 xml_conversion_start = datetime.datetime.now()
-                qemu.checked_run("kyua report-junit --results-file=/tmp/results.db > /tmp/results.xml",
-                                 timeout=200 * 60)
+                qemu.checked_run(
+                    "kyua report-junit --results-file=/tmp/results.db > /tmp/results.xml",
+                    timeout=200 * 60,
+                )
                 if qemu.smb_failed:
                     boot_cheribsd.info("SMB mount has failed, performing normal scp")
                     qemu.scp_from_guest("/tmp/results.xml", Path(args.test_output_dir, results_xml.name))
                 else:
                     qemu.checked_run(f"cp -v /tmp/results.xml {results_xml}")
                     qemu.checked_run("fsync " + str(results_xml))
-                boot_cheribsd.success("Creating JUnit XML ", results_xml, " took: ",
-                                      datetime.datetime.now() - xml_conversion_start)
+                boot_cheribsd.success(
+                    "Creating JUnit XML ",
+                    results_xml,
+                    " took: ",
+                    datetime.datetime.now() - xml_conversion_start,
+                )
     except boot_cheribsd.CheriBSDCommandTimeout as e:
         boot_cheribsd.failure("Timeout running tests: " + str(e), exit=False)
         qemu.sendintr()
@@ -290,28 +306,61 @@ def cheribsd_setup_args(args: argparse.Namespace):
         if not boot_cheribsd.PRETEND:
             (real_output_dir / "cmdline").write_text(str(sys.argv))
         args.smb_mount_directories.append(
-            boot_cheribsd.SmbMount(real_output_dir, readonly=False, in_target="/test-results"))
+            boot_cheribsd.SmbMount(real_output_dir, readonly=False, in_target="/test-results"),
+        )
 
 
 def add_args(parser: argparse.ArgumentParser):
-    parser.add_argument("--skip-poweroff", action="store_true",
-                        help="Don't run poweroff after tests (implicit with --interact). Without --interact this will"
-                             "almost certainly corrupt the disk image, so only pass this if you no longer need the "
-                             "image!")
-    parser.add_argument("--kyua-tests-files", action="append", nargs=argparse.ZERO_OR_MORE, default=[],
-                        help="Run tests for the given following Kyuafile(s)")
+    parser.add_argument(
+        "--skip-poweroff",
+        action="store_true",
+        help=(
+            "Don't run poweroff after tests (implicit with --interact). Without --interact this will"
+            "almost certainly corrupt the disk image, so only pass this if you no longer need the "
+            "image!"
+        ),
+    )
+    parser.add_argument(
+        "--kyua-tests-files",
+        action="append",
+        nargs=argparse.ZERO_OR_MORE,
+        default=[],
+        help="Run tests for the given following Kyuafile(s)",
+    )
     default_test_output = str(Path(".").resolve() / "cheribsd-test-results")
-    parser.add_argument("--test-output-dir", "--kyua-tests-output", dest="test_output_dir", default=default_test_output,
-                        help="Directory for the test outputs (it will be mounted with SMB)")
-    parser.add_argument("--no-timestamped-test-subdir", action="store_true",
-                        help="Don't create a timestamped subdirectory in the test output dir ")
-    parser.add_argument("--run-cheribsdtest", dest="run_cheribsdtest", action="store_true", default=None,
-                        help="Run cheribsdtest programs")
-    parser.add_argument("--no-run-cheribsdtest", dest="run_cheribsdtest", action="store_false",
-                        help="Do not run cheribsdtest programs")
+    parser.add_argument(
+        "--test-output-dir",
+        "--kyua-tests-output",
+        dest="test_output_dir",
+        default=default_test_output,
+        help="Directory for the test outputs (it will be mounted with SMB)",
+    )
+    parser.add_argument(
+        "--no-timestamped-test-subdir",
+        action="store_true",
+        help="Don't create a timestamped subdirectory in the test output dir ",
+    )
+    parser.add_argument(
+        "--run-cheribsdtest",
+        dest="run_cheribsdtest",
+        action="store_true",
+        default=None,
+        help="Run cheribsdtest programs",
+    )
+    parser.add_argument(
+        "--no-run-cheribsdtest",
+        dest="run_cheribsdtest",
+        action="store_false",
+        help="Do not run cheribsdtest programs",
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # we set need_ssh to True here to test that SSH connections work.
-    run_tests_main(test_function=run_cheribsd_test, argparse_setup_callback=add_args, should_mount_builddir=False,
-                   argparse_adjust_args_callback=cheribsd_setup_args, need_ssh=True)
+    run_tests_main(
+        test_function=run_cheribsd_test,
+        argparse_setup_callback=add_args,
+        should_mount_builddir=False,
+        argparse_adjust_args_callback=cheribsd_setup_args,
+        need_ssh=True,
+    )

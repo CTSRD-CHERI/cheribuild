@@ -41,14 +41,23 @@ def run_simple_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Nam
     # TODO: copy over the logfile and enable coredumps?
     # Run tests with a two hour timeout:
     qemu.checked_run(f"cd '{qemu.smb_dirs[0].in_target}'", timeout=10)
-    qemu.checked_run(args.test_command, timeout=args.test_timeout, pretend_result=0,
-                     ignore_cheri_trap=args.ignore_cheri_trap)
+    qemu.checked_run(
+        args.test_command,
+        timeout=args.test_timeout,
+        pretend_result=0,
+        ignore_cheri_trap=args.ignore_cheri_trap,
+    )
     return True
 
 
 def add_args(parser: argparse.ArgumentParser):
-    parser.add_argument("--ignore-cheri-trap", action="store_true", required=False, default=True,
-                        help="Don't fail the tests when a CHERI trap happens (useful for BODiagSuite or similar)")
+    parser.add_argument(
+        "--ignore-cheri-trap",
+        action="store_true",
+        required=False,
+        default=True,
+        help="Don't fail the tests when a CHERI trap happens (useful for BODiagSuite or similar)",
+    )
 
 
 def adjust_args(args: argparse.Namespace):
@@ -57,7 +66,12 @@ def adjust_args(args: argparse.Namespace):
         boot_cheribsd.failure("--test-command must be set!", exit=True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # we don't need ssh running to execute the tests
-    run_tests_main(test_function=run_simple_test, need_ssh=False, should_mount_builddir=True,
-                   argparse_setup_callback=add_args, argparse_adjust_args_callback=adjust_args)
+    run_tests_main(
+        test_function=run_simple_test,
+        need_ssh=False,
+        should_mount_builddir=True,
+        argparse_setup_callback=add_args,
+        argparse_adjust_args_callback=adjust_args,
+    )

@@ -63,10 +63,17 @@ def add_args(parser: argparse.ArgumentParser):
 def adjust_args(args: argparse.Namespace):
     args.build_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
     args.smb_mount_directories.append(
-        boot_cheribsd.SmbMount(args.libunwind_build_dir, readonly=True, in_target="/libunwind"))
+        boot_cheribsd.SmbMount(args.libunwind_build_dir, readonly=True, in_target="/libunwind"),
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # we don't need ssh running to execute the tests
-    run_tests_main(test_function=run_libcxxrt_tests, need_ssh=False, argparse_setup_callback=add_args,
-                   argparse_adjust_args_callback=adjust_args, should_mount_builddir=True, should_mount_sysroot=True)
+    run_tests_main(
+        test_function=run_libcxxrt_tests,
+        need_ssh=False,
+        argparse_setup_callback=add_args,
+        argparse_adjust_args_callback=adjust_args,
+        should_mount_builddir=True,
+        should_mount_sysroot=True,
+    )

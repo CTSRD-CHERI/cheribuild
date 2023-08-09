@@ -48,13 +48,13 @@ def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path, prefix: "Opti
 def fixup_kyua_generated_junit_xml(xml_file: Path, prefix: "Optional[str]" = None):
     boot_cheribsd.info("Updating statistics in JUnit file ", xml_file)
     # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
-    orig_xml_str = xml_file.read_text("utf-8", errors='backslashreplace')
+    orig_xml_str = xml_file.read_text("utf-8", errors="backslashreplace")
     xml_str = orig_xml_str
     for i in range(32):
         if chr(i) not in ("\n", "\t"):
             # Can't reference NULL character -> backslashescape instead
             # xml_str = xml_str.replace(chr(i), "&#" + str(i) + ";")
-            xml_str = xml_str.replace(chr(i), "\\x" + format(i, '02x') + ";")
+            xml_str = xml_str.replace(chr(i), "\\x" + format(i, "02x") + ";")
     with tempfile.NamedTemporaryFile("wb") as tf:
         # create a temporary file first to avoid clobbering the original one if we fail to parse it
         tf.write(xml_str.encode("ascii", errors="xmlcharrefreplace"))
@@ -83,8 +83,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("db", help="The database to convert")
-    parser.add_argument("xml", nargs=argparse.OPTIONAL,
-                        help="The output file (or - for stdout). Defaults to the db file with suffix .xml")
+    parser.add_argument(
+        "xml",
+        nargs=argparse.OPTIONAL,
+        help="The output file (or - for stdout). Defaults to the db file with suffix .xml",
+    )
     parser.add_argument("--update-stats", action="store_true", help="Only update stats instead of parsing a kyua db")
     parser.add_argument("--add-prefix", help="Add a prefix to all testsuites")
     args = parser.parse_args()

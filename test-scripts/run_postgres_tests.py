@@ -53,10 +53,16 @@ def add_args(parser: argparse.ArgumentParser):
 def adjust_args(args: argparse.Namespace):
     if args.minimal_image:
         args.smb_mount_directories.append(
-            boot_cheribsd.SmbMount(args.locale_files_dir, readonly=True, in_target="/locale"))
+            boot_cheribsd.SmbMount(args.locale_files_dir, readonly=True, in_target="/locale"),
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # we don't need ssh running to execute the tests
-    run_tests_main(test_function=run_postgres_tests, need_ssh=False, should_mount_builddir=False,
-                   argparse_setup_callback=add_args, argparse_adjust_args_callback=adjust_args)
+    run_tests_main(
+        test_function=run_postgres_tests,
+        need_ssh=False,
+        should_mount_builddir=False,
+        argparse_setup_callback=add_args,
+        argparse_adjust_args_callback=adjust_args,
+    )
