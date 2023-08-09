@@ -834,8 +834,8 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: Optional[Path], kerne
 
 
 def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=False,
-                   network_iface: Optional[str], expected_kernel_abi_msg: Optional[str],
-                   boot_alternate_kernel_dir: "Optional[Path]") -> None:
+                   network_iface: Optional[str], expected_kernel_abi_msg: Optional[str] = None,
+                   boot_alternate_kernel_dir: "Optional[Path]" = None) -> None:
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
