@@ -311,42 +311,45 @@ def build_target(cheri_config, target: Target) -> None:
 
 
 def create_tarball(cheri_config) -> None:
-    if True:  # Note: This if exists for now to avoid a large whitespace diff.
-        bsdtar_path = shutil.which("bsdtar")
-        tar_cmd = None
-        tar_flags = ["--invalid-flag"]
-        if bsdtar_path:
-            bsdtar_version = get_program_version(Path(bsdtar_path), regex=b"bsdtar\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?",
-                                                 config=cheri_config)
-            if bsdtar_version > (3, 0, 0):
-                # Only newer versions support --uid/--gid
-                tar_cmd = bsdtar_path
-                tar_flags = ["--uid=0", "--gid=0", "--numeric-owner"]
-            if bsdtar_version > (3, 2, 0):
-                # Use parallel xz compression
-                tar_flags.append("--options=xz:threads=" + str(cheri_config.make_jobs))
+    bsdtar_path = shutil.which("bsdtar")
+    tar_cmd = None
+    tar_flags = ["--invalid-flag"]
+    if bsdtar_path:
+        bsdtar_version = get_program_version(
+            Path(bsdtar_path), regex=b"bsdtar\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?", config=cheri_config,
+        )
+        if bsdtar_version > (3, 0, 0):
+            # Only newer versions support --uid/--gid
+            tar_cmd = bsdtar_path
+            tar_flags = ["--uid=0", "--gid=0", "--numeric-owner"]
+        if bsdtar_version > (3, 2, 0):
+            # Use parallel xz compression
+            tar_flags.append("--options=xz:threads=" + str(cheri_config.make_jobs))
 
-        if not tar_cmd and (shutil.which("gtar") or OSInfo.IS_LINUX):
-            # GNU tar
-            tar_cmd = "tar" if OSInfo.IS_LINUX else "gtar"
-            tar_flags = ["--owner=0", "--group=0", "--numeric-owner"]
+    if not tar_cmd and (shutil.which("gtar") or OSInfo.IS_LINUX):
+        # GNU tar
+        tar_cmd = "tar" if OSInfo.IS_LINUX else "gtar"
+        tar_flags = ["--owner=0", "--group=0", "--numeric-owner"]
 
-        # bsdtar too old and GNU tar not found
-        if not tar_cmd:
-            fatal_error("Could not find a usable version of the tar command", pretend=cheri_config.pretend)
-            return
-        status_update("Creating tarball", cheri_config.tarball_name)
-        # Strip all ELF files:
-        if cheri_config.strip_elf_files:
-            # TODO: we only accept one target name to infer the correct llvm-strip binary path
-            assert len(cheri_config.targets) == 1, "--create-tarball only accepts one target name"
-            target = target_manager.get_target_raw(cheri_config.targets[0])
-            Target.instantiating_targets_should_warn = False
-            project = target.get_or_create_project(None, cheri_config, caller=None)
-            strip_binaries(cheri_config, project, cheri_config.output_root)
-        run_command([tar_cmd, "--create", "--xz", *tar_flags, "-f", cheri_config.tarball_name,
-                     "-C", cheri_config.output_root, "."], cwd=cheri_config.workspace)
-        run_command("du", "-sh", cheri_config.workspace / cheri_config.tarball_name)
+    # bsdtar too old and GNU tar not found
+    if not tar_cmd:
+        fatal_error("Could not find a usable version of the tar command", pretend=cheri_config.pretend)
+        return
+    status_update("Creating tarball", cheri_config.tarball_name)
+    # Strip all ELF files:
+    if cheri_config.strip_elf_files:
+        # TODO: we only accept one target name to infer the correct llvm-strip binary path
+        assert len(cheri_config.targets) == 1, "--create-tarball only accepts one target name"
+        target = target_manager.get_target_raw(cheri_config.targets[0])
+        Target.instantiating_targets_should_warn = False
+        project = target.get_or_create_project(None, cheri_config, caller=None)
+        project.prepare_install_dir_for_archiving()
+        strip_binaries(cheri_config, project, cheri_config.output_root)
+    run_command(
+        [tar_cmd, "--create", "--xz", *tar_flags, "-f", cheri_config.tarball_name, "-C", cheri_config.output_root, "."],
+        cwd=cheri_config.workspace,
+    )
+    run_command("du", "-sh", cheri_config.workspace / cheri_config.tarball_name)
 
 
 def strip_binaries(_: JenkinsConfig, project: SimpleProject, directory: Path) -> None:

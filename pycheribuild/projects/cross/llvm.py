@@ -398,16 +398,17 @@ exec {lld} "$@"
         self.run_cmd("du", "-sh", self.install_dir)
         # We don't use libclang.so or the other llvm libraries:
         # Note: this is a non-recursive search since we *do* need the files in lib/clang/<version>/
-        if (self.install_dir / "lib").is_dir():
+        if self.install_toolchain_only and (self.install_dir / "lib").is_dir():
             for f in (self.install_dir / "lib").iterdir():
                 if f.is_dir():
                     continue
-                if any(f.name.startswith(prefix) for prefix in ("libclang", "libRemarks", "libLTO")):
+                if f.name.startswith(("libclang", "libRemarks", "libLTO", "libLLVM", "liblld")):
                     self.delete_file(f, warn_if_missing=True)
                     continue
                 self.warning("Found an unexpected file in libdir. Was this installed by another project?", f)
-        # We also don't need the C API headers since we deleted the libraries
-        self.clean_directory(self.install_dir / "include/", ensure_dir_exists=False)
+        if self.install_toolchain_only:
+            # We also don't need the C API headers if we deleted the libraries
+            self.clean_directory(self.install_dir / "include/", ensure_dir_exists=False)
         # Each of these executables are 30-40MB and we don't use them anywhere:
         # 31685928	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-scan-deps
         # 32103560	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-rename

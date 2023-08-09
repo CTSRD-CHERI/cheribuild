@@ -81,7 +81,6 @@ from ..utils import (
     cached_property,
     classproperty,
     coloured,
-    is_jenkins_build,
     remove_duplicates,
     status_update,
 )
@@ -1415,10 +1414,6 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 self.warning("Could not find latest counter in", require_clean_path)
             return latest_counter
 
-    def prepare_install_dir_for_archiving(self) -> None:
-        """Perform cleanup to reduce the size of the tarball that jenkins creates"""
-        self.info("No project-specific cleanup for", self.target)
-
     def process(self) -> None:
         if self.generate_cmakelists:
             self._do_generate_cmakelists()
@@ -1564,8 +1559,6 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     self.info("Not installing", self.target, "since install dir is set to DO_NOT_INSTALL")
                 else:
                     self.install()
-                if is_jenkins_build():
-                    self.prepare_install_dir_for_archiving()
 
 
 # Shared between meson and CMake

@@ -1163,6 +1163,10 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             return False
         return True
 
+    def prepare_install_dir_for_archiving(self) -> None:
+        """Perform cleanup to reduce the size of the tarball that jenkins creates"""
+        self.info("No project-specific cleanup for", self.target)
+
     def _cleanup_old_files(self, *old_paths: Path, default_delete=True) -> None:
         for p in old_paths:
             if not p.exists():
