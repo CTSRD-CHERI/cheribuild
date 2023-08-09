@@ -154,18 +154,27 @@ class RunSyzkaller(SimpleProject):
         super().setup_config_options(**kwargs)
         cls.syz_config = cls.add_optional_path_option(
             "syz-config", help="Path to the syzkaller configuration file to use.", show_help=True)
-        cls.syz_ssh_key = cls.add_path_option("ssh-privkey", show_help=True,
-                                              default=lambda config, project: (
-                                                      config.source_root / "extra-files" / "syzkaller_id_rsa"),
-                                              help="A directory with additional files that will be added to the image "
-                                                   "(default: '$SOURCE_ROOT/extra-files/syzkaller_id_rsa')",
-                                              metavar="syzkaller_id_rsa")
-        cls.syz_workdir = cls.add_path_option("workdir", show_help=True,
-                                              default=lambda config, project: (
-                                                      config.output_root / "syzkaller-workdir"),
-                                              help="Working directory for syzkaller output.", metavar="DIR")
-        cls.syz_debug = cls.add_bool_option("debug",
-                                            help="Run syz-manager in debug mode, requires manual startup of the VM.")
+        cls.syz_ssh_key = cls.add_path_option(
+            "ssh-privkey",
+            show_help=True,
+            default=lambda config, project: (config.source_root / "extra-files" / "syzkaller_id_rsa"),
+            help=(
+                "A directory with additional files that will be added to the image "
+                "(default: '$SOURCE_ROOT/extra-files/syzkaller_id_rsa')"
+            ),
+            metavar="syzkaller_id_rsa",
+        )
+        cls.syz_workdir = cls.add_path_option(
+            "workdir",
+            show_help=True,
+            default=lambda config, project: (config.output_root / "syzkaller-workdir"),
+            help="Working directory for syzkaller output.",
+            metavar="DIR",
+        )
+        cls.syz_debug = cls.add_bool_option(
+            "debug",
+            help="Run syz-manager in debug mode, requires manual startup of the VM.",
+        )
 
     def syzkaller_config(self, syzkaller: BuildSyzkaller):
         """ Get path of syzkaller configuration file to use. """
@@ -195,6 +204,7 @@ class RunSyzkaller(SimpleProject):
                 vm_type = "none"
 
             qemu_opts = QemuOptions(self.crosscompile_target)
+            qemu_args = [*qemu_opts.machine_flags, "-device", "virtio-rng-pci", "-D", "syz-trace.log"]
             template = {
                 "name": "cheribsd-n64",
                 "target": "freebsd/" + str(self.crosscompile_target.cpu_architecture.value),
@@ -215,16 +225,15 @@ class RunSyzkaller(SimpleProject):
                 "type": vm_type,
                 "vm": {
                     "qemu": str(qemu_binary),
-                    "qemu_args": commandline_to_str(
-                        [*qemu_opts.machine_flags, "-device", "virtio-rng-pci", "-D", "syz-trace.log"]),
+                    "qemu_args": commandline_to_str(qemu_args),
                     "kernel": str(kernel_path),
                     "image_device": "drive index=0,media=disk,format=raw,file=",
                     "count": 1,
                     "cpu": 1,
                     "mem": 2048,
                     "timeout": 60,
-                    },
-                }
+                },
+            }
             self.verbose_print("Using syzkaller configuration", template)
             if not self.config.pretend:
                 with syz_config.open("w+") as fp:

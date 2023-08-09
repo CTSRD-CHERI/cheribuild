@@ -599,15 +599,17 @@ class Project(SimpleProject):
                                                  help="Build with CCache")
         else:
             cls.use_ccache = False
-        cls.auto_var_init = cls.add_config_option("auto-var-init", kind=AutoVarInit,
-                                                  default=ComputedDefaultValue(
-                                                      lambda config, proj: proj.default_auto_var_init,
-                                                      lambda c: (
-                                                              "the value of the global --skip-update option ("
-                                                              "defaults to \"" +
-                                                              c.default_auto_var_init.value + "\")")),
-                                                  help="Whether to initialize all local variables (currently only "
-                                                       "supported when compiling with clang)")
+        cls.auto_var_init = cls.add_config_option(
+            "auto-var-init",
+            kind=AutoVarInit,
+            default=ComputedDefaultValue(
+                lambda config, proj: proj.default_auto_var_init,
+                lambda c: (
+                    'the value of the global --skip-update option (defaults to "' + c.default_auto_var_init.value + '")'
+                ),
+            ),
+            help="Whether to initialize all local variables (currently only supported when compiling with clang)",
+        )
         cls.skip_update = cls.add_bool_option("skip-update",
                                               default=ComputedDefaultValue(lambda config, proj: config.skip_update,
                                                                            "the value of the global --skip-update "

@@ -7,4 +7,6 @@ extend-exclude =
   .pytype/
 show-source = true
 statistics = true
+# E203 is incompatible with black
+ignore = E121,E123,E126,E203,E226,E24,E704,W503,W504
 # TODO: max-complexity = 20

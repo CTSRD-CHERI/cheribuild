@@ -123,7 +123,7 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
             AR=self.target_info.ar,
             OBJCOPY=self.CC.with_name(self.CC.name.replace("gcc", "objcopy")),
             SIZE=self.CC.with_name(self.CC.name.replace("gcc", "size")),
-            )
+        )
 
     def process(self):
         if not self.CC.exists():

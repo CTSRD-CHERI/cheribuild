@@ -544,4 +544,5 @@ def remove_prefix(s: str, prefix: str, prefix_required=False) -> str:
 #
 # https://stackoverflow.com/questions/17215400/python-format-string-unused-named-arguments
 class SafeDict(dict):
-    def __missing__(self, key) -> str: return '{' + key + '}'
+    def __missing__(self, key) -> str:
+        return "{" + key + "}"

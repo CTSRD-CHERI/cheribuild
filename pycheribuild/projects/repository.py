@@ -188,7 +188,7 @@ class GitRepository(SourceRepository):
             if local_end_idx == -1:
                 return GitBranchInfo(local_branch=branch_info[3:])   # no upstream configured
             local_branch = branch_info[3:local_end_idx]
-            upstream = branch_info[local_end_idx+3:].split()[0].rstrip()
+            upstream = branch_info[local_end_idx + 3 :].split()[0].rstrip()
             remote_name, remote_branch = upstream.split("/", maxsplit=1)
             return GitBranchInfo(local_branch=local_branch, remote_name=remote_name, upstream_branch=remote_branch)
 

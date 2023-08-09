@@ -1204,7 +1204,7 @@ class BuildCheriBSDTarball(BuildCheriBSDDiskImage):
                 raise LookupError("Could not find bsdtar command in PATH")
             bsdtar_path = "bsdtar"
         try:
-            self.run_cmd([bsdtar_path, "acf", self.disk_image_path, "@"+str(self.manifest_file)], cwd=self.rootfs_dir)
+            self.run_cmd([bsdtar_path, "acf", self.disk_image_path, "@" + str(self.manifest_file)], cwd=self.rootfs_dir)
         except Exception:
             self.warning("bsdtar failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
                          " or cheribsd) and attach the METALOG file.")

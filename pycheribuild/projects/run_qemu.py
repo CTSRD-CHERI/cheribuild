@@ -798,7 +798,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
             self._after_disk_options.extend([
                 "-netdev", "tap,id=tap0,ifname=cherios_tap,script=no,downscript=no",
                 "-device", "virtio-net-device,netdev=tap0",
-                ])
+            ])
 
         if cherios.smp_cores > 1:
             self._project_specific_options.append("-smp")

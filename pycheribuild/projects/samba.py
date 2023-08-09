@@ -83,7 +83,7 @@ class BuildSamba(Project):
             "--without-winbind",
             # "--without-json-audit", "--without-ldb-lmdb", (only needed in master not 4.8 stable)
             "--prefix=" + str(self.install_dir),
-            ])
+        ])
         #  version 4.9 "--without-json-audit",
         self.configure_args.append("--without-json")
 

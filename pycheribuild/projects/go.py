@@ -61,7 +61,7 @@ class BuildGo(Project):
     def compile(self, **kwargs):
         env = {
             "GOROOT_FINAL": self.goroot_dir,
-            }
+        }
         if self.go_bootstrap:
             env["GOROOT_BOOTSTRAP"] = self.go_bootstrap
 
