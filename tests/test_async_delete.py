@@ -23,17 +23,24 @@ class MockProject(Project):
     def __init__(self, config: MockConfig, name: str):
         self.target = name
         self.default_directory_basename = name
-        expected_src = config.source_root / "sources" / name
-        self._initial_source_dir = expected_src
-        expected_install = config.source_root / "install" / name
-        self._install_dir = expected_install
-        expected_build = Path(config.source_root, "build", name + "-build")
-        self.build_dir = expected_build
+        self.expected_src = config.source_root / "sources" / name
+        self._initial_source_dir = self.expected_src
+        self.expected_install = config.source_root / "install" / name
+        self._install_dir = self.expected_install
+        self.expected_build = Path(config.source_root, "build", name + "-build")
+        self.build_dir = self.expected_build
         super().__init__(config, crosscompile_target=CompilationTargets.NATIVE)
-        assert self.source_dir == expected_src
-        assert self.build_dir == expected_build
-        assert self.install_dir == expected_install
+
+    def setup(self):
+        super().setup()
+        assert self.source_dir == self.expected_src
+        assert self.build_dir == self.expected_build
+        assert self.install_dir == self.expected_install
         self.source_dir.mkdir(parents=True)
+
+    @classmethod
+    def cached_full_dependencies(cls):
+        return []
 
     def _delete_directories(self, *dirs):
         if self.config.sleep_before_delete:
@@ -57,6 +64,7 @@ class TestAsyncDelete(TestCase):
         assert self.tempRoot == self.config.source_root
         assert self.tempRoot / "build" == self.config.build_root
         self.project = MockProject(self.config, "foo")
+        self.project.setup()
         assert self.project.source_dir.exists(), self.project.source_dir
 
     def tearDown(self):
