@@ -113,6 +113,8 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
         if self.compiling_for_cheri():
             # LLVM IR testcases do not work for purecap.
             self.add_cmake_options(TEST_SUITE_ENABLE_BITCODE_TESTS=False)
+        if self.target_info.is_freebsd():
+            self.add_cmake_options(TEST_SUITE_USE_PMCSTAT=True)
 
     def run_tests(self):
         output_file = self.build_dir / "results.json"
