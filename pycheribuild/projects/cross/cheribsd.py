@@ -774,7 +774,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.make_args.set(**self.arch_build_flags)
         self.extra_kernels = []
 
-    def setup(self) -> Path:
+    def setup(self) -> None:
         super().setup()
         self.destdir = self.install_dir
         self._install_prefix = Path("/")
