@@ -271,14 +271,8 @@ def _jenkins_main() -> None:
             # noinspection PyProtectedMember
             project = target._get_or_create_project_no_setup(None, cheri_config, caller=None)
             if isinstance(project, Project):
-                # Using "/" as the install prefix results inconsistently prefixing some paths with '/usr/'.
-                # To avoid this, just use the full install path as the prefix.
-                if cheri_config.installation_prefix == Path("/"):
-                    project._install_prefix = expected_install_path
-                    project.destdir = None
-                else:
-                    project._install_prefix = cheri_config.installation_prefix
-                    project.destdir = cheri_config.output_root
+                project._install_prefix = cheri_config.installation_prefix
+                project.destdir = cheri_config.output_root
                 assert project.real_install_root_dir == expected_install_path
         for tgt in cheri_config.targets:
             build_target(cheri_config, target_manager.get_target_raw(tgt))
