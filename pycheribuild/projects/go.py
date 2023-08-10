@@ -34,8 +34,12 @@ from ..utils import ThreadJoiner
 
 
 class BuildGo(Project):
-    github_base_url = "https://github.com/CTSRD-CHERI/"
-    repository = GitRepository(github_base_url + "freebsd-mips-go.git")
+    repository = GitRepository(
+        "https://github.com/golang/go.git",
+        default_branch="release-branch.go1.21",
+        force_branch=True,
+        old_urls=[b"https://github.com/CTSRD-CHERI/freebsd-mips-go.git"],
+    )
     no_default_sysroot = None
     skip_cheri_symlinks = True
     native_install_dir = DefaultInstallDir.CHERI_SDK
