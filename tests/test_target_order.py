@@ -30,6 +30,7 @@ from pycheribuild.projects.run_qemu import BuildAll, BuildAndRunCheriBSD, Launch
 from pycheribuild.projects.sdk import BuildCheriBSDSdk, BuildSdk
 from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.projects.spike import RunCheriSpikeBase
+from pycheribuild.projects.syzkaller import BuildSyzkaller, RunSyzkaller
 from pycheribuild.targets import Target, target_manager
 from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
 
@@ -651,16 +652,19 @@ def test_hybrid_targets(enable_hybrid_targets: bool):
         if xtarget.target_info_cls.is_baremetal():
             return False
 
+        # Syzkaller is always built hybrid
+        if issubclass(target.project_class, (BuildSyzkaller, RunSyzkaller)):
+            return False
+
         # Should never see anything else if hybrid targets aren't enabled
         if not enable_hybrid_targets and xtarget.get_rootfs_target().is_cheri_hybrid():
             return True
 
         # Ignore explicitly requested hybrid-for-purecap-rootfs targets
         if enable_hybrid_for_purecap_rootfs_targets() and xtarget.get_rootfs_target().is_cheri_purecap():
-            if target.name not in expected_hybrid_targets:
-                return False
+            return False
 
-        # We expect certain tagets to be built hybrid: CheriBSD/disk image/GDB/LLVM/run
+        # We expect certain targets to be built hybrid: CheriBSD/disk image/GDB/LLVM/run
         if issubclass(
             cls,
             (
@@ -673,6 +677,8 @@ def test_hybrid_targets(enable_hybrid_targets: bool):
                 BuildMorelloLLVM,
                 LaunchFVPBase,
                 RunCheriSpikeBase,
+                BuildSyzkaller,
+                RunSyzkaller,
             ),
         ):
             return False
@@ -694,13 +700,11 @@ def test_hybrid_targets(enable_hybrid_targets: bool):
         if issubclass(cls, BuildGmp):
             return False
 
-        # Otherwise this target
+        # Otherwise this target is unexpected
         return True
 
     unexpected_hybrid_targets = filter(should_include_target, all_hybrid_targets)
-    # Currently this list should only include the Syzkaller targets:
-    expected_hybrid_targets = ["cheri-syzkaller", "run-syzkaller"]
-    assert [t.name for t in unexpected_hybrid_targets] == expected_hybrid_targets
+    assert list(unexpected_hybrid_targets) == []
 
 
 def _get_native_targets():
