@@ -767,18 +767,14 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._setup_make_args_called = False
+        self.destdir = self.install_dir
+        self._install_prefix = Path("/")
         self.kernel_toolchain_exists: bool = False
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
         if self.has_default_buildkernel_kernel_config:
             assert self.kernel_config is not None
         self.make_args.set(**self.arch_build_flags)
         self.extra_kernels = []
-
-    def setup(self) -> None:
-        super().setup()
-        self.destdir = self.install_dir
-        self._install_prefix = Path("/")
-        assert self.real_install_root_dir == self.destdir
 
     @cached_property
     def build_toolchain_root_dir(self) -> "Optional[Path]":
