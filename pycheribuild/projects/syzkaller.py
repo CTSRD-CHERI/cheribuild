@@ -30,35 +30,49 @@
 #
 
 import json
-import os
 from pathlib import Path
 
 from .build_qemu import BuildQEMU
 from .cross.cheribsd import BuildCHERIBSD, CheriBSDConfigTable, ConfigPlatform
 from .cross.crosscompileproject import CompilationTargets, CrossCompileProject
 from .disk_image import BuildCheriBSDDiskImage
+from .go import BuildGo
 from .project import DefaultInstallDir, GitRepository, MakeCommandKind
 from .simple_project import BoolConfigOption, SimpleProject
+from ..config.target_info import CPUArchitecture
 from ..processutils import commandline_to_str
 from ..qemu_utils import QemuOptions
-from ..utils import ThreadJoiner
+from ..utils import OSInfo, ThreadJoiner
 
 
 class BuildSyzkaller(CrossCompileProject):
     dependencies = ("go",)
     target = "cheri-syzkaller"
-    github_base_url = "https://github.com/CTSRD-CHERI/"
-    repository = GitRepository(github_base_url + "cheri-syzkaller.git")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-syzkaller.git", force_branch=True,
+                               default_branch="morello-syzkaller")
     # no_default_sysroot = None // probably useless??
     # skip_cheri_symlinks = True // llvm target only, useless here
     make_kind = MakeCommandKind.GnuMake
 
     # is_sdk_target = True
-    supported_architectures = (CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS,)
+    supported_architectures = (
+        CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS,
+        CompilationTargets.CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS,
+    )
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
 
-    sysgen = BoolConfigOption("run-sysgen", show_help=True,
-                              help="Rerun syz-extract and syz-sysgen to rebuild generated Go syscall descriptions.")
+    if OSInfo.IS_FREEBSD:
+        sysgen = BoolConfigOption(
+            "run-sysgen",
+            show_help=True,
+            help="Rerun syz-extract and syz-sysgen to rebuild generated Go syscall descriptions.",
+        )
+    else:
+        sysgen = False
+
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("go", apt="golang")
 
     def __init__(self, config, *args, **kwargs):
         self._install_prefix = config.cheri_sdk_dir
@@ -66,88 +80,82 @@ class BuildSyzkaller(CrossCompileProject):
         self.destdir = Path("")
         super().__init__(config, *args, **kwargs)
 
-        # self.gopath = source_base / gohome
-        self.goroot = config.cheri_sdk_dir / "go"
+    @staticmethod
+    def _arch_to_syzstring(arch: CPUArchitecture):
+        if arch == CPUArchitecture.X86_64:
+            return "amd64"
+        elif arch == CPUArchitecture.AARCH64:
+            return "arm64"
+        return arch.value
 
-        # repo_url = urlparse(self.repository.url)
-        # repo_path = repo_url.path.split(".")[0]
-        # parts = ["src", repo_url.netloc] + repo_path.split("/")
-        self.gopath = self.build_dir
-        self.gosrc = self.source_dir
+    @property
+    def syz_arch(self):
+        return self._arch_to_syzstring(self.crosscompile_target.cpu_architecture)
 
-        self._new_path = (str(self.config.cheri_sdk_dir / "bin") + ":" +
-                          str(self.config.dollar_path_with_other_tools))
-
-        cheribsd_target = self.crosscompile_target.get_rootfs_target()
-        self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self, cross_target=cheribsd_target)
+    def setup(self):
+        super().setup()
+        goroot = BuildGo.get_instance(self, cross_target=CompilationTargets.NATIVE).goroot_dir
+        self.make_args.set_env(
+            HOSTARCH=self._arch_to_syzstring(CompilationTargets.NATIVE.cpu_architecture),
+            TARGETARCH=self.syz_arch,
+            TARGETOS="freebsd",
+            GOPATH=self.build_dir,
+            GOROOT=goroot,
+            CC=self.commandline_to_str([self.CC, *self.essential_compiler_and_linker_flags]),
+            CXX=self.commandline_to_str([self.CXX, *self.essential_compiler_and_linker_flags]),
+            ADDCFLAGS=self.commandline_to_str(self.default_compiler_flags + self.default_ldflags),
+        )
+        cflags = self.default_compiler_flags + self.default_ldflags
+        self.make_args.set_env(CFLAGS=" ".join(cflags))
+        self.make_args.set_env(PATH=f'{goroot / "bin"}:{self.config.dollar_path_with_other_tools}')
 
     def syzkaller_install_path(self):
-        return self.config.cheri_sdk_bindir
+        return self.real_install_root_dir / "bin"
 
     def syzkaller_binary(self):
-        return self.config.cheri_sdk_bindir / "syz-manager"
+        return self.syzkaller_install_path() / "syz-manager"
 
     def needs_configure(self) -> bool:
         return False
 
     def compile(self, **kwargs):
-        cflags = self.default_compiler_flags + self.default_ldflags
-
-        self.make_args.set_env(
-            HOSTARCH="amd64",
-            TARGETARCH=self.crosscompile_target.cpu_architecture.value,
-            TARGETOS="freebsd",
-            GOROOT=self.goroot.expanduser(),
-            GOPATH=self.gopath.expanduser(),
-            CC=self.CC, CXX=self.CXX,
-            PATH=self._new_path)
         if self.sysgen:
             self.generate()
-
-        self.make_args.set_env(CFLAGS=" ".join(cflags))
-        self.run_make(parallel=False, cwd=self.gosrc)
+        self.run_make(parallel=False, cwd=self.source_dir)
 
     def generate(self):
-        with self.set_env(PATH=self._new_path, SOURCEDIR=self.cheribsd_dir):
-            self.run_make("extract", parallel=False, cwd=self.gosrc)
-            self.run_make("generate", parallel=False, cwd=self.gosrc)
+        cheribsd_target = self.crosscompile_target.get_rootfs_target()
+        cheribsd_dir = BuildCHERIBSD.get_source_dir(self, cross_target=cheribsd_target)
+        if not cheribsd_dir.exists():
+            self.dependency_error("Missing CheriBSD source directory")
+        with self.set_env(SOURCEDIR=cheribsd_dir):
+            self.run_make("extract", parallel=False, cwd=self.source_dir)
+            self.run_make("generate", parallel=False, cwd=self.source_dir)
 
     def install(self, **kwargs):
-        # XXX-AM: should have a propert install dir configuration
         native_build = self.source_dir / "bin"
-        mips64_build = native_build / "freebsd_mips64"
-        syz_remote_install = self.syzkaller_install_path() / "freebsd_mips64"
+        target_build = native_build / f"freebsd_{self.syz_arch}"
+        syz_remote_install = self.syzkaller_install_path() / f"freebsd_{self.syz_arch}"
 
         self.makedirs(syz_remote_install)
 
         self.install_file(native_build / "syz-manager", self.syzkaller_binary(), mode=0o755)
 
         if not self.config.pretend:
-            # mips64_build does not exist if we preted, so skip
-            for fname in os.listdir(str(mips64_build)):
-                fpath = mips64_build / fname
-                if os.path.isfile(fpath):
-                    self.install_file(fpath, syz_remote_install / fname, mode=0o755)
+            for fpath in target_build.iterdir():
+                if fpath.is_file():
+                    self.install_file(fpath, syz_remote_install / fpath.name, mode=0o755)
 
     def clean(self) -> ThreadJoiner:
         self.run_cmd(["chmod", "-R", "u+w", self.build_dir])
-        self.make_args.set_env(
-            HOSTARCH="amd64",
-            TARGETARCH=self.crosscompile_target.cpu_architecture.value,
-            TARGETOS="freebsd",
-            GOROOT=self.goroot.expanduser(),
-            GOPATH=self.gopath.expanduser(),
-            CC=self.CC, CXX=self.CXX,
-            PATH=self._new_path)
-
-        self.run_make("clean", parallel=False, cwd=self.gosrc)
+        self.run_make("clean", parallel=False, cwd=self.source_dir)
         joiner = super().clean()
         return joiner
 
 
 class RunSyzkaller(SimpleProject):
     target = "run-syzkaller"
-    supported_architectures = (CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS,)
+    supported_architectures = BuildSyzkaller.supported_architectures
 
     @classmethod
     def setup_config_options(cls, **kwargs):

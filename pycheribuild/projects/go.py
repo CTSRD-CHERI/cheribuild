@@ -57,8 +57,11 @@ class BuildGo(Project):
         self.make_dir = self.source_dir / "src"
         self.bin_dir = self.source_dir / "bin"
         self.pkg_dir = self.source_dir / "pkg"
-        self.goroot_dir = self.install_dir / "go"
         self.go_cache = Path("~").expanduser() / ".cache" / "go-build"
+
+    @property
+    def goroot_dir(self):
+        return self.real_install_root_dir / "go"
 
     def build_dir_for_target(self, target: CrossCompileTarget):
         return self.source_dir / "pkg"
