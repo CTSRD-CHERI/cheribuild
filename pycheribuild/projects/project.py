@@ -821,8 +821,7 @@ class Project(SimpleProject):
 
         if self.build_in_source_dir:
             assert not self.build_via_symlink_farm, "Using a symlink farm only makes sense with a separate build dir"
-            if self.config.debug_output:
-                self.info("Cannot build", self.target, "in a separate build dir, will build in", self.source_dir)
+            self.verbose_print("Cannot build", self.target, "in a separate build dir, will build in", self.source_dir)
             self.build_dir = self.source_dir
 
         self.configure_command = None
@@ -852,8 +851,7 @@ class Project(SimpleProject):
             elif install_dir_kind in (DefaultInstallDir.ROOTFS_OPTBASE, DefaultInstallDir.KDE_PREFIX):
                 relative_to_rootfs = os.path.relpath(str(self._install_dir), str(self.rootfs_dir))
                 if relative_to_rootfs.startswith(os.path.pardir):
-                    self.verbose_print("Custom install dir", self._install_dir,
-                                       "-> using / as install prefix for", self.target)
+                    self.verbose_print("Custom install dir", self._install_dir, "-> using / as install prefix")
                     self._install_prefix = Path("/")
                     self.destdir = self._install_dir
                 else:
@@ -946,10 +944,6 @@ class Project(SimpleProject):
 
     def setup(self):
         super().setup()
-        self.verbose_print(
-            self.target, f"INSTALLDIR={self._install_dir}", f"INSTALL_PREFIX={self._install_prefix}",
-            f"DESTDIR={self.destdir}",
-        )
         if self.set_pkg_config_path:
             pkg_config_args = dict()
             if self.compiling_for_host():
@@ -1269,12 +1263,10 @@ class Project(SimpleProject):
 
     @property
     def install_dir(self) -> Path:
-        assert self._setup_called, "Should be called after base class setup()"
         return self.real_install_root_dir
 
     @property
     def install_prefix(self) -> Path:
-        assert self._setup_called, "Should be called after base class setup()"
         if self._install_prefix is not None:
             return self._install_prefix
         return self._install_dir
