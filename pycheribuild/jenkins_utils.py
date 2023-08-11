@@ -40,37 +40,39 @@ from .utils import status_update
 def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix: Path):
     expected_install_path = Path(f"{cheri_config.output_root}{install_prefix}")
     # Ugly workaround to override all install dirs to go to the tarball
-    for tgt in target_manager.targets(cheri_config):
-        if isinstance(tgt, SimpleTargetAlias):
-            continue
-        cls = tgt.project_class
-        if issubclass(cls, Project) and not isinstance(tgt, MultiArchTargetAlias):
-            cls._default_install_dir_fn = Path(expected_install_path)
-            i = inspect.getattr_static(cls, "_install_dir")
-            assert isinstance(i, CommandLineConfigOption)
-            # But don't change it if it was specified on the command line. Note: This also does the config
-            # inheritance: i.e. setting --cheribsd/install-dir will also affect cheribsd-cheri/cheribsd-mips
-            # noinspection PyTypeChecker
-            from_cmdline = i.load_option(cheri_config, cls, cls, return_none_if_default=True)
-            if from_cmdline is not None:
-                status_update("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
-            else:
-                cls._install_dir = cheri_config.output_root
-                cls._check_install_dir_conflict = False
+    all_targets = [
+        x for x in target_manager.targets(cheri_config)
+        if not isinstance(x, (SimpleTargetAlias, MultiArchTargetAlias)) and issubclass(x.project_class, Project)
+    ]
+    for target in all_targets:
+        cls = target.project_class
+        cls._default_install_dir_fn = Path(expected_install_path)
+        i = inspect.getattr_static(cls, "_install_dir")
+        assert isinstance(i, CommandLineConfigOption)
+        # But don't change it if it was specified on the command line. Note: This also does the config
+        # inheritance: i.e. setting --cheribsd/install-dir will also affect cheribsd-cheri/cheribsd-mips
+        # noinspection PyTypeChecker
+        from_cmdline = i.load_option(cheri_config, cls, cls, return_none_if_default=True)
+        if from_cmdline is not None:
+            status_update("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
+        else:
+            cls._install_dir = cheri_config.output_root
+            cls._check_install_dir_conflict = False
 
-        Target.instantiating_targets_should_warn = False
-        # Override the installation directory for all enabled targets
-        for name in cheri_config.targets:
-            target = target_manager.get_target_raw(name)
-            # noinspection PyProtectedMember
-            project = target._get_or_create_project_no_setup(None, cheri_config, caller=None)
-            if isinstance(project, Project):
-                # Using "/" as the install prefix results inconsistently prefixing some paths with '/usr/'.
-                # To avoid this, just use the full install path as the prefix.
-                if install_prefix == Path("/"):
-                    project._install_prefix = expected_install_path
-                    project.destdir = Path("/")
-                else:
-                    project._install_prefix = install_prefix
-                    project.destdir = cheri_config.output_root
-                assert project.real_install_root_dir == expected_install_path
+    Target.instantiating_targets_should_warn = False
+    # Now that we have set the _install_dir member, override the prefix/destdir after instantiating.
+    for target in all_targets:
+        # noinspection PyProtectedMember
+        project = target._get_or_create_project_no_setup(None, cheri_config, caller=None)
+        assert isinstance(project, Project)
+        i = inspect.getattr_static(target.project_class, "_install_dir")
+        assert isinstance(i, Path)
+        # Using "/" as the install prefix results inconsistently prefixing some paths with '/usr/'.
+        # To avoid this, just use the full install path as the prefix.
+        if install_prefix == Path("/"):
+            project._install_prefix = expected_install_path
+            project.destdir = Path("/")
+        else:
+            project._install_prefix = install_prefix
+            project.destdir = cheri_config.output_root
+        assert project.real_install_root_dir == expected_install_path

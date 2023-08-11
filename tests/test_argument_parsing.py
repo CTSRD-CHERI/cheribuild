@@ -1382,7 +1382,6 @@ def test_install_dir(target: str, expected_default_path: Path, install_dir_split
     )
 
 
-@pytest.mark.xfail(reason="Bug after refactoring")
 def test_jenkins_hack_disk_image():
     # Regression test for the refactoring of the Jenkins installation directories hack:
     # After refactoring the disk image target was trying to look for files in tarball/ instead of using
@@ -1398,5 +1397,4 @@ def test_jenkins_hack_disk_image():
         "disk-image-aarch64", config, BuildCheriBSDDiskImage,
     )
     assert disk_image.disk_image_path == Path("/tmp/tarball/cheribsd-aarch64.img")
-    # FIXME: this is failing
     assert disk_image.rootfs_dir == Path("/tmp/tarball/rootfs")
