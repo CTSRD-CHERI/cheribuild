@@ -1830,7 +1830,6 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
             platform = self.get_default_kernel_platform()
         kernel_abi = filter_kwargs.pop("kernel_abi", self.get_default_kernel_abi())
         filter_kwargs.setdefault("caprevoke", self.caprevoke_kernel)
-        filter_kwargs.setdefault("benchmark", self.build_bench_kernels)
         filter_kwargs["mfsroot"] = True
         config = CheriBSDConfigTable.get_default(self.crosscompile_target, platform, kernel_abi, **filter_kwargs)
         return config.kernconf
