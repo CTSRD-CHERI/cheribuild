@@ -1398,3 +1398,21 @@ def test_jenkins_hack_disk_image():
     )
     assert disk_image.disk_image_path == Path("/tmp/tarball/cheribsd-aarch64.img")
     assert disk_image.rootfs_dir == Path("/tmp/tarball/rootfs")
+
+
+# Another regression test, explicitly overriding the installation directory triggered an assertion
+@pytest.mark.parametrize(
+    ("target", "args", "expected_install_dir"),
+    [
+        pytest.param("cheribsd-release-aarch64", [], Path("/tmp/tarball/prefix")),
+        # We explicitly override the install dir on the command line so there should not be an extra /prefix
+        pytest.param("cheribsd-release-aarch64", ["--cheribsd-release/install-dir=/tmp/tarball"], Path("/tmp/tarball")),
+        # compiler-rt-native should not install to the resource dir in jenkins builds
+        pytest.param("cheri-syzkaller-riscv64-hybrid-for-purecap-rootfs", [], Path("/tmp/tarball/prefix")),
+    ],
+)
+def test_jenkins_hack_install_dirs(target: str, args: "list[str]", expected_install_dir: Path):
+    config = _parse_arguments(["--output-root=/tmp/tarball", *args])
+    jenkins_override_install_dirs_hack(config, Path("/prefix"))
+    release = _get_target_instance(target, config, Project)
+    assert release.install_dir == expected_install_dir

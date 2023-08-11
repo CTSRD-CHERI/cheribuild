@@ -46,18 +46,7 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
     ]
     for target in all_targets:
         cls = target.project_class
-        cls._default_install_dir_fn = Path(expected_install_path)
-        i = inspect.getattr_static(cls, "_install_dir")
-        assert isinstance(i, CommandLineConfigOption)
-        # But don't change it if it was specified on the command line. Note: This also does the config
-        # inheritance: i.e. setting --cheribsd/install-dir will also affect cheribsd-cheri/cheribsd-mips
-        # noinspection PyTypeChecker
-        from_cmdline = i.load_option(cheri_config, cls, cls, return_none_if_default=True)
-        if from_cmdline is not None:
-            status_update("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
-        else:
-            cls._install_dir = cheri_config.output_root
-            cls._check_install_dir_conflict = False
+        cls._default_install_dir_fn = expected_install_path
 
     Target.instantiating_targets_should_warn = False
     # Now that we have set the _install_dir member, override the prefix/destdir after instantiating.
@@ -65,14 +54,25 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
         # noinspection PyProtectedMember
         project = target._get_or_create_project_no_setup(None, cheri_config, caller=None)
         assert isinstance(project, Project)
-        i = inspect.getattr_static(target.project_class, "_install_dir")
-        assert isinstance(i, Path)
-        # Using "/" as the install prefix results inconsistently prefixing some paths with '/usr/'.
-        # To avoid this, just use the full install path as the prefix.
-        if install_prefix == Path("/"):
-            project._install_prefix = expected_install_path
-            project.destdir = Path("/")
+        i = inspect.getattr_static(project, "_install_dir")
+        assert isinstance(i, CommandLineConfigOption)
+        # But don't change it if it was specified on the command line. Note: This also does the config
+        # inheritance: i.e. setting --cheribsd/install-dir will also affect cheribsd-cheri/cheribsd-mips
+        # noinspection PyTypeChecker
+        from_cmdline = i.load_option(cheri_config, cls, cls, return_none_if_default=True)
+        if from_cmdline is not None:
+            status_update("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
+            project._install_dir = from_cmdline
         else:
-            project._install_prefix = install_prefix
-            project.destdir = cheri_config.output_root
-        assert project.real_install_root_dir == expected_install_path
+            project._install_dir = cheri_config.output_root
+            project._check_install_dir_conflict = False
+            # Using "/" as the install prefix results inconsistently prefixing some paths with '/usr/'.
+            # To avoid this, just use the full install path as the prefix.
+            if install_prefix == Path("/"):
+                project._install_prefix = expected_install_path
+                project.destdir = Path("/")
+            else:
+                project._install_prefix = install_prefix
+                project.destdir = cheri_config.output_root
+            assert project.real_install_root_dir == expected_install_path
+    assert isinstance(inspect.getattr_static(project, "_install_dir"), Path)
