@@ -30,7 +30,6 @@
 #
 
 import json
-from pathlib import Path
 
 from .build_qemu import BuildQEMU
 from .cross.cheribsd import BuildCHERIBSD, CheriBSDConfigTable, ConfigPlatform
@@ -39,6 +38,7 @@ from .disk_image import BuildCheriBSDDiskImage
 from .go import BuildGo
 from .project import DefaultInstallDir, GitRepository, MakeCommandKind
 from .simple_project import BoolConfigOption, SimpleProject
+from ..config.computed_default_value import ComputedDefaultValue
 from ..config.target_info import CPUArchitecture
 from ..processutils import commandline_to_str
 from ..qemu_utils import QemuOptions
@@ -60,6 +60,10 @@ class BuildSyzkaller(CrossCompileProject):
         CompilationTargets.CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS,
     )
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, project: config.cheri_sdk_dir,
+        as_string="$CHERI_SDK_DIR",
+    )
 
     if OSInfo.IS_FREEBSD:
         sysgen = BoolConfigOption(
@@ -75,9 +79,6 @@ class BuildSyzkaller(CrossCompileProject):
         self.check_required_system_tool("go", apt="golang")
 
     def __init__(self, config, *args, **kwargs):
-        self._install_prefix = config.cheri_sdk_dir
-        self._install_dir = config.cheri_sdk_dir
-        self.destdir = Path("")
         super().__init__(config, *args, **kwargs)
 
     @staticmethod
