@@ -49,7 +49,6 @@ from .projects import *  # noqa: F401, F403, RUF100
 
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # noqa: F401, F403, RUF100
-from .projects.project import Project
 from .projects.simple_project import SimpleProject
 from .targets import Target, target_manager
 from .utils import OSInfo, ThreadJoiner, fatal_error, init_global_config, status_update, warning_message
@@ -258,9 +257,6 @@ def build_target(cheri_config, target: Target) -> None:
     project = target.get_or_create_project(None, cheri_config, caller=None)
     assert project
     _ = project.all_dependency_names(cheri_config)  # Ensure dependencies are cached.
-    if isinstance(project, Project):
-        assert project.real_install_root_dir == Path(f"{cheri_config.output_root}{cheri_config.installation_prefix}")
-
     if cheri_config.debug_output:
         status_update("Configuration options for building", project.target, file=sys.stderr)
         for attr in dir(project):
