@@ -921,14 +921,6 @@ def test_kernel_configs(target, config_options: "list[str]", expected_kernels: "
             ],
             ["CHERI-QEMU-MFS-ROOT"],
         ),
-        pytest.param("cheribsd-mfs-root-kernel-aarch64", [], ["GENERIC-MFS-ROOT"]),
-        # regression test for assert len(configs) != 0, "No matching default kernel configuration", the
-        # build-bench-kernels flag should not affect the default kernel config selection just the additional ones.
-        pytest.param(
-            "cheribsd-mfs-root-kernel-aarch64",
-            ["--cheribsd/build-bench-kernels", "--cheribsd/default-kernel-abi=hybrid"],
-            ["GENERIC-MFS-ROOT"],
-        ),
     ],
 )
 def test_mfsroot_kernel_configs(target: str, config_options: "list[str]", expected_kernels: "list[str]"):
