@@ -46,6 +46,9 @@ class BuildBluespecCompiler(Project):
         self.check_required_system_tool("gperf", homebrew="gperf", apt="gperf")
         for i in ("autoconf", "bison", "flex"):
             self.check_required_system_tool(i, homebrew=i)
+
+    def setup(self):
+        super().setup()
         self.make_args.set(PREFIX=self.install_dir)
 
     def compile(self, **kwargs):
