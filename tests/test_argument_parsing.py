@@ -17,6 +17,7 @@ import pytest
 from pycheribuild.config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
 from pycheribuild.config.loader import ConfigLoaderBase, ConfigOptionBase, JsonAndCommandLineConfigOption
+from pycheribuild.jenkins_utils import jenkins_override_install_dirs_hack
 
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # noqa: F401, F403, RUF100
@@ -1379,3 +1380,23 @@ def test_install_dir(target: str, expected_default_path: Path, install_dir_split
         ["--source-root=/default/prefix", f"--{target}/install-directory=/custom/override"],
         Path("/custom/override"),
     )
+
+
+@pytest.mark.xfail(reason="Bug after refactoring")
+def test_jenkins_hack_disk_image():
+    # Regression test for the refactoring of the Jenkins installation directories hack:
+    # After refactoring the disk image target was trying to look for files in tarball/ instead of using
+    # the expected tarball/rootfs directory.
+    args = [
+        "--output-root=/tmp/tarball",
+        "--cheribsd/default-kernel-abi=hybrid",
+        "--cheribsd/build-bench-kernels",
+    ]
+    config = _parse_arguments(args)
+    jenkins_override_install_dirs_hack(config, Path("/rootfs"))
+    disk_image = _get_target_instance(
+        "disk-image-aarch64", config, BuildCheriBSDDiskImage,
+    )
+    assert disk_image.disk_image_path == Path("/tmp/tarball/cheribsd-aarch64.img")
+    # FIXME: this is failing
+    assert disk_image.rootfs_dir == Path("/tmp/tarball/rootfs")
