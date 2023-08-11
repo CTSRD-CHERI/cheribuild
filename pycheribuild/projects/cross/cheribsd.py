@@ -772,7 +772,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.has_default_buildkernel_kernel_config:
             assert self.kernel_config is not None
         self.make_args.set(**self.arch_build_flags)
-        self.extra_kernels = []
+        self.extra_kernels: "list[str]" = []
 
     def setup(self) -> None:
         super().setup()
@@ -1056,6 +1056,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.run_make("installkernel", options=install_kernel_args, parallel=False)
 
     def kernconf_list(self) -> "list[str]":
+        assert self.kernel_config is not None
         return [self.kernel_config, *self.extra_kernels]
 
     def compile(self, mfs_root_image: "Optional[Path]" = None, sysroot_only=False, **kwargs) -> None:
@@ -1620,7 +1621,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.extra_kernels_with_mfs = []
+        self.extra_kernels_with_mfs: "list[str]" = []
         configs = self.extra_kernel_configs()
         self.extra_kernels += [c.kernconf for c in configs if not c.mfsroot]
         self.extra_kernels_with_mfs += [c.kernconf for c in configs if c.mfsroot]
