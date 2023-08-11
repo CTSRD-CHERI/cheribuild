@@ -913,7 +913,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         result.update(self.cross_toolchain_config)
         return result
 
-    def kernel_make_args_for_config(self, kernconf: str, extra_make_args) -> MakeOptions:
+    def kernel_make_args_for_config(self, kernconfs: "list[str]", extra_make_args) -> MakeOptions:
         self._setup_make_args()  # ensure make args are complete
         kernel_options = self.make_args.copy()
         if self.compiling_for_mips(include_purecap=True):
@@ -961,7 +961,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.build_drm_kmod:
             drm_kmod = BuildDrmKMod.get_instance(self)
             kernel_options.set(LOCAL_MODULES=drm_kmod.source_dir.name, LOCAL_MODULES_DIR=drm_kmod.source_dir.parent)
-        kernel_options.set(KERNCONF=kernconf)
+        kernel_options.set(KERNCONF=" ".join(kernconfs))
         if self.with_debug_info:
             kernel_options.set(DEBUG="-g")
         if extra_make_args:
@@ -1000,24 +1000,22 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 continue
             self.info(conf.name)
 
-    def _buildkernel(self, kernconf: str, mfs_root_image: "Optional[Path]" = None, extra_make_args=None,
+    def _buildkernel(self, kernconfs: "list[str]", mfs_root_image: "Optional[Path]" = None, extra_make_args=None,
                      ignore_skip_kernel=False) -> None:
         # Check that --skip-kernel is respected. However, we ignore it for the cheribsd-mfs-root-kernel targets
         # since those targets only build a kernel.
         assert not self.config.skip_kernel or ignore_skip_kernel, "--skip-kernel set but building kernel"
-        kernel_make_args = self.kernel_make_args_for_config(kernconf, extra_make_args)
+        kernel_make_args = self.kernel_make_args_for_config(kernconfs, extra_make_args)
         if not self.use_bootstrapped_toolchain and not self.CC.exists():
             self.fatal("Requested build of kernel with external toolchain, but", self.CC,
                        "doesn't exist!")
         if self.debug_kernel:
-            if "_BENCHMARK" in kernconf:
+            if any(x.endswith(("_BENCHMARK", "-NODEBUG")) for x in kernconfs):
                 if not self.query_yes_no("Trying to build BENCHMARK kernel without optimization. Continue?"):
                     return
             kernel_make_args.set(COPTFLAGS="-O0 -DBOOTVERBOSE=2")
         if mfs_root_image:
             kernel_make_args.set(MFS_IMAGE=mfs_root_image)
-            if self.compiling_for_mips(include_purecap=True) and "MFS_ROOT" not in kernconf:
-                self.warning("Attempting to build an MFS_ROOT kernel but kernel config name sounds wrong")
         if not self.kernel_toolchain_exists and not self.fast_rebuild:
             kernel_toolchain_opts = kernel_make_args.copy()
             # The kernel seems to use LDFLAGS and ignore XLDFLAGS. Ensure we don't pass those flags when building host
@@ -1030,16 +1028,17 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 kernel_toolchain_opts.set_with_options(LLD_BOOTSTRAP=False, CLANG=False, CLANG_BOOTSTRAP=False)
             self.run_make("kernel-toolchain", options=kernel_toolchain_opts)
             self.kernel_toolchain_exists = True
-        self.info("Building kernels for configs:", kernconf)
+        self.info("Building kernels for configs:", " ".join(kernconfs))
         self.run_make("buildkernel", options=kernel_make_args,
-                      compilation_db_name="compile_commands_" + kernconf.replace(" ", "_") + ".json")
+                      compilation_db_name="compile_commands_" + " ".join(kernconfs).replace(" ", "_") + ".json")
 
-    def _installkernel(self, kernconf, *, install_dir: Path, extra_make_args=None, ignore_skip_kernel=False) -> None:
+    def _installkernel(self, kernconfs: "list[str]", *, install_dir: Path, extra_make_args=None,
+                       ignore_skip_kernel=False) -> None:
         # Check that --skip-kernel is respected. However, we ignore it for the cheribsd-mfs-root-kernel targets
         # since those targets only build a kernel.
         assert not self.config.skip_kernel or ignore_skip_kernel, "--skip-kernel set but building kernel"
         # don't use multiple jobs here
-        install_kernel_args = self.kernel_make_args_for_config(kernconf, extra_make_args)
+        install_kernel_args = self.kernel_make_args_for_config(kernconfs, extra_make_args)
         install_kernel_args.env_vars.update(self.make_install_env)
         # Also install all other kernels that were potentially built
         install_kernel_args.set(NO_INSTALLEXTRAKERNELS="no")
@@ -1048,12 +1047,14 @@ class BuildFreeBSD(BuildFreeBSDBase):
             install_kernel_args.set_with_options(KERNEL_SYMBOLS=True)
             install_kernel_args.set(INSTALL_KERNEL_DOT_FULL=True)
         install_kernel_args.set_env(DESTDIR=install_dir, METALOG=install_dir / "METALOG.kernel")
-        self.info("Installing kernels for configs:", kernconf)
+        self.info("Installing kernels for configs:", " ".join(kernconfs))
         self.delete_file(install_dir / "METALOG.kernel")  # Ensure that METALOG does not contain stale values.
         self.run_make("installkernel", options=install_kernel_args, parallel=False)
 
-    def compile(self, mfs_root_image: "Optional[Path]" = None, sysroot_only=False,
-                all_kernel_configs: "Optional[str]" = None, **kwargs) -> None:
+    def kernconf_list(self) -> "list[str]":
+        return [self.kernel_config, *self.extra_kernels]
+
+    def compile(self, mfs_root_image: "Optional[Path]" = None, sysroot_only=False, **kwargs) -> None:
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
         if not self.use_bootstrapped_toolchain:
@@ -1080,14 +1081,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.run_make("buildworld", options=build_args)
             self.kernel_toolchain_exists = True  # includes the necessary tools for kernel-toolchain
         if not self.config.skip_kernel:
-            for i in ("USBROOT", "NFSROOT", "MDROOT"):
-                if ("_" + i) in self.kernel_config:
-                    self.info("Not embedding MFS_ROOT image in non-MFS root kernel config:", self.kernel_config)
-                    mfs_root_image = None
-                    break
-            if not all_kernel_configs:
-                all_kernel_configs = self.kernel_config
-            self._buildkernel(kernconf=all_kernel_configs, mfs_root_image=mfs_root_image)
+            self._buildkernel(kernconfs=self.kernconf_list(), mfs_root_image=mfs_root_image)
 
     def _remove_schg_flag(self, *paths: "str") -> None:
         if shutil.which("chflags"):
@@ -1201,7 +1195,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         result.set_env(METALOG=self.install_dir / "METALOG.world")
         return result
 
-    def install(self, all_kernel_configs: "Optional[str]" = None, sysroot_only=False, **kwargs) -> None:
+    def install(self, kernconfs: "Optional[list[str]]" = None, sysroot_only=False, **kwargs) -> None:
         if self.config.freebsd_host_tools_only:
             self.info("Skipping install step because freebsd-host-tools was set")
             return
@@ -1272,9 +1266,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return
         # Run installkernel after installworld since installworld deletes METALOG and therefore the files added by
         # the installkernel step will not be included if we run it first.
-        if not all_kernel_configs:
-            all_kernel_configs = self.kernel_config
-        self._installkernel(kernconf=all_kernel_configs, install_dir=self.install_dir)
+        if kernconfs is None:
+            kernconfs = self.kernconf_list()
+        self._installkernel(kernconfs=kernconfs, install_dir=self.install_dir)
 
     def add_cross_build_options(self) -> None:
         self.make_args.set_env(CC=self.host_CC, CXX=self.host_CXX, CPP=self.host_CPP,
@@ -1728,23 +1722,17 @@ class BuildCHERIBSD(BuildFreeBSD):
     def compile(self, **kwargs) -> None:
         # We could also just pass all values in KERNCONF to build all those kernels. However, if MFS_ROOT is set
         # that will apply to all those kernels and embed the rootfs even if not needed
-        super().compile(all_kernel_configs=self.kernel_config, mfs_root_image=self.mfs_root_image,
-                        sysroot_only=self.sysroot_only, **kwargs)
+        super().compile(mfs_root_image=None, sysroot_only=self.sysroot_only, **kwargs)
         if self.sysroot_only:
             # Don't attempt to build extra kernels if we are only building a sysroot
             return
-        if not self.config.skip_kernel:
-            if self.extra_kernels:
-                self._buildkernel(kernconf=" ".join(self.extra_kernels))
-            if self.extra_kernels_with_mfs and self.mfs_root_image:
-                self._buildkernel(kernconf=" ".join(self.extra_kernels_with_mfs), mfs_root_image=self.mfs_root_image)
+        if not self.config.skip_kernel and self.extra_kernels_with_mfs and self.mfs_root_image:
+            self._buildkernel(kernconfs=self.extra_kernels_with_mfs, mfs_root_image=self.mfs_root_image)
 
     def install(self, **kwargs) -> None:
-        # If we build the FPGA kernels also install them into boot:
-        available_kernconfs = [self.kernel_config, *self.extra_kernels]
-        if self.mfs_root_image:
-            available_kernconfs += self.extra_kernels_with_mfs
-        super().install(all_kernel_configs=" ".join(available_kernconfs), sysroot_only=self.sysroot_only, **kwargs)
+        # When building we build MFS and
+        super().install(kernconfs=self.kernconf_list() + self.extra_kernels_with_mfs,
+                        sysroot_only=self.sysroot_only, **kwargs)
 
 
 class BuildCheriBsdMfsKernel(BuildCHERIBSD):
@@ -1783,8 +1771,11 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(kernel_only_target=True, **kwargs)
 
+    def kernconf_list(self) -> "list[str]":
+        return self.get_kernel_configs(None)
+
     def process(self) -> None:
-        kernel_configs = self.get_kernel_configs(None)
+        kernel_configs = self.kernconf_list()
         if len(kernel_configs) == 0:
             self.fatal("No matching kernel configuration to build for", self.crosscompile_target)
 
@@ -1798,16 +1789,13 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
 
     def _build_and_install_kernel_binaries(self, kernconfs: "list[str]", image: Path):
         # Install to a temporary directory and then copy the kernel to OUTPUT_ROOT
-        # noinspection PyProtectedMember
         # Don't bother with modules for the MFS kernels:
         extra_make_args = dict(NO_MODULES="yes")
-        # noinspection PyProtectedMember
-        self._buildkernel(kernconf=" ".join(kernconfs), mfs_root_image=image, extra_make_args=extra_make_args,
+        self._buildkernel(kernconfs=kernconfs, mfs_root_image=image, extra_make_args=extra_make_args,
                           ignore_skip_kernel=True)
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
-            # noinspection PyProtectedMember
-            self._installkernel(kernconf=" ".join(kernconfs), install_dir=Path(td),
-                                extra_make_args=extra_make_args, ignore_skip_kernel=True)
+            self._installkernel(kernconfs=kernconfs, install_dir=Path(td), extra_make_args=extra_make_args,
+                                ignore_skip_kernel=True)
             self.run_cmd("find", td)
             for conf in kernconfs:
                 kernel_install_path = self.get_kernel_install_path(conf)
@@ -1899,9 +1887,9 @@ class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
 
         # release/Makefile needs to install both world and kernel to create
         # images, so start with the arguments for the combination of the two.
-        kernconf = " ".join(self.get_kernel_configs(None))
+        kernconfs = self.get_kernel_configs(None)
         release_args = self.installworld_args.copy()
-        release_args.update(self.kernel_make_args_for_config(kernconf, None).copy())
+        release_args.update(self.kernel_make_args_for_config(kernconfs, None).copy())
 
         # Don't build src.txz into our releases.  We prefer that users check
         # out src using revision control.
