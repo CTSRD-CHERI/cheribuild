@@ -27,8 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-
-from typing import Optional
+from typing import Optional, cast
 
 from .cheribsd import ConfigPlatform
 from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject
@@ -43,6 +42,7 @@ from ..project import (
     MakeCommandKind,
     Project,
 )
+from ...config.compilation_targets import BaremetalClangTargetInfo
 from ...qemu_utils import QemuOptions
 
 
@@ -79,15 +79,12 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         self.common_warning_flags.append("-Werror=return-type")
         self.common_warning_flags.append("-Wall")
 
-        if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-            # We have to build a purecap if we want to support CHERI
-            self.configure_args.append("--with-abi=l64pc128")
-            # Enable CHERI extensions
-            self.configure_args.append("--with-arch=rv64imafdcxcheri")
-        else:
-            self.configure_args.append("--with-abi=lp64")
-            self.configure_args.append("--with-arch=rv64imafdc")
-
+        tinfo = cast(self.target_info, BaremetalClangTargetInfo)
+        # Assume hardfloat architecture and softfloat ABI
+        self.configure_args.append(
+            "--with-arch=" + tinfo.get_riscv_arch_string(self.crosscompile_target, softfloat=False),
+        )
+        self.configure_args.append("--with-abi=" + tinfo.get_riscv_abi(self.crosscompile_target, softfloat=True))
         self.configure_args.append("--with-mem-start=" + self.mem_start)
 
         if self.build_type == BuildType.DEBUG:
