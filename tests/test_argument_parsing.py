@@ -930,6 +930,14 @@ def test_kernel_configs(target, config_options: "list[str]", expected_kernels: "
             ["--cheribsd/build-bench-kernels", "--cheribsd/default-kernel-abi=hybrid"],
             ["GENERIC-MFS-ROOT"],
         ),
+        # Another regression test for assert len(configs) != 0, "No matching default kernel configuration"; we were
+        # missing CHERI(-PURECAP)-CAPREVOKE-QEMU-MFS-ROOT
+        pytest.param(
+            "cheribsd-mfs-root-kernel-riscv64-purecap",
+            ["--cheribsd/caprevoke-kernel"],
+            ["CHERI-CAPREVOKE-QEMU-MFS-ROOT", "CHERI-QEMU-MFS-ROOT", "CHERI-PURECAP-CAPREVOKE-QEMU-MFS-ROOT",
+             "CHERI-PURECAP-QEMU-MFS-ROOT"],
+        ),
     ],
 )
 def test_mfsroot_kernel_configs(target: str, config_options: "list[str]", expected_kernels: "list[str]"):

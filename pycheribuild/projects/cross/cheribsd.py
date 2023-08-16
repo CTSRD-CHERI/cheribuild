@@ -235,6 +235,8 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
             configs.append(
                 self.make_config({ConfigPlatform.QEMU}, kernel_abi, caprevoke=True, benchmark=True, default=True))
             configs.append(
+                self.make_config({ConfigPlatform.QEMU}, kernel_abi, caprevoke=True, mfsroot=True, default=True))
+            configs.append(
                 self.make_config({ConfigPlatform.QEMU}, kernel_abi, caprevoke=True, benchmark=True, mfsroot=True,
                                  default=True))
             configs.append(self.make_config({ConfigPlatform.GFE}, kernel_abi, caprevoke=True, mfsroot=True))
