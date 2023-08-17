@@ -1066,12 +1066,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
             rootfs_elf = self._get_kernel_rootfs_install_path(config, rootfs_dir, kernconfs[0])
             dest_elf = dest_dir / f"kernel{dest_kernel_suffix}"
             if config != kernconfs[0] or dest_all_extra:
-                dest_elf = dest_elf.with_suffix(f".{config}")
-            self.install_file(rootfs_elf, dest_elf, print_verbose_only=False)
-            rootfs_elf_with_dbg = rootfs_elf.with_suffix(".full")
-            dest_elf_with_dbg = dest_elf.with_suffix(".full")
-            if rootfs_elf_with_dbg.exists():
-                self.install_file(rootfs_elf_with_dbg, dest_elf_with_dbg, print_verbose_only=False)
+                dest_elf = dest_elf.with_suffix(f"{dest_elf.suffix}.{config}")
+            self.install_file(rootfs_elf, dest_elf, force=True, print_verbose_only=False)
+            rootfs_elf_with_dbg = rootfs_elf.with_suffix(f"{rootfs_elf.suffix}.full")
+            dest_elf_with_dbg = dest_elf.with_suffix(f"{dest_elf.suffix}.full")
+            if rootfs_elf_with_dbg.exists() or self.config.pretend:
+                self.install_file(rootfs_elf_with_dbg, dest_elf_with_dbg, force=True, print_verbose_only=False)
 
     def kernconf_list(self) -> "list[str]":
         assert self.kernel_config is not None
