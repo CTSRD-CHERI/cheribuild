@@ -1057,6 +1057,22 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.delete_file(install_dir / "METALOG.kernel")  # Ensure that METALOG does not contain stale values.
         self.run_make("installkernel", options=install_kernel_args, parallel=False)
 
+    def _copykernel(self, kernconfs: "list[str]", rootfs_dir: Path, dest_dir: Path, *,
+                    dest_kernel_suffix: str = "", dest_all_extra: bool = False) -> None:
+        """
+        Copy kernels from the rootfs to the given directory (for MFS-ROOT kernels and Jenkins)
+        """
+        for config in kernconfs:
+            rootfs_elf = self._get_kernel_rootfs_install_path(config, rootfs_dir, kernconfs[0])
+            dest_elf = dest_dir / f"kernel{dest_kernel_suffix}"
+            if config != kernconfs[0] or dest_all_extra:
+                dest_elf = dest_elf.with_suffix(f".{config}")
+            self.install_file(rootfs_elf, dest_elf, print_verbose_only=False)
+            rootfs_elf_with_dbg = rootfs_elf.with_suffix(".full")
+            dest_elf_with_dbg = dest_elf.with_suffix(".full")
+            if rootfs_elf_with_dbg.exists():
+                self.install_file(rootfs_elf_with_dbg, dest_elf_with_dbg, print_verbose_only=False)
+
     def kernconf_list(self) -> "list[str]":
         assert self.kernel_config is not None
         return [self.kernel_config, *self.extra_kernels]
@@ -1276,6 +1292,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if kernconfs is None:
             kernconfs = self.kernconf_list()
         self._installkernel(kernconfs=kernconfs, install_dir=self.install_dir)
+        # Jenkins currently expects kernels to be installed to the output
+        # directory
+        if is_jenkins_build():
+            self._copykernel(kernconfs=kernconfs, rootfs_dir=self.install_dir, dest_dir=self.config.output_root)
 
     def add_cross_build_options(self) -> None:
         self.make_args.set_env(CC=self.host_CC, CXX=self.host_CXX, CPP=self.host_CPP,
@@ -1395,16 +1415,20 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 [self.make_args.command, *make_args.all_commandline_args(self.config), *extra_flags, compat_target],
                 env=make_args.env_vars, cwd=self.source_dir)
 
+    def _get_kernel_rootfs_install_path(self, kernconf: "Optional[str]", rootfs: Path,
+                                        default_kernconf: "Optional[str]") -> Path:
+        if kernconf is None or kernconf == default_kernconf:
+            kerndir = "kernel"
+        else:
+            kerndir = "kernel." + kernconf
+        return rootfs / "boot" / kerndir / "kernel"
+
     def get_kernel_install_path(self, kernconf: "Optional[str]" = None) -> Path:
         """
         Get the installed kernel path for the given kernel configuration. If no kernel config
         is given, the default kernel configuration is selected.
         """
-        if kernconf is None or kernconf == self.kernel_config:
-            kerndir = "kernel"
-        else:
-            kerndir = "kernel." + kernconf
-        return self.install_dir / "boot" / kerndir / "kernel"
+        return self._get_kernel_rootfs_install_path(kernconf, self.install_dir, self.kernel_config)
 
     def get_kern_module_path(self, kernconf: "Optional[str]" = None) -> "Optional[str]":
         """
@@ -1435,15 +1459,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         config = CheriBSDConfigTable.get_entry(self.crosscompile_target, self.kernel_config)
         assert config is not None, "Invalid configuration name"
         return [c.kernconf for c in filter_kernel_configs([config], platform=platform, kernel_abi=None)]
-
-    def prepare_install_dir_for_archiving(self):
-        assert is_jenkins_build(), "Should only be called for jenkins builds"
-        for config in self.get_kernel_configs(None):
-            kernel_elf = self.get_kernel_install_path(config)
-            self.install_file(kernel_elf, self.config.output_root / f"kernel.{config}")
-            kernel_elf_with_dbg = kernel_elf.with_suffix(".full")
-            if kernel_elf_with_dbg.exists():
-                self.install_file(kernel_elf_with_dbg, self.config.output_root / f"kernel.{config}.full")
 
 
 # Build FreeBSD with the default options (build the bundled clang instead of using the SDK one)
@@ -1801,22 +1816,13 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         self._buildkernel(kernconfs=kernconfs, mfs_root_image=image, extra_make_args=extra_make_args,
                           ignore_skip_kernel=True)
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
-            self._installkernel(kernconfs=kernconfs, install_dir=Path(td), extra_make_args=extra_make_args,
+            temp_rootfs = Path(td)
+            build_suffix = self.crosscompile_target.build_suffix(self.config, include_os=False)
+
+            self._installkernel(kernconfs=kernconfs, install_dir=temp_rootfs, extra_make_args=extra_make_args,
                                 ignore_skip_kernel=True)
-            self.run_cmd("find", td)
-            for conf in kernconfs:
-                kernel_install_path = self.get_kernel_install_path(conf)
-                self.delete_file(kernel_install_path)
-                if conf == kernconfs[0]:
-                    source_path = Path(td, "boot/kernel/kernel")
-                else:
-                    # All other kernels are installed with a suffixed name:
-                    source_path = Path(td, "boot/kernel." + conf, "kernel")
-                self.install_file(source_path, kernel_install_path, force=True, print_verbose_only=False)
-                dbg_info_kernel = source_path.with_suffix(".full")
-                if dbg_info_kernel.exists():
-                    fullkernel_install_path = kernel_install_path.with_name(kernel_install_path.name + ".full")
-                    self.install_file(dbg_info_kernel, fullkernel_install_path, force=True, print_verbose_only=False)
+            self._copykernel(kernconfs=kernconfs, rootfs_dir=temp_rootfs, dest_dir=self.config.cheribsd_image_root,
+                             dest_kernel_suffix=build_suffix, dest_all_extra=True)
 
     def _get_all_kernel_configs(self) -> list:
         kernel_abis = self._get_kernel_abis_to_build()
