@@ -175,7 +175,7 @@ class RunTestRIGBase(SimpleProject):
             self.get_reference_implementation_command(reference_impl_port),
             config=self.config,
             stdin=subprocess.DEVNULL,
-            cwd="/",
+            cwd=log_dir,
         ) as reference_cmd:
             with self.get_test_impl(test_impl_port) as test_cmd:
                 if not self.config.pretend:
