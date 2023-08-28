@@ -411,7 +411,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
 
     def setup(self):
         super().setup()
-        lit_args = f"--xunit-xml-output \"{self.build_dir}/test-results.xml\" --max-time 3600 --timeout 120 -s -vv"
+        lit_args = f"--xunit-xml-output \"{self.build_dir}/test-results.xml\" --max-time 3600 --timeout 300 -s -vv"
         external_cxxabi = None
         enabled_runtimes = self.get_enabled_runtimes()
         if self.target_info.is_freebsd():
