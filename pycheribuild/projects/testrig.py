@@ -207,8 +207,12 @@ class RunTestRIGBase(SimpleProject):
                 ]
                 vengine_args.extend(self._get_vengine_action_args(log_dir))
                 vengine_instance.run_qcvengine(*vengine_args, *self.extra_vengine_args, cwd=log_dir)
-                reference_cmd.kill()
-                test_cmd.kill()
+                # Kill the simulators if they didn't shut down cleanly after 3 seconds
+                if not self.config.pretend:
+                    reference_cmd.wait(timeout=3)
+                    reference_cmd.kill()
+                    test_cmd.wait(timeout=3)
+                    test_cmd.kill()
 
     def process(self):
         self.run_testrig()
