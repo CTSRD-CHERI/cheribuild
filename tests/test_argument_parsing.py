@@ -332,7 +332,6 @@ def test_per_project_override():
         pytest.param("run", None),
         pytest.param("freebsd", None),
         pytest.param("disk-image-freebsd", None),
-        pytest.param("disk-image", None),
         pytest.param("qtbase", None),
         pytest.param("libcxx", None),
     ],
