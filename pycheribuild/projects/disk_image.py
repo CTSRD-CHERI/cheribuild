@@ -1044,12 +1044,16 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             # needed by /bin/sh & /bin/csh (if we included the purecap sh/csh)
             "libedit.so.7", "libedit.so.8",
         ]
+        # required, but versions were bumped for OpenSSL 3
+        optional_libs += [
+            # cheribsdbox depends on SSL
+            "libcrypto.so.111", "libcrypto.so.30",
+            "libssl.so.111", "libssl.so.30",
+        ]
         # additional cheribsdbox dependencies (PAM+SSL+BSM)
         # We don't know what ABI cheribsdbox is built for so let's just add the libraries for all ABIs
         required_libs += [
             "libbsm.so.3",
-            "libcrypto.so.111",
-            "libssl.so.111",
             "libpam.so.6",
             "libypclnt.so.4",  # needed by pam_unix.so.6
             # cheribsdbox links these three dynamically since they are needed by other programs too
