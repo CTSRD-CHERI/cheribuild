@@ -230,16 +230,18 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 # This makes a noticeable difference for plain aarch64 (v8.2 instead of v8.0) and also enables a few
                 # extensions that are not enabled by -march=morello (crypto+crc32)
                 result.append("-mcpu=rainier")
-            if xtarget.is_cheri_hybrid():
-                result += [f"-march=morello{march_suffix}", "-mabi=aapcs"]
-            elif xtarget.is_cheri_purecap():
-                result += [f"-march=morello+c64{march_suffix}", "-mabi=purecap"]
+            if xtarget.is_hybrid_or_purecap_cheri():
+                result.append(f"-march=morello{march_suffix}")
+                if xtarget.is_cheri_purecap():
+                    result.append("-mabi=purecap")
+                else:
+                    result.append("-mabi=aapcs")
             else:
                 if cls.uses_morello_llvm:
                     # -mcpu=rainier enables capabilities unless -march=morello+noa64c is also passed
                     result.append(f"-march=morello+noa64c{march_suffix}")
                 else:
-                    result += [f"-march=armv8{march_suffix}"]
+                    result.append(f"-march=armv8{march_suffix}")
         elif xtarget.is_x86_64():
             pass  # No additional flags needed for x86_64.
         else:
