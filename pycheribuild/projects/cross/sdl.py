@@ -28,7 +28,7 @@ from ..project import GitRepository
 
 
 class BuildSDL(CrossCompileCMakeProject):
-    repository = GitRepository("https://github.com/libsdl-org/SDL.git")
+    repository = GitRepository("https://github.com/libsdl-org/SDL.git", default_branch="SDL2", force_branch=True)
     dependencies = ("libx11", "libxext", "libxrandr", "libxrender", "libxcursor", "libxi", "libxscrnsaver")
 
     def setup(self):
@@ -37,15 +37,25 @@ class BuildSDL(CrossCompileCMakeProject):
         # CheriBSD (and it needs to be in the main branch not just dev).
         if self.compiling_for_cheri():
             self.add_cmake_options(SDL_TEST=False, SDL_TESTS=False)
+        self.cross_warning_flags.append("-Wno-error=incompatible-function-pointer-types")
 
 
 class BuildSDLMixer(CrossCompileAutotoolsProject):
     target = "sdl-mixer"
-    repository = GitRepository("https://github.com/libsdl-org/SDL_mixer.git")
+    repository = GitRepository("https://github.com/libsdl-org/SDL_mixer.git", default_branch="SDL2", force_branch=True)
     dependencies = ("sdl",)
+
+    def setup(self) -> None:
+        super().setup()
+        self.configure_args.append("--disable-music-flac")
 
 
 class BuildSDLNet(CrossCompileAutotoolsProject):
     target = "sdl-net"
-    repository = GitRepository("https://github.com/libsdl-org/SDL_net.git")
+    repository = GitRepository("https://github.com/libsdl-org/SDL_net.git", default_branch="SDL2", force_branch=True)
     dependencies = ("sdl",)
+
+    def setup(self):
+        super().setup()
+        self.configure_args.append("--disable-sdltest")
+        self.configure_args.append("--disable-examples")
