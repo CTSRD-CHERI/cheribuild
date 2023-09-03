@@ -26,6 +26,7 @@
 from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, CrossCompileProject
+from .sdl import BuildSDLMixer
 from ..project import ExternallyManagedSourceRepository, GitRepository
 
 
@@ -35,10 +36,16 @@ class BuildChocolateDoom(CrossCompileAutotoolsProject):
                                old_urls=[b"https://github.com/jrtc27/chocolate-doom.git"],
                                default_branch="master", force_branch=True)
     dependencies = ("sdl", "sdl-mixer", "sdl-net", "libpng")
+    _can_use_autogen_sh = False  # Can't use autogen.sh since it will run configure in the wrong dir
 
     def configure(self, **kwargs):
         self.run_cmd("autoreconf", "-fi", cwd=self.source_dir)
         super().configure(**kwargs)
+
+    def setup(self):
+        super().setup()
+        # Rpath is usually handled automatically, but doesn't see to work here
+        self.COMMON_LDFLAGS.append("-Wl,-rpath," + str(BuildSDLMixer.get_instance(self).install_prefix / "lib"))
 
 
 class BuildFreedoom(CrossCompileProject):

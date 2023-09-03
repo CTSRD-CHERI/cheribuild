@@ -1750,6 +1750,7 @@ class _CMakeAndMesonSharedLogic(Project):
 class AutotoolsProject(Project):
     do_not_add_to_targets: bool = True
     _configure_supports_prefix: bool = True
+    _can_use_autogen_sh = True  # Whether autogen.sh can be used to create ./configure
     make_kind: MakeCommandKind = MakeCommandKind.GnuMake
     add_host_target_build_config_options: bool = True
 
@@ -1799,11 +1800,19 @@ class AutotoolsProject(Project):
         if self.extra_configure_flags:
             self.configure_args.extend(self.extra_configure_flags)
         # If there is no ./configure script but ./autogen.sh exists, try running that first
-        if not self.configure_command.exists() and (self.configure_command.parent / "autogen.sh").is_file():
+        if self._can_use_autogen_sh and (self.configure_command.parent / "autogen.sh").is_file():
+            generate_configure = not self.configure_command.exists()
+            # We should also run autogen.sh if configure_command is not tracked by git and --clean is passed
+            if not generate_configure and self.config.clean and isinstance(self.repository, GitRepository):
+                generate_configure = not GitRepository.is_tracked(self, self.source_dir, self.configure_command)
             # We need to pass NOCONFIGURE=1, to avoid invoking the configure script directly plus any environment
             # variables that might affect the autoconf lookup (e.g. ACLOCAL_PATH).
-            self.run_cmd(self.configure_command.parent / "autogen.sh", cwd=self.configure_command.parent,
-                         env={**dict(NOCONFIGURE=1), **self.configure_environment})
+            if generate_configure:
+                self.run_cmd(
+                    self.configure_command.parent / "autogen.sh",
+                    cwd=self.configure_command.parent,
+                    env={**dict(NOCONFIGURE=1), **self.configure_environment},
+                )
         super().configure(**kwargs)
 
     def needs_configure(self) -> bool:

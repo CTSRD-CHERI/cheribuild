@@ -155,6 +155,28 @@ class GitRepository(SourceRepository):
                 return target_override.branch
         return self._default_branch
 
+
+    @staticmethod
+    def is_tracked(current_project: "Project", src_dir: Path, path: Path):
+        # Note: "ls-files --error-unmatch" exits with code 0/1, so we need to pass allow_unexpected_returncode
+        ls_files = run_command(
+            "git",
+            "ls-files",
+            "--error-unmatch",
+            path,
+            cwd=src_dir,
+            print_verbose_only=True,
+            capture_error=True,
+            allow_unexpected_returncode=True,
+            run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+            raise_in_pretend_mode=True,
+        )
+        if ls_files.returncode == 0:
+            current_project.verbose_print(coloured(AnsiColour.blue, path, "is tracked by git"))
+            return True
+        current_project.verbose_print(coloured(AnsiColour.blue, path, "is not tracked by git"))
+        return False
+
     @staticmethod
     def get_branch_info(src_dir: Path) -> "Optional[GitBranchInfo]":
         try:
