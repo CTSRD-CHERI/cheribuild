@@ -51,6 +51,7 @@ class BuildEPollShim(CrossCompileCMakeProject):
             self.add_cmake_options(BUILD_TESTING=False)
             # Set these variables to the CMake results from building natively:
             self.add_cmake_options(ALLOWS_ONESHOT_TIMERS_WITH_TIMEOUT_ZERO=True)
+            self.add_cmake_options(POLLRDHUP_VALUE="0x4000", HAVE_POLLRDHUP=True)
         super().configure()
 
     def install(self, **kwargs):
