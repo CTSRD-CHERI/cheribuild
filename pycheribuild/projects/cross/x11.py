@@ -207,6 +207,7 @@ class BuildLibX11(X11AutotoolsProject):
             # A few warnings in xlibi18n that don't affect correct execution. Fixing them would require
             # using uintptr_t and there currently isn't a typedef for that in libX11.
             self.cross_warning_flags += ["-Wno-error=cheri-capability-misuse"]
+            self.cross_warning_flags.append("-Wno-error=incompatible-pointer-types-discards-qualifiers")
 
 
 class BuildLibXext(X11AutotoolsProject):
@@ -262,6 +263,7 @@ class BuildLibIce(X11AutotoolsProject):
         super().setup()
         # TODO: fix the source code instead
         self.cross_warning_flags.append("-Wno-error=format")  # otherwise configure does not detect asprintf
+        self.cross_warning_flags.append("-Wno-error=incompatible-pointer-types-discards-qualifiers")
 
 
 class BuildLibXt(X11AutotoolsProject):
@@ -285,6 +287,7 @@ class BuildLibXmu(X11AutotoolsProject):
         super().setup()
         # TODO: fix the source code instead
         self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+        self.configure_args.append("--disable-unit-tests")
 
 
 class BuildXWinInfo(X11AutotoolsProject):
@@ -618,6 +621,7 @@ class BuildIceWM(X11CMakeProject):
         # /usr/local/bin/icewmbg --scaled=1 --center=1 --image /root/cherries.jpeg
         self.add_cmake_options(CONFIG_LIBPNG=True, CONFIG_LIBJPEG=True, CONFIG_IMLIB2=False, CONFIG_XPM=True)
         self.add_cmake_options(ENABLE_NLS=False, CONFIG_I18N=False)
+        self.add_cmake_options(CONFIG_FDO_MENUS=False)  # Avoid gio dependency for now
 
 
 class BuildLibPCIAccess(X11MesonProject):
