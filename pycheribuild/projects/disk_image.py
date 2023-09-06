@@ -1064,7 +1064,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "libexecinfo.so.1",  # depends on libelf.so
         ]
         # Add the required PAM libraries for su(1)/login(1)
-        for i in ("permit", "rootok", "self", "unix", "nologin", "securetty", "lastlog"):
+        for i in ("permit", "rootok", "self", "unix", "nologin", "securetty", "lastlog", "login_access"):
             required_libs += ["pam_" + i + ".so", "pam_" + i + ".so.6"]
 
         # Libraries to include if they exist
