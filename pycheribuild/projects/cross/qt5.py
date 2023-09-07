@@ -685,7 +685,7 @@ class BuildQtTools(BuildQtModuleWithQMake):
 
 class BuildQtWayland(BuildQtModuleWithQMake):
     target = "qtwayland"
-    dependencies = ("qtbase", "wayland", "wayland-native")
+    dependencies = ("qtbase", "wayland", "wayland-native", "libxcomposite")
     repository = GitRepository("https://code.qt.io/qt/qtwayland.git",
                                temporary_url_override="https://github.com/CTSRD-CHERI/qtwayland",
                                url_override_reason="Needs a patch to build on FreeBSD",
