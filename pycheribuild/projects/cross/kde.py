@@ -839,6 +839,7 @@ class BuildBreezeStyle(KDECMakeProject):
 class BuildKIdleTime(KDECMakeProject):
     target = "kidletime"
     repository = KF5GitRepository("https://invent.kde.org/frameworks/kidletime.git")
+    _uses_wayland_scanner = True
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
