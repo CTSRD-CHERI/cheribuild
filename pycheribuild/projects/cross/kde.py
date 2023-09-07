@@ -54,6 +54,13 @@ class KF5GitRepository(GitRepository):
         super().__init__(url, *args, force_branch=True, default_branch="kf5", **kwargs)
 
 
+# Plasma master branches have started requiring KF6, use the last stable branch
+class KDEPlasmaGitRepository(GitRepository):
+    def __init__(self, url, *args, **kwargs):
+        super().__init__(url, *args, force_branch=True, default_branch="Plasma/5.27", **kwargs)
+
+
+
 class KDECMakeProject(CrossCompileCMakeProject):
     do_not_add_to_targets = True
     default_install_dir = DefaultInstallDir.KDE_PREFIX
@@ -813,7 +820,7 @@ class BuildKRunner(KDECMakeProject):
 class BuildKDecoration(KDECMakeProject):
     target = "kdecoration"
     dependencies = ("kcoreaddons", "ki18n")
-    repository = GitRepository("https://invent.kde.org/plasma/kdecoration.git")
+    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/kdecoration.git")
 
 
 class BuildKFrameworkIntegration(KDECMakeProject):
@@ -824,7 +831,7 @@ class BuildKFrameworkIntegration(KDECMakeProject):
 
 class BuildBreezeStyle(KDECMakeProject):
     target = "breeze"
-    repository = GitRepository("https://invent.kde.org/plasma/breeze.git")
+    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/breeze.git")
     dependencies = ("kdecoration", "kconfig", "kcoreaddons", "kguiaddons", "kiconthemes", "kconfigwidgets",
                     "kwindowsystem", "kcmutils", "kframeworkintegration")
 
@@ -843,14 +850,14 @@ class BuildKIdleTime(KDECMakeProject):
 
 class LayerShellQt(KDECMakeProject):
     target = "layer-shell-qt"
-    repository = GitRepository("https://invent.kde.org/plasma/layer-shell-qt.git")
+    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/layer-shell-qt.git")
     dependencies = ("qtwayland", "wayland-protocols", "libxkbcommon", "qtdeclarative")
     _uses_wayland_scanner = True
 
 
 class BuildKScreenLocker(KDECMakeProject):
     target = "kscreenlocker"
-    repository = GitRepository("https://invent.kde.org/plasma/kscreenlocker.git",
+    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/kscreenlocker.git",
                                old_urls=[b"https://invent.kde.org/arichardson/kscreenlocker.git"])
     dependencies = ("kwindowsystem", "kcmutils", "kxmlgui", "kwindowsystem", "kidletime", "libxcb", "kwayland",
                     "layer-shell-qt")
@@ -859,14 +866,14 @@ class BuildKScreenLocker(KDECMakeProject):
 
 class BuildKDECliTools(KDECMakeProject):
     target = "kde-cli-tools"
-    repository = GitRepository("https://invent.kde.org/plasma/kde-cli-tools.git")
+    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/kde-cli-tools.git")
     dependencies = ("kconfig", "kiconthemes", "ki18n", "kcmutils", "kio", "kservice", "kwindowsystem",
                     "kactivities")  # optional: "kdesu"
 
 
 class BuildKWin(KDECMakeProject):
     target = "kwin"
-    repository = GitRepository("https://invent.kde.org/plasma/kwin.git",
+    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/kwin.git",
                                temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
                                url_override_reason="Avoid libdrm/libgbm dependency+a few minor fixes")
     _uses_wayland_scanner = True
@@ -898,7 +905,7 @@ class BuildKWin(KDECMakeProject):
 
 class BuildLibKScreen(KDECMakeProject):
     target = "libkscreen"
-    repository = GitRepository("https://invent.kde.org/plasma/libkscreen.git",
+    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/libkscreen.git",
                                old_urls=[b"https://invent.kde.org/arichardson/libkscreen.git"])
     dependencies = ("qtx11extras", "kwayland")
     _uses_wayland_scanner = True
@@ -906,7 +913,7 @@ class BuildLibKScreen(KDECMakeProject):
 
 class BuildLibKSysguard(KDECMakeProject):
     target = "libksysguard"
-    repository = GitRepository("https://invent.kde.org/plasma/libksysguard.git")
+    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/libksysguard.git")
     dependencies = ("kio",)
 
 
@@ -919,7 +926,7 @@ class BuildKQuickCharts(KDECMakeProject):
 
 class BuildKActivityManagerD(KDECMakeProject):
     target = "kactivitymanagerd"
-    repository = GitRepository("https://invent.kde.org/plasma/kactivitymanagerd.git")
+    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/kactivitymanagerd.git")
     dependencies = ("kcrash", "kdbusaddons", "ki18n", "kio", "kxmlgui", "kglobalaccel", "boost")
 
 
@@ -954,7 +961,7 @@ class BuildQQC2DesktopStyle(KDECMakeProject):
 
 class BuildQQC2BreezeStyle(KDECMakeProject):
     target = "qqc2-breeze-style"
-    repository = GitRepository("https://invent.kde.org/plasma/qqc2-breeze-style.git")
+    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/qqc2-breeze-style.git")
     dependencies = ("kirigami", "kiconthemes", "kconfigwidgets", "qtx11extras", "breeze")
 
 
@@ -974,9 +981,10 @@ class BuildPlasmaDesktop(KDECMakeProject):
 
 class BuildSystemSettings(KDECMakeProject):
     target = "systemsettings"
-    repository = GitRepository("https://invent.kde.org/plasma/systemsettings.git",
-                               old_urls=[b"https://invent.kde.org/arichardson/systemsettings.git"],
-                               default_branch="master", force_branch=True)
+    repository = KDEPlasmaGitRepository(
+        "https://invent.kde.org/plasma/systemsettings.git",
+        old_urls=[b"https://invent.kde.org/arichardson/systemsettings.git"],
+    )
     dependencies = ("plasma-workspace",)
 
 
