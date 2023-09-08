@@ -678,19 +678,18 @@ def test_libcxxrt_dependency_path():
         pytest.fail(f"Should have found -DLIBUNWIND_PATH= in {tgt.configure_args}")
 
     config = _parse_arguments(["--skip-configure"])
-    check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
     check_libunwind_path(
-        config.output_root / "rootfs-riscv64-purecap/opt/riscv64-purecap/c++/lib",
+        config.build_root / "libunwind-native-build/test-install-prefix/lib",
+        "libcxxrt-native",
+    )
+    check_libunwind_path(
+        config.build_root / "libunwind-riscv64-purecap-build/test-install-prefix/lib",
         "libcxxrt-riscv64-purecap",
     )
-    check_libunwind_path(config.output_root / "rootfs-riscv64/opt/riscv64/c++/lib", "libcxxrt-riscv64")
-    # Check the defaults:
-    config = _parse_arguments(["--skip-configure"])
-    check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
-    config = _parse_arguments(["--skip-configure"])
-    check_libunwind_path(config.output_root / "rootfs-riscv64/opt/riscv64/c++/lib", "libcxxrt-riscv64")
-    check_libunwind_path(config.output_root / "rootfs-riscv64/opt/riscv64/c++/lib", "libcxxrt-riscv64")
-
+    check_libunwind_path(
+        config.build_root / "libunwind-riscv64-build/test-install-prefix/lib",
+        "libcxxrt-riscv64",
+    )
 
 class SystemClangIfExistsElse:
     def __init__(self, fallback: str):

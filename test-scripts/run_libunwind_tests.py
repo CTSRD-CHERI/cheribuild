@@ -38,15 +38,17 @@ from run_tests_common import boot_cheribsd, run_tests_main
 
 
 def setup_libunwind_env(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace):
-    # We also need libdl and libcxxrt from the sysroot:
-    libdir = "libcheri" if qemu.xtarget.is_cheri_purecap() else "lib64"
-    qemu.checked_run(f"ln -sfv /build/lib/libunwind.so* /usr/{libdir}/")
-    qemu.checked_run(f"ln -sfv /sysroot/usr/{libdir}/libcxxrt.so* /sysroot/usr/{libdir}/libdl.so* /usr/{libdir}/")
-    # Add a fake libgcc_s link to libunwind (this works now that we build libunwind with version info)
-    qemu.checked_run(f"ln -sfv /usr/{libdir}/libunwind.so /usr/{libdir}/libgcc_s.so.1")
+    # Ensure that the local libunwind.so is used instead of the system one
+    qemu.checked_run("echo ln -sfv /build/lib/libunwind.so.1 /build/lib/libgcc_s.so.1")
+    boot_cheribsd.prepend_ld_library_path(qemu, "/build/lib")
 
 
 def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+    common_args = dict(
+        test_env=dict(LD_LIBRARY_PATH="/build/lib", LD64_LIBRARY_PATH="/build/lib", LD64C_LIBRARY_PATH="/build/lib"),
+        test_dirs=["libunwind/test"],
+        llvm_lit_path=args.llvm_lit_path,
+    )
     with tempfile.TemporaryDirectory(prefix="cheribuild-libunwind-tests-") as tempdir:
         # run the tests both for shared and static libunwind by setting -Denable_shared=
         # First static binaries
@@ -56,7 +58,7 @@ def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Nam
             args,
             tempdir,
             lit_extra_args=["-Dforce_static_executable=True", "-Denable_shared=False"],
-            llvm_lit_path=args.llvm_lit_path,
+            **common_args,
         )
         # dynamic binary with libunwind linked statically
         static_libunwind_success = run_remote_lit_test.run_remote_lit_tests(
@@ -65,7 +67,7 @@ def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Nam
             args,
             tempdir,
             lit_extra_args=["-Denable_shared=False"],
-            llvm_lit_path=args.llvm_lit_path,
+            **common_args,
         )
         # dynamic binary with libunwind linked shared
         shared_success = run_remote_lit_test.run_remote_lit_tests(
@@ -74,7 +76,7 @@ def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Nam
             args,
             tempdir,
             lit_extra_args=["-Denable_shared=True"],
-            llvm_lit_path=args.llvm_lit_path,
+            **common_args,
         )
         return static_libunwind_success and static_everything_success and shared_success
 

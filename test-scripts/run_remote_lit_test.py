@@ -151,6 +151,8 @@ def run_remote_lit_tests(
     qemu: boot_cheribsd.CheriBSDInstance,
     args: argparse.Namespace,
     tempdir: str,
+    test_dirs: "list[str]",
+    test_env: "Optional[dict[str, str]]",
     mp_q: Optional[multiprocessing.Queue] = None,
     barrier: Optional[multiprocessing.Barrier] = None,
     llvm_lit_path: "Optional[str]" = None,
@@ -172,6 +174,8 @@ def run_remote_lit_tests(
             mp_q=mp_q,
             llvm_lit_path=llvm_lit_path,
             lit_extra_args=lit_extra_args,
+            test_dirs=test_dirs,
+            test_env=test_env,
         )
         if mp_q:
             mp_q.put((COMPLETED, args.internal_shard))
@@ -189,6 +193,8 @@ def run_remote_lit_tests_impl(
     qemu: boot_cheribsd.CheriBSDInstance,
     args: argparse.Namespace,
     tempdir: str,
+    test_dirs: "list[str]",
+    test_env: "Optional[dict[str, str]]",
     mp_q: Optional[multiprocessing.Queue] = None,
     barrier: Optional[multiprocessing.Barrier] = None,
     llvm_lit_path: "Optional[str]" = None,
@@ -288,8 +294,11 @@ Host cheribsd-test-instance
         args.ssh_executor_script,
         "--host",
         "cheribsd-test-instance",
-        "--extra-ssh-args=" + extra_ssh_args,
     ]
+    if test_env:
+        ssh_executor_args.append("--env")
+        ssh_executor_args.extend(f"{k}={v}" for k, v in test_env.items())
+    ssh_executor_args.append("--extra-ssh-args=" + extra_ssh_args)
     if args.use_shared_mount_for_tests:
         # If we have a shared directory use that to massively speed up running tests
         tmpdir_name = args.shared_tmpdir_local.name
@@ -306,7 +315,17 @@ Host cheribsd-test-instance
     if llvm_lit_path is None:
         llvm_lit_path = str(test_build_dir / "bin/llvm-lit")
     # Note: we require python 3 since otherwise it seems to deadlock in Jenkins
-    lit_cmd = [sys.executable, llvm_lit_path, "-j1", "-vv", "-Dexecutor=" + executor, "test"]
+    # TODO: the -D flags was for pre-LLVM 15, post LLVM-15 uses --param=
+    lit_cmd = [
+        sys.executable,
+        llvm_lit_path,
+        "-j1",
+        "-vv",
+        f"-Dexecutor={executor}",
+        "--param",
+        f"executor={executor}",
+        *test_dirs,
+    ]
     if lit_extra_args:
         lit_cmd.extend(lit_extra_args)
     if args.lit_debug_output:

@@ -41,9 +41,8 @@ def run_libcxxrt_tests(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespa
     qemu.run("export LIBUNWIND_PRINT_UNWINDING=1", timeout=2)
     qemu.run("export LIBUNWIND_PRINT_APIS=1", timeout=2)
     qemu.run("export LIBUNWIND_PRINT_DWARF=1", timeout=2)
-    # Copy the libunwind library to both MIPS and CHERI library dirs so that it is picked up
-    qemu.checked_run("ln -sfv /libunwind/lib/libunwind.so* /usr/lib/")
-    qemu.checked_run("ln -sfv /libunwind/lib/libunwind.so* /usr/libcheri/")
+    # Add the libunwind library dirs so that the local one is picked up
+    boot_cheribsd.prepend_ld_library_path(qemu, "/libunwind/lib")
 
     qemu.checked_run("'/build/bin/cxxrt-test-static' -v")
     qemu.checked_run("'/build/bin/cxxrt-test-foreign-exceptions' -v")
