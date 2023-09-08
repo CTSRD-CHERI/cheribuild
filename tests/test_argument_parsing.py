@@ -1423,3 +1423,16 @@ def test_jenkins_hack_install_dirs(target: str, args: "list[str]", expected_inst
     jenkins_override_install_dirs_hack(config, Path("/prefix"))
     release = _get_target_instance(target, config, Project)
     assert release.install_dir == expected_install_dir
+
+
+def test_host_prefixes():
+    # Building the wayland target was failing because it was trying to find wayland-scanner
+    # inside the morello-purecap rootfs
+    config = _parse_arguments(["--output-root=/output"])
+    wayland = _get_target_instance("wayland-morello-purecap", config, Project)
+    assert "wayland-native" in wayland.all_dependency_names(config)
+    assert wayland.host_dependency_prefixes == [
+        Path("/output/rootfs-morello-purecap/usr/local/morello-purecap"),  # FIXME: this is wrong
+        Path("/output/local"),
+        Path("/output/bootstrap"),
+    ]
