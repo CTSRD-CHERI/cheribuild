@@ -155,7 +155,6 @@ class GitRepository(SourceRepository):
                 return target_override.branch
         return self._default_branch
 
-
     @staticmethod
     def is_tracked(current_project: "Project", src_dir: Path, path: Path):
         # Note: "ls-files --error-unmatch" exits with code 0/1, so we need to pass allow_unexpected_returncode
