@@ -557,7 +557,12 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                                cross_target: Optional[CrossCompileTarget] = None) -> T:
         if cross_target is None:
             cross_target = caller.crosscompile_target
-        target = target_manager.get_target(cls.target, cross_target, caller.config, caller=caller)
+        target_name = cls.target
+        if cross_target is not None and isinstance(caller, cls):
+            # When called as self.get_* we have to ensure that we use the "generic" target since cls.target includes
+            # the -<arch> suffix and querying the target manager for foo-<arch> with a mismatched target is an error
+            target_name = getattr(cls, "synthetic_base", cls).target
+        target = target_manager.get_target(target_name, cross_target, caller.config, caller=caller)
         # noinspection PyProtectedMember
         result = target._get_or_create_project_no_setup(cross_target, caller.config, caller=caller)
         assert isinstance(result, SimpleProject)
