@@ -48,6 +48,7 @@ from .project import (
     DefaultInstallDir,
     GitRepository,
     MakeCommandKind,
+    Project,
 )
 from .simple_project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
@@ -132,7 +133,7 @@ class FileSystemType(Enum):
 class BuildDiskImageBase(SimpleProject):
     do_not_add_to_targets = True
     disk_image_path: Path = None
-    _source_class: "Optional[type[SimpleProject]]" = None
+    _source_class: "Optional[type[Project]]" = None
     strip_binaries = False  # True by default for minimal disk-image
     is_minimal = False  # To allow building a much smaller image
     disk_image_prefix: str = None
@@ -336,7 +337,7 @@ class BuildDiskImageBase(SimpleProject):
         def path_relative_to_outputroot(xtarget) -> Path:
             if xtarget not in self.supported_architectures:
                 return Path("/target/not/supported")
-            install_dir = self.source_project.get_install_dir(self, cross_target=xtarget)
+            install_dir = self._source_class.get_install_dir(self, cross_target=xtarget)
             try:
                 return install_dir.relative_to(self.config.output_root)
             except ValueError:

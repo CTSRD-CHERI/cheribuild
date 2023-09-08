@@ -53,7 +53,7 @@ def _sort_targets(
     global_config.skip_sdk = skip_sdk
     global_config.build_morello_firmware_from_source = build_morello_from_source
     global_config.only_dependencies = only_dependencies
-    real_targets = list(target_manager.get_target(t, None, global_config, caller="_sort_targets") for t in targets)
+    real_targets = list(target_manager.get_target(t, config=global_config, caller="_sort_targets") for t in targets)
 
     for t in real_targets:
         if t.project_class._xtarget is None:
@@ -729,7 +729,12 @@ def test_no_dependencies_in_build_dir(config: CheriConfig, native_target: Target
         pytest.skip(f"Skipping {proj.target}: {proj.get_default_install_dir_kind()}")
         return
     for dep in proj.all_dependency_names(config):
-        dep_project = target_manager.get_target(dep, native_target.xtarget, config, "test").project_class
+        dep_project = target_manager.get_target(
+            dep,
+            arch_for_unqualified_targets=native_target.xtarget,
+            config=config,
+            caller="test",
+        ).project_class
         assert issubclass(dep_project, SimpleProject)
         if not issubclass(dep_project, Project):
             continue

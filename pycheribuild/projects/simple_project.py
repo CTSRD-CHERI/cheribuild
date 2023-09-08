@@ -406,8 +406,12 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                 # not A-for-B-rootfs.
                 for dep_name in cls._xtarget.target_info_cls.base_sysroot_targets(cls._xtarget, config):
                     try:
-                        dep_target = target_manager.get_target(dep_name, arch=expected_build_arch.get_rootfs_target(),
-                                                               config=config, caller=cls.target)
+                        dep_target = target_manager.get_target(
+                            dep_name,
+                            arch_for_unqualified_targets=expected_build_arch.get_rootfs_target(),
+                            config=config,
+                            caller=cls.target,
+                        )
                         dependencies.append(dep_target.name)
                     except KeyError:
                         fatal_error("Could not find sysroot target '", dep_name, "' for ", cls.__name__, sep="",
@@ -416,8 +420,9 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         # Try to resovle the target names to actual targets and potentially add recursive depdencies
         for dep_name in dependencies:
             try:
-                dep_target = target_manager.get_target(dep_name, arch=expected_build_arch, config=config,
-                                                       caller=cls.target)
+                dep_target = target_manager.get_target(
+                    dep_name, arch_for_unqualified_targets=expected_build_arch, config=config, caller=cls.target,
+                )
             except KeyError:
                 fatal_error("Could not find target '", dep_name, "' for ", cls.__name__, sep="",
                             pretend=config.pretend, fatal_when_pretending=True)
@@ -562,7 +567,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             # When called as self.get_* we have to ensure that we use the "generic" target since cls.target includes
             # the -<arch> suffix and querying the target manager for foo-<arch> with a mismatched target is an error
             target_name = getattr(cls, "synthetic_base", cls).target
-        target = target_manager.get_target(target_name, cross_target, caller.config, caller=caller)
+        target = target_manager.get_target(target_name, required_arch=cross_target, config=caller.config, caller=caller)
         # noinspection PyProtectedMember
         result = target._get_or_create_project_no_setup(cross_target, caller.config, caller=caller)
         assert isinstance(result, SimpleProject)
@@ -576,7 +581,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         if caller is not None:
             assert caller._init_called, "Cannot call this inside __init__()"
         root_class = getattr(cls, "synthetic_base", cls)
-        target = target_manager.get_target(root_class.target, cross_target, config, caller=caller)
+        target = target_manager.get_target(root_class.target, required_arch=cross_target, config=config, caller=caller)
         result = target.get_or_create_project(cross_target, config, caller=caller)
         assert isinstance(result, SimpleProject)
         found_target = result.get_crosscompile_target()
@@ -902,7 +907,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         if not cheribuild_target:
             return
         # Check that the target actually exists
-        tgt = target_manager.get_target(cheribuild_target, None, config=self.config, caller=self)
+        tgt = target_manager.get_target(cheribuild_target, config=self.config, caller=self)
         # And check that it's a native target:
         if not tgt.project_class.get_crosscompile_target().is_native():
             self.fatal("add_required_*() should use a native cheribuild target and not ", cheribuild_target,
@@ -1225,7 +1230,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             if self.query_yes_no("Would you like to " + cheribuild_action + " the dependency (" + cheribuild_target +
                                  ") using cheribuild?", force_result=False if is_jenkins_build() else True):
                 xtarget = cheribuild_xtarget if cheribuild_xtarget is not None else self.crosscompile_target
-                dep_target = target_manager.get_target(cheribuild_target, xtarget, config=self.config, caller=self)
+                dep_target = target_manager.get_target(cheribuild_target, required_arch=xtarget, config=self.config,
+                                                       caller=self)
                 dep_target.check_system_deps(self.config)
                 assert dep_target.get_or_create_project(None, self.config, caller=self).crosscompile_target == xtarget
                 dep_target.execute(self.config)

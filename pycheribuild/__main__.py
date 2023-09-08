@@ -131,7 +131,7 @@ def get_config_option_value(option: ConfigOptionBase, config: DefaultCheriConfig
     if option._owning_class is not None:
         project_cls: "type[SimpleProject]" = option._owning_class
         Target.instantiating_targets_should_warn = False
-        t = target_manager.get_target(project_cls.target, None, config, caller="get_config_option")
+        t = target_manager.get_target(project_cls.target, config=config, caller="get_config_option")
         obj = t._get_or_create_project_no_setup(None, config, caller=None)
         return option.__get__(obj, option._owning_class)
     # otherwise it must be a config option on CheriConfig:

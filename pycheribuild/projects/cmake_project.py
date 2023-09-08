@@ -300,7 +300,9 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                 try:
                     cmake_xtarget = self.crosscompile_target
                     # Use a string here instead of BuildCrossCompiledCMake to avoid a cyclic import.
-                    cmake_target = target_manager.get_target("cmake-crosscompiled", cmake_xtarget, self.config, self)
+                    cmake_target = target_manager.get_target(
+                        "cmake-crosscompiled", required_arch=cmake_xtarget, config=self.config, caller=self,
+                    )
                     cmake_project = cmake_target.project_class.get_instance(self, cross_target=cmake_xtarget)
                     expected_ctest_path = cmake_project.install_dir / "bin/ctest"
                     if not expected_ctest_path.is_file():

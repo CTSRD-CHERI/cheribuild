@@ -351,8 +351,7 @@ def test_target_aliases_default_target(target_name, resolved_target):
         assert isinstance(raw_target, MultiArchTargetAlias) or raw_target.name == resolved_target
         target = target_manager.get_target(
             target_name,
-            None,
-            _parse_arguments([]),
+            config=_parse_arguments([]),
             caller="test_target_aliases_default_target",
         )
         assert target.name == resolved_target
@@ -1002,7 +1001,7 @@ def test_freebsd_toolchains_cheribsd_purecap():
 def test_default_build_dir(target: str, args: list, expected: str):
     # Check that the cheribsd build dir is correct
     config = _parse_arguments(args)
-    target = target_manager.get_target(target, None, config, caller="test_default_arch")
+    target = target_manager.get_target(target, config=config, caller="test_default_arch")
     builddir = target.get_or_create_project(None, config, caller=None).build_dir
     assert isinstance(builddir, Path)
     assert builddir.name == expected
