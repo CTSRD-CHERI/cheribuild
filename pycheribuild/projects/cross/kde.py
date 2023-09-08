@@ -81,7 +81,7 @@ class KDECMakeProject(CrossCompileCMakeProject):
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
         result = super().dependencies(config)
-        return (*result, "qtbase", "extra-cmake-modules", "qttools")
+        return (*result, "qtbase", "qttools-native", "extra-cmake-modules")
 
     @property
     def ctest_script_extra_args(self):
