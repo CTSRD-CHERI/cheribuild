@@ -771,9 +771,13 @@ class BuildKioExtras(KDECMakeProject):
 class BuildKFileMetadata(KDECMakeProject):
     # This includes e.g. the thumbnail provider for dolphin
     target = "kfilemetadata"
-    # TODO: depend on poppler for PDF medatadata
     dependencies = ("karchive", "kconfig", "ki18n", "karchive", "poppler")
     repository = KF5GitRepository("https://invent.kde.org/frameworks/kfilemetadata.git")
+
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        if self.target_info.is_linux():
+            self.check_required_pkg_config("libattr", apt="libattr1-dev")
 
 
 class BuildKActivities(KDECMakeProject):
