@@ -641,12 +641,22 @@ class BuildQtSVG(BuildQtModuleWithQMake):
 
 class BuildQtX11Extras(BuildQtModuleWithQMake):
     target = "qtx11extras"
-    repository = GitRepository("https://code.qt.io/qt/qtx11extras.git", default_branch="5.15", force_branch=True)
+    repository = GitRepository(
+        "https://invent.kde.org/qt/qt/qtx11extras.git",
+        old_urls=[b"https://code.qt.io/qt/qtx11extras.git"],
+        default_branch="5.15",
+        force_branch=True,
+    )
 
 
 class BuildQtMacExtras(BuildQtModuleWithQMake):
     target = "qtmacextras"
-    repository = GitRepository("https://code.qt.io/qt/qtmacextras.git", default_branch="5.15", force_branch=True)
+    repository = GitRepository(
+        "https://invent.kde.org/qt/qt/qtmacextras.git",
+        old_urls=[b"https://code.qt.io/qt/qtmacextras.git"],
+        default_branch="5.15",
+        force_branch=True,
+    )
 
 
 class BuildQtDeclarative(BuildQtModuleWithQMake):
@@ -665,9 +675,12 @@ class BuildQtDeclarative(BuildQtModuleWithQMake):
 class BuildQtTools(BuildQtModuleWithQMake):
     target = "qttools"
     dependencies = ("qtbase",)
-    repository = GitRepository("https://code.qt.io/qt/qttools.git",
-                               # "https://invent.kde.org/qt/qt/qttools.git",
-                               default_branch="5.15", force_branch=True)
+    repository = GitRepository(
+        "https://invent.kde.org/qt/qt/qttools.git",
+        old_urls=[b"https://code.qt.io/qt/qttools.git"],
+        default_branch="kde/5.15",
+        force_branch=True,
+    )
 
     def setup(self):
         super().setup()
@@ -722,9 +735,9 @@ class BuildQtQuickControls2(BuildQtModuleWithQMake):
 class BuildQtQuickControls(BuildQtModuleWithQMake):
     target = "qtquickcontrols"
     dependencies = ("qtdeclarative",)
-    repository = GitRepository("https://code.qt.io/qt/qtquickcontrols.git",
-                               # "https://invent.kde.org/qt/qt/qtquickcontrols.git",
-                               default_branch="5.15", force_branch=True)
+    repository = GitRepository("https://invent.kde.org/qt/qt/qtquickcontrols.git",
+                               old_urls=[b"https://code.qt.io/qt/qtquickcontrols.git"],
+                               default_branch="kde/5.15", force_branch=True)
 
     def compile(self, **kwargs):
         self.run_make()
@@ -734,9 +747,10 @@ class BuildQtGraphicalEffects(BuildQtModuleWithQMake):
     target = "qtgraphicaleffects"
     dependencies = ("qtdeclarative",)
     # Depends on OpenGL to be useful, https://github.com/CTSRD-CHERI/qtgraphicaleffects allows compiling without OpenGL
-    repository = GitRepository("https://code.qt.io/qt/qtgraphicaleffects.git",
-                               old_urls=[b"https://github.com/CTSRD-CHERI/qtgraphicaleffects"],
-                               default_branch="5.15", force_branch=True)
+    repository = GitRepository("https://invent.kde.org/qt/qt/qtgraphicaleffects.git",
+                               old_urls=[b"https://github.com/CTSRD-CHERI/qtgraphicaleffects",
+                                         b"https://code.qt.io/qt/qtgraphicaleffects.git"],
+                               default_branch="kde/5.15", force_branch=True)
 
     def compile(self, **kwargs):
         self.run_make()
