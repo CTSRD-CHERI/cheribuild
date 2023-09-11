@@ -967,7 +967,7 @@ class BuildPlasmaWorkspace(KDECMakeProject):
     # libkworkspace/kworkspace_autogen/timestamp
     _default_cmake_generator_arg = "-GUnix Makefiles"
     _uses_wayland_scanner = True
-    repository = GitRepository(
+    repository = KDEPlasmaGitRepository(
         "https://invent.kde.org/plasma/plasma-workspace.git",
         old_urls=[b"https://invent.kde.org/arichardson/plasma-workspace.git"])
     dependencies = ("xprop", "xsetroot", "plasma-framework", "kwin", "breeze", "kidletime", "kitemmodels", "kcmutils",
@@ -977,8 +977,11 @@ class BuildPlasmaWorkspace(KDECMakeProject):
 
     def setup(self):
         super().setup()
-        # Qalculate is only needed for the calculator runner, skip that for now
-        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_Qalculate=True)
+        self.add_cmake_options(
+            CMAKE_DISABLE_FIND_PACKAGE_Qalculate=True,
+            WITHOUT_QALCULATE=True,  # Qalculate is only needed for the calculator runner, skip that for now
+            GLIBC_LOCALE_GEN=False,  # avoid PolKit-Qt dependency
+        )
 
 
 class BuildQQC2DesktopStyle(KDECMakeProject):
