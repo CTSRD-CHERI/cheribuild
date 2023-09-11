@@ -858,10 +858,21 @@ class LayerShellQt(KDECMakeProject):
 
 class BuildKScreenLocker(KDECMakeProject):
     target = "kscreenlocker"
-    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/kscreenlocker.git",
-                               old_urls=[b"https://invent.kde.org/arichardson/kscreenlocker.git"])
-    dependencies = ("kwindowsystem", "kcmutils", "kxmlgui", "kwindowsystem", "kidletime", "libxcb", "kwayland",
-                    "layer-shell-qt")
+    repository = KDEPlasmaGitRepository(
+        "https://invent.kde.org/plasma/kscreenlocker.git",
+        old_urls=[b"https://invent.kde.org/arichardson/kscreenlocker.git"],
+    )
+    dependencies = (
+        "kwindowsystem",
+        "kcmutils",
+        "kxmlgui",
+        "kwindowsystem",
+        "kidletime",
+        "libxcb",
+        "kwayland",
+        "layer-shell-qt",
+        "libkscreen",
+    )
     _uses_wayland_scanner = True
 
 
