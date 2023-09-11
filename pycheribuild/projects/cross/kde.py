@@ -998,7 +998,7 @@ class BuildQQC2BreezeStyle(KDECMakeProject):
 
 class BuildPlasmaDesktop(KDECMakeProject):
     target = "plasma-desktop"
-    repository = GitRepository(
+    repository = KDEPlasmaGitRepository(
         "https://invent.kde.org/plasma/plasma-desktop.git",
         temporary_url_override="https://invent.kde.org/arichardson/plasma-desktop.git",
         url_override_reason="https://invent.kde.org/plasma/plasma-desktop/-/merge_requests/944")
