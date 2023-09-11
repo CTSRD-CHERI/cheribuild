@@ -933,6 +933,13 @@ class BuildLibKSysguard(KDECMakeProject):
     repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/libksysguard.git")
     dependencies = ("kio",)
 
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        if self.target_info.is_linux():
+            self.check_required_pkg_config("libnl-3.0", apt="libnl-3-dev")
+            self.check_required_pkg_config("libnl-route-3.0", apt="libnl-route-3-dev")
+            self.check_required_system_header("sensors/sensors.h", apt="libsensors-dev")
+
 
 class BuildKQuickCharts(KDECMakeProject):
     # NB: this needs openGL.
