@@ -885,19 +885,24 @@ class BuildKDECliTools(KDECMakeProject):
 
 class BuildKWin(KDECMakeProject):
     target = "kwin"
-    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/kwin.git",
-                               temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
-                               url_override_reason="Avoid libdrm/libgbm dependency+a few minor fixes")
+    repository = KDEPlasmaGitRepository(
+        "https://invent.kde.org/plasma/kwin.git",
+        temporary_url_override="https://invent.kde.org/arichardson/kwin.git",
+        url_override_reason="Avoid libdrm/libgbm/dbus dependency",
+    )
     _uses_wayland_scanner = True
-    use_mesa = BoolConfigOption("use-mesa", default=True,
-                                help="Add a dependency on Mesa to build the wayland DRM backend")
+    use_mesa = BoolConfigOption(
+        "use-mesa",
+        default=True,
+        help="Add a dependency on Mesa to build the wayland DRM backend",
+    )
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
         result = (*super().dependencies(config), "kdecoration", "qtx11extras", "breeze", "kcmutils", "kscreenlocker",
                   "plasma-framework", "libinput", "qttools", "libepoxy", "libxcvt", "lcms2")
         if cls.use_mesa:
-            result += ("mesa",)
+            result += ("mesa", "libdrm")
         if cls.get_crosscompile_target().target_info_cls.is_freebsd():
             result += ("linux-input-h",)
         return result
