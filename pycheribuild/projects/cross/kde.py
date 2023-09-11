@@ -1100,7 +1100,7 @@ class BuildOpenJPEG(CrossCompileCMakeProject):
 
 class BuildPoppler(CrossCompileCMakeProject):
     target = "poppler"
-    dependencies = ("freetype2", "fontconfig", "qtbase", "libtiff")
+    dependencies = ("freetype2", "fontconfig", "qtbase", "libtiff", "openjpeg")
     repository = GitRepository("https://gitlab.freedesktop.org/poppler/poppler.git",
                                old_urls=[b"https://gitlab.freedesktop.org/arichardson/poppler.git"])
 
