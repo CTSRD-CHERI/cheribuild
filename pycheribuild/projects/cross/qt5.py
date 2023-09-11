@@ -742,6 +742,16 @@ class BuildQtGraphicalEffects(BuildQtModuleWithQMake):
         self.run_make()
 
 
+class BuildQtMultimedia(BuildQtModuleWithQMake):
+    target = "qtmultimedia"
+    dependencies = ("qtbase", "qtdeclarative")
+    repository = GitRepository(
+        "https://invent.kde.org/qt/qt/qtmultimedia.git", default_branch="kde/5.15", force_branch=True,
+    )
+
+    def compile(self, **kwargs):
+        self.run_make()
+
 # Webkit needs ICU (and recommended for QtBase too):
 class BuildICU4C(CrossCompileAutotoolsProject):
     # noinspection PyUnreachableCode

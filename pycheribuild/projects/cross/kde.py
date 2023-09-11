@@ -1148,7 +1148,7 @@ class BuildKonsole(KDECMakeProject):
     dependencies = ("extra-cmake-modules", "kbookmarks", "kconfig", "kconfigwidgets", "kcoreaddons", "kcrash",
                     "kglobalaccel", "kguiaddons", "kdbusaddons", "ki18n", "kiconthemes", "kio", "knewstuff",
                     "knotifications", "knotifyconfig", "kparts", "kpty", "kservice", "ktextwidgets", "kwidgetsaddons",
-                    "kwindowsystem", "kxmlgui", "qtbase")
+                    "kwindowsystem", "kxmlgui", "qtbase", "qtmultimedia")
 
 
 # TODO: fails to build due to exiv2 usage of auto_ptr
