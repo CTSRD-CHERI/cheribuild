@@ -122,10 +122,14 @@ class BuildXorgProto(X11AutotoolsProject):
     repository = GitRepository("https://gitlab.freedesktop.org/xorg/proto/xorgproto.git")
 
 
-class BuildLibXau(X11AutotoolsProject):
+class BuildLibXau(X11MesonProject):
     target = "libxau"
     dependencies = ("xorgproto", "xorg-macros")
-    repository = GitRepository("https://gitlab.freedesktop.org/xorg/lib/libxau.git")
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/xorg/lib/libxau.git",
+        temporary_url_override="",
+        url_override_reason="https://gitlab.freedesktop.org/xorg/lib/libxau/-/merge_requests/13",
+    )
 
 
 class BuildLibXCBPthreadStubs(X11AutotoolsProject):
