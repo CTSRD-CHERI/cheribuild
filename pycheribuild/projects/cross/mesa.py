@@ -74,10 +74,10 @@ class BuildLibGlvnd(CrossCompileMesonProject):
 class BuildMesa(CrossCompileMesonProject):
     target = "mesa"
     repository = GitRepository("https://gitlab.freedesktop.org/mesa/mesa.git",
-                               temporary_url_override="https://gitlab.freedesktop.org/arichardson/mesa.git",
-                               url_override_reason="Various incorrect changes to allow purecap compilation",
-                               # 21.3 appears to work on the Morello board, newer branches trigger assertions.
-                               force_branch=True, default_branch="21.3")
+                               temporary_url_override="https://github.com/CTSRD-CHERI/mesa",
+                               url_override_reason="Various changes to allow purecap compilation",
+                               old_urls=[b"https://gitlab.freedesktop.org/arichardson/mesa.git"],
+                               force_branch=True, default_branch="mesa-22.3.7-cheriabi")
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
     include_x11 = True
     include_wayland = True
