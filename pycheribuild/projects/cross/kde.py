@@ -60,7 +60,6 @@ class KDEPlasmaGitRepository(GitRepository):
         super().__init__(url, *args, force_branch=True, default_branch="Plasma/5.27", **kwargs)
 
 
-
 class KDECMakeProject(CrossCompileCMakeProject):
     do_not_add_to_targets = True
     default_install_dir = DefaultInstallDir.KDE_PREFIX
@@ -926,8 +925,10 @@ class BuildKWin(KDECMakeProject):
 
 class BuildLibKScreen(KDECMakeProject):
     target = "libkscreen"
-    repository = KDEPlasmaGitRepository("https://invent.kde.org/plasma/libkscreen.git",
-                               old_urls=[b"https://invent.kde.org/arichardson/libkscreen.git"])
+    repository = KDEPlasmaGitRepository(
+        "https://invent.kde.org/plasma/libkscreen.git",
+        old_urls=[b"https://invent.kde.org/arichardson/libkscreen.git"],
+    )
     dependencies = ("qtx11extras", "kwayland")
     _uses_wayland_scanner = True
 

@@ -766,6 +766,7 @@ class BuildQtMultimedia(BuildQtModuleWithQMake):
     def compile(self, **kwargs):
         self.run_make()
 
+
 # Webkit needs ICU (and recommended for QtBase too):
 class BuildICU4C(CrossCompileAutotoolsProject):
     # noinspection PyUnreachableCode

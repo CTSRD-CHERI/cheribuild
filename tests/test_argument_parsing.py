@@ -692,6 +692,7 @@ def test_libcxxrt_dependency_path():
         "libcxxrt-riscv64",
     )
 
+
 class SystemClangIfExistsElse:
     def __init__(self, fallback: str):
         self.fallback = fallback
