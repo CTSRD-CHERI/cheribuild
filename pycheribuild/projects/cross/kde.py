@@ -421,7 +421,10 @@ class BuildKI18N(KDECMakeProject):
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
-        return (*super().dependencies(config), "libintl-lite")
+        # GLibc provides the libintl APIs, but for FreeBSD we use the basic libintl-lite library.
+        if not cls.get_crosscompile_target().target_info_cls.is_linux():
+            return (*super().dependencies(config), "libintl-lite")
+        return super().dependencies(config)
 
     def setup(self):
         super().setup()
