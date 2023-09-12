@@ -372,8 +372,9 @@ class LaunchQEMUBase(SimpleProject):
 
         user_network_options = ""
         smb_dir_count = 0
-        have_9pfs_support = (self.crosscompile_target.is_native() or
-                             self.crosscompile_target.is_any_x86()) and qemu_supports_9pfs(self.chosen_qemu.binary)
+        have_9pfs_support = (
+            self.crosscompile_target.is_native() or self.crosscompile_target.is_any_x86()
+        ) and qemu_supports_9pfs(self.chosen_qemu.binary, config=self.config)
         # Only default to providing the smb mount if smbd exists
         have_smbfs_support = self.chosen_qemu.can_provide_src_via_smb and shutil.which("smbd")
 

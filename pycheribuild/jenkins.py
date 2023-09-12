@@ -94,7 +94,7 @@ class SdkArchive:
         assert self.archive.exists(), str(self.archive)
         self.cheri_config.FS.makedirs(self.output_dir)
         run_command(["tar", "xf", self.archive, "-C", self.output_dir, *self.extra_args],
-                    cwd=self.cheri_config.workspace)
+                    cwd=self.cheri_config.workspace, config=self.cheri_config)
         self.check_required_files()
 
     def check_required_files(self, fatal=True) -> bool:
@@ -134,13 +134,13 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "list[SdkArc
     if not sysroot_archive.archive.exists():
         warning_message("Project needs a sysroot archive but ", sysroot_archive.archive,
                         "is missing. Will attempt to build anyway but build will most likely fail.")
-        run_command("ls", "-la", cwd=cheri_config.workspace)
+        run_command("ls", "-la", cwd=cheri_config.workspace, config=cheri_config)
         return all_archives
     else:
         all_archives.append(sysroot_archive)
         # Old sysroot archives had a leading ./, newer ones don't anymore
         # TODO: remove when master has been updated
-        contents = run_command("tar", "tf", sysroot_archive.archive, capture_output=True)
+        contents = run_command("tar", "tf", sysroot_archive.archive, capture_output=True, config=cheri_config)
         if contents.stdout.startswith(b'./'):
             warning_message("Old sysroot archive detected, stripping one more path component")
             sysroot_archive.extra_args = ["--strip-components", "2"]
@@ -316,13 +316,14 @@ def create_tarball(cheri_config) -> None:
     run_command(
         [tar_cmd, "--create", "--xz", *tar_flags, "-f", cheri_config.tarball_name, "-C", cheri_config.output_root, "."],
         cwd=cheri_config.workspace,
+        config=cheri_config,
     )
-    run_command("du", "-sh", cheri_config.workspace / cheri_config.tarball_name)
+    run_command("du", "-sh", cheri_config.workspace / cheri_config.tarball_name, config=cheri_config)
 
 
 def strip_binaries(_: JenkinsConfig, project: SimpleProject, directory: Path) -> None:
     status_update("Tarball directory size before stripping ELF files:")
-    run_command("du", "-sh", directory)
+    project.run_cmd("du", "-sh", directory)
     for root, dirs, filelist in os.walk(str(directory)):
         for file in filelist:
             # Try to shrink the size by stripping all elf binaries
@@ -331,7 +332,7 @@ def strip_binaries(_: JenkinsConfig, project: SimpleProject, directory: Path) ->
                 continue
             project.maybe_strip_elf_file(filepath)
     status_update("Tarball directory size after stripping ELF files:")
-    run_command("du", "-sh", directory)
+    project.run_cmd("du", "-sh", directory)
 
 
 def jenkins_main() -> None:

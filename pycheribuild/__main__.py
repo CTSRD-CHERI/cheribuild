@@ -83,15 +83,15 @@ def _update_check(config: DefaultCheriConfig, d: Path) -> None:
     # check if new commits are available
     project_dir = str(d)
     run_command(["git", "fetch"], cwd=project_dir, timeout=5, config=config)
-    branch_info = GitRepository.get_branch_info(d)
+    branch_info = GitRepository.get_branch_info(d, config=config)
     if branch_info is not None and branch_info.upstream_branch == "master":
         if query_yes_no(config, f"The local {branch_info.local_branch} branch is tracking the obsolete remote 'master'"
                                 f" branch, would you like to switch to 'main'?", force_result=False):
             # Update the remote ref to point to "main".
-            run_command("git", "branch", f"--set-upstream-to={branch_info.remote_name}/main", cwd=d)
+            run_command("git", "branch", f"--set-upstream-to={branch_info.remote_name}/main", cwd=d, config=config)
             if branch_info.local_branch == "master":
                 # And rename master to main if possible.
-                run_command("git", "branch", "-m", "main", cwd=d, allow_unexpected_returncode=True)
+                run_command("git", "branch", "-m", "main", cwd=d, allow_unexpected_returncode=True, config=config)
 
     output = run_command(["git", "status", "-uno"], cwd=project_dir, config=config, capture_output=True,
                          print_verbose_only=True).stdout
@@ -227,10 +227,10 @@ def real_main() -> None:
                 # Use docker restart + docker exec instead of docker run
                 # FIXME: docker restart doesn't work for some reason
                 stop_cmd = ["docker", "stop", cheri_config.docker_container]
-                print_command(stop_cmd)
+                print_command(stop_cmd, config=cheri_config)
                 subprocess.check_call(stop_cmd)
                 start_cmd = ["docker", "start", cheri_config.docker_container]
-                print_command(start_cmd)
+                print_command(start_cmd, config=cheri_config)
                 subprocess.check_call(start_cmd)
                 docker_run_cmd = ["docker", "exec", cheri_config.docker_container, *cheribuild_args]
             else:
@@ -269,7 +269,7 @@ def real_main() -> None:
             continue
         if not cheri_config.pretend:
             if cheri_config.verbose:
-                print_command("mkdir", "-p", str(d))
+                print_command("mkdir", "-p", str(d), config=cheri_config)
             d.mkdir(parents=True, exist_ok=True)
 
     # Don't do the update check when tab-completing (otherwise it freezes)

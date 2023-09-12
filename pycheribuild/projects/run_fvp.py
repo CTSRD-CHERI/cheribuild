@@ -227,7 +227,7 @@ VOLUME /diskimg
         if self.use_docker_container and x11 and OSInfo.IS_MAC:
             # To use X11 via docker on macos we need to run socat on port 6000
             socat_cmd = ["socat", "TCP-LISTEN:6000,reuseaddr,fork", "UNIX-CLIENT:\"" + display + "\""]
-            socat = popen(socat_cmd, stdin=subprocess.DEVNULL)
+            socat = popen(socat_cmd, stdin=subprocess.DEVNULL, config=self.config)
             bg_processes.append((socat, False))
         try:
             extra_args = []
@@ -313,7 +313,8 @@ VOLUME /diskimg
                     # Pass os.setsid to create a new process group so signals
                     # are passed to children; docker exec does not seem to want
                     # to behave so we have to signal its child too.
-                    fvp = popen(fvp_cmdline(), stdin=subprocess.DEVNULL, preexec_fn=os.setsid, **fvp_kwargs)
+                    fvp = popen(fvp_cmdline(), stdin=subprocess.DEVNULL, preexec_fn=os.setsid, config=self.config,
+                                **fvp_kwargs)
                     bg_processes.append((fvp, True))
                     self.info("Waiting for FVP to start...")
                     # Don't call get_ap_port() in --pretend mode since it will hang forever

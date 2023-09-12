@@ -35,7 +35,7 @@ from typing import Optional
 
 from .config.target_info import CPUArchitecture, CrossCompileTarget
 from .processutils import run_command
-from .utils import OSInfo, warning_message
+from .utils import ConfigBase, OSInfo, warning_message
 
 
 class QemuOptions:
@@ -191,11 +191,11 @@ class QemuOptions:
 
 
 @functools.lru_cache(maxsize=20)
-def qemu_supports_9pfs(qemu: Path) -> bool:
+def qemu_supports_9pfs(qemu: Path, *, config: ConfigBase) -> bool:
     if not qemu.is_file():
         return False
     prog = run_command([str(qemu), "-virtfs", "?"], stdin=subprocess.DEVNULL, capture_output=True, capture_error=True,
-                       run_in_pretend_mode=True, expected_exit_code=1, print_verbose_only=True)
+                       run_in_pretend_mode=True, expected_exit_code=1, print_verbose_only=True, config=config)
     return b"-virtfs ?: Usage: -virtfs" in prog.stderr
 
 

@@ -37,7 +37,7 @@ from typing import Optional
 from .simple_project import SimpleProject
 from ..config.target_info import CrossCompileTarget
 from ..processutils import get_program_version, run_command
-from ..utils import AnsiColour, coloured, remove_prefix, status_update
+from ..utils import AnsiColour, ConfigBase, coloured, remove_prefix, status_update
 
 if typing.TYPE_CHECKING:
     from .project import Project
@@ -158,7 +158,7 @@ class GitRepository(SourceRepository):
     @staticmethod
     def is_tracked(current_project: "Project", src_dir: Path, path: Path):
         # Note: "ls-files --error-unmatch" exits with code 0/1, so we need to pass allow_unexpected_returncode
-        ls_files = run_command(
+        ls_files = current_project.run_cmd(
             "git",
             "ls-files",
             "--error-unmatch",
@@ -177,11 +177,11 @@ class GitRepository(SourceRepository):
         return False
 
     @staticmethod
-    def get_branch_info(src_dir: Path) -> "Optional[GitBranchInfo]":
+    def get_branch_info(src_dir: Path, config: ConfigBase) -> "Optional[GitBranchInfo]":
         try:
             status = run_command("git", "status", "-b", "-s", "--porcelain=v2", "-u", "no",
                                  capture_output=True, print_verbose_only=True, cwd=src_dir,
-                                 run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS)
+                                 run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, config=config)
             if not status.stdout.startswith(b"# branch"):
                 return None  # unexpected output format
             headers = {}
@@ -201,7 +201,7 @@ class GitRepository(SourceRepository):
             # TODO: can we drop this support? I believe all systems should have support for git 2.11
             status = run_command("git", "status", "-b", "-s", "--porcelain", "-u", "no",
                                  capture_output=True, print_verbose_only=True, cwd=src_dir,
-                                 run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS)
+                                 run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, config=config)
             if not status.stdout.startswith(b"## "):
                 return None  # unexpected output format
             branch_info = status.stdout.splitlines()[0].decode("utf-8")
@@ -219,9 +219,15 @@ class GitRepository(SourceRepository):
         if current_project.config.pretend and (not src_dir.exists() or not shutil.which("git")):
             return False
         # Note: merge-base --is-ancestor exits with code 0/1, so we need to pass allow_unexpected_returncode
-        is_ancestor = run_command("git", "merge-base", "--is-ancestor", commit, expected_branch, cwd=src_dir,
-                                  print_verbose_only=True, capture_error=True, allow_unexpected_returncode=True,
-                                  run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, raise_in_pretend_mode=True)
+        is_ancestor = current_project.run_cmd(
+            ["git", "merge-base", "--is-ancestor", commit, expected_branch],
+            cwd=src_dir,
+            print_verbose_only=True,
+            capture_error=True,
+            allow_unexpected_returncode=True,
+            run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+            raise_in_pretend_mode=True,
+        )
         if is_ancestor.returncode == 0:
             current_project.verbose_print(coloured(AnsiColour.blue, expected_branch, "contains commit", commit))
             return True
@@ -294,8 +300,9 @@ class GitRepository(SourceRepository):
         # Find the first valid remote
         per_target_url = target_override.url if target_override.url else self.url
         matching_remote = None
-        remotes = run_command(["git", "-C", base_project_source_dir, "remote", "-v"],
-                              capture_output=True).stdout.decode("utf-8")
+        remotes = current_project.run_cmd(
+            ["git", "-C", base_project_source_dir, "remote", "-v"], capture_output=True,
+        ).stdout.decode("utf-8")
         for r in remotes.splitlines():
             remote_name = r.split()[0].strip()
             if per_target_url in r:
@@ -304,7 +311,7 @@ class GitRepository(SourceRepository):
                 break  # Found the matching remote
             # Also check the raw config file entry in case insteadOf/pushInsteadOf rewrote the URL so it no longer works
             try:
-                raw_url = run_command(
+                raw_url = current_project.run_cmd(
                     ["git", "-C", base_project_source_dir, "config", "remote." + remote_name + ".url"],
                     capture_output=True).stdout.decode("utf-8").strip()
                 if raw_url == per_target_url:
@@ -316,15 +323,20 @@ class GitRepository(SourceRepository):
         if matching_remote is None:
             current_project.warning("Could not find remote for URL", per_target_url, "will add a new one")
             new_remote = "remote-" + current_project.crosscompile_target.generic_arch_suffix
-            run_command(["git", "-C", base_project_source_dir, "remote", "add", new_remote, per_target_url],
-                        print_verbose_only=False)
+            current_project.run_cmd(
+                ["git", "-C", base_project_source_dir, "remote", "add", new_remote, per_target_url],
+                print_verbose_only=False,
+            )
             matching_remote = new_remote
         # Fetch from the remote to ensure that the target ref exists (otherwise git worktree add fails)
-        run_command(["git", "-C", base_project_source_dir, "fetch", matching_remote], print_verbose_only=False)
+        current_project.run_cmd(["git", "-C", base_project_source_dir, "fetch", matching_remote],
+                                print_verbose_only=False)
         while True:
             try:
-                url = run_command(["git", "-C", base_project_source_dir, "remote", "get-url", matching_remote],
-                                  capture_output=True).stdout.decode("utf-8").strip()
+                url = current_project.run_cmd(
+                    ["git", "-C", base_project_source_dir, "remote", "get-url", matching_remote],
+                    capture_output=True,
+                ).stdout.decode("utf-8").strip()
             except subprocess.CalledProcessError as e:
                 current_project.warning("Could not determine URL for remote", matching_remote, str(e))
                 url = None
@@ -337,15 +349,15 @@ class GitRepository(SourceRepository):
             matching_remote = input("Please enter the correct remote: ")
         # TODO --track -B?
         try:
-            run_command(["git", "-C", base_project_source_dir, "worktree", "add", "--track", "-b",
-                         target_override.branch, src_dir, matching_remote + "/" + target_override.branch],
-                        print_verbose_only=False)
+            current_project.run_cmd(["git", "-C", base_project_source_dir, "worktree", "add", "--track", "-b",
+                                     target_override.branch, src_dir, matching_remote + "/" + target_override.branch],
+                                    print_verbose_only=False)
         except subprocess.CalledProcessError:
             current_project.warning("Could not create worktree with branch name ", target_override.branch,
                                     ", maybe it already exists. Trying fallback name.", sep="")
-            run_command(["git", "-C", base_project_source_dir, "worktree", "add", "--track", "-b",
-                         "worktree-fallback-" + target_override.branch, src_dir,
-                         matching_remote + "/" + target_override.branch], print_verbose_only=False)
+            current_project.run_cmd(["git", "-C", base_project_source_dir, "worktree", "add", "--track", "-b",
+                                     "worktree-fallback-" + target_override.branch, src_dir,
+                                     matching_remote + "/" + target_override.branch], print_verbose_only=False)
 
     def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Path) -> Path:
         target_override = self.per_target_branches.get(caller.crosscompile_target, None)
@@ -364,10 +376,11 @@ class GitRepository(SourceRepository):
 
         # handle repositories that have moved:
         if src_dir.exists() and self.old_urls:
-            branch_info = self.get_branch_info(src_dir)
+            branch_info = self.get_branch_info(src_dir, config=current_project.config)
             if branch_info is not None and branch_info.remote_name is not None:
-                remote_url = run_command("git", "remote", "get-url", branch_info.remote_name, capture_output=True,
-                                         cwd=src_dir).stdout.strip()
+                remote_url = current_project.run_cmd(
+                    "git", "remote", "get-url", branch_info.remote_name, capture_output=True, cwd=src_dir,
+                ).stdout.strip()
                 # Strip any .git suffix to match more old URLs
                 if remote_url.endswith(b".git"):
                     remote_url = remote_url[:-4]
@@ -379,24 +392,31 @@ class GitRepository(SourceRepository):
                     if remote_url == old_url:
                         current_project.warning(current_project.target, "still points to old repository", remote_url)
                         if current_project.query_yes_no("Update to correct URL?"):
-                            run_command("git", "remote", "set-url", branch_info.remote_name, self.url,
-                                        run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, cwd=src_dir)
+                            current_project.run_cmd(
+                                ["git", "remote", "set-url", branch_info.remote_name, self.url],
+                                run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+                                cwd=src_dir,
+                            )
 
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
         # If there is no upstream, it will just return immediately.
-        run_command(["git", "fetch"], cwd=src_dir)
+        current_project.run_cmd(["git", "fetch"], cwd=src_dir)
 
         if revision is not None:
             # TODO: do some rev-parse stuff to check if we are on the right revision?
-            run_command("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
+            current_project.run_cmd("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
             if not skip_submodules:
-                run_command("git", "submodule", "update", "--init", "--recursive", cwd=src_dir, print_verbose_only=True)
+                current_project.run_cmd(
+                    ["git", "submodule", "update", "--init", "--recursive"],
+                    cwd=src_dir,
+                    print_verbose_only=True,
+                )
             return
 
         # Handle forced branches now that we have fetched the latest changes
         if src_dir.exists() and (self.force_branch or self.old_branches):
-            branch_info = self.get_branch_info(src_dir)
+            branch_info = self.get_branch_info(src_dir, config=current_project.config)
             current_branch = branch_info.local_branch if branch_info is not None else None
             if branch_info is None:
                 default_branch = None
@@ -411,13 +431,16 @@ class GitRepository(SourceRepository):
                                         "branch. You should be using", default_branch)
                 if current_project.query_yes_no("Would you like to change to the " + default_branch + " branch?"):
                     try:
-                        run_command("git", "checkout", default_branch, cwd=src_dir, capture_error=True)
+                        current_project.run_cmd("git", "checkout", default_branch, cwd=src_dir, capture_error=True)
                     except subprocess.CalledProcessError as e:
                         # If the branch doesn't exist and there are multiple upstreams with that branch, use --track
                         # to create a new branch that follows the upstream one
                         if e.stderr.strip().endswith(b") remote tracking branches"):
-                            run_command("git", "checkout", "--track", f"{branch_info.remote_name}/{default_branch}",
-                                        cwd=src_dir, capture_error=True)
+                            current_project.run_cmd(
+                                ["git", "checkout", "--track", f"{branch_info.remote_name}/{default_branch}"],
+                                cwd=src_dir,
+                                capture_error=True,
+                            )
                         else:
                             raise e
 
@@ -442,8 +465,8 @@ class GitRepository(SourceRepository):
         current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
 
         # make sure we run git stash if we discover any local changes
-        has_changes = len(run_command("git", "diff", "--stat", "--ignore-submodules",
-                                      capture_output=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
+        has_changes = len(current_project.run_cmd(["git", "diff", "--stat", "--ignore-submodules"],
+                                                  capture_output=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
         pull_cmd = ["git", "pull"]
         has_autostash = False
         git_version = get_program_version(Path(shutil.which("git") or "git"), config=current_project.config)
@@ -463,8 +486,12 @@ class GitRepository(SourceRepository):
                 return
             if not has_autostash:
                 # TODO: ask if we should continue?
-                stash_result = run_command("git", "stash", "save", "Automatic stash by cheribuild.py",
-                                           capture_output=True, cwd=src_dir, print_verbose_only=True).stdout
+                stash_result = current_project.run_cmd(
+                    ["git", "stash", "save", "Automatic stash by cheribuild.py"],
+                    capture_output=True,
+                    cwd=src_dir,
+                    print_verbose_only=True,
+                ).stdout
                 # print("stash_result =", stash_result)
                 if "No local changes to save" in stash_result.decode("utf-8"):
                     # print("NO REAL CHANGES")
@@ -473,11 +500,13 @@ class GitRepository(SourceRepository):
         if not skip_submodules:
             pull_cmd.append("--recurse-submodules")
         rebase_flag = "--rebase=merges" if git_version >= (2, 18) else "--rebase=preserve"
-        run_command([*pull_cmd, rebase_flag], cwd=src_dir, print_verbose_only=True)
+        current_project.run_cmd([*pull_cmd, rebase_flag], cwd=src_dir, print_verbose_only=True)
         if not skip_submodules:
-            run_command("git", "submodule", "update", "--init", "--recursive", cwd=src_dir, print_verbose_only=True)
+            current_project.run_cmd(
+                ["git", "submodule", "update", "--init", "--recursive"], cwd=src_dir, print_verbose_only=True,
+            )
         if has_changes and not has_autostash:
-            run_command("git", "stash", "pop", cwd=src_dir, print_verbose_only=True)
+            current_project.run_cmd(["git", "stash", "pop"], cwd=src_dir, print_verbose_only=True)
 
 
 class MercurialRepository(SourceRepository):
@@ -516,7 +545,7 @@ class MercurialRepository(SourceRepository):
             command += args[0]  # list with parameters was passed
         else:
             command += args
-        return run_command(command, **kwargs)
+        return run_command(command, config=project.config, **kwargs)
 
     @staticmethod
     def contains_commit(current_project: "Project", commit: str, *, src_dir: Path, expected_branch="HEAD"):
@@ -658,4 +687,4 @@ class SubversionRepository(SourceRepository):
             return
 
         update_command = ["svn", "update"]
-        run_command(update_command, cwd=src_dir)
+        current_project.run_cmd(update_command, cwd=src_dir)

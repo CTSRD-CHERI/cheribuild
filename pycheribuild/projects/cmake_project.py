@@ -37,7 +37,7 @@ from typing import Optional, Sequence
 from .project import MakeCommandKind, Project, _CMakeAndMesonSharedLogic
 from .simple_project import _default_stdout_filter
 from ..config.chericonfig import BuildType
-from ..processutils import commandline_to_str, run_command
+from ..processutils import commandline_to_str
 from ..targets import target_manager
 from ..utils import InstallInstructions, OSInfo, include_local_file
 
@@ -330,12 +330,11 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                            "Please re-run build the target with --", self.get_config_option_name("build_tests"), sep="")
             self.warning("Do not know how to run tests for", self.target)
 
-    @staticmethod
-    def find_package(name: str) -> bool:
+    def find_package(self, name: str) -> bool:
         try:
             cmd = "cmake --find-package -DCOMPILER_ID=Clang -DLANGUAGE=CXX -DMODE=EXIST -DQUIET=TRUE".split()
             cmd.append("-DNAME=" + name)
-            return run_command(cmd).returncode == 0
+            return self.run_cmd(cmd).returncode == 0
         except subprocess.CalledProcessError:
             return False
 

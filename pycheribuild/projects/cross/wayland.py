@@ -218,8 +218,8 @@ global target_list
 set target_list "remote-cheribsd"
 """, overwrite=True)
                 ssh_options = "-o NoHostAuthenticationForLocalhost=yes"
-                ssh_port = ssh_config_parameters(self.config.remote_morello_board).get("port", "22")
-                ssh_user = ssh_config_parameters(self.config.remote_morello_board).get("user", "root")
+                ssh_port = ssh_config_parameters(self.config.remote_morello_board, self.config).get("port", "22")
+                ssh_user = ssh_config_parameters(self.config.remote_morello_board, self.config).get("user", "root")
                 self.write_file(self.build_dir / "remote-cheribsd.exp", contents=f"""
 load_generic_config "unix"
 set_board_info connect ssh

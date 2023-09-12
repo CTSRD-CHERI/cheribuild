@@ -45,14 +45,14 @@ class FileSystemUtils:
         self.config = config
 
     def makedirs(self, path: Path) -> None:
-        print_command("mkdir", "-p", path, print_verbose_only=True)
+        print_command("mkdir", "-p", path, print_verbose_only=True, config=self.config)
         if not self.config.pretend and not path.is_dir():
             path.mkdir(parents=True, exist_ok=True)
 
     def _delete_directories(self, *dirs) -> None:
         # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
         # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
-        run_command("rm", "-rf", *dirs)
+        run_command("rm", "-rf", *dirs, config=self.config)
 
     def clean_directory(self, path: Path, keep_root=False, ensure_dir_exists=True) -> None:
         """ After calling this function path will be an empty directory
@@ -127,10 +127,10 @@ class FileSystemUtils:
                     all_entries = all_entries_new
                 all_entries = list(map(str, all_entries))
                 if all_entries:
-                    run_command(["mv", *all_entries, str(tempdir)], print_verbose_only=True)
+                    run_command(["mv", *all_entries, str(tempdir)], print_verbose_only=True, config=self.config)
             else:
                 # rename the directory, create a new dir and then delete it in a background thread
-                run_command("mv", path, tempdir)
+                run_command("mv", path, tempdir, config=self.config)
                 self.makedirs(path)
         if not self.config.pretend:
             assert path.is_dir()
@@ -142,12 +142,12 @@ class FileSystemUtils:
         return ThreadJoiner(deleter_thread)
 
     def copy_directory(self, src_path: Path, dst_path: Path) -> None:
-        print_command("cp", "-r", src_path, dst_path, print_verbose_only=True)
+        print_command("cp", "-r", src_path, dst_path, print_verbose_only=True, config=self.config)
         if not self.config.pretend:
             shutil.copytree(str(src_path), str(dst_path))
 
     def delete_file(self, file: Path, print_verbose_only=False, warn_if_missing=False) -> None:
-        print_command("rm", "-f", file, print_verbose_only=print_verbose_only)
+        print_command("rm", "-f", file, print_verbose_only=print_verbose_only, config=self.config)
         if not file.is_file() and not file.is_symlink():
             if warn_if_missing:
                 warning_message("Expected", file, "to exist but is missing!")
@@ -156,24 +156,22 @@ class FileSystemUtils:
             return
         file.unlink()
 
-    @staticmethod
-    def _transfer_to_from_remote(src: str, dest: str) -> None:
+    def _transfer_to_from_remote(self, src: str, dest: str) -> None:
         # if we have rsync we can skip the copy if file is already up-to-date
         if shutil.which("rsync"):
             try:
-                run_command("rsync", "-Havu", "--progress", src, dest)
+                run_command("rsync", "-Havu", "--progress", src, dest, config=self.config)
             except subprocess.CalledProcessError as err:
                 if err.returncode == 127:
                     warning_message("rysnc doesn't seem to be installed on remote machine, trying scp")
-                    run_command("scp", src, dest)
+                    run_command("scp", src, dest, config=self.config)
                 else:
                     raise err
         else:
-            run_command("scp", src, dest)
+            run_command("scp", src, dest, config=self.config)
 
-    @classmethod
-    def copy_remote_file(cls, remote_path: str, target_file: Path) -> None:
-        return cls._transfer_to_from_remote(remote_path, str(target_file))
+    def copy_remote_file(self, remote_path: str, target_file: Path) -> None:
+        return self._transfer_to_from_remote(remote_path, str(target_file))
 
     def upload_file(self, target_file: Path, remote_host: str, remote_path: str) -> None:
         assert target_file.is_absolute(), target_file
@@ -208,7 +206,7 @@ class FileSystemUtils:
         """
         if not never_print_cmd:
             print_command("echo", contents, colour=AnsiColour.green, output_file=file,
-                          print_verbose_only=print_verbose_only)
+                          print_verbose_only=print_verbose_only, config=self.config)
         if self.config.pretend:
             return
         if not overwrite and file.exists():
@@ -223,8 +221,8 @@ class FileSystemUtils:
     # would require create_symlinks to inherit some of ln's heuristics about
     # whether to create a new file called src.basename() inside dest, whether
     # to use dest.parent or dest, etc.
-    @staticmethod
-    def create_symlink(src: Path, dest: Path, *, relative=True, cwd: "Optional[Path]" = None, print_verbose_only=True):
+    def create_symlink(self, src: Path, dest: Path, *, relative=True, cwd: "Optional[Path]" = None,
+                       print_verbose_only=True):
         assert dest.is_absolute() or cwd is not None
         if not cwd:
             cwd = dest.parent
@@ -233,13 +231,12 @@ class FileSystemUtils:
                 src = os.path.relpath(str(src), str(dest.parent if dest.is_absolute() else cwd))
             if cwd is not None and cwd.is_dir():
                 dest = dest.relative_to(cwd)
-            run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only)
+            run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only, config=self.config)
         else:
-            run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only)
+            run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only, config=self.config)
 
-    @staticmethod
-    def create_symlinks(srcs: typing.Iterable[Path], destdir: Path, *, relative=True, cwd: "Optional[Path]" = None,
-                        print_verbose_only=True):
+    def create_symlinks(self, srcs: typing.Iterable[Path], destdir: Path, *, relative=True,
+                        cwd: "Optional[Path]" = None, print_verbose_only=True):
         assert destdir.is_absolute() or cwd is not None
         if not cwd:
             cwd = destdir
@@ -250,7 +247,8 @@ class FileSystemUtils:
                 destdir = destdir.relative_to(cwd)
         srcs = list(srcs)
         if srcs:
-            run_command("ln", "-fs", *srcs, str(destdir) + "/", cwd=cwd, print_verbose_only=print_verbose_only)
+            run_command("ln", "-fs", *srcs, str(destdir) + "/", cwd=cwd, print_verbose_only=print_verbose_only,
+                        config=self.config)
 
     def move_file(self, src: Path, dest: Path, force=False, create_dirs=True) -> None:
         if not src.exists():
@@ -258,17 +256,17 @@ class FileSystemUtils:
         cmd = ["mv", "-f"] if force else ["mv"]
         if create_dirs and not dest.parent.exists():
             self.makedirs(dest.parent)
-        run_command([*cmd, str(src), str(dest)])
+        run_command([*cmd, str(src), str(dest)], config=self.config)
 
     def install_file(self, src: Path, dest: Path, *, force=False, create_dirs=True, print_verbose_only=True,
                      mode=None) -> None:
         if force:
-            print_command("cp", "-f", src, dest, print_verbose_only=print_verbose_only)
+            print_command("cp", "-f", src, dest, print_verbose_only=print_verbose_only, config=self.config)
         else:
-            print_command("cp", src, dest, print_verbose_only=print_verbose_only)
+            print_command("cp", src, dest, print_verbose_only=print_verbose_only, config=self.config)
         if self.config.pretend:
             if mode is not None:
-                print_command("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
+                print_command("chmod", oct(mode), dest, print_verbose_only=print_verbose_only, config=self.config)
             return
         assert not dest.is_dir(), "install_file: target is a directory and not a file: " + str(dest)
         if (dest.is_symlink() or dest.exists()) and force:
@@ -282,7 +280,7 @@ class FileSystemUtils:
         # noinspection PyArgumentList
         shutil.copy2(str(src), str(dest), follow_symlinks=False)
         if mode is not None:
-            print_command("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
+            print_command("chmod", oct(mode), dest, print_verbose_only=print_verbose_only, config=self.config)
             dest.chmod(mode)
 
     def rewrite_file(self, file: Path, rewrite: "Callable[[typing.Iterable[str]], typing.Iterable[str]]"):
@@ -336,7 +334,7 @@ class FileSystemUtils:
         # a prefixed tool_path was installed -> create link such as mips4-unknown-freebsd-ld -> ld
         if create_unprefixed_link:
             assert tool_path.name != tool_name
-            run_command("ln", "-fsn", tool_path.name, tool_name, cwd=cwd, print_verbose_only=True)
+            run_command("ln", "-fsn", tool_path.name, tool_name, cwd=cwd, print_verbose_only=True, config=self.config)
 
         for target in self.triple_prefixes_for_binaries:
             link = tool_path.parent / (target + tool_name)
@@ -344,7 +342,8 @@ class FileSystemUtils:
                 # if self.config.verbose:
                 #    print(coloured(AnsiColour.yellow, "Not overwriting", link, "because it is the target"))
                 continue
-            run_command("ln", "-fsn", tool_path.name, target + tool_name, cwd=cwd, print_verbose_only=True)
+            run_command("ln", "-fsn", tool_path.name, target + tool_name, cwd=cwd, print_verbose_only=True,
+                        config=self.config)
 
     @staticmethod
     # Not cached since another target could write to this dir: @functools.lru_cache(maxsize=20)

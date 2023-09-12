@@ -207,7 +207,7 @@ class SerialConnection:
         if get_global_config().pretend:
             self.cheribsd = FakeSerialSpawn(executable, args)
         else:
-            print_command([executable, *args])
+            print_command([executable, *args], config=get_global_config())
             self.cheribsd = CheriBSDInstance(
                 CompilationTargets.CHERIBSD_RISCV_HYBRID,
                 executable,

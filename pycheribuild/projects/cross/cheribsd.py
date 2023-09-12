@@ -2092,7 +2092,7 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         if not (rootfs_dir / "lib/libc.so.7").is_file():
             self.fatal("Sysroot source directory", rootfs_dir, "does not contain libc.so.7",
                        fixit_hint="Run `cheribuild.py " + rootfs_target.target + "` first")
-        print_command(tar_cmd, cwd=rootfs_dir)
+        print_command(tar_cmd, cwd=rootfs_dir, config=self.config)
         if not self.config.pretend:
             tar_cwd = str(rootfs_dir)
             with subprocess.Popen(tar_cmd, stdout=subprocess.PIPE, cwd=tar_cwd) as tar:

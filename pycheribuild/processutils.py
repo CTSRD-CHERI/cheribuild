@@ -50,7 +50,7 @@ from subprocess import CompletedProcess
 from typing import Callable, Optional, Union
 
 from .colour import AnsiColour, coloured
-from .utils import ConfigBase, OSInfo, Type_T, fatal_error, get_global_config, status_update, warning_message
+from .utils import ConfigBase, OSInfo, Type_T, fatal_error, status_update, warning_message
 
 __all__ = ["print_command", "get_compiler_info", "CompilerInfo", "popen", "popen_handle_noexec",  # no-combine
            "run_command", "latest_system_clang_tool", "commandline_to_str", "set_env", "extract_version",  # no-combine
@@ -214,9 +214,7 @@ def keep_terminal_sane(gave_tty_control=False, command: Optional[list] = None):
 
 def print_command(arg1: "Union[str, typing.Sequence[typing.Any]]", *remaining_args, output_file=None,
                   colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", print_verbose_only=False,
-                  config: Optional[ConfigBase] = None, **kwargs):
-    if config is None:
-        config = get_global_config()  # TODO: remove
+                  config: ConfigBase, **kwargs):
     if config.quiet or (print_verbose_only and not config.verbose):
         return
     # also allow passing a single string
@@ -350,10 +348,8 @@ class FakePopen:
         pass
 
 
-def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, config: Optional[ConfigBase] = None,
+def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, config: ConfigBase,
           **kwargs) -> subprocess.Popen:
-    if config is None:
-        config = get_global_config()  # TODO: remove
     print_command(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), config=config,
                   print_verbose_only=print_verbose_only)
     if not run_in_pretend_mode and config.pretend:
@@ -366,10 +362,8 @@ def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, confi
 def run_command(*args, capture_output=False, capture_error=False, input: "Optional[Union[str, bytes]]" = None,
                 timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
                 no_print=False, replace_env=False, give_tty_control=False, expected_exit_code=0,
-                allow_unexpected_returncode=False, config: Optional[ConfigBase] = None,
+                allow_unexpected_returncode=False, config: ConfigBase,
                 env: "Optional[dict[str, str]]" = None, **kwargs) -> "CompletedProcess[bytes]":
-    if config is None:
-        config = get_global_config()  # TODO: remove
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
@@ -703,10 +697,7 @@ def get_compiler_info(compiler: "Union[str, Path]", *, config: ConfigBase) -> Co
 
 # Cache the versions
 @functools.lru_cache(maxsize=20)
-def get_version_output(program: Path, command_args: Optional[tuple] = None, *,
-                       config: Optional[ConfigBase] = None) -> "bytes":
-    if config is None:
-        config = get_global_config()  # TODO: remove
+def get_version_output(program: Path, command_args: Optional[tuple] = None, *, config: ConfigBase) -> "bytes":
     if command_args is None:
         command_args = ["--version"]
     if program == Path():
@@ -721,8 +712,6 @@ def get_version_output(program: Path, command_args: Optional[tuple] = None, *,
 def get_program_version(program: Path, command_args: Optional[tuple] = None, component_kind: "type[Type_T]" = int,
                         regex=None, program_name: Optional[bytes] = None, *,
                         config: ConfigBase) -> "tuple[Type_T, ...]":
-    if config is None:
-        config = get_global_config()  # TODO: remove
     if program_name is None:
         program_name = program.name.encode("utf-8")
     try:
@@ -750,18 +739,29 @@ def extract_version(output: bytes, component_kind: "type[Type_T]" = int, regex: 
 
 
 @functools.lru_cache(maxsize=20)
-def ssh_config_parameters(host: str) -> "dict[str, str]":
-    output = run_command("ssh", "-G", host, capture_output=True, run_in_pretend_mode=True).stdout.decode("utf-8")
+def ssh_config_parameters(host: str, config: ConfigBase) -> "dict[str, str]":
+    output = run_command("ssh", "-G", host, capture_output=True, run_in_pretend_mode=True,
+                         config=config).stdout.decode("utf-8")
     lines = output.splitlines()
     return {k: v for k, v in (line.split(maxsplit=1) for line in lines)}
 
 
 @functools.lru_cache(maxsize=20)
-def ssh_host_accessible(host: str) -> bool:
+def ssh_host_accessible(host: str, *, config: ConfigBase) -> bool:
     assert host, "Passed empty SSH hostname!"
     try:
-        output = run_command("ssh", host, "--", "echo", "connection successful", capture_output=True,
-                             run_in_pretend_mode=True, raise_in_pretend_mode=True).stdout.decode("utf-8").strip()
+        result = run_command(
+            "ssh",
+            host,
+            "--",
+            "echo",
+            "connection successful",
+            capture_output=True,
+            run_in_pretend_mode=True,
+            raise_in_pretend_mode=True,
+            config=config,
+        )
+        output = result.stdout.decode("utf-8").strip()
         return output == "connection successful"
     except subprocess.CalledProcessError as e:
         warning_message(f"SSH host '{host}' is not accessible:", e)

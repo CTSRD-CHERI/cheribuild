@@ -1056,7 +1056,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         :param env the environment to pass to make
         :param stdin defaults to /dev/null, set to None to pass the current stdin.
         """
-        print_command(args, cwd=cwd, env=env)
+        print_command(args, cwd=cwd, env=env, config=self.config)
         # make sure that env is either None or a os.environ with the updated entries entries
         new_env: "Optional[dict[str, str]]" = None
         if env:
@@ -1159,7 +1159,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                     if output_path:
                         self.makedirs(output_path.parent)
                         cmd += ["-o", output_path]
-                    run_command(cmd, print_verbose_only=print_verbose_only)
+                    self.run_cmd(cmd, print_verbose_only=print_verbose_only)
                     return True
         except OSError as e:
             self.warning("Failed to detect file type for", file, e)
@@ -1299,9 +1299,9 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         # Remove kwargs not supported by print_command
         print_args.pop("capture_output", None)
         print_args.pop("give_tty_control", None)
-        print_command(shell, "-xe" if self.config.verbose else "-e", "-c", script, **print_args)
+        print_command(shell, "-xe" if self.config.verbose else "-e", "-c", script, config=self.config, **print_args)
         kwargs["no_print"] = True
-        return run_command(shell, "-xe" if self.config.verbose else "-e", "-c", script, **kwargs)
+        return run_command(shell, "-xe" if self.config.verbose else "-e", "-c", script, config=self.config, **kwargs)
 
     def ensure_file_exists(self, what, path, fixit_hint=None) -> Path:
         if not path.exists():
