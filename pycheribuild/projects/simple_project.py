@@ -1153,7 +1153,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             return False
         try:
             with file.open("rb") as f:
-                if f.read(4) == b"\x7fELF" and self.should_strip_elf_file_for_tarball(file):
+                if f.read(4) == b"\x7fELF" and self.should_strip_elf_file(file):
                     self.verbose_print("Stripping ELF binary", file)
                     cmd = [self.target_info.strip_tool, file]
                     if output_path:
@@ -1165,7 +1165,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             self.warning("Failed to detect file type for", file, e)
         return False
 
-    def should_strip_elf_file_for_tarball(self, f: Path) -> bool:
+    def should_strip_elf_file(self, f: Path) -> bool:
         if f.suffix == ".o":
             # We musn't strip crt1.o, etc. sice if we do the linker can't find essential symbols such as __start
             # __programe or environ.
