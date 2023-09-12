@@ -63,7 +63,7 @@ class QemuOptions:
             self.has_default_nic = True  # MALTA board has a default pcnet at 0x0b
         elif xtarget.is_riscv(include_purecap=True):
             # Note: we always use the CHERI QEMU
-            self.qemu_arch_sufffix = "riscv64cheri"
+            self.qemu_arch_sufffix = "riscv32cheri" if xtarget.is_riscv32(include_purecap=True) else "riscv32cheri"
             self.machine_flags = ["-M", "virt"]
             self.can_boot_kernel_directly = True
         elif xtarget.is_any_x86():
