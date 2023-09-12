@@ -712,7 +712,8 @@ def get_version_output(program: Path, command_args: Optional[tuple] = None, *,
     if program == Path():
         raise ValueError("Empty path?")
     prog = run_command([str(program), *list(command_args)], config=config, stdin=subprocess.DEVNULL,
-                       stderr=subprocess.STDOUT, capture_output=True, run_in_pretend_mode=True)
+                       stderr=subprocess.STDOUT, capture_output=True,
+                       run_in_pretend_mode=True, raise_in_pretend_mode=True)
     return prog.stdout
 
 
