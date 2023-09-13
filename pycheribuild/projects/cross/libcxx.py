@@ -407,12 +407,13 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                         LIBCXX_CXX_ABI_LIBRARY_PATH=self.sdk_sysroot / "usr" / self.target_info.default_libdir,
                     )
                 # LIBCXX_ENABLE_ABI_LINKER_SCRIPT is needed if we use libcxxrt/system libc++abi in the tests
-                self.add_cmake_options(LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False, LIBCXX_ENABLE_ABI_LINKER_SCRIPT=True)
+                self.add_cmake_options(LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
             else:
                 # When using the locally-built libc++abi, we link the ABI library objects as part of libc++.so
                 assert "libcxxabi" in enabled_runtimes, enabled_runtimes
                 self.add_cmake_options(LIBCXX_CXX_ABI="libcxxabi")
-                self.add_cmake_options(LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False, LIBCXX_ENABLE_ABI_LINKER_SCRIPT=True)
+                self.add_cmake_options(LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
+            self.add_cmake_options(LIBCXX_ENABLE_ABI_LINKER_SCRIPT=not self.target_info.must_link_statically)
             if self.target_info.is_baremetal():
                 self.add_cmake_options(LIBCXX_ENABLE_THREADS=False,
                                        LIBCXX_ENABLE_PARALLEL_ALGORITHMS=False,
