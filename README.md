@@ -17,7 +17,7 @@ macOS 10.14 and newer is also supported.
 When building on macOS the following commands will install the packages required for
 the most commonly used cheribuild targets:
 ```shell
-brew install cmake ninja libarchive git glib gnu-sed automake autoconf coreutils llvm make wget pixman pkg-config xz
+brew install cmake ninja libarchive git glib gnu-sed automake autoconf coreutils llvm make wget pixman pkg-config xz texinfo mercurial
 # Install samba for shared mounts between host and CheriBSD on QEMU
 brew install samba
 # If you intend to run the morello FVP model you will also need the following:
