@@ -43,7 +43,7 @@ from typing import Optional
 
 from run_tests_common import boot_cheribsd, commandline_to_str, pexpect
 
-from pycheribuild.ssh_utils import generate_ssh_config_file_for_qemu
+from pycheribuild.ssh_utils import generate_ssh_config_file_for_qemu, ssh_host_accessible
 from pycheribuild.utils import get_global_config
 
 KERNEL_PANIC = False
@@ -218,9 +218,10 @@ def run_remote_lit_tests_impl(
 
     test_build_dir = Path(args.build_dir)
     config_contents = generate_ssh_config_file_for_qemu(
-        ssh_port=args.ssh_port, ssh_key=Path(args.ssh_key).with_suffix(""),
+        ssh_port=args.ssh_port,
+        ssh_key=Path(args.ssh_key).with_suffix(""),
+        config=get_global_config(),
     )
-    config_contents += "        ControlPersist {control_persist}\n"
     with Path(tempdir, "config").open("w") as c:
         c.write(config_contents)
     boot_cheribsd.run_host_command(["cat", str(Path(tempdir, "config"))])
@@ -229,22 +230,16 @@ def run_remote_lit_tests_impl(
 
     def check_ssh_connection(prefix):
         connection_test_start = datetime.datetime.utcnow()
-        boot_cheribsd.run_host_command(
-            [
-                "ssh",
-                "-F",
-                str(Path(tempdir, "config")),
-                "cheribsd-test-instance",
-                "-p",
-                str(port),
-                "--",
-                "echo",
-                "connection successful",
-            ],
-            cwd=str(test_build_dir),
-        )
-        connection_time = (datetime.datetime.utcnow() - connection_test_start).total_seconds()
-        boot_cheribsd.success(prefix, " successful after ", connection_time, " seconds")
+        if ssh_host_accessible(
+            "cheribsd-test-instance",
+            ssh_args=("-F", str(Path(tempdir, "config"))),
+            config=get_global_config(),
+            run_in_pretend_mode=False,
+        ):
+            connection_time = (datetime.datetime.utcnow() - connection_test_start).total_seconds()
+            boot_cheribsd.success(prefix, " successful after ", connection_time, " seconds")
+        else:
+            boot_cheribsd.failure("Failed to connect via SSH", exit=True)
 
     check_ssh_connection("First SSH connection")
     controlmaster_running = False

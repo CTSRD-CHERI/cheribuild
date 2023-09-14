@@ -76,7 +76,7 @@ def ssh_config_parameters(host: str, config: ConfigBase) -> "dict[str, str]":
 
 
 @functools.lru_cache(maxsize=20)
-def ssh_host_accessible(host: str, *, ssh_args: "list[str]", config: ConfigBase) -> bool:
+def ssh_host_accessible(host: str, *, ssh_args: "tuple[str, ...]", config: ConfigBase) -> bool:
     assert host, "Passed empty SSH hostname!"
     try:
         result = run_command(
