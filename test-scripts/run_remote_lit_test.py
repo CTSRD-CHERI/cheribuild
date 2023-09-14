@@ -43,6 +43,8 @@ from typing import Optional
 
 from run_tests_common import boot_cheribsd, commandline_to_str, pexpect
 
+from pycheribuild.ssh_utils import generate_ssh_config_file_for_qemu
+
 KERNEL_PANIC = False
 COMPLETED = "COMPLETED"
 NEXT_STAGE = "NEXT_STAGE"
@@ -212,36 +214,14 @@ def run_remote_lit_tests_impl(
         raise RuntimeError("SOMETHING WENT WRONG!")
     qemu.checked_run("cat /root/.ssh/authorized_keys", timeout=20)
     port = args.ssh_port
-    user = "root"  # TODO: run these tests as non-root!
+
     test_build_dir = Path(args.build_dir)
-    # TODO: move this to boot_cheribsd.py
-    config_contents = """
-Host cheribsd-test-instance
-        User {user}
-        HostName localhost
-        Port {port}
-        IdentityFile {ssh_key}
-        # avoid errors due to changed host key:
-        UserKnownHostsFile /dev/null
-        StrictHostKeyChecking no
-        NoHostAuthenticationForLocalhost yes
-        # faster connection by reusing the existing one:
-        ControlPath {home}/.ssh/controlmasters/%r@%h:%p
-        # ConnectTimeout 20
-        # ConnectionAttempts 2
-        ControlMaster auto
-""".format(
-        user=user,
-        port=port,
-        ssh_key=Path(args.ssh_key).with_suffix(""),
-        home=Path.home(),
+    config_contents = generate_ssh_config_file_for_qemu(
+        ssh_port=args.ssh_port, ssh_key=Path(args.ssh_key).with_suffix(""),
     )
     config_contents += "        ControlPersist {control_persist}\n"
-    # print("Writing ssh config: ", config_contents)
     with Path(tempdir, "config").open("w") as c:
-        # Keep socket open for 10 min (600) or indefinitely (yes)
-        c.write(config_contents.format(control_persist="yes"))
-    Path(Path.home(), ".ssh/controlmasters").mkdir(exist_ok=True)
+        c.write(config_contents)
     boot_cheribsd.run_host_command(["cat", str(Path(tempdir, "config"))])
 
     # Check that the config file works:
