@@ -23,12 +23,26 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+import functools
+import subprocess
 from pathlib import Path
+
+__all__ = ["generate_ssh_config_file_for_qemu", "ssh_host_accessible", "ssh_config_parameters"]  # no-combine
+
+from pycheribuild.filesystemutils import FileSystemUtils
+from pycheribuild.processutils import run_command
+from pycheribuild.utils import ConfigBase, warning_message
 
 
 def generate_ssh_config_file_for_qemu(
-    *, ssh_port: int, ssh_key: Path, instance_name: str = "cheribsd-test-instance", ssh_user="root",
+    *,
+    ssh_port: int,
+    ssh_key: Path,
+    instance_name: str = "cheribsd-test-instance",
+    ssh_user="root",
+    config: ConfigBase,
 ) -> str:
+    FileSystemUtils(config).makedirs(Path.home() / ".ssh/controlmasters")
     return f"""
     Host {instance_name}
             User {ssh_user}
@@ -47,3 +61,33 @@ def generate_ssh_config_file_for_qemu(
             # Keep socket open for 10 min (600) or indefinitely (yes)
             ControlPersist 600
     """
+
+
+@functools.lru_cache(maxsize=20)
+def ssh_config_parameters(host: str, config: ConfigBase) -> "dict[str, str]":
+    output = run_command(
+        ["ssh", "-G", host],
+        capture_output=True,
+        run_in_pretend_mode=True,
+        config=config,
+    ).stdout.decode("utf-8")
+    lines = output.splitlines()
+    return {k: v for k, v in (line.split(maxsplit=1) for line in lines)}
+
+
+@functools.lru_cache(maxsize=20)
+def ssh_host_accessible(host: str, *, ssh_args: "list[str]", config: ConfigBase) -> bool:
+    assert host, "Passed empty SSH hostname!"
+    try:
+        result = run_command(
+            ["ssh", host, *ssh_args, "--", "echo", "connection successful"],
+            capture_output=True,
+            run_in_pretend_mode=True,
+            raise_in_pretend_mode=True,
+            config=config,
+        )
+        output = result.stdout.decode("utf-8").strip()
+        return output == "connection successful"
+    except subprocess.CalledProcessError as e:
+        warning_message(f"SSH host '{host}' is not accessible:", e)
+        return False

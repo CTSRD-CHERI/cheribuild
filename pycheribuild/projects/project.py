@@ -70,8 +70,8 @@ from ..processutils import (
     commandline_to_str,
     get_program_version,
     get_version_output,
-    ssh_host_accessible,
 )
+from ..ssh_utils import ssh_host_accessible
 from ..utils import (
     AnsiColour,
     InstallInstructions,

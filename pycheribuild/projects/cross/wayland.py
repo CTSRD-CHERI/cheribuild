@@ -33,7 +33,8 @@ from ..project import AutotoolsProject, DefaultInstallDir, GitRepository
 from ..simple_project import SimpleProject
 from ...config.chericonfig import CheriConfig, Linkage
 from ...config.compilation_targets import CompilationTargets
-from ...processutils import get_program_version, ssh_config_parameters
+from ...processutils import get_program_version
+from ...ssh_utils import ssh_config_parameters
 from ...utils import OSInfo
 
 
