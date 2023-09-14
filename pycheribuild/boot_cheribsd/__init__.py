@@ -56,7 +56,7 @@ from pycheribuild.colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..processutils import commandline_to_str, keep_terminal_sane, run_and_kill_children_on_exit
 from ..qemu_utils import QemuOptions, riscv_bios_arguments
-from ..utils import find_free_port
+from ..utils import find_free_port, get_global_config
 
 _cheribuild_root = Path(__file__).parent.parent.parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
@@ -116,7 +116,6 @@ PEXPECT_CONTINUATION_PROMPT_RE = re.escape(PEXPECT_CONTINUATION_PROMPT)
 
 FATAL_ERROR_MESSAGES = [CHERI_TRAP_MIPS, CHERI_TRAP_RISCV]
 
-PRETEND = False
 INTERACT_ON_KERNEL_PANIC = False
 MESSAGE_PREFIX = ""
 QEMU_LOGFILE: Optional[Path] = None
@@ -419,7 +418,7 @@ def failure(*args, exit: bool, **kwargs):
 
 def run_host_command(cmd: "list[str]", **kwargs):
     print_cmd(cmd, **kwargs)
-    if PRETEND:
+    if get_global_config().pretend:
         return
     subprocess.check_call(cmd, **kwargs)
 
@@ -487,7 +486,7 @@ def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True,
     def unxz(archive):
         return decompress(archive, force_decompression, cmd=["xz", "-d", "-v", "-f"], keep_archive=keep_archive)
 
-    if args and getattr(args, "internal_shard", None) and not PRETEND:
+    if args and getattr(args, "internal_shard", None) and not get_global_config().pretend:
         assert path.exists()
 
     if path.suffix == ".bz2":
@@ -806,7 +805,7 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: Optional[Path], kerne
     if _SSH_SOCKET_PLACEHOLDER is not None:
         _SSH_SOCKET_PLACEHOLDER.close()
     qemu_cls = QemuCheriBSDInstance
-    if PRETEND:
+    if get_global_config().pretend:
         qemu_cls = FakeQemuSpawn
     child = qemu_cls(qemu_options, qemu_args[0], qemu_args[1:], ssh_port=ssh_port, ssh_pubkey=ssh_pubkey,
                      encoding="utf-8", echo=False, timeout=60)
@@ -891,7 +890,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
 
         # Check that we are booting the expected kind of CheriBSD kernel (hybrid/purecap)
         if expected_kernel_abi_msg is not None:
-            if PRETEND:
+            if get_global_config().pretend:
                 i = boot_messages.index(expected_kernel_abi_msg)
             if i == boot_messages.index(expected_kernel_abi_msg):
                 success(f"Booting correct kernel ABI: {expected_kernel_abi_msg}")
@@ -1037,7 +1036,7 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
     for index, d in enumerate(smb_dirs):
         qemu.run(f"mkdir -p '{d.in_target}'")
         mount_command = f"mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{index + 1} '{d.in_target}'"
-        for trial in range(MAX_SMBFS_RETRY if not PRETEND else 1):  # maximum of 3 trials
+        for trial in range(MAX_SMBFS_RETRY if not get_global_config().pretend else 1):  # maximum of 3 trials
             try:
                 checked_run_cheribsd_command(qemu, mount_command,
                                              error_output="unable to open connection: syserr = ",
@@ -1051,7 +1050,7 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
                         " seconds. Trying ", (MAX_SMBFS_RETRY - trial - 1), " more time(s)", exit=False)
                 qemu.smb_failed = True
                 info("Waiting for 2-10 seconds before retrying mount_smbfs...")
-                if not PRETEND:
+                if not get_global_config().pretend:
                     time.sleep(2 + 8 * random.random())  # wait 2-10 seconds, hopefully the server is less busy then.
 
     if test_archives:
@@ -1263,9 +1262,13 @@ def _main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespac
         if args.qemu_cmd is None:
             failure("ERROR: Cannot find QEMU binary for target ", qemu_options.qemu_arch_sufffix, exit=True)
 
-    global PRETEND, INTERACT_ON_KERNEL_PANIC  # noqa: PLW0603
+    global INTERACT_ON_KERNEL_PANIC  # noqa: PLW0603
+    get_global_config().verbose = True
+    get_global_config().quiet = False
+    get_global_config().pretend = False
+    get_global_config().force = False
     if args.pretend:
-        PRETEND = True
+        get_global_config().pretend = True
     if args.interact_on_kernel_panic:
         INTERACT_ON_KERNEL_PANIC = True
     global QEMU_LOGFILE  # noqa: PLW0603

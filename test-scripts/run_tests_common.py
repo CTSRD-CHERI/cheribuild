@@ -55,6 +55,7 @@ from pycheribuild import boot_cheribsd  # noqa: E402
 from pycheribuild.boot_cheribsd import QemuCheriBSDInstance  # noqa: E402
 from pycheribuild.config.target_info import CrossCompileTarget  # noqa: E402
 from pycheribuild.processutils import commandline_to_str  # noqa: E402
+from pycheribuild.utils import get_global_config  # noqa: E402
 
 __all__ = [
     "run_tests_main",
@@ -139,7 +140,7 @@ def finish_and_write_junit_xml_report(
             (datetime.datetime.utcnow() - all_tests_starttime),
         )
     # Finally, write the Junit XML file:
-    if not boot_cheribsd.PRETEND:
+    if not get_global_config().pretend:
         xml.write(output_file, pretty=True)
     boot_cheribsd.info("Wrote Junit results to ", output_file)
     return not failed_test_suites

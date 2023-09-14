@@ -31,6 +31,8 @@ from pathlib import Path
 
 from run_tests_common import boot_cheribsd, get_default_junit_xml_name, run_tests_main
 
+from pycheribuild.utils import get_global_config
+
 
 def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     if not args.extra_library_paths:
@@ -65,7 +67,7 @@ def test_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
                 boot_cheribsd.failure("Cannot update host CMake path in ", ctest_file, exit=True)
                 continue
             new_contents = ctest_contents.replace(host_cmake_path, b"/cmake/bin/cmake")
-            if not boot_cheribsd.PRETEND:
+            if not get_global_config().pretend:
                 ctest_file.write_bytes(new_contents)
             boot_cheribsd.info("Updated ", num_host_paths, " references to ${CMAKE_COMMAND} in ", ctest_file)
     # Add CMake/CTest to $PATH

@@ -44,6 +44,7 @@ from typing import Optional
 from run_tests_common import boot_cheribsd, commandline_to_str, pexpect
 
 from pycheribuild.ssh_utils import generate_ssh_config_file_for_qemu
+from pycheribuild.utils import get_global_config
 
 KERNEL_PANIC = False
 COMPLETED = "COMPLETED"
@@ -132,7 +133,7 @@ def flush_thread(f, qemu: boot_cheribsd.QemuCheriBSDInstance, should_exit_event:
             timeout=qemu.flush_interval,
             log_patterns=False,
         )
-        if boot_cheribsd.PRETEND:
+        if get_global_config().pretend:
             time.sleep(1)
         elif i == 1:
             boot_cheribsd.failure("GOT KERNEL PANIC!", exit=False)

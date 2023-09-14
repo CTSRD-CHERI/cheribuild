@@ -49,6 +49,8 @@ from run_remote_lit_test import mp_debug
 # To combine the test result xmls
 from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 
+from pycheribuild.utils import get_global_config
+
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
     run_remote_lit_test.add_common_cmdline_args(
@@ -145,7 +147,7 @@ class LitShardProcess(Process):
 
 def run_parallel(args: argparse.Namespace):
     if args.pretend:
-        boot_cheribsd.PRETEND = True
+        get_global_config().pretend = True
     boot_cheribsd.MESSAGE_PREFIX = "\033[0;35m" + "main process: \033[0m"
     if args.parallel_jobs < 1:
         boot_cheribsd.failure("Invalid number of parallel jobs: ", args.parallel_jobs, exit=True)
