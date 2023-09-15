@@ -592,8 +592,6 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                         "-vv",
                         f"--xunit-xml-output={self.build_dir / 'test-results.xml'}",
                         "-Dexecutor=" + self.commandline_to_str(executor),
-                        "--param",
-                        "executor=" + self.commandline_to_str(executor),
                         *[f"runtimes/{d}" for d in self.get_enabled_runtimes()],
                     ],
                     cwd=self.build_dir,

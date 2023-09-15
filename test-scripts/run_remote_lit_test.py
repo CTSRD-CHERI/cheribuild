@@ -291,15 +291,12 @@ def run_remote_lit_tests_impl(
     if llvm_lit_path is None:
         llvm_lit_path = str(test_build_dir / "bin/llvm-lit")
     # Note: we require python 3 since otherwise it seems to deadlock in Jenkins
-    # TODO: the -D flags was for pre-LLVM 15, post LLVM-15 uses --param=
     lit_cmd = [
         sys.executable,
         llvm_lit_path,
         "-j1",
         "-vv",
         f"-Dexecutor={executor}",
-        "--param",
-        f"executor={executor}",
         *test_dirs,
     ]
     if lit_extra_args:
