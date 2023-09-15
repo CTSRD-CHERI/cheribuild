@@ -71,7 +71,7 @@ from ..processutils import (
     get_program_version,
     get_version_output,
 )
-from ..ssh_utils import ssh_host_accessible
+from ..ssh_utils import ssh_host_accessible_cached
 from ..utils import (
     AnsiColour,
     InstallInstructions,
@@ -534,7 +534,7 @@ class Project(SimpleProject):
     def can_run_binaries_on_remote_morello_board(self) -> bool:
         morello_ssh_hostname = self.config.remote_morello_board
         return morello_ssh_hostname and self.target_info.is_cheribsd() and self.compiling_for_aarch64(
-            include_purecap=True) and ssh_host_accessible(morello_ssh_hostname, config=self.config)
+            include_purecap=True) and ssh_host_accessible_cached(morello_ssh_hostname, ssh_args=(), config=self.config)
 
     def can_use_lto(self, ccinfo: CompilerInfo) -> bool:
         if ccinfo.compiler == "apple-clang":

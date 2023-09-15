@@ -43,7 +43,7 @@ from typing import Optional
 
 from run_tests_common import boot_cheribsd, commandline_to_str, pexpect
 
-from pycheribuild.ssh_utils import generate_ssh_config_file_for_qemu, ssh_host_accessible
+from pycheribuild.ssh_utils import generate_ssh_config_file_for_qemu, ssh_host_accessible_uncached
 from pycheribuild.utils import get_global_config
 
 KERNEL_PANIC = False
@@ -230,7 +230,7 @@ def run_remote_lit_tests_impl(
 
     def check_ssh_connection(prefix):
         connection_test_start = datetime.datetime.utcnow()
-        if ssh_host_accessible(
+        if ssh_host_accessible_uncached(
             "cheribsd-test-instance",
             ssh_args=("-F", str(Path(tempdir, "config"))),
             config=get_global_config(),

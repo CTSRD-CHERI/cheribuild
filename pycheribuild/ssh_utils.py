@@ -27,7 +27,12 @@ import functools
 import subprocess
 from pathlib import Path
 
-__all__ = ["generate_ssh_config_file_for_qemu", "ssh_host_accessible", "ssh_config_parameters"]  # no-combine
+__all__ = [  # no-combine
+    "generate_ssh_config_file_for_qemu",  # no-combine
+    "ssh_host_accessible_cached",  # no-combine
+    "ssh_host_accessible_uncached",  # no-combine
+    "ssh_config_parameters",  # no-combine
+]  # no-combine
 
 from pycheribuild.filesystemutils import FileSystemUtils
 from pycheribuild.processutils import run_command
@@ -76,16 +81,34 @@ def ssh_config_parameters(host: str, config: ConfigBase) -> "dict[str, str]":
 
 
 @functools.lru_cache(maxsize=20)
-def ssh_host_accessible(host: str, *, ssh_args: "tuple[str, ...]", config: ConfigBase) -> bool:
+def ssh_host_accessible_cached(
+    host: str,
+    *,
+    ssh_args: "tuple[str, ...]",
+    config: ConfigBase,
+    run_in_pretend_mode: bool = True,
+) -> bool:
+    return ssh_host_accessible_uncached(host, ssh_args=ssh_args, config=config, run_in_pretend_mode=run_in_pretend_mode)
+
+
+def ssh_host_accessible_uncached(
+    host: str,
+    *,
+    ssh_args: "tuple[str, ...]",
+    config: ConfigBase,
+    run_in_pretend_mode: bool = True,
+) -> bool:
     assert host, "Passed empty SSH hostname!"
     try:
         result = run_command(
             ["ssh", host, *ssh_args, "--", "echo", "connection successful"],
             capture_output=True,
-            run_in_pretend_mode=True,
+            run_in_pretend_mode=run_in_pretend_mode,
             raise_in_pretend_mode=True,
             config=config,
         )
+        if config.pretend and not run_in_pretend_mode:
+            return True
         output = result.stdout.decode("utf-8").strip()
         return output == "connection successful"
     except subprocess.CalledProcessError as e:
