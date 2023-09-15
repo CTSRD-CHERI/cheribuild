@@ -38,30 +38,49 @@ class BuildBluespecCompiler(Project):
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake
+    needs_full_history = True
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
         self.check_required_system_tool("ghc", apt="ghc", homebrew="ghc")
         self.check_required_system_tool("cabal", apt="cabal-install", homebrew="cabal-install")
         self.check_required_system_tool("gperf", homebrew="gperf", apt="gperf")
+        self.check_required_pkg_config("tcl", apt="tcl")
         for i in ("autoconf", "bison", "flex"):
             self.check_required_system_tool(i, homebrew=i)
 
+    def clean(self):
+        if self.source_dir.exists():
+            self.run_make("clean", cwd=self.source_dir)
+
     def setup(self):
         super().setup()
-        self.make_args.set(PREFIX=self.install_dir)
+        # The build tends to fail if we set GHCJOBS to a value larger than 8
+        self.make_args.set(PREFIX=self.install_dir, GHCJOBS=min(self.config.make_jobs, 8))
 
     def compile(self, **kwargs):
+        self.info("Compilation happens as part of install")
+
+    def install(self, **kwargs):
         try:
-            self.run_make("all")
+            self.run_cmd("cabal", "v1-update")
+            self.run_cmd("cabal", "v1-install", "regex-compat", "syb", "old-time", "split", cwd=self.source_dir)
+            self.run_make("install-src", cwd=self.source_dir)
         except Exception:
-            self.info("Compilation failed. If it complains about missing packages try running:\n"
-                      "\tcabal install regex-compat syb old-time split\n"
-                      "If this doesn't fix the issue `v1-install` instead of `install` (e.g. macOS).")
+            self.info(
+                "Compilation failed. If it complains about missing packages try running:\n"
+                "\tcabal install regex-compat syb old-time split\n"
+                "If this doesn't fix the issue `v1-install` instead of `install` (e.g. macOS).",
+            )
             if OSInfo.IS_MAC:
-                self.info("Alternatively, try running:",
-                          self.source_dir / ".github/workflows/install_dependencies_macos.sh")
+                self.info(
+                    "Alternatively, try running:", self.source_dir / ".github/workflows/install_dependencies_macos.sh",
+                )
             elif OSInfo.is_ubuntu():
-                self.info("Alternatively, try running:",
-                          self.source_dir / ".github/workflows/install_dependencies_ubuntu.sh")
+                self.info(
+                    "Alternatively, try running:", self.source_dir / ".github/workflows/install_dependencies_ubuntu.sh",
+                )
             raise
+
+    def run_tests(self) -> None:
+        self.run_cmd("check-smoke")
