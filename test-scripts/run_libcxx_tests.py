@@ -116,8 +116,7 @@ def libcxx_main(
                 tempdir,
                 mp_q=mp_queue,
                 barrier=barrier,
-                test_dirs=["test"],
-                test_env=[],
+                test_dirs=["libcxx/test"],
             )
 
     try:

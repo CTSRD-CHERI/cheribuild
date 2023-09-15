@@ -45,7 +45,6 @@ def setup_libunwind_env(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namesp
 
 def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     common_args = dict(
-        test_env=dict(LD_LIBRARY_PATH="/build/lib", LD64_LIBRARY_PATH="/build/lib", LD64C_LIBRARY_PATH="/build/lib"),
         test_dirs=["libunwind/test"],
         llvm_lit_path=args.llvm_lit_path,
     )

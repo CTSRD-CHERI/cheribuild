@@ -155,7 +155,7 @@ def run_remote_lit_tests(
     args: argparse.Namespace,
     tempdir: str,
     test_dirs: "list[str]",
-    test_env: "Optional[dict[str, str]]",
+    test_env: "Optional[dict[str, str]]" = None,
     mp_q: Optional[multiprocessing.Queue] = None,
     barrier: Optional[multiprocessing.Barrier] = None,
     llvm_lit_path: "Optional[str]" = None,
@@ -205,6 +205,9 @@ def run_remote_lit_tests_impl(
 ) -> bool:
     qemu.EXIT_ON_KERNEL_PANIC = False  # since we run multiple threads we shouldn't use sys.exit()
     boot_cheribsd.info("PID of QEMU: ", qemu.pid)
+
+    if test_env is None:
+        test_env = dict(LD_LIBRARY_PATH="/build/lib", LD64_LIBRARY_PATH="/build/lib", LD64C_LIBRARY_PATH="/build/lib")
 
     if args.pretend and os.getenv("FAIL_TIMEOUT_BOOT") and args.internal_shard == 2:
         time.sleep(10)
