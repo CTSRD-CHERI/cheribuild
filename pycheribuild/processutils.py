@@ -130,6 +130,8 @@ class TtyState:
             return tty_pgrp == process_pgrp and os.isatty(self.fd.fileno())
         except OSError:
             return False
+        except ValueError:
+            return False
 
     def _restore_attrs(self) -> None:
         if not self._is_foreground_tty():
