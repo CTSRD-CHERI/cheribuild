@@ -67,7 +67,7 @@ CURRENT_STAGE: MultiprocessStages = MultiprocessStages.FINDING_SSH_PORT
 
 def add_common_cmdline_args(parser: argparse.ArgumentParser, default_xunit_output: str, allow_multiprocessing: bool):
     parser.add_argument("--ssh-executor-script", help="Path to the ssh.py executor script", required=True)
-    parser.add_argument("--use-shared-mount-for-tests", action="store_true", default=True)
+    parser.add_argument("--use-shared-mount-for-tests", action="store_true", default=False)
     parser.add_argument("--no-use-shared-mount-for-tests", dest="use-shared-mount-for-tests", action="store_false")
     parser.add_argument("--llvm-lit-path")
     parser.add_argument("--xunit-output", default=default_xunit_output)
@@ -205,9 +205,6 @@ def run_remote_lit_tests_impl(
 ) -> bool:
     qemu.EXIT_ON_KERNEL_PANIC = False  # since we run multiple threads we shouldn't use sys.exit()
     boot_cheribsd.info("PID of QEMU: ", qemu.pid)
-
-    if test_env is None:
-        test_env = dict(LD_LIBRARY_PATH="/build/lib", LD64_LIBRARY_PATH="/build/lib", LD64C_LIBRARY_PATH="/build/lib")
 
     if args.pretend and os.getenv("FAIL_TIMEOUT_BOOT") and args.internal_shard == 2:
         time.sleep(10)
