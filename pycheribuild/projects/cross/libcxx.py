@@ -495,7 +495,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                     LIBCXX_ENABLE_MONOTONIC_CLOCK=False,  # Missing CLOCK_MONOTONIC support.
                     LIBCXX_ENABLE_FILESYSTEM=False,  # no <dirent.h>
                     LIBCXX_ENABLE_RANDOM_DEVICE=False,  # no /dev/urandom or similar entropy source
-                    LIBCXX_ENABLE_LOCALIZATION=False,  # NB: locales are required for <iostream>
+                    LIBCXX_ENABLE_LOCALIZATION=True,  # NB: locales are required for <iostream>
                     # TODO: to reduce size:
                     # LIBCXX_ENABLE_LOCALIZATION=False,  # NB: locales are required for <iostream>
                     # LIBCXX_ENABLE_WIDE_CHARACTERS=False,  # mostly there but missing swprintf()
@@ -629,7 +629,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                         "--ssh-executor-script",
                         self.source_dir / "../libcxx/utils/ssh.py",
                         "--parallel-jobs",
-                        self.test_jobs,
+                        1,  # self.test_jobs,
                         mount_sysroot=True,
                     )
 
@@ -642,6 +642,13 @@ class BuildLlvmLibs(_BuildLlvmRuntimes):
     )
     default_architecture = CompilationTargets.NATIVE
     default_build_type = BuildType.DEBUG
+
+    @classproperty
+    def cross_install_dir(self):
+        # For picolibc, we do actually want to install to the sysroot as this target provides the C++ standard library.
+        if self._xtarget in CompilationTargets.ALL_PICOLIBC_TARGETS:
+            return DefaultInstallDir.ROOTFS_LOCALBASE
+        return super().cross_install_dir
 
 
 class BuildLibunwind(_BuildLlvmRuntimes):
@@ -674,13 +681,6 @@ class BuildUpstreamLlvmLibs(_BuildLlvmRuntimes):
         + CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS
     )
     default_architecture = CompilationTargets.NATIVE
-
-    @classproperty
-    def cross_install_dir(self):
-        # For picolibc, we do actually want to install to the sysroot as this target provides the C++ standard library.
-        if self._xtarget in CompilationTargets.ALL_PICOLIBC_TARGETS:
-            return DefaultInstallDir.ROOTFS_LOCALBASE
-        return super().cross_install_dir
 
 
 class BuildUpstreamLlvmLibsWithHostCompiler(_BuildLlvmRuntimes):
