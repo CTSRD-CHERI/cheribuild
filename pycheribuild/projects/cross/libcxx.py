@@ -629,7 +629,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                         "--ssh-executor-script",
                         self.source_dir / "../libcxx/utils/ssh.py",
                         "--parallel-jobs",
-                        1,  # self.test_jobs,
+                        self.test_jobs,
                         mount_sysroot=True,
                     )
 
