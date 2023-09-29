@@ -202,7 +202,8 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output "
             + os.getenv("WORKSPACE", ".")
-            + "/libcxx-test-results.xml --max-time 3600 --timeout 120 -s -vv"
+            + "/libcxx-test-results.xml --max-time 3600 --timeout 120"
+            + (" -a" if self.config.verbose else " -vv")
             + self.libcxx_lit_jobs,
         )
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for
@@ -436,7 +437,8 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
 
     def setup(self):
         super().setup()
-        lit_args = f'--xunit-xml-output "{self.build_dir}/test-results.xml" --max-time 3600 --timeout 300 -s -vv'
+        lit_args = f'--xunit-xml-output "{self.build_dir}/test-results.xml" --max-time 3600 --timeout 300 -s'
+        lit_args += (" -a" if self.config.verbose else " -vv")
         external_cxxabi = None
         enabled_runtimes = self.get_enabled_runtimes()
         if self.target_info.is_freebsd() and self.llvm_project is not BuildUpstreamLLVM:
@@ -603,7 +605,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             [
                 sys.executable,
                 self.build_dir / "bin/llvm-lit",
-                "-vv",
+                "-a" if self.config.verbose else "-vv",
                 f"--xunit-xml-output={self.build_dir / 'test-results.xml'}",
                 *args,
                 *[f"{d}/test" for d in self.get_enabled_runtimes()],
