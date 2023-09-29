@@ -137,9 +137,9 @@ class BuildLittleKernel(CrossCompileMakefileProject):
 
     def compile(self, **kwargs):
         if self.compiling_for_aarch64(include_purecap=True):
-            self.run_make("qemu-virt-arm64-test", cwd=self.source_dir, parallel=False)
+            self.run_make("qemu-virt-arm64-test", cwd=self.source_dir, parallel=True)
         elif self.compiling_for_riscv(include_purecap=True):
-            self.run_make("qemu-virt-riscv64-test", cwd=self.source_dir, parallel=False)
+            self.run_make("qemu-virt-riscv64-test", cwd=self.source_dir, parallel=True)
         else:
             return self.fatal("Unsupported arch")
 
