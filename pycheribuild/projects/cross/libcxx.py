@@ -44,10 +44,10 @@ from .llvm import BuildCheriLLVM, BuildLLVMMonoRepoBase, BuildUpstreamLLVM
 from ..build_qemu import BuildQEMU
 from ..cmake_project import CMakeProject
 from ..project import ReuseOtherProjectDefaultTargetRepository
-from ..run_qemu import LaunchCheriBSD
+from ..run_qemu import LaunchCheriBSD, LaunchFreeBSD
 from ...colour import AnsiColour, coloured
 from ...config.chericonfig import BuildType
-from ...ssh_utils import generate_ssh_config_file_for_qemu, ssh_host_accessible_cached
+from ...ssh_utils import generate_ssh_config_file_for_qemu, ssh_host_accessible_uncached
 from ...utils import OSInfo, classproperty
 
 
@@ -356,7 +356,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
     llvm_project: "typing.ClassVar[type[BuildLLVMMonoRepoBase]]"
     # TODO: add compiler-rt
     _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("libunwind", "libcxxabi", "libcxx")
-    test_agains_running_qemu_instance = False
+    test_against_running_qemu_instance = False
     test_localhost_via_ssh = False
 
     def get_enabled_runtimes(self) -> "list[str]":
@@ -406,6 +406,8 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
     def qemu_instance(self):
         if self.target_info.is_cheribsd():
             return LaunchCheriBSD.get_instance(self, cross_target=self.crosscompile_target.get_rootfs_target())
+        elif self.target_info.is_freebsd():
+            return LaunchFreeBSD.get_instance(self, cross_target=self.crosscompile_target.get_rootfs_target())
         return None
 
     @property
@@ -570,7 +572,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 help="Use the ssh.py executor for localhost (to check that it works correctly)",
             )
         if not cls.get_crosscompile_target().is_native():
-            cls.test_agains_running_qemu_instance = cls.add_bool_option(
+            cls.test_against_running_qemu_instance = cls.add_bool_option(
                 "test-against-running-qemu-instance",
                 help="Run tests against a currently running QEMU instance using the ssh.py executor.",
             )
@@ -604,7 +606,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 "-vv",
                 f"--xunit-xml-output={self.build_dir / 'test-results.xml'}",
                 *args,
-                *[f"runtimes/{d}" for d in self.get_enabled_runtimes()],
+                *[f"{d}/test" for d in self.get_enabled_runtimes()],
             ],
             cwd=self.build_dir,
         )
@@ -615,29 +617,28 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
         if self.compiling_for_host() or self._have_compile_only_executor():
             with self.set_env(LC_ALL="en_US.UTF-8", FILECHECK_DUMP_INPUT_ON_FAILURE=1):
                 self.run_cmd("cmake", "--build", self.build_dir, "--verbose", "--target", "check-runtimes")
-        if self.target_info.is_cheribsd() and not self.compiling_for_host():
+        elif self.test_against_running_qemu_instance:
+            if not ssh_host_accessible_uncached(
+                "cheribsd-test-instance",
+                ssh_args=("-F", str(self.test_ssh_config_path)),
+                config=self.config,
+            ):
+                ssh_key_contents = self.config.test_ssh_key.read_text(encoding="utf-8").strip()
+                return self.fatal(
+                    "Cannot connect to ssh host",
+                    fixit_hint=f"Try running `cheribuild.py {self.qemu_instance.target}`.\n"
+                               + coloured(AnsiColour.blue, "If that does not work, try running ")
+                               + coloured(AnsiColour.yellow, f"echo '{ssh_key_contents}' >> /root/.ssh/authorized_keys")
+                               + coloured(AnsiColour.blue, " inside QEMU."),
+                )
+            self._run_lit(
+                "-j1", "-Dexecutor=" + self.commandline_to_str(self.get_localhost_test_executor_command()),
+                       )
+        elif self.target_info.is_cheribsd() and not self.compiling_for_host():
             if self.can_run_binaries_on_remote_morello_board():
                 executor = [self.source_dir / "utils/ssh.py", "--host", self.config.remote_morello_board]
                 # The Morello board has 4 CPUs, so run 4 tests in parallel.
                 self._run_lit("-j4", "-Dexecutor=" + self.commandline_to_str(executor))
-            if self.test_agains_running_qemu_instance:
-                if not ssh_host_accessible_cached(
-                    "cheribsd-test-instance",
-                    ssh_args=("-F", str(self.test_ssh_config_path)),
-                    config=self.config,
-                ):
-                    ssh_key_contents = self.config.test_ssh_key.read_text(encoding="utf-8").strip()
-                    self.qemu_instance.print_port_usage(self.qemu_instance.ssh_forwarding_port)
-                    return self.fatal(
-                        "Cannot connect to ssh host",
-                        fixit_hint=f"Try running `cheribuild.py {self.qemu_instance.target}`.\n"
-                        + coloured(AnsiColour.blue, "If that does not work, try running ")
-                        + coloured(AnsiColour.yellow, f"echo '{ssh_key_contents}' >> /root/.ssh/authorized_keys")
-                        + coloured(AnsiColour.blue, " inside QEMU."),
-                    )
-                self._run_lit(
-                    "-j1", "-Dexecutor=" + self.commandline_to_str(self.get_localhost_test_executor_command()),
-                )
             else:
                 if "libunwind" in self.get_enabled_runtimes():
                     self.target_info.run_cheribsd_test_script(
@@ -657,6 +658,8 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                         self.test_jobs,
                         mount_sysroot=True,
                     )
+        else:
+            super().run_tests()
 
 
 class BuildLlvmLibs(_BuildLlvmRuntimes):
@@ -691,6 +694,7 @@ class BuildUpstreamLibunwind(BuildLibunwind):
     supported_architectures = (
         CompilationTargets.ALL_NATIVE
         + CompilationTargets.ALL_PICOLIBC_TARGETS
+        + CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
         + CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS
         + CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS
     )
@@ -699,12 +703,7 @@ class BuildUpstreamLibunwind(BuildLibunwind):
 class BuildUpstreamLlvmLibs(_BuildLlvmRuntimes):
     target = "upstream-llvm-libs"
     llvm_project = BuildUpstreamLLVM
-    supported_architectures = (
-        CompilationTargets.ALL_NATIVE
-        + CompilationTargets.ALL_PICOLIBC_TARGETS
-        + CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS
-        + CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS
-    )
+    supported_architectures = BuildUpstreamLibunwind.supported_architectures
     default_architecture = CompilationTargets.NATIVE
 
 
