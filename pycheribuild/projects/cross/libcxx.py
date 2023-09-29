@@ -356,6 +356,8 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
     llvm_project: "typing.ClassVar[type[BuildLLVMMonoRepoBase]]"
     # TODO: add compiler-rt
     _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("libunwind", "libcxxabi", "libcxx")
+    test_agains_running_qemu_instance = False
+    test_localhost_via_ssh = False
 
     def get_enabled_runtimes(self) -> "list[str]":
         return list(self._enabled_runtimes)
@@ -409,6 +411,19 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
     @property
     def test_ssh_config_path(self):
         return self.build_dir / "ssh_config"
+
+    def get_localhost_test_executor_command(self) -> "list[str]":
+        if self.test_localhost_via_ssh:
+            assert self.compiling_for_host()
+            ssh_host = self.config.get_user_name() + "@" + platform.node()
+            return [f"{self.source_dir / '../libcxx/utils/ssh.py'}", "--host", ssh_host]
+        return [
+            f"{self.source_dir / '../libcxx/utils/ssh.py'}",
+            "--host",
+            "cheribsd-test-instance",
+            f"--extra-ssh-args=-F {self.test_ssh_config_path}",
+            f"--extra-scp-args=-F {self.test_ssh_config_path}",
+        ]
 
     def setup(self):
         super().setup()
@@ -513,19 +528,13 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 # The compile_only executor does not exist for upstream (yet)
                 test_executor = self.commandline_to_str([self.source_dir / "../libcxx/utils/compile_only.py"])
             elif self.qemu_instance is not None:
-                # Have to be careful with the quoting here since the config file uses single quotes
-                test_executor = (
-                    f"\\'{self.source_dir / '../libcxx/utils/ssh.py'}\\' --host cheribsd-test-instance "
-                    f" \"--extra-ssh-args=-F \\'{self.test_ssh_config_path!s}\\'\""
-                    f" \"--extra-scp-args=-F \\'{self.test_ssh_config_path!s}\\'\""
-                )
+                test_executor = self.commandline_to_str(self.get_localhost_test_executor_command())
                 # Trying to run more than one test in parallel will fail since we only have one CPU:
                 # sshd[798]: error: beginning MaxStartups throttling
                 # sshd[838]: error: no more sessions
                 lit_args += " -j1"
         elif self.test_localhost_via_ssh:
-            ssh_host = self.config.get_user_name() + "@" + platform.node()
-            test_executor = self.commandline_to_str([self.source_dir / "../libcxx/utils/ssh.py", "--host", ssh_host])
+            test_executor = self.commandline_to_str(self.get_localhost_test_executor_command())
         if test_executor:
             self.set_cmake_flag_for_each_runtime(EXECUTOR=test_executor)
         # The cheribuild default RPATH settings break the linker script (but should also be unnecessary without it).
@@ -548,10 +557,16 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.test_localhost_via_ssh = cls.add_bool_option(
-            "test-localhost-via-ssh",
-            help="Use the ssh.py executor for localhost (to check that it works correctly)",
-        )
+        if cls.get_crosscompile_target().is_native():
+            cls.test_localhost_via_ssh = cls.add_bool_option(
+                "test-localhost-via-ssh",
+                help="Use the ssh.py executor for localhost (to check that it works correctly)",
+            )
+        if not cls.get_crosscompile_target().is_native():
+            cls.test_agains_running_qemu_instance = cls.add_bool_option(
+                "test-against-running-qemu-instance",
+                help="Run tests against a currently running QEMU instance using the ssh.py executor.",
+            )
         cls.test_jobs = cls.add_config_option(
             "parallel-test-jobs",
             help="Number of QEMU instances spawned to run tests (default: number of build jobs (-j flag) / 2)",
@@ -574,6 +589,19 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             )
         return super().compile()
 
+    def _run_lit(self, *args: str):
+        self.run_cmd(
+            [
+                sys.executable,
+                self.build_dir / "bin/llvm-lit",
+                "-vv",
+                f"--xunit-xml-output={self.build_dir / 'test-results.xml'}",
+                *args,
+                *[f"runtimes/{d}" for d in self.get_enabled_runtimes()],
+            ],
+            cwd=self.build_dir,
+        )
+
     def run_tests(self):
         # Without setting LC_ALL lit attempts to encode some things as ASCII and fails.
         # This only happens on FreeBSD, but we might as well set it everywhere
@@ -584,19 +612,8 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             if self.can_run_binaries_on_remote_morello_board():
                 executor = [self.source_dir / "utils/ssh.py", "--host", self.config.remote_morello_board]
                 # The Morello board has 4 CPUs, so run 4 tests in parallel.
-                self.run_cmd(
-                    [
-                        sys.executable,
-                        self.build_dir / "bin/llvm-lit",
-                        "-j4",
-                        "-vv",
-                        f"--xunit-xml-output={self.build_dir / 'test-results.xml'}",
-                        "-Dexecutor=" + self.commandline_to_str(executor),
-                        *[f"runtimes/{d}" for d in self.get_enabled_runtimes()],
-                    ],
-                    cwd=self.build_dir,
-                )
-            if self.qemu_instance is not None and self.test_jobs == 1:
+                self._run_lit("-j4", "-Dexecutor=" + self.commandline_to_str(executor))
+            if self.test_agains_running_qemu_instance:
                 if not ssh_host_accessible_cached(
                     "cheribsd-test-instance",
                     ssh_args=("-F", str(self.test_ssh_config_path)),
@@ -611,8 +628,9 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                         + coloured(AnsiColour.yellow, f"echo '{ssh_key_contents}' >> /root/.ssh/authorized_keys")
                         + coloured(AnsiColour.blue, " inside QEMU."),
                     )
-                with self.set_env(LC_ALL="en_US.UTF-8", FILECHECK_DUMP_INPUT_ON_FAILURE=1):
-                    self.run_cmd("cmake", "--build", self.build_dir, "--verbose", "--target", "check-runtimes")
+                self._run_lit(
+                    "-j1", "-Dexecutor=" + self.commandline_to_str(self.get_localhost_test_executor_command()),
+                )
             else:
                 if "libunwind" in self.get_enabled_runtimes():
                     self.target_info.run_cheribsd_test_script(
