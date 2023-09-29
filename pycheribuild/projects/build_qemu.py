@@ -153,6 +153,14 @@ class BuildQEMUBase(AutotoolsProject):
             "sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed", freebsd="gsed",
         )
 
+    def add_asan_flags(self):
+        self.configure_args.append("--enable-sanitizers")
+        # Ensure that tests crash on UBSan reports
+        self.COMMON_FLAGS.append("-fno-sanitize-recover=all")
+        if self.use_lto:
+            self.info("Disabling LTO for ASAN instrumented builds")
+        self.use_lto = False
+
     def setup(self):
         super().setup()
         # Disable some more unneeded things (we don't usually need the GUI frontends)
@@ -178,14 +186,6 @@ class BuildQEMUBase(AutotoolsProject):
 
         if self.build_type.should_include_debug_info:
             self.configure_args.append("--enable-debug-info")
-
-        if self.use_asan:
-            self.configure_args.append("--enable-sanitizers")
-            # Ensure that tests crash on UBSan reports
-            self.COMMON_FLAGS.append("-fno-sanitize-recover=all")
-            if self.use_lto:
-                self.info("Disabling LTO for ASAN instrumented builds")
-            self.use_lto = False
 
         # Having symbol information is useful for debugging and profiling
         self.configure_args.append("--disable-strip")

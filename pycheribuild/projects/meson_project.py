@@ -89,6 +89,9 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         return self._add_configure_options(_config_file_options=self.meson_options, _replace=_replace,
                                            _include_empty_vars=_include_empty_vars, **kwargs)
 
+    def add_asan_flags(self):
+        self.add_meson_options(b_sanitize="address,undefined", b_lundef=False)
+
     def setup(self) -> None:
         super().setup()
         self._toolchain_template = include_local_file("files/meson-machine-file.ini.in")
@@ -115,8 +118,6 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         if self.use_lto:
             self.add_meson_options(b_lto=True, b_lto_threads=self.config.make_jobs,
                                    b_lto_mode="thin" if self.get_compiler_info(self.CC).is_clang else "default")
-        if self.use_asan:
-            self.add_meson_options(b_sanitize="address,undefined", b_lundef=False)
 
         # Unlike CMake, Meson does not set the DT_RUNPATH entry automatically:
         # See https://github.com/mesonbuild/meson/issues/6220, https://github.com/mesonbuild/meson/issues/6541, etc.

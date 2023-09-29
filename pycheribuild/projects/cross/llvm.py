@@ -129,6 +129,10 @@ class BuildLLVMBase(CMakeProject):
                                  "llvm-readobj", "llvm-size", "llvm-strings", "llvm-strip", "llvm-symbolizer",
                                  "opt"]
 
+    def add_asan_flags(self):
+        # Use asan+ubsan
+        self.add_cmake_options(LLVM_USE_SANITIZER="Address;Undefined")
+
     def setup(self):
         super().setup()
         if self.compiling_for_host():
@@ -149,10 +153,6 @@ class BuildLLVMBase(CMakeProject):
         if self.should_include_debug_info and "-DBUILD_SHARED_LIBS=ON" not in self.cmake_options:
             link_jobs //= 4
         self.add_cmake_options(LLVM_PARALLEL_LINK_JOBS=link_jobs)  # anything more causes too much I/O + memory usage
-        if self.use_asan:
-            # Use asan+ubsan
-            self.add_cmake_options(LLVM_USE_SANITIZER="Address;Undefined")
-
         if self.build_type is BuildType.DEBUG:
             # For debug builds we default to enabling expensive checks (override using --llvm/cmake-options)
             self.add_cmake_options(LLVM_ENABLE_EXPENSIVE_CHECKS=True)

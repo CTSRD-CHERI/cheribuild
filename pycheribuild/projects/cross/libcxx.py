@@ -425,6 +425,10 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             f"--extra-scp-args=-F {self.test_ssh_config_path}",
         ]
 
+    def add_asan_flags(self):
+        # Use asan+ubsan
+        self.add_cmake_options(LLVM_USE_SANITIZER="Address")
+
     def setup(self):
         super().setup()
         lit_args = f'--xunit-xml-output "{self.build_dir}/test-results.xml" --max-time 3600 --timeout 300 -s -vv'

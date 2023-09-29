@@ -795,6 +795,10 @@ class Project(SimpleProject):
             result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
         return result
 
+    def add_asan_flags(self):
+        self.COMMON_FLAGS.append("-fsanitize=address")
+        self.COMMON_LDFLAGS.append("-fsanitize=address")
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         # set up the install/build/source directories (allowing overrides from config file)
@@ -895,10 +899,6 @@ class Project(SimpleProject):
         self.ASMFLAGS: "list[str]" = []
         self.LDFLAGS: "list[str]" = self.target_info.required_link_flags()
         self.COMMON_LDFLAGS: "list[str]" = []
-        # Don't build CHERI with ASAN since that doesn't work or make much sense
-        if self.use_asan and not self.compiling_for_cheri():
-            self.COMMON_FLAGS.append("-fsanitize=address")
-            self.COMMON_LDFLAGS.append("-fsanitize=address")
         if self.crosscompile_target.is_libcompat_target():
             self.COMMON_LDFLAGS.append("-L" + str(self.sdk_sysroot / "usr" / self.target_info.default_libdir))
 
@@ -949,6 +949,8 @@ class Project(SimpleProject):
             self.target, f"INSTALLDIR={self._install_dir}", f"INSTALL_PREFIX={self._install_prefix}",
             f"DESTDIR={self.destdir}",
         )
+        if self.use_asan:
+            self.add_asan_flags()
         if self.set_pkg_config_path:
             pkg_config_args = dict()
             if self.compiling_for_host():
