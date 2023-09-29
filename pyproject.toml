@@ -29,7 +29,7 @@ target-version = ['py36']
 # let's restrict this to the other files for now.
 extend-exclude = '''3rdparty|\.pytype|pycheribuild'''
 preview = true
-required-version = '23.7.0'
+required-version = '23'
 
 [tool.ruff.isort]
 relative-imports-order = "closest-to-furthest"
