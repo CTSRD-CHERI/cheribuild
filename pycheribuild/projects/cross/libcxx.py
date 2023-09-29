@@ -429,6 +429,9 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
         # Use asan+ubsan
         self.add_cmake_options(LLVM_USE_SANITIZER="Address")
 
+    def add_msan_flags(self):
+        self.add_cmake_options(LLVM_USE_SANITIZER="MemoryWithOrigins")
+
     def setup(self):
         super().setup()
         lit_args = f'--xunit-xml-output "{self.build_dir}/test-results.xml" --max-time 3600 --timeout 300 -s -vv'

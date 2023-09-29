@@ -133,6 +133,9 @@ class BuildLLVMBase(CMakeProject):
         # Use asan+ubsan
         self.add_cmake_options(LLVM_USE_SANITIZER="Address;Undefined")
 
+    def add_msan_flags(self):
+        self.add_cmake_options(LLVM_USE_SANITIZER="MemoryWithOrigins")
+
     def setup(self):
         super().setup()
         if self.compiling_for_host():

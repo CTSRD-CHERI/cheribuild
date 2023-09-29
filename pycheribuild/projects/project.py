@@ -464,6 +464,11 @@ class Project(SimpleProject):
         return self._xtarget is None or not self._xtarget.is_cheri_purecap()
 
     @classproperty
+    def can_build_with_msan(self) -> bool:
+        # For now limit MSan to native builds
+        return self._xtarget is None or self._xtarget.is_native()
+
+    @classproperty
     def can_build_with_cfi(self) -> bool:
         return self._xtarget is None or not self._xtarget.is_cheri_purecap()
 
@@ -592,6 +597,11 @@ class Project(SimpleProject):
                                                help="Build with AddressSanitizer enabled")
         else:
             cls.use_asan = False
+        if cls.can_build_with_msan:
+            cls.use_msan = cls.add_bool_option("use-msan", default=False, help="Build with MemorySanitizer enabled")
+        else:
+            cls.use_msan = False
+
         if cls.can_build_with_ccache:
             cls.use_ccache = cls.add_bool_option("use-ccache", default=False,
                                                  help="Build with CCache")
@@ -799,6 +809,11 @@ class Project(SimpleProject):
         self.COMMON_FLAGS.append("-fsanitize=address")
         self.COMMON_LDFLAGS.append("-fsanitize=address")
 
+    def add_msan_flags(self):
+        self.COMMON_FLAGS.append("-fsanitize=memory")
+        self.COMMON_FLAGS.append("-fsanitize-memory-track-origins")
+        self.COMMON_LDFLAGS.append("-fsanitize=memory")
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         # set up the install/build/source directories (allowing overrides from config file)
@@ -950,7 +965,12 @@ class Project(SimpleProject):
             f"DESTDIR={self.destdir}",
         )
         if self.use_asan:
+            if self.use_msan:
+                self.fatal("ASan and MSan are incompatible")
             self.add_asan_flags()
+        elif self.use_msan:
+            self.add_msan_flags()
+
         if self.set_pkg_config_path:
             pkg_config_args = dict()
             if self.compiling_for_host():

@@ -332,6 +332,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     install_dir: Optional[Path] = None
     build_dir_suffix: str = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
     use_asan: bool = False
+    use_msan: bool = False
     add_build_dir_suffix_for_native: bool = False  # Whether to add -native to the native build dir
     build_in_source_dir: bool = False  # For projects that can't build in the source dir
     build_via_symlink_farm: bool = False  # Create source symlink farm to work around lack of out-of-tree build support

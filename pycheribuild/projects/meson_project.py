@@ -92,6 +92,9 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     def add_asan_flags(self):
         self.add_meson_options(b_sanitize="address,undefined", b_lundef=False)
 
+    def add_msan_flags(self):
+        self.add_meson_options(b_sanitize="memory,undefined", b_lundef=False)
+
     def setup(self) -> None:
         super().setup()
         self._toolchain_template = include_local_file("files/meson-machine-file.ini.in")
