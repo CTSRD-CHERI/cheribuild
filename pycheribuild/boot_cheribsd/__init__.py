@@ -1215,7 +1215,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
 def _main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], bool]]" = None,
           test_setup_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], None]]" = None,
           argparse_setup_callback: "Optional[Callable[[argparse.ArgumentParser], None]]" = None,
-          argparse_adjust_args_callback: "Optional[Callable[[argparse.Namespace], None]]" = None):
+          argparse_adjust_args_callback: "Optional[Callable[[argparse.Namespace], None]]" = None,
+          post_config_callback: "Optional[Callable[[argparse.Namespace], None]]" = None):
     parser = get_argument_parser()
     if argparse_setup_callback:
         argparse_setup_callback(parser)
@@ -1276,6 +1277,9 @@ def _main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespac
         QEMU_LOGFILE = args.qemu_logfile
 
     starttime = datetime.datetime.now()
+
+    if post_config_callback:
+        post_config_callback(args)
 
     # validate args:
     test_archives: "list[Path]" = []
@@ -1400,13 +1404,15 @@ def _main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespac
 def main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], bool]]" = None,
          test_setup_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespace], None]]" = None,
          argparse_setup_callback: "Optional[Callable[[argparse.ArgumentParser], None]]" = None,
-         argparse_adjust_args_callback: "Optional[Callable[[argparse.Namespace], None]]" = None):
+         argparse_adjust_args_callback: "Optional[Callable[[argparse.Namespace], None]]" = None,
+         post_config_callback: "Optional[Callable[[argparse.Namespace], None]]" = None):
     # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
     with keep_terminal_sane():
         run_and_kill_children_on_exit(
             lambda: _main(test_function=test_function, test_setup_function=test_setup_function,
                           argparse_setup_callback=argparse_setup_callback,
-                          argparse_adjust_args_callback=argparse_adjust_args_callback))
+                          argparse_adjust_args_callback=argparse_adjust_args_callback,
+                          post_config_callback=post_config_callback))
 
 
 if __name__ == "__main__":

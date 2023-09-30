@@ -304,12 +304,16 @@ def cheribsd_setup_args(args: argparse.Namespace):
             args.timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             real_output_dir = (test_output_dir / args.timestamp).absolute()
         args.test_output_dir = str(real_output_dir)
-        boot_cheribsd.run_host_command(["mkdir", "-p", str(real_output_dir)])
-        if not get_global_config().pretend:
-            (real_output_dir / "cmdline").write_text(str(sys.argv))
         args.smb_mount_directories.append(
             boot_cheribsd.SmbMount(real_output_dir, readonly=False, in_target="/test-results"),
         )
+
+
+def cheribsd_setup_output_dir(args: argparse.Namespace):
+    if args.kyua_tests_files or args.run_cheribsdtest:
+        boot_cheribsd.run_host_command(["mkdir", "-p", str(args.test_output_dir)])
+        if not get_global_config().pretend:
+            (args.test_output_dir / "cmdline").write_text(str(sys.argv))
 
 
 def add_args(parser: argparse.ArgumentParser):
@@ -364,5 +368,6 @@ if __name__ == "__main__":
         argparse_setup_callback=add_args,
         should_mount_builddir=False,
         argparse_adjust_args_callback=cheribsd_setup_args,
+        post_config_callback=cheribsd_setup_output_dir,
         need_ssh=True,
     )
