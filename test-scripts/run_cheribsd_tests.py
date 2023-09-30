@@ -311,9 +311,9 @@ def cheribsd_setup_args(args: argparse.Namespace):
 
 def cheribsd_setup_output_dir(args: argparse.Namespace):
     if args.kyua_tests_files or args.run_cheribsdtest:
-        boot_cheribsd.run_host_command(["mkdir", "-p", str(args.test_output_dir)])
+        boot_cheribsd.run_host_command(["mkdir", "-p", args.test_output_dir])
         if not get_global_config().pretend:
-            (args.test_output_dir / "cmdline").write_text(str(sys.argv))
+            (Path(args.test_output_dir) / "cmdline").write_text(str(sys.argv))
 
 
 def add_args(parser: argparse.ArgumentParser):
