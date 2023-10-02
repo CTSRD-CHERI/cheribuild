@@ -56,7 +56,7 @@ from pycheribuild.colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..processutils import commandline_to_str, keep_terminal_sane, run_and_kill_children_on_exit
 from ..qemu_utils import QemuOptions, riscv_bios_arguments
-from ..utils import find_free_port, get_global_config
+from ..utils import ConfigBase, find_free_port, get_global_config, init_global_config
 
 _cheribuild_root = Path(__file__).parent.parent.parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
@@ -1228,6 +1228,7 @@ def _main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespac
         pass
 
     args = parser.parse_args()
+    init_global_config(ConfigBase(pretend=args.pretend, verbose=True, quiet=False, force=False))
     if args.ssh_port is None:
         temp_ssh_port = find_free_port()
         args.ssh_port = temp_ssh_port.port
@@ -1264,12 +1265,6 @@ def _main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespac
             failure("ERROR: Cannot find QEMU binary for target ", qemu_options.qemu_arch_sufffix, exit=True)
 
     global INTERACT_ON_KERNEL_PANIC  # noqa: PLW0603
-    get_global_config().verbose = True
-    get_global_config().quiet = False
-    get_global_config().pretend = False
-    get_global_config().force = False
-    if args.pretend:
-        get_global_config().pretend = True
     if args.interact_on_kernel_panic:
         INTERACT_ON_KERNEL_PANIC = True
     global QEMU_LOGFILE  # noqa: PLW0603
