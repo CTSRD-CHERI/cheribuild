@@ -1060,7 +1060,7 @@ def _do_test_setup(qemu: QemuCheriBSDInstance, args: argparse.Namespace, test_ar
                 if not get_global_config().pretend:
                     time.sleep(2 + 8 * random.random())  # wait 2-10 seconds, hopefully the server is less busy then.
 
-    if test_archives:
+    if test_archives and not get_global_config().pretend:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
     # See how much space we have after running scp
     qemu.run("df -h")

@@ -293,7 +293,8 @@ def run_parallel_impl(
     # FIXME: without this sleep it fails in jenkins (is the python version there broken?)
     # Works just fine everywhere else where I test it...
     boot_cheribsd.info("Waiting 5 seconds before releasing barrier")
-    time.sleep(5)
+    if not get_global_config().pretend:
+        time.sleep(5)
     mp_debug(args, "Waiting for SSH port barrier")
     mp_barrier.wait(timeout=10)  # wait for ssh ports to be assigned
     for i in range(len(processes)):
