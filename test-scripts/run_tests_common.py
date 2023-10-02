@@ -157,7 +157,6 @@ def run_tests_main(
     test_setup_function: Optional[Callable[[QemuCheriBSDInstance, argparse.Namespace], None]] = None,
     argparse_setup_callback: Optional[Callable[[argparse.ArgumentParser], None]] = None,
     argparse_adjust_args_callback: Optional[Callable[[argparse.Namespace], None]] = None,
-    post_config_callback: Optional[Callable[[argparse.Namespace], None]] = None,
 ):
     def default_add_cmdline_args(parser: argparse.ArgumentParser):
         parser.add_argument("--build-dir", required=should_mount_builddir)
@@ -209,10 +208,6 @@ def run_tests_main(
         if argparse_adjust_args_callback:
             argparse_adjust_args_callback(args)
 
-    def default_post_config(args: argparse.Namespace):
-        if post_config_callback:
-            post_config_callback(args)
-
     def default_setup_tests(qemu: QemuCheriBSDInstance, args: argparse.Namespace):
         if should_mount_builddir or args.build_dir:
             qemu.checked_run(f"ln -sf '{args.build_dir}' /build", timeout=60)
@@ -232,5 +227,4 @@ def run_tests_main(
         test_setup_function=default_setup_tests,
         argparse_setup_callback=default_add_cmdline_args,
         argparse_adjust_args_callback=default_setup_args,
-        post_config_callback=default_post_config,
     )
