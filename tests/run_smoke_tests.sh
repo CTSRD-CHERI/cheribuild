@@ -36,7 +36,8 @@ try_run ./cheribuild.py -p __run_everything__ --clean --build --test --benchmark
 # Also check that we can run --pretend mode with all tools missing.
 try_run env PATH=/does/not/exist "$(command -v python3)" ./cheribuild.py -p __run_everything__ --clean --build --test --benchmark
 try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --allow-more-than-one-target --build --test --cpu=default -p __run_everything__
-
+# Check that the CheriBSD test script works
+try_run ./test-scripts/run_cheribsd_tests.py -p --architecture morello-purecap --ssh-key path/to/test/ssh_key.pub --qemu-cmd /path/to/sdk/bin/qemu-system-morello --disk-image /path/to/output/cheribsd-morello-purecap.img --test-output-dir=/path/to/build/test-results/run-morello-purecap
 # We were previously hitting an error while argument completing, check that it works now:
 if python3 -c 'import argcomplete'; then
     # We previously crashed while completing options that inherited their value from a parent class, but that parent
