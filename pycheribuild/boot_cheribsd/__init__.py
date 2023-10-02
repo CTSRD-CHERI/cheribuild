@@ -671,7 +671,8 @@ def setup_ssh_for_root_login(qemu: QemuCheriBSDInstance):
     except pexpect.TIMEOUT:
         failure("Timed out setting up SSH keys", exit=True)
     qemu.expect_prompt(timeout=120)
-    time.sleep(2)  # sleep for two seconds to avoid a rejection
+    if not get_global_config().pretend:
+        time.sleep(2)  # sleep for two seconds to avoid a rejection
     success("===> SSH authorized_keys set up")
 
 
