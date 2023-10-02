@@ -234,7 +234,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
 
     # Update the JUnit stats in the XML files (both kyua and cheribsdtest):
     if args.kyua_tests_files or args.run_cheribsdtest:
-        if get_global_config().pretend:
+        if not get_global_config().pretend:
             time.sleep(2)  # sleep two seconds to ensure the files exist
         junit_dir = Path(args.test_output_dir)
         if host_has_kyua:
