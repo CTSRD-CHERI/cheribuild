@@ -71,7 +71,10 @@ def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, di
     # sys.argv.append("--pretend")
     print("Starting shard", num, sys.argv)
     boot_cheribsd.MESSAGE_PREFIX = "\033[0;34m" + "shard" + str(num) + ": \033[0m"
-    boot_cheribsd.QEMU_LOGFILE = Path(build_dir, "shard-" + str(num) + ".log")
+    if get_global_config().pretend:
+        boot_cheribsd.QEMU_LOGFILE = Path(os.devnull)
+    else:
+        boot_cheribsd.QEMU_LOGFILE = Path(build_dir, "shard-" + str(num) + ".log")
     boot_cheribsd.info("writing CheriBSD output to ", boot_cheribsd.QEMU_LOGFILE)
     try:
         libcxx_main(barrier=barrier, mp_queue=q, ssh_port_queue=ssh_port_queue, shard_num=num)
