@@ -409,10 +409,13 @@ def print_cmd(cmd: "list[str]", **kwargs):
 # noinspection PyShadowingBuiltins
 def failure(*args, exit: bool, **kwargs):
     print("\n", MESSAGE_PREFIX, "\033[0;31m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
-    if exit and not get_global_config().pretend:
-        with contextlib.suppress(Exception):
-            time.sleep(1)  # to get the remaining output
-        sys.exit(1)
+    if exit:
+        if get_global_config().pretend:
+            print("\033[0;37mIgnored fatal error in --pretend mode\033[0m", sep="", file=sys.stderr, flush=True)
+        else:
+            with contextlib.suppress(Exception):
+                time.sleep(1)  # to get the remaining output
+            sys.exit(1)
     return False
 
 
@@ -513,7 +516,7 @@ def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True,
 
     if not path.exists():
         failure("Could not find " + what + " " + str(path), exit=True)
-    assert path.exists(), path
+    assert get_global_config().pretend or path.exists(), path
     return path
 
 
@@ -646,7 +649,10 @@ def setup_ssh_for_root_login(qemu: QemuCheriBSDInstance):
     assert isinstance(pubkey, Path)
     # Ensure that we have permissions set up in a way so that ssh doesn't complain
     qemu.run("mkdir -p /root/.ssh && chmod 700 /root /root/.ssh")
-    ssh_pubkey_contents = pubkey.read_text(encoding="utf-8").strip()
+    if get_global_config() and not pubkey.exists():
+        ssh_pubkey_contents = "ssh-ed25519 AAAA Test SSH key for cheribuild"
+    else:
+        ssh_pubkey_contents = pubkey.read_text(encoding="utf-8").strip()
     # Handle ssh-pubkeys that might be too long to send as a single line (write 150-char chunks instead):
     chunk_size = 150
     for part in (ssh_pubkey_contents[i:i + chunk_size] for i in range(0, len(ssh_pubkey_contents), chunk_size)):
@@ -1364,10 +1370,6 @@ def _main(test_function: "Optional[Callable[[CheriBSDInstance, argparse.Namespac
                                   test_setup_function=test_setup_function, test_ld_preload_files=test_ld_preload_files)
         except CheriBSDCommandFailed as e:
             failure("Command failed while runnings tests: ", str(e), "\n", str(qemu), exit=False)
-            traceback.print_exc(file=sys.stderr)
-            tests_okay = False
-        except Exception:
-            failure("FAILED to run tests!!\n", str(qemu), exit=False)
             traceback.print_exc(file=sys.stderr)
             tests_okay = False
         except KeyboardInterrupt:
