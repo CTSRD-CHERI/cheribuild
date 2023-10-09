@@ -205,17 +205,24 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             CMAKE_C_COMPILER=self.CC,
             CMAKE_CXX_COMPILER=self.CXX,
             CMAKE_ASM_COMPILER=self.CC,  # Compile assembly files with the default compiler
-            # All of these should be commandlines not CMake lists:
-            CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CFLAGS),
-            CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CXXFLAGS),
-            CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.ASMFLAGS),
-            CMAKE_EXE_LINKER_FLAGS_INIT=commandline_to_str(
-                custom_ldflags + self.target_info.additional_executable_link_flags),
-            CMAKE_SHARED_LINKER_FLAGS_INIT=commandline_to_str(
-                custom_ldflags + self.target_info.additional_shared_library_link_flags),
-            CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(
-                custom_ldflags + self.target_info.additional_shared_library_link_flags),
         )
+        if not self.compiling_for_host():
+            # Add compiler/linker flags (for cross-compilation these are defined in the toolchain file).
+            # Note: All of these should be commandlines not CMake lists.
+            self.add_cmake_options(
+                CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CFLAGS),
+                CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CXXFLAGS),
+                CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.ASMFLAGS),
+                CMAKE_EXE_LINKER_FLAGS_INIT=commandline_to_str(
+                    custom_ldflags + self.target_info.additional_executable_link_flags,
+                ),
+                CMAKE_SHARED_LINKER_FLAGS_INIT=commandline_to_str(
+                    custom_ldflags + self.target_info.additional_shared_library_link_flags,
+                ),
+                CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(
+                    custom_ldflags + self.target_info.additional_shared_library_link_flags,
+                ),
+            )
         if self.optimization_flags:
             # If the project uses custom optimization flags (e.g. SPEC), override the CMake defaults defined in
             # Modules/Compiler/GNU.cmake. Just adding them to CMAKE_<LANG>_FLAGS_INIT is not enough since the

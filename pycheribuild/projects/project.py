@@ -1629,6 +1629,7 @@ class _CMakeAndMesonSharedLogic(Project):
         raise NotImplementedError()
 
     def _replace_value(self, template: str, required: bool, key: str, value: str) -> str:
+        result = template
         if isinstance(value, bool):
             strval = self._bool_to_str(value)
         elif isinstance(value, _CMakeAndMesonSharedLogic.CommandLineArgs):
@@ -1636,8 +1637,7 @@ class _CMakeAndMesonSharedLogic(Project):
             # CMake calling `clang -target;foo;--sysroot=...". We have to use a space-separated list instead, so we
             # also expand @{KEY}_STR@ (but don't make it an error if it doesn't exist in the toolchain file).
             # Feature request: https://github.com/mesonbuild/meson/issues/8534
-            template = self._replace_value(template, required=False,
-                                           key=key + '_STR', value=commandline_to_str(value.args))
+            result = self._replace_value(result, required=False, key=key + '_STR', value=commandline_to_str(value.args))
             strval = self._toolchain_file_command_args_to_str(value)
         elif isinstance(value, _CMakeAndMesonSharedLogic.EnvVarPathList):
             strval = self._toolchain_file_env_var_path_list_to_str(value)
@@ -1647,7 +1647,7 @@ class _CMakeAndMesonSharedLogic(Project):
             if not isinstance(value, (str, Path, int)):
                 self.fatal(f"Unexpected value type {type(value)} for {key}: {value}", fatal_when_pretending=True)
             strval = str(value)
-        result = template.replace("@" + key + "@", strval)
+        result = result.replace("@" + key + "@", strval)
         if required and result == template:
             raise ValueError(key + " not used in toolchain file")
         return result
@@ -1687,7 +1687,12 @@ class _CMakeAndMesonSharedLogic(Project):
             TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
             TOOLCHAIN_COMMON_FLAGS=cmdline(self.default_compiler_flags),
             TOOLCHAIN_C_FLAGS=cmdline(self.CFLAGS),
-            TOOLCHAIN_LINKER_FLAGS=cmdline(self.default_ldflags + self.LDFLAGS),
+            TOOLCHAIN_EXE_LINKER_FLAGS=cmdline(
+                self.default_ldflags + self.LDFLAGS + self.target_info.additional_executable_link_flags,
+            ),
+            TOOLCHAIN_SHARED_LINKER_FLAGS=cmdline(
+                self.default_ldflags + self.LDFLAGS + self.target_info.additional_shared_library_link_flags,
+            ),
             TOOLCHAIN_CXX_FLAGS=cmdline(self.CXXFLAGS),
             TOOLCHAIN_ASM_FLAGS=cmdline(self.ASMFLAGS),
             TOOLCHAIN_C_COMPILER=self.CC,
