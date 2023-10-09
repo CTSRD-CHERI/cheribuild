@@ -119,6 +119,10 @@ default_ram_size   = '0x00200000'
             # The clang baremetal driver expect the following directory to exist:
             self.makedirs(self.install_dir / "rv64imafdc")
             self.create_symlink(self.install_dir, self.install_dir / "rv64imafdc/lp64d", print_verbose_only=False)
+        if not (self.install_dir / "lib/libdl.a").exists():
+            # The libunwind test suite expects -ldl to exists since CMAKE_DL_LIBS is always non-empty for baremetal...
+            # Work around this for now by creating an empty file
+            self.run_cmd(self.target_info.ar, "r", self.install_dir / "lib/libdl.a")
 
     def run_tests(self):
         if not self.compiling_for_host():
