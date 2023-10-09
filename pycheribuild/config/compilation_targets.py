@@ -855,6 +855,9 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
 class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
     shortname: str = "Picolibc"
 
+    def cmake_extra_toolchain_file_code(self) -> str:
+        return "set(CMAKE_DL_LIBS \"\")\n"
+
     @classmethod
     def uses_softfloat_by_default(cls, xtarget: "CrossCompileTarget"):
         return False
