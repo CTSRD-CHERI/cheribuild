@@ -146,7 +146,10 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             # This makes it a lot easier to reproduce the builds outside cheribuild.
             self.add_cmake_options(CMAKE_PREFIX_PATH=self._toolchain_file_list_to_str(self.cmake_prefix_paths))
         else:
-            self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self._toolchain_file)
+            if self._get_configure_tool_version() >= (3, 21):
+                self.configure_args.append(f"--toolchain={self._toolchain_file}")
+            else:
+                self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self._toolchain_file)
 
         if self.install_prefix != self.install_dir:
             assert self.destdir, "custom install prefix requires DESTDIR being set!"
