@@ -856,7 +856,11 @@ class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
     shortname: str = "Picolibc"
 
     def cmake_extra_toolchain_file_code(self) -> str:
-        return "set(CMAKE_DL_LIBS \"\")\n"
+        return """
+# This does not actually seem to work since include ordering means the vaue can only by overridden in Plaforms/Foo.cmake
+# See Modules/CMakeSystemSpecificInformation.cmake which is included for each language.
+set(CMAKE_DL_LIBS "")
+"""
 
     @classmethod
     def uses_softfloat_by_default(cls, xtarget: "CrossCompileTarget"):
