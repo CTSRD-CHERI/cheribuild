@@ -166,7 +166,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             # TODO: if this doesn't work we can set CMAKE_TRY_COMPILE_TARGET_TYPE to build a static lib instead
             # https://cmake.org/cmake/help/git-master/variable/CMAKE_TRY_COMPILE_TARGET_TYPE.html
             # XXX: we should have everything set up correctly so this should no longer be needed for FreeBSD
-            if self.target_info.is_baremetal():
+            if self.target_info.is_baremetal() and not self.needs_sysroot:
                 self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")
             else:
                 self.add_cmake_options(
