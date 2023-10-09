@@ -268,10 +268,13 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         # TODO: avoid the toolchain file and set all flags on the command line
         force_static_script = file.parent / "ForceStaticLibraries.cmake"
         if self.force_static_linkage:
-            self.write_file(force_static_script, include_local_file("files/ForceStaticLibraries.cmake"),
-                            overwrite=True)
-        self._prepare_toolchain_file_common(file, TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
-                                            FORCE_STATIC_LIBRARIES_CMAKE_SCRIPT=force_static_script)
+            self.write_file(force_static_script, include_local_file("files/ForceStaticLibraries.cmake"), overwrite=True)
+        self._prepare_toolchain_file_common(
+            file,
+            TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
+            FORCE_STATIC_LIBRARIES_CMAKE_SCRIPT=force_static_script,
+            CMAKE_EXTRA_TOOLCHAIN_FILE_CODE=self.target_info.cmake_extra_toolchain_file_code(),
+        )
 
     def configure(self, **kwargs) -> None:
         # make sure we get a completely fresh cache when --reconfigure is passed:

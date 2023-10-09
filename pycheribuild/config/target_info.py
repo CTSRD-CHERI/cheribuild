@@ -227,6 +227,9 @@ class TargetInfo(ABC):
         """List of additional directories to be searched for packages (e.g. sysroot/usr/local/riscv64-purecap)"""
         return []
 
+    def cmake_extra_toolchain_file_code(self) -> str:
+        return ""
+
     @property
     @abstractmethod
     def sdk_root_dir(self) -> Path:
