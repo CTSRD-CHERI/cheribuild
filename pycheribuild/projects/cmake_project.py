@@ -165,15 +165,6 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                 _CMAKE_TOOLCHAIN_LOCATION=self.target_info.sdk_root_dir / "bin",
                 CMAKE_LINKER=self.target_info.linker)
 
-        if self.target_info.additional_executable_link_flags:
-            # TODO: if this doesn't work we can set CMAKE_TRY_COMPILE_TARGET_TYPE to build a static lib instead
-            # https://cmake.org/cmake/help/git-master/variable/CMAKE_TRY_COMPILE_TARGET_TYPE.html
-            # XXX: we should have everything set up correctly so this should no longer be needed for FreeBSD
-            if self.target_info.is_baremetal() and not self.needs_sysroot:
-                self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")
-            else:
-                self.add_cmake_options(
-                    CMAKE_REQUIRED_LINK_OPTIONS=commandline_to_str(self.target_info.additional_executable_link_flags))
         if self.force_static_linkage:
             self.add_cmake_options(
                 CMAKE_SHARED_LIBRARY_SUFFIX=".a",

@@ -954,7 +954,7 @@ set(CMAKE_DL_LIBS "")
 
         return BuildCheriLLVM
 
-    def semihosting_ldflags(self):
+    def semihosting_ldflags(self) -> "list[str]":
         stack_size = "4k"
         if self.target.is_riscv64(include_purecap=True) or self.target.is_riscv32(include_purecap=True):
             flash_start = 0x80000000
@@ -971,6 +971,7 @@ set(CMAKE_DL_LIBS "")
             f"-Wl,--defsym=__ram={hex(dram_start)}",
             f"-Wl,--defsym=__ram_size={hex(dram_size)}",
             f"-Wl,--defsym=__stack_size={stack_size}",
+            "-lsemihost",
             self.sysroot_dir / "lib/crt0-semihost.o",
         ]
 
@@ -985,7 +986,7 @@ set(CMAKE_DL_LIBS "")
         return ["picolibc"]
 
     @property
-    def additional_executable_link_flags(self):
+    def additional_executable_link_flags(self) -> "list[str]":
         return super().additional_executable_link_flags + self.semihosting_ldflags()
 
     def _get_rootfs_project(self, xtarget: CrossCompileTarget) -> "Project":
