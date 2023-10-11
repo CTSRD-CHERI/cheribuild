@@ -538,6 +538,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                     str(self.source_dir / "../libcxx/utils/qemu_baremetal.py"),
                     f"--qemu={BuildQEMU.qemu_binary(self)}",
                 ]
+                lit_args += " -Dlong_tests=False"
                 self.source_dir / "../libcxx/utils/qemu_baremetal.py"
             elif self._have_compile_only_executor():
                 # The compile_only executor does not exist for upstream (yet)
