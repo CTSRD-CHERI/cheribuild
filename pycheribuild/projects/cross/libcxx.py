@@ -40,7 +40,7 @@ from .crosscompileproject import (
     DefaultInstallDir,
     GitRepository,
 )
-from .llvm import BuildCheriLLVM, BuildLLVMMonoRepoBase, BuildUpstreamLLVM
+from .llvm import BuildCheriLLVM, BuildLLVMMonoRepoBase, BuildUpstreamLLVM, extra_llvm_lit_opts
 from ..build_qemu import BuildQEMU
 from ..cmake_project import CMakeProject
 from ..project import ReuseOtherProjectDefaultTargetRepository
@@ -176,7 +176,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         cls.test_jobs = cls.add_config_option(
             "parallel-test-jobs",
             help="Number of QEMU instances spawned to run tests (default: number of build jobs (-j flag) / 2)",
-            default=lambda c, p: c.make_jobs / 2,
+            default=lambda c, p: max(c.make_jobs / 2, 1),
             kind=int,
         )
 
@@ -203,7 +203,6 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             LLVM_LIT_ARGS="--xunit-xml-output "
             + os.getenv("WORKSPACE", ".")
             + "/libcxx-test-results.xml --max-time 3600 --timeout 120"
-            + (" -a" if self.config.verbose else " -vv")
             + self.libcxx_lit_jobs,
         )
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for
@@ -438,7 +437,6 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
     def setup(self):
         super().setup()
         lit_args = f'--xunit-xml-output "{self.build_dir}/test-results.xml" --max-time 3600 --timeout 300 -s'
-        lit_args += (" -a" if self.config.verbose else " -vv")
         external_cxxabi = None
         enabled_runtimes = self.get_enabled_runtimes()
         if self.target_info.is_freebsd() and self.llvm_project is not BuildUpstreamLLVM:
@@ -533,21 +531,27 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             self.add_cmake_options(UNIX=1)
             self.COMMON_FLAGS.append("-D_GNU_SOURCE=1")  # strtoll_l is guarded by __GNU_VISIBLE
 
-        test_executor = None
+        test_executor: "list[str]" = []
         if not self.compiling_for_host():
-            if self._have_compile_only_executor():
+            if self.target_info.is_baremetal() and (self.source_dir / "../libcxx/utils/qemu_baremetal.py").exists():
+                test_executor = [
+                    str(self.source_dir / "../libcxx/utils/qemu_baremetal.py"),
+                    f"--qemu={BuildQEMU.qemu_binary(self)}",
+                ]
+                self.source_dir / "../libcxx/utils/qemu_baremetal.py"
+            elif self._have_compile_only_executor():
                 # The compile_only executor does not exist for upstream (yet)
-                test_executor = self.commandline_to_str([self.source_dir / "../libcxx/utils/compile_only.py"])
+                test_executor = [str(self.source_dir / "../libcxx/utils/compile_only.py")]
             elif self.qemu_instance is not None:
-                test_executor = self.commandline_to_str(self.get_localhost_test_executor_command())
+                test_executor = self.get_localhost_test_executor_command()
                 # Trying to run more than one test in parallel will fail since we only have one CPU:
                 # sshd[798]: error: beginning MaxStartups throttling
                 # sshd[838]: error: no more sessions
                 lit_args += " -j1"
         elif self.test_localhost_via_ssh:
-            test_executor = self.commandline_to_str(self.get_localhost_test_executor_command())
+            test_executor = self.get_localhost_test_executor_command()
         if test_executor:
-            self.set_cmake_flag_for_each_runtime(EXECUTOR=test_executor)
+            self.set_cmake_flag_for_each_runtime(EXECUTOR=self.commandline_to_str(test_executor))
         # The cheribuild default RPATH settings break the linker script (but should also be unnecessary without it).
         self.add_cmake_options(
             CMAKE_INSTALL_RPATH_USE_LINK_PATH=False,
@@ -600,26 +604,11 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             )
         return super().compile()
 
-    def _run_lit(self, *args: str):
-        self.run_cmd(
-            [
-                sys.executable,
-                self.build_dir / "bin/llvm-lit",
-                "-a" if self.config.verbose else "-vv",
-                f"--xunit-xml-output={self.build_dir / 'test-results.xml'}",
-                *args,
-                *[f"{d}/test" for d in self.get_enabled_runtimes()],
-            ],
-            cwd=self.build_dir,
-        )
-
     def run_tests(self):
-        # Without setting LC_ALL lit attempts to encode some things as ASCII and fails.
-        # This only happens on FreeBSD, but we might as well set it everywhere
-        if self.compiling_for_host() or self._have_compile_only_executor():
-            with self.set_env(LC_ALL="en_US.UTF-8", FILECHECK_DUMP_INPUT_ON_FAILURE=1):
-                self.run_cmd("cmake", "--build", self.build_dir, "--verbose", "--target", "check-runtimes")
-        elif self.test_against_running_qemu_instance:
+        test_jobs = self.test_jobs
+        executor_lit_args = []
+        if self.test_against_running_qemu_instance:
+            test_jobs = 1
             if not ssh_host_accessible_uncached(
                 "cheribsd-test-instance",
                 ssh_args=("-F", str(self.test_ssh_config_path)),
@@ -629,39 +618,45 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 return self.fatal(
                     "Cannot connect to ssh host",
                     fixit_hint=f"Try running `cheribuild.py {self.qemu_instance.target}`.\n"
-                               + coloured(AnsiColour.blue, "If that does not work, try running ")
-                               + coloured(AnsiColour.yellow, f"echo '{ssh_key_contents}' >> /root/.ssh/authorized_keys")
-                               + coloured(AnsiColour.blue, " inside QEMU."),
+                    + coloured(AnsiColour.blue, "If that does not work, try running ")
+                    + coloured(AnsiColour.yellow, f"echo '{ssh_key_contents}' >> /root/.ssh/authorized_keys")
+                    + coloured(AnsiColour.blue, " inside QEMU."),
                 )
-            self._run_lit(
-                "-j1", "-Dexecutor=" + self.commandline_to_str(self.get_localhost_test_executor_command()),
-                       )
+            executor_lit_args = ["-Dexecutor=" + self.commandline_to_str(self.get_localhost_test_executor_command())]
+        elif self.can_run_binaries_on_remote_morello_board():
+            executor = [self.source_dir / "utils/ssh.py", "--host", self.config.remote_morello_board]
+            executor_lit_args = ["-Dexecutor=" + self.commandline_to_str(executor)]
+            # The Morello board has 4 CPUs, so run 4 tests in parallel.
+            test_jobs = 4
         elif self.target_info.is_cheribsd() and not self.compiling_for_host():
-            if self.can_run_binaries_on_remote_morello_board():
-                executor = [self.source_dir / "utils/ssh.py", "--host", self.config.remote_morello_board]
-                # The Morello board has 4 CPUs, so run 4 tests in parallel.
-                self._run_lit("-j4", "-Dexecutor=" + self.commandline_to_str(executor))
-            else:
-                if "libunwind" in self.get_enabled_runtimes():
-                    self.target_info.run_cheribsd_test_script(
-                        "run_libunwind_tests.py",
-                        "--lit-debug-output",
-                        "--ssh-executor-script",
-                        self.source_dir / "../libcxx/utils/ssh.py",
-                        mount_sysroot=True,
-                    )
-                if "libcxx" in self.get_enabled_runtimes():
-                    self.target_info.run_cheribsd_test_script(
-                        "run_libcxx_tests.py",
-                        "--lit-debug-output",
-                        "--ssh-executor-script",
-                        self.source_dir / "../libcxx/utils/ssh.py",
-                        "--parallel-jobs",
-                        self.test_jobs,
-                        mount_sysroot=True,
-                    )
-        else:
-            super().run_tests()
+            if "libunwind" in self.get_enabled_runtimes():
+                self.target_info.run_cheribsd_test_script(
+                    "run_libunwind_tests.py",
+                    "--lit-debug-output",
+                    "--ssh-executor-script",
+                    self.source_dir / "../libcxx/utils/ssh.py",
+                    mount_sysroot=True,
+                )
+            if "libcxx" in self.get_enabled_runtimes():
+                self.target_info.run_cheribsd_test_script(
+                    "run_libcxx_tests.py",
+                    "--lit-debug-output",
+                    "--ssh-executor-script",
+                    self.source_dir / "../libcxx/utils/ssh.py",
+                    "--parallel-jobs",
+                    self.test_jobs,
+                    mount_sysroot=True,
+                )
+            return
+        # Without setting LC_ALL lit attempts to encode some things as ASCII and fails.
+        # This only happens on FreeBSD, but we might as well set it everywhere
+        with self.set_env(
+            LC_ALL="en_US.UTF-8",
+            FILECHECK_DUMP_INPUT_ON_FAILURE=1,
+            LIT_OPTS=self.commandline_to_str(extra_llvm_lit_opts(self, test_jobs=test_jobs) + executor_lit_args),
+            print_verbose_only=False,
+        ):
+            self.run_cmd("cmake", "--build", self.build_dir, "--verbose", "--target", "check-runtimes")
 
 
 class BuildLlvmLibs(_BuildLlvmRuntimes):

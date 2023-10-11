@@ -30,7 +30,7 @@
 import os
 import sys
 from pathlib import Path
-from typing import ClassVar, Iterable
+from typing import ClassVar, Iterable, Optional
 
 from ..cmake_project import CMakeProject
 from ..project import BuildType, ComputedDefaultValue, DefaultInstallDir, GitRepository
@@ -54,6 +54,19 @@ _false_unless_build_all_set = ComputedDefaultValue(
     function=lambda config, project: project.build_everything,
     as_string="False unless build-everything is set",
 )
+
+
+def extra_llvm_lit_opts(project: SimpleProject, *, test_jobs: "Optional[int]") -> list[str]:
+    result = [project.config.make_j_flag if test_jobs is None else f"-j{test_jobs}"]
+    if project.config.debug_output:
+        result.append("--show-all")
+    elif project.config.verbose:
+        result.append("-vv")
+    elif project.config.quiet:
+        result.append("--quiet")
+    else:
+        result += ["-s", "-v"]
+    return result
 
 
 class BuildLLVMBase(CMakeProject):
@@ -497,7 +510,12 @@ exec {lld} "$@"
             return
         # Without setting LC_ALL lit attempts to encode some things as ASCII and fails.
         # This only happens on FreeBSD, but we might as well set it everywhere
-        with self.set_env(LC_ALL="en_US.UTF-8", FILECHECK_DUMP_INPUT_ON_FAILURE=1):
+        with self.set_env(
+            LC_ALL="en_US.UTF-8",
+            FILECHECK_DUMP_INPUT_ON_FAILURE=1,
+            LIT_OPTS=self.commandline_to_str(extra_llvm_lit_opts(self, test_jobs=None)),
+            print_verbose_only=False,
+        ):
             self.run_cmd("cmake", "--build", self.build_dir, "--target", "check-all")
 
     def prepare_install_dir_for_archiving(self):
