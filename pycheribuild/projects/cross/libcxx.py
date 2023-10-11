@@ -472,11 +472,12 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 self.add_cmake_options(LIBUNWIND_REMEMBER_HEAP_ALLOC=True)
         if "libcxxabi" in enabled_runtimes:
             self.add_cmake_options(
-                LIBCXXABI_USE_LLVM_UNWINDER="libunwind" in enabled_runtimes,
                 LIBCXXABI_ENABLE_STATIC=True,
                 LIBCXXABI_ENABLE_SHARED=not self.target_info.must_link_statically,
                 LIBCXXABI_TEST_TARGET_FLAGS=target_test_flags,
             )
+            if "libunwind" in enabled_runtimes:
+                self.add_cmake_options(LIBCXXABI_USE_LLVM_UNWINDER=True, LIBCXXABI_ENABLE_STATIC_UNWINDER=True)
             if self.target_info.is_baremetal():
                 self.add_cmake_options(
                     LIBCXXABI_ENABLE_THREADS=False,
