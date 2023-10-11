@@ -585,7 +585,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
         cls.test_jobs = cls.add_config_option(
             "parallel-test-jobs",
             help="Number of QEMU instances spawned to run tests (default: number of build jobs (-j flag) / 2)",
-            default=lambda c, p: c.make_jobs / 2,
+            default=lambda c, p: max(c.make_jobs / 2, 1),
             kind=int,
         )
 
