@@ -972,7 +972,7 @@ set(CMAKE_DL_LIBS "")
             f"-Wl,--defsym=__ram_size={hex(dram_size)}",
             f"-Wl,--defsym=__stack_size={stack_size}",
             "-lsemihost",
-            self.sysroot_dir / "lib/crt0-semihost.o",
+            str(self.sysroot_dir / "lib/crt0-semihost.o"),
         ]
 
     @classmethod

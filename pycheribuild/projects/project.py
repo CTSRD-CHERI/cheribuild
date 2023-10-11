@@ -1236,7 +1236,7 @@ class Project(SimpleProject):
             fullpath += " " + self.commandline_to_str(args)
         self.configure_environment[prog] = fullpath
 
-    def configure(self, cwd: "Optional[Path]" = None, configure_path: "Optional[Path]" = None) -> None:
+    def configure(self, *, cwd: "Optional[Path]" = None, configure_path: "Optional[Path]" = None) -> None:
         if cwd is None:
             cwd = self.build_dir
         if not self.should_run_configure():
@@ -1263,7 +1263,7 @@ class Project(SimpleProject):
             self.run_with_logfile([str(configure_path), *self.configure_args], logfile_name="configure", cwd=cwd,
                                   env=self.configure_environment)
 
-    def compile(self, cwd: "Optional[Path]" = None, parallel: bool = True) -> None:
+    def compile(self, *, cwd: "Optional[Path]" = None, parallel: bool = True) -> None:
         if cwd is None:
             cwd = self.build_dir
         self.run_make("all", cwd=cwd, parallel=parallel)
@@ -1315,7 +1315,7 @@ class Project(SimpleProject):
         self.run_make(make_target=target, options=options, stdout_filter=_stdout_filter, cwd=cwd,
                       parallel=parallel, **kwargs)
 
-    def install(self, _stdout_filter=_default_stdout_filter) -> None:
+    def install(self, *, _stdout_filter=_default_stdout_filter) -> None:
         self.run_make_install(_stdout_filter=_stdout_filter)
         if self.compiling_for_cheri() and not (self.real_install_root_dir / "lib64c").exists():
             self.create_symlink(self.real_install_root_dir / "lib", self.real_install_root_dir / "lib64c")

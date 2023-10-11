@@ -1077,7 +1077,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         assert self.kernel_config is not None
         return [self.kernel_config, *self.extra_kernels]
 
-    def compile(self, mfs_root_image: "Optional[Path]" = None, sysroot_only=False, **kwargs) -> None:
+    def compile(self, *, mfs_root_image: "Optional[Path]" = None, sysroot_only=False, **kwargs) -> None:
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
         if not self.use_bootstrapped_toolchain:
@@ -1218,7 +1218,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         result.set_env(METALOG=self.install_dir / "METALOG.world")
         return result
 
-    def install(self, kernconfs: "Optional[list[str]]" = None, sysroot_only=False, **kwargs) -> None:
+    def install(self, *, kernconfs: "Optional[list[str]]" = None, sysroot_only=False, **kwargs) -> None:
         if self.config.freebsd_host_tools_only:
             self.info("Skipping install step because freebsd-host-tools was set")
             return

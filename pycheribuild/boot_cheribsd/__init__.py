@@ -160,7 +160,7 @@ class PretendSpawn(pexpect.spawn):
     def wait(self):
         info("Exiting (fake) ", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
 
-    def interact(self, **kwargs):
+    def interact(self, escape_character=chr(29), input_filter=None, output_filter=None):
         info("Interacting with (fake) ", coloured(AnsiColour.yellow, commandline_to_str(self.cmd)))
 
     def sendcontrol(self, char):
@@ -730,7 +730,7 @@ class FakeQemuSpawn(QemuCheriBSDInstance):
     def sendintr(self):
         self.stderr.write("^C\n")
 
-    def interact(self, **kwargs):
+    def interact(self, escape_character=chr(29), input_filter=None, output_filter=None):
         if self.should_quit:
             super().kill(signal.SIGTERM)
             time.sleep(0.1)
