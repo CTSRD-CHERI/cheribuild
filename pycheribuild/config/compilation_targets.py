@@ -987,7 +987,9 @@ set(CMAKE_DL_LIBS "")
 
     @property
     def additional_executable_link_flags(self) -> "list[str]":
-        return super().additional_executable_link_flags + self.semihosting_ldflags()
+        if self.project.needs_sysroot:
+            return super().additional_executable_link_flags + self.semihosting_ldflags()
+        return []
 
     def _get_rootfs_project(self, xtarget: CrossCompileTarget) -> "Project":
         from ..projects.cross.picolibc import BuildPicoLibc
