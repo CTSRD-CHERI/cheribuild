@@ -46,10 +46,14 @@ from ...config.target_info import AbstractProject, CompilerType, CrossCompileTar
 from ...processutils import CompilerInfo
 from ...utils import InstallInstructions, OSInfo, ThreadJoiner, is_jenkins_build, remove_tuple_duplicates
 
-_true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
-                                                  as_string="True unless build-everything is set")
-_false_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: project.build_everything,
-                                                   as_string="False unless build-everything is set")
+_true_unless_build_all_set = ComputedDefaultValue(
+    function=lambda config, project: not project.build_everything,
+    as_string="True unless build-everything is set",
+)
+_false_unless_build_all_set = ComputedDefaultValue(
+    function=lambda config, project: project.build_everything,
+    as_string="False unless build-everything is set",
+)
 
 
 class BuildLLVMBase(CMakeProject):
@@ -97,37 +101,78 @@ class BuildLLVMBase(CMakeProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         if "included_projects" not in cls.__dict__:
-            cls.included_projects = cls.add_list_option("include-projects", default=["llvm", "clang", "lld"],
-                                                        help="List of LLVM subprojects that should be built")
+            cls.included_projects = cls.add_list_option(
+                "include-projects",
+                default=["llvm", "clang", "lld"],
+                help="List of LLVM subprojects that should be built",
+            )
         cls.add_default_sysroot = False
         cls.enable_assertions = cls.add_bool_option("assertions", help="build with assertions enabled", default=True)
         if "skip_static_analyzer" not in cls.__dict__:
-            cls.skip_static_analyzer = cls.add_bool_option("skip-static-analyzer", default=_true_unless_build_all_set,
-                                                           help="Don't build the clang static analyzer")
+            cls.skip_static_analyzer = cls.add_bool_option(
+                "skip-static-analyzer",
+                default=_true_unless_build_all_set,
+                help="Don't build the clang static analyzer",
+            )
         if "skip_misc_llvm_tools" not in cls.__dict__:
-            cls.skip_misc_llvm_tools = cls.add_bool_option("skip-unused-tools", default=_true_unless_build_all_set,
-                                                           help="Don't build some of the LLVM tools that should not be "
-                                                                "needed by default (e.g. llvm-mca, llvm-pdbutil)")
-        cls.build_everything = cls.add_bool_option("build-everything", default=False,
-                                                   help="Build everything for the projects that are enabled (e.g. "
-                                                        "documentation,examples and bindings)")
-        cls.use_llvm_cxx = cls.add_bool_option("use-in-tree-cxx-libs", default=False,
-                                               help="Use in-tree, not host, C++ runtime")
+            cls.skip_misc_llvm_tools = cls.add_bool_option(
+                "skip-unused-tools",
+                default=_true_unless_build_all_set,
+                help=(
+                    "Don't build some of the LLVM tools that should not be "
+                    "needed by default (e.g. llvm-mca, llvm-pdbutil)"
+                ),
+            )
+        cls.build_everything = cls.add_bool_option(
+            "build-everything",
+            default=False,
+            help="Build everything for the projects that are enabled (e.g. documentation,examples and bindings)",
+        )
+        cls.use_llvm_cxx = cls.add_bool_option(
+            "use-in-tree-cxx-libs",
+            default=False,
+            help="Use in-tree, not host, C++ runtime",
+        )
         cls.use_modules_build = cls.add_bool_option(
-            "use-llvm-modules-build", default=False,
-            help="Use the LLVM modules build (may be faster in some cases but probably won't allow debugging)")
+            "use-llvm-modules-build",
+            default=False,
+            help="Use the LLVM modules build (may be faster in some cases but probably won't allow debugging)",
+        )
         cls.dylib = cls.add_bool_option("dylib", default=False, help="Build dynamic-link LLVM")
-        cls.install_toolchain_only = cls.add_bool_option("install-toolchain-only", default=False,
-                                                         help="Install only toolchain binaries (i.e. no test tools)")
-        cls.build_minimal_toolchain = cls.add_bool_option("build-minimal-toolchain", default=False,
-                                                          help="Only build the binaries required for a minimal "
-                                                               "toolchain (this is useful to avoid excessive compile "
-                                                               "times with LTO)")
+        cls.install_toolchain_only = cls.add_bool_option(
+            "install-toolchain-only",
+            default=False,
+            help="Install only toolchain binaries (i.e. no test tools)",
+        )
+        cls.build_minimal_toolchain = cls.add_bool_option(
+            "build-minimal-toolchain",
+            default=False,
+            help=(
+                "Only build the binaries required for a minimal toolchain (this is useful to avoid excessive compile "
+                "times with LTO)"
+            ),
+        )
 
-    minimal_toolchain_targets = ["clang", "clang-format", "llc", "lld", "llvm-ar", "llvm-cxxfilt", "llvm-mc",
-                                 "llvm-nm", "llvm-objcopy", "llvm-objdump", "llvm-ranlib", "llvm-readelf",
-                                 "llvm-readobj", "llvm-size", "llvm-strings", "llvm-strip", "llvm-symbolizer",
-                                 "opt"]
+    minimal_toolchain_targets = [
+        "clang",
+        "clang-format",
+        "llc",
+        "lld",
+        "llvm-ar",
+        "llvm-cxxfilt",
+        "llvm-mc",
+        "llvm-nm",
+        "llvm-objcopy",
+        "llvm-objdump",
+        "llvm-ranlib",
+        "llvm-readelf",
+        "llvm-readobj",
+        "llvm-size",
+        "llvm-strings",
+        "llvm-strip",
+        "llvm-symbolizer",
+        "opt",
+    ]
 
     def add_asan_flags(self):
         # Use asan+ubsan
@@ -141,8 +186,12 @@ class BuildLLVMBase(CMakeProject):
         if self.compiling_for_host():
             cheri_cc = self.config.cheri_sdk_bindir / "clang"
             if self.CC.exists() and cheri_cc.exists() and self.CC.resolve() == cheri_cc.resolve():
-                self.warning("It appears you are trying to compile CHERI-LLVM with CHERI-LLVM (", self.CC,
-                             "). This is not recommended!", sep="")
+                self.warning(
+                    "It appears you are trying to compile CHERI-LLVM with CHERI-LLVM (",
+                    self.CC,
+                    "). This is not recommended!",
+                    sep="",
+                )
                 self.ask_for_confirmation("Are you sure you want to continue?")
         if self.compiling_for_cheri():
             # XXX: Lots of these from SmallVector/StringRef; silence the noise
@@ -177,8 +226,10 @@ class BuildLLVMBase(CMakeProject):
         self.add_cmake_options(LLVM_ENABLE_ZLIB="FORCE_ON")
 
         if self.use_modules_build:
-            self.add_cmake_options(LLVM_ENABLE_MODULES=True,
-                                   LLVM_ENABLE_MODULE_DEBUGGING=self.should_include_debug_info)
+            self.add_cmake_options(
+                LLVM_ENABLE_MODULES=True,
+                LLVM_ENABLE_MODULE_DEBUGGING=self.should_include_debug_info,
+            )
 
         if not self.build_everything:
             self.add_cmake_options(
@@ -190,14 +241,14 @@ class BuildLLVMBase(CMakeProject):
                 LLVM_INCLUDE_DOCS=False,
                 # This saves some CMake time since it is used as a sub-project
                 LLVM_INCLUDE_BENCHMARKS=False,
-                )
+            )
         if self.use_llvm_cxx:
             self.included_projects += ["libcxx", "libcxxabi", "compiler-rt", "libunwind"]
             self.add_cmake_options(
                 LIBCXXABI_USE_LLVM_UNWINDER=True,
                 CLANG_DEFAULT_CXX_STDLIB="libc++",
                 CLANG_DEFAULT_RTLIB="compiler-rt",
-                )
+            )
         if self.dylib:
             self.add_cmake_options(LLVM_LINK_LLVM_DYLIB=True)
         if self.install_toolchain_only:
@@ -206,26 +257,32 @@ class BuildLLVMBase(CMakeProject):
             self.add_cmake_options(LLVM_INSTALL_UTILS=True)
         if self.skip_static_analyzer:
             # save some build time by skipping the static analyzer
-            self.add_cmake_options(CLANG_ENABLE_STATIC_ANALYZER=False,
-                                   CLANG_ENABLE_ARCMT=False,  # also need to disable ARCMT to disable static analyzer
-                                   LLVM_ENABLE_Z3_SOLVER=False,  # and this also needs to be set
-                                   )
+            self.add_cmake_options(
+                CLANG_ENABLE_STATIC_ANALYZER=False,
+                CLANG_ENABLE_ARCMT=False,  # also need to disable ARCMT to disable static analyzer
+                LLVM_ENABLE_Z3_SOLVER=False,  # and this also needs to be set
+            )
         if self.skip_misc_llvm_tools:
-            self.add_cmake_options(LLVM_TOOL_LLVM_MCA_BUILD=False,
-                                   LLVM_TOOL_LLVM_EXEGESIS_BUILD=False,
-                                   LLVM_TOOL_LLVM_RC_BUILD=False,
-                                   )
+            self.add_cmake_options(
+                LLVM_TOOL_LLVM_MCA_BUILD=False,
+                LLVM_TOOL_LLVM_EXEGESIS_BUILD=False,
+                LLVM_TOOL_LLVM_RC_BUILD=False,
+            )
         if self.can_use_lld(self.CC):
             self.add_cmake_options(LLVM_ENABLE_LLD=True, _replace=False)  # Don't set to true if LTO set it to false
             # Add GDB index to speed up debugging
             if self.should_include_debug_info:
-                self.add_cmake_options(CMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index",
-                                       CMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index")
+                self.add_cmake_options(
+                    CMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index",
+                    CMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index",
+                )
                 # This should also speed up link time:
                 self.add_cmake_options(LLVM_USE_SPLIT_DWARF=True)
         if self.add_default_sysroot:
-            self.add_cmake_options(DEFAULT_SYSROOT=self.cross_sysroot_path,
-                                   LLVM_DEFAULT_TARGET_TRIPLE="mips64-unknown-freebsd")
+            self.add_cmake_options(
+                DEFAULT_SYSROOT=self.cross_sysroot_path,
+                LLVM_DEFAULT_TARGET_TRIPLE="mips64-unknown-freebsd",
+            )
         # when making a debug or asserts build speed it up by building a release tablegen
         # Actually it seems like the time spent in CMake is longer than that spent running tablegen, disable for now
         self.add_cmake_options(LLVM_OPTIMIZED_TABLEGEN=False)
@@ -240,17 +297,33 @@ class BuildLLVMBase(CMakeProject):
             self.add_cmake_options(COMPILER_RT_DEBUG=True)  # Enable ASAN, etc assertions
         if self.build_minimal_toolchain:
             if self.build_everything:
-                self.fatal(self.target, "/build-everything is incompatible with ", self.target,
-                           "/build-minimal-toolchain", sep="")
+                self.fatal(
+                    self.target,
+                    "/build-everything is incompatible with ",
+                    self.target,
+                    "/build-minimal-toolchain",
+                    sep="",
+                )
                 if self.install_toolchain_only:
-                    self.fatal(self.target, "/build-minimal-toolchain is incompatible with ", self.target,
-                               "/install-toolchain-only", sep="")
-            self.add_cmake_options(LLVM_BUILD_LLVM_DYLIB=False, LLVM_LINK_LLVM_DYLIB=False,
-                                   LLVM_BUILD_LLVM_C_DYLIB=False, CLANG_LINK_CLANG_DYLIB=False,
-                                   LLVM_INCLUDE_UTILS=False, LLVM_INCLUDE_TESTS=False, CLANG_INCLUDE_TESTS=False,
-                                   CLANG_ENABLE_STATIC_ANALYZER=False, CLANG_ENABLE_ARCMT=False,
-                                   LLVM_INSTALL_TOOLCHAIN_ONLY=False,  # This prevents some targets from being created
-                                   )
+                    self.fatal(
+                        self.target,
+                        "/build-minimal-toolchain is incompatible with ",
+                        self.target,
+                        "/install-toolchain-only",
+                        sep="",
+                    )
+            self.add_cmake_options(
+                LLVM_BUILD_LLVM_DYLIB=False,
+                LLVM_LINK_LLVM_DYLIB=False,
+                LLVM_BUILD_LLVM_C_DYLIB=False,
+                CLANG_LINK_CLANG_DYLIB=False,
+                LLVM_INCLUDE_UTILS=False,
+                LLVM_INCLUDE_TESTS=False,
+                CLANG_INCLUDE_TESTS=False,
+                CLANG_ENABLE_STATIC_ANALYZER=False,
+                CLANG_ENABLE_ARCMT=False,
+                LLVM_INSTALL_TOOLCHAIN_ONLY=False,  # This prevents some targets from being created
+            )
 
         if not self.compiling_for_host():
             self.add_cmake_options(LLVM_DEFAULT_TARGET_TRIPLE=self.target_info.target_triple)
@@ -278,8 +351,10 @@ class BuildLLVMBase(CMakeProject):
     def clean(self) -> ThreadJoiner:
         # TODO: probably fine if LLVM is the only target to be built
         # Warn before cleaning LLVM to avoid wasted CPU cycles
-        if not self.query_yes_no("You are about to do a clean LLVM build. This may take a long time. Are you sure?",
-                                 default_result=True):
+        if not self.query_yes_no(
+            "You are about to do a clean LLVM build. This may take a long time. Are you sure?",
+            default_result=True,
+        ):
             return ThreadJoiner(None)
         return super().clean()
 
@@ -304,15 +379,20 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         info = self.get_compiler_info(self.CC)
         version_str = ".".join(map(str, info.version))
         if info.compiler == "apple-clang":
-            self.info("Compiler is apple clang", version_str, " -- assuming it matches required version",
-                      "%d.%d" % (major, minor))
+            self.info(
+                f"Compiler is apple clang {version_str} -- assuming it matches required version {major}.{minor}",
+            )
         elif info.compiler == "gcc":
             if info.version < (5, 0, 0):
                 self.warning("GCC older than 5.0.0 will probably not work for compiling clang!")
         elif info.compiler != "clang" or info.version < (major, minor, patch):
-            self.dependency_error(self.CC, "version", version_str,
-                                  "is not supported. Clang version %d.%d or newer is required." % (major, minor),
-                                  install_instructions=self.clang_install_hint())
+            self.dependency_error(
+                self.CC,
+                "version",
+                version_str,
+                "is not supported. Clang version %d.%d or newer is required." % (major, minor),
+                install_instructions=self.clang_install_hint(),
+            )
 
     def compile(self, **kwargs):
         if self.build_minimal_toolchain:
@@ -327,8 +407,10 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         if self.build_minimal_toolchain:
             # TODO: should allow multiple targets in self.run_make()
             make_args = self.make_args.copy()
-            make_args.add_flags("install-clang-resource-headers",
-                                *["install-" + x for x in self.minimal_toolchain_targets])
+            make_args.add_flags(
+                "install-clang-resource-headers",
+                *["install-" + x for x in self.minimal_toolchain_targets],
+            )
             self.run_make(options=make_args)
         else:
             super().install(**kwargs)
@@ -337,20 +419,32 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         # create a symlinks for triple-prefixed tools
         if "clang" in self.included_projects:
             # create cc and c++ symlinks (expected by some build systems)
-            self.create_triple_prefixed_symlinks(self.install_dir / "bin/clang", tool_name="cc",
-                                                 create_unprefixed_link=False)
-            self.create_triple_prefixed_symlinks(self.install_dir / "bin/clang++", tool_name="c++",
-                                                 create_unprefixed_link=False)
-            self.create_triple_prefixed_symlinks(self.install_dir / "bin/clang-cpp", tool_name="cpp",
-                                                 create_unprefixed_link=False)
+            self.create_triple_prefixed_symlinks(
+                self.install_dir / "bin/clang",
+                tool_name="cc",
+                create_unprefixed_link=False,
+            )
+            self.create_triple_prefixed_symlinks(
+                self.install_dir / "bin/clang++",
+                tool_name="c++",
+                create_unprefixed_link=False,
+            )
+            self.create_triple_prefixed_symlinks(
+                self.install_dir / "bin/clang-cpp",
+                tool_name="cpp",
+                create_unprefixed_link=False,
+            )
             for tool in ("clang", "clang++", "clang-cpp"):
                 self.create_triple_prefixed_symlinks(self.install_dir / "bin" / tool)
 
             # Ensure that the installed clang can find the C++ headers:
             if OSInfo.IS_MAC and Path("/Library/Developer/CommandLineTools/usr/include/c++/v1").is_dir():
                 self.makedirs(self.install_dir / "include/c++")
-                self.create_symlink(Path("/Library/Developer/CommandLineTools/usr/include/c++/v1"),
-                                    self.install_dir / "include/c++/v1", relative=False)
+                self.create_symlink(
+                    Path("/Library/Developer/CommandLineTools/usr/include/c++/v1"),
+                    self.install_dir / "include/c++/v1",
+                    relative=False,
+                )
 
         # Use the LLVM versions of all binutils by default
         if "llvm" in self.included_projects:
@@ -359,12 +453,21 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
                     # Handle old versions of LLVM where readelf isn't installed
                     self.warning(self.install_dir / ("bin/llvm-" + tool), "is missing, please update LLVM")
                     continue
-                self.create_triple_prefixed_symlinks(self.install_dir / ("bin/llvm-" + tool), tool_name=tool,
-                                                     create_unprefixed_link=True)
-            self.create_triple_prefixed_symlinks(self.install_dir / "bin/llvm-symbolizer", tool_name="addr2line",
-                                                 create_unprefixed_link=True)
-            self.create_triple_prefixed_symlinks(self.install_dir / "bin/llvm-cxxfilt", tool_name="c++filt",
-                                                 create_unprefixed_link=True)
+                self.create_triple_prefixed_symlinks(
+                    self.install_dir / ("bin/llvm-" + tool),
+                    tool_name=tool,
+                    create_unprefixed_link=True,
+                )
+            self.create_triple_prefixed_symlinks(
+                self.install_dir / "bin/llvm-symbolizer",
+                tool_name="addr2line",
+                create_unprefixed_link=True,
+            )
+            self.create_triple_prefixed_symlinks(
+                self.install_dir / "bin/llvm-cxxfilt",
+                tool_name="c++filt",
+                create_unprefixed_link=True,
+            )
 
         if "lld" in self.included_projects:
             self.create_triple_prefixed_symlinks(self.install_dir / "bin/ld.lld")
@@ -382,8 +485,11 @@ esac
 exec {lld} "$@"
 """.format(lld=self.install_dir / "bin/ld.lld")
                 self.write_file(self.install_dir / "bin/ld", script, overwrite=True, mode=0o755)
-            self.create_triple_prefixed_symlinks(self.install_dir / "bin/ld.lld", tool_name="ld",
-                                                 create_unprefixed_link=not self.target_info.is_macos())
+            self.create_triple_prefixed_symlinks(
+                self.install_dir / "bin/ld.lld",
+                tool_name="ld",
+                create_unprefixed_link=not self.target_info.is_macos(),
+            )
 
     def run_tests(self):
         if not self.compiling_for_host():
@@ -417,8 +523,16 @@ exec {lld} "$@"
         # 32103560	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-rename
         # 33349288	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-refactor
         # 41052504	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-import-test
-        for i in ("clang-scan-deps", "clang-rename", "clang-refactor", "clang-import-test", "clang-offload-bundler",
-                  "clang-offload-wrapper", "clang-extdef-mapping", "clang-check"):
+        for i in (
+            "clang-scan-deps",
+            "clang-rename",
+            "clang-refactor",
+            "clang-import-test",
+            "clang-offload-bundler",
+            "clang-offload-wrapper",
+            "clang-extdef-mapping",
+            "clang-check",
+        ):
             self.delete_file(self.install_dir / "bin" / i, warn_if_missing=True)
         self.info("Size after cleanup")
         self.run_cmd("du", "-sh", self.install_dir)
@@ -486,8 +600,12 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
     def process(self):
         if self.compiling_for_host() and not is_jenkins_build():
             if self.get_native_install_path(self.config) != self.install_dir:
-                self.fatal("Overriding the install directory of ", self.target,
-                           " is not supported, set the global path properties instead.", fatal_when_pretending=True)
+                self.fatal(
+                    "Overriding the install directory of ",
+                    self.target,
+                    " is not supported, set the global path properties instead.",
+                    fatal_when_pretending=True,
+                )
         return super().process()
 
     @classmethod
@@ -506,20 +624,27 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     # NB: remove_duplicates is needed for --enable-hybrid-for-purecap-rootfs targets.
-    supported_architectures = remove_tuple_duplicates((
-        *CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS,
-        *CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS,
-        CompilationTargets.NATIVE_NON_PURECAP,
-    ))
+    supported_architectures = remove_tuple_duplicates(
+        (
+            *CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS,
+            *CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS,
+            CompilationTargets.NATIVE_NON_PURECAP,
+        ),
+    )
     build_all_targets: "ClassVar[bool]"
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.build_all_targets = cls.add_bool_option("build-all-targets", default=_false_unless_build_all_set,
-                                                    help="Support code generation for all architectures instead of "
-                                                         "only for CHERI+Host. This is off by "
-                                                         "default to reduce compile time.")
+        cls.build_all_targets = cls.add_bool_option(
+            "build-all-targets",
+            default=_false_unless_build_all_set,
+            help=(
+                "Support code generation for all architectures instead of "
+                "only for CHERI+Host. This is off by "
+                "default to reduce compile time."
+            ),
+        )
 
     def setup(self):
         super().setup()
@@ -543,21 +668,32 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
 
         # llvm-objdump currently doesn't infer the available features
         # This depends on https://reviews.llvm.org/D74023
-        self.write_file(self.install_dir / "bin/riscv64cheri-objdump",
-                        "#!/bin/sh\nexec '{}' --mattr=+m,+a,+f,+d,+c,+xcheri \"$@\"".format(
-                            self.install_dir / "bin/llvm-objdump"),
-                        overwrite=True, mode=0o755)
+        self.write_file(
+            self.install_dir / "bin/riscv64cheri-objdump",
+            "#!/bin/sh\nexec '{}' --mattr=+m,+a,+f,+d,+c,+xcheri \"$@\"".format(self.install_dir / "bin/llvm-objdump"),
+            overwrite=True,
+            mode=0o755,
+        )
 
     @property
     def triple_prefixes_for_binaries(self) -> "Iterable[str]":
         triples = [
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config,
-                                                 include_version=False),
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_AARCH64, self.config,
-                                                 include_version=False),
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_X86_64, self.config,
-                                                 include_version=False),
-            ]
+            CheriBSDTargetInfo.triple_for_target(
+                CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                self.config,
+                include_version=False,
+            ),
+            CheriBSDTargetInfo.triple_for_target(
+                CompilationTargets.CHERIBSD_AARCH64,
+                self.config,
+                include_version=False,
+            ),
+            CheriBSDTargetInfo.triple_for_target(
+                CompilationTargets.CHERIBSD_X86_64,
+                self.config,
+                include_version=False,
+            ),
+        ]
         return [x + "-" for x in triples]
 
     @classmethod
@@ -575,18 +711,23 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     # NB: remove_duplicates is needed for --enable-hybrid-for-purecap-rootfs targets.
-    supported_architectures = remove_tuple_duplicates((
-        *CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS,
-        *CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS,
-        CompilationTargets.NATIVE_NON_PURECAP,
-    ))
+    supported_architectures = remove_tuple_duplicates(
+        (
+            *CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS,
+            *CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS,
+            CompilationTargets.NATIVE_NON_PURECAP,
+        ),
+    )
 
     @property
     def triple_prefixes_for_binaries(self) -> "Iterable[str]":
         triples = [
-            CheriBSDMorelloTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MORELLO_PURECAP, self.config,
-                                                        include_version=False),
-            ]
+            CheriBSDMorelloTargetInfo.triple_for_target(
+                CompilationTargets.CHERIBSD_MORELLO_PURECAP,
+                self.config,
+                include_version=False,
+            ),
+        ]
         return [x + "-" for x in triples]
 
     def configure(self, **kwargs):
@@ -626,7 +767,8 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     target = "upstream-llvm"
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.output_root / "upstream-llvm",
-        as_string="$INSTALL_ROOT/upstream-llvm")
+        as_string="$INSTALL_ROOT/upstream-llvm",
+    )
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 
     @classmethod
@@ -635,12 +777,17 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
 
 
 class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git", force_branch=True,
-                               default_branch="temporal_merge_neat")
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/llvm-project.git",
+        force_branch=True,
+        default_branch="temporal_merge_neat",
+    )
     default_directory_basename = "cherios-llvm-project"
     target = "cherios-llvm"
-    _default_install_dir_fn = ComputedDefaultValue(function=lambda config, project: config.output_root / "cherios-sdk",
-                                                   as_string="$INSTALL_ROOT/cherios-sdk")
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, project: config.output_root / "cherios-sdk",
+        as_string="$INSTALL_ROOT/cherios-sdk",
+    )
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
     hide_options_from_help = True
 
@@ -662,11 +809,19 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
         super().setup_config_options(**kwargs)
 
         def add_subproject_ptions(name):
-            rev = cls.add_config_option(name + "-git-revision", kind=str, metavar="REVISION",
-                                        help="The git revision for tools/" + name)
-            repo = cls.add_config_option(name + "-repository", kind=str, metavar="REPOSITORY",
-                                         default=cls.github_base_url + name + ".git",
-                                         help="The git repository for tools/" + name)
+            rev = cls.add_config_option(
+                name + "-git-revision",
+                kind=str,
+                metavar="REVISION",
+                help="The git revision for tools/" + name,
+            )
+            repo = cls.add_config_option(
+                name + "-repository",
+                kind=str,
+                metavar="REPOSITORY",
+                default=cls.github_base_url + name + ".git",
+                help="The git repository for tools/" + name,
+            )
             return repo, rev
 
         cls.clang_repository, cls.clang_revision = add_subproject_ptions("clang")
@@ -677,18 +832,29 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
 
     def setup(self):
         super().setup()
-        self.add_cmake_options(LLVM_TOOL_CLANG_BUILD="clang" in self.included_projects,
-                               LLVM_TOOL_LLDB_BUILD="lldb" in self.included_projects,
-                               LLVM_TOOL_LLD_BUILD="lld" in self.included_projects)
+        self.add_cmake_options(
+            LLVM_TOOL_CLANG_BUILD="clang" in self.included_projects,
+            LLVM_TOOL_LLDB_BUILD="lldb" in self.included_projects,
+            LLVM_TOOL_LLD_BUILD="lld" in self.included_projects,
+        )
 
     def update(self):
         super().update()
         if "clang" in self.included_projects:
-            GitRepository(self.clang_repository).update(self, src_dir=self.source_dir / "tools/clang",
-                                                        revision=self.clang_revision)
+            GitRepository(self.clang_repository).update(
+                self,
+                src_dir=self.source_dir / "tools/clang",
+                revision=self.clang_revision,
+            )
         if "lld" in self.included_projects:
-            GitRepository(self.lld_repository).update(self, src_dir=self.source_dir / "tools/lld",
-                                                      revision=self.lld_revision)
+            GitRepository(self.lld_repository).update(
+                self,
+                src_dir=self.source_dir / "tools/lld",
+                revision=self.lld_revision,
+            )
         if "lldb" in self.included_projects:  # Not yet usable
-            GitRepository(self.lldb_repository).update(self, src_dir=self.source_dir / "tools/lldb",
-                                                       revision=self.lldb_revision)
+            GitRepository(self.lldb_repository).update(
+                self,
+                src_dir=self.source_dir / "tools/lldb",
+                revision=self.lldb_revision,
+            )
