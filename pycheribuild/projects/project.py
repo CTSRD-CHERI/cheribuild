@@ -1127,7 +1127,7 @@ class Project(SimpleProject):
 
     def get_make_commandline(self, make_target: "Union[str, list[str]]", make_command: "Optional[str]" = None,
                              options: "Optional[MakeOptions]" = None, parallel: bool = True,
-                             compilation_db_name: "Optional[str]" = None) -> list:
+                             compilation_db_name: "Optional[str]" = None) -> "list[str]":
         if not options:
             options = self.make_args
         if not make_command:

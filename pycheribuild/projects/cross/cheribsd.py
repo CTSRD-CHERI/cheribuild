@@ -514,7 +514,7 @@ class BuildFreeBSDBase(Project):
         super().run_make(make_target, options=options, cwd=self.source_dir, parallel=parallel, **kwargs)
 
     @property
-    def jflag(self) -> list:
+    def jflag(self) -> "list[str]":
         return [self.config.make_j_flag] if self.config.make_jobs > 1 else []
 
     def set_lto_binutils(self, ar, ranlib, nm, ld) -> None:
@@ -1824,7 +1824,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
             self._copykernel(kernconfs=kernconfs, rootfs_dir=temp_rootfs, dest_dir=self.config.cheribsd_image_root,
                              dest_kernel_suffix=build_suffix, dest_all_extra=True)
 
-    def _get_all_kernel_configs(self) -> list:
+    def _get_all_kernel_configs(self) -> "list[CheriBSDConfig]":
         kernel_abis = self._get_kernel_abis_to_build()
         platform = self.get_default_kernel_platform()
         combinations = []

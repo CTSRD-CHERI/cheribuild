@@ -89,7 +89,7 @@ class QemuOptions:
         else:
             raise ValueError("Unknown target " + str(xtarget))
 
-    def disk_image_args(self, image: Path, image_format: str) -> list:
+    def disk_image_args(self, image: Path, image_format: str) -> "list[str]":
         # Probe the disk image format in case someone has overridden the default image path or format is unspecified
         if not image.exists():
             # Either we're pretending or we'll complain elsewhere.
