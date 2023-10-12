@@ -36,6 +36,7 @@ import subprocess
 import sys
 import typing
 from abc import ABC, abstractmethod
+from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
@@ -56,7 +57,7 @@ from .target_info import (
 )
 from ..processutils import extract_version, get_compiler_info, get_version_output
 from ..projects.simple_project import SimpleProject
-from ..utils import cached_property, is_jenkins_build, warning_message
+from ..utils import is_jenkins_build, warning_message
 
 
 class BuildLLVMInterface(SimpleProject if typing.TYPE_CHECKING else object):

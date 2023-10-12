@@ -39,7 +39,6 @@ import time
 import traceback
 import typing
 from pathlib import Path
-from threading import RLock
 from typing import Callable, Optional, Union
 
 from .colour import AnsiColour, coloured
@@ -56,7 +55,6 @@ __all__ = [
     "ThreadJoiner",
     "Type_T",
     "add_error_context",
-    "cached_property",
     "classproperty",
     "coloured",
     "default_make_jobs_count",
@@ -142,60 +140,6 @@ def init_global_config(config: ConfigBase, *, test_mode: bool = False) -> None:
 
 def get_global_config() -> ConfigBase:
     return GlobalConfig
-
-
-if False and sys.version_info >= (3, 8, 0):
-    # TODO: once we depend on 3.8 use functools version instead
-    # from functools import cached_property
-    pass
-else:
-    # Note: this is a copy of the python 3.8.6 implementation with f-strings removed for python 3.5.2 compat.
-    _NOT_FOUND: object = object()
-
-    # noinspection PyPep8Naming
-    class cached_property(typing.Generic[Type_T]):  # noqa: N801
-        def __init__(self, func: "Callable[[typing.Any], Type_T]") -> None:
-            self.func = func
-            self.attrname = func.__name__ if sys.version_info < (3, 6) else None
-            self.__doc__ = func.__doc__
-            self.lock = RLock()
-
-        def __set_name__(self, _, name) -> None:  # XXX: requires python 3.6
-            if self.attrname is None:
-                self.attrname = name
-            elif name != self.attrname:
-                raise TypeError(
-                    f"Cannot assign the same cached_property to two different names ({self.attrname} and {name})."
-                )
-
-        def __get__(self, instance, owner=None) -> Type_T:
-            if instance is None:
-                return self
-            if self.attrname is None:
-                raise TypeError("Cannot use cached_property instance without calling __set_name__ on it.")
-            try:
-                cache = instance.__dict__
-            except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
-                msg = (
-                    f"No '__dict__' attribute on {type(instance).__name__} instance to cache {self.attrname} property."
-                )
-                raise TypeError(msg) from None
-            val = cache.get(self.attrname, _NOT_FOUND)
-            if val is _NOT_FOUND:
-                with self.lock:
-                    # check if another thread filled cache while we awaited lock
-                    val = cache.get(self.attrname, _NOT_FOUND)
-                    if val is _NOT_FOUND:
-                        val = self.func(instance)
-                        try:
-                            cache[self.attrname] = val
-                        except TypeError:
-                            msg = (
-                                f"The '__dict__' attribute on {type(instance).__name__} instance does not support "
-                                f"item assignment for caching {self.attrname} property."
-                            )
-                            raise TypeError(msg) from None
-            return val
 
 
 def is_jenkins_build() -> bool:
@@ -600,12 +544,12 @@ def replace_one(s: str, old, new) -> str:
 
 
 def remove_duplicates(items: "typing.Iterable[Type_T]") -> "list[Type_T]":
-    # Convert to a dict to remove duplicates (retains order since python 3.6, which is our minimum)
+    # Convert to a dict to remove duplicates (retains order since python 3.6, which is older than our minimum)
     return list(dict.fromkeys(items))
 
 
 def remove_tuple_duplicates(items: "typing.Iterable[Type_T]") -> "tuple[Type_T, ...]":
-    # Convert to a dict to remove duplicates (retains order since python 3.6, which is our minimum)
+    # Convert to a dict to remove duplicates (retains order since python 3.6, which is older than our minimum)
     return tuple(dict.fromkeys(items))
 
 

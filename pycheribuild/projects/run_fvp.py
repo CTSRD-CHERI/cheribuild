@@ -32,6 +32,7 @@ import signal
 import subprocess
 import tempfile
 import typing
+from functools import cached_property
 from pathlib import Path
 from subprocess import CompletedProcess
 from typing import Optional
@@ -47,7 +48,6 @@ from ..utils import (
     AnsiColour,
     OSInfo,
     SocketAndPort,
-    cached_property,
     classproperty,
     coloured,
     find_free_port,

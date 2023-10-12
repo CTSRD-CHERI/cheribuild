@@ -27,6 +27,7 @@ import subprocess
 import time
 import typing
 from abc import ABC, abstractmethod
+from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
@@ -36,7 +37,7 @@ from .repository import GitRepository
 from .sail import BuildSailCheriRISCV
 from .simple_project import BoolConfigOption, IntConfigOption, OptionalIntConfigOption, SimpleProject
 from ..processutils import FakePopen, commandline_to_str, popen
-from ..utils import cached_property, find_free_port
+from ..utils import find_free_port
 
 
 # This repository contains various implementations and QuickCheckVEngine
