@@ -80,8 +80,8 @@ __all__ = [
     "warning_message",
 ]
 
-if sys.version_info < (3, 6, 0):
-    sys.exit("This script requires at least Python 3.6.0")
+if sys.version_info < (3, 8, 0):  # noqa: UP036
+    sys.exit("This script requires at least Python 3.8.0")
 
 Type_T = typing.TypeVar("Type_T")
 
