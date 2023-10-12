@@ -37,6 +37,7 @@ import tempfile
 import typing
 from collections import OrderedDict
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 from typing import ClassVar, Optional, Union
 
@@ -59,7 +60,7 @@ from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ConfigOptionHandle
 from ...config.target_info import AutoVarInit, CompilerType, CrossCompileTarget
 from ...processutils import latest_system_clang_tool, print_command
-from ...utils import OSInfo, ThreadJoiner, cached_property, classproperty, is_jenkins_build
+from ...utils import OSInfo, ThreadJoiner, classproperty, is_jenkins_build
 
 
 def _arch_suffixed_custom_install_dir(prefix: str) -> "ComputedDefaultValue[Path]":

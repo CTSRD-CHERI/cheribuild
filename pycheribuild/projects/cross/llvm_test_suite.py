@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import shutil
+from functools import cached_property
 from pathlib import Path
 
 from .benchmark_mixin import BenchmarkMixin
@@ -42,7 +43,7 @@ from .llvm import BuildCheriLLVM, BuildLLVMBase, BuildUpstreamLLVM
 from ..project import ReuseOtherProjectRepository
 from ..simple_project import BoolConfigOption
 from ...config.compilation_targets import FreeBSDTargetInfo
-from ...utils import cached_property, classproperty, is_jenkins_build
+from ...utils import classproperty, is_jenkins_build
 
 
 class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):

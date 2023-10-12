@@ -40,6 +40,7 @@ import time
 import typing
 from collections import OrderedDict
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 from typing import Callable, Optional, Sequence, Union
 
@@ -77,7 +78,6 @@ from ..utils import (
     InstallInstructions,
     OSInfo,
     ThreadJoiner,
-    cached_property,
     classproperty,
     coloured,
     remove_duplicates,
