@@ -56,7 +56,7 @@ _false_unless_build_all_set = ComputedDefaultValue(
 )
 
 
-def extra_llvm_lit_opts(project: SimpleProject, *, test_jobs: "Optional[int]") -> list[str]:
+def extra_llvm_lit_opts(project: SimpleProject, *, test_jobs: "Optional[int]") -> "list[str]":
     result = [project.config.make_j_flag if test_jobs is None else f"-j{test_jobs}"]
     if project.config.debug_output:
         result.append("--show-all")
