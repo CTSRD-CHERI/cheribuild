@@ -513,7 +513,7 @@ class BuildDiskImageBase(SimpleProject):
     def is_x86(self):
         return self.crosscompile_target.is_any_x86()
 
-    def run_mkimg(self, cmd: list, **kwargs):
+    def run_mkimg(self, cmd: "list[str]", **kwargs):
         if not self.mkimg_cmd or not self.mkimg_cmd.exists():
             self.fatal(f"Missing mkimg command ('{self.mkimg_cmd}')! Should be found in FreeBSD build dir.",
                        fixit_hint="Pass an explicit path to mkimg by setting the MKIMG_CMD environment variable")

@@ -1656,7 +1656,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         return kernel_abi
 
     def _get_config_variants(self, platforms: "set[ConfigPlatform]", kernel_abis: "list[KernelABI]",
-                             combine_flags: list, **filter_kwargs) -> "list[CheriBSDConfig]":
+                             combine_flags: "list[str]", **filter_kwargs) -> "list[CheriBSDConfig]":
         flag_values = itertools.product([True, False], repeat=len(combine_flags))
         combine_tuples = list(itertools.product(platforms, kernel_abis, flag_values))
         configs = []

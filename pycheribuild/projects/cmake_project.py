@@ -32,7 +32,7 @@ import shlex
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 from .project import MakeCommandKind, Project, _CMakeAndMesonSharedLogic
 from .simple_project import _default_stdout_filter
@@ -63,7 +63,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     # 3.13.4 is the minimum version for LLVM and that also allows us to use "cmake --build -j <N>" unconditionally.
     _minimum_cmake_or_meson_version: "tuple[int, ...]" = (3, 13, 4)
 
-    def _toolchain_file_list_to_str(self, value: list) -> str:
+    def _toolchain_file_list_to_str(self, value: "list[Union[str, Path]]") -> str:
         assert isinstance(value, list), f"Expected a list and not {type(value)}: {value}"
         return ";".join(map(str, value))
 
@@ -376,7 +376,7 @@ class MakefileProject(Project):
             LDFLAGS=commandline_to_str(self.default_ldflags + self.LDFLAGS),
         )
 
-    def set_make_cmd_with_args(self, var, cmd: Path, args: list) -> None:
+    def set_make_cmd_with_args(self, var, cmd: Path, args: "list[str]") -> None:
         value = str(cmd)
         if args:
             value += " " + self.commandline_to_str(args)

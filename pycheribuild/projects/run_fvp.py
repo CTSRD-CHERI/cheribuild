@@ -176,8 +176,9 @@ VOLUME /diskimg
         else:
             return [], self.install_dir / model_relpath
 
-    def execute_fvp(self, args: list, disk_image_path: "Optional[Path]" = None, firmware_path: "Optional[Path]" = None,
-                    x11=True, tcp_ports: "Optional[list[int]]" = None, interactive=True, **kwargs) -> CompletedProcess:
+    def execute_fvp(self, args: "list[str]", disk_image_path: "Optional[Path]" = None,
+                    firmware_path: "Optional[Path]" = None, x11=True, tcp_ports: "Optional[list[int]]" = None,
+                    interactive=True, **kwargs) -> CompletedProcess:
         if tcp_ports is None:
             tcp_ports = []
         display = os.getenv("DISPLAY", None)

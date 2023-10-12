@@ -60,7 +60,7 @@ class CheribuildAction(CheribuildActionEnum):
 
 
 class DefaultCheribuildConfigLoader(JsonAndCommandLineConfigLoader):
-    def finalize_options(self, available_targets: list, **kwargs) -> None:
+    def finalize_options(self, available_targets: "list[str]", **kwargs) -> None:
         target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
                                                   help="The targets to build")
         if argcomplete and self.is_completing_arguments:
@@ -82,7 +82,7 @@ class DefaultCheribuildConfigLoader(JsonAndCommandLineConfigLoader):
 
 
 class DefaultCheriConfig(CheriConfig):
-    def __init__(self, loader: ConfigLoaderBase, available_targets: list) -> None:
+    def __init__(self, loader: ConfigLoaderBase, available_targets: "list[str]") -> None:
         super().__init__(loader, action_class=CheribuildAction)
         self.default_action = CheribuildAction.BUILD
         # The run mode:

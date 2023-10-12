@@ -73,7 +73,7 @@ class BODiagTestsuite:
     def error(self, *args):
         print(self.test_prefix, "ERROR:", *args, file=sys.stderr)
 
-    def handle_testcase(self, o: Path, tools: list):
+    def handle_testcase(self, o: Path, tools: "list[str]"):
         stem = o.stem
         assert stem.startswith(self.test_prefix), stem
         exit_code_str = o.read_text(encoding="utf-8", errors="replace").rstrip()

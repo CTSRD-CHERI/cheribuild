@@ -999,7 +999,7 @@ def test_freebsd_toolchains_cheribsd_purecap():
         pytest.param("sqlite-native", [], "sqlite-native-build"),
     ],
 )
-def test_default_build_dir(target: str, args: list, expected: str):
+def test_default_build_dir(target: str, args: "list[str]", expected: str):
     # Check that the cheribsd build dir is correct
     config = _parse_arguments(args)
     target = target_manager.get_target(target, config=config, caller="test_default_arch")
@@ -1067,7 +1067,7 @@ def test_default_build_dir(target: str, args: list, expected: str):
         pytest.param("freebsd-riscv64", [], "sdk/sysroot-freebsd-riscv64", "freebsd-riscv64"),
     ],
 )
-def test_default_rootfs_and_sysroot_dir(target: str, args: list, expected_sysroot: str, expected_rootfs: str):
+def test_default_rootfs_and_sysroot_dir(target: str, args: "list[str]", expected_sysroot: str, expected_rootfs: str):
     # Check that the cheribsd build dir is correct
     config = _parse_arguments(args)
     project = _get_target_instance(target, config, BuildFreeBSD)

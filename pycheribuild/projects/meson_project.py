@@ -32,7 +32,7 @@ import itertools
 import os
 import shutil
 from pathlib import Path
-from typing import Sequence
+from typing import Sequence, Union
 
 from .project import MakeCommandKind, _CMakeAndMesonSharedLogic
 from ..config.chericonfig import BuildType
@@ -136,7 +136,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     def needs_configure(self) -> bool:
         return not (self.build_dir / "build.ninja").exists()
 
-    def _toolchain_file_list_to_str(self, values: list) -> str:
+    def _toolchain_file_list_to_str(self, values: "list[Union[str, Path]]") -> str:
         # The meson toolchain file uses python-style lists
         assert all(isinstance(x, (str, Path)) for x in values), \
             "All values should be strings/Paths: " + str(values)

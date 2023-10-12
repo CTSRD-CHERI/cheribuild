@@ -1230,7 +1230,7 @@ class Project(SimpleProject):
         assert not isinstance(value, tuple), ("Wrong type:", type(value))
         self.configure_environment[arg] = str(value)
 
-    def set_configure_prog_with_args(self, prog: str, path: Path, args: list) -> None:
+    def set_configure_prog_with_args(self, prog: str, path: Path, args: "list[Union[str, Path]]") -> None:
         fullpath = str(path)
         if args:
             fullpath += " " + self.commandline_to_str(args)
@@ -1595,7 +1595,7 @@ class _CMakeAndMesonSharedLogic(Project):
     class CommandLineArgs:
         """Simple wrapper to distinguish CMake (space-separated string) from Meson (python-style list)"""
 
-        def __init__(self, args: list) -> None:
+        def __init__(self, args: "list[Union[str, Path]]") -> None:
             self.args = args
 
         def __str__(self) -> str:
@@ -1607,7 +1607,7 @@ class _CMakeAndMesonSharedLogic(Project):
     class EnvVarPathList:
         """Simple wrapper to distinguish CMake (:-separated string) from Meson (python-style list)"""
 
-        def __init__(self, paths: list) -> None:
+        def __init__(self, paths: "list[str]") -> None:
             self.paths = paths
 
         def __str__(self) -> str:
@@ -1616,7 +1616,7 @@ class _CMakeAndMesonSharedLogic(Project):
         def __repr__(self) -> str:
             return str(self)
 
-    def _toolchain_file_list_to_str(self, value: list) -> str:
+    def _toolchain_file_list_to_str(self, value: "list[Union[str, Path]]") -> str:
         raise NotImplementedError()
 
     def _toolchain_file_command_args_to_str(self, value: CommandLineArgs) -> str:

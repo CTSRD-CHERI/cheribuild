@@ -63,7 +63,7 @@ class JenkinsConfigLoader(CommandLineConfigLoader):
         assert isinstance(self._parsed_args.targets, list)
         self._parsed_args.verbose = True
 
-    def finalize_options(self, available_targets: list, **kwargs) -> None:
+    def finalize_options(self, available_targets: "list[str]", **kwargs) -> None:
         target_option = self._parser.add_argument(
             "targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE, help="The target to build",
             choices=[*available_targets, EXTRACT_SDK_TARGET, RUN_EVERYTHING_TARGET])

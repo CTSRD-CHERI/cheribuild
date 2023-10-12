@@ -87,7 +87,7 @@ def _infer_compiler_output_path(config: "JenkinsConfig", _):
 
 
 class JenkinsConfig(CheriConfig):
-    def __init__(self, loader: ConfigLoaderBase, available_targets: list) -> None:
+    def __init__(self, loader: ConfigLoaderBase, available_targets: "list[str]") -> None:
         super().__init__(loader, action_class=JenkinsAction)
         self.cpu = loader.add_commandline_only_option(
             "cpu", default=os.getenv("CPU", "default"),

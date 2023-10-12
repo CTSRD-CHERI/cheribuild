@@ -134,7 +134,7 @@ class OpamMixin(_MixinBase):
         script = "eval `opam config env`\n" + command + "\n"
         return self.run_shell_script(script, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
 
-    def run_command_in_ocaml_env(self, command: list, cwd=None, print_verbose_only=False, **kwargs):
+    def run_command_in_ocaml_env(self, command: "list[Union[str, Path]]", cwd=None, print_verbose_only=False, **kwargs):
         self._ensure_correct_switch()
         opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         # for opam commands we don't need to prepend opam exec --
