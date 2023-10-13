@@ -70,6 +70,7 @@ def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, di
 
     # sys.argv.append("--pretend")
     print("Starting shard", num, sys.argv)
+    run_remote_lit_test.CURRENT_STAGE = run_remote_lit_test.MultiprocessStages.FINDING_SSH_PORT
     boot_cheribsd.MESSAGE_PREFIX = "\033[0;34m" + "shard" + str(num) + ": \033[0m"
     if pretend:
         boot_cheribsd.QEMU_LOGFILE = Path(os.devnull)
@@ -95,7 +96,7 @@ def libcxx_main(
         if mp_queue:
             # check that we don't get a conflict
             mp_debug(args, "Syncing shard ", shard_num, " with main process. Stage: assign SSH port")
-
+            assert run_remote_lit_test.CURRENT_STAGE == run_remote_lit_test.MultiprocessStages.FINDING_SSH_PORT
             ssh_port_queue.put((args.ssh_port, shard_num))  # check that we don't get a conflict
             run_remote_lit_test.notify_main_process(
                 args,
@@ -296,13 +297,6 @@ def run_parallel_impl(
     starttime = datetime.datetime.now()
     ssh_ports = []  # check that we don't have multiple parallel jobs trying to use the same port
     assert not mp_barrier.broken, mp_barrier
-    # FIXME: without this sleep it fails in jenkins (is the python version there broken?)
-    # Works just fine everywhere else where I test it...
-    boot_cheribsd.info("Waiting 5 seconds before releasing barrier")
-    if not get_global_config().pretend:
-        time.sleep(5)
-    mp_debug(args, "Waiting for SSH port barrier")
-    mp_barrier.wait(timeout=10)  # wait for ssh ports to be assigned
     for i in range(len(processes)):
         try:
             ssh_port, index = ssh_port_queue.get(timeout=1)
@@ -317,6 +311,7 @@ def run_parallel_impl(
             timed_out = True  # kill all child processes
             boot_cheribsd.failure("ERROR: Could not determine SSH port for one of the processes!", exit=False)
 
+    mp_barrier.wait()  # allow shards to start running
     # wait for the success/failure message from the process:
     # if the shard takes longer than 4 hours to run something went wrong
     start_time = datetime.datetime.utcnow()
@@ -380,8 +375,9 @@ def run_parallel_impl(
                     remaining_processes.remove(target_process)
                 target_process.stage = run_remote_lit_test.MultiprocessStages.EXITED
             elif shard_result[0] == run_remote_lit_test.NEXT_STAGE:
-                mp_debug(args, "===> Shard ", shard_result[1], " reached next stage: ", shard_result[2])
-                if target_process.stage == run_remote_lit_test.MultiprocessStages.BOOTING_CHERIBSD:
+                mp_debug(args, "===> Shard ", shard_result[1], " complated stage: ", shard_result[2])
+                assert target_process.stage == shard_result[2]
+                if shard_result[2] == run_remote_lit_test.MultiprocessStages.BOOTING_CHERIBSD:
                     not_booted_processes.remove(target_process)
                     boot_cheribsd.success(
                         "Shard ",
@@ -398,9 +394,12 @@ def run_parallel_impl(
                         assert mp_barrier.n_waiting == len(processes), f"{mp_barrier.n_waiting} != {len(processes)}"
                         mp_barrier.wait(timeout=10)
                         boot_cheribsd.success("Barrier has been released, tests should run now.")
-                # assert target_process.stage < shard_result[2], "STAGE WENT BACKWARDS?"
-                target_process.stage = shard_result[2]
+                target_process.stage = shard_result[3]
             elif shard_result[0] == run_remote_lit_test.FAILURE:
+                boot_cheribsd.failure(
+                    f"ERROR: Shard {target_process} faied in stage: {target_process.stage}",
+                    exit=False,
+                )
                 previous_stage = target_process.stage
                 target_process.stage = run_remote_lit_test.MultiprocessStages.FAILED
                 target_process.error_message = shard_result[2]
@@ -423,7 +422,7 @@ def run_parallel_impl(
                         shard_result[1],
                         " failed while running tests: ",
                         shard_result[2],
-                        exit=True,
+                        exit=False,
                     )
             else:
                 boot_cheribsd.failure("===> FATAL: Received invalid shard result message: ", shard_result, exit=True)

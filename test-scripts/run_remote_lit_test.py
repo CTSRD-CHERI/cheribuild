@@ -62,7 +62,7 @@ class MultiprocessStages(Enum):
     TIMED_OUT = "timed out"
 
 
-CURRENT_STAGE: MultiprocessStages = MultiprocessStages.FINDING_SSH_PORT
+CURRENT_STAGE: MultiprocessStages = MultiprocessStages.BOOTING_CHERIBSD
 
 
 def add_common_cmdline_args(parser: argparse.ArgumentParser, default_xunit_output: str, allow_multiprocessing: bool):
@@ -111,14 +111,13 @@ def notify_main_process(
     if mp_q:
         global CURRENT_STAGE  # noqa: PLW0603
         mp_debug(cmdline_args, "Next stage: ", CURRENT_STAGE, "->", stage)
-        mp_q.put((NEXT_STAGE, cmdline_args.internal_shard, stage))
+        mp_q.put((NEXT_STAGE, cmdline_args.internal_shard, CURRENT_STAGE, stage))
         CURRENT_STAGE = stage
     if barrier:
         assert mp_q
         mp_debug(cmdline_args, "Waiting for main process to release barrier for stage ", stage)
         barrier.wait()
         mp_debug(cmdline_args, "Barrier released for stage ", stage)
-        time.sleep(1)
 
 
 def flush_thread(f, qemu: boot_cheribsd.QemuCheriBSDInstance, should_exit_event: threading.Event):
@@ -210,6 +209,7 @@ def run_remote_lit_tests_impl(
         time.sleep(10)
     if mp_q:
         assert barrier is not None
+    assert CURRENT_STAGE == MultiprocessStages.BOOTING_CHERIBSD
     notify_main_process(args, MultiprocessStages.TESTING_SSH_CONNECTION, mp_q, barrier=barrier)
     if get_global_config().pretend and os.getenv("FAIL_RAISE_EXCEPTION") and args.internal_shard == 1:
         raise RuntimeError("SOMETHING WENT WRONG!")
