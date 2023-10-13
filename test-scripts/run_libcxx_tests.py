@@ -60,7 +60,7 @@ def add_cmdline_args(parser: argparse.ArgumentParser):
     )
 
 
-def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, disk_image, build_dir):
+def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, disk_image, build_dir, pretend):
     sys.argv.append("--internal-num-shards=" + str(total))
     sys.argv.append("--internal-shard=" + str(num))
     if kernel is not None:
@@ -71,7 +71,7 @@ def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, di
     # sys.argv.append("--pretend")
     print("Starting shard", num, sys.argv)
     boot_cheribsd.MESSAGE_PREFIX = "\033[0;34m" + "shard" + str(num) + ": \033[0m"
-    if get_global_config().pretend:
+    if pretend:
         boot_cheribsd.QEMU_LOGFILE = Path(os.devnull)
     else:
         boot_cheribsd.QEMU_LOGFILE = Path(build_dir, "shard-" + str(num) + ".log")
@@ -181,6 +181,7 @@ def run_parallel(args: argparse.Namespace):
                 kernel_path,
                 disk_image_path,
                 args.build_dir,
+                get_global_config().pretend,
             ),
         )
         p.stage = run_remote_lit_test.MultiprocessStages.FINDING_SSH_PORT
