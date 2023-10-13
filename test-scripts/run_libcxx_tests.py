@@ -235,9 +235,12 @@ def run_parallel(args: argparse.Namespace):
                     result.add_testsuite(error_suite)
 
             result.update_statistics()
-            result.write(str(xunit_file))
             if args.pretend:
-                print(xunit_file.read_text())
+                result.write(sys.stderr.buffer)
+                sys.stderr.flush()
+            else:
+                with xunit_file.open("w", encoding="utf-8", errors="xmlcharrefreplace") as f:
+                    result.write(f)
             boot_cheribsd.success("Done merging JUnit XML outputs into ", xunit_file)
             print("Duration: ", result.time)
             print("Tests: ", result.tests)
