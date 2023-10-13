@@ -206,12 +206,12 @@ def run_remote_lit_tests_impl(
     qemu.EXIT_ON_KERNEL_PANIC = False  # since we run multiple threads we shouldn't use sys.exit()
     boot_cheribsd.info("PID of QEMU: ", qemu.pid)
 
-    if args.pretend and os.getenv("FAIL_TIMEOUT_BOOT") and args.internal_shard == 2:
+    if get_global_config().pretend and os.getenv("FAIL_TIMEOUT_BOOT") and args.internal_shard == 2:
         time.sleep(10)
     if mp_q:
         assert barrier is not None
     notify_main_process(args, MultiprocessStages.TESTING_SSH_CONNECTION, mp_q, barrier=barrier)
-    if args.pretend and os.getenv("FAIL_RAISE_EXCEPTION") and args.internal_shard == 1:
+    if get_global_config().pretend and os.getenv("FAIL_RAISE_EXCEPTION") and args.internal_shard == 1:
         raise RuntimeError("SOMETHING WENT WRONG!")
     qemu.checked_run("cat /root/.ssh/authorized_keys", timeout=20)
     port = args.ssh_port
@@ -261,7 +261,7 @@ def run_remote_lit_tests_impl(
             c.write(config_contents.format(control_persist="no"))
         check_ssh_connection("Second SSH connection (without controlmaster)")
 
-    if args.pretend:
+    if get_global_config().pretend:
         time.sleep(2.5)
 
     extra_ssh_args = commandline_to_str(("-n", "-4", "-F", f"{tempdir}/config"))
