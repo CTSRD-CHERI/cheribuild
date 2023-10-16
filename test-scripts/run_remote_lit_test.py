@@ -286,7 +286,7 @@ def run_remote_lit_tests_impl(
     executor = commandline_to_str(ssh_executor_args)
     # TODO: I was previously passing -t -t to ssh. Is this actually needed?
     boot_cheribsd.success("Running", testsuite, "tests with executor", executor)
-    notify_main_process(args, MultiprocessStages.RUNNING_TESTS, mp_q)
+    notify_main_process(args, MultiprocessStages.RUNNING_TESTS, mp_q, barrier=barrier)
     # have to use -j1 since otherwise CheriBSD might wedge
     if llvm_lit_path is None:
         llvm_lit_path = str(test_build_dir / "bin/llvm-lit")

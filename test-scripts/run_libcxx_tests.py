@@ -193,10 +193,7 @@ def run_parallel(args: argparse.Namespace):
         atexit.register(p.terminate)
     dump_processes(processes)
     try:
-        return run_parallel_impl(args, processes, mp_q, mp_barrier, ssh_port_queue)
-    except BaseException as e:
-        boot_cheribsd.info("Got error while running run_parallel_impl (", type(e), "): ", e)
-        raise
+        run_parallel_impl(args, processes, mp_q, mp_barrier, ssh_port_queue)
     finally:
         wait_or_terminate_all_shards(processes, max_time=5, timed_out=False)
         # merge junit xml files
@@ -240,7 +237,7 @@ def run_parallel(args: argparse.Namespace):
                 result.write(sys.stderr.buffer)
                 sys.stderr.flush()
             else:
-                with xunit_file.open("w", encoding="utf-8", errors="xmlcharrefreplace") as f:
+                with xunit_file.open("wb") as f:
                     result.write(f)
             boot_cheribsd.success("Done merging JUnit XML outputs into ", xunit_file)
             print("Duration: ", result.time)
@@ -311,7 +308,6 @@ def run_parallel_impl(
             timed_out = True  # kill all child processes
             boot_cheribsd.failure("ERROR: Could not determine SSH port for one of the processes!", exit=False)
 
-    mp_barrier.wait()  # allow shards to start running
     # wait for the success/failure message from the process:
     # if the shard takes longer than 4 hours to run something went wrong
     start_time = datetime.datetime.utcnow()
@@ -323,6 +319,7 @@ def run_parallel_impl(
     boot_end_time = start_time + max_boot_time
     remaining_processes = processes.copy()
     not_booted_processes = processes.copy()
+    processes_in_next_stage = []
     retrying_queue_read = False
     while len(remaining_processes) > 0:
         if timed_out:
@@ -375,8 +372,13 @@ def run_parallel_impl(
                     remaining_processes.remove(target_process)
                 target_process.stage = run_remote_lit_test.MultiprocessStages.EXITED
             elif shard_result[0] == run_remote_lit_test.NEXT_STAGE:
-                mp_debug(args, "===> Shard ", shard_result[1], " complated stage: ", shard_result[2])
+                mp_debug(args, "===> Shard ", shard_result[1], " completed stage: ", shard_result[2])
                 assert target_process.stage == shard_result[2]
+                if processes_in_next_stage:
+                    assert processes_in_next_stage[-1] == shard_result[3]
+                processes_in_next_stage.append(shard_result[3])
+                target_process.stage = shard_result[3]
+                mp_debug(args, f"===> {len(processes_in_next_stage)}/{len(processes)} reached {shard_result[3]}")
                 if shard_result[2] == run_remote_lit_test.MultiprocessStages.BOOTING_CHERIBSD:
                     not_booted_processes.remove(target_process)
                     boot_cheribsd.success(
@@ -385,16 +387,15 @@ def run_parallel_impl(
                         " has booted successfully afer ",
                         loop_start_time - start_time,
                     )
-                    if len(not_booted_processes) == 0:
-                        boot_cheribsd.success(
-                            "All shards have booted succesfully. Releasing barrier (num_waiting = ",
-                            mp_barrier.n_waiting,
-                            ")",
-                        )
-                        assert mp_barrier.n_waiting == len(processes), f"{mp_barrier.n_waiting} != {len(processes)}"
-                        mp_barrier.wait(timeout=10)
-                        boot_cheribsd.success("Barrier has been released, tests should run now.")
-                target_process.stage = shard_result[3]
+                if len(processes_in_next_stage) == len(processes):
+                    boot_cheribsd.success(
+                        f"All shards have reached stage {processes_in_next_stage[0]} succesfully. "
+                        f"Releasing barrier (num_waiting = {mp_barrier.n_waiting})",
+                    )
+                    assert mp_barrier.n_waiting == len(processes), f"{mp_barrier.n_waiting} != {len(processes)}"
+                    mp_barrier.wait(timeout=1)
+                    boot_cheribsd.success(f"Barrier has been released, entering {target_process.stage} stage.")
+                    processes_in_next_stage = []
             elif shard_result[0] == run_remote_lit_test.FAILURE:
                 boot_cheribsd.failure(
                     f"ERROR: Shard {target_process} faied in stage: {target_process.stage}",
