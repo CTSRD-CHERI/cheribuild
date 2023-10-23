@@ -207,9 +207,10 @@ class CommandLineConfigOption(ConfigOptionBase[T]):
                  value_type: "Union[type[T], Callable[[Any], T]]", _owning_class, *,
                  _loader: "JsonAndCommandLineConfigLoader", help_hidden: bool,
                  group: "Optional[argparse._ArgumentGroup]", _fallback_names: "Optional[list[str]]" = None,
-                 _legacy_alias_names: "Optional[list[str]]" = None, **kwargs):
+                 _legacy_alias_names: "Optional[list[str]]" = None, is_fallback: bool = False, **kwargs):
         super().__init__(name, shortname, default, value_type, _owning_class, _loader=_loader,
-                         _fallback_names=_fallback_names, _legacy_alias_names=_legacy_alias_names)
+                         _fallback_names=_fallback_names, _legacy_alias_names=_legacy_alias_names,
+                         is_fallback=is_fallback)
         # hide obscure options unless --help-hidden/--help/all is passed
         if help_hidden and not self._loader.show_all_help:
             kwargs["help"] = argparse.SUPPRESS

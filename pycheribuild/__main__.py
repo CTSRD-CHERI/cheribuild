@@ -129,6 +129,9 @@ def check_not_root() -> None:
 # noinspection PyProtectedMember
 def get_config_option_value(handle: ConfigOptionHandle, config: DefaultCheriConfig) -> str:
     option = handle._get_option()
+    if option.is_fallback_only:
+        raise LookupError(f"Option '{option.full_option_name}' cannot be queried since it is a generic fallback value"
+                          f"for a target-specific option. Please use the target-suffixed on instead.")
     if option._owning_class is not None:
         project_cls: "type[SimpleProject]" = option._owning_class
         Target.instantiating_targets_should_warn = False
@@ -190,7 +193,10 @@ def real_main() -> None:
         cheri_config.pretend = True
         cheri_config.quiet = True
         handle = config_loader.option_handles[cheri_config.get_config_option]
-        print(get_config_option_value(handle, cheri_config))
+        try:
+            print(get_config_option_value(handle, cheri_config))
+        except LookupError as e:
+            fatal_error(*e.args, pretend=False)
         sys.exit()
 
     assert any(x in cheri_config.action for x in (CheribuildAction.TEST, CheribuildAction.BUILD,

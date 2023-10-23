@@ -24,6 +24,18 @@ try_run() {
     fi
 }
 
+expect_error() {
+    message="$1"
+    shift
+    echo "Expecting failure: $*"
+    if ! "$@" 2>&1 | grep "$message" > /dev/null; then
+        echo >&2 "Unexpected error message running $*, don't push this!"
+        # Run it again with stderr/stdout available:
+        "$@"; exit 1
+        exit 1
+    fi
+}
+
 # skip expensive metalog checks in pre-push hook
 export _TEST_SKIP_METALOG=1
 # Also skip `git status`, etc. invocations
@@ -33,7 +45,9 @@ export CHERIBUILD_DEBUG=1
 # check that there are no obvious mistakes:
 try_run "${srcdir}/cheribuild.py" --help
 try_run "${srcdir}/jenkins-cheri-build.py" --help
-try_run "${srcdir}/cheribuild.py" --get-config-option llvm/source-directory
+try_run "${srcdir}/cheribuild.py" --get-config-option llvm-native/source-directory
+# The unprefixed config option should fail:
+expect_error "Fatal error: Option 'llvm/source-directory' cannot be queried" "${srcdir}/cheribuild.py" --get-config-option llvm/source-directory
 try_run "${srcdir}/cheribuild.py" --get-config-option output-root
 try_run "${srcdir}/cheribuild.py" --dump-config
 try_run "${srcdir}/cheribuild.py" -p __run_everything__ --clean --build --test --benchmark

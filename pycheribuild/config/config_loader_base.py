@@ -124,7 +124,8 @@ class ConfigLoaderBase(ABC):
                 fallback_handle = self.option_handles.get(fallback_name)
                 if fallback_handle is None or fallback_handle.replaceable:
                     # Do not assign an owning class or a default value to this implicitly added fallback option.
-                    self.add_option(fallback_name, type=type, option_cls=option_cls, replaceable=fallback_replaceable)
+                    self.add_option(fallback_name, type=type, option_cls=option_cls, replaceable=fallback_replaceable,
+                                    is_fallback=True)
         option = option_cls(name, shortname, default, type, _owning_class, _loader=self,
                             _fallback_names=_fallback_names, **kwargs)
         if name in self.option_handles:
@@ -231,7 +232,7 @@ class ConfigOptionBase(AbstractConfigOption[T]):
     def __init__(self, name: str, shortname: Optional[str], default,
                  value_type: "Union[type[T], Callable[[typing.Any], T]]", _owning_class=None, *,
                  _loader: "Optional[ConfigLoaderBase]" = None, _fallback_names: "Optional[list[str]]" = None,
-                 _legacy_alias_names: "Optional[list[str]]" = None):
+                 _legacy_alias_names: "Optional[list[str]]" = None, is_fallback: bool = False):
         self.name = name
         self.shortname = shortname
         self.default = default
@@ -247,6 +248,7 @@ class ConfigOptionBase(AbstractConfigOption[T]):
         self._fallback_names = _fallback_names  # for targets such as gdb-mips, etc
         self.alias_names = _legacy_alias_names  # for targets such as gdb-mips, etc
         self._is_default_value = False
+        self.is_fallback_only = is_fallback
 
     def load_option(self, config: "ConfigBase", instance: "Optional[object]", _: type,
                     return_none_if_default=False) -> T:
