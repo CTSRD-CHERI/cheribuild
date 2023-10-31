@@ -114,12 +114,12 @@ class CheriBSDConfig:
     """
 
     def __init__(self, kernconf: str, platforms: "set[ConfigPlatform]", kernel_abi=KernelABI.NOCHERI, default=False,
-                 caprevoke=False, mfsroot=False, debug=False, benchmark=False, fuzzing=False, fett=False):
+                 nocaprevoke=False, mfsroot=False, debug=False, benchmark=False, fuzzing=False, fett=False):
         self.kernconf = kernconf
         self.platforms = platforms
         self.kernel_abi = kernel_abi
         self.default = default
-        self.caprevoke = caprevoke
+        self.nocaprevoke = nocaprevoke
         self.mfsroot = mfsroot
         self.debug = debug
         self.benchmark = benchmark
@@ -134,7 +134,7 @@ class CheriBSDConfig:
 
 class KernelConfigFactory:
     kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict([(k, None) for k in (
-        "kabi_name", "caprevoke", "platform_name", "flags")])
+        "kabi_name", "nocaprevoke", "platform_name", "flags")])
     separator: str = "_"
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {}
 
@@ -154,7 +154,7 @@ class KernelConfigFactory:
         assert False, "Should not be reached..."
 
     def get_flag_names(self, platforms: "set[ConfigPlatform]", kernel_abi: KernelABI, mfsroot=False, fuzzing=False,
-                       benchmark=False, default=False, caprevoke=False):
+                       benchmark=False, default=False, nocaprevoke=False):
         flags = []
         if mfsroot:
             flags.append(f"MFS{self.separator}ROOT")
@@ -172,8 +172,8 @@ class KernelConfigFactory:
             ctx["kabi_name"] = self.get_kabi_name(kernel_abi)
         if "platform_name" in ctx:
             ctx["platform_name"] = self.get_platform_name(platforms)
-        if "caprevoke" in ctx and kwargs.get("caprevoke", False):
-            ctx["caprevoke"] = "CAPREVOKE"
+        if "nocaprevoke" in ctx and kwargs.get("nocaprevoke", False):
+            ctx["nocaprevoke"] = "NOCAPREVOKE"
         if "flags" in ctx:
             flag_list = self.get_flag_names(platforms, kernel_abi, **kwargs)
             if flag_list:
@@ -189,7 +189,7 @@ class KernelConfigFactory:
 
 class RISCVKernelConfigFactory(KernelConfigFactory):
     kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict([(k, None) for k in (
-        "kabi_name", "caprevoke", "platform_name", "flags")])
+        "kabi_name", "nocaprevoke", "platform_name", "flags")])
     separator: str = "-"
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {
         ConfigPlatform.QEMU: "QEMU",
@@ -197,7 +197,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         ConfigPlatform.AWS: None,
     }
 
-    def get_flag_names(self, platforms: "set[ConfigPlatform]", kernel_abi: KernelABI, default=False, caprevoke=False,
+    def get_flag_names(self, platforms: "set[ConfigPlatform]", kernel_abi: KernelABI, default=False, nocaprevoke=False,
                        mfsroot=False, debug=False, benchmark=False, fuzzing=False, fett=False):
         if ConfigPlatform.GFE in platforms:
             # Suppress mfsroot flag as it is implied for GFE configurations
@@ -206,7 +206,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         if fett:
             flags.append("FETT")
         flags += super().get_flag_names(platforms, kernel_abi, mfsroot=mfsroot, fuzzing=fuzzing, benchmark=benchmark,
-                                        caprevoke=caprevoke)
+                                        nocaprevoke=nocaprevoke)
         return flags
 
     def make_all(self) -> "list[CheriBSDConfig]":
@@ -231,23 +231,23 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
 
         # Caprevoke kernels
         for kernel_abi in KernelABI:
-            configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, caprevoke=True, default=True))
+            configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, default=True))
             configs.append(
-                self.make_config({ConfigPlatform.QEMU}, kernel_abi, caprevoke=True, benchmark=True, default=True))
+                self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, benchmark=True, default=True))
             configs.append(
-                self.make_config({ConfigPlatform.QEMU}, kernel_abi, caprevoke=True, mfsroot=True, default=True))
+                self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, mfsroot=True, default=True))
             configs.append(
-                self.make_config({ConfigPlatform.QEMU}, kernel_abi, caprevoke=True, benchmark=True, mfsroot=True,
+                self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, benchmark=True, mfsroot=True,
                                  default=True))
-            configs.append(self.make_config({ConfigPlatform.GFE}, kernel_abi, caprevoke=True, mfsroot=True))
-            configs.append(self.make_config({ConfigPlatform.AWS}, kernel_abi, fett=True, caprevoke=True))
+            configs.append(self.make_config({ConfigPlatform.GFE}, kernel_abi, nocaprevoke=True, mfsroot=True))
+            configs.append(self.make_config({ConfigPlatform.AWS}, kernel_abi, fett=True, nocaprevoke=True))
 
         return configs
 
 
 class AArch64KernelConfigFactory(KernelConfigFactory):
     kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict([(k, None) for k in (
-        "platform_name", "kabi_name", "caprevoke", "flags")])
+        "platform_name", "kabi_name", "nocaprevoke", "flags")])
     separator: str = "-"
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {
         ConfigPlatform.QEMU: "GENERIC",
@@ -274,11 +274,11 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
         # Caprevoke kernels
         for kernel_abi in KernelABI:
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
-                                            caprevoke=True))
+                                            nocaprevoke=True))
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
-                                            caprevoke=True, benchmark=True))
+                                            nocaprevoke=True, benchmark=True))
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
-                                            caprevoke=True, mfsroot=True))
+                                            nocaprevoke=True, mfsroot=True))
 
         return configs
 
@@ -363,7 +363,7 @@ class CheriBSDConfigTable:
         This filters out all the specialized configuration flags defaulting all of them
         to False.
         """
-        filter_kwargs.setdefault("caprevoke", False)
+        filter_kwargs.setdefault("nocaprevoke", False)
         filter_kwargs.setdefault("debug", False)
         filter_kwargs.setdefault("benchmark", False)
         filter_kwargs.setdefault("fett", False)
@@ -1626,10 +1626,10 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                       _allow_unknown_targets=True,
                                                       help="Also build benchmark kernels")
 
-        cls.caprevoke_kernel = cls.add_bool_option(
-            "caprevoke-kernel", show_help=True, _allow_unknown_targets=True,
+        cls.build_nocaprevoke_kernels = cls.add_bool_option(
+            "build-nocaprevoke-kernels", show_help=True, _allow_unknown_targets=True,
             only_add_for_targets=CompilationTargets.ALL_CHERIBSD_CHERI_TARGETS_WITH_HYBRID,
-            help="Build kernel with caprevoke support (experimental)")
+            help="Build kernels without caprevoke support")
         if kernel_only_target:
             return  # The remaining options only affect the userspace build
         cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=False,
@@ -1684,8 +1684,8 @@ class BuildCHERIBSD(BuildFreeBSD):
         combinations = []
         if self.build_bench_kernels:
             combinations.append("benchmark")
-        if self.caprevoke_kernel:
-            combinations.append("caprevoke")
+        if self.build_nocaprevoke_kernels:
+            combinations.append("nocaprevoke")
         if self.build_fett_kernels:
             if not self.compiling_for_riscv(include_purecap=True):
                 self.warning("Unsupported architecture for FETT kernels")
@@ -1706,7 +1706,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         kernel_abi = filter_kwargs.pop("kernel_abi", self.get_default_kernel_abi())
         if xtarget.is_riscv(include_purecap=True):
             filter_kwargs.setdefault("fett", self.build_fett_kernels)
-        filter_kwargs.setdefault("caprevoke", self.caprevoke_kernel)
+        filter_kwargs.setdefault("nocaprevoke", self.build_nocaprevoke_kernels)
         config = CheriBSDConfigTable.get_default(xtarget, platform, kernel_abi, **filter_kwargs)
         return config.kernconf
 
@@ -1830,8 +1830,8 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         combinations = []
         if self.build_bench_kernels:
             combinations.append("benchmark")
-        if self.caprevoke_kernel:
-            combinations.append("caprevoke")
+        if self.build_nocaprevoke_kernels:
+            combinations.append("nocaprevoke")
         configs = self._get_config_variants({platform}, kernel_abis, combinations, mfsroot=True)
         if self.build_fpga_kernels:
             configs += self._get_config_variants(ConfigPlatform.fpga_platforms(), kernel_abis,
@@ -1842,7 +1842,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         if platform is None:
             platform = self.get_default_kernel_platform()
         kernel_abi = filter_kwargs.pop("kernel_abi", self.get_default_kernel_abi())
-        filter_kwargs.setdefault("caprevoke", self.caprevoke_kernel)
+        filter_kwargs.setdefault("nocaprevoke", self.build_nocaprevoke_kernels)
         filter_kwargs["mfsroot"] = True
         config = CheriBSDConfigTable.get_default(self.crosscompile_target, platform, kernel_abi, **filter_kwargs)
         return config.kernconf
