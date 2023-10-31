@@ -9,7 +9,7 @@ will start an instance of [CheriBSD](https://github.com/CTSRD-CHERI/cheribsd) bu
 
 ## Supported operating systems
 `cheribuild.py` has been tested and should work on FreeBSD 12 and 13.
-On Linux, Ubuntu 18.04/20.04, Debian 10 and OpenSUSE Tumbleweed are supported.
+On Linux, Ubuntu 20.04/22.04, Debian 10/11/12 and OpenSUSE Tumbleweed are supported.
 macOS 10.14 and newer is also supported.
 
 # Pre-Build Setup
