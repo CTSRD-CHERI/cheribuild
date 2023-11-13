@@ -61,30 +61,40 @@ class BuildPicoLibc(CrossCompileMesonProject):
             assert self.compiling_for_riscv(include_purecap=True), "Only tested riscv so far"
             return """
 default_flash_addr = '0x80000000'
-default_flash_size = '0x00200000'
-default_ram_addr   = '0x80200000'
+default_flash_size = '0x00400000'
+default_ram_addr   = '0x80400000'
 default_ram_size   = '0x00200000'
 """
         return ""
 
     def setup(self):
         super().setup()
-        self.add_meson_options(tests=True, multilib=False, **{
-            "io-long-long": True,
-            "tests-enable-stack-protector": False,
-        })
+        self.add_meson_options(
+            tests=True,
+            multilib=False,
+            **{
+                "io-long-long": True,
+                "io-long-double": True,
+                "tests-enable-stack-protector": False,
+                "tinystdio": True,
+            },
+        )
+        if self.compiling_for_cheri():
+            self.add_meson_options(
+                **{
+                    "newlib-initfini": False,
+                    "thread-local-storage": False,  # TODO: needs more fixes
+                },
+            )
         if self.compiling_for_host():  # see scripts/do-native-configure
-            self.add_meson_options(**{
-                "tls-model": "global-dynamic",
-                "errno-function": "auto",
-                "use-stdlib": True,
-                "picocrt": False,
-                "picolib": False,
-                "semihost": False,
-                "posix-console": True,
-                "native-tests": True,
-                "tinystdio": False,  # currently fails to build due to a linker error when building tests.
-            })
+            self.add_meson_options(
+                **{
+                    "picocrt": False,
+                    "picolib": False,
+                    "semihost": False,
+                    "posix-console": True,
+                },
+            )
 
     @property
     def default_compiler_flags(self):
@@ -109,8 +119,9 @@ default_ram_size   = '0x00200000'
         if not self.compiling_for_host():
             # Symlink libgcc.a to the build dir to allow linking against it without adding all of <sysroot>/lib.
             self.makedirs(self.build_dir / "local-libgcc")
-            self.create_symlink(self.sdk_sysroot / "lib/libgcc.a", self.build_dir / "local-libgcc/libgcc.a",
-                                print_verbose_only=False)
+            self.create_symlink(
+                self.sdk_sysroot / "lib/libgcc.a", self.build_dir / "local-libgcc/libgcc.a", print_verbose_only=False,
+            )
         super().compile(**kwargs)
 
     def install(self, **kwargs):

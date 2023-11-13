@@ -490,13 +490,15 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 LIBCXX_ENABLE_STATIC=True,
                 LIBCXX_INCLUDE_TESTS=True,
                 LIBCXX_ENABLE_EXCEPTIONS=not self.target_info.is_baremetal(),
-                LIBCXX_ENABLE_RTTI=not self.target_info.is_baremetal(),
+                LIBCXX_ENABLE_RTTI=True,  # Ensure typeinfo symbols are always available
                 LIBCXX_TEST_TARGET_FLAGS=target_test_flags,
             )
             if GitRepository.contains_commit(self, "d1367ca46ee40dd76661e3f551515d77301568c0", src_dir=self.source_dir):
                 self.add_cmake_options(LIBCXX_HARDENING_MODE="hardened")
             else:
                 self.add_cmake_options(LIBCXX_ENABLE_ASSERTIONS=True)
+                # Need to export the symbols from debug.cpp to allow linking code that defines _LIBCPP_DEBUG=1
+                self.add_cmake_options(LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS=True)
 
             if external_cxxabi is not None:
                 self.add_cmake_options(LIBCXX_CXX_ABI=external_cxxabi)
@@ -521,9 +523,9 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                     LIBCXX_ENABLE_FILESYSTEM=False,  # no <dirent.h>
                     LIBCXX_ENABLE_RANDOM_DEVICE=False,  # no /dev/urandom or similar entropy source
                     LIBCXX_ENABLE_LOCALIZATION=True,  # NB: locales are required for <iostream>
+                    LIBCXX_ENABLE_WIDE_CHARACTERS=False,  # mostly there but missing wcstold()
                     # TODO: to reduce size:
                     # LIBCXX_ENABLE_LOCALIZATION=False,  # NB: locales are required for <iostream>
-                    # LIBCXX_ENABLE_WIDE_CHARACTERS=False,  # mostly there but missing swprintf()
                     # LIBCXX_ENABLE_UNICODE=False,  # reduce size
                 )
 
