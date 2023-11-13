@@ -28,9 +28,11 @@
 # SUCH DAMAGE.
 #
 import copy
+import functools
 import inspect
 import os
 import re
+import subprocess
 import sys
 import typing
 from abc import ABCMeta, abstractmethod
@@ -49,12 +51,28 @@ from .target_info import (
     MipsFloatAbi,
     TargetInfo,
 )
+from ..processutils import extract_version, get_version_output
 from ..projects.project import Project
-from ..utils import cached_property, is_jenkins_build
+from ..utils import cached_property, is_jenkins_build, warning_message
 
 if typing.TYPE_CHECKING:  # no-combine
     from ..projects.cross.llvm import BuildLLVMMonoRepoBase  # no-combine
     from ..projects.run_qemu import AbstractLaunchFreeBSD  # no-combine
+
+
+@functools.lru_cache
+def _linker_supports_riscv_relaxations(linker: Path, config: CheriConfig) -> bool:
+    try:
+        linker_version = get_version_output(linker, config=config)
+    except subprocess.CalledProcessError as e:
+        warning_message("Failed to determine version for", linker, ":", e)
+        return False
+    if linker_version.startswith(b"GNU ld"):
+        return True
+    if linker_version.startswith(b"LLD "):
+        version = extract_version(linker_version, program_name=b"LLD", regex=re.compile(b"(\\d+)\\.(\\d+)\\.?(\\d+)?"))
+        return version >= (15, 0, 0)   # Linker relaxations are not supported with clang+lld < 15
+    return False
 
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
@@ -235,7 +253,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             # Use the insane RISC-V arch string to enable CHERI
             result.append("-march=" + cls.get_riscv_arch_string(xtarget, softfloat=softfloat))
             result.append("-mabi=" + cls.get_riscv_abi(xtarget, softfloat=softfloat))
-            result.append("-mno-relax")  # Linker relaxations are not supported with clang+lld
+            result.append("-mrelax" if _linker_supports_riscv_relaxations(instance.linker, config) else "-mno-relax")
 
             if cls.is_baremetal() or cls.is_rtems():
                 # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
