@@ -933,7 +933,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # rather than requiring cheribuild to fix things.
             broken_modules = []
             # TODO: Fix armv8crypto for the purecap kernel; overrides
-            # -march=morello+c64 by passing -march=armv8-a+crypto, but should
+            # -march=morello by passing -march=armv8-a+crypto, but should
             # *only* enable crypto, not override the baseline. Otherwise it
             # fails to build (currently hits a frontend assertion because
             # Morello Clang doesn't actually validate the arguments properly).
