@@ -240,7 +240,6 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
                 self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, benchmark=True, mfsroot=True,
                                  default=True))
             configs.append(self.make_config({ConfigPlatform.GFE}, kernel_abi, nocaprevoke=True, mfsroot=True))
-            configs.append(self.make_config({ConfigPlatform.AWS}, kernel_abi, fett=True, nocaprevoke=True))
 
         return configs
 
@@ -277,8 +276,6 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
                                             nocaprevoke=True))
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
                                             nocaprevoke=True, benchmark=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
-                                            nocaprevoke=True, mfsroot=True))
 
         return configs
 
