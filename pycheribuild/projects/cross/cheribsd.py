@@ -1707,7 +1707,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         kernel_abi = filter_kwargs.pop("kernel_abi", self.get_default_kernel_abi())
         if xtarget.is_riscv(include_purecap=True):
             filter_kwargs.setdefault("fett", self.build_fett_kernels)
-        filter_kwargs.setdefault("nocaprevoke", self.build_nocaprevoke_kernels)
         config = CheriBSDConfigTable.get_default(xtarget, platform, kernel_abi, **filter_kwargs)
         return config.kernconf
 
@@ -1843,7 +1842,6 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         if platform is None:
             platform = self.get_default_kernel_platform()
         kernel_abi = filter_kwargs.pop("kernel_abi", self.get_default_kernel_abi())
-        filter_kwargs.setdefault("nocaprevoke", self.build_nocaprevoke_kernels)
         filter_kwargs["mfsroot"] = True
         config = CheriBSDConfigTable.get_default(self.crosscompile_target, platform, kernel_abi, **filter_kwargs)
         return config.kernconf
