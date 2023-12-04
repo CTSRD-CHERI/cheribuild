@@ -348,8 +348,12 @@ class CheriBSDConfigTable:
         It is a fatal failure if 0 or more than one configurations exist.
         """
         configs = cls.get_configs(xtarget, platform=platform, kernel_abi=kernel_abi, default=True, **filter_kwargs)
-        assert len(configs) != 0, "No matching default kernel configuration"
-        assert len(configs) == 1, f"Too many default kernel configurations {configs}"
+        assert len(configs) != 0, f"No matching default kernel configuration for xtarget={xtarget}, " \
+                                  f"platform={platform.name}, kernel_abi={kernel_abi.name}, " \
+                                  f"filter_kwargs={filter_kwargs}"
+        assert len(configs) == 1, f"Too many default kernel configurations {configs} for xtarget={xtarget}, " \
+                                  f"platform={platform.name}, kernel_abi={kernel_abi.name}, " \
+                                  f"filter_kwargs={filter_kwargs}"
         return configs[0]
 
     @classmethod
