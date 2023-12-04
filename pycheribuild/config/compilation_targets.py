@@ -38,7 +38,7 @@ from pathlib import Path
 from typing import Optional
 
 from .chericonfig import CheriConfig
-from .config_loader_base import ConfigLoaderBase, ConfigOptionBase
+from .config_loader_base import ConfigLoaderBase, ConfigOptionHandle
 from .target_info import (
     AArch64FloatSimdOptions,
     AutoVarInit,
@@ -522,7 +522,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             use_benchmark_kernel_value = self.config.use_minimal_benchmark_kernel  # Load the value first to ensure
             # that it has been loaded
             use_benchmark_config_option = inspect.getattr_static(self.config, "use_minimal_benchmark_kernel")
-            assert isinstance(use_benchmark_config_option, ConfigOptionBase)
+            assert isinstance(use_benchmark_config_option, ConfigOptionHandle)
             want_benchmark_kernel = use_benchmark_kernel_value or (
                 use_benchmark_kernel_by_default and use_benchmark_config_option.is_default_value
             )

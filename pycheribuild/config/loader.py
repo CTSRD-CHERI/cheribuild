@@ -45,7 +45,13 @@ from enum import Enum
 from pathlib import Path
 
 from .computed_default_value import ComputedDefaultValue
-from .config_loader_base import ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption, _LoadedConfigValue
+from .config_loader_base import (  # noqa: F401
+    ConfigLoaderBase,
+    ConfigOptionBase,
+    ConfigOptionHandle,
+    DefaultValueOnlyConfigOption,
+    _LoadedConfigValue,
+)
 from ..colour import AnsiColour, coloured
 from ..utils import ConfigBase, error_message, fatal_error, status_update, warning_message
 
@@ -344,7 +350,7 @@ class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
         super().__init__(option_cls=DefaultValueOnlyConfigOption,
                          command_line_only_options_cls=DefaultValueOnlyConfigOption)
         # Ignore options stored in other classes
-        self.options = dict()
+        self.option_handles = dict()
 
     def load(self) -> None:
         pass
@@ -470,7 +476,7 @@ class CommandLineConfigLoader(ConfigLoaderBase):
                 all_options = getattr(self._parser, "_option_string_actions", {}).keys()
                 if not all_options:
                     error_message("Internal argparse API change, cannot detect available command line options.")
-                    all_options = ["--" + opt for opt in self.options.keys()]
+                    all_options = ["--" + opt for opt in self.option_handles.keys()]
                 # Suggesting the correct config option is quite expensive (currently we have to scan over ~64K
                 # options), so we only do this when not running tests.
                 suggestions = None
@@ -667,21 +673,23 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
         if fullname == "#include":
             return True
 
-        found_option = self.options.get(fullname)
+        found_handle = self.option_handles.get(fullname)
         # see if it is one of the alternate names is valid
-        if found_option is None:
-            for option in self.options.values():
+        if found_handle is None:
+            for handle in self.option_handles.values():
+                option = handle._get_option()
                 # only handle alternate names that aren't one character long
                 if option.shortname and len(option.shortname) > 1:
                     alternate_name = option.shortname.lstrip("-")
                     if fullname == alternate_name:
-                        found_option = option  # fine
+                        found_handle = handle  # fine
                         break
                 if option.alias_names and fullname in option.alias_names:
-                    found_option = option  # fine
+                    found_handle = handle  # fine
                     break
 
-        if found_option is not None:
+        if found_handle is not None:
+            found_option = found_handle._get_option()
             # Found an option, now verify that it's not a command-line only option
             if not isinstance(found_option, JsonAndCommandLineConfigOption):
                 errmsg = "Option '" + fullname + "' cannot be used in the config file"

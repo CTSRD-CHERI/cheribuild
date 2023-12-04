@@ -55,7 +55,7 @@ from .repository import (
 )
 from .simple_project import SimpleProject, _default_stdout_filter
 from ..config.chericonfig import BuildType, CheriConfig, ComputedDefaultValue, Linkage, supported_build_type_strings
-from ..config.config_loader_base import ConfigOptionBase
+from ..config.config_loader_base import ConfigOptionHandle
 from ..config.target_info import (
     AbstractProject,
     AutoVarInit,
@@ -826,7 +826,7 @@ class Project(SimpleProject):
             self.default_directory_basename = self.default_directory_basename(self.config, self)
         if isinstance(self.repository, ReuseOtherProjectRepository):
             initial_source_dir = inspect.getattr_static(self, "_initial_source_dir")
-            assert isinstance(initial_source_dir, ConfigOptionBase)
+            assert isinstance(initial_source_dir, ConfigOptionHandle)
             # noinspection PyProtectedMember
             assert initial_source_dir._get_default_value(self.config, self) is None, \
                 "initial source dir != None for ReuseOtherProjectRepository"

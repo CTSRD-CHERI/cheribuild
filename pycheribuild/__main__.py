@@ -44,7 +44,7 @@ from .config.defaultconfig import CheribuildAction, DefaultCheribuildConfigLoade
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
-from .config.loader import ConfigOptionBase, MyJsonEncoder
+from .config.loader import ConfigOptionHandle, MyJsonEncoder
 from .processutils import get_program_version, print_command, run_and_kill_children_on_exit, run_command
 
 # make sure all projects are loaded so that target_manager gets populated
@@ -127,7 +127,8 @@ def check_not_root() -> None:
 
 
 # noinspection PyProtectedMember
-def get_config_option_value(option: ConfigOptionBase, config: DefaultCheriConfig) -> str:
+def get_config_option_value(handle: ConfigOptionHandle, config: DefaultCheriConfig) -> str:
+    option = handle._get_option()
     if option._owning_class is not None:
         project_cls: "type[SimpleProject]" = option._owning_class
         Target.instantiating_targets_should_warn = False
@@ -174,7 +175,7 @@ def real_main() -> None:
         json_dict = OrderedDict()
         cheri_config.pretend = True
         cheri_config.quiet = True
-        for v in cheri_config.loader.options.values():
+        for v in cheri_config.loader.option_handles.values():
             try:
                 json_dict[v.full_option_name] = get_config_option_value(v, cheri_config)
             except LookupError:
@@ -184,12 +185,12 @@ def real_main() -> None:
         json.dump(json_dict, sys.stdout, sort_keys=True, cls=MyJsonEncoder, indent=4)
         sys.exit()
     elif cheri_config.get_config_option:
-        if cheri_config.get_config_option not in config_loader.options:
+        if cheri_config.get_config_option not in config_loader.option_handles:
             fatal_error("Unknown config key", cheri_config.get_config_option, pretend=False)
         cheri_config.pretend = True
         cheri_config.quiet = True
-        option = config_loader.options[cheri_config.get_config_option]
-        print(get_config_option_value(option, cheri_config))
+        handle = config_loader.option_handles[cheri_config.get_config_option]
+        print(get_config_option_value(handle, cheri_config))
         sys.exit()
 
     assert any(x in cheri_config.action for x in (CheribuildAction.TEST, CheribuildAction.BUILD,

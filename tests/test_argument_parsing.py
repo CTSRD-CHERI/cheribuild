@@ -16,7 +16,7 @@ import pytest
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
 from pycheribuild.config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
-from pycheribuild.config.loader import ConfigLoaderBase, ConfigOptionBase, JsonAndCommandLineConfigOption
+from pycheribuild.config.loader import ConfigLoaderBase, ConfigOptionHandle, JsonAndCommandLineConfigOption
 from pycheribuild.jenkins_utils import jenkins_override_install_dirs_hack
 
 # noinspection PyUnresolvedReferences
@@ -96,7 +96,8 @@ def test_skip_update():
     # default is false:
     conf = _parse_arguments(["--skip-configure"])
     skip = inspect.getattr_static(conf, "skip_update")
-    assert isinstance(skip, JsonAndCommandLineConfigOption)
+    assert isinstance(skip, ConfigOptionHandle)
+    assert isinstance(skip._get_option(), JsonAndCommandLineConfigOption)
     assert not _parse_arguments(["--skip-configure"]).skip_update
     # check that --no-foo and --foo work:
     assert _parse_arguments(["--skip-update"]).skip_update
@@ -534,7 +535,8 @@ def test_kernconf():
     assert config.freebsd_kernconf == "LINT"
     attr = inspect.getattr_static(freebsd_riscv, "kernel_config")
     # previously we would replace the command line attribute with a string -> check this is no longer true
-    assert isinstance(attr, JsonAndCommandLineConfigOption)
+    assert isinstance(attr, ConfigOptionHandle)
+    assert isinstance(attr._get_option(), JsonAndCommandLineConfigOption)
     assert freebsd_riscv.kernel_config == "FOO"
     assert cheribsd_riscv_hybrid.kernel_config == "LINT"
     assert freebsd_native.kernel_config == "LINT"
@@ -1180,7 +1182,7 @@ def test_mfs_root_kernel_config_options():
     config_options = [
         attr
         for attr in project.__class__.__dict__
-        if isinstance(inspect.getattr_static(project, attr), ConfigOptionBase)
+        if isinstance(inspect.getattr_static(project, attr), ConfigOptionHandle)
     ]
     config_options.sort()
     assert config_options == [

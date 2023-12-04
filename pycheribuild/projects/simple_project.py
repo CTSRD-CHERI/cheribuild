@@ -44,7 +44,7 @@ from types import MappingProxyType
 from typing import Callable, Optional, Union
 
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue
-from ..config.config_loader_base import ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption
+from ..config.config_loader_base import ConfigLoaderBase, ConfigOptionHandle, DefaultValueOnlyConfigOption
 from ..config.target_info import (
     AbstractProject,
     AutoVarInit,
@@ -221,7 +221,7 @@ class PerProjectConfigOption:
         self._help = help
         self._kwargs = kwargs
 
-    def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionBase:
+    def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
         raise NotImplementedError()
 
     # noinspection PyProtectedMember
@@ -254,8 +254,8 @@ else:
                      **kwargs):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionBase:
-            return typing.cast(ConfigOptionBase,
+        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
+            return typing.cast(ConfigOptionHandle,
                                owner.add_bool_option(self._name, default=self._default, help=self._help,
                                                      **self._kwargs))
 
@@ -263,8 +263,8 @@ else:
         def __init__(self, name: str, help: str, default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionBase:
-            return typing.cast(ConfigOptionBase,
+        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
+            return typing.cast(ConfigOptionHandle,
                                owner.add_config_option(self._name, default=self._default, help=self._help, kind=int,
                                                        **self._kwargs))
 
@@ -273,8 +273,8 @@ else:
                      default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]" = None, **kwargs):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionBase:
-            return typing.cast(ConfigOptionBase,
+        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
+            return typing.cast(ConfigOptionHandle,
                                owner.add_config_option(self._name, default=self._default, help=self._help, kind=int,
                                                        **self._kwargs))
 
@@ -750,7 +750,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     @classmethod
     def get_config_option_name(cls, option: str) -> str:
         option = inspect.getattr_static(cls, option)
-        assert isinstance(option, ConfigOptionBase)
+        assert isinstance(option, ConfigOptionHandle)
         return option.full_option_name
 
     @classmethod
@@ -804,6 +804,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                             cls.supported_architectures)
             if target is not None and target not in only_add_for_targets and not typing.TYPE_CHECKING:
                 kwargs["option_cls"] = DefaultValueOnlyConfigOption
+                kwargs["fallback_replaceable"] = True
 
         # We don't want to inherit certain options from the non-target specific class since they should always be
         # set directly for that target. Currently the only such option is build-directory since sharing that would
