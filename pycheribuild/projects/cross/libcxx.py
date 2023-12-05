@@ -439,6 +439,9 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
         lit_args = f'--xunit-xml-output "{self.build_dir}/test-results.xml" --max-time 3600 --timeout 300 -s'
         external_cxxabi = None
         enabled_runtimes = self.get_enabled_runtimes()
+        # CMake will attempt to build a C++ executable when detecting compiler features, but
+        # it's possible that this target is the actual provider of libc++ (e.g. for baremetal)
+        self.add_cmake_options(_CMAKE_FEATURE_DETECTION_TARGET_TYPE="STATIC_LIBRARY")
         if self.target_info.is_freebsd() and self.llvm_project is not BuildUpstreamLLVM:
             # When targeting FreeBSD we use libcxxrt instead of the local libc++abi:
             with suppress(ValueError):
