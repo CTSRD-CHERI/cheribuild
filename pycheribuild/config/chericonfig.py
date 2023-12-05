@@ -35,6 +35,7 @@ import re
 import shutil
 import typing
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
@@ -44,7 +45,6 @@ from ..processutils import latest_system_clang_tool, run_command
 from ..utils import (
     ConfigBase,
     DoNotUseInIfStmt,
-    cached_property,
     fatal_error,
     have_working_internet_connection,
     status_update,

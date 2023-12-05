@@ -1,4 +1,4 @@
-FROM python:3.7.0
+FROM python:3.11.0
 LABEL maintainer="Alexander.Richardson@cl.cam.ac.uk"
 
 COPY requirements.txt /tmp/requirements.txt

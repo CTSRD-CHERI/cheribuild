@@ -1,11 +1,8 @@
 [tool.ruff]
 select = ["E", "F", "I", "N", "W", "U", "COM", "RUF", "PLC", "PLE", "PLW"]
 # Ensure suggested fixes are compatible with our minimum supported version
-# XXX: Currently this is py36, but the minimum supported by ruff is py37.
-target-version = "py37"
+target-version = "py38"
 ignore = [
-    "UP037",  # Remove quotes from type annotation, not possible until we start using 3.7 as the minimum
-    "UP036", # 'Version block is outdated for minimum Python version' to be removed when we set the minimum to 3.8
     "PLW2901", # `for` loop variable `value` overwritten by assignment target
     "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar` (cannot be fixed due to bug)
 ]
@@ -22,7 +19,7 @@ line-length = 120
 
 [tool.black]
 line-length = 120
-target-version = ['py36']
+target-version = ['py38']
 # 'extend-exclude' excludes files or directories in addition to the defaults
 # Currently reformatting pycheribuild/ results in lots of weird formatting, so
 # let's restrict this to the other files for now.

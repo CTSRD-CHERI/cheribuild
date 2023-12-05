@@ -39,7 +39,6 @@ import time
 import traceback
 import typing
 from pathlib import Path
-from threading import RLock
 from typing import Callable, Optional, Union
 
 from .colour import AnsiColour, coloured
@@ -51,11 +50,11 @@ __all__ = ["typing", "include_local_file", "Type_T", "init_global_config",  # no
            "SafeDict", "error_message", "ConfigBase", "final", "add_error_context",  # no-combine
            "default_make_jobs_count", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
            "classproperty", "find_free_port", "have_working_internet_connection", "SocketAndPort",  # no-combine
-           "is_case_sensitive_dir", "replace_one", "cached_property", "remove_prefix",  # no-combine
+           "is_case_sensitive_dir", "replace_one", "remove_prefix",  # no-combine
            "remove_duplicates", "remove_tuple_duplicates"]  # no-combine
 
-if sys.version_info < (3, 6, 0):
-    sys.exit("This script requires at least Python 3.6.0")
+if sys.version_info < (3, 8, 0):   # noqa: UP036
+    sys.exit("This script requires at least Python 3.8.0")
 
 Type_T = typing.TypeVar("Type_T")
 
@@ -113,56 +112,6 @@ def init_global_config(config: ConfigBase, *, test_mode: bool = False) -> None:
 
 def get_global_config() -> ConfigBase:
     return GlobalConfig
-
-
-if False and sys.version_info >= (3, 8, 0):
-    # TODO: once we depend on 3.8 use functools version instead
-    # from functools import cached_property
-    pass
-else:
-    # Note: this is a copy of the python 3.8.6 implementation with f-strings removed for python 3.5.2 compat.
-    _NOT_FOUND: object = object()
-
-    # noinspection PyPep8Naming
-    class cached_property(typing.Generic[Type_T]):  # noqa: N801
-        def __init__(self, func: "Callable[[typing.Any], Type_T]") -> None:
-            self.func = func
-            self.attrname = func.__name__ if sys.version_info < (3, 6) else None
-            self.__doc__ = func.__doc__
-            self.lock = RLock()
-
-        def __set_name__(self, _, name) -> None:  # XXX: requires python 3.6
-            if self.attrname is None:
-                self.attrname = name
-            elif name != self.attrname:
-                raise TypeError("Cannot assign the same cached_property to two different names "
-                                f"({self.attrname} and {name}).")
-
-        def __get__(self, instance, owner=None) -> Type_T:
-            if instance is None:
-                return self
-            if self.attrname is None:
-                raise TypeError("Cannot use cached_property instance without calling __set_name__ on it.")
-            try:
-                cache = instance.__dict__
-            except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
-                msg = ("No '__dict__' attribute on {} instance to cache {} property.".format(type(instance).__name__,
-                                                                                             self.attrname))
-                raise TypeError(msg) from None
-            val = cache.get(self.attrname, _NOT_FOUND)
-            if val is _NOT_FOUND:
-                with self.lock:
-                    # check if another thread filled cache while we awaited lock
-                    val = cache.get(self.attrname, _NOT_FOUND)
-                    if val is _NOT_FOUND:
-                        val = self.func(instance)
-                        try:
-                            cache[self.attrname] = val
-                        except TypeError:
-                            msg = ("The '__dict__' attribute on {} instance does not support item assignment for"
-                                   " caching {} property.".format(type(instance).__name__, self.attrname))
-                            raise TypeError(msg) from None
-            return val
 
 
 def is_jenkins_build() -> bool:
@@ -522,12 +471,12 @@ def replace_one(s: str, old, new) -> str:
 
 
 def remove_duplicates(items: "typing.Iterable[Type_T]") -> "list[Type_T]":
-    # Convert to a dict to remove duplicates (retains order since python 3.6, which is our minimum)
+    # Convert to a dict to remove duplicates (retains order since python 3.6, which is older than our minimum)
     return list(dict.fromkeys(items))
 
 
 def remove_tuple_duplicates(items: "typing.Iterable[Type_T]") -> "tuple[Type_T, ...]":
-    # Convert to a dict to remove duplicates (retains order since python 3.6, which is our minimum)
+    # Convert to a dict to remove duplicates (retains order since python 3.6, which is older than our minimum)
     return tuple(dict.fromkeys(items))
 
 

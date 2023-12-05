@@ -32,6 +32,7 @@ import signal
 import subprocess
 import tempfile
 import typing
+from functools import cached_property
 from pathlib import Path
 from subprocess import CompletedProcess
 from typing import Optional
@@ -43,7 +44,7 @@ from ..config.chericonfig import CheriConfig, ComputedDefaultValue
 from ..config.compilation_targets import CompilationTargets
 from ..config.target_info import CrossCompileTarget
 from ..processutils import extract_version, popen
-from ..utils import AnsiColour, OSInfo, SocketAndPort, cached_property, classproperty, coloured, find_free_port
+from ..utils import AnsiColour, OSInfo, SocketAndPort, classproperty, coloured, find_free_port
 
 
 class InstallMorelloFVP(SimpleProject):

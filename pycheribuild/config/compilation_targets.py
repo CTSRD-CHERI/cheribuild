@@ -34,6 +34,7 @@ import re
 import sys
 import typing
 from abc import ABCMeta, abstractmethod
+from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
@@ -50,7 +51,7 @@ from .target_info import (
     TargetInfo,
 )
 from ..projects.project import Project
-from ..utils import cached_property, is_jenkins_build
+from ..utils import is_jenkins_build
 
 if typing.TYPE_CHECKING:  # no-combine
     from ..projects.cross.llvm import BuildLLVMMonoRepoBase  # no-combine

@@ -34,6 +34,7 @@ import shutil
 import sys
 import tempfile
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
@@ -53,7 +54,7 @@ from .project import (
 from .simple_project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile
-from ..utils import AnsiColour, cached_property, classproperty, coloured, include_local_file
+from ..utils import AnsiColour, classproperty, coloured, include_local_file
 
 # Notes:
 # Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo

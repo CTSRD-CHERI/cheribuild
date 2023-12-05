@@ -32,13 +32,14 @@ import platform
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 from typing import ClassVar, Optional
 
 from .chericonfig import AArch64FloatSimdOptions, CheriConfig, MipsFloatAbi
 from ..filesystemutils import FileSystemUtils
 from ..processutils import CompilerInfo, get_compiler_info
-from ..utils import OSInfo, cached_property, fatal_error, final, status_update, warning_message
+from ..utils import OSInfo, fatal_error, final, status_update, warning_message
 
 __all__ = ["AbstractProject", "AArch64FloatSimdOptions", "AutoVarInit", "BasicCompilationTargets",  # no-combine
            "CPUArchitecture",  "CrossCompileTarget", "CompilerType", "MipsFloatAbi", "TargetInfo",  # no-combine

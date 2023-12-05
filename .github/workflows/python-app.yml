@@ -13,7 +13,7 @@ jobs:
     build-baseline:
         runs-on: ubuntu-latest
         container:
-          image: python:3.6.0
+          image: python:3.8.0
         steps:
             -   uses: actions/checkout@v3
             -   name: Install dependencies
