@@ -146,7 +146,7 @@ class CheribuildActionEnum(Enum):
     option_name: str
     help_message: str
     altname: str
-    actions: "list[CheribuildActionEnum]"
+    actions: "list[typing.Any]"  # actually list[CheribuildActionEnum] but pytype errors on that
 
 
 class CheriConfig(ConfigBase):
