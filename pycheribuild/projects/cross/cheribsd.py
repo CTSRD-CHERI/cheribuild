@@ -1774,11 +1774,6 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     # We want the CheriBSD config options as well, so that defaults (e.g. build-alternate-abi-kernels) are inherited.
     _config_inherits_from: "type[BuildCHERIBSD]" = BuildCHERIBSD
 
-    @classproperty
-    def mfs_root_image_class(self) -> "type[SimpleProject]":
-        from ..disk_image import BuildMfsRootCheriBSDDiskImage
-        return BuildMfsRootCheriBSDDiskImage
-
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         # No need to rebuild kernel-toolchain, the full toolchain must have
@@ -1787,7 +1782,8 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
 
     @cached_property
     def image(self) -> Path:
-        return self.mfs_root_image_class.get_instance(self).disk_image_path
+        image_project = self.get_instance_for_target_name("disk-image-minimal", self.crosscompile_target, self)
+        return image_project.disk_image_path
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
