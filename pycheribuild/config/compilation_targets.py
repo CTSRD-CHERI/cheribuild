@@ -1013,10 +1013,10 @@ set(CMAKE_DL_LIBS "")
             return super().additional_executable_link_flags + self.semihosting_ldflags()
         return []
 
-    def _get_rootfs_project(self, xtarget: CrossCompileTarget) -> "Project":
+    def _get_rootfs_class(self, xtarget: CrossCompileTarget) -> "type[Project]":
         from ..projects.cross.picolibc import BuildPicoLibc
 
-        return BuildPicoLibc.get_instance(self.project, cross_target=xtarget)
+        return BuildPicoLibc.get_class_for_target(xtarget)
 
 
 class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
