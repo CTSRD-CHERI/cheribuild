@@ -126,7 +126,8 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         # See https://github.com/mesonbuild/meson/issues/6220, https://github.com/mesonbuild/meson/issues/6541, etc.
         if not self.compiling_for_host():
             extra_libdirs = [s / self.target_info.default_libdir for s in self.dependency_install_prefixes]
-            with contextlib.suppress(LookupError):  # If there isn't a rootfs, we use the absolute paths instead.
+            # If there isn't a rootfs, we use the absolute paths instead.
+            with contextlib.suppress(LookupError, ValueError):
                 # If we are installing into a rootfs, remove the rootfs prefix from the RPATH
                 extra_libdirs = ["/" + str(s.relative_to(self.rootfs_dir)) for s in extra_libdirs]
             rpath_dirs = remove_duplicates(self.target_info.additional_rpath_directories + extra_libdirs)
