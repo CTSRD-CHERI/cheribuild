@@ -60,7 +60,7 @@ if typing.TYPE_CHECKING:  # no-combine
     from ..projects.run_qemu import AbstractLaunchFreeBSD  # no-combine
 
 
-@functools.lru_cache
+@functools.lru_cache(maxsize=20)
 def _linker_supports_riscv_relaxations(linker: Path, config: CheriConfig) -> bool:
     try:
         linker_version = get_version_output(linker, config=config)
