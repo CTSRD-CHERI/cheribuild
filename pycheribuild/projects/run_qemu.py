@@ -38,7 +38,6 @@ from pathlib import Path
 from typing import Optional
 
 from .build_qemu import BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
-from .cherios import BuildCheriOS
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.gdb import BuildGDB
 from .cross.u_boot import BuildUBoot
@@ -770,56 +769,6 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             result += ("bbl-baremetal-riscv64-purecap",)
         return result
-
-
-class LaunchCheriOSQEMU(LaunchQEMUBase):
-    target = "run-cherios"
-    dependencies = ("qemu", "cherios")
-    supported_architectures = (CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP)
-    forward_ssh_port = False
-    qemu_user_networking = False
-    hide_options_from_help = True
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(default_ssh_port=get_default_ssh_forwarding_port(40), **kwargs)
-
-    @property
-    def source_project(self):
-        return BuildCheriOS.get_instance(self, self.config)
-
-    def setup(self):
-        super().setup()
-        # FIXME: these should be config options
-        cherios = BuildCheriOS.get_instance(self, self.config)
-        self.current_kernel = cherios.build_dir / "boot/cherios.elf"
-        self.disk_image = self.config.output_root / "cherios-disk.img"
-        self._project_specific_options = ["-no-reboot", "-global", "virtio-mmio.force-legacy=false"]
-
-        if cherios.build_net:
-            self._after_disk_options.extend([
-                "-netdev", "tap,id=tap0,ifname=cherios_tap,script=no,downscript=no",
-                "-device", "virtio-net-device,netdev=tap0",
-            ])
-
-        if cherios.smp_cores > 1:
-            self._project_specific_options.append("-smp")
-            self._project_specific_options.append(str(cherios.smp_cores))
-
-        self.qemu_options.virtio_disk = True  # CheriOS needs virtio
-        self.qemu_options.force_virtio_blk_device = True
-        self.qemu_user_networking = False
-
-    def process(self):
-        if not self.disk_image.exists():
-            if self.query_yes_no("CheriOS disk image is missing. Would you like to create a zero-filled 1MB image?"):
-                size_flag = "bs=128m" if OSInfo.IS_MAC else "bs=128M"
-                self.run_cmd("dd", "if=/dev/zero", "of=" + str(self.disk_image), size_flag, "count=1")
-        super().process()
-
-    def get_riscv_bios_args(self) -> "list[str]":
-        # CheriOS bundles its kernel with its own bootloader
-        return ["-bios", "none"]
 
 
 class LaunchDmQEMU(LaunchCheriBSD):

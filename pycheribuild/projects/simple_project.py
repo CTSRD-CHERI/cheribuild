@@ -76,7 +76,8 @@ from ..utils import (
 
 __all__ = [  # no-combine
     "_cached_get_homebrew_prefix", "_clear_line_sequence", "_default_stdout_filter",  # no-combine
-    "flush_stdio", "SimpleProject", "TargetAlias", "TargetAliasWithDependencies", "BoolConfigOption",  # no-combine
+    "flush_stdio", "SimpleProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
+    "BoolConfigOption", "IntConfigOption",  # no-combine
 ]  # no-combine
 
 T = typing.TypeVar("T")
@@ -574,23 +575,29 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         assert isinstance(result, SimpleProject)
         return result
 
+    @staticmethod
+    def get_instance_for_target_name(target_name: str, cross_target: CrossCompileTarget, config: CheriConfig,
+                                     caller: "Optional[AbstractProject]" = None) -> "SimpleProject":
+        if caller is not None:
+            assert caller._init_called, "Cannot call this inside __init__()"
+        assert cross_target is not None
+        target = target_manager.get_target(target_name, required_arch=cross_target, config=config, caller=caller)
+        result = target.get_or_create_project(cross_target, config, caller=caller)
+        assert isinstance(result, SimpleProject)
+        found_target = result.get_crosscompile_target()
+        # XXX: FIXME: add cross target to every call
+        assert found_target is cross_target, (f"Didn't find right instance of {target_name}: {found_target} vs "
+                                              f"{cross_target}, caller was {caller!r}")
+        return result
+
     @classmethod
     def get_instance_for_cross_target(cls: "type[T]", cross_target: CrossCompileTarget, config: CheriConfig,
                                       caller: "Optional[AbstractProject]" = None) -> T:
         # Also need to handle calling self.get_instance_for_cross_target() on a target-specific instance
         # In that case cls.target returns e.g. foo-mips, etc. and target_manager will always return the MIPS version
-        if caller is not None:
-            assert caller._init_called, "Cannot call this inside __init__()"
+        # which is not what we want if there is an explicit cross_target
         root_class = getattr(cls, "synthetic_base", cls)
-        target = target_manager.get_target(root_class.target, required_arch=cross_target, config=config, caller=caller)
-        result = target.get_or_create_project(cross_target, config, caller=caller)
-        assert isinstance(result, SimpleProject)
-        found_target = result.get_crosscompile_target()
-        # XXX: FIXME: add cross target to every call
-        assert cross_target is not None
-        assert found_target is cross_target, "Didn't find right instance of " + str(cls) + ": " + str(
-            found_target) + " vs. " + str(cross_target) + ", caller was " + repr(caller)
-        return result
+        return cls.get_instance_for_target_name(root_class.target, cross_target, config, caller)
 
     @classproperty
     def default_architecture(self) -> "Optional[CrossCompileTarget]":

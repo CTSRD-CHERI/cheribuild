@@ -522,9 +522,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             ), "All other architectures can boot directly"
             if disk_image_path is None and not has_test_extra_arg_override("--disk-image"):
                 assert self.is_cheribsd(), "Not supported for FreeBSD yet"
-                from ..projects.disk_image import BuildMinimalCheriBSDDiskImage
-
-                instance = BuildMinimalCheriBSDDiskImage.get_instance(self.project, cross_target=rootfs_xtarget)
+                instance = self.project.get_instance_for_target_name(
+                    "disk-image-minimal", cross_target=rootfs_xtarget, config=self.config, caller=self.project,
+                )
+                # noinspection PyUnresolvedReferences
                 disk_image_path = instance.disk_image_path
                 if not disk_image_path.exists():
                     self.project.dependency_error(
