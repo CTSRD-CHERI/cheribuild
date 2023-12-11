@@ -449,9 +449,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return BuildUpstreamLLVM
 
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[Project]":
-        from ..projects.cross.cheribsd import BuildFreeBSD
-
-        return BuildFreeBSD.get_class_for_target(xtarget)
+        return Project.get_class_for_target_name("freebsd", xtarget)
 
     def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
         raise NotImplementedError("Only implemented for CheriBSD")
@@ -693,9 +691,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         ]
 
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[Project]":
-        from ..projects.cross.cheribsd import BuildCHERIBSD
-
-        return BuildCHERIBSD.get_class_for_target(xtarget)
+        return Project.get_class_for_target_name("cheribsd", xtarget)
 
     def cheribsd_version(self) -> "Optional[int]":
         pattern = re.compile(r"#define\s+__CheriBSD_version\s+([0-9]+)")
@@ -938,9 +934,7 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
         return True
 
     def _get_rootfs_class(self, xtarget: CrossCompileTarget) -> "type[Project]":
-        from ..projects.cross.newlib import BuildNewlib
-
-        return BuildNewlib.get_class_for_target(xtarget)
+        return Project.get_class_for_target_name("newlib", xtarget)
 
 
 class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
@@ -1014,9 +1008,7 @@ set(CMAKE_DL_LIBS "")
         return []
 
     def _get_rootfs_class(self, xtarget: CrossCompileTarget) -> "type[Project]":
-        from ..projects.cross.picolibc import BuildPicoLibc
-
-        return BuildPicoLibc.get_class_for_target(xtarget)
+        return Project.get_class_for_target_name("picolibc", xtarget)
 
 
 class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
