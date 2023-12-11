@@ -86,7 +86,7 @@ def _linker_supports_riscv_relaxations(linker: Path, config: CheriConfig) -> boo
         return True
     if linker_version.startswith(b"LLD "):
         version = extract_version(linker_version, program_name=b"LLD", regex=re.compile(b"(\\d+)\\.(\\d+)\\.?(\\d+)?"))
-        return version >= (15, 0, 0)   # Linker relaxations are not supported with clang+lld < 15
+        return version >= (15, 0, 0)  # Linker relaxations are not supported with clang+lld < 15
     return False
 
 
