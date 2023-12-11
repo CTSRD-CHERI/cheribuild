@@ -50,7 +50,7 @@ from .disk_image import (
 )
 from .project import CheriConfig, ComputedDefaultValue, CPUArchitecture, Project
 from .simple_project import BoolConfigOption, SimpleProject, TargetAliasWithDependencies
-from ..config.compilation_targets import CompilationTargets
+from ..config.compilation_targets import CompilationTargets, LaunchFreeBSDInterface
 from ..config.target_info import CrossCompileTarget
 from ..qemu_utils import QemuOptions, qemu_supports_9pfs, riscv_bios_arguments
 from ..utils import AnsiColour, OSInfo, classproperty, coloured, fatal_error, find_free_port, is_jenkins_build
@@ -588,7 +588,7 @@ class LaunchQEMUBase(SimpleProject):
             return False
 
 
-class AbstractLaunchFreeBSD(LaunchQEMUBase):
+class AbstractLaunchFreeBSD(LaunchQEMUBase, LaunchFreeBSDInterface):
     do_not_add_to_targets = True
     kernel_project: Optional[BuildFreeBSD]
     disk_image_project: Optional[BuildDiskImageBase]

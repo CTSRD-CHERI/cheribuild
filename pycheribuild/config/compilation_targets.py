@@ -53,11 +53,22 @@ from .target_info import (
 )
 from ..processutils import extract_version, get_version_output
 from ..projects.project import Project
+from ..projects.simple_project import SimpleProject
 from ..utils import cached_property, is_jenkins_build, warning_message
 
 if typing.TYPE_CHECKING:  # no-combine
     from ..projects.cross.llvm import BuildLLVMMonoRepoBase  # no-combine
-    from ..projects.run_qemu import AbstractLaunchFreeBSD  # no-combine
+
+
+class LaunchFreeBSDInterface:
+    current_kernel: Optional[Path]
+    disk_image: Optional[Path]
+    kernel_project: Optional[Project]
+    disk_image_project: Optional[Project]
+
+    @classmethod
+    def get_chosen_qemu(cls, config: CheriConfig):
+        raise NotImplementedError()
 
 
 @functools.lru_cache(maxsize=20)
@@ -115,7 +126,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             if hasattr(project, "path_in_rootfs"):
                 assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
                 return self._rootfs_path() / project.path_in_rootfs[1:]
-            # noinspection PyUnresolvedReferences
+            # noinspection PyUnresolvedReferences,PyProtectedMember
             return self._rootfs_path() / "opt" / self.install_prefix_dirname / project._rootfs_install_dir_name
         elif install_dir == DefaultInstallDir.KDE_PREFIX:
             return Path(self._rootfs_path(), "opt", self.install_prefix_dirname, "kde")
@@ -454,10 +465,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
         raise NotImplementedError("Only implemented for CheriBSD")
 
-    def _get_run_project(self) -> "type[AbstractLaunchFreeBSD]":
-        from ..projects.run_qemu import LaunchFreeBSD
-
-        return LaunchFreeBSD
+    def _get_run_project(self, xtarget: "CrossCompileTarget", caller: SimpleProject) -> LaunchFreeBSDInterface:
+        result = SimpleProject.get_instance_for_target_name("run-freebsd", xtarget, caller.config, caller)
+        return typing.cast(LaunchFreeBSDInterface, result)
 
     def run_cheribsd_test_script(
         self,
@@ -488,10 +498,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         from ..qemu_utils import QemuOptions
 
         qemu_options = QemuOptions(rootfs_xtarget)
-        run_instance: AbstractLaunchFreeBSD = self._get_run_project().get_instance(
-            self.project,
-            cross_target=rootfs_xtarget,
-        )
+        run_instance: LaunchFreeBSDInterface = self._get_run_project(rootfs_xtarget, self.project)
         if rootfs_xtarget.cpu_architecture not in (
             CPUArchitecture.MIPS64,
             CPUArchitecture.RISCV64,
@@ -567,7 +574,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         if kernel_path and not has_test_extra_arg_override("--kernel"):
             cmd.extend(["--kernel", kernel_path])
         if not has_test_extra_arg_override("--qemu-cmd"):
-            chosen_qemu = run_instance.chosen_qemu
+            chosen_qemu = run_instance.get_chosen_qemu(self.config)
             # FIXME: this is rather ugly: In order to access the binary property we have to call setup() first, but
             #  we can't call setup() on the run_instance since that might result in multiple calls to setup().
             # noinspection PyProtectedMember
@@ -624,10 +631,9 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
         return BuildCheriLLVM
 
-    def _get_run_project(self) -> "type[AbstractLaunchFreeBSD]":
-        from ..projects.run_qemu import LaunchCheriBSD
-
-        return LaunchCheriBSD
+    def _get_run_project(self, xtarget: "CrossCompileTarget", caller: SimpleProject) -> LaunchFreeBSDInterface:
+        result = SimpleProject.get_instance_for_target_name("run", xtarget, caller.config, caller)
+        return typing.cast(LaunchFreeBSDInterface, result)
 
     @classmethod
     def is_cheribsd(cls) -> bool:
