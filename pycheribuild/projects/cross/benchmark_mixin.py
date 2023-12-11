@@ -36,6 +36,7 @@ from typing import Optional
 from .crosscompileproject import CompilationTargets
 from ..project import Project
 from ...config.chericonfig import BuildType
+from ...config.compilation_targets import CheriBSDTargetInfo
 from ...processutils import commandline_to_str
 from ...utils import SocketAndPort, find_free_port
 
@@ -116,9 +117,12 @@ class BenchmarkMixin(_BenchmarkMixinBase):
         from ...projects.cross.cheribsd import BuildCheriBsdMfsKernel, ConfigPlatform
         if self.config.benchmark_with_qemu:
             # When benchmarking with QEMU we always spawn a new instance
+            target = self.target_info
+            assert isinstance(target, CheriBSDTargetInfo)
             # noinspection PyProtectedMember
-            kernel_image = self.target_info._get_mfs_root_kernel(ConfigPlatform.QEMU,
-                                                                 not self.config.benchmark_with_debug_kernel)
+            kernel_image = target._get_run_project(xtarget.get_rootfs_target(), self).get_qemu_mfs_root_kernel(
+                not self.config.benchmark_with_debug_kernel,
+            )
             basic_args.append("--kernel-img=" + str(kernel_image))
         elif self.config.benchmark_clean_boot:
             # use a bitfile from jenkins. TODO: add option for overriding

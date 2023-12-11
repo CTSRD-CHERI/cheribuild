@@ -45,6 +45,7 @@ from .target_info import (
     AArch64FloatSimdOptions,
     AutoVarInit,
     BasicCompilationTargets,
+    CompilerType,
     CPUArchitecture,
     CrossCompileTarget,
     DefaultInstallDir,
@@ -68,6 +69,9 @@ class LaunchFreeBSDInterface:
 
     @classmethod
     def get_chosen_qemu(cls, config: CheriConfig):
+        raise NotImplementedError()
+
+    def get_qemu_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
         raise NotImplementedError()
 
 
@@ -343,18 +347,15 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return str(self.FREEBSD_VERSION) + ".0"
 
     def _get_sdk_root_dir_lazy(self) -> Path:
-        from ..projects.cross.cheribsd import BuildFreeBSD, FreeBSDToolchainKind
-
         # Determine the toolchain based on --freebsd/toolchain=<>
         xtarget = self.target.get_rootfs_target()
         # We don't want to call setup() yet on the FreeBSD instance (not needed to get the compiler)
         # noinspection PyProtectedMember
         fbsd = self._get_rootfs_class(xtarget)._get_instance_no_setup(self.project, cross_target=xtarget)
-        assert isinstance(fbsd, BuildFreeBSD)
         configured_path = fbsd.build_toolchain_root_dir
         if configured_path is None:
             # If we couldn't find a working system compiler, default to cheribuild-compiled upstream LLVM.
-            assert fbsd.build_toolchain == FreeBSDToolchainKind.DEFAULT_COMPILER
+            assert fbsd.build_toolchain == CompilerType.DEFAULT_COMPILER
             # noinspection PyUnresolvedReferences
             return self._get_compiler_project().get_native_install_path(self.config)
         return configured_path
@@ -462,9 +463,6 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[Project]":
         return Project.get_class_for_target_name("freebsd", xtarget)
 
-    def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
-        raise NotImplementedError("Only implemented for CheriBSD")
-
     def _get_run_project(self, xtarget: "CrossCompileTarget", caller: SimpleProject) -> LaunchFreeBSDInterface:
         result = SimpleProject.get_instance_for_target_name("run-freebsd", xtarget, caller.config, caller)
         return typing.cast(LaunchFreeBSDInterface, result)
@@ -528,7 +526,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             if disk_image_path is None and not has_test_extra_arg_override("--disk-image"):
                 assert self.is_cheribsd(), "Not supported for FreeBSD yet"
                 instance = self.project.get_instance_for_target_name(
-                    "disk-image-minimal", cross_target=rootfs_xtarget, config=self.config, caller=self.project,
+                    "disk-image-minimal",
+                    cross_target=rootfs_xtarget,
+                    config=self.config,
+                    caller=self.project,
                 )
                 # noinspection PyUnresolvedReferences
                 disk_image_path = instance.disk_image_path
@@ -539,8 +540,6 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                         cheribuild_xtarget=rootfs_xtarget,
                     )
         elif kernel_path is None and not has_test_extra_arg_override("--kernel"):
-            from ..projects.cross.cheribsd import ConfigPlatform
-
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
             # --no-use-minimal-benchmark-kernel on the command line or in the config JSON
             use_benchmark_kernel_value = self.config.use_minimal_benchmark_kernel  # Load the value first to ensure
@@ -550,7 +549,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             want_benchmark_kernel = use_benchmark_kernel_value or (
                 use_benchmark_kernel_by_default and use_benchmark_config_option.is_default_value
             )
-            kernel_path = self._get_mfs_root_kernel(ConfigPlatform.QEMU, want_benchmark_kernel)
+            kernel_path = run_instance.get_qemu_mfs_root_kernel(want_benchmark_kernel)
             if (kernel_path is None or not kernel_path.exists()) and is_jenkins_build():
                 jenkins_kernel_path = self.config.cheribsd_image_root / "kernel.xz"
                 if jenkins_kernel_path.exists():
@@ -638,18 +637,6 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     @classmethod
     def is_cheribsd(cls) -> bool:
         return True
-
-    def _get_mfs_root_kernel(self, platform, use_benchmark_kernel: bool) -> Path:
-        assert self.is_cheribsd(), "Other cases not handled yet"
-        from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel
-
-        xtarget = self.target.get_rootfs_target()
-        if xtarget not in BuildCheriBsdMfsKernel.supported_architectures:
-            self.project.fatal("No MFS kernel for target", xtarget)
-            raise ValueError()
-        mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(xtarget, self.config, caller=self.project)
-        kernconf = mfs_kernel.default_kernel_config(platform, benchmark=use_benchmark_kernel)
-        return mfs_kernel.get_kernel_install_path(kernconf)
 
     @property
     def freebsd_target_arch(self):

@@ -1782,8 +1782,8 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
 
     @cached_property
     def image(self) -> Path:
-        image_project = self.get_instance_for_target_name("disk-image-minimal", self.crosscompile_target, self)
-        return image_project.disk_image_path
+        from ..disk_image import BuildMfsRootCheriBSDDiskImage
+        return BuildMfsRootCheriBSDDiskImage.get_instance(self).disk_image_path
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
