@@ -710,26 +710,32 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     @classmethod
     def get_class_for_target(cls: "type[T]", arch: CrossCompileTarget) -> "type[T]":
-        target = target_manager.get_target_raw(cls.target)
+        base_class: "type[T]" = getattr(cls, "synthetic_base", cls)
+        result = cls.get_class_for_target_name(base_class.target, arch)
+        assert issubclass(result, base_class)
+        return result
+
+    @classmethod
+    def get_class_for_target_name(cls: "type[T]", name: str, arch: Optional[CrossCompileTarget]) -> "type[T]":
+        target = target_manager.get_target_raw(name)
         if isinstance(target, MultiArchTarget):
             # check for exact match
             if target.target_arch is arch:
-                assert issubclass(target.project_class, cls)
                 return target.project_class
             # Otherwise fall back to the target alias and find the matching one
             target = target.base_target
         if isinstance(target, MultiArchTargetAlias):
+            if arch is None:
+                return target.project_class
             for t in target.derived_targets:
                 if t.target_arch is arch:
-                    assert issubclass(t.project_class, target.project_class)
                     return t.project_class
         elif isinstance(target, Target):
             # single architecture target
             result = target.project_class
             if arch is None or result._xtarget is arch:
-                assert issubclass(result, cls)
                 return result
-        raise LookupError("Invalid arch " + str(arch) + " for class " + str(cls))
+        raise LookupError(f"Invalid arch {arch} for target {name}")
 
     @property
     def cross_sysroot_path(self) -> Path:
