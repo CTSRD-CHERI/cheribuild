@@ -770,6 +770,15 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
             result += ("bbl-baremetal-riscv64-purecap",)
         return result
 
+    def get_qemu_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
+        xtarget = self.crosscompile_target.get_rootfs_target()
+        if xtarget not in BuildCheriBsdMfsKernel.supported_architectures:
+            self.fatal("No MFS kernel for target", xtarget)
+            raise ValueError()
+        mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(xtarget, self.config, caller=self)
+        kernconf = mfs_kernel.default_kernel_config(ConfigPlatform.QEMU, benchmark=use_benchmark_kernel)
+        return mfs_kernel.get_kernel_install_path(kernconf)
+
 
 class LaunchDmQEMU(LaunchCheriBSD):
     target = "run-dm"
