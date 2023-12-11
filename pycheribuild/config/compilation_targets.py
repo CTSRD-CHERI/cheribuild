@@ -57,8 +57,13 @@ from ..projects.project import Project
 from ..projects.simple_project import SimpleProject
 from ..utils import cached_property, is_jenkins_build, warning_message
 
-if typing.TYPE_CHECKING:  # no-combine
-    from ..projects.cross.llvm import BuildLLVMMonoRepoBase  # no-combine
+
+class BuildLLVMInterface(Project if typing.TYPE_CHECKING else object):
+    @classmethod
+    def get_native_install_path(cls, config: CheriConfig) -> Path:
+        # This returns the path where the installed compiler is expected to be
+        # Note: When building LLVM in Jenkins this will not match the install_directory
+        raise NotImplementedError()
 
 
 class LaunchFreeBSDInterface:
@@ -109,7 +114,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         return self._sdk_root_dir
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
+    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
         raise NotImplementedError()
 
     def _get_sdk_root_dir_lazy(self) -> Path:
@@ -455,10 +460,8 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return Path("usr/local")
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
-        from ..projects.cross.llvm import BuildUpstreamLLVM
-
-        return BuildUpstreamLLVM
+    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("upstream-llvm", None))
 
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[Project]":
         return Project.get_class_for_target_name("freebsd", xtarget)
@@ -625,10 +628,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     FREEBSD_VERSION: int = 13
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
-        from ..projects.cross.llvm import BuildCheriLLVM
-
-        return BuildCheriLLVM
+    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("llvm", None))
 
     def _get_run_project(self, xtarget: "CrossCompileTarget", caller: SimpleProject) -> LaunchFreeBSDInterface:
         result = SimpleProject.get_instance_for_target_name("run", xtarget, caller.config, caller)
@@ -704,10 +705,8 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     uses_morello_llvm: bool = True
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
-        from ..projects.cross.llvm import BuildMorelloLLVM
-
-        return BuildMorelloLLVM
+    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("morello-llvm", None))
 
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config, *, include_version):
@@ -757,10 +756,8 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
         return self._get_compiler_project().get_native_install_path(self.config)
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
-        from ..projects.cross.llvm import BuildCheriOSLLVM
-
-        return BuildCheriOSLLVM
+    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("cherios-llvm", None))
 
     @property
     def sysroot_dir(self):
@@ -826,10 +823,8 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
         return Path(self.target_triple)
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
-        from ..projects.cross.llvm import BuildCheriLLVM
-
-        return BuildCheriLLVM
+    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("llvm", None))
 
     @property
     def must_link_statically(self):
@@ -885,10 +880,8 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
         return sysroot_dir / "baremetal" / suffix
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
-        from ..projects.cross.llvm import BuildCheriLLVM
-
-        return BuildCheriLLVM
+    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("llvm", None))
 
     @classmethod
     def triple_for_target(cls, target, config, include_version: bool) -> str:
@@ -958,10 +951,8 @@ set(CMAKE_DL_LIBS "")
         return sysroot_dir / "picolibc" / self.target.get_rootfs_target().generic_arch_suffix
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
-        from ..projects.cross.llvm import BuildCheriLLVM
-
-        return BuildCheriLLVM
+    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("llvm", None))
 
     def semihosting_ldflags(self) -> "list[str]":
         stack_size = "4k"
@@ -1009,10 +1000,8 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
     os_prefix: str = "baremetal-"
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
-        from ..projects.cross.llvm import BuildCheriLLVM
-
-        return BuildCheriLLVM
+    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("llvm", None))
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
@@ -1034,10 +1023,8 @@ class MorelloBaremetalTargetInfo(BaremetalFreestandingTargetInfo):
     uses_morello_llvm: bool = True
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMMonoRepoBase]":
-        from ..projects.cross.llvm import BuildMorelloLLVM
-
-        return BuildMorelloLLVM
+    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("morello-llvm", None))
 
     @property
     def sysroot_dir(self) -> Path:

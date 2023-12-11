@@ -37,6 +37,7 @@ from ..project import BuildType, ComputedDefaultValue, DefaultInstallDir, GitRep
 from ..simple_project import SimpleProject
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import (
+    BuildLLVMInterface,
     CheriBSDMorelloTargetInfo,
     CheriBSDTargetInfo,
     CompilationTargets,
@@ -556,7 +557,7 @@ exec {lld} "$@"
         self.run_cmd("du", "-sh", self.install_dir)
 
 
-class BuildLLVMMonoRepoBase(BuildLLVMBase):
+class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
     do_not_add_to_targets = True
     root_cmakelists_subdirectory = Path("llvm")
 
@@ -625,12 +626,6 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
                     fatal_when_pretending=True,
                 )
         return super().process()
-
-    @classmethod
-    def get_native_install_path(cls, config: CheriConfig):
-        # This returns the path where the installed compiler is expected to be
-        # Note: When building LLVM in Jenkins this will not match the install_directory
-        raise NotImplementedError()
 
 
 class BuildCheriLLVM(BuildLLVMMonoRepoBase):
