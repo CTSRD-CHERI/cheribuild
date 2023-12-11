@@ -190,9 +190,9 @@ class GitRepository(SourceRepository):
                     break  # end of metadata information
                 key, value = line[1:].decode("utf-8").split(None, maxsplit=1)
                 headers[key] = value
-            upstream = headers.get("branch.upstream", None)
+            upstream = headers.get("branch.upstream", "")
             remote_name, remote_branch = upstream.split("/", maxsplit=1) if upstream else (None, None)
-            return GitBranchInfo(local_branch=headers.get("branch.head", None),
+            return GitBranchInfo(local_branch=headers.get("branch.head", ""),
                                  remote_name=remote_name, upstream_branch=remote_branch)
         except subprocess.CalledProcessError as e:
             if isinstance(e.__cause__, FileNotFoundError):

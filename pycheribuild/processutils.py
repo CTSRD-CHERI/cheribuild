@@ -502,7 +502,7 @@ class CompilerInfo:
         return self._resource_dir
 
     def get_include_dirs(self, basic_flags: "list[str]") -> "list[Path]":
-        include_dirs = self._include_dirs.get(tuple(basic_flags), None)
+        include_dirs = self._include_dirs.get(tuple(*basic_flags), None)
         if include_dirs is None:
             if not self.path.exists():
                 return [Path("/unknown/include/dir")]  # avoid failing in jenkins
@@ -525,7 +525,7 @@ class CompilerInfo:
                 warning_message("Could not determine include dirs for", self.path, basic_flags)
             if self.config.verbose:
                 print("Include paths for", self.path, basic_flags, "are", include_dirs)
-            self._include_dirs[tuple(basic_flags)] = include_dirs
+            self._include_dirs[tuple(*basic_flags)] = include_dirs
         return list(include_dirs)
 
     def _supports_flag(self, flag: str, other_args: "list[str]") -> bool:
@@ -540,12 +540,12 @@ class CompilerInfo:
         return result.returncode == 0
 
     def supports_sanitizer_flag(self, sanitzer_flag: str, arch_flags: "list[str]"):
-        result = self._supported_sanitizer_flags.get((sanitzer_flag, tuple(arch_flags)))
+        result = self._supported_sanitizer_flags.get((sanitzer_flag, tuple(*arch_flags)))
         if result is None:
             assert sanitzer_flag.startswith("-fsanitize")
             result = self._supports_flag(sanitzer_flag,
                                          [*arch_flags, "-c", "-xc", "/dev/null", "-Werror", "-o", "/dev/null"])
-            self._supported_sanitizer_flags[(sanitzer_flag, tuple(arch_flags))] = result
+            self._supported_sanitizer_flags[(sanitzer_flag, tuple(*arch_flags))] = result
         return result
 
     def supports_warning_flag(self, flag: str) -> bool:

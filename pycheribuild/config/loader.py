@@ -256,7 +256,7 @@ class CommandLineConfigOption(ConfigOptionBase[T]):
             if action_kind is None:
                 kwargs["action"] = StoreActionWithPossibleAliases
             else:
-                assert action_kind == "append", "Unhandled action " + action_kind
+                assert action_kind == "append", f"Unhandled action {action_kind}"
         # TODO: instantiate the actions and call parser_obj._add_action() to skip some slow argparse code
         # TODO: but need to investigate if that API is stable across versions
         if shortname:
