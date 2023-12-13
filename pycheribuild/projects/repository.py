@@ -42,18 +42,33 @@ from ..utils import AnsiColour, ConfigBase, coloured, remove_prefix, status_upda
 if typing.TYPE_CHECKING:
     from .project import Project
 
-__all__ = ["GitRepository", "ExternallyManagedSourceRepository", "MercurialRepository",  # no-combine
-           "ReuseOtherProjectRepository", "ReuseOtherProjectDefaultTargetRepository",  # no-combine
-           "SubversionRepository", "TargetBranchInfo", "SourceRepository"]  # no-combine
+__all__ = [
+    "GitRepository",
+    "ExternallyManagedSourceRepository",
+    "MercurialRepository",
+    "ReuseOtherProjectRepository",
+    "ReuseOtherProjectDefaultTargetRepository",
+    "SubversionRepository",
+    "TargetBranchInfo",
+    "SourceRepository",
+]
 
 
 class SourceRepository:
-    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path,
-                      skip_submodules=False) -> None:
+    def ensure_cloned(
+        self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path, skip_submodules=False,
+    ) -> None:
         raise NotImplementedError
 
-    def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: "Optional[Path]" = None,
-               revision=None, skip_submodules=False) -> None:
+    def update(
+        self,
+        current_project: "Project",
+        *,
+        src_dir: Path,
+        base_project_source_dir: "Optional[Path]" = None,
+        revision=None,
+        skip_submodules=False,
+    ) -> None:
         raise NotImplementedError
 
     def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Path) -> Path:
@@ -69,8 +84,14 @@ class ExternallyManagedSourceRepository(SourceRepository):
 
 
 class ReuseOtherProjectRepository(SourceRepository):
-    def __init__(self, source_project: "type[Project]", *, subdirectory=".",
-                 repo_for_target: "Optional[CrossCompileTarget]" = None, do_update=False):
+    def __init__(
+        self,
+        source_project: "type[Project]",
+        *,
+        subdirectory=".",
+        repo_for_target: "Optional[CrossCompileTarget]" = None,
+        do_update=False,
+    ):
         self.source_project = source_project
         self.subdirectory = subdirectory
         self.repo_for_target = repo_for_target
@@ -82,9 +103,11 @@ class ReuseOtherProjectRepository(SourceRepository):
         if not src.exists():
             current_project.fatal(
                 f"Source repository for target {current_project.target} does not exist.",
-                fixit_hint=f"This project uses the sources from the {self.source_project.target} target so you will"
-                f" have to clone that first. Try running:\n\t`cheribuild.py {self.source_project.target} "
-                f"--no-skip-update --skip-configure --skip-build --skip-install`",
+                fixit_hint=(
+                    f"This project uses the sources from the {self.source_project.target} target so you will"
+                    f" have to clone that first. Try running:\n\t`cheribuild.py {self.source_project.target} "
+                    "--no-skip-update --skip-configure --skip-build --skip-install`"
+                ),
             )
 
     def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Optional[Path]) -> Path:
@@ -97,14 +120,19 @@ class ReuseOtherProjectRepository(SourceRepository):
             src_proj = self.source_project.get_instance(current_project, cross_target=self.repo_for_target)
             src_proj.update()
         else:
-            current_project.info("Not updating", src_dir, "since it reuses the repository for ",
-                                 self.source_project.target)
+            current_project.info(
+                "Not updating", src_dir, "since it reuses the repository for ", self.source_project.target,
+            )
 
 
 class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
     def __init__(self, source_project: "type[Project]", *, subdirectory=".", do_update=False):
-        super().__init__(source_project, subdirectory=subdirectory, do_update=do_update,
-                         repo_for_target=source_project.supported_architectures[0])
+        super().__init__(
+            source_project,
+            subdirectory=subdirectory,
+            do_update=do_update,
+            repo_for_target=source_project.supported_architectures[0],
+        )
 
 
 # Use git-worktree to handle per-target branches:
@@ -126,11 +154,18 @@ class GitBranchInfo(typing.NamedTuple):
 
 
 class GitRepository(SourceRepository):
-    def __init__(self, url: str, *, old_urls: "Optional[list[bytes]]" = None, default_branch: "Optional[str]" = None,
-                 force_branch: bool = False, temporary_url_override: "Optional[str]" = None,
-                 url_override_reason: "typing.Any" = None,
-                 per_target_branches: "Optional[dict[CrossCompileTarget, TargetBranchInfo]]" = None,
-                 old_branches: "Optional[dict[str, str]]" = None):
+    def __init__(
+        self,
+        url: str,
+        *,
+        old_urls: "Optional[list[bytes]]" = None,
+        default_branch: "Optional[str]" = None,
+        force_branch: bool = False,
+        temporary_url_override: "Optional[str]" = None,
+        url_override_reason: "typing.Any" = None,
+        per_target_branches: "Optional[dict[CrossCompileTarget, TargetBranchInfo]]" = None,
+        old_branches: "Optional[dict[str, str]]" = None,
+    ):
         self.old_urls = old_urls
         if temporary_url_override is not None:
             self.url = temporary_url_override
@@ -179,9 +214,20 @@ class GitRepository(SourceRepository):
     @staticmethod
     def get_branch_info(src_dir: Path, config: ConfigBase) -> "Optional[GitBranchInfo]":
         try:
-            status = run_command("git", "status", "-b", "-s", "--porcelain=v2", "-u", "no",
-                                 capture_output=True, print_verbose_only=True, cwd=src_dir,
-                                 run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, config=config)
+            status = run_command(
+                "git",
+                "status",
+                "-b",
+                "-s",
+                "--porcelain=v2",
+                "-u",
+                "no",
+                capture_output=True,
+                print_verbose_only=True,
+                cwd=src_dir,
+                run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+                config=config,
+            )
             if not status.stdout.startswith(b"# branch"):
                 return None  # unexpected output format
             headers = {}
@@ -192,30 +238,48 @@ class GitRepository(SourceRepository):
                 headers[key] = value
             upstream = headers.get("branch.upstream", "")
             remote_name, remote_branch = upstream.split("/", maxsplit=1) if upstream else (None, None)
-            return GitBranchInfo(local_branch=headers.get("branch.head", ""),
-                                 remote_name=remote_name, upstream_branch=remote_branch)
+            return GitBranchInfo(
+                local_branch=headers.get("branch.head", ""), remote_name=remote_name, upstream_branch=remote_branch,
+            )
         except subprocess.CalledProcessError as e:
             if isinstance(e.__cause__, FileNotFoundError):
                 return None  # git not installed
             # Fall back to v1 output on error (v2 requires git 2.11 -- which should be available everywhere)
             # TODO: can we drop this support? I believe all systems should have support for git 2.11
-            status = run_command("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                                 capture_output=True, print_verbose_only=True, cwd=src_dir,
-                                 run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, config=config)
+            status = run_command(
+                "git",
+                "status",
+                "-b",
+                "-s",
+                "--porcelain",
+                "-u",
+                "no",
+                capture_output=True,
+                print_verbose_only=True,
+                cwd=src_dir,
+                run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS,
+                config=config,
+            )
             if not status.stdout.startswith(b"## "):
                 return None  # unexpected output format
             branch_info = status.stdout.splitlines()[0].decode("utf-8")
             local_end_idx = branch_info.find("...")
             if local_end_idx == -1:
-                return GitBranchInfo(local_branch=branch_info[3:])   # no upstream configured
+                return GitBranchInfo(local_branch=branch_info[3:])  # no upstream configured
             local_branch = branch_info[3:local_end_idx]
             upstream = branch_info[local_end_idx + 3 :].split()[0].rstrip()
             remote_name, remote_branch = upstream.split("/", maxsplit=1)
             return GitBranchInfo(local_branch=local_branch, remote_name=remote_name, upstream_branch=remote_branch)
 
     @staticmethod
-    def contains_commit(current_project: "Project", commit: str, *, src_dir: Path, expected_branch="HEAD",
-                        invalid_commit_ref_result: typing.Any = False):
+    def contains_commit(
+        current_project: "Project",
+        commit: str,
+        *,
+        src_dir: Path,
+        expected_branch="HEAD",
+        invalid_commit_ref_result: typing.Any = False,
+    ):
         if current_project.config.pretend and (not src_dir.exists() or not shutil.which("git")):
             return False
         # Note: merge-base --is-ancestor exits with code 0/1, so we need to pass allow_unexpected_returncode
@@ -233,25 +297,35 @@ class GitRepository(SourceRepository):
             return True
         elif is_ancestor.returncode == 1:
             current_project.verbose_print(
-                coloured(AnsiColour.blue, expected_branch, "does not contains commit", commit))
+                coloured(AnsiColour.blue, expected_branch, "does not contains commit", commit),
+            )
             return False
         elif is_ancestor.returncode == 128 or (
-                is_ancestor.stderr and (b"Not a valid commit name" in is_ancestor.stderr or  # e.g. not fetched yet
-                                        b"no upstream configured" in is_ancestor.stderr)):  # @{u} without an upstream.
+            is_ancestor.stderr
+            and (
+                b"Not a valid commit name" in is_ancestor.stderr
+                or b"no upstream configured" in is_ancestor.stderr  # e.g. not fetched yet
+            )
+        ):  # @{u} without an upstream.
             # Strip the fatal: prefix from the error message for easier to understand debug output.
             error_message = remove_prefix(is_ancestor.stderr.decode("utf-8"), "fatal: ").strip()
-            current_project.verbose_print(coloured(AnsiColour.blue, "Could not determine if ", expected_branch,
-                                                   " contains ", commit, ":", sep=""),
-                                          coloured(AnsiColour.yellow, error_message))
+            current_project.verbose_print(
+                coloured(
+                    AnsiColour.blue, "Could not determine if ", expected_branch, " contains ", commit, ":", sep="",
+                ),
+                coloured(AnsiColour.yellow, error_message),
+            )
             return invalid_commit_ref_result
         else:
             current_project.warning("Unknown return code", is_ancestor)
             # some other error -> raise so that I can see what went wrong
-            raise subprocess.CalledProcessError(is_ancestor.returncode, is_ancestor.args, output=is_ancestor.stdout,
-                                                stderr=is_ancestor.stderr)
+            raise subprocess.CalledProcessError(
+                is_ancestor.returncode, is_ancestor.args, output=is_ancestor.stdout, stderr=is_ancestor.stderr,
+            )
 
-    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path,
-                      skip_submodules=False) -> None:
+    def ensure_cloned(
+        self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path, skip_submodules=False,
+    ) -> None:
         if current_project.config.skip_clone:
             if not (src_dir / ".git").exists():
                 current_project.fatal("Sources for", str(src_dir), " missing!")
@@ -263,8 +337,9 @@ class GitRepository(SourceRepository):
             assert isinstance(self.url, str), self.url
             assert not self.url.startswith("<"), "Invalid URL " + self.url
             if current_project.config.confirm_clone and not current_project.query_yes_no(
-                    str(base_project_source_dir) + " is not a git repository. Clone it from '" + self.url + "'?",
-                    default_result=True):
+                str(base_project_source_dir) + " is not a git repository. Clone it from '" + self.url + "'?",
+                default_result=True,
+            ):
                 current_project.fatal("Sources for", str(base_project_source_dir), " missing!")
             clone_cmd = ["git", "clone"]
             if current_project.config.shallow_clone and not current_project.needs_full_history:
@@ -290,18 +365,26 @@ class GitRepository(SourceRepository):
         target_override = self.per_target_branches.get(current_project.crosscompile_target, None)
         default_clone_branch = self.get_default_branch(current_project, include_per_target=False)
         assert target_override is not None, "Default src != base src -> must have a per-target override"
-        assert target_override.branch != default_clone_branch, \
-            f"Cannot create worktree with same branch as base repo: {target_override.branch} vs {default_clone_branch}"
+        assert (
+            target_override.branch != default_clone_branch
+        ), f"Cannot create worktree with same branch as base repo: {target_override.branch} vs {default_clone_branch}"
         if (src_dir / ".git").exists():
             return
-        current_project.info("Creating git-worktree checkout of", base_project_source_dir, "with branch",
-                             target_override.branch, "for", src_dir)
+        current_project.info(
+            "Creating git-worktree checkout of",
+            base_project_source_dir,
+            "with branch",
+            target_override.branch,
+            "for",
+            src_dir,
+        )
 
         # Find the first valid remote
         per_target_url = target_override.url if target_override.url else self.url
         matching_remote = None
         remotes = current_project.run_cmd(
-            ["git", "-C", base_project_source_dir, "remote", "-v"], capture_output=True,
+            ["git", "-C", base_project_source_dir, "remote", "-v"],
+            capture_output=True,
         ).stdout.decode("utf-8")
         for r in remotes.splitlines():
             remote_name = r.split()[0].strip()
@@ -311,9 +394,14 @@ class GitRepository(SourceRepository):
                 break  # Found the matching remote
             # Also check the raw config file entry in case insteadOf/pushInsteadOf rewrote the URL so it no longer works
             try:
-                raw_url = current_project.run_cmd(
-                    ["git", "-C", base_project_source_dir, "config", "remote." + remote_name + ".url"],
-                    capture_output=True).stdout.decode("utf-8").strip()
+                raw_url = (
+                    current_project.run_cmd(
+                        ["git", "-C", base_project_source_dir, "config", "remote." + remote_name + ".url"],
+                        capture_output=True,
+                    )
+                    .stdout.decode("utf-8")
+                    .strip()
+                )
                 if raw_url == per_target_url:
                     matching_remote = remote_name
                     break
@@ -329,35 +417,69 @@ class GitRepository(SourceRepository):
             )
             matching_remote = new_remote
         # Fetch from the remote to ensure that the target ref exists (otherwise git worktree add fails)
-        current_project.run_cmd(["git", "-C", base_project_source_dir, "fetch", matching_remote],
-                                print_verbose_only=False)
+        current_project.run_cmd(
+            ["git", "-C", base_project_source_dir, "fetch", matching_remote], print_verbose_only=False,
+        )
         while True:
             try:
-                url = current_project.run_cmd(
-                    ["git", "-C", base_project_source_dir, "remote", "get-url", matching_remote],
-                    capture_output=True,
-                ).stdout.decode("utf-8").strip()
+                url = (
+                    current_project.run_cmd(
+                        ["git", "-C", base_project_source_dir, "remote", "get-url", matching_remote],
+                        capture_output=True,
+                    )
+                    .stdout.decode("utf-8")
+                    .strip()
+                )
             except subprocess.CalledProcessError as e:
                 current_project.warning("Could not determine URL for remote", matching_remote, str(e))
                 url = None
             if url == self.url:
                 break
-            current_project.info("URL '", url, "' for remote ", matching_remote, " does not match expected url '",
-                                 self.url, "'", sep="")
+            current_project.info(
+                "URL '", url, "' for remote ", matching_remote, " does not match expected url '", self.url, "'", sep="",
+            )
             if current_project.query_yes_no("Use this remote?"):
                 break
             matching_remote = input("Please enter the correct remote: ")
         # TODO --track -B?
         try:
-            current_project.run_cmd(["git", "-C", base_project_source_dir, "worktree", "add", "--track", "-b",
-                                     target_override.branch, src_dir, matching_remote + "/" + target_override.branch],
-                                    print_verbose_only=False)
+            current_project.run_cmd(
+                [
+                    "git",
+                    "-C",
+                    base_project_source_dir,
+                    "worktree",
+                    "add",
+                    "--track",
+                    "-b",
+                    target_override.branch,
+                    src_dir,
+                    matching_remote + "/" + target_override.branch,
+                ],
+                print_verbose_only=False,
+            )
         except subprocess.CalledProcessError:
-            current_project.warning("Could not create worktree with branch name ", target_override.branch,
-                                    ", maybe it already exists. Trying fallback name.", sep="")
-            current_project.run_cmd(["git", "-C", base_project_source_dir, "worktree", "add", "--track", "-b",
-                                     "worktree-fallback-" + target_override.branch, src_dir,
-                                     matching_remote + "/" + target_override.branch], print_verbose_only=False)
+            current_project.warning(
+                "Could not create worktree with branch name ",
+                target_override.branch,
+                ", maybe it already exists. Trying fallback name.",
+                sep="",
+            )
+            current_project.run_cmd(
+                [
+                    "git",
+                    "-C",
+                    base_project_source_dir,
+                    "worktree",
+                    "add",
+                    "--track",
+                    "-b",
+                    "worktree-fallback-" + target_override.branch,
+                    src_dir,
+                    matching_remote + "/" + target_override.branch,
+                ],
+                print_verbose_only=False,
+            )
 
     def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Path) -> Path:
         target_override = self.per_target_branches.get(caller.crosscompile_target, None)
@@ -365,10 +487,21 @@ class GitRepository(SourceRepository):
             return base_project_source_dir
         return base_project_source_dir.with_name(target_override.directory_name)
 
-    def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: "Optional[Path]" = None,
-               revision=None, skip_submodules=False):
-        self.ensure_cloned(current_project, src_dir=src_dir, base_project_source_dir=base_project_source_dir,
-                           skip_submodules=skip_submodules)
+    def update(
+        self,
+        current_project: "Project",
+        *,
+        src_dir: Path,
+        base_project_source_dir: "Optional[Path]" = None,
+        revision=None,
+        skip_submodules=False,
+    ):
+        self.ensure_cloned(
+            current_project,
+            src_dir=src_dir,
+            base_project_source_dir=base_project_source_dir,
+            skip_submodules=skip_submodules,
+        )
         if current_project.skip_update:
             return
         if not src_dir.exists():
@@ -379,7 +512,12 @@ class GitRepository(SourceRepository):
             branch_info = self.get_branch_info(src_dir, config=current_project.config)
             if branch_info is not None and branch_info.remote_name is not None:
                 remote_url = current_project.run_cmd(
-                    "git", "remote", "get-url", branch_info.remote_name, capture_output=True, cwd=src_dir,
+                    "git",
+                    "remote",
+                    "get-url",
+                    branch_info.remote_name,
+                    capture_output=True,
+                    cwd=src_dir,
                 ).stdout.strip()
                 # Strip any .git suffix to match more old URLs
                 if remote_url.endswith(b".git"):
@@ -427,8 +565,9 @@ class GitRepository(SourceRepository):
             else:
                 default_branch = self.old_branches.get(current_branch)
             if default_branch and current_branch != default_branch:
-                current_project.warning("You are trying to build the", current_branch,
-                                        "branch. You should be using", default_branch)
+                current_project.warning(
+                    "You are trying to build the", current_branch, "branch. You should be using", default_branch,
+                )
                 if current_project.query_yes_no("Would you like to change to the " + default_branch + " branch?"):
                     try:
                         current_project.run_cmd("git", "checkout", default_branch, cwd=src_dir, capture_error=True)
@@ -445,15 +584,19 @@ class GitRepository(SourceRepository):
                             raise e
 
                 else:
-                    current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
-                                                         error_message="Wrong branch: " + current_branch)
+                    current_project.ask_for_confirmation(
+                        "Are you sure you want to continue?",
+                        force_result=False,
+                        error_message="Wrong branch: " + current_branch,
+                    )
 
         # We don't need to update if the upstream commit is an ancestor of the current HEAD.
         # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
         # When checking if we are up to date, we treat a missing @{upstream} reference (no upstream branch
         # configured) as success to avoid getting an error from git pull.
-        up_to_date = self.contains_commit(current_project, "@{upstream}", src_dir=src_dir,
-                                          invalid_commit_ref_result="invalid")
+        up_to_date = self.contains_commit(
+            current_project, "@{upstream}", src_dir=src_dir, invalid_commit_ref_result="invalid",
+        )
         if up_to_date is True:
             current_project.info("Skipping update: Current HEAD is up-to-date or ahead of upstream.")
             return
@@ -465,8 +608,17 @@ class GitRepository(SourceRepository):
         current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
 
         # make sure we run git stash if we discover any local changes
-        has_changes = len(current_project.run_cmd(["git", "diff", "--stat", "--ignore-submodules"],
-                                                  capture_output=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
+        has_changes = (
+            len(
+                current_project.run_cmd(
+                    ["git", "diff", "--stat", "--ignore-submodules"],
+                    capture_output=True,
+                    cwd=src_dir,
+                    print_verbose_only=True,
+                ).stdout,
+            )
+            > 1
+        )
         pull_cmd = ["git", "pull"]
         has_autostash = False
         git_version = get_program_version(Path(shutil.which("git") or "git"), config=current_project.config)
@@ -480,8 +632,9 @@ class GitRepository(SourceRepository):
             # TODO: add a config option to skip this query?
             if current_project.config.force_update:
                 status_update("Updating", src_dir, "with autostash due to --force-update")
-            elif not current_project.query_yes_no("Stash the changes, update and reapply?", default_result=True,
-                                                  force_result=True):
+            elif not current_project.query_yes_no(
+                "Stash the changes, update and reapply?", default_result=True, force_result=True,
+            ):
                 status_update("Skipping update of", src_dir)
                 return
             if not has_autostash:
@@ -503,16 +656,25 @@ class GitRepository(SourceRepository):
         current_project.run_cmd([*pull_cmd, rebase_flag], cwd=src_dir, print_verbose_only=True)
         if not skip_submodules:
             current_project.run_cmd(
-                ["git", "submodule", "update", "--init", "--recursive"], cwd=src_dir, print_verbose_only=True,
+                ["git", "submodule", "update", "--init", "--recursive"],
+                cwd=src_dir,
+                print_verbose_only=True,
             )
         if has_changes and not has_autostash:
             current_project.run_cmd(["git", "stash", "pop"], cwd=src_dir, print_verbose_only=True)
 
 
 class MercurialRepository(SourceRepository):
-    def __init__(self, url: str, *, old_urls: "Optional[list[bytes]]" = None, default_branch: "Optional[str]" = None,
-                 force_branch: bool = False, temporary_url_override: "Optional[str]" = None,
-                 url_override_reason: "typing.Any" = None):
+    def __init__(
+        self,
+        url: str,
+        *,
+        old_urls: "Optional[list[bytes]]" = None,
+        default_branch: "Optional[str]" = None,
+        force_branch: bool = False,
+        temporary_url_override: "Optional[str]" = None,
+        url_override_reason: "typing.Any" = None,
+    ):
         self.old_urls = old_urls
         if temporary_url_override is not None:
             self.url = temporary_url_override
@@ -538,8 +700,10 @@ class MercurialRepository(SourceRepository):
         # requires a merge, like update (e.g. on macOS it will default to
         # opening FileMerge.app... sigh).
         command += [
-            "--config", "ui.merge=diff3",
-            "--config", "merge-tools.diff3.args=$local $base $other -m > $output",
+            "--config",
+            "ui.merge=diff3",
+            "--config",
+            "merge-tools.diff3.args=$local $base $other -m > $output",
         ]
         if len(args) == 1 and isinstance(args[0], (list, tuple)):
             command += args[0]  # list with parameters was passed
@@ -552,18 +716,26 @@ class MercurialRepository(SourceRepository):
         if current_project.config.pretend and not src_dir.exists():
             return False
         revset = "ancestor(" + commit + ",.) and id(" + commit + ")"
-        log = MercurialRepository.run_hg(src_dir, "log", "--quiet", "--rev", revset,
-                                         capture_output=True, print_verbose_only=True, project=current_project)
+        log = MercurialRepository.run_hg(
+            src_dir,
+            "log",
+            "--quiet",
+            "--rev",
+            revset,
+            capture_output=True,
+            print_verbose_only=True,
+            project=current_project,
+        )
         if len(log.stdout) > 0:
             current_project.verbose_print(coloured(AnsiColour.blue, expected_branch, "contains commit", commit))
             return True
         else:
-            current_project.verbose_print(
-                coloured(AnsiColour.blue, expected_branch, "does not contain commit", commit))
+            current_project.verbose_print(coloured(AnsiColour.blue, expected_branch, "does not contain commit", commit))
             return False
 
-    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path,
-                      skip_submodules=False) -> None:
+    def ensure_cloned(
+        self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path, skip_submodules=False,
+    ) -> None:
         if current_project.config.skip_clone:
             if not (src_dir / ".hg").exists():
                 current_project.fatal("Sources for", str(src_dir), " missing!")
@@ -574,8 +746,9 @@ class MercurialRepository(SourceRepository):
             assert isinstance(self.url, str), self.url
             assert not self.url.startswith("<"), "Invalid URL " + self.url
             if current_project.config.confirm_clone and not current_project.query_yes_no(
-                    str(base_project_source_dir) + " is not a mercurial repository. Clone it from '" + self.url + "'?",
-                    default_result=True):
+                str(base_project_source_dir) + " is not a mercurial repository. Clone it from '" + self.url + "'?",
+                default_result=True,
+            ):
                 current_project.fatal("Sources for", str(base_project_source_dir), " missing!")
             clone_cmd = ["clone"]
             if self.default_branch:
@@ -583,10 +756,21 @@ class MercurialRepository(SourceRepository):
             self.run_hg(None, [*clone_cmd, self.url, base_project_source_dir], cwd="/", project=current_project)
         assert src_dir == base_project_source_dir, "Worktrees only supported with git"
 
-    def update(self, current_project: "Project", *, src_dir: Path, base_project_source_dir: "Optional[Path]" = None,
-               revision=None, skip_submodules=False):
-        self.ensure_cloned(current_project, src_dir=src_dir, base_project_source_dir=base_project_source_dir,
-                           skip_submodules=skip_submodules)
+    def update(
+        self,
+        current_project: "Project",
+        *,
+        src_dir: Path,
+        base_project_source_dir: "Optional[Path]" = None,
+        revision=None,
+        skip_submodules=False,
+    ):
+        self.ensure_cloned(
+            current_project,
+            src_dir=src_dir,
+            base_project_source_dir=base_project_source_dir,
+            skip_submodules=skip_submodules,
+        )
         if current_project.skip_update:
             return
         if not src_dir.exists():
@@ -594,8 +778,9 @@ class MercurialRepository(SourceRepository):
 
         # handle repositories that have moved
         if src_dir.exists() and self.old_urls:
-            remote_url = self.run_hg(src_dir, "paths", "default", capture_output=True,
-                                     project=current_project).stdout.strip()
+            remote_url = self.run_hg(
+                src_dir, "paths", "default", capture_output=True, project=current_project,
+            ).stdout.strip()
             # Update from the old url:
             for old_url in self.old_urls:
                 assert isinstance(old_url, bytes)
@@ -617,17 +802,22 @@ class MercurialRepository(SourceRepository):
         # Handle forced branches now that we have fetched the latest changes
         if src_dir.exists() and self.force_branch:
             assert self.default_branch, "default_branch must be set if force_branch is true!"
-            branch = self.run_hg(src_dir, "branch", capture_output=True, print_verbose_only=True,
-                                 project=current_project)
+            branch = self.run_hg(
+                src_dir, "branch", capture_output=True, print_verbose_only=True, project=current_project,
+            )
             current_branch = branch.stdout.decode("utf-8")
             if current_branch != self.force_branch:
-                current_project.warning("You are trying to build the", current_branch,
-                                        "branch. You should be using", self.default_branch)
+                current_project.warning(
+                    "You are trying to build the", current_branch, "branch. You should be using", self.default_branch,
+                )
                 if current_project.query_yes_no("Would you like to change to the " + self.default_branch + " branch?"):
                     self.run_hg(src_dir, "update", "--merge", self.default_branch, project=current_project)
                 else:
-                    current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
-                                                         error_message="Wrong branch: " + current_branch)
+                    current_project.ask_for_confirmation(
+                        "Are you sure you want to continue?",
+                        force_result=False,
+                        error_message="Wrong branch: " + current_branch,
+                    )
 
         # We don't need to update if the tip is an ancestor of the current dirctory.
         up_to_date = self.contains_commit(current_project, "tip", src_dir=src_dir)
@@ -638,15 +828,22 @@ class MercurialRepository(SourceRepository):
         current_project.verbose_print(coloured(AnsiColour.blue, "Current directory is behind tip."))
 
         # make sure we run git stash if we discover any local changes
-        has_changes = len(self.run_hg(src_dir, "diff", "--stat", capture_output=True, print_verbose_only=True,
-                                      project=current_project).stdout) > 1
+        has_changes = (
+            len(
+                self.run_hg(
+                    src_dir, "diff", "--stat", capture_output=True, print_verbose_only=True, project=current_project,
+                ).stdout,
+            )
+            > 1
+        )
         if has_changes:
             print(coloured(AnsiColour.green, "Local changes detected in", src_dir))
             # TODO: add a config option to skip this query?
             if current_project.config.force_update:
                 status_update("Updating", src_dir, "with merge due to --force-update")
-            elif not current_project.query_yes_no("Update and merge the changes?", default_result=True,
-                                                  force_result=True):
+            elif not current_project.query_yes_no(
+                "Update and merge the changes?", default_result=True, force_result=True,
+            ):
                 status_update("Skipping update of", src_dir)
                 return
         self.run_hg(src_dir, "update", "--merge", ".", print_verbose_only=True, project=current_project)
@@ -669,10 +866,10 @@ class SubversionRepository(SourceRepository):
         assert not self.url.startswith("<"), "Invalid URL " + self.url
         checkout_url = self.url
         if self._default_branch:
-            checkout_url = checkout_url + '/' + self._default_branch
+            checkout_url = checkout_url + "/" + self._default_branch
         if current_project.config.confirm_clone and not current_project.query_yes_no(
-                str(src_dir) + " is not a subversion checkout. Checkout from '" + checkout_url + "'?",
-                default_result=True):
+            str(src_dir) + " is not a subversion checkout. Checkout from '" + checkout_url + "'?", default_result=True,
+        ):
             current_project.fatal("Sources for", str(src_dir), " missing!")
             return
 
