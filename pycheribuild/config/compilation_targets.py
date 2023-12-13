@@ -52,13 +52,12 @@ from .target_info import (
     MipsFloatAbi,
     TargetInfo,
 )
-from ..processutils import extract_version, get_version_output
-from ..projects.project import Project
+from ..processutils import extract_version, get_compiler_info, get_version_output
 from ..projects.simple_project import SimpleProject
 from ..utils import cached_property, is_jenkins_build, warning_message
 
 
-class BuildLLVMInterface(Project if typing.TYPE_CHECKING else object):
+class BuildLLVMInterface(SimpleProject if typing.TYPE_CHECKING else object):
     @classmethod
     def get_native_install_path(cls, config: CheriConfig) -> Path:
         # This returns the path where the installed compiler is expected to be
@@ -69,8 +68,8 @@ class BuildLLVMInterface(Project if typing.TYPE_CHECKING else object):
 class LaunchFreeBSDInterface:
     current_kernel: Optional[Path]
     disk_image: Optional[Path]
-    kernel_project: Optional[Project]
-    disk_image_project: Optional[Project]
+    kernel_project: Optional[SimpleProject]
+    disk_image_project: Optional[SimpleProject]
 
     @classmethod
     def get_chosen_qemu(cls, config: CheriConfig):
@@ -127,7 +126,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     def _rootfs_path(self) -> Path:
         xtarget = self.target.get_rootfs_target()
         # noinspection PyUnresolvedReferences
-        return self._get_rootfs_class(xtarget).get_install_dir(self, xtarget)
+        return self._get_rootfs_class(xtarget).get_install_dir(self.project, xtarget)
 
     def default_install_dir(self, install_dir: DefaultInstallDir) -> Path:
         if install_dir == DefaultInstallDir.ROOTFS_OPTBASE:
@@ -225,7 +224,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         result += ["-B" + str(instance._compiler_dir)]
 
         if not default_flags_only and project.auto_var_init != AutoVarInit.NONE:
-            compiler = project.get_compiler_info(instance.c_compiler)
+            compiler = get_compiler_info(instance.c_compiler, config=config)
             valid_clang_version = compiler.is_clang and compiler.version >= (8, 0)
             # We should have at least 8.0.0 unless the user explicitly selected an incompatible clang
             if valid_clang_version:
@@ -357,7 +356,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         # We don't want to call setup() yet on the FreeBSD instance (not needed to get the compiler)
         # noinspection PyProtectedMember
         fbsd = self._get_rootfs_class(xtarget)._get_instance_no_setup(self.project, cross_target=xtarget)
-        configured_path = fbsd.build_toolchain_root_dir
+        configured_path = fbsd.build_toolchain_root_dir  # pytype: disable=attribute-error
         if configured_path is None:
             # If we couldn't find a working system compiler, default to cheribuild-compiled upstream LLVM.
             assert fbsd.build_toolchain == CompilerType.DEFAULT_COMPILER
@@ -461,10 +460,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("upstream-llvm", None))
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("upstream-llvm", None))
 
-    def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[Project]":
-        return Project.get_class_for_target_name("freebsd", xtarget)
+    def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
+        return SimpleProject.get_class_for_target_name("freebsd", xtarget)
 
     def _get_run_project(self, xtarget: "CrossCompileTarget", caller: SimpleProject) -> LaunchFreeBSDInterface:
         result = SimpleProject.get_instance_for_target_name("run-freebsd", xtarget, caller.config, caller)
@@ -491,7 +490,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             return result is not None
 
         if typing.TYPE_CHECKING:
-            assert isinstance(self.project, Project)
+            assert isinstance(self.project, SimpleProject)
         # mount_sysroot may be needed for projects such as QtWebkit where the minimal image doesn't contain all the
         # necessary libraries
         xtarget = self.target
@@ -592,9 +591,11 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             cmd.extend(["--sysroot-dir", self.sysroot_dir])
         if mount_installdir:
             if not has_test_extra_arg_override("--install-destdir"):
-                cmd.extend(["--install-destdir", self.project.destdir])
+                # noinspection PyUnresolvedReferences
+                cmd.extend(["--install-destdir", self.project.destdir])  # pytype: disable=attribute-error
             if not has_test_extra_arg_override("--install-prefix"):
-                cmd.extend(["--install-prefix", self.project.install_prefix])
+                # noinspection PyUnresolvedReferences
+                cmd.extend(["--install-prefix", self.project.install_prefix])  # pytype: disable=attribute-error
         if disk_image_path and not has_test_extra_arg_override("--disk-image"):
             cmd.extend(["--disk-image", disk_image_path])
             if not disk_image_path.exists():
@@ -629,7 +630,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("llvm", None))
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
     def _get_run_project(self, xtarget: "CrossCompileTarget", caller: SimpleProject) -> LaunchFreeBSDInterface:
         result = SimpleProject.get_instance_for_target_name("run", xtarget, caller.config, caller)
@@ -684,8 +685,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             str(self.sysroot_dir / f"{self.localbase}/libdata/pkgconfig"),
         ]
 
-    def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[Project]":
-        return Project.get_class_for_target_name("cheribsd", xtarget)
+    def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
+        return SimpleProject.get_class_for_target_name("cheribsd", xtarget)
 
     def cheribsd_version(self) -> "Optional[int]":
         pattern = re.compile(r"#define\s+__CheriBSD_version\s+([0-9]+)")
@@ -706,7 +707,7 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("morello-llvm", None))
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("morello-llvm", None))
 
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config, *, include_version):
@@ -749,7 +750,7 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
     shortname: str = "CheriOS"
     FREEBSD_VERSION: int = 0
 
-    def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[Project]":
+    def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
         raise LookupError("Should not be called")
 
     def _get_sdk_root_dir_lazy(self) -> Path:
@@ -757,7 +758,7 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("cherios-llvm", None))
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("cherios-llvm", None))
 
     @property
     def sysroot_dir(self):
@@ -824,7 +825,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("llvm", None))
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
     @property
     def must_link_statically(self):
@@ -881,7 +882,7 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("llvm", None))
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
     @classmethod
     def triple_for_target(cls, target, config, include_version: bool) -> str:
@@ -919,8 +920,8 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
     def is_newlib(cls) -> bool:
         return True
 
-    def _get_rootfs_class(self, xtarget: CrossCompileTarget) -> "type[Project]":
-        return Project.get_class_for_target_name("newlib", xtarget)
+    def _get_rootfs_class(self, xtarget: CrossCompileTarget) -> "type[SimpleProject]":
+        return SimpleProject.get_class_for_target_name("newlib", xtarget)
 
 
 class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
@@ -952,7 +953,7 @@ set(CMAKE_DL_LIBS "")
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("llvm", None))
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
     def semihosting_ldflags(self) -> "list[str]":
         stack_size = "4k"
@@ -991,8 +992,8 @@ set(CMAKE_DL_LIBS "")
             return super().additional_executable_link_flags + self.semihosting_ldflags()
         return []
 
-    def _get_rootfs_class(self, xtarget: CrossCompileTarget) -> "type[Project]":
-        return Project.get_class_for_target_name("picolibc", xtarget)
+    def _get_rootfs_class(self, xtarget: CrossCompileTarget) -> "type[SimpleProject]":
+        return SimpleProject.get_class_for_target_name("picolibc", xtarget)
 
 
 class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
@@ -1001,7 +1002,7 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("llvm", None))
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
@@ -1024,7 +1025,7 @@ class MorelloBaremetalTargetInfo(BaremetalFreestandingTargetInfo):
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", Project.get_class_for_target_name("morello-llvm", None))
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("morello-llvm", None))
 
     @property
     def sysroot_dir(self) -> Path:

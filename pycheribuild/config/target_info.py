@@ -190,6 +190,10 @@ class AbstractProject(FileSystemUtils):
                      cross_target: "Optional[CrossCompileTarget]" = None) -> "_AnyProject":
         raise NotImplementedError()
 
+    @classmethod
+    def get_install_dir(cls, caller: "AbstractProject", cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
+        raise NotImplementedError()
+
 
 _AnyProject = typing.TypeVar("_AnyProject", bound=AbstractProject)
 

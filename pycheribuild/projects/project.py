@@ -442,15 +442,15 @@ class Project(SimpleProject):
         return self.config.generate_cmakelists
 
     @classmethod
-    def get_source_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None):
+    def get_source_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
         return cls._get_instance_no_setup(caller, cross_target).source_dir
 
     @classmethod
-    def get_build_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None):
+    def get_build_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
         return cls._get_instance_no_setup(caller, cross_target).build_dir
 
     @classmethod
-    def get_install_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None):
+    def get_install_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
         return cls._get_instance_no_setup(caller, cross_target).real_install_root_dir
 
     def build_dir_for_target(self, target: CrossCompileTarget) -> Path:
@@ -506,7 +506,7 @@ class Project(SimpleProject):
     """ The default installation directory """
 
     @property
-    def _rootfs_install_dir_name(self):
+    def _rootfs_install_dir_name(self) -> str:
         return self.default_directory_basename
 
     # useful for cross compile projects that use a prefix and DESTDIR
