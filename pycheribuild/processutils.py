@@ -497,8 +497,9 @@ class CompilerInfo:
                 # pretend to compile an existing source file and capture the -resource-dir output
                 cc1_cmd = run_command(self.path, "-###", "-xc", "-c", "/dev/null", config=self.config,
                                       capture_error=True, print_verbose_only=True, run_in_pretend_mode=True)
-                resource_dir_pat = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"')
-                self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
+                match = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"').search(cc1_cmd.stderr)
+                assert match is not None, f"Could not find -resource dir in {cc1_cmd.stderr}"
+                self._resource_dir = Path(match.group(1).decode("utf-8"))
         return self._resource_dir
 
     def get_include_dirs(self, basic_flags: "list[str]") -> "list[Path]":

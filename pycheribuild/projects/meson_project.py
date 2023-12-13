@@ -54,6 +54,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     meson_test_script_extra_args: "Sequence[str]" = tuple()  # additional arguments to pass to run_meson_tests.py
     _meson_extra_binaries = ""  # Needed for picolibc
     _meson_extra_properties = ""  # Needed for picolibc
+    meson_options: "list[str]"
 
     def set_minimum_meson_version(self, major: int, minor: int, patch: int = 0) -> None:
         new_version = (major, minor, patch)
