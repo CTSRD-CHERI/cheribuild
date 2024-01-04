@@ -210,6 +210,9 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             )
         # When cross compiling we need at least -target=
         result = ["-target", cls.triple_for_target(xtarget, project.config, include_version=True)]
+        # Experimentally enable PIE executables always in this branch.
+        # This is to make hybrid more comparable to purecap.  Hopefully.
+        result.append("-fPIE")
         # And usually also --sysroot
         if project.needs_sysroot:
             result.append("--sysroot=" + str(instance.sysroot_dir))
