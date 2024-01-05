@@ -177,6 +177,7 @@ class BuildDejaGNU(AutotoolsProject):
 class BuildLibFFI(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/libffi/libffi.git",
                                temporary_url_override="https://github.com/CTSRD-CHERI/libffi.git",
+                               default_branch="v3.4.4-cheriabi", force_branch=True,
                                url_override_reason="Needs lots of CHERI fixes")
     target = "libffi"
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
@@ -196,8 +197,13 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
                                   install_instructions=OSInfo.install_instructions("runtest", False, default="dejagnu",
                                                                                    apt="dejagnu", homebrew="deja-gnu"),
                                   cheribuild_target="dejagnu", cheribuild_xtarget=CompilationTargets.NATIVE)
+        runtest_flags = "-a"
+        if self.config.debug_output:
+            runtest_flags += " -v -v -v"
+        elif self.config.verbose:
+            runtest_flags += " -v"
         if self.compiling_for_host():
-            self.run_cmd("make", "check", "RUNTESTFLAGS=-a", cwd=self.build_dir,
+            self.run_cmd("make", "check", f"RUNTESTFLAGS={runtest_flags}", cwd=self.build_dir,
                          env=dict(DEJAGNU=self.source_dir / ".ci/site.exp", BOARDSDIR=self.source_dir / ".ci"))
         elif self.target_info.is_cheribsd():
             # We need two minor fixes for SSH execution:
@@ -234,7 +240,8 @@ set_board_info ssh_opts "{ssh_options}"
 # Build tests statically linked so they pick up the local libffi library
 set TOOL_OPTIONS -static
 """, overwrite=True)
-                self.run_cmd(["make", "check", "RUNTESTFLAGS=-a --target-board remote-cheribsd --xml"],
+                self.run_cmd(["make", "check",
+                              f"RUNTESTFLAGS={runtest_flags} --target-board remote-cheribsd --xml"],
                              env=dict(BOARDSDIR=self.build_dir, DEJAGNU=self.build_dir / "site.exp"),
                              cwd=str(self.build_dir))
             else:

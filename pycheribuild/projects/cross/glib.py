@@ -39,7 +39,7 @@ class BuildGlib(CrossCompileMesonProject):
         super().setup()
         self.add_meson_options(tests=True)
         if self.compiling_for_host() and self.target_info.is_linux():
-            self.add_meson_options(gtk_doc=True)
+            self.add_meson_options(documentation=True)
         self.common_warning_flags.append("-Werror=int-conversion")
         self.common_warning_flags.append("-Werror=incompatible-pointer-types")
         self.COMMON_FLAGS.append("-DG_ENABLE_EXPERIMENTAL_ABI_COMPILATION")
