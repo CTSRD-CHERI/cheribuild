@@ -47,7 +47,7 @@ from .crosscompileproject import (
 from .wayland import BuildWayland
 from .x11 import BuildLibXCB
 from ..project import default_source_dir_in_subdir
-from ..simple_project import SimpleProject
+from ..simple_project import BoolConfigOption, SimpleProject
 from ...utils import InstallInstructions
 
 
@@ -308,8 +308,12 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # optimize-debug needs GCC
             # self.configure_args.append("-optimize-debug")
         else:
-            assert self.build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO,
-                                       BuildType.MINSIZEREL, BuildType.RELEASE)
+            assert self.build_type in (
+                BuildType.RELWITHDEBINFO,
+                BuildType.MINSIZERELWITHDEBINFO,
+                BuildType.MINSIZEREL,
+                BuildType.RELEASE,
+            )
             self.configure_args.append("-release")
             if self.build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO):
                 self.configure_args.append("-force-debug-info")
@@ -379,25 +383,66 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
     # default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
     default_build_type = BuildType.RELWITHDEBINFO
     needs_native_build_for_crosscompile = True
+    build_tests = BoolConfigOption("build-tests", default=True, show_help=True, help="build the Qt unit tests")
+    build_examples: bool = BoolConfigOption("build-examples", show_help=True, help="build the Qt examples")
+    assertions: bool = BoolConfigOption("assertions", default=True, show_help=True, help="Include assertions")
+    gui: bool = BoolConfigOption("gui", show_help=True, default=True, help="Include QtGui")
+    use_opengl: bool = BoolConfigOption("opengl", show_help=True, default=False, help="Include QtOpenGl")
+    minimal: bool = BoolConfigOption(
+        "minimal", show_help=True, default=True, help="Don't build QtWidgets or QtSql, etc",
+    )
 
     @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.build_tests = cls.add_bool_option("build-tests", default=True, show_help=True,
-                                              help="build the Qt unit tests")
-        cls.build_examples = cls.add_bool_option("build-examples", show_help=True, help="build the Qt examples")
-        cls.assertions = cls.add_bool_option("assertions", default=True, show_help=True, help="Include assertions")
-        cls.minimal = cls.add_bool_option("minimal", show_help=True, default=True,
-                                          help="Don't build QtWidgets or QtGui, etc")
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        deps = list(super().dependencies(config))
+        rootfs_target = cls.get_crosscompile_target().get_rootfs_target()
+        deps.append(BuildSharedMimeInfo.get_class_for_target(rootfs_target).target)
+        if cls.gui:
+            # The system X11 libraries might be too old, so add the cheribuild-provided ones as a dependency
+            deps.extend([
+                "libx11",
+                "libxkbcommon",
+                "libinput",
+                "libxcb",
+                "libxcb-cursor",
+                "libxcb-util",
+                "libxcb-image",
+                "libice",
+                "libsm",
+                "libxext",
+                "libxtst",
+                "libxcb-render-util",
+                "libxcb-wm",
+                "libxcb-keysyms",
+            ])
+        # Always use our patched image/sql libraries instead of the host ones:
+        deps.extend(["libpng", "libjpeg-turbo"])
+        if not cls.get_crosscompile_target().is_native():
+            # We can only depend on fonts when installing to a rootfs, as those need to be installed to a directory
+            # that is only writable by root.
+            deps.extend([InstallDejaVuFonts.get_class_for_target(rootfs_target).target])
+        if cls.use_opengl:
+            deps.extend(["libglvnd", "libdrm"])
+        if cls.minimal:
+            return tuple(deps)
+        deps.append("sqlite")
+        # For non-macOS we need additional libraries for GUI and openGL parts.
+        if not cls.get_crosscompile_target().target_info_cls.is_macos():
+            deps.extend(["dbus", "fontconfig"])
+        return tuple(deps)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.set_minimum_cmake_version(3, 18)
 
     def process(self):
-        if not self.compiling_for_host() and not (self.host_target.install_dir / "bin/moc").exists():
-            self.fatal("Missing host build moc tool", self.host_target.install_dir / "bin/moc",
-                       " (needed for cross-compiling)", fixit_hint="Run `cheribuild.py " + self.target + "-native`")
+        if not self.compiling_for_host() and not (self.host_target.install_dir / "libexec/moc").exists():
+            self.fatal(
+                "Missing host build moc tool",
+                self.host_target.install_dir / "libexec/moc",
+                " (needed for cross-compiling)",
+                fixit_hint="Run `cheribuild.py " + self.target + "-native`",
+            )
         super().process()
 
     def setup(self):
@@ -408,35 +453,47 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
         if compiler_info.is_clang and not compiler_info.is_apple_clang and compiler_info.version > (10, 0):
             self.add_cmake_options(WARNINGS_ARE_ERRORS=False)  # -Werror,-Wunused-private-field
 
-        if self.compiling_for_mips(include_purecap=False) and self.force_static_linkage:
-            assert "-mxgot" in self.default_compiler_flags
         if self.force_static_linkage:
             self.add_cmake_options(BUILD_SHARED_LIBS=False)
 
         if not self.compiling_for_host():
-            assert self.target_info.is_freebsd(), "Not other targets supported yet"
-            self.add_cmake_options(QT_HOST_PATH=self.host_target.install_dir,
-                                   QT_QMAKE_TARGET_MKSPEC="freebsd-clang")
+            assert self.target_info.is_freebsd(), "No other targets supported yet"
+            self.add_cmake_options(QT_HOST_PATH=self.host_target.install_dir, QT_QMAKE_TARGET_MKSPEC="freebsd-clang")
         if self.compiling_for_cheri():
             # Not ported to CHERI purecap
-            self.add_cmake_options(PCRE2_DISABLE_JIT=True)
+            self.add_cmake_options(PCRE2_DISABLE_JIT="ON")
+            # TODO: investigate: ms->window.base becomes invalid
+            self.add_cmake_options(QT_FEATURE_zstd="OFF")
 
         # Debug info makes libraries massive and makes running tests from SMBFS really slow
-        self.add_cmake_options(QT_FEATURE_separate_debug_info=True)
+        self.add_cmake_options(QT_FEATURE_separate_debug_info="ON")
         # Enable --gdb-index to make debugging less painfully slow
-        self.add_cmake_options(QT_FEATURE_enable_gdb_index=True)
-        # Disable most libraries for now (we only test qtcore)
+        if self.can_use_lld(self.CC):
+            self.add_cmake_options(QT_FEATURE_enable_gdb_index="ON", INPUT_linker="lld")
+        if self.gui:
+            self.add_cmake_options(
+                QT_FEATURE_gui="ON",
+                INPUT_libpng="system",
+                INPUT_freetype="system",
+                INPUT_pcre="system",
+                FEATURE_xcb="ON",
+                FEATURE_xcb_xlib="ON",
+            )
+        else:
+            self.add_cmake_options(QT_FEATURE_png="OFF", QT_FEATURE_freetype="OFF")
+
+        # Disable most libraries for now (we only test qtcore and qtgui)
         if self.minimal:
             self.add_cmake_options(
-                QT_FEATURE_sql=False,
-                QT_FEATURE_network=False,
-                # QT_FEATURE_xml=False,  disabling this breaks the build
-                QT_FEATURE_dbus=False,
-                # Disable all GUI libs
-                QT_FEATURE_gui=False, QT_FEATURE_opengl=False, QT_FEATURE_widgets=False)
-
-            self.add_cmake_options(QT_FEATURE_png=False, QT_FEATURE_freetype=False)
-
+                QT_FEATURE_sql="OFF",
+                QT_FEATURE_network="OFF",
+                # QT_FEATURE_xml="OFF",  disabling this breaks the build
+                QT_FEATURE_dbus="OFF",
+                QT_FEATURE_widgets="OFF",
+            )
+        if not self.use_opengl:
+            # Disable OpenGL and Widgets libraries
+            self.add_cmake_options(QT_FEATURE_opengl="OFF", INPUT_opengl="no")
         # if not self.compiling_for_host():
         # Seems to break the build
         #    self.add_cmake_options(FEATURE_use_lld_linker=True)
@@ -445,23 +502,20 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
         # TODO: require ICU "-icu",
         # TODO: "-no-iconv"
         if self.target_info.is_macos():
-            self.add_cmake_options(QT_FEATURE_icu=False)  # Not linked correctly -> tests fail to run
+            self.add_cmake_options(QT_FEATURE_icu="OFF")  # Not linked correctly -> tests fail to run
             self.add_cmake_options(CMAKE_PREFIX_PATH="/usr/local")  # Find homebrew libraries
         if self.build_tests:
-            self.add_cmake_options(FEATURE_developer_build=True)
-            if self.target_info.is_macos():
+            self.add_cmake_options(FEATURE_developer_build="ON")
+            if self.target_info.is_macos() and self.build_type.is_debug:
                 # Otherwise we get "ERROR: debug-only framework builds are not supported. Configure with -no-framework
                 # if you want a pure debug build."
-                self.add_cmake_options(FEATURE_framework=False)
+                self.add_cmake_options(FEATURE_framework="OFF")
         else:
             self.add_cmake_options(BUILD_TESTING=False)
         self.add_cmake_options(BUILD_EXAMPLES=self.build_examples)
 
-        # currently causes build failures:
-        self.add_cmake_options(QT_FEATURE_system_png=False)
-
         if self.assertions:
-            self.add_cmake_options(FEATURE_force_asserts=True)
+            self.add_cmake_options(FEATURE_force_asserts="ON")
         self.add_cmake_options(BUILD_WITH_PCH=False)  # slows down build but gives useful crash testcases
         # QT_FEATURE_reduce_relocations
 
@@ -471,8 +525,9 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
             self.run_make("test", cwd=self.build_dir)
         else:
             # TODO: run `ctest --show-only=json-v1` to get list of tests
-            self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=False,
-                                                      mount_sysroot=True, mount_sourcedir=True)
+            self.target_info.run_cheribsd_test_script(
+                "run_qtbase_tests.py", use_benchmark_kernel_by_default=False, mount_sysroot=True, mount_sourcedir=True,
+            )
 
 
 class BuildQt5(BuildQtWithConfigureScript):
