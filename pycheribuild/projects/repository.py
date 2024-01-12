@@ -237,7 +237,7 @@ class GitRepository(SourceRepository):
                 key, value = line[1:].decode("utf-8").split(None, maxsplit=1)
                 headers[key] = value
             upstream = headers.get("branch.upstream", "")
-            remote_name, remote_branch = upstream.split("/", maxsplit=1) if upstream else (None, None)
+            remote_name, remote_branch = upstream.split("/", maxsplit=1) if "/" in upstream else (None, None)
             return GitBranchInfo(
                 local_branch=headers.get("branch.head", ""), remote_name=remote_name, upstream_branch=remote_branch,
             )
