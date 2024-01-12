@@ -46,6 +46,13 @@ class BuildGlib(CrossCompileMesonProject):
         if self.compiling_for_cheri():
             self.common_warning_flags.append("-Wshorten-cap-to-int")
         if self.target_info.is_freebsd():
+            # The glib configure checks by default don't consider a potentially present /usr/local(64)/include/iconv.h
+            # but other dependencies might add /usr/local(64)/include. This can result in undefined `libiconv_open`
+            # errors being reported at runtime since /usr/local(64)/include/iconv.h redefines iconv_open to
+            # libiconv_open which requires linking against the libiconv port. Passing -DLIBICONV_PLUG ensures that
+            # the libiconv iconv.h header uses the base system functions instead.
+            # See also https://gitlab.gnome.org/GNOME/glib/-/merge_requests/3828
+            self.COMMON_FLAGS.append("-DLIBICONV_PLUG")
             self.add_meson_options(xattr=False)
             self.add_meson_options(b_lundef=False)  # undefined reference to environ
             self.configure_args.append("--localstatedir=/var")  # This is needed for GDBus
