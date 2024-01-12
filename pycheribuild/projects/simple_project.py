@@ -971,6 +971,9 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
         try:
             env = {}
+            # Handle /usr/local vs /usr/local64 on CheriBSD
+            if self.target_info.pkg_config_libdir_override is not None:
+                env["PKG_CONFIG_LIBDIR"] = self.target_info.pkg_config_libdir_override
             # Support keg-only homebrew formulae, like libarchive
             if OSInfo.IS_MAC:
                 brew_prefix = self.get_homebrew_prefix(homebrew if homebrew is not None else package, optional=True)

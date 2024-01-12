@@ -382,7 +382,7 @@ class TargetInfo(ABC):
 
     @property
     def pkg_config_libdir_override(self) -> "Optional[str]":
-        raise ValueError("Should only be called for native")
+        return None
 
     @property
     def install_prefix_dirname(self) -> str:
