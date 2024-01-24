@@ -42,6 +42,7 @@ from .crosscompileproject import (
     MakeCommandKind,
 )
 from .gmp import BuildGmp
+from .mpfr import BuildMpfr
 from ..project import ComputedDefaultValue
 from ...utils import OSInfo
 
@@ -75,7 +76,7 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         deps = super().dependencies(config)
         # For the native and native-hybrid builds gmp must be installed via ports.
         if not cls.get_crosscompile_target().is_native():
-            deps += ("gmp",)
+            deps += ("gmp", "mpfr")
         return deps
 
     @classmethod
@@ -93,6 +94,7 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         self.check_required_system_tool("makeinfo", default="texinfo")
         if self.compiling_for_host() and self.target_info.is_cheribsd():
             self.check_required_pkg_config("gmp", freebsd="gmp")
+            self.check_required_pkg_config("mpfr", freebsd="mpfr")
             self.check_required_pkg_config("expat", freebsd="expat")
 
     def __init__(self, *args, **kwargs):
@@ -169,6 +171,7 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
                                               MAKEINFO="/bin/false",
                                               )
             self.configure_args.append("--with-gmp=" + str(BuildGmp.get_install_dir(self)))
+            self.configure_args.append("--with-mpfr=" + str(BuildMpfr.get_install_dir(self)))
             # GDB > 12 only uses --with-gmp
             self.configure_args.append("--with-libgmp-prefix=" + str(BuildGmp.get_install_dir(self)))
             # Autoconf stupidly decides which to use based on file existence

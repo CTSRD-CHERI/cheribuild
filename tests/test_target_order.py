@@ -22,6 +22,7 @@ from pycheribuild.projects.cross.cheribsd import (
 from pycheribuild.projects.cross.gdb import BuildGDBBase
 from pycheribuild.projects.cross.gmp import BuildGmp
 from pycheribuild.projects.cross.llvm import BuildCheriLLVM, BuildMorelloLLVM
+from pycheribuild.projects.cross.mpfr import BuildMpfr
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 from pycheribuild.projects.disk_image import BuildDiskImageBase
 from pycheribuild.projects.project import DefaultInstallDir, Project
@@ -187,6 +188,7 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
                 "morello-llvm-native",
                 "cheribsd-morello-hybrid",
                 "gmp-morello-hybrid",
+                "mpfr-morello-hybrid",
                 "gdb-morello-hybrid",
                 "disk-image-morello-hybrid",
             ],
@@ -199,6 +201,7 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
                 "morello-llvm-native",
                 "cheribsd-morello-purecap",
                 "gmp-morello-hybrid-for-purecap-rootfs",
+                "mpfr-morello-hybrid-for-purecap-rootfs",
                 "gdb-morello-hybrid-for-purecap-rootfs",
                 "disk-image-morello-purecap",
             ],
@@ -206,7 +209,15 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
         pytest.param(
             "run-riscv64",
             True,
-            ["qemu", "llvm-native", "cheribsd-riscv64", "gmp-riscv64", "gdb-riscv64", "disk-image-riscv64"],
+            [
+                "qemu",
+                "llvm-native",
+                "cheribsd-riscv64",
+                "gmp-riscv64",
+                "mpfr-riscv64",
+                "gdb-riscv64",
+                "disk-image-riscv64",
+            ],
         ),
         pytest.param(
             "run-riscv64-hybrid",
@@ -216,6 +227,7 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
                 "llvm-native",
                 "cheribsd-riscv64-hybrid",
                 "gmp-riscv64-hybrid",
+                "mpfr-riscv64-hybrid",
                 "gdb-riscv64-hybrid",
                 "bbl-baremetal-riscv64-purecap",
                 "disk-image-riscv64-hybrid",
@@ -229,6 +241,7 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
                 "llvm-native",
                 "cheribsd-riscv64-purecap",
                 "gmp-riscv64-hybrid-for-purecap-rootfs",
+                "mpfr-riscv64-hybrid-for-purecap-rootfs",
                 "gdb-riscv64-hybrid-for-purecap-rootfs",
                 "bbl-baremetal-riscv64-purecap",
                 "disk-image-riscv64-purecap",
@@ -237,12 +250,28 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
         pytest.param(
             "run-aarch64",
             True,
-            ["qemu", "llvm-native", "cheribsd-aarch64", "gmp-aarch64", "gdb-aarch64", "disk-image-aarch64"],
+            [
+                "qemu",
+                "llvm-native",
+                "cheribsd-aarch64",
+                "gmp-aarch64",
+                "mpfr-aarch64",
+                "gdb-aarch64",
+                "disk-image-aarch64",
+            ],
         ),
         pytest.param(
             "run-amd64",
             True,
-            ["qemu", "llvm-native", "cheribsd-amd64", "gmp-amd64", "gdb-amd64", "disk-image-amd64"],
+            [
+                "qemu",
+                "llvm-native",
+                "cheribsd-amd64",
+                "gmp-amd64",
+                "mpfr-amd64",
+                "gdb-amd64",
+                "disk-image-amd64",
+            ],
         ),
         # Morello code won't run on QEMU (yet)
         pytest.param(
@@ -253,6 +282,7 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
                 "morello-llvm-native",
                 "cheribsd-morello-hybrid",
                 "gmp-morello-hybrid",
+                "mpfr-morello-hybrid",
                 "gdb-morello-hybrid",
                 "morello-firmware",
                 "disk-image-morello-hybrid",
@@ -266,6 +296,7 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
                 "morello-llvm-native",
                 "cheribsd-morello-purecap",
                 "gmp-morello-hybrid-for-purecap-rootfs",
+                "mpfr-morello-hybrid-for-purecap-rootfs",
                 "gdb-morello-hybrid-for-purecap-rootfs",
                 "morello-firmware",
                 "disk-image-morello-purecap",
@@ -532,6 +563,7 @@ def test_riscv():
         "llvm-native",
         "cheribsd-riscv64",
         "gmp-riscv64",
+        "mpfr-riscv64",
         "gdb-riscv64",
         "disk-image-riscv64",
     ]
@@ -540,6 +572,7 @@ def test_riscv():
         "llvm-native",
         "cheribsd-riscv64",
         "gmp-riscv64",
+        "mpfr-riscv64",
         "gdb-riscv64",
         "disk-image-riscv64",
         "run-riscv64",
@@ -697,7 +730,7 @@ def test_hybrid_targets(enable_hybrid_targets: bool):
             return False
 
         # Finally, filter out dependencies of any of the above:
-        if issubclass(cls, BuildGmp):
+        if issubclass(cls, (BuildGmp, BuildMpfr)):
             return False
 
         # Otherwise this target is unexpected

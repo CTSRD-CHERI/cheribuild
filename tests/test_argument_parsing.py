@@ -127,6 +127,7 @@ def test_skip_update():
                 "llvm-native",
                 "cheribsd-riscv64-purecap",
                 "gmp-riscv64-hybrid-for-purecap-rootfs",
+                "mpfr-riscv64-hybrid-for-purecap-rootfs",
                 "gdb-riscv64-hybrid-for-purecap-rootfs",
                 "bbl-baremetal-riscv64-purecap",
                 "disk-image-riscv64-purecap",
