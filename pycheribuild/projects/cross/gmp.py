@@ -54,3 +54,8 @@ class BuildGmp(CrossCompileAutotoolsProject):
     def configure(self, **kwargs):
         self.run_cmd("./.bootstrap", cwd=self.source_dir)
         super().configure(**kwargs)
+
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        if not self.compiling_for_host():
+            self.delete_file(self.install_dir / "lib/libgmp.la", warn_if_missing=True)
