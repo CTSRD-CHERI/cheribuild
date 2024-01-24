@@ -860,6 +860,9 @@ class CrossCompileTarget:
         assert self.target_info_cls is not None
         return self.target_info_cls.is_native()
 
+    def is_native_hybrid(self) -> bool:
+        return self.is_native() and self._is_cheri_hybrid
+
     def _check_arch(self, arch: CPUArchitecture, include_purecap: "Optional[bool]") -> bool:
         if self.cpu_architecture is not arch:
             return False

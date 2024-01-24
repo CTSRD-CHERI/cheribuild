@@ -658,6 +658,9 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def compiling_for_host(self) -> bool:
         return self.crosscompile_target.is_native()
 
+    def compiling_for_host_hybrid(self) -> bool:
+        return self.crosscompile_target.is_native_hybrid()
+
     def compiling_for_riscv(self, include_purecap: bool) -> bool:
         return self.crosscompile_target.is_riscv(include_purecap=include_purecap)
 
