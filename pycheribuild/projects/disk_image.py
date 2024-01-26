@@ -912,6 +912,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "strip", default=True, help="strip ELF files to reduce size of generated image")
         cls.include_cheribsdtest = cls.add_bool_option(
             "include-cheribsdtest", default=True, help="Also add static cheribsdtest base variants to the disk image")
+        cls.include_pmc = cls.add_bool_option("include-pmc", default=True,
+                                              help="Include PMC tools and kernel modules in the disk image")
         cls.kernels = cls.add_list_option("kernel-names", default=[""],
                                           help="Kernel(s) to include in the image; empty string or '/' for "
                                                "/boot/kernel/, X for /boot/kernel.X/")
@@ -959,12 +961,19 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                         include_local_file("files/minimal-image/etc.files")]
         if self._have_cplusplus_support(["lib", "usr/lib"]):
             files_to_add.append(include_local_file("files/minimal-image/need-cplusplus.files"))
+
+        kernel_dir_files = []
         if self.include_boot_kernel:
+            kernel_dir_files.append("kernel")
+        if self.include_pmc:
+            kernel_dir_files.append("hwpmc.ko")
+        if kernel_dir_files:
             for k in self.kernels:
                 kernel_dir = "kernel" if k in ("", "/") else f"kernel.{k}"
-                files_to_add.append(f"boot/{kernel_dir}/kernel")
+                for f in kernel_dir_files:
+                    files_to_add.append(f"boot/{kernel_dir}/{f}")
         elif self.kernels is not None:
-            self.warning("This disk image is not installing kernels, yet kernel names given.")
+            self.warning("This disk image is not installing kernels or modules, yet kernel names given.")
 
         for files_list in files_to_add:
             self.process_files_list(files_list)
@@ -999,6 +1008,9 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         if self.include_cheribsdtest:
             for test_binary in (self.rootfs_dir / "bin").glob("cheribsdtest-*"):
                 self.add_file_to_image(test_binary, base_directory=self.rootfs_dir)
+
+        if self.include_pmc:
+            self.add_file_to_image(self.rootfs_dir / "usr/sbin/pmcstat", base_directory=self.rootfs_dir)
 
         # These dirs seem to be needed
         self.mtree.add_dir("var/db", print_status=self.config.verbose)
@@ -1037,6 +1049,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             # Commonly used (and tiny)
             "libdl.so.1",
             "libncursesw.so.9",
+            "libtinfow.so.9",
             "libxo.so.0",
             "libz.so.6",
             "librt.so.1",
@@ -1077,6 +1090,9 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
 
         if self._have_cplusplus_support(libdirs):
             required_libs += ["libc++.so.1", "libcxxrt.so.1", "libgcc_s.so.1"]
+
+        if self.include_pmc:
+            required_libs += ["libpmc.so.5"]
 
         for libs, required in [(required_libs, True), (optional_libs, False)]:
             for library_basename in libs:
