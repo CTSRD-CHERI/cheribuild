@@ -987,14 +987,14 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             self.warning("default ABI runtime linker not present in rootfs at", ld_elf_path)
             self.ask_for_confirmation("Are you sure you want to continue?")
         # Add all compat ABI runtime linkers that we find in the rootfs:
-        for rtld_abi in ("elf32", "elf64", "elf64c", "elf64cb"):
+        for rtld_abi in ("elf32", "elf64", "elf64c", "elf64cb", "elf128", "elf128g"):
             rtld_path = self.rootfs_dir / "libexec" / f"ld-{rtld_abi}.so.1"
             if rtld_path.exists():
                 self.add_file_to_image(rtld_path, base_directory=self.rootfs_dir)
 
         self.add_required_libraries(["lib", "usr/lib"])
         # Add compat libraries (may not exist if it was built with -DWITHOUT_LIB64, etc.)
-        for libcompat_dir in ("lib32", "lib64", "lib64c", "lib64cb"):
+        for libcompat_dir in ("lib32", "lib64", "lib64c", "lib64cb", "lib128", "lib128g"):
             fullpath = self.rootfs_dir / "usr" / libcompat_dir
             if fullpath.is_symlink():
                 # add the libcompat symlinks to ensure that we can always use lib64/lib64c in test scripts

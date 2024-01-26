@@ -2080,6 +2080,7 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
                    "--include=./usr/lib/", "--include=./usr/libdata/",
                    "--include=./usr/lib32", "--include=./usr/lib64",
                    "--include=./usr/lib64c", "--include=./usr/lib64cb",
+                   "--include=./usr/lib128", "--include=./usr/lib128g",
                    # only pack those files that are mentioned in METALOG
                    "@METALOG.world"]
         rootfs_target = self.rootfs_source_class.get_instance(self)
