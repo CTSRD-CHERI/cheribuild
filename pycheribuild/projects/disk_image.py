@@ -1003,7 +1003,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                 if (self.rootfs_dir / libcompat_dir).is_symlink():
                     self.mtree.add_symlink(src_symlink=self.rootfs_dir / libcompat_dir, path_in_image=libcompat_dir)
             elif (fullpath / "libc.so").exists():
-                self.add_required_libraries(["usr/" + libcompat_dir])
+                ignore_required = libcompat_dir in ("lib128", "lib128g")
+                self.add_required_libraries(["usr/" + libcompat_dir], ignore_required=ignore_required)
 
         if self.include_cheribsdtest:
             for test_binary in (self.rootfs_dir / "bin").glob("cheribsdtest-*"):
@@ -1037,7 +1038,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             self.verbose_print("Boot files:\n\t", "\n\t".join(map(str, sorted(extra_files))))
         self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
 
-    def add_required_libraries(self, libdirs: "list[str]"):
+    def add_required_libraries(self, libdirs: "list[str]", ignore_required: bool = False):
         optional_libs = []
         required_libs = [
             "libc.so.7",
@@ -1106,7 +1107,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                         prefix = libdirs[0] + "/"
                     else:
                         prefix = "{" + ",".join(libdirs) + "}/"
-                    if required:
+                    if required and not ignore_required:
                         self.fatal("Could not find required library '", prefix + library_basename, "' in rootfs ",
                                    self.rootfs_dir, sep="")
                     else:
