@@ -1011,6 +1011,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                 self.add_file_to_image(test_binary, base_directory=self.rootfs_dir)
 
         if self.include_pmc:
+            self.add_file_to_image(self.rootfs_dir / "sbin/kldload", base_directory=self.rootfs_dir)
             self.add_file_to_image(self.rootfs_dir / "usr/sbin/pmcstat", base_directory=self.rootfs_dir)
 
         # These dirs seem to be needed
