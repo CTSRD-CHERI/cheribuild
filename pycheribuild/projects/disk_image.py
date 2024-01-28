@@ -1122,7 +1122,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
     def prepare_rootfs(self):
         super().prepare_rootfs()
         # Add the additional sysctl configs
-        self.create_file_for_image("/etc/pam.d/system", show_contents_non_verbose=False,
+        self.create_file_for_image("/etc/pam.d/system", mode=0o644, show_contents_non_verbose=False,
                                    contents=include_local_file("files/minimal-image/pam.d/system"))
         # disable coredumps (since there is almost no space on the image)
         self.create_file_for_image("/etc/sysctl.conf", show_contents_non_verbose=False,
