@@ -1164,7 +1164,10 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def maybe_strip_elf_file(self, file: Path, *, output_path: "Optional[Path]" = None,
                              print_verbose_only=True) -> bool:
         """Runs llvm-strip on the file if it is an ELF file and it is safe to do so."""
-        if not file.is_file():
+        # NB: Must check if it's a symlink first; if it refers to a path we
+        # don't have permission to stat on the host (e.g. a symlink into /root)
+        # then is_file() will raise a PermissionError.
+        if file.is_symlink() or not file.is_file():
             return False
         try:
             with file.open("rb") as f:
