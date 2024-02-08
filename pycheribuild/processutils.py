@@ -52,10 +52,23 @@ from typing import Callable, Optional, Union
 from .colour import AnsiColour, coloured
 from .utils import ConfigBase, OSInfo, Type_T, fatal_error, status_update, warning_message
 
-__all__ = ["print_command", "get_compiler_info", "CompilerInfo", "popen", "popen_handle_noexec",
-           "run_command", "latest_system_clang_tool", "commandline_to_str", "set_env", "extract_version",
-           "get_program_version", "check_call_handle_noexec", "get_version_output", "keep_terminal_sane",
-           "run_and_kill_children_on_exit", "DoNotQuoteStr"]
+__all__ = [
+    "CompilerInfo",
+    "DoNotQuoteStr",
+    "check_call_handle_noexec",
+    "commandline_to_str",
+    "extract_version",
+    "get_compiler_info",
+    "get_program_version",
+    "get_version_output",
+    "keep_terminal_sane",
+    "latest_system_clang_tool",
+    "popen",
+    "popen_handle_noexec",
+    "print_command",
+    "run_and_kill_children_on_exit",
+    "run_command",
+    "set_env"]
 
 
 def __filter_env(env: "dict[str, str]") -> "dict[str, str]":

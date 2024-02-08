@@ -43,14 +43,14 @@ if typing.TYPE_CHECKING:   # no-combine
     from .project import Project  # no-combine
 
 __all__ = [
-    "GitRepository",
     "ExternallyManagedSourceRepository",
+    "GitRepository",
     "MercurialRepository",
-    "ReuseOtherProjectRepository",
     "ReuseOtherProjectDefaultTargetRepository",
+    "ReuseOtherProjectRepository",
+    "SourceRepository",
     "SubversionRepository",
     "TargetBranchInfo",
-    "SourceRepository",
 ]
 
 

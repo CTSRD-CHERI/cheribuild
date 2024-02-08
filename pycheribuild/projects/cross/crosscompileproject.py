@@ -53,11 +53,24 @@ from ..simple_project import SimpleProject
 from ...config.compilation_targets import CompilationTargets
 from ...utils import AnsiColour, coloured
 
-__all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",
-           "CrossCompileTarget", "CrossCompileSimpleProject", "CrossCompileProject",
-           "MakeCommandKind", "Linkage", "DefaultInstallDir", "BuildType", "CompilationTargets",
-           "GitRepository", "CrossCompileMixin", "CrossCompileMakefileProject",
-           "CrossCompileMesonProject", "commandline_to_str", "SubversionRepository"]
+__all__ = [
+    "BuildType",
+    "CheriConfig",
+    "CompilationTargets",
+    "CrossCompileAutotoolsProject",
+    "CrossCompileCMakeProject",
+    "CrossCompileMakefileProject",
+    "CrossCompileMesonProject",
+    "CrossCompileMixin",
+    "CrossCompileProject",
+    "CrossCompileSimpleProject",
+    "CrossCompileTarget",
+    "DefaultInstallDir",
+    "GitRepository",
+    "Linkage",
+    "MakeCommandKind",
+    "SubversionRepository",
+    "commandline_to_str"]
 
 
 if typing.TYPE_CHECKING:

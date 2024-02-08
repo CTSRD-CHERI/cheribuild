@@ -75,9 +75,15 @@ from ..utils import (
 )
 
 __all__ = [
-    "_cached_get_homebrew_prefix", "_clear_line_sequence", "_default_stdout_filter",
-    "flush_stdio", "SimpleProject", "TargetAlias", "TargetAliasWithDependencies",
-    "BoolConfigOption", "IntConfigOption",
+    "BoolConfigOption",
+    "IntConfigOption",
+    "SimpleProject",
+    "TargetAlias",
+    "TargetAliasWithDependencies",
+    "_cached_get_homebrew_prefix",
+    "_clear_line_sequence",
+    "_default_stdout_filter",
+    "flush_stdio",
 ]
 
 T = typing.TypeVar("T")

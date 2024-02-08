@@ -58,14 +58,14 @@ from pycheribuild.processutils import commandline_to_str  # noqa: E402
 from pycheribuild.utils import get_global_config  # noqa: E402
 
 __all__ = [
-    "run_tests_main",
-    "boot_cheribsd",
-    "junitparser",
-    "pexpect",
-    "commandline_to_str",
     "CrossCompileTarget",
+    "boot_cheribsd",
+    "commandline_to_str",
     "finish_and_write_junit_xml_report",
     "get_default_junit_xml_name",
+    "junitparser",
+    "pexpect",
+    "run_tests_main",
 ]
 
 

@@ -29,9 +29,9 @@ from pathlib import Path
 
 __all__ = [
     "generate_ssh_config_file_for_qemu",
+    "ssh_config_parameters",
     "ssh_host_accessible_cached",
     "ssh_host_accessible_uncached",
-    "ssh_config_parameters",
 ]
 
 from .filesystemutils import FileSystemUtils

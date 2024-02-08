@@ -45,14 +45,39 @@ from typing import Callable, Optional, Union
 from .colour import AnsiColour, coloured
 
 # reduce the number of import statements per project
-__all__ = ["typing", "include_local_file", "Type_T", "init_global_config",
-           "status_update", "fatal_error", "coloured", "AnsiColour", "query_yes_no",
-           "warning_message", "DoNotUseInIfStmt", "ThreadJoiner", "InstallInstructions",
-           "SafeDict", "error_message", "ConfigBase", "final", "add_error_context",
-           "default_make_jobs_count", "OSInfo", "is_jenkins_build", "get_global_config",
-           "classproperty", "find_free_port", "have_working_internet_connection", "SocketAndPort",
-           "is_case_sensitive_dir", "replace_one", "cached_property", "remove_prefix",
-           "remove_duplicates", "remove_tuple_duplicates"]
+__all__ = [
+    "AnsiColour",
+    "ConfigBase",
+    "DoNotUseInIfStmt",
+    "InstallInstructions",
+    "OSInfo",
+    "SafeDict",
+    "SocketAndPort",
+    "ThreadJoiner",
+    "Type_T",
+    "add_error_context",
+    "cached_property",
+    "classproperty",
+    "coloured",
+    "default_make_jobs_count",
+    "error_message",
+    "fatal_error",
+    "final",
+    "find_free_port",
+    "get_global_config",
+    "have_working_internet_connection",
+    "include_local_file",
+    "init_global_config",
+    "is_case_sensitive_dir",
+    "is_jenkins_build",
+    "query_yes_no",
+    "remove_duplicates",
+    "remove_prefix",
+    "remove_tuple_duplicates",
+    "replace_one",
+    "status_update",
+    "typing",
+    "warning_message"]
 
 if sys.version_info < (3, 6, 0):
     sys.exit("This script requires at least Python 3.6.0")
