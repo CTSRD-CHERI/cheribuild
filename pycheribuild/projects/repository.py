@@ -39,7 +39,7 @@ from ..config.target_info import CrossCompileTarget
 from ..processutils import get_program_version, run_command
 from ..utils import AnsiColour, ConfigBase, coloured, remove_prefix, status_update
 
-if typing.TYPE_CHECKING:   # no-combine
+if typing.TYPE_CHECKING:  # no-combine
     from .project import Project  # no-combine
 
 __all__ = [
@@ -56,7 +56,12 @@ __all__ = [
 
 class SourceRepository:
     def ensure_cloned(
-        self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path, skip_submodules=False,
+        self,
+        current_project: "Project",
+        *,
+        src_dir: Path,
+        base_project_source_dir: Path,
+        skip_submodules=False,
     ) -> None:
         raise NotImplementedError
 
@@ -121,7 +126,10 @@ class ReuseOtherProjectRepository(SourceRepository):
             src_proj.update()
         else:
             current_project.info(
-                "Not updating", src_dir, "since it reuses the repository for ", self.source_project.target,
+                "Not updating",
+                src_dir,
+                "since it reuses the repository for ",
+                self.source_project.target,
             )
 
 
@@ -243,7 +251,9 @@ class GitRepository(SourceRepository):
             upstream = headers.get("branch.upstream", "")
             remote_name, remote_branch = upstream.split("/", maxsplit=1) if "/" in upstream else (None, None)
             return GitBranchInfo(
-                local_branch=headers.get("branch.head", ""), remote_name=remote_name, upstream_branch=remote_branch,
+                local_branch=headers.get("branch.head", ""),
+                remote_name=remote_name,
+                upstream_branch=remote_branch,
             )
         except subprocess.CalledProcessError as e:
             if isinstance(e.__cause__, FileNotFoundError):
@@ -315,7 +325,13 @@ class GitRepository(SourceRepository):
             error_message = remove_prefix(is_ancestor.stderr.decode("utf-8"), "fatal: ").strip()
             current_project.verbose_print(
                 coloured(
-                    AnsiColour.blue, "Could not determine if ", expected_branch, " contains ", commit, ":", sep="",
+                    AnsiColour.blue,
+                    "Could not determine if ",
+                    expected_branch,
+                    " contains ",
+                    commit,
+                    ":",
+                    sep="",
                 ),
                 coloured(AnsiColour.yellow, error_message),
             )
@@ -324,11 +340,19 @@ class GitRepository(SourceRepository):
             current_project.warning("Unknown return code", is_ancestor)
             # some other error -> raise so that I can see what went wrong
             raise subprocess.CalledProcessError(
-                is_ancestor.returncode, is_ancestor.args, output=is_ancestor.stdout, stderr=is_ancestor.stderr,
+                is_ancestor.returncode,
+                is_ancestor.args,
+                output=is_ancestor.stdout,
+                stderr=is_ancestor.stderr,
             )
 
     def ensure_cloned(
-        self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path, skip_submodules=False,
+        self,
+        current_project: "Project",
+        *,
+        src_dir: Path,
+        base_project_source_dir: Path,
+        skip_submodules=False,
     ) -> None:
         if current_project.config.skip_clone:
             if not (src_dir / ".git").exists():
@@ -422,7 +446,8 @@ class GitRepository(SourceRepository):
             matching_remote = new_remote
         # Fetch from the remote to ensure that the target ref exists (otherwise git worktree add fails)
         current_project.run_cmd(
-            ["git", "-C", base_project_source_dir, "fetch", matching_remote], print_verbose_only=False,
+            ["git", "-C", base_project_source_dir, "fetch", matching_remote],
+            print_verbose_only=False,
         )
         while True:
             try:
@@ -439,9 +464,7 @@ class GitRepository(SourceRepository):
                 url = None
             if url == self.url:
                 break
-            current_project.info(
-                "URL '", url, "' for remote ", matching_remote, " does not match expected url '", self.url, "'", sep="",
-            )
+            current_project.info(f"URL '{url}' for remote {matching_remote} does not match expected url '{self.url}'")
             if current_project.query_yes_no("Use this remote?"):
                 break
             matching_remote = input("Please enter the correct remote: ")
@@ -570,7 +593,7 @@ class GitRepository(SourceRepository):
                 default_branch = self.old_branches.get(current_branch)
             if default_branch and current_branch != default_branch:
                 current_project.warning(
-                    "You are trying to build the", current_branch, "branch. You should be using", default_branch,
+                    f"You are trying to build the {current_branch} branch. You should be using {default_branch}"
                 )
                 if current_project.query_yes_no("Would you like to change to the " + default_branch + " branch?"):
                     try:
@@ -599,7 +622,10 @@ class GitRepository(SourceRepository):
         # When checking if we are up to date, we treat a missing @{upstream} reference (no upstream branch
         # configured) as success to avoid getting an error from git pull.
         up_to_date = self.contains_commit(
-            current_project, "@{upstream}", src_dir=src_dir, invalid_commit_ref_result="invalid",
+            current_project,
+            "@{upstream}",
+            src_dir=src_dir,
+            invalid_commit_ref_result="invalid",
         )
         if up_to_date is True:
             current_project.info("Skipping update: Current HEAD is up-to-date or ahead of upstream.")
@@ -637,7 +663,9 @@ class GitRepository(SourceRepository):
             if current_project.config.force_update:
                 status_update("Updating", src_dir, "with autostash due to --force-update")
             elif not current_project.query_yes_no(
-                "Stash the changes, update and reapply?", default_result=True, force_result=True,
+                "Stash the changes, update and reapply?",
+                default_result=True,
+                force_result=True,
             ):
                 status_update("Skipping update of", src_dir)
                 return
@@ -738,7 +766,12 @@ class MercurialRepository(SourceRepository):
             return False
 
     def ensure_cloned(
-        self, current_project: "Project", *, src_dir: Path, base_project_source_dir: Path, skip_submodules=False,
+        self,
+        current_project: "Project",
+        *,
+        src_dir: Path,
+        base_project_source_dir: Path,
+        skip_submodules=False,
     ) -> None:
         if current_project.config.skip_clone:
             if not (src_dir / ".hg").exists():
@@ -783,7 +816,11 @@ class MercurialRepository(SourceRepository):
         # handle repositories that have moved
         if src_dir.exists() and self.old_urls:
             remote_url = self.run_hg(
-                src_dir, "paths", "default", capture_output=True, project=current_project,
+                src_dir,
+                "paths",
+                "default",
+                capture_output=True,
+                project=current_project,
             ).stdout.strip()
             # Update from the old url:
             for old_url in self.old_urls:
@@ -807,12 +844,19 @@ class MercurialRepository(SourceRepository):
         if src_dir.exists() and self.force_branch:
             assert self.default_branch, "default_branch must be set if force_branch is true!"
             branch = self.run_hg(
-                src_dir, "branch", capture_output=True, print_verbose_only=True, project=current_project,
+                src_dir,
+                "branch",
+                capture_output=True,
+                print_verbose_only=True,
+                project=current_project,
             )
             current_branch = branch.stdout.decode("utf-8")
             if current_branch != self.force_branch:
                 current_project.warning(
-                    "You are trying to build the", current_branch, "branch. You should be using", self.default_branch,
+                    "You are trying to build the",
+                    current_branch,
+                    "branch. You should be using",
+                    self.default_branch,
                 )
                 if current_project.query_yes_no("Would you like to change to the " + self.default_branch + " branch?"):
                     self.run_hg(src_dir, "update", "--merge", self.default_branch, project=current_project)
@@ -835,7 +879,12 @@ class MercurialRepository(SourceRepository):
         has_changes = (
             len(
                 self.run_hg(
-                    src_dir, "diff", "--stat", capture_output=True, print_verbose_only=True, project=current_project,
+                    src_dir,
+                    "diff",
+                    "--stat",
+                    capture_output=True,
+                    print_verbose_only=True,
+                    project=current_project,
                 ).stdout,
             )
             > 1
@@ -846,7 +895,9 @@ class MercurialRepository(SourceRepository):
             if current_project.config.force_update:
                 status_update("Updating", src_dir, "with merge due to --force-update")
             elif not current_project.query_yes_no(
-                "Update and merge the changes?", default_result=True, force_result=True,
+                "Update and merge the changes?",
+                default_result=True,
+                force_result=True,
             ):
                 status_update("Skipping update of", src_dir)
                 return
@@ -872,7 +923,8 @@ class SubversionRepository(SourceRepository):
         if self._default_branch:
             checkout_url = checkout_url + "/" + self._default_branch
         if current_project.config.confirm_clone and not current_project.query_yes_no(
-            str(src_dir) + " is not a subversion checkout. Checkout from '" + checkout_url + "'?", default_result=True,
+            str(src_dir) + " is not a subversion checkout. Checkout from '" + checkout_url + "'?",
+            default_result=True,
         ):
             current_project.fatal("Sources for", str(src_dir), " missing!")
             return

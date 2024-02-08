@@ -63,14 +63,22 @@ class MesonProject(_CMakeAndMesonSharedLogic):
 
     def _configure_tool_install_instructions(self) -> InstallInstructions:
         return OSInfo.install_instructions(
-            "meson", False, default="meson", homebrew="meson", zypper="meson", freebsd="meson", apt="meson",
-            alternative="run `pip3 install --upgrade --user meson` to install the latest version")
+            "meson",
+            False,
+            default="meson",
+            homebrew="meson",
+            zypper="meson",
+            freebsd="meson",
+            apt="meson",
+            alternative="run `pip3 install --upgrade --user meson` to install the latest version",
+        )
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
-        cls.meson_options = cls.add_list_option("meson-options", metavar="OPTIONS",
-                                                help="Additional command line options to pass to Meson")
+        cls.meson_options = cls.add_list_option(
+            "meson-options", metavar="OPTIONS", help="Additional command line options to pass to Meson"
+        )
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -87,8 +95,12 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         return self.build_dir / "meson-native-file.ini"
 
     def add_meson_options(self, _include_empty_vars=False, _replace=True, **kwargs) -> None:
-        return self._add_configure_options(_config_file_options=self.meson_options, _replace=_replace,
-                                           _include_empty_vars=_include_empty_vars, **kwargs)
+        return self._add_configure_options(
+            _config_file_options=self.meson_options,
+            _replace=_replace,
+            _include_empty_vars=_include_empty_vars,
+            **kwargs,
+        )
 
     def add_asan_flags(self):
         self.add_meson_options(b_sanitize="address,undefined", b_lundef=False)
@@ -120,8 +132,11 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         self.configure_args.append("--wrap-mode=nofallback")
         self.add_meson_options(**self.build_type.to_meson_args())
         if self.use_lto:
-            self.add_meson_options(b_lto=True, b_lto_threads=self.config.make_jobs,
-                                   b_lto_mode="thin" if self.get_compiler_info(self.CC).is_clang else "default")
+            self.add_meson_options(
+                b_lto=True,
+                b_lto_threads=self.config.make_jobs,
+                b_lto_mode="thin" if self.get_compiler_info(self.CC).is_clang else "default",
+            )
 
         # Unlike CMake, Meson does not set the DT_RUNPATH entry automatically:
         # See https://github.com/mesonbuild/meson/issues/6220, https://github.com/mesonbuild/meson/issues/6541, etc.
@@ -140,8 +155,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
 
     def _toolchain_file_list_to_str(self, values: "list[Union[str, Path]]") -> str:
         # The meson toolchain file uses python-style lists
-        assert all(isinstance(x, (str, Path)) for x in values), \
-            "All values should be strings/Paths: " + str(values)
+        assert all(isinstance(x, (str, Path)) for x in values), "All values should be strings/Paths: " + str(values)
         return str(list(map(str, values)))
 
     def _bool_to_str(self, value: bool) -> str:
@@ -172,16 +186,21 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             host_target_info = NativeTargetInfo(BasicCompilationTargets.NATIVE, None)  # pytype: disable=wrong-arg-types
             host_prefixes = self.host_dependency_prefixes
             assert self.config.other_tools_dir in host_prefixes
-            host_pkg_config_dirs = list(itertools.chain.from_iterable(
-                host_target_info.pkgconfig_candidates(x) for x in host_prefixes))
+            host_pkg_config_dirs = list(
+                itertools.chain.from_iterable(host_target_info.pkgconfig_candidates(x) for x in host_prefixes)
+            )
             self._replace_values_in_toolchain_file(
-                native_toolchain_template, self._native_toolchain_file,
-                NATIVE_C_COMPILER=self.host_CC, NATIVE_CXX_COMPILER=self.host_CXX,
-                TOOLCHAIN_PKGCONFIG_BINARY=pkg_config_bin, TOOLCHAIN_CMAKE_BINARY=cmake_bin,
+                native_toolchain_template,
+                self._native_toolchain_file,
+                NATIVE_C_COMPILER=self.host_CC,
+                NATIVE_CXX_COMPILER=self.host_CXX,
+                TOOLCHAIN_PKGCONFIG_BINARY=pkg_config_bin,
+                TOOLCHAIN_CMAKE_BINARY=cmake_bin,
                 # To find native packages we have to add the bootstrap tools to PKG_CONFIG_PATH and CMAKE_PREFIX_PATH.
                 NATIVE_PKG_CONFIG_PATH=remove_duplicates(host_pkg_config_dirs),
                 NATIVE_CMAKE_PREFIX_PATH=remove_duplicates(
-                    host_prefixes + host_target_info.cmake_prefix_paths(self.config)),
+                    host_prefixes + host_target_info.cmake_prefix_paths(self.config)
+                ),
                 MESON_EXTRA_BINARIES=self._meson_extra_binaries,
             )
 
@@ -199,16 +218,23 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         self.configure_args.append(str(self.build_dir))
         super().configure(**kwargs)
         if self.config.copy_compilation_db_to_source_dir and (self.build_dir / "compile_commands.json").exists():
-            self.install_file(self.build_dir / "compile_commands.json", self.source_dir / "compile_commands.json",
-                              force=True)
+            self.install_file(
+                self.build_dir / "compile_commands.json", self.source_dir / "compile_commands.json", force=True
+            )
 
     def run_tests(self) -> None:
         if self.compiling_for_host():
             self.run_cmd(self.configure_command, "test", "--print-errorlogs", cwd=self.build_dir)
         elif self.target_info.is_cheribsd():
-            self.target_info.run_cheribsd_test_script("run_meson_tests.py", *self.meson_test_script_extra_args,
-                                                      mount_builddir=True, mount_sysroot=True, mount_sourcedir=True,
-                                                      use_full_disk_image=self.tests_need_full_disk_image)
+            self.target_info.run_cheribsd_test_script(
+                "run_meson_tests.py",
+                *self.meson_test_script_extra_args,
+                mount_builddir=True,
+                mount_sysroot=True,
+                mount_sourcedir=True,
+                use_full_disk_image=self.tests_need_full_disk_image,
+            )
         else:
-            self.info("Don't know how to run tests for", self.target, "when cross-compiling for",
-                      self.crosscompile_target)
+            self.info(
+                "Don't know how to run tests for", self.target, "when cross-compiling for", self.crosscompile_target
+            )

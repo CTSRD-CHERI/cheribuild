@@ -38,8 +38,9 @@ from ..config.compilation_targets import CompilationTargets
 
 class BuildCheriSpike(AutotoolsProject):
     target = "spike"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/riscv-isa-sim",
-                               default_branch="cheri", force_branch=True)
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/riscv-isa-sim", default_branch="cheri", force_branch=True
+    )
     native_install_dir = DefaultInstallDir.CHERI_SDK
     default_build_type = BuildType.RELEASE
     lto_by_default = True
@@ -80,13 +81,23 @@ class RunCheriSpikeBase(SimpleProject):
         kernel_config = kernel_project.default_kernel_config(ConfigPlatform.QEMU)
         kernel = kernel_project.get_kernel_install_path(kernel_config)
         # We always want output even with --quiet
-        self.run_cmd([BuildCheriSpike.get_simulator_binary(self), "+payload=" + str(kernel),
-                      self._bbl_class.get_installed_kernel_path(self, cross_target=self._bbl_xtarget)],
-                     give_tty_control=True, stdout=sys.stdout, stderr=sys.stderr)
+        self.run_cmd(
+            [
+                BuildCheriSpike.get_simulator_binary(self),
+                "+payload=" + str(kernel),
+                self._bbl_class.get_installed_kernel_path(self, cross_target=self._bbl_xtarget),
+            ],
+            give_tty_control=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
 
 
 class RunCheriBsdSpike(RunCheriSpikeBase):
     target = "run-spike"
     _source_class = BuildCheriBsdMfsKernel
-    supported_architectures = (CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
-                               CompilationTargets.CHERIBSD_RISCV_HYBRID)
+    supported_architectures = (
+        CompilationTargets.CHERIBSD_RISCV_PURECAP,
+        CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+        CompilationTargets.CHERIBSD_RISCV_HYBRID,
+    )

@@ -65,14 +65,19 @@ class OpamMixin(_MixinBase):
         self.check_required_system_tool("opam", homebrew="opam", apt="opam", cheribuild_target="opam-2.0")
         opam_path = shutil.which("opam")
         if opam_path:
-            opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?",
-                                               config=self.config)
+            opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?", config=self.config)
             min_version = (2, 0, 8)
             if opam_version < min_version:
-                install_inst = OSInfo.install_instructions("opam", False, apt="opam",
-                                                           cheribuild_target="opam-2.0" if OSInfo.IS_LINUX else None)
-                self.dependency_error("Opam version", ".".join(map(str, opam_version)), "is too old. Need at least",
-                                      ".".join(map(str, min_version)), install_instructions=install_inst)
+                install_inst = OSInfo.install_instructions(
+                    "opam", False, apt="opam", cheribuild_target="opam-2.0" if OSInfo.IS_LINUX else None
+                )
+                self.dependency_error(
+                    "Opam version",
+                    ".".join(map(str, opam_version)),
+                    "is too old. Need at least",
+                    ".".join(map(str, min_version)),
+                    install_instructions=install_inst,
+                )
 
     @property
     def opam_binary(self):
@@ -95,8 +100,9 @@ class OpamMixin(_MixinBase):
                 self.run_opam_cmd("switch", self.required_ocaml_version, _add_switch=False)
             except CalledProcessError:
                 # create the switch if it doesn't exist
-                self.run_opam_cmd("switch", "--verbose", "--debug", "create", self.required_ocaml_version,
-                                  _add_switch=False)
+                self.run_opam_cmd(
+                    "switch", "--verbose", "--debug", "create", self.required_ocaml_version, _add_switch=False
+                )
             finally:
                 self.__ignore_switch_version = False
             self.__using_correct_switch = True
@@ -109,8 +115,10 @@ class OpamMixin(_MixinBase):
         except CalledProcessError:
             if ignore_errors:
                 # noinspection PyUnresolvedReferences
-                self.verbose_print("Ignoring non-zero exit code from",
-                                   coloured(AnsiColour.yellow, self.commandline_to_str(command_list)))
+                self.verbose_print(
+                    "Ignoring non-zero exit code from",
+                    coloured(AnsiColour.yellow, self.commandline_to_str(command_list)),
+                )
             else:
                 raise
 
@@ -119,14 +127,25 @@ class OpamMixin(_MixinBase):
             cwd = self.source_dir if getattr(self, "source_dir") else "/"
 
         self._ensure_correct_switch()
-        opam_env = dict(GIT_TEMPLATE_DIR="",  # see https://github.com/ocaml/opam/issues/3493
-                        OPAMROOT=self.opamroot, CCACHE_DISABLE=1,  # https://github.com/ocaml/opam/issues/3395
-                        PATH=self.config.dollar_path_with_other_tools)
+        opam_env = dict(
+            GIT_TEMPLATE_DIR="",  # see https://github.com/ocaml/opam/issues/3493
+            OPAMROOT=self.opamroot,
+            CCACHE_DISABLE=1,  # https://github.com/ocaml/opam/issues/3395
+            PATH=self.config.dollar_path_with_other_tools,
+        )
         if Path(self.opam_binary).is_absolute():
             opam_env["OPAM_USER_PATH_RO"] = Path(self.opam_binary).parent
         if not (self.opamroot / "opam-init").exists():
-            self.run_cmd(self.opam_binary, "init", "--cli=2.1", "--disable-sandboxing", "--root=" + str(self.opamroot),
-                         "--no-setup", cwd="/", env=opam_env)
+            self.run_cmd(
+                self.opam_binary,
+                "init",
+                "--cli=2.1",
+                "--disable-sandboxing",
+                "--root=" + str(self.opamroot),
+                "--no-setup",
+                cwd="/",
+                env=opam_env,
+            )
         return opam_env, cwd
 
     def run_in_ocaml_env(self, command: str, cwd=None, print_verbose_only=False, **kwargs):
@@ -157,14 +176,24 @@ class Opam2(SimpleProject):
             self.makedirs(self.config.other_tools_dir / "bin")
             with tempfile.TemporaryDirectory() as td:
                 base_url = "https://github.com/ocaml/opam/releases/download/"
-                self.download_file(Path(td, "opam"), url=base_url + "2.0.8/opam-2.0.8-x86_64-linux",
-                                   sha256="95365a873d9e3ae6fb48e6109b5fc5df3b4e526c9d65d20652a78e263f745a35")
-                self.install_file(Path(td, "opam"), self.config.other_tools_dir / "bin/opam", force=True,
-                                  print_verbose_only=False, mode=0o755)
+                self.download_file(
+                    Path(td, "opam"),
+                    url=base_url + "2.0.8/opam-2.0.8-x86_64-linux",
+                    sha256="95365a873d9e3ae6fb48e6109b5fc5df3b4e526c9d65d20652a78e263f745a35",
+                )
+                self.install_file(
+                    Path(td, "opam"),
+                    self.config.other_tools_dir / "bin/opam",
+                    force=True,
+                    print_verbose_only=False,
+                    mode=0o755,
+                )
                 self.delete_file(self.config.other_tools_dir / "bin/opam.downloaded", print_verbose_only=False)
         else:
-            self.fatal("This target is only implement for Linux x86_64, for others operating systems you will have"
-                       " to install opam 2.0 manually")
+            self.fatal(
+                "This target is only implement for Linux x86_64, for others operating systems you will have"
+                " to install opam 2.0 manually"
+            )
 
 
 class BuildBubbleWrap(AutotoolsProject):
@@ -191,8 +220,9 @@ class BuildSailFromOpam(ProjectUsingOpam):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
-    use_git_version = BoolConfigOption("use-git-version",
-                                       help="Install sail from github instead of using the latest released version")
+    use_git_version = BoolConfigOption(
+        "use-git-version", help="Install sail from github instead of using the latest released version"
+    )
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
@@ -258,8 +288,12 @@ class BuildSailCheriMips(ProjectUsingOpam):
     def compile(self, **kwargs):
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
-        cmd = [self.make_args.command, self.config.make_j_flag, "all",
-               *self.make_args.all_commandline_args(self.config)]
+        cmd = [
+            self.make_args.command,
+            self.config.make_j_flag,
+            "all",
+            *self.make_args.all_commandline_args(self.config),
+        ]
         self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
@@ -277,6 +311,7 @@ class RunSailShell(OpamMixin, SimpleProject):
         shell = os.getenv("SHELL", "bash")
         self.info(f"Starting sail shell (using {shell})... ")
         import subprocess
+
         try:
             prompt_env = {}
             if "_P9K_TTY" in os.environ or "P9K_TTY" in os.environ:
@@ -290,7 +325,8 @@ class RunSailShell(OpamMixin, SimpleProject):
             with self.set_env(**prompt_env):
                 self.run_command_in_ocaml_env(
                     [shell, "-c", f"echo 'Entering sail environment, send CTRL+D to exit'; exec {shell} -i"],
-                    cwd=os.getcwd())
+                    cwd=os.getcwd(),
+                )
         except subprocess.CalledProcessError as e:
             if e.returncode == 130:
                 return  # User pressed Ctrl+D to exit shell, don't print an error
@@ -311,8 +347,15 @@ class BuildSailRISCV(ProjectUsingOpam):
 
     def compile(self, **kwargs):
         for arch in ("RV64", "RV32"):
-            cmd = [self.make_args.command, self.config.make_j_flag, "ARCH=" + arch, "csim", "osim", "rvfi",
-                   *self.make_args.all_commandline_args(self.config)]
+            cmd = [
+                self.make_args.command,
+                self.config.make_j_flag,
+                "ARCH=" + arch,
+                "csim",
+                "osim",
+                "rvfi",
+                *self.make_args.all_commandline_args(self.config),
+            ]
             self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
@@ -335,8 +378,15 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
 
     def compile(self, **kwargs):
         for arch in ("RV64", "RV32"):
-            cmd = [self.make_args.command, self.config.make_j_flag, "ARCH=" + arch, "csim", "osim", "rvfi",
-                   *self.make_args.all_commandline_args(self.config)]
+            cmd = [
+                self.make_args.command,
+                self.config.make_j_flag,
+                "ARCH=" + arch,
+                "csim",
+                "osim",
+                "rvfi",
+                *self.make_args.all_commandline_args(self.config),
+            ]
             self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
@@ -358,6 +408,11 @@ class BuildSailMorello(ProjectUsingOpam):
         self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     def compile(self, **kwargs):
-        cmd = [self.make_args.command, self.config.make_j_flag, "gen_c", "check_sail",
-               *self.make_args.all_commandline_args(self.config)]
+        cmd = [
+            self.make_args.command,
+            self.config.make_j_flag,
+            "gen_c",
+            "check_sail",
+            *self.make_args.all_commandline_args(self.config),
+        ]
         self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)

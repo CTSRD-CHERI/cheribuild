@@ -127,21 +127,30 @@ class ProjectSubclassDefinitionHook(ABCMeta):
             if clsdict.get("do_not_add_to_targets") is True:
                 return  # if do_not_add_to_targets is defined within the class we skip it
         elif name.endswith("Base"):
-            fatal_error("Found class name ending in Base (", name, ") but do_not_add_to_targets was not defined",
-                        sep="", pretend=False)
+            fatal_error(
+                "Found class name ending in Base (",
+                name,
+                ") but do_not_add_to_targets was not defined",
+                sep="",
+                pretend=False,
+            )
 
         def die(msg):
             sys.exit(inspect.getfile(cls) + ":" + str(inspect.findsource(cls)[1] + 1) + ": error: " + msg)
+
         # load "target" field first then use that to infer the default source/build/install dir names
         target_name = None
         if "target" in clsdict:
             target_name = clsdict["target"]
         elif name.startswith("Build"):
-            target_name = name[len("Build"):].replace("_", "-").lower()
+            target_name = name[len("Build") :].replace("_", "-").lower()
             cls.target = target_name
         if not target_name:
-            die("target name is not set and cannot infer from class " + name +
-                " -- set target= or do_not_add_to_targets=True")
+            die(
+                "target name is not set and cannot infer from class "
+                + name
+                + " -- set target= or do_not_add_to_targets=True"
+            )
         # Make the local config options dictionary read-only
         cls._local_config_options = MappingProxyType(cls._local_config_options)
 
@@ -150,16 +159,20 @@ class ProjectSubclassDefinitionHook(ABCMeta):
             cls.default_directory_basename = target_name
 
         if "project_name" in clsdict:
-            die("project_name should no longer be used, change the definition of class " + name +
-                " to include target and/or default_directory_basename")
+            die(
+                "project_name should no longer be used, change the definition of class "
+                + name
+                + " to include target and/or default_directory_basename"
+            )
 
         if cls.__dict__.get("dependencies_must_be_built") and not cls.dependencies:
             sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
         supported_archs = cls.supported_architectures
         assert supported_archs, "Must not be empty: " + str(supported_archs)
         assert isinstance(supported_archs, tuple)
-        assert len(set(supported_archs)) == len(
-            supported_archs), "Duplicates in supported archs for " + cls.__name__ + ": " + str(supported_archs)
+        assert len(set(supported_archs)) == len(supported_archs), (
+            "Duplicates in supported archs for " + cls.__name__ + ": " + str(supported_archs)
+        )
         # TODO: if len(cls.supported_architectures) > 1:
         if cls._always_add_suffixed_targets or len(supported_archs) > 1:
             # Add a the target for the default architecture
@@ -208,8 +221,10 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                         if arch.is_mips(include_purecap=False):
                             new_cls._config_file_aliases += (replace_one(new_name, "-mips64", "-mips"),)
                         elif arch.is_x86_64(include_purecap=False):
-                            new_cls._config_file_aliases += (replace_one(new_name, "-amd64", "-x86"),
-                                                             replace_one(new_name, "-amd64", "-x86_64"))
+                            new_cls._config_file_aliases += (
+                                replace_one(new_name, "-amd64", "-x86"),
+                                replace_one(new_name, "-amd64", "-x86_64"),
+                            )
                 if len(set(new_cls._config_file_aliases)) != len(new_cls._config_file_aliases):
                     raise ValueError(f"Duplicate aliases for {new_name}: {new_cls._config_file_aliases}")
         else:
@@ -240,50 +255,71 @@ class PerProjectConfigOption:
 
 
 if typing.TYPE_CHECKING:
-    # noinspection PyPep8Naming
-    def BoolConfigOption(name: str, help: str,  # noqa: N802
-                         default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
+
+    def BoolConfigOption(  # noqa: N802
+        name: str,
+        help: str,
+        default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False,
+        **kwargs,
+    ) -> bool:
         return typing.cast(bool, default)
 
     # noinspection PyPep8Naming
-    def IntConfigOption(name: str, help: str,  # noqa: N802
-                        default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs) -> int:
+    def IntConfigOption(  # noqa: N802
+        name: str,
+        help: str,
+        default: "typing.Union[int, ComputedDefaultValue[int]]",
+        **kwargs,
+    ) -> int:
         return typing.cast(int, default)
 
     # noinspection PyPep8Naming
-    def OptionalIntConfigOption(name: str, help: str,  # noqa: N802
-                                default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]" = None,
-                                **kwargs) -> "Optional[int]":
+    def OptionalIntConfigOption(  # noqa: N802
+        name: str,
+        help: str,
+        default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]" = None,
+        **kwargs,
+    ) -> "Optional[int]":
         return typing.cast(Optional[int], default)
 else:
+
     class BoolConfigOption(PerProjectConfigOption):
-        def __init__(self, name: str, help: str, default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False,
-                     **kwargs):
+        def __init__(
+            self, name: str, help: str, default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs
+        ):
             super().__init__(name, help, default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
-            return typing.cast(ConfigOptionHandle,
-                               owner.add_bool_option(self._name, default=self._default, help=self._help,
-                                                     **self._kwargs))
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_bool_option(self._name, default=self._default, help=self._help, **self._kwargs),
+            )
 
     class IntConfigOption(PerProjectConfigOption):
         def __init__(self, name: str, help: str, default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs):
             super().__init__(name, help, default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
-            return typing.cast(ConfigOptionHandle,
-                               owner.add_config_option(self._name, default=self._default, help=self._help, kind=int,
-                                                       **self._kwargs))
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(self._name, default=self._default, help=self._help, kind=int, **self._kwargs),
+            )
 
     class OptionalIntConfigOption(PerProjectConfigOption):
-        def __init__(self, name: str, help: str,
-                     default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]" = None, **kwargs):
+        def __init__(
+            self,
+            name: str,
+            help: str,
+            default: "typing.Union[Optional[int], ComputedDefaultValue[Optional[int]]]" = None,
+            **kwargs,
+        ):
             super().__init__(name, help, default, **kwargs)
 
         def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
-            return typing.cast(ConfigOptionHandle,
-                               owner.add_config_option(self._name, default=self._default, help=self._help, kind=int,
-                                                       **self._kwargs))
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_config_option(self._name, default=self._default, help=self._help, kind=int, **self._kwargs),
+            )
 
 
 @functools.lru_cache(maxsize=20)
@@ -294,8 +330,11 @@ def _cached_get_homebrew_prefix(package: "Optional[str]", config: CheriConfig):
         command.append(package)
     prefix = None
     try:
-        prefix_str = run_command(command, capture_output=True, run_in_pretend_mode=True,
-                                 print_verbose_only=False, config=config).stdout.decode("utf-8").strip()
+        prefix_str = (
+            run_command(command, capture_output=True, run_in_pretend_mode=True, print_verbose_only=False, config=config)
+            .stdout.decode("utf-8")
+            .strip()
+        )
         prefix = Path(prefix_str)
         if not prefix.exists():
             prefix = None
@@ -374,7 +413,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     @property
     def _no_overwrite_allowed(self) -> "tuple[str]":
-        return ("_xtarget", )
+        return ("_xtarget",)
 
     @classmethod
     def all_dependency_names(cls, config: CheriConfig) -> "list[str]":
@@ -385,9 +424,14 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     # noinspection PyCallingNonCallable
     @classmethod
-    def _direct_dependencies(cls, config: CheriConfig, *, include_toolchain_dependencies: bool,
-                             include_sdk_dependencies: bool,
-                             explicit_dependencies_only: bool) -> "typing.Iterator[Target]":
+    def _direct_dependencies(
+        cls,
+        config: CheriConfig,
+        *,
+        include_toolchain_dependencies: bool,
+        include_sdk_dependencies: bool,
+        explicit_dependencies_only: bool,
+    ) -> "typing.Iterator[Target]":
         if not include_sdk_dependencies:
             include_toolchain_dependencies = False  # --skip-sdk means skip toolchain and skip sysroot
         assert cls._xtarget is not None
@@ -422,31 +466,50 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                         )
                         dependencies.append(dep_target.name)
                     except KeyError:
-                        fatal_error("Could not find sysroot target '", dep_name, "' for ", cls.__name__, sep="",
-                                    pretend=config.pretend, fatal_when_pretending=True)
+                        fatal_error(
+                            "Could not find sysroot target '",
+                            dep_name,
+                            "' for ",
+                            cls.__name__,
+                            sep="",
+                            pretend=config.pretend,
+                            fatal_when_pretending=True,
+                        )
                         raise
         # Try to resovle the target names to actual targets and potentially add recursive depdencies
         for dep_name in dependencies:
             try:
                 dep_target = target_manager.get_target(
-                    dep_name, arch_for_unqualified_targets=expected_build_arch, config=config, caller=cls.target,
+                    dep_name,
+                    arch_for_unqualified_targets=expected_build_arch,
+                    config=config,
+                    caller=cls.target,
                 )
             except KeyError:
-                fatal_error("Could not find target '", dep_name, "' for ", cls.__name__, sep="",
-                            pretend=config.pretend, fatal_when_pretending=True)
+                fatal_error(
+                    "Could not find target '",
+                    dep_name,
+                    "' for ",
+                    cls.__name__,
+                    sep="",
+                    pretend=config.pretend,
+                    fatal_when_pretending=True,
+                )
                 raise
             # Handle --include-dependencies when --skip-sdk/--no-include-toolchain-dependencies is passed
             if explicit_dependencies_only:
                 pass  # add all explicit direct dependencies
             elif not include_sdk_dependencies and dep_target.project_class.is_sdk_target:
                 if config.verbose:
-                    status_update("Not adding ", cls.target, "dependency", dep_target.name,
-                                  "since it is an SDK target.")
+                    status_update(
+                        "Not adding ", cls.target, "dependency", dep_target.name, "since it is an SDK target."
+                    )
                 continue
             elif not include_toolchain_dependencies and dep_target.project_class.is_toolchain_target():
                 if config.verbose:
-                    status_update("Not adding ", cls.target, "dependency", dep_target.name,
-                                  "since it is a toolchain target.")
+                    status_update(
+                        "Not adding ", cls.target, "dependency", dep_target.name, "since it is a toolchain target."
+                    )
                 continue
             # Now find the actual crosscompile targets for target aliases:
             if isinstance(dep_target, MultiArchTargetAlias):
@@ -457,8 +520,9 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                         dep_target = tgt
                         # print("Overriding with", tgt.name)
                         break
-            assert not isinstance(dep_target, MultiArchTargetAlias), "All targets should be fully resolved but got " \
-                                                                     + str(dep_target) + " in " + cls.__name__
+            assert not isinstance(dep_target, MultiArchTargetAlias), (
+                "All targets should be fully resolved but got " + str(dep_target) + " in " + cls.__name__
+            )
             if dep_target.project_class is cls:
                 # assert False, "Found self as dependency:" + str(cls)
                 continue
@@ -484,23 +548,31 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             with_toolchain_deps = config.include_toolchain_dependencies and not cls.skip_toolchain_dependencies
             with_sdk_deps = not config.skip_sdk
             result = cls._recursive_dependencies_impl(
-                config, include_dependencies=config.include_dependencies or cls.dependencies_must_be_built,
-                include_toolchain_dependencies=with_toolchain_deps, include_sdk_dependencies=with_sdk_deps)
+                config,
+                include_dependencies=config.include_dependencies or cls.dependencies_must_be_built,
+                include_toolchain_dependencies=with_toolchain_deps,
+                include_sdk_dependencies=with_sdk_deps,
+            )
             cls._cached_filtered_deps = result
         return result
 
     @classmethod
-    def _recursive_dependencies_impl(cls, config: CheriConfig, *, include_dependencies: bool,
-                                     include_toolchain_dependencies: bool,
-                                     dependency_chain: "Optional[list[type[SimpleProject]]]" = None,
-                                     include_sdk_dependencies: bool) -> "list[Target]":
+    def _recursive_dependencies_impl(
+        cls,
+        config: CheriConfig,
+        *,
+        include_dependencies: bool,
+        include_toolchain_dependencies: bool,
+        dependency_chain: "Optional[list[type[SimpleProject]]]" = None,
+        include_sdk_dependencies: bool,
+    ) -> "list[Target]":
         assert cls._xtarget is not None, cls
         if not include_dependencies:
             return []
         if dependency_chain:
             new_dependency_chain = [*dependency_chain, cls]
             if cls in dependency_chain:
-                cycle = new_dependency_chain[new_dependency_chain.index(cls):]
+                cycle = new_dependency_chain[new_dependency_chain.index(cls) :]
                 fatal_error("Cyclic dependency found:", " -> ".join(map(lambda c: c.target, cycle)), pretend=False)
         else:
             new_dependency_chain = [cls]
@@ -511,9 +583,12 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         if cached_result is not None:
             return cached_result
         result = []
-        for target in cls._direct_dependencies(config, include_toolchain_dependencies=include_toolchain_dependencies,
-                                               include_sdk_dependencies=include_sdk_dependencies,
-                                               explicit_dependencies_only=cls.direct_dependencies_only):
+        for target in cls._direct_dependencies(
+            config,
+            include_toolchain_dependencies=include_toolchain_dependencies,
+            include_sdk_dependencies=include_sdk_dependencies,
+            explicit_dependencies_only=cls.direct_dependencies_only,
+        ):
             if config.should_skip_dependency(target.name, cls.target):
                 continue
 
@@ -523,10 +598,12 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                 continue  # don't add recursive dependencies for e.g. "build-and-run"
             # now recursively add the other deps:
             recursive_deps = target.project_class._recursive_dependencies_impl(
-                config, include_dependencies=include_dependencies,
+                config,
+                include_dependencies=include_dependencies,
                 include_toolchain_dependencies=include_toolchain_dependencies,
                 include_sdk_dependencies=include_sdk_dependencies,
-                dependency_chain=new_dependency_chain)
+                dependency_chain=new_dependency_chain,
+            )
             for r in recursive_deps:
                 if r not in result:
                     result.append(r)
@@ -546,13 +623,17 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     @classmethod
     def _cache_full_dependencies(cls, config, *, allow_already_cached=False) -> None:
         assert allow_already_cached or cls.__dict__.get("_cached_full_deps", None) is None, "Already cached??"
-        cls._cached_full_deps = cls._recursive_dependencies_impl(config, include_dependencies=True,
-                                                                 include_toolchain_dependencies=True,
-                                                                 include_sdk_dependencies=True)
+        cls._cached_full_deps = cls._recursive_dependencies_impl(
+            config, include_dependencies=True, include_toolchain_dependencies=True, include_sdk_dependencies=True
+        )
 
     @classmethod
-    def get_instance(cls: "type[T]", caller: "Optional[AbstractProject]", config: "Optional[CheriConfig]" = None,
-                     cross_target: Optional[CrossCompileTarget] = None) -> T:
+    def get_instance(
+        cls: "type[T]",
+        caller: "Optional[AbstractProject]",
+        config: "Optional[CheriConfig]" = None,
+        cross_target: Optional[CrossCompileTarget] = None,
+    ) -> T:
         # TODO: assert that target manager has been initialized
         if caller is not None:
             if config is None:
@@ -566,8 +647,9 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return cls.get_instance_for_cross_target(cross_target, config, caller=caller)
 
     @classmethod
-    def _get_instance_no_setup(cls: "type[T]", caller: AbstractProject,
-                               cross_target: Optional[CrossCompileTarget] = None) -> T:
+    def _get_instance_no_setup(
+        cls: "type[T]", caller: AbstractProject, cross_target: Optional[CrossCompileTarget] = None
+    ) -> T:
         if cross_target is None:
             cross_target = caller.crosscompile_target
         target_name = cls.target
@@ -582,8 +664,12 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return result
 
     @staticmethod
-    def get_instance_for_target_name(target_name: str, cross_target: CrossCompileTarget, config: CheriConfig,
-                                     caller: "Optional[AbstractProject]" = None) -> "SimpleProject":
+    def get_instance_for_target_name(
+        target_name: str,
+        cross_target: CrossCompileTarget,
+        config: CheriConfig,
+        caller: "Optional[AbstractProject]" = None,
+    ) -> "SimpleProject":
         if caller is not None:
             assert caller._init_called, "Cannot call this inside __init__()"
         assert cross_target is not None
@@ -592,13 +678,18 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         assert isinstance(result, SimpleProject)
         found_target = result.get_crosscompile_target()
         # XXX: FIXME: add cross target to every call
-        assert found_target is cross_target, (f"Didn't find right instance of {target_name}: {found_target} vs "
-                                              f"{cross_target}, caller was {caller!r}")
+        assert found_target is cross_target, (
+            f"Didn't find right instance of {target_name}: {found_target} vs " f"{cross_target}, caller was {caller!r}"
+        )
         return result
 
     @classmethod
-    def get_instance_for_cross_target(cls: "type[T]", cross_target: CrossCompileTarget, config: CheriConfig,
-                                      caller: "Optional[AbstractProject]" = None) -> T:
+    def get_instance_for_cross_target(
+        cls: "type[T]",
+        cross_target: CrossCompileTarget,
+        config: CheriConfig,
+        caller: "Optional[AbstractProject]" = None,
+    ) -> T:
         # Also need to handle calling self.get_instance_for_cross_target() on a target-specific instance
         # In that case cls.target returns e.g. foo-mips, etc. and target_manager will always return the MIPS version
         # which is not what we want if there is an explicit cross_target
@@ -696,7 +787,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     @property
     def triple_arch(self) -> str:
         target_triple = self.target_info.target_triple
-        return target_triple[:target_triple.find("-")]
+        return target_triple[: target_triple.find("-")]
 
     @property
     def sdk_sysroot(self) -> Path:
@@ -714,8 +805,12 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def display_name(self) -> str:
         if self._xtarget is None:
             return self.target + " (target alias)"
-        return self.target + " (" + self._xtarget.build_suffix(self.config,
-                                                               include_os=self.include_os_in_target_suffix) + ")"
+        return (
+            self.target
+            + " ("
+            + self._xtarget.build_suffix(self.config, include_os=self.include_os_in_target_suffix)
+            + ")"
+        )
 
     @classmethod
     def get_class_for_target(cls: "type[T]", arch: CrossCompileTarget) -> "type[T]":
@@ -753,14 +848,36 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     # Duplicate all arguments instead of using **kwargs to get sensible code completion
     # noinspection PyShadowingBuiltins
-    def run_cmd(self, *args, capture_output=False, capture_error=False, input: "Optional[Union[str, bytes]]" = None,
-                timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
-                no_print=False, replace_env=False, give_tty_control=False,
-                **kwargs) -> "subprocess.CompletedProcess[bytes]":
-        return run_command(*args, capture_output=capture_output, capture_error=capture_error, input=input,
-                           timeout=timeout, config=self.config, print_verbose_only=print_verbose_only,
-                           run_in_pretend_mode=run_in_pretend_mode, raise_in_pretend_mode=raise_in_pretend_mode,
-                           no_print=no_print, replace_env=replace_env, give_tty_control=give_tty_control, **kwargs)
+    def run_cmd(
+        self,
+        *args,
+        capture_output=False,
+        capture_error=False,
+        input: "Optional[Union[str, bytes]]" = None,
+        timeout=None,
+        print_verbose_only=False,
+        run_in_pretend_mode=False,
+        raise_in_pretend_mode=False,
+        no_print=False,
+        replace_env=False,
+        give_tty_control=False,
+        **kwargs,
+    ) -> "subprocess.CompletedProcess[bytes]":
+        return run_command(
+            *args,
+            capture_output=capture_output,
+            capture_error=capture_error,
+            input=input,
+            timeout=timeout,
+            config=self.config,
+            print_verbose_only=print_verbose_only,
+            run_in_pretend_mode=run_in_pretend_mode,
+            raise_in_pretend_mode=raise_in_pretend_mode,
+            no_print=no_print,
+            replace_env=replace_env,
+            give_tty_control=give_tty_control,
+            **kwargs,
+        )
 
     def set_env(self, *, print_verbose_only=True, **environ) -> "typing.ContextManager":
         return set_env(print_verbose_only=print_verbose_only, config=self.config, **environ)
@@ -776,12 +893,20 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return option.full_option_name
 
     @classmethod
-    def add_config_option(cls, name: str, *, show_help=False, altname: "Optional[str]" = None,
-                          kind: "Union[type[T], Callable[[str], T]]" = str,
-                          default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], T], T, None]"
-                          = None, only_add_for_targets: "Optional[tuple[CrossCompileTarget, ...]]" = None,
-                          extra_fallback_config_names: "Optional[list[str]]" = None, _allow_unknown_targets=False,
-                          use_default_fallback_config_names=True, **kwargs) -> Optional[T]:
+    def add_config_option(
+        cls,
+        name: str,
+        *,
+        show_help=False,
+        altname: "Optional[str]" = None,
+        kind: "Union[type[T], Callable[[str], T]]" = str,
+        default: "Union[ComputedDefaultValue[T], Callable[[CheriConfig, SimpleProject], T], T, None]" = None,
+        only_add_for_targets: "Optional[tuple[CrossCompileTarget, ...]]" = None,
+        extra_fallback_config_names: "Optional[list[str]]" = None,
+        _allow_unknown_targets=False,
+        use_default_fallback_config_names=True,
+        **kwargs,
+    ) -> Optional[T]:
         fullname = cls.target + "/" + name
         # We abuse shortname to implement altname
         if altname is not None:
@@ -802,7 +927,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             if hasattr(cls._config_loader, "_parser"):  # XXX:  Use hasattr instead of isinstance to avoid imports.
                 # noinspection PyProtectedMember
                 cls._commandline_option_group = cls._config_loader._parser.add_argument_group(
-                    "Options for target '" + cls.target + "'")
+                    "Options for target '" + cls.target + "'"
+                )
             else:
                 cls._commandline_option_group = None
         if cls.hide_options_from_help:
@@ -821,9 +947,13 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             # If we are adding to the base class or the target is not in the list, emit a warning
             if not _allow_unknown_targets:
                 for t in only_add_for_targets:
-                    assert t in cls.supported_architectures, \
-                        cls.__name__ + ": some of " + str(only_add_for_targets) + " not in " + str(
-                            cls.supported_architectures)
+                    assert t in cls.supported_architectures, (
+                        cls.__name__
+                        + ": some of "
+                        + str(only_add_for_targets)
+                        + " not in "
+                        + str(cls.supported_architectures)
+                    )
             if target is not None and target not in only_add_for_targets and not typing.TYPE_CHECKING:
                 kwargs["option_cls"] = DefaultValueOnlyConfigOption
                 kwargs["fallback_replaceable"] = True
@@ -850,22 +980,42 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
         legacy_alias_target_names = [tgt + "/" + name for tgt in cls.__dict__.get("_config_file_aliases", tuple())]
-        return cls._config_loader.add_option(fullname, shortname, default=default, type=kind,
-                                             _owning_class=cls, group=cls._commandline_option_group,
-                                             help_hidden=help_hidden, _fallback_names=fallback_config_names,
-                                             _legacy_alias_names=legacy_alias_target_names, **kwargs)
+        return cls._config_loader.add_option(
+            fullname,
+            shortname,
+            default=default,
+            type=kind,
+            _owning_class=cls,
+            group=cls._commandline_option_group,
+            help_hidden=help_hidden,
+            _fallback_names=fallback_config_names,
+            _legacy_alias_names=legacy_alias_target_names,
+            **kwargs,
+        )
 
     @classmethod
-    def add_bool_option(cls, name: str, *, altname=None,
-                        only_add_for_targets: "Optional[tuple[CrossCompileTarget, ...]]" = None,
-                        default: "Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
-        return typing.cast(bool, cls.add_config_option(name, default=default, kind=bool, altname=altname,
-                                                       only_add_for_targets=only_add_for_targets, **kwargs))
+    def add_bool_option(
+        cls,
+        name: str,
+        *,
+        altname=None,
+        only_add_for_targets: "Optional[tuple[CrossCompileTarget, ...]]" = None,
+        default: "Union[bool, ComputedDefaultValue[bool]]" = False,
+        **kwargs,
+    ) -> bool:
+        return typing.cast(
+            bool,
+            cls.add_config_option(
+                name, default=default, kind=bool, altname=altname, only_add_for_targets=only_add_for_targets, **kwargs
+            ),
+        )
 
     @classmethod
     def add_list_option(cls, name: str, *, default=None, **kwargs) -> "list[str]":
-        return typing.cast(typing.List[str],
-                           cls.add_config_option(name, kind=list, default=[] if default is None else default, **kwargs))
+        return typing.cast(
+            typing.List[str],
+            cls.add_config_option(name, kind=list, default=[] if default is None else default, **kwargs),
+        )
 
     @classmethod
     def add_optional_path_option(cls, name: str, **kwargs) -> Optional[Path]:
@@ -873,8 +1023,11 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     @classmethod
     def add_path_option(
-        cls, name: str, *,
-        default: "Union[ComputedDefaultValue[Path], Callable[[CheriConfig, SimpleProject], Path], Path]", **kwargs,
+        cls,
+        name: str,
+        *,
+        default: "Union[ComputedDefaultValue[Path], Callable[[CheriConfig, SimpleProject], Path], Path]",
+        **kwargs,
     ) -> Path:
         return typing.cast(Path, cls.add_config_option(name, kind=Path, default=default, **kwargs))
 
@@ -904,7 +1057,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         assert self._xtarget == crosscompile_target, "Failed to update all callers?"
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
         assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
-            self.__class__)
+            self.__class__
+        )
         self._system_deps_checked = False
         self._setup_called = False
         self._setup_late_called = False
@@ -934,21 +1088,42 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         tgt = target_manager.get_target(cheribuild_target, config=self.config, caller=self)
         # And check that it's a native target:
         if not tgt.project_class.get_crosscompile_target().is_native():
-            self.fatal("add_required_*() should use a native cheribuild target and not ", cheribuild_target,
-                       "- found while processing", self.target, fatal_when_pretending=True)
+            self.fatal(
+                "add_required_*() should use a native cheribuild target and not ",
+                cheribuild_target,
+                "- found while processing",
+                self.target,
+                fatal_when_pretending=True,
+            )
 
-    def check_required_system_tool(self, executable: str, instructions: "Optional[InstallInstructions]" = None,
-                                   default: "Optional[str]" = None, freebsd: "Optional[str]" = None,
-                                   apt: "Optional[str]" = None, zypper: "Optional[str]" = None,
-                                   homebrew: "Optional[str]" = None, cheribuild_target: "Optional[str]" = None,
-                                   alternative_instructions: "Optional[str]" = None,
-                                   compat_abi: "Optional[bool]" = None):
+    def check_required_system_tool(
+        self,
+        executable: str,
+        instructions: "Optional[InstallInstructions]" = None,
+        default: "Optional[str]" = None,
+        freebsd: "Optional[str]" = None,
+        apt: "Optional[str]" = None,
+        zypper: "Optional[str]" = None,
+        homebrew: "Optional[str]" = None,
+        cheribuild_target: "Optional[str]" = None,
+        alternative_instructions: "Optional[str]" = None,
+        compat_abi: "Optional[bool]" = None,
+    ):
         if instructions is None:
             if compat_abi is None:
                 compat_abi = self.compiling_for_host() and self.compiling_for_cheri_hybrid()
             instructions = OSInfo.install_instructions(
-                executable, is_lib=False, default=default, freebsd=freebsd, zypper=zypper, apt=apt, homebrew=homebrew,
-                cheribuild_target=cheribuild_target, alternative=alternative_instructions, compat_abi=compat_abi)
+                executable,
+                is_lib=False,
+                default=default,
+                freebsd=freebsd,
+                zypper=zypper,
+                apt=apt,
+                homebrew=homebrew,
+                cheribuild_target=cheribuild_target,
+                alternative=alternative_instructions,
+                compat_abi=compat_abi,
+            )
         if executable in self.__checked_system_tools:
             # If we already checked for this tool, the install instructions should match
             assert instructions.fixit_hint() == self.__checked_system_tools[executable].fixit_hint(), executable
@@ -957,22 +1132,42 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         assert instructions.alternative == alternative_instructions
         self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
         if not shutil.which(str(executable)):
-            self.dependency_error("Required program", executable, "is missing!", install_instructions=instructions,
-                                  cheribuild_target=instructions.cheribuild_target,
-                                  cheribuild_xtarget=BasicCompilationTargets.NATIVE)
+            self.dependency_error(
+                "Required program",
+                executable,
+                "is missing!",
+                install_instructions=instructions,
+                cheribuild_target=instructions.cheribuild_target,
+                cheribuild_xtarget=BasicCompilationTargets.NATIVE,
+            )
         self.__checked_system_tools[executable] = instructions
 
-    def check_required_pkg_config(self, package: str, instructions: "Optional[InstallInstructions]" = None,
-                                  default: "Optional[str]" = None, freebsd: "Optional[str]" = None,
-                                  apt: "Optional[str]" = None, zypper: "Optional[str]" = None,
-                                  homebrew: "Optional[str]" = None, cheribuild_target: "Optional[str]" = None,
-                                  alternative_instructions: "Optional[str]" = None) -> None:
+    def check_required_pkg_config(
+        self,
+        package: str,
+        instructions: "Optional[InstallInstructions]" = None,
+        default: "Optional[str]" = None,
+        freebsd: "Optional[str]" = None,
+        apt: "Optional[str]" = None,
+        zypper: "Optional[str]" = None,
+        homebrew: "Optional[str]" = None,
+        cheribuild_target: "Optional[str]" = None,
+        alternative_instructions: "Optional[str]" = None,
+    ) -> None:
         if "pkg-config" not in self.__checked_system_tools:
             self.check_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
         if instructions is None:
             instructions = OSInfo.install_instructions(
-                package, is_lib=False, default=default, freebsd=freebsd, zypper=zypper, apt=apt, homebrew=homebrew,
-                cheribuild_target=cheribuild_target, alternative=alternative_instructions)
+                package,
+                is_lib=False,
+                default=default,
+                freebsd=freebsd,
+                zypper=zypper,
+                apt=apt,
+                homebrew=homebrew,
+                cheribuild_target=cheribuild_target,
+                alternative=alternative_instructions,
+            )
         if package in self.__checked_pkg_config:
             # If we already checked for this pkg-config .pc file, the install instructions should match
             assert instructions.fixit_hint() == self.__checked_pkg_config[package].fixit_hint(), package
@@ -991,21 +1186,41 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             with self.set_env(**env):
                 self.run_cmd(["pkg-config", "--modversion", package], capture_output=True)
         except subprocess.CalledProcessError as e:
-            self.dependency_error("Required pkg-config file for", package, "is missing:", e,
-                                  install_instructions=instructions,
-                                  cheribuild_target=instructions.cheribuild_target,
-                                  cheribuild_xtarget=BasicCompilationTargets.NATIVE)
+            self.dependency_error(
+                "Required pkg-config file for",
+                package,
+                "is missing:",
+                e,
+                install_instructions=instructions,
+                cheribuild_target=instructions.cheribuild_target,
+                cheribuild_xtarget=BasicCompilationTargets.NATIVE,
+            )
         self.__checked_pkg_config[package] = instructions
 
-    def check_required_system_header(self, header: str, instructions: "Optional[InstallInstructions]" = None,
-                                     default: "Optional[str]" = None, freebsd: "Optional[str]" = None,
-                                     apt: "Optional[str]" = None, zypper: "Optional[str]" = None,
-                                     homebrew: "Optional[str]" = None, cheribuild_target: "Optional[str]" = None,
-                                     alternative_instructions: "Optional[str]" = None) -> None:
+    def check_required_system_header(
+        self,
+        header: str,
+        instructions: "Optional[InstallInstructions]" = None,
+        default: "Optional[str]" = None,
+        freebsd: "Optional[str]" = None,
+        apt: "Optional[str]" = None,
+        zypper: "Optional[str]" = None,
+        homebrew: "Optional[str]" = None,
+        cheribuild_target: "Optional[str]" = None,
+        alternative_instructions: "Optional[str]" = None,
+    ) -> None:
         if instructions is None:
             instructions = OSInfo.install_instructions(
-                header, is_lib=False, default=default, freebsd=freebsd, zypper=zypper, apt=apt, homebrew=homebrew,
-                cheribuild_target=cheribuild_target, alternative=alternative_instructions)
+                header,
+                is_lib=False,
+                default=default,
+                freebsd=freebsd,
+                zypper=zypper,
+                apt=apt,
+                homebrew=homebrew,
+                cheribuild_target=cheribuild_target,
+                alternative=alternative_instructions,
+            )
         if header in self.__checked_system_headers:
             # If we already checked for this header file, the install instructions should match
             assert instructions.fixit_hint() == self.__checked_system_headers[header].fixit_hint(), header
@@ -1013,18 +1228,26 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
         include_dirs = self.get_compiler_info(self.CC).get_include_dirs(self.essential_compiler_and_linker_flags)
         if not any(Path(d, header).exists() for d in include_dirs):
-            self.dependency_error("Required C header", header, "is missing!", install_instructions=instructions,
-                                  cheribuild_target=instructions.cheribuild_target,
-                                  cheribuild_xtarget=BasicCompilationTargets.NATIVE)
+            self.dependency_error(
+                "Required C header",
+                header,
+                "is missing!",
+                install_instructions=instructions,
+                cheribuild_target=instructions.cheribuild_target,
+                cheribuild_xtarget=BasicCompilationTargets.NATIVE,
+            )
         self.__checked_system_headers[header] = instructions
 
-    def query_yes_no(self, message: str = "", *, default_result=False, force_result=True,
-                     yes_no_str: "Optional[str]" = None) -> bool:
-        return query_yes_no(self.config, message, default_result=default_result, force_result=force_result,
-                            yes_no_str=yes_no_str)
+    def query_yes_no(
+        self, message: str = "", *, default_result=False, force_result=True, yes_no_str: "Optional[str]" = None
+    ) -> bool:
+        return query_yes_no(
+            self.config, message, default_result=default_result, force_result=force_result, yes_no_str=yes_no_str
+        )
 
-    def ask_for_confirmation(self, message: str, error_message="Cannot continue.", default_result=True,
-                             **kwargs) -> None:
+    def ask_for_confirmation(
+        self, message: str, error_message="Cannot continue.", default_result=True, **kwargs
+    ) -> None:
         if not self.query_yes_no(message, default_result=default_result, **kwargs):
             self.fatal(error_message)
 
@@ -1069,9 +1292,17 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     # def _stdout_filter(self, line: bytes):
     #     self._line_not_important_stdout_filter(line)
 
-    def run_with_logfile(self, args: "typing.Sequence[str]", logfile_name: str, *, stdout_filter=None,
-                         cwd: "Optional[Path]" = None, env: "Optional[dict[str, Optional[str]]]" = None,
-                         append_to_logfile=False, stdin=subprocess.DEVNULL) -> None:
+    def run_with_logfile(
+        self,
+        args: "typing.Sequence[str]",
+        logfile_name: str,
+        *,
+        stdout_filter=None,
+        cwd: "Optional[Path]" = None,
+        env: "Optional[dict[str, Optional[str]]]" = None,
+        append_to_logfile=False,
+        stdin=subprocess.DEVNULL,
+    ) -> None:
         """
         Runs make and logs the output
         config.quiet doesn't display anything, normal only status updates and config.verbose everything
@@ -1128,19 +1359,25 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                 check_call_handle_noexec(args, cwd=str(cwd), stdout=logfile, stderr=logfile, stdin=stdin, env=new_env)
                 return
             with keep_terminal_sane(command=args):
-                make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                           stdin=stdin, env=new_env)
+                make = popen_handle_noexec(
+                    args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=stdin, env=new_env
+                )
                 self.__run_process_with_filtered_output(make, logfile, stdout_filter, args)
 
-    def __run_process_with_filtered_output(self, proc: subprocess.Popen, logfile: "Optional[typing.IO]",
-                                           stdout_filter: "Callable[[bytes], None]",
-                                           args: "list[str]"):
+    def __run_process_with_filtered_output(
+        self,
+        proc: subprocess.Popen,
+        logfile: "Optional[typing.IO]",
+        stdout_filter: "Callable[[bytes], None]",
+        args: "list[str]",
+    ):
         logfile_lock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
         stderr_thread = None
         if logfile:
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
-            stderr_thread = threading.Thread(target=self._handle_stderr,
-                                             args=(logfile, proc.stderr, logfile_lock, self))
+            stderr_thread = threading.Thread(
+                target=self._handle_stderr, args=(logfile, proc.stderr, logfile_lock, self)
+            )
             stderr_thread.start()
         for line in proc.stdout:
             with logfile_lock:  # make sure we don't interleave stdout and stderr lines
@@ -1173,8 +1410,9 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             message = ("See " + logfile.name + " for details.").encode("utf-8") if logfile else None
             raise subprocess.CalledProcessError(retcode, args, None, stderr=message)
 
-    def maybe_strip_elf_file(self, file: Path, *, output_path: "Optional[Path]" = None,
-                             print_verbose_only=True) -> bool:
+    def maybe_strip_elf_file(
+        self, file: Path, *, output_path: "Optional[Path]" = None, print_verbose_only=True
+    ) -> bool:
         """Runs llvm-strip on the file if it is an ELF file and it is safe to do so."""
         # NB: Must check if it's a symlink first; if it refers to a path we
         # don't have permission to stat on the host (e.g. a symlink into /root)
@@ -1224,8 +1462,13 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         if not old_suffixes:
             return
         if current_suffix not in current_path.name:
-            self.info("Warning:", current_path.name, "does not include expected suffix", current_suffix,
-                      "-- either it was set in the config file or this is a logic error.")
+            self.info(
+                "Warning:",
+                current_path.name,
+                "does not include expected suffix",
+                current_suffix,
+                "-- either it was set in the config file or this is a logic error.",
+            )
             # raise ValueError((current_path, current_suffix))
         for old_suffix in old_suffixes:
             old_name = current_path.name.replace(current_suffix, old_suffix)
@@ -1241,11 +1484,16 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                     if self.query_yes_no("Would you like to remove the old directory " + str(old_path)):
                         self._delete_directories(old_path)
 
-    def _dependency_message(self, *args, problem="missing",
-                            install_instructions: "Optional[InstallInstructions]" = None,
-                            cheribuild_target: "Optional[str]" = None,
-                            cheribuild_xtarget: "Optional[CrossCompileTarget]" = None,
-                            cheribuild_action: str = "install", fatal: bool):
+    def _dependency_message(
+        self,
+        *args,
+        problem="missing",
+        install_instructions: "Optional[InstallInstructions]" = None,
+        cheribuild_target: "Optional[str]" = None,
+        cheribuild_xtarget: "Optional[CrossCompileTarget]" = None,
+        cheribuild_action: str = "install",
+        fatal: bool,
+    ):
         self._system_deps_checked = True  # make sure this is always set
         if install_instructions is not None and isinstance(install_instructions, InstallInstructions):
             install_instructions = install_instructions.fixit_hint()
@@ -1253,15 +1501,24 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             self.warning("Dependency for", self.target, problem + ":", *args, fixit_hint=install_instructions)
             if not self._setup_late_called:
                 # TODO: make this a fatal error
-                self.warning("TODO: Should not call dependency_error() with a cheribuild target fixit before "
-                             "setup() has completed. Move the call to process() instead.")
+                self.warning(
+                    "TODO: Should not call dependency_error() with a cheribuild target fixit before "
+                    "setup() has completed. Move the call to process() instead."
+                )
                 self.fatal("Dependency for", self.target, problem + ":", *args, fixit_hint=install_instructions)
                 return
-            if self.query_yes_no("Would you like to " + cheribuild_action + " the dependency (" + cheribuild_target +
-                                 ") using cheribuild?", force_result=False if is_jenkins_build() else True):
+            if self.query_yes_no(
+                "Would you like to "
+                + cheribuild_action
+                + " the dependency ("
+                + cheribuild_target
+                + ") using cheribuild?",
+                force_result=False if is_jenkins_build() else True,
+            ):
                 xtarget = cheribuild_xtarget if cheribuild_xtarget is not None else self.crosscompile_target
-                dep_target = target_manager.get_target(cheribuild_target, required_arch=xtarget, config=self.config,
-                                                       caller=self)
+                dep_target = target_manager.get_target(
+                    cheribuild_target, required_arch=xtarget, config=self.config, caller=self
+                )
                 dep_target.check_system_deps(self.config)
                 assert dep_target.get_or_create_project(None, self.config, caller=self).crosscompile_target == xtarget
                 dep_target.execute(self.config)
@@ -1269,21 +1526,43 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         if fatal:
             self.fatal("Dependency for", self.target, problem + ":", *args, fixit_hint=install_instructions)
 
-    def dependency_error(self, *args, problem="missing", install_instructions: "Optional[InstallInstructions]" = None,
-                         cheribuild_target: "Optional[str]" = None,
-                         cheribuild_xtarget: "Optional[CrossCompileTarget]" = None, cheribuild_action: str = "install"):
-        self._dependency_message(*args, problem=problem, install_instructions=install_instructions,
-                                 cheribuild_target=cheribuild_target, cheribuild_action=cheribuild_action,
-                                 cheribuild_xtarget=cheribuild_xtarget, fatal=True)
+    def dependency_error(
+        self,
+        *args,
+        problem="missing",
+        install_instructions: "Optional[InstallInstructions]" = None,
+        cheribuild_target: "Optional[str]" = None,
+        cheribuild_xtarget: "Optional[CrossCompileTarget]" = None,
+        cheribuild_action: str = "install",
+    ):
+        self._dependency_message(
+            *args,
+            problem=problem,
+            install_instructions=install_instructions,
+            cheribuild_target=cheribuild_target,
+            cheribuild_action=cheribuild_action,
+            cheribuild_xtarget=cheribuild_xtarget,
+            fatal=True,
+        )
 
-    def dependency_warning(self, *args, problem="missing",
-                           install_instructions: "Optional[InstallInstructions]" = None,
-                           cheribuild_target: "Optional[str]" = None,
-                           cheribuild_xtarget: "Optional[CrossCompileTarget]" = None,
-                           cheribuild_action: str = "install"):
-        self._dependency_message(*args, problem=problem, install_instructions=install_instructions,
-                                 cheribuild_target=cheribuild_target, cheribuild_xtarget=cheribuild_xtarget,
-                                 cheribuild_action=cheribuild_action, fatal=False)
+    def dependency_warning(
+        self,
+        *args,
+        problem="missing",
+        install_instructions: "Optional[InstallInstructions]" = None,
+        cheribuild_target: "Optional[str]" = None,
+        cheribuild_xtarget: "Optional[CrossCompileTarget]" = None,
+        cheribuild_action: str = "install",
+    ):
+        self._dependency_message(
+            *args,
+            problem=problem,
+            install_instructions=install_instructions,
+            cheribuild_target=cheribuild_target,
+            cheribuild_xtarget=cheribuild_xtarget,
+            cheribuild_action=cheribuild_action,
+            fatal=False,
+        )
 
     def check_system_dependencies(self) -> None:
         """
@@ -1297,8 +1576,11 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         if not prefix and not optional:
             prefix = Path("/fake/homebrew/prefix/when/pretending")
             if package:
-                self.dependency_error("Could not find homebrew package", package,
-                                      install_instructions=InstallInstructions(f"Try running `brew install {package}`"))
+                self.dependency_error(
+                    "Could not find homebrew package",
+                    package,
+                    install_instructions=InstallInstructions(f"Try running `brew install {package}`"),
+                )
                 prefix = prefix / "opt" / package
             else:
                 self.dependency_error("Could not find homebrew")
@@ -1367,8 +1649,10 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             elif shutil.which("fetch"):  # pre-installed on FreeBSD/CheriBSD
                 self.run_cmd("fetch", "-o", dest, url)
             else:
-                self.dependency_error("Cannot find a tool to download target URL.",
-                                      install_instructions=InstallInstructions("Please install wget or curl"))
+                self.dependency_error(
+                    "Cannot find a tool to download target URL.",
+                    install_instructions=InstallInstructions("Please install wget or curl"),
+                )
             downloaded_sha256 = self.sha256sum(dest)
             self.verbose_print("Downloaded", url, "with SHA256 hash", downloaded_sha256)
             if sha256 is not None and downloaded_sha256 != sha256:

@@ -239,7 +239,8 @@ class RunTestRIGFuzz(RunTestRIGBase, ABC):
         super().setup_config_options(**kwargs)
         if getattr(cls, "_replay_trace_path", None) is None:
             cls._replay_trace_path = cls.add_optional_path_option(
-                "replay-trace", help="Run QCV trace from file/directory")
+                "replay-trace", help="Run QCV trace from file/directory"
+            )
 
     @cached_property
     def run_implementations_with_tracing(self) -> bool:

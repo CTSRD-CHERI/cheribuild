@@ -65,11 +65,15 @@ class DockerAdduser(SimpleProject):
             gid = uid
 
         # Create a Dockerfile that will contain this user's name, gid, uid
-        self.write_file(self.build_dir / "Dockerfile", overwrite=True, contents=f"""
+        self.write_file(
+            self.build_dir / "Dockerfile",
+            overwrite=True,
+            contents=f"""
 FROM {self.config.docker_container}
 RUN addgroup --gid {gid} {user} && \
     adduser --uid {uid} --ingroup {user} {user}
-""")
+""",
+        )
 
         # Build a new image from our installed image with this user
         try:
@@ -78,8 +82,6 @@ RUN addgroup --gid {gid} {user} && \
 
         except subprocess.CalledProcessError:
             # if the image is missing print a helpful error message:
-            error = "Failed to add your user to the docker image " + \
-                    self.config.docker_container
-            hint = "Ensure you have " + self.config.docker_container + \
-                   "available (check using docker image ls)"
+            error = "Failed to add your user to the docker image " + self.config.docker_container
+            hint = "Ensure you have " + self.config.docker_container + "available (check using docker image ls)"
             self.fatal(error, fixit_hint=hint)

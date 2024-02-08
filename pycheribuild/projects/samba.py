@@ -45,9 +45,12 @@ class BuildSamba(Project):
     else:
         build_in_source_dir = True
     # NB: We can't update beyond 4.13 due to https://bugzilla.samba.org/show_bug.cgi?id=15024
-    repository = GitRepository("https://github.com/CTSRD-CHERI/samba.git",
-                               old_urls=[b"https://github.com/samba-team/samba.git"],
-                               default_branch="v4-13-stable", force_branch=True)
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/samba.git",
+        old_urls=[b"https://github.com/samba-team/samba.git"],
+        default_branch="v4-13-stable",
+        force_branch=True,
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -65,25 +68,27 @@ class BuildSamba(Project):
         super().setup()
         # Based on https://willhaley.com/blog/compile-samba-macos/
         # Also try to disable everything that is not needed for QEMU user shares
-        self.configure_args.extend([
-            "--disable-cephfs",
-            "--disable-cups",
-            "--disable-iprint",
-            "--disable-glusterfs",
-            "--disable-python",
-            "--without-acl-support",
-            "--without-ad-dc",
-            "--without-ads",
-            "--without-ldap",
-            "--without-pam",
-            "--without-quotas",
-            "--without-regedit",
-            "--without-syslog",
-            "--without-utmp",
-            "--without-winbind",
-            # "--without-json-audit", "--without-ldb-lmdb", (only needed in master not 4.8 stable)
-            "--prefix=" + str(self.install_dir),
-        ])
+        self.configure_args.extend(
+            [
+                "--disable-cephfs",
+                "--disable-cups",
+                "--disable-iprint",
+                "--disable-glusterfs",
+                "--disable-python",
+                "--without-acl-support",
+                "--without-ad-dc",
+                "--without-ads",
+                "--without-ldap",
+                "--without-pam",
+                "--without-quotas",
+                "--without-regedit",
+                "--without-syslog",
+                "--without-utmp",
+                "--without-winbind",
+                # "--without-json-audit", "--without-ldb-lmdb", (only needed in master not 4.8 stable)
+                "--prefix=" + str(self.install_dir),
+            ]
+        )
         #  version 4.9 "--without-json-audit",
         self.configure_args.append("--without-json")
 
@@ -94,17 +99,24 @@ class BuildSamba(Project):
         # XXX: Can't call contains_commit inside setup() since we might not have cloned the repo yet.
         if self.repository.contains_commit(self, "91c024dfd8ecf909f23ab8ee3816ae6a4c9b881c", src_dir=self.source_dir):
             # current master branch doesn't need as many workarounds
-            self.configure_args.extend([
-                # Avoid depending on libraries from the build tree:
-                "--bundled-libraries=ALL", "--with-static-modules=ALL",
-                "--enable-debug",
-            ])
+            self.configure_args.extend(
+                [
+                    # Avoid depending on libraries from the build tree:
+                    "--bundled-libraries=ALL",
+                    "--with-static-modules=ALL",
+                    "--enable-debug",
+                ]
+            )
         else:
-            self.configure_args.extend([
-                "--without-ntvfs-fileserver", "--without-dnsupdate",
-                # Avoid depending on libraries from the build tree:
-                "--bundled-libraries=talloc,tdb,pytdb,ldb,pyldb,tevent,pytevent", "--with-static-modules=ALL",
-            ])
+            self.configure_args.extend(
+                [
+                    "--without-ntvfs-fileserver",
+                    "--without-dnsupdate",
+                    # Avoid depending on libraries from the build tree:
+                    "--bundled-libraries=talloc,tdb,pytdb,ldb,pyldb,tevent,pytevent",
+                    "--with-static-modules=ALL",
+                ]
+            )
         super().configure(cwd=self.source_dir, **kwargs)
 
     def compile(self, **kwargs):
@@ -123,14 +135,19 @@ class BuildSamba(Project):
         if OSInfo.IS_MAC:
             # We need icu4c, libarchive, readline and krb5 from homebrew:
             homebrew_dirs = [str(self.get_homebrew_prefix(pkg)) for pkg in ("krb5", "libarchive", "readline", "icu4c")]
-            with self.set_env(PATH=':'.join([x + "/bin" for x in homebrew_dirs]) + ':' +
-                                   ':'.join([x + "/sbin" for x in homebrew_dirs]) + ':' +
-                                   os.getenv("PATH", ""),
-                              PKG_CONFIG_PATH=':'.join([x + "/lib/pkgconfig" for x in homebrew_dirs]) + ':' +
-                                              os.getenv("PKG_CONFIG_PATH", ""),
-                              LDFLAGS=' '.join(["-L" + x + "/lib" for x in homebrew_dirs]),
-                              CPPFLAGS=' '.join(["-I" + x + "/include" for x in homebrew_dirs]),
-                              CFLAGS=' '.join(["-I" + x + "/include" for x in homebrew_dirs])):
+            with self.set_env(
+                PATH=":".join([x + "/bin" for x in homebrew_dirs])
+                + ":"
+                + ":".join([x + "/sbin" for x in homebrew_dirs])
+                + ":"
+                + os.getenv("PATH", ""),
+                PKG_CONFIG_PATH=":".join([x + "/lib/pkgconfig" for x in homebrew_dirs])
+                + ":"
+                + os.getenv("PKG_CONFIG_PATH", ""),
+                LDFLAGS=" ".join(["-L" + x + "/lib" for x in homebrew_dirs]),
+                CPPFLAGS=" ".join(["-I" + x + "/include" for x in homebrew_dirs]),
+                CFLAGS=" ".join(["-I" + x + "/include" for x in homebrew_dirs]),
+            ):
                 super().process()
         else:
             super().process()
