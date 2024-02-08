@@ -727,6 +727,10 @@ class BuildUpstreamLibunwind(BuildLibunwind):
     )
 
 
+class BuildUpstreamLibunwindWithHostCompiler(_HostCompilerMixin, BuildUpstreamLibunwind):
+    target = "upstream-libunwind-with-host-compiler"
+
+
 class BuildCompilerRtRuntimesBuild(_BuildLlvmRuntimes):
     target = "compiler-rt-runtimes-build"
     llvm_project = BuildCheriLLVM
