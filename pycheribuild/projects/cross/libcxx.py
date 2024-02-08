@@ -709,6 +709,10 @@ class BuildLibunwind(_BuildLlvmRuntimes):
     _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("libunwind",)
 
 
+class BuildLibunwindWithHostCompiler(_HostCompilerMixin, BuildLibunwind):
+    target = "libunwind-with-host-compiler"
+
+
 class BuildUpstreamLibunwind(_UpstreamLLVMMixin, BuildLibunwind):
     target = "upstream-libunwind"
 
@@ -724,6 +728,10 @@ class BuildCompilerRtRuntimesBuild(_BuildLlvmRuntimes):
     default_architecture = CompilationTargets.NATIVE
     default_build_type = BuildType.DEBUG
     _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("compiler-rt",)
+
+
+class BuildCompilerRtRuntimesBuildWithHostCompiler(_HostCompilerMixin, BuildCompilerRtRuntimesBuild):
+    target = "compiler-rt-runtimes-build-with-host-compiler"
 
 
 class BuildUpstreamCompilerRtRuntimesBuild(_UpstreamLLVMMixin, BuildCompilerRtRuntimesBuild):
@@ -749,6 +757,10 @@ class BuildLlvmLibs(_BuildLlvmRuntimes):
         if self._xtarget in CompilationTargets.ALL_PICOLIBC_TARGETS:
             return DefaultInstallDir.ROOTFS_LOCALBASE
         return super().cross_install_dir
+
+
+class BuildLlvmLibsWithHostCompiler(_HostCompilerMixin, BuildLlvmLibs):
+    target = "llvm-libs-with-host-compiler"
 
 
 class BuildUpstreamLlvmLibs(_UpstreamLLVMMixin, _BuildLlvmRuntimes):
