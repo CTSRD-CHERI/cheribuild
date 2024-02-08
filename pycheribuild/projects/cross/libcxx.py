@@ -404,7 +404,9 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
 
     @property
     def qemu_instance(self):
-        if self.target_info.is_cheribsd():
+        if self.compiling_for_host():
+            return None
+        elif self.target_info.is_cheribsd():
             return LaunchCheriBSD.get_instance(self, cross_target=self.crosscompile_target.get_rootfs_target())
         elif self.target_info.is_freebsd():
             return LaunchFreeBSD.get_instance(self, cross_target=self.crosscompile_target.get_rootfs_target())
