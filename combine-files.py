@@ -101,6 +101,8 @@ def handle_line(line: str, src_file: Path, continued_import: bool):
 
 def add_filtered_file(p: Path):
     # print("adding", p, file=sys.stderr)
+    p = p.resolve()
+    assert p not in handled_files, p
     handled_files.append(p)
     # TODO: filter
     with p.open("r") as f:
@@ -123,64 +125,40 @@ def check_all_files_used(directory: Path):
 add_filtered_file(script_dir / "colour.py")
 add_filtered_file(script_dir / "utils.py")
 add_filtered_file(script_dir / "mtree.py")
+add_filtered_file(script_dir / "config/config_loader_base.py")
 add_filtered_file(script_dir / "config/loader.py")
-add_filtered_file(script_dir / "config/target_info.py")
+add_filtered_file(script_dir / "config/computed_default_value.py")
 add_filtered_file(script_dir / "config/chericonfig.py")
+add_filtered_file(script_dir / "filesystemutils.py")
+add_filtered_file(script_dir / "processutils.py")
+add_filtered_file(script_dir / "config/target_info.py")
 add_filtered_file(script_dir / "config/defaultconfig.py")
 add_filtered_file(script_dir / "targets.py")
-add_filtered_file(script_dir / "filesystemutils.py")
+add_filtered_file(script_dir / "jenkins_utils.py")
+add_filtered_file(script_dir / "ssh_utils.py")
+add_filtered_file(script_dir / "projects/simple_project.py")
+add_filtered_file(script_dir / "projects/repository.py")
 add_filtered_file(script_dir / "projects/project.py")
+add_filtered_file(script_dir / "projects/cmake_project.py")
+add_filtered_file(script_dir / "projects/meson_project.py")
 add_filtered_file(script_dir / "qemu_utils.py")
-add_filtered_file(script_dir / "config/compilation_targets.py")
-
-# for now keep the original order
-add_filtered_file(script_dir / "projects/build_qemu.py")
-add_filtered_file(script_dir / "projects/binutils.py")
-add_filtered_file(script_dir / "projects/llvm.py")
-
-add_filtered_file(script_dir / "projects/bmake.py")
-add_filtered_file(script_dir / "projects/bsdtar.py")
-add_filtered_file(script_dir / "projects/cmake.py")
-add_filtered_file(script_dir / "projects/cherios.py")
-add_filtered_file(script_dir / "projects/cherisim.py")
-add_filtered_file(script_dir / "projects/cheritrace.py")
-add_filtered_file(script_dir / "projects/makefs_linux.py")
-add_filtered_file(script_dir / "projects/qtcreator.py")
-add_filtered_file(script_dir / "projects/kdevelop.py")
-add_filtered_file(script_dir / "projects/bear.py")
-add_filtered_file(script_dir / "projects/go.py")
-add_filtered_file(script_dir / "projects/sail.py")
-add_filtered_file(script_dir / "projects/soaap.py")
-add_filtered_file(script_dir / "projects/effectivesan.py")
-add_filtered_file(script_dir / "projects/softboundcets.py")
-add_filtered_file(script_dir / "projects/valgrind.py")
-add_filtered_file(script_dir / "projects/ninja.py")
-add_filtered_file(script_dir / "projects/openradtool.py")
-add_filtered_file(script_dir / "projects/cheri_afl.py")
 
 # First three need to be in order, then add all others
-cross_files = [
-    (script_dir / "projects/cross/cheribsd.py").resolve(),
-    (script_dir / "projects/cross/crosscompileproject.py").resolve(),
-]
-for file in sorted((script_dir / "projects/cross").glob("*.py")):
-    path = file.resolve()
-    if path not in cross_files:
-        cross_files.append(path)
-
-for file in cross_files:
-    add_filtered_file(file)
-
+add_filtered_file(script_dir / "config/compilation_targets.py")
+add_filtered_file(script_dir / "projects/build_qemu.py")
+add_filtered_file(script_dir / "projects/cross/llvm.py")
+add_filtered_file(script_dir / "projects/cross/cheribsd.py")
+add_filtered_file(script_dir / "projects/cross/crosscompileproject.py")
+add_filtered_file(script_dir / "projects/cross/benchmark_mixin.py")
+add_filtered_file(script_dir / "projects/cross/llvm_test_suite.py")
 # disk-image, sdk and run_qemu must come after cheribsd as they use CheriBSD.rootfs_dir
 add_filtered_file(script_dir / "projects/disk_image.py")
-add_filtered_file(script_dir / "projects/syzkaller.py")
-add_filtered_file(script_dir / "projects/sdk.py")
-add_filtered_file(script_dir / "projects/spike.py")
 add_filtered_file(script_dir / "projects/run_qemu.py")
-add_filtered_file(script_dir / "projects/run_fpga.py")
+# Add the remaining projects
+for file in sorted((script_dir / "projects").rglob("*.py")):
+    if file.resolve() not in handled_files:
+        add_filtered_file(file)
 
-# this one should not be needed
-add_filtered_file(script_dir / "projects/samba.py")
 
 # now make sure that all the projects were handled
 check_all_files_used(script_dir)
