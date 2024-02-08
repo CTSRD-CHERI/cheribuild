@@ -373,7 +373,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
 
     @classproperty
     def repository(self):
-        return ReuseOtherProjectDefaultTargetRepository(self.llvm_project, subdirectory="runtimes")
+        return ReuseOtherProjectDefaultTargetRepository(self.llvm_project, subdirectory="runtimes", do_update=True)
 
     @property
     def custom_c_preprocessor(self):
