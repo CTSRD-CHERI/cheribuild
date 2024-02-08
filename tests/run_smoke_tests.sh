@@ -50,6 +50,8 @@ try_run "${srcdir}/cheribuild.py" --get-config-option llvm-native/source-directo
 expect_error "Fatal error: Option 'llvm/source-directory' cannot be queried" "${srcdir}/cheribuild.py" --get-config-option llvm/source-directory
 try_run "${srcdir}/cheribuild.py" --get-config-option output-root
 try_run "${srcdir}/cheribuild.py" --dump-config
+# Check that the concatenated script still works:
+try_run sh -c "\"${srcdir}/combine-files.py\" | \"$(command -v python3)\" - --get-config-option output-root"
 try_run "${srcdir}/cheribuild.py" -p __run_everything__ --clean --build --test --benchmark
 # Also check that we can run --pretend mode with all tools missing.
 try_run env PATH=/does/not/exist "$(command -v python3)" "${srcdir}/cheribuild.py" -p __run_everything__ --clean --build --test --benchmark
