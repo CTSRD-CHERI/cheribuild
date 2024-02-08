@@ -41,7 +41,8 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
     expected_install_path = Path(f"{cheri_config.output_root}{install_prefix}")
     # Ugly workaround to override all install dirs to go to the tarball
     all_targets = [
-        x for x in target_manager.targets(cheri_config)
+        x
+        for x in target_manager.targets(cheri_config)
         if not isinstance(x, (SimpleTargetAlias, MultiArchTargetAlias)) and issubclass(x.project_class, Project)
     ]
     for target in all_targets:

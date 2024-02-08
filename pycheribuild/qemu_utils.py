@@ -96,9 +96,9 @@ class QemuOptions:
             if image_format is None:
                 image_format = "qcow2" if image.name.endswith(".qcow2") else "raw"
         else:
-            with image.open('rb') as imgf:
+            with image.open("rb") as imgf:
                 magic = imgf.read(4)
-                is_qcow2 = magic == b'QFI\xfb'
+                is_qcow2 = magic == b"QFI\xfb"
 
                 if image_format is None:
                     image_format = "qcow2" if is_qcow2 else "raw"
@@ -113,8 +113,12 @@ class QemuOptions:
                 device_kind = "virtio-blk-device"
             else:
                 device_kind = "virtio-blk-pci"
-            return ["-drive", "if=none,file=" + str(image) + ",id=drv,format=" + image_format,
-                    "-device", device_kind + ",drive=drv"]
+            return [
+                "-drive",
+                "if=none,file=" + str(image) + ",id=drv,format=" + image_format,
+                "-device",
+                device_kind + ",drive=drv",
+            ]
         else:
             return ["-drive", "file=" + str(image) + ",format=" + image_format + ",index=0,media=disk"]
 
@@ -152,11 +156,22 @@ class QemuOptions:
         found_in_path = shutil.which("qemu-system-" + self.qemu_arch_sufffix)
         return Path(found_in_path) if found_in_path is not None else None
 
-    def get_commandline(self, *, qemu_command=None, kernel_file: "Optional[Path]" = None,
-                        disk_image: "Optional[Path]" = None, disk_image_format: str = "raw",
-                        user_network_args: str = "", add_network_device=True, bios_args: "Optional[list[str]]" = None,
-                        trap_on_unrepresentable=False, debugger_on_cheri_trap=False, add_virtio_rng=False,
-                        write_disk_image_changes=True, gui_options: "Optional[list[str]]" = None) -> "list[str]":
+    def get_commandline(
+        self,
+        *,
+        qemu_command=None,
+        kernel_file: "Optional[Path]" = None,
+        disk_image: "Optional[Path]" = None,
+        disk_image_format: str = "raw",
+        user_network_args: str = "",
+        add_network_device=True,
+        bios_args: "Optional[list[str]]" = None,
+        trap_on_unrepresentable=False,
+        debugger_on_cheri_trap=False,
+        add_virtio_rng=False,
+        write_disk_image_changes=True,
+        gui_options: "Optional[list[str]]" = None,
+    ) -> "list[str]":
         if kernel_file is None and disk_image is None:
             raise ValueError("Must pass kernel and/or disk image path when launching QEMU")
         if qemu_command is None:
@@ -194,8 +209,16 @@ class QemuOptions:
 def qemu_supports_9pfs(qemu: Path, *, config: ConfigBase) -> bool:
     if not qemu.is_file():
         return False
-    prog = run_command([str(qemu), "-virtfs", "?"], stdin=subprocess.DEVNULL, capture_output=True, capture_error=True,
-                       run_in_pretend_mode=True, expected_exit_code=1, print_verbose_only=True, config=config)
+    prog = run_command(
+        [str(qemu), "-virtfs", "?"],
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        capture_error=True,
+        run_in_pretend_mode=True,
+        expected_exit_code=1,
+        print_verbose_only=True,
+        config=config,
+    )
     return b"-virtfs ?: Usage: -virtfs" in prog.stderr
 
 

@@ -78,12 +78,14 @@ class Target:
         assert result._xtarget is not None
         return result._xtarget
 
-    def get_real_target(self, cross_target: Optional[CrossCompileTarget], config,
-                        caller: "Union[SimpleProject, str]" = "<unknown>") -> "Target":
+    def get_real_target(
+        self, cross_target: Optional[CrossCompileTarget], config, caller: "Union[SimpleProject, str]" = "<unknown>"
+    ) -> "Target":
         return self
 
-    def _get_or_create_project_no_setup(self, _: Optional[CrossCompileTarget], config,
-                                        caller: "Optional[AbstractProject]") -> "SimpleProject":
+    def _get_or_create_project_no_setup(
+        self, _: Optional[CrossCompileTarget], config, caller: "Optional[AbstractProject]"
+    ) -> "SimpleProject":
         # Note: MultiArchTarget uses cross_target to select the right project (e.g. libcxxrt-native needs
         # libunwind-native path)
         if self.__project is None:
@@ -94,8 +96,9 @@ class Target:
 
     # noinspection PyProtectedMember
     @final
-    def get_or_create_project(self, cross_target: Optional[CrossCompileTarget], config,
-                              caller: "Optional[SimpleProject]") -> "SimpleProject":
+    def get_or_create_project(
+        self, cross_target: Optional[CrossCompileTarget], config, caller: "Optional[SimpleProject]"
+    ) -> "SimpleProject":
         if caller is not None:
             # noinspection PyProtectedMember
             assert caller._init_called, "Cannot call this inside __init__()"
@@ -225,8 +228,13 @@ class Target:
 
 # XXX: can't call this CrossCompileTarget since that is already the name of the enum
 class MultiArchTarget(Target):
-    def __init__(self, name, project_class: "type[SimpleProject]", target_arch: "CrossCompileTarget",
-                 base_target: "MultiArchTargetAlias"):
+    def __init__(
+        self,
+        name,
+        project_class: "type[SimpleProject]",
+        target_arch: "CrossCompileTarget",
+        base_target: "MultiArchTargetAlias",
+    ):
         super().__init__(name, project_class)
         assert target_arch is not None
         self.target_arch = target_arch
@@ -263,12 +271,14 @@ class _TargetAliasBase(Target):
     def _create_project(self, config: CheriConfig) -> "SimpleProject":
         raise ValueError("Should not be called!")
 
-    def get_real_target(self, cross_target: Optional[CrossCompileTarget], config,
-                        caller: "Union[SimpleProject, str]" = "<unknown>") -> Target:
+    def get_real_target(
+        self, cross_target: Optional[CrossCompileTarget], config, caller: "Union[SimpleProject, str]" = "<unknown>"
+    ) -> Target:
         raise NotImplementedError()
 
-    def _get_or_create_project_no_setup(self, cross_target: Optional[CrossCompileTarget], config,
-                                        caller: "Optional[AbstractProject]") -> "SimpleProject":
+    def _get_or_create_project_no_setup(
+        self, cross_target: Optional[CrossCompileTarget], config, caller: "Optional[AbstractProject]"
+    ) -> "SimpleProject":
         if caller is not None:
             # noinspection PyProtectedMember
             assert caller._init_called, "Cannot call this inside __init__()"
@@ -309,8 +319,9 @@ class MultiArchTargetAlias(_TargetAliasBase):
             raise ValueError("ERROR:", self.name, "does not have a default_architecture value!")
         return cross_target
 
-    def get_real_target(self, cross_target: "Optional[CrossCompileTarget]", config,
-                        caller: "Union[SimpleProject, str]" = "<unknown>") -> Target:
+    def get_real_target(
+        self, cross_target: "Optional[CrossCompileTarget]", config, caller: "Union[SimpleProject, str]" = "<unknown>"
+    ) -> Target:
         assert self.derived_targets, "derived targets must not be empty"
         if cross_target is None:
             # Use the default target:
@@ -322,7 +333,8 @@ class MultiArchTargetAlias(_TargetAliasBase):
             if tgt.target_arch is cross_target:
                 return tgt
         raise LookupError(
-            "Could not find '" + self.name + "' target for " + str(cross_target) + ", caller was " + str(caller))
+            "Could not find '" + self.name + "' target for " + str(cross_target) + ", caller was " + str(caller)
+        )
 
 
 class SimpleTargetAlias(_TargetAliasBase):
@@ -330,8 +342,9 @@ class SimpleTargetAlias(_TargetAliasBase):
     def __init__(self, name, real_target_name: str, t: "TargetManager"):
         self._real_target = t.get_target_raw(real_target_name)
         real_cls = self._real_target.project_class
-        assert not isinstance(self._real_target,
-                              _TargetAliasBase), "Target aliases must reference a real target not another alias"
+        assert not isinstance(
+            self._real_target, _TargetAliasBase
+        ), "Target aliases must reference a real target not another alias"
         super().__init__(name, real_cls)
         self.real_target_name = real_target_name
         # Add the alias name for config lookups so that old configs remain valid
@@ -346,8 +359,9 @@ class SimpleTargetAlias(_TargetAliasBase):
     def xtarget(self):
         return self._real_target.xtarget
 
-    def get_real_target(self, cross_target: Optional[CrossCompileTarget], config,
-                        caller: "Union[SimpleProject, str]" = "<unknown>") -> Target:
+    def get_real_target(
+        self, cross_target: Optional[CrossCompileTarget], config, caller: "Union[SimpleProject, str]" = "<unknown>"
+    ) -> Target:
         return self._real_target
 
     def __repr__(self) -> str:
@@ -355,12 +369,20 @@ class SimpleTargetAlias(_TargetAliasBase):
 
 
 class DeprecatedTargetAlias(SimpleTargetAlias):
-    def get_real_target(self, cross_target: Optional[CrossCompileTarget], config: "CheriConfig",
-                        caller: "Union[SimpleProject, str]" = "<unknown>") -> Target:
-        warning_message("Using deprecated target ", coloured(AnsiColour.red, self.name),
-                        coloured(AnsiColour.magenta, ". Please use "),
-                        coloured(AnsiColour.yellow, self.real_target_name),
-                        coloured(AnsiColour.magenta, " instead."), sep="")
+    def get_real_target(
+        self,
+        cross_target: Optional[CrossCompileTarget],
+        config: "CheriConfig",
+        caller: "Union[SimpleProject, str]" = "<unknown>",
+    ) -> Target:
+        warning_message(
+            "Using deprecated target ",
+            coloured(AnsiColour.red, self.name),
+            coloured(AnsiColour.magenta, ". Please use "),
+            coloured(AnsiColour.yellow, self.real_target_name),
+            coloured(AnsiColour.magenta, " instead."),
+            sep="",
+        )
         if not query_yes_no(config, "Continue?", default_result=True):
             fatal_error("Cannot continue.", pretend=config.pretend, fatal_when_pretending=True)
         return self._real_target
@@ -442,9 +464,15 @@ class TargetManager:
         except KeyError:
             return self._targets_for_command_line_options_only[name]
 
-    def get_target(self, name: str, *, required_arch: Optional[CrossCompileTarget] = None,
-                   arch_for_unqualified_targets: Optional[CrossCompileTarget] = None, config: CheriConfig,
-                   caller: "Union[AbstractProject, str]") -> Target:
+    def get_target(
+        self,
+        name: str,
+        *,
+        required_arch: Optional[CrossCompileTarget] = None,
+        arch_for_unqualified_targets: Optional[CrossCompileTarget] = None,
+        config: CheriConfig,
+        caller: "Union[AbstractProject, str]",
+    ) -> Target:
         target = self.get_target_raw(name)
         # print("get_target", name, arch, end="")
         if isinstance(target, MultiArchTargetAlias):
@@ -453,8 +481,9 @@ class TargetManager:
                 arch_for_unqualified_targets = required_arch
             target = target.get_real_target(arch_for_unqualified_targets, config, caller=caller)
         if required_arch is not None and target.xtarget != required_arch:
-            raise LookupError(f"Target {target.name} has wrong architecture:"
-                              f"{target.xtarget} but expected {required_arch}")
+            raise LookupError(
+                f"Target {target.name} has wrong architecture:" f"{target.xtarget} but expected {required_arch}"
+            )
         # print(" ->", target)
         return target
 
@@ -494,7 +523,7 @@ class TargetManager:
             if config.start_with:
                 sort = sort[found_index:]
             elif config.start_after:
-                sort = sort[found_index + 1:]
+                sort = sort[found_index + 1 :]
             if not sort:
                 raise ValueError("selected target list is empty after --start-after/--start-with filtering")
         return sort
@@ -502,9 +531,11 @@ class TargetManager:
     def run(self, config: CheriConfig, chosen_targets=None) -> None:
         if chosen_targets is None:
             chosen_targets = self.get_all_chosen_targets(config)
-        with set_env(PATH=config.dollar_path_with_other_tools,
-                     CLANG_FORCE_COLOR_DIAGNOSTICS="always" if config.clang_colour_diags else None,
-                     config=config):
+        with set_env(
+            PATH=config.dollar_path_with_other_tools,
+            CLANG_FORCE_COLOR_DIAGNOSTICS="always" if config.clang_colour_diags else None,
+            config=config,
+        ):
             for target in chosen_targets:
                 target.check_system_deps(config)
             # all dependencies exist -> run the targets
@@ -536,13 +567,17 @@ class TargetManager:
                     suggestions = sorted([tgt.name for tgt in alias.derived_targets])
                 else:
                     import difflib
+
                     errmsg = coloured(AnsiColour.red, "Target", target_name, "does not exist.")
                     suggestions = difflib.get_close_matches(target_name, self.target_names(config))
                 if suggestions:
                     errmsg += " Did you mean " + " or ".join(coloured(AnsiColour.blue, s) for s in suggestions) + "?"
                 else:
-                    errmsg += " See " + coloured(AnsiColour.yellow, os.path.basename(sys.argv[0]), "--list-targets") + \
-                              " for the list of available targets."
+                    errmsg += (
+                        " See "
+                        + coloured(AnsiColour.yellow, os.path.basename(sys.argv[0]), "--list-targets")
+                        + " for the list of available targets."
+                    )
                 sys.exit(errmsg)
             explicitly_chosen_targets.append(self.get_target(target_name, config=config, caller="cmdline parsing"))
         chosen_targets = self.get_all_targets(explicitly_chosen_targets, config)

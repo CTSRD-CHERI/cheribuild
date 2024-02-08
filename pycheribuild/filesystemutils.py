@@ -55,7 +55,7 @@ class FileSystemUtils:
         run_command("rm", "-rf", *dirs, config=self.config)
 
     def clean_directory(self, path: Path, keep_root=False, ensure_dir_exists=True) -> None:
-        """ After calling this function path will be an empty directory
+        """After calling this function path will be an empty directory
         :param path: the directory to delete
         :param keep_root: Whether to keep the root directory (e.g. for NFS exported mountpoints)
         :param ensure_dir_exists: Create the cleaned directory if it doesn't exist
@@ -84,8 +84,9 @@ class FileSystemUtils:
             except Exception as e:
                 warning_message("Could not remove directory", self.path, e)
 
-    def async_clean_directory(self, path: Path, *, keep_root=False,
-                              keep_dirs: "Optional[list[str]]" = None) -> ThreadJoiner:
+    def async_clean_directory(
+        self, path: Path, *, keep_root=False, keep_dirs: "Optional[list[str]]" = None
+    ) -> ThreadJoiner:
         """
         Delete a directory in the background (e.g. deleting the cheribsd build directory delays the build a lot)
         ::
@@ -194,8 +195,9 @@ class FileSystemUtils:
         with file.open("r", encoding="utf-8") as f:
             return f.read()
 
-    def write_file(self, file: Path, contents: str, *, overwrite: bool, never_print_cmd=False, mode=None,
-                   print_verbose_only=True) -> None:
+    def write_file(
+        self, file: Path, contents: str, *, overwrite: bool, never_print_cmd=False, mode=None, print_verbose_only=True
+    ) -> None:
         """
         :param file: The target path to write contents to
         :param contents: the contents of the new file
@@ -205,8 +207,14 @@ class FileSystemUtils:
         :param print_verbose_only: only print contents in verbose mode
         """
         if not never_print_cmd:
-            print_command("echo", contents, colour=AnsiColour.green, output_file=file,
-                          print_verbose_only=print_verbose_only, config=self.config)
+            print_command(
+                "echo",
+                contents,
+                colour=AnsiColour.green,
+                output_file=file,
+                print_verbose_only=print_verbose_only,
+                config=self.config,
+            )
         if self.config.pretend:
             return
         if not overwrite and file.exists():
@@ -221,8 +229,9 @@ class FileSystemUtils:
     # would require create_symlinks to inherit some of ln's heuristics about
     # whether to create a new file called src.basename() inside dest, whether
     # to use dest.parent or dest, etc.
-    def create_symlink(self, src: Path, dest: Path, *, relative=True, cwd: "Optional[Path]" = None,
-                       print_verbose_only=True):
+    def create_symlink(
+        self, src: Path, dest: Path, *, relative=True, cwd: "Optional[Path]" = None, print_verbose_only=True
+    ):
         assert dest.is_absolute() or cwd is not None
         if not cwd:
             cwd = dest.parent
@@ -235,8 +244,15 @@ class FileSystemUtils:
         else:
             run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only, config=self.config)
 
-    def create_symlinks(self, srcs: typing.Iterable[Path], destdir: Path, *, relative=True,
-                        cwd: "Optional[Path]" = None, print_verbose_only=True):
+    def create_symlinks(
+        self,
+        srcs: typing.Iterable[Path],
+        destdir: Path,
+        *,
+        relative=True,
+        cwd: "Optional[Path]" = None,
+        print_verbose_only=True,
+    ):
         assert destdir.is_absolute() or cwd is not None
         if not cwd:
             cwd = destdir
@@ -247,8 +263,15 @@ class FileSystemUtils:
                 destdir = destdir.relative_to(cwd)
         srcs = list(srcs)
         if srcs:
-            run_command("ln", "-fs", *srcs, str(destdir) + "/", cwd=cwd, print_verbose_only=print_verbose_only,
-                        config=self.config)
+            run_command(
+                "ln",
+                "-fs",
+                *srcs,
+                str(destdir) + "/",
+                cwd=cwd,
+                print_verbose_only=print_verbose_only,
+                config=self.config,
+            )
 
     def move_file(self, src: Path, dest: Path, force=False, create_dirs=True) -> None:
         if not src.exists():
@@ -258,8 +281,9 @@ class FileSystemUtils:
             self.makedirs(dest.parent)
         run_command([*cmd, str(src), str(dest)], config=self.config)
 
-    def install_file(self, src: Path, dest: Path, *, force=False, create_dirs=True, print_verbose_only=True,
-                     mode=None) -> None:
+    def install_file(
+        self, src: Path, dest: Path, *, force=False, create_dirs=True, print_verbose_only=True, mode=None
+    ) -> None:
         if force:
             print_command("cp", "-f", src, dest, print_verbose_only=print_verbose_only, config=self.config)
         else:
@@ -293,7 +317,7 @@ class FileSystemUtils:
         with file.open("r+", encoding="utf-8") as f:
             lines = list(rewrite(f.read().splitlines()))
             f.seek(0)
-            f.writelines(map(lambda line: line + '\n', lines))
+            f.writelines(map(lambda line: line + "\n", lines))
             f.truncate()
 
     def add_unique_line_to_file(self, file: Path, line: str) -> None:
@@ -306,6 +330,7 @@ class FileSystemUtils:
                 for old, new in replacements.items():
                     line = line.replace(old, new)
                 yield line
+
         status_update("Remapping ", replacements, " in ", file, sep="")
         self.rewrite_file(file, do_replace)
 
@@ -313,8 +338,13 @@ class FileSystemUtils:
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
         raise ValueError("Must override triple_prefixes_for_binaries to use create_triple_prefixed_symlinks!")
 
-    def create_triple_prefixed_symlinks(self, tool_path: Path, tool_name: "Optional[str]" = None,
-                                        create_unprefixed_link: bool = False, cwd: "Optional[str]" = None) -> None:
+    def create_triple_prefixed_symlinks(
+        self,
+        tool_path: Path,
+        tool_name: "Optional[str]" = None,
+        create_unprefixed_link: bool = False,
+        cwd: "Optional[str]" = None,
+    ) -> None:
         """
         Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
         for build tools like clang, ld, etc.
@@ -328,8 +358,9 @@ class FileSystemUtils:
         if not tool_name:
             tool_name = tool_path.name
         if not tool_path.is_file():
-            fatal_error("Attempting to create symlink to non-existent build tool_path:", tool_path,
-                        pretend=self.config.pretend)
+            fatal_error(
+                "Attempting to create symlink to non-existent build tool_path:", tool_path, pretend=self.config.pretend
+            )
 
         # a prefixed tool_path was installed -> create link such as mips4-unknown-freebsd-ld -> ld
         if create_unprefixed_link:
@@ -342,8 +373,9 @@ class FileSystemUtils:
                 # if self.config.verbose:
                 #    print(coloured(AnsiColour.yellow, "Not overwriting", link, "because it is the target"))
                 continue
-            run_command("ln", "-fsn", tool_path.name, target + tool_name, cwd=cwd, print_verbose_only=True,
-                        config=self.config)
+            run_command(
+                "ln", "-fsn", tool_path.name, target + tool_name, cwd=cwd, print_verbose_only=True, config=self.config
+            )
 
     @staticmethod
     # Not cached since another target could write to this dir: @functools.lru_cache(maxsize=20)
@@ -364,6 +396,7 @@ class FileSystemUtils:
     def sha256sum(self, file: Path) -> str:
         # Based on https://stackoverflow.com/a/44873382/894271
         import hashlib  # rarely need, so imported on demand to reduce startup time
+
         h = hashlib.sha256()
         b = bytearray(128 * 1024)
         mv = memoryview(b)
@@ -371,7 +404,7 @@ class FileSystemUtils:
             fatal_error("Cannot hash", file, "since it does not exist", pretend=self.config.pretend)
             if self.config.pretend:
                 return "0"
-        with file.open('rb', buffering=0) as f:
+        with file.open("rb", buffering=0) as f:
             # PyCharm thinks .readinto is not supported.
             # noinspection PyUnresolvedReferences
             for n in iter(lambda: f.readinto(mv), 0):  # pytype: disable=wrong-arg-types

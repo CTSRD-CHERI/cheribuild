@@ -95,6 +95,7 @@ class MtreeEntry:
             # Note: we only handle spaces here since we haven't seen any other special characters being use. If they do
             # exist in practise we can just update this code to handle them too.
             return s.replace(" ", "\\s")
+
         return escape(self.path) + " " + " ".join(k + "=" + shlex.quote(v) for k, v in self.attributes.items())
 
     def __repr__(self) -> str:
@@ -102,8 +103,13 @@ class MtreeEntry:
 
 
 class MtreeFile:
-    def __init__(self, *, verbose: bool, file: "Union[io.StringIO, Path, typing.IO, None]" = None,
-                 contents_root: "Optional[Path]" = None):
+    def __init__(
+        self,
+        *,
+        verbose: bool,
+        file: "Union[io.StringIO, Path, typing.IO, None]" = None,
+        contents_root: "Optional[Path]" = None,
+    ):
         self.verbose = verbose
         self._mtree: "dict[str, MtreeEntry]" = OrderedDict()
         if file:
@@ -173,8 +179,17 @@ class MtreeFile:
             return "0600"
         return result
 
-    def add_file(self, file: "Optional[Path]", path_in_image, mode=None, uname="root", gname="wheel",
-                 print_status=True, parent_dir_mode=None, symlink_dest: "Optional[str]" = None):
+    def add_file(
+        self,
+        file: "Optional[Path]",
+        path_in_image,
+        mode=None,
+        uname="root",
+        gname="wheel",
+        print_status=True,
+        parent_dir_mode=None,
+        symlink_dest: "Optional[str]" = None,
+    ):
         if isinstance(path_in_image, Path):
             path_in_image = str(path_in_image)
         assert not path_in_image.startswith("/")
@@ -203,8 +218,14 @@ class MtreeFile:
                 # now add the actual entry (with contents=/path/to/file)
                 contents_path = str(file.absolute())
                 last_attrib = ("contents", contents_path)
-        self.add_dir(str(Path(path_in_image).parent), mode=parent_dir_mode, uname=uname, gname=gname,
-                     reference_dir=reference_dir, print_status=print_status)
+        self.add_dir(
+            str(Path(path_in_image).parent),
+            mode=parent_dir_mode,
+            uname=uname,
+            gname=gname,
+            reference_dir=reference_dir,
+            print_status=print_status,
+        )
         attribs = OrderedDict([("type", mtree_type), ("uname", uname), ("gname", gname), ("mode", mode), last_attrib])
         if print_status:
             if "link" in attribs:
@@ -269,7 +290,7 @@ class MtreeFile:
             # glob must be anchored at the root (./) or start with a pattern
             assert glob[:2] == "./" or glob[:1] == "?" or glob[:1] == "*"
         paths_to_remove = set()
-        for (path, entry) in self._mtree.items():
+        for path, entry in self._mtree.items():
             for glob in globs:
                 if fnmatch.fnmatch(path, glob):
                     delete = True
@@ -286,6 +307,7 @@ class MtreeFile:
 
     def __repr__(self) -> str:
         import pprint
+
         return "<MTREE: " + pprint.pformat(self._mtree) + ">"
 
     def write(self, output: "Union[io.StringIO,Path,typing.IO]", *, pretend):
