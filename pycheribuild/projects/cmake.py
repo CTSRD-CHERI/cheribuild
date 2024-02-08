@@ -61,6 +61,7 @@ class BuildCMake(AutotoolsProject):
     repository = GitRepository("https://github.com/Kitware/CMake",  # a lot faster than "https://cmake.org/cmake.git"
                                # track the stable release branch
                                default_branch="release")
+    default_architecture = CompilationTargets.NATIVE
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     make_kind = MakeCommandKind.Ninja
     add_host_target_build_config_options = False

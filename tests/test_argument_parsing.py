@@ -1157,8 +1157,8 @@ def test_source_dir_option_when_reusing_git_repo():
     )
     assert str(_get_target_instance("llvm-native", config).source_dir) == "/custom/llvm/dir3"
     assert str(_get_target_instance("compiler-rt-native", config).source_dir) == "/custom/compiler-rt/dir3"
-    # compiler-rt-riscv64 uses the default path, since we only changed llvm-native and compiler-rt-native:
-    assert str(_get_target_instance("compiler-rt-riscv64", config).source_dir) == "/foo/llvm-project/compiler-rt"
+    # compiler-rt-riscv64 uses the default path (llvm-native source), since we only changed compiler-rt-native:
+    assert str(_get_target_instance("compiler-rt-riscv64", config).source_dir) == "/custom/llvm/dir3/compiler-rt"
 
     # Check that cheribsd-mfs-root-kernel reused the cheribsd source dir
     assert str(_get_target_instance("cheribsd-mfs-root-kernel-riscv64-purecap", config).source_dir) == "/foo/cheribsd"
