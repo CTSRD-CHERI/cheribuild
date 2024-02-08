@@ -499,13 +499,6 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 LIBCXX_ENABLE_RTTI=True,  # Ensure typeinfo symbols are always available
                 LIBCXX_TEST_TARGET_FLAGS=target_test_flags,
             )
-            if GitRepository.contains_commit(self, "64d413efdd76f2e6464ae6f578161811b9d12411", src_dir=self.source_dir):
-                self.add_cmake_options(LIBCXX_HARDENING_MODE="extensive")
-            else:
-                self.add_cmake_options(LIBCXX_ENABLE_ASSERTIONS=True)
-                # Need to export the symbols from debug.cpp to allow linking code that defines _LIBCPP_DEBUG=1
-                self.add_cmake_options(LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS=True)
-
             if external_cxxabi is not None:
                 self.add_cmake_options(LIBCXX_CXX_ABI=external_cxxabi)
                 if not self.compiling_for_host():
@@ -598,6 +591,16 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             default=lambda c, p: max(c.make_jobs / 2, 1),
             kind=int,
         )
+
+    def configure(self, **kwargs) -> None:
+        if "libcxx" in self.get_enabled_runtimes():
+            if GitRepository.contains_commit(self, "64d413efdd76f2e6464ae6f578161811b9d12411", src_dir=self.source_dir):
+                self.add_cmake_options(LIBCXX_HARDENING_MODE="extensive")
+            else:
+                self.add_cmake_options(LIBCXX_ENABLE_ASSERTIONS=True)
+                # Need to export the symbols from debug.cpp to allow linking code that defines _LIBCPP_DEBUG=1
+                self.add_cmake_options(LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS=True)
+        super().configure(**kwargs)
 
     def compile(self, **kwargs):
         if self.qemu_instance is not None:
