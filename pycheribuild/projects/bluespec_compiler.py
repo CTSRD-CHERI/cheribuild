@@ -74,11 +74,13 @@ class BuildBluespecCompiler(Project):
             )
             if OSInfo.IS_MAC:
                 self.info(
-                    "Alternatively, try running:", self.source_dir / ".github/workflows/install_dependencies_macos.sh",
+                    "Alternatively, try running:",
+                    self.source_dir / ".github/workflows/install_dependencies_macos.sh",
                 )
             elif OSInfo.is_ubuntu():
                 self.info(
-                    "Alternatively, try running:", self.source_dir / ".github/workflows/install_dependencies_ubuntu.sh",
+                    "Alternatively, try running:",
+                    self.source_dir / ".github/workflows/install_dependencies_ubuntu.sh",
                 )
             raise
 

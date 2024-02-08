@@ -75,14 +75,23 @@ class BuildQEMUBase(AutotoolsProject):
         "targets will fail without smbd support)",
     )
     gui = BoolConfigOption(
-        "gui", show_help=False, default=False, help="Build a the graphical UI bits for QEMU (SDL,VNC)",
+        "gui",
+        show_help=False,
+        default=False,
+        help="Build a the graphical UI bits for QEMU (SDL,VNC)",
     )
     build_profiler = BoolConfigOption(
-        "build-profiler", show_help=False, default=False, help="Enable QEMU internal profiling",
+        "build-profiler",
+        show_help=False,
+        default=False,
+        help="Enable QEMU internal profiling",
     )
     enable_plugins = BoolConfigOption("enable-plugins", show_help=False, default=False, help="Enable QEMU TCG plugins")
     prefer_full_lto_over_thin_lto = BoolConfigOption(
-        "full-lto", show_help=False, default=True, help="Prefer full LTO over LLVM ThinLTO when using LTO",
+        "full-lto",
+        show_help=False,
+        default=True,
+        help="Prefer full LTO over LLVM ThinLTO when using LTO",
     )
 
     @classmethod
@@ -101,7 +110,10 @@ class BuildQEMUBase(AutotoolsProject):
         cls.qemu_targets = typing.cast(
             str,
             cls.add_config_option(
-                "targets", show_help=True, help="Build QEMU for the following targets", default=cls.default_targets,
+                "targets",
+                show_help=True,
+                help="Build QEMU for the following targets",
+                default=cls.default_targets,
             ),
         )
 
@@ -137,20 +149,31 @@ class BuildQEMUBase(AutotoolsProject):
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
         self.check_required_system_tool(
-            "glibtoolize" if self.target_info.is_macos() else "libtoolize", default="libtool",
+            "glibtoolize" if self.target_info.is_macos() else "libtoolize",
+            default="libtool",
         )
         self.check_required_system_tool("autoreconf", default="autoconf")
         self.check_required_system_tool("aclocal", default="automake")
 
         self.check_required_pkg_config(
-            "pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev", freebsd="pixman",
+            "pixman-1",
+            homebrew="pixman",
+            zypper="libpixman-1-0-devel",
+            apt="libpixman-1-dev",
+            freebsd="pixman",
         )
         self.check_required_pkg_config(
-            "glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev", freebsd="glib",
+            "glib-2.0",
+            homebrew="glib",
+            zypper="glib2-devel",
+            apt="libglib2.0-dev",
+            freebsd="glib",
         )
         # Tests require GNU sed
         self.check_required_system_tool(
-            "sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed", freebsd="gsed",
+            "sed" if self.target_info.is_linux() else "gsed",
+            homebrew="gnu-sed",
+            freebsd="gsed",
         )
 
     def add_asan_flags(self):

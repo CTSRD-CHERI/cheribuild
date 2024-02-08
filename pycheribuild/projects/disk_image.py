@@ -121,8 +121,8 @@ def _default_disk_image_name(_: CheriConfig, directory: Path, project: "BuildDis
 def _default_disk_image_hostname(prefix: str) -> "ComputedDefaultValue[str]":
     # noinspection PyProtectedMember
     return ComputedDefaultValue(
-        function=lambda conf, proj: prefix + proj.build_configuration_suffix(),
-        as_string=prefix + "-<ARCHITECTURE>")
+        function=lambda conf, proj: prefix + proj.build_configuration_suffix(), as_string=prefix + "-<ARCHITECTURE>"
+    )
 
 
 class FileSystemType(Enum):
@@ -139,7 +139,8 @@ class BuildDiskImageBase(SimpleProject):
     disk_image_prefix: str = None
     default_disk_image_path = ComputedDefaultValue(
         function=lambda conf, proj: _default_disk_image_name(conf, conf.output_root, proj),
-        as_string=lambda cls: "$OUTPUT_ROOT/" + cls.disk_image_prefix + "-<TARGET>-disk.img depending on architecture")
+        as_string=lambda cls: "$OUTPUT_ROOT/" + cls.disk_image_prefix + "-<TARGET>-disk.img depending on architecture",
+    )
 
     @classproperty
     def default_architecture(self) -> CrossCompileTarget:
@@ -156,39 +157,66 @@ class BuildDiskImageBase(SimpleProject):
     @classmethod
     def setup_config_options(cls, *, default_hostname, extra_files_suffix="", **kwargs):
         super().setup_config_options()
-        cls.extra_files_dir = cls.add_path_option("extra-files", show_help=True,
-                                                  default=lambda config, project: (
-                                                          config.source_root / ("extra-files" + extra_files_suffix)),
-                                                  help="A directory with additional files that will be added to the "
-                                                       "image (default: "
-                                                       "'$SOURCE_ROOT/extra-files" + extra_files_suffix + "')",
-                                                  metavar="DIR")
-        cls.hostname = cls.add_config_option("hostname", show_help=False, default=default_hostname, metavar="HOSTNAME",
-                                             help="The hostname to use for the disk image")
+        cls.extra_files_dir = cls.add_path_option(
+            "extra-files",
+            show_help=True,
+            default=lambda config, project: (config.source_root / ("extra-files" + extra_files_suffix)),
+            help="A directory with additional files that will be added to the "
+            "image (default: "
+            "'$SOURCE_ROOT/extra-files" + extra_files_suffix + "')",
+            metavar="DIR",
+        )
+        cls.hostname = cls.add_config_option(
+            "hostname",
+            show_help=False,
+            default=default_hostname,
+            metavar="HOSTNAME",
+            help="The hostname to use for the disk image",
+        )
         if "use_qcow2" not in cls.__dict__:
-            cls.use_qcow2 = cls.add_bool_option("use-qcow2",
-                                                help="Convert the disk image to QCOW2 format instead of raw")
-        cls.rootfs_type = cls.add_config_option("rootfs-type", show_help=True,
-                                                kind=FileSystemType, default=FileSystemType.UFS,
-                                                enum_choices=[FileSystemType.UFS, FileSystemType.ZFS],
-                                                help="Select the type of the root file system image.")
-        cls.remote_path = cls.add_config_option("remote-path", show_help=False, metavar="PATH",
-                                                help="When set rsync will be used to update the image from "
-                                                     "the remote server instead of building it locally.")
-        cls.wget_via_tmp = cls.add_bool_option("wget-via-tmp",
-                                               help="Use a directory in /tmp for recursive wget operations;"
-                                                    "of interest in rare cases, like extra-files on smbfs.")
-        cls.include_gdb = cls.add_bool_option("include-gdb", default=True,
-                                              help="Include GDB in the disk image (if it exists)")
-        cls.include_kgdb = cls.add_bool_option("include-kgdb", default=False,
-                                               help="Include KGDB in the disk image (if it exists)")
+            cls.use_qcow2 = cls.add_bool_option(
+                "use-qcow2", help="Convert the disk image to QCOW2 format instead of raw"
+            )
+        cls.rootfs_type = cls.add_config_option(
+            "rootfs-type",
+            show_help=True,
+            kind=FileSystemType,
+            default=FileSystemType.UFS,
+            enum_choices=[FileSystemType.UFS, FileSystemType.ZFS],
+            help="Select the type of the root file system image.",
+        )
+        cls.remote_path = cls.add_config_option(
+            "remote-path",
+            show_help=False,
+            metavar="PATH",
+            help="When set rsync will be used to update the image from "
+            "the remote server instead of building it locally.",
+        )
+        cls.wget_via_tmp = cls.add_bool_option(
+            "wget-via-tmp",
+            help="Use a directory in /tmp for recursive wget operations;"
+            "of interest in rare cases, like extra-files on smbfs.",
+        )
+        cls.include_gdb = cls.add_bool_option(
+            "include-gdb", default=True, help="Include GDB in the disk image (if it exists)"
+        )
+        cls.include_kgdb = cls.add_bool_option(
+            "include-kgdb", default=False, help="Include KGDB in the disk image (if it exists)"
+        )
         assert cls.default_disk_image_path is not None
-        cls.disk_image_path = cls.add_path_option("path", default=cls.default_disk_image_path, metavar="IMGPATH",
-                                                  help="The output path for the disk image", show_help=True)
-        cls.force_overwrite = cls.add_bool_option("force-overwrite", default=True,
-                                                  help="Overwrite an existing disk image without prompting")
-        cls.no_autoboot = cls.add_bool_option("no-autoboot", default=False,
-                                              help="Disable autoboot and boot menu for targets that use loader(8)")
+        cls.disk_image_path = cls.add_path_option(
+            "path",
+            default=cls.default_disk_image_path,
+            metavar="IMGPATH",
+            help="The output path for the disk image",
+            show_help=True,
+        )
+        cls.force_overwrite = cls.add_bool_option(
+            "force-overwrite", default=True, help="Overwrite an existing disk image without prompting"
+        )
+        cls.no_autoboot = cls.add_bool_option(
+            "no-autoboot", default=False, help="Disable autoboot and boot menu for targets that use loader(8)"
+        )
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
@@ -235,8 +263,17 @@ class BuildDiskImageBase(SimpleProject):
     def _get_source_class_target(self):
         return self.crosscompile_target
 
-    def add_file_to_image(self, file: Path, *, base_directory: "Optional[Path]" = None, user="root", group="wheel",
-                          mode=None, path_in_target=None, strip_binaries: "Optional[bool]" = None):
+    def add_file_to_image(
+        self,
+        file: Path,
+        *,
+        base_directory: "Optional[Path]" = None,
+        user="root",
+        group="wheel",
+        mode=None,
+        path_in_target=None,
+        strip_binaries: "Optional[bool]" = None,
+    ):
         if path_in_target is None:
             assert base_directory is not None, "Either base_directory or path_in_target must be set!"
             path_in_target = os.path.relpath(str(file), str(base_directory))
@@ -259,8 +296,9 @@ class BuildDiskImageBase(SimpleProject):
         if file in self.extra_files:
             self.extra_files.remove(file)  # remove it from extra_files so we don't install it twice
 
-    def create_file_for_image(self, path_in_image: str, *, contents: str = "\n", show_contents_non_verbose=False,
-                              mode=None):
+    def create_file_for_image(
+        self, path_in_image: str, *, contents: str = "\n", show_contents_non_verbose=False, mode=None
+    ):
         if path_in_image.startswith("/"):
             path_in_image = path_in_image[1:]
         assert not path_in_image.startswith("/")
@@ -275,8 +313,14 @@ class BuildDiskImageBase(SimpleProject):
             target_file = self.tmpdir / path_in_image
             base_dir = self.tmpdir
             if self.config.verbose or (show_contents_non_verbose and not self.config.quiet):
-                print("Generating /", path_in_image, " with the following contents:\n",
-                      coloured(AnsiColour.green, contents), sep="", end="")
+                print(
+                    "Generating /",
+                    path_in_image,
+                    " with the following contents:\n",
+                    coloured(AnsiColour.green, contents),
+                    sep="",
+                    end="",
+                )
             self.write_file(target_file, contents, never_print_cmd=True, overwrite=False, mode=mode)
         self.add_file_to_image(target_file, base_directory=base_dir)
 
@@ -306,27 +350,29 @@ class BuildDiskImageBase(SimpleProject):
         if self.include_swap_partition:
             fstab_contents += "/dev/gpt/swap none swap sw 0 0\n"
         fstab_contents += self.file_templates.get_fstab_template()
-        self.create_file_for_image("/etc/fstab", contents=fstab_contents,
-                                   mode=0o644, show_contents_non_verbose=True)
+        self.create_file_for_image("/etc/fstab", contents=fstab_contents, mode=0o644, show_contents_non_verbose=True)
 
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
         rc_conf_contents = self.file_templates.get_rc_conf_template().format(hostname=self.hostname)
-        self.create_file_for_image("/etc/rc.conf", contents=rc_conf_contents,
-                                   mode=0o644, show_contents_non_verbose=False)
+        self.create_file_for_image(
+            "/etc/rc.conf", contents=rc_conf_contents, mode=0o644, show_contents_non_verbose=False
+        )
 
-        cshrc_contents = self.file_templates.get_cshrc_template().format(SRCPATH=self.config.source_root,
-                                                                         ROOTFS_DIR=self.rootfs_dir)
+        cshrc_contents = self.file_templates.get_cshrc_template().format(
+            SRCPATH=self.config.source_root, ROOTFS_DIR=self.rootfs_dir
+        )
         self.create_file_for_image("/etc/csh.cshrc", contents=cshrc_contents, mode=0o644)
 
         # Basic .bashrc/.bash_profile template
-        dot_bashrc_contents = self.file_templates.get_dot_bashrc_template().format(SRCPATH=self.config.source_root,
-                                                                                   ROOTFS_DIR=self.rootfs_dir)
+        dot_bashrc_contents = self.file_templates.get_dot_bashrc_template().format(
+            SRCPATH=self.config.source_root, ROOTFS_DIR=self.rootfs_dir
+        )
         self.create_file_for_image("/root/.bashrc", contents=dot_bashrc_contents, mode=0o644)
         self.create_file_for_image("/usr/share/skel/dot.bashrc", contents=dot_bashrc_contents, mode=0o644)
         dot_bash_profile_contents = self.file_templates.get_dot_bash_profile_template().format(
-            SRCPATH=self.config.source_root,
-            ROOTFS_DIR=self.rootfs_dir)
+            SRCPATH=self.config.source_root, ROOTFS_DIR=self.rootfs_dir
+        )
         self.create_file_for_image("/root/.bash_profile", contents=dot_bash_profile_contents, mode=0o644)
         self.create_file_for_image("/usr/share/skel/dot.bash_profile", contents=dot_bash_profile_contents, mode=0o644)
 
@@ -343,8 +389,12 @@ class BuildDiskImageBase(SimpleProject):
             try:
                 return install_dir.relative_to(self.config.output_root)
             except ValueError:
-                self.info(install_dir, "is not relative to", self.config.output_root,
-                          "-- qemu-mount-rootfs.sh may not mount it")
+                self.info(
+                    install_dir,
+                    "is not relative to",
+                    self.config.output_root,
+                    "-- qemu-mount-rootfs.sh may not mount it",
+                )
                 return Path("/invalid/path")
 
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
@@ -352,33 +402,55 @@ class BuildDiskImageBase(SimpleProject):
             hybrid_cheri_dirname = path_relative_to_outputroot(self.crosscompile_target.get_cheri_hybrid_target())
             purecap_cheri_dirname = path_relative_to_outputroot(self.crosscompile_target.get_cheri_purecap_target())
         mount_rootfs_script = include_local_file("files/cheribsd/qemu-mount-rootfs.sh.in").format(
-            SRCPATH=self.config.source_root, ROOTFS_DIR=self.rootfs_dir,
-            NOCHERI_ROOTFS_DIRNAME=non_cheri_dirname, HYBRID_ROOTFS_DIRNAME=hybrid_cheri_dirname,
-            PURECAP_ROOTFS_DIRNAME=purecap_cheri_dirname)
-        self.create_file_for_image("/sbin/qemu-mount-rootfs.sh", contents=mount_rootfs_script,
-                                   mode=0o755, show_contents_non_verbose=False)
+            SRCPATH=self.config.source_root,
+            ROOTFS_DIR=self.rootfs_dir,
+            NOCHERI_ROOTFS_DIRNAME=non_cheri_dirname,
+            HYBRID_ROOTFS_DIRNAME=hybrid_cheri_dirname,
+            PURECAP_ROOTFS_DIRNAME=purecap_cheri_dirname,
+        )
+        self.create_file_for_image(
+            "/sbin/qemu-mount-rootfs.sh", contents=mount_rootfs_script, mode=0o755, show_contents_non_verbose=False
+        )
         mount_sources_script = include_local_file("files/cheribsd/qemu-mount-sources.sh.in").format(
-            SRCPATH=self.config.source_root, ROOTFS_DIR=self.rootfs_dir)
-        self.create_file_for_image("/sbin/qemu-mount-sources.sh", contents=mount_sources_script,
-                                   mode=0o755, show_contents_non_verbose=False)
+            SRCPATH=self.config.source_root, ROOTFS_DIR=self.rootfs_dir
+        )
+        self.create_file_for_image(
+            "/sbin/qemu-mount-sources.sh", contents=mount_sources_script, mode=0o755, show_contents_non_verbose=False
+        )
         do_reroot_script = include_local_file("files/cheribsd/qemu-do-reroot.sh.in").format(
-            SRCPATH=self.config.source_root, ROOTFS_DIR=self.rootfs_dir)
-        self.create_file_for_image("/sbin/qemu-do-reroot.sh", contents=do_reroot_script,
-                                   mode=0o755, show_contents_non_verbose=False)
-        self.create_file_for_image("/sbin/startup-benchmark.sh", mode=0o755, show_contents_non_verbose=False,
-                                   contents=include_local_file("files/cheribsd/startup-benchmark.sh"))
+            SRCPATH=self.config.source_root, ROOTFS_DIR=self.rootfs_dir
+        )
+        self.create_file_for_image(
+            "/sbin/qemu-do-reroot.sh", contents=do_reroot_script, mode=0o755, show_contents_non_verbose=False
+        )
+        self.create_file_for_image(
+            "/sbin/startup-benchmark.sh",
+            mode=0o755,
+            show_contents_non_verbose=False,
+            contents=include_local_file("files/cheribsd/startup-benchmark.sh"),
+        )
         # Add a script to launch gdb, run a program and get a backtrace:
-        self.create_file_for_image("/usr/bin/gdb-run.sh", contents=include_local_file("files/cheribsd/gdb-run.sh"),
-                                   mode=0o755, show_contents_non_verbose=False)
+        self.create_file_for_image(
+            "/usr/bin/gdb-run.sh",
+            contents=include_local_file("files/cheribsd/gdb-run.sh"),
+            mode=0o755,
+            show_contents_non_verbose=False,
+        )
         # And another one for non-interactive use:
-        self.create_file_for_image("/usr/bin/gdb-run-noninteractive.sh",
-                                   contents=include_local_file("files/cheribsd/gdb-run-noninteractive.sh"),
-                                   mode=0o755, show_contents_non_verbose=False)
+        self.create_file_for_image(
+            "/usr/bin/gdb-run-noninteractive.sh",
+            contents=include_local_file("files/cheribsd/gdb-run-noninteractive.sh"),
+            mode=0o755,
+            show_contents_non_verbose=False,
+        )
 
         # Add a script to turn of network and stop running services:
-        self.create_file_for_image("/usr/bin/prepare-benchmark-environment.sh",
-                                   contents=include_local_file("files/cheribsd/prepare-benchmark-environment.sh"),
-                                   mode=0o755, show_contents_non_verbose=False)
+        self.create_file_for_image(
+            "/usr/bin/prepare-benchmark-environment.sh",
+            contents=include_local_file("files/cheribsd/prepare-benchmark-environment.sh"),
+            mode=0o755,
+            show_contents_non_verbose=False,
+        )
 
         # Update test suite config to skip tests disabled in FreeBSD CI and skip slow tests by default.
         # For example, the mkimg tests take almost 6 hours out of 22 total on RISCV purecap.
@@ -391,8 +463,9 @@ class BuildDiskImageBase(SimpleProject):
             # make sure we can login as root with pubkey auth:
             new_kyua_config_contents = self.read_file(kyua_config)
             new_kyua_config_contents += include_local_file("files/cheribsd/kyua.conf.append")
-            self.create_file_for_image("/" + kyua_config_path, contents=new_kyua_config_contents,
-                                       mode=0o644, show_contents_non_verbose=False)
+            self.create_file_for_image(
+                "/" + kyua_config_path, contents=new_kyua_config_contents, mode=0o644, show_contents_non_verbose=False
+            )
 
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
@@ -407,23 +480,26 @@ class BuildDiskImageBase(SimpleProject):
             new_sshd_config_contents = self.read_file(sshd_config)
             new_sshd_config_contents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
             new_sshd_config_contents += "\n# Major speedup to SSH performance:\n UseDNS no\n"
-            self.create_file_for_image("/etc/ssh/sshd_config", contents=new_sshd_config_contents,
-                                       mode=0o644, show_contents_non_verbose=False)
+            self.create_file_for_image(
+                "/etc/ssh/sshd_config", contents=new_sshd_config_contents, mode=0o644, show_contents_non_verbose=False
+            )
         # now try adding the right ~/.ssh/authorized_keys
         authorized_keys = self.extra_files_dir / "root/.ssh/authorized_keys"
         if not authorized_keys.is_file():
             ssh_keys = list(Path(os.path.expanduser("~/.ssh/")).glob("*.pub"))
             if len(ssh_keys) > 0:
                 print("Found the following ssh keys:", list(map(str, ssh_keys)))
-                if self.query_yes_no("Would you like to add them to /root/.ssh/authorized_keys in the image?",
-                                     default_result=True):
+                if self.query_yes_no(
+                    "Would you like to add them to /root/.ssh/authorized_keys in the image?", default_result=True
+                ):
                     contents = ""
                     for pubkey in ssh_keys:
                         contents += self.read_file(pubkey)
                     self.create_file_for_image("/root/.ssh/authorized_keys", contents=contents, mode=0o600)
-                    if self.query_yes_no("Should this authorized_keys file be used by default? "
-                                         "(You can always change them by editing/deleting '" +
-                                         str(authorized_keys) + "')?"):
+                    if self.query_yes_no(
+                        "Should this authorized_keys file be used by default? "
+                        "(You can always change them by editing/deleting '" + str(authorized_keys) + "')?"
+                    ):
                         self.install_file(self.tmpdir / "root/.ssh/authorized_keys", authorized_keys)
                         # SSHD complains and rejects all connections if /root or /root/.ssh is not 0700
                         self.run_cmd("chmod", "0700", authorized_keys.parent.parent, authorized_keys.parent)
@@ -431,14 +507,14 @@ class BuildDiskImageBase(SimpleProject):
 
         loader_conf_contents = ""
         if self.is_x86:
-            loader_conf_contents += "console=\"comconsole\"\nautoboot_delay=0\n"
+            loader_conf_contents += 'console="comconsole"\nautoboot_delay=0\n'
         if self.no_autoboot:
             if self.crosscompile_target.is_aarch64(include_purecap=True) or self.is_x86:
-                loader_conf_contents += "autoboot_delay=\"NO\"\nbeastie_disable=\"YES\"\n"
+                loader_conf_contents += 'autoboot_delay="NO"\nbeastie_disable="YES"\n'
             else:
                 self.warning("--no-autoboot is not supported for this target, ignoring.")
         if self.rootfs_type == FileSystemType.ZFS:
-            loader_conf_contents += "zfs_load=\"YES\"\n"
+            loader_conf_contents += 'zfs_load="YES"\n'
         self.create_file_for_image("/boot/loader.conf", contents=loader_conf_contents, mode=0o644)
 
         # Avoid long boot time on first start due to missing entropy:
@@ -499,7 +575,7 @@ class BuildDiskImageBase(SimpleProject):
 
     def add_all_files_in_dir(self, root_dir: Path):
         for root, dirnames, filenames in os.walk(str(root_dir)):
-            for ignored_dirname in ('.svn', '.git', '.idea'):
+            for ignored_dirname in (".svn", ".git", ".idea"):
                 if ignored_dirname in dirnames:
                     dirnames.remove(ignored_dirname)
             # Symlinks that point to directories are included in dirnames as a
@@ -517,8 +593,10 @@ class BuildDiskImageBase(SimpleProject):
 
     def run_mkimg(self, cmd: "list[str]", **kwargs):
         if not self.mkimg_cmd or not self.mkimg_cmd.exists():
-            self.fatal(f"Missing mkimg command ('{self.mkimg_cmd}')! Should be found in FreeBSD build dir.",
-                       fixit_hint="Pass an explicit path to mkimg by setting the MKIMG_CMD environment variable")
+            self.fatal(
+                f"Missing mkimg command ('{self.mkimg_cmd}')! Should be found in FreeBSD build dir.",
+                fixit_hint="Pass an explicit path to mkimg by setting the MKIMG_CMD environment variable",
+            )
         self.run_cmd([self.mkimg_cmd, *cmd], **kwargs)
 
     @property
@@ -560,13 +638,20 @@ class BuildDiskImageBase(SimpleProject):
                 raise ValueError("Invalid FileSystemType")
 
             # See mk_nogeli_gpt_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
-            self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
-                            # "-f", "raw",  # raw disk image instead of qcow2
-                            "-b", self.rootfs_dir / "boot/pmbr",  # bootload (MBR)
-                            *mkimg_bootfs_args,
-                            *mkimg_rootfs_args,
-                            "-o", out_img,  # output file
-                            ], cwd=self.rootfs_dir)
+            self.run_mkimg(
+                [
+                    "-s",
+                    "gpt",  # use GUID Partition Table (GPT)
+                    # "-f", "raw",  # raw disk image instead of qcow2
+                    "-b",
+                    self.rootfs_dir / "boot/pmbr",  # bootload (MBR)
+                    *mkimg_bootfs_args,
+                    *mkimg_rootfs_args,
+                    "-o",
+                    out_img,  # output file
+                ],
+                cwd=self.rootfs_dir,
+            )
         finally:
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
 
@@ -594,13 +679,19 @@ class BuildDiskImageBase(SimpleProject):
 
             mkimg_rootfs_args = ["-p", f"freebsd-{self.rootfs_type.value}:={root_partition}"]
             self.make_rootfs_image(root_partition)
-            self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
-                            # "-f", "raw",  # raw disk image instead of qcow2
-                            *mkimg_efi_args,
-                            *mkimg_rootfs_args,
-                            *mkimg_swap_args,
-                            "-o", out_img,  # output file
-                            ], cwd=self.rootfs_dir)
+            self.run_mkimg(
+                [
+                    "-s",
+                    "gpt",  # use GUID Partition Table (GPT)
+                    # "-f", "raw",  # raw disk image instead of qcow2
+                    *mkimg_efi_args,
+                    *mkimg_rootfs_args,
+                    *mkimg_swap_args,
+                    "-o",
+                    out_img,  # output file
+                ],
+                cwd=self.rootfs_dir,
+            )
         finally:
             self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
             if efi_partition is not None:
@@ -628,19 +719,32 @@ class BuildDiskImageBase(SimpleProject):
             if use_makefs:
                 # Makefs doesn't handle contents= right now
                 efi_mtree = MtreeFile(verbose=self.config.verbose)
-                efi_mtree.add_file(self.rootfs_dir / "boot" / loader_file, path_in_image="efi/boot/" + efi_file.lower(),
-                                   mode=0o644)
+                efi_mtree.add_file(
+                    self.rootfs_dir / "boot" / loader_file, path_in_image="efi/boot/" + efi_file.lower(), mode=0o644
+                )
                 efi_mtree.write(tmp_mtree, pretend=self.config.pretend)
                 tmp_mtree.flush()  # ensure the file is actually written
                 self.run_cmd("cat", tmp_mtree.name)
                 # Note: it appears msdosfs makefs only works if you pass a fixed size, so use 2m which is large
                 # enough to fit either loader_simp.efi or loader.efi.
-                self.run_cmd([self.makefs_cmd, "-t", "msdos", "-s", "2m",
-                              # "-d", "0x2fffffff",  # super verbose output
-                              # "-d", "0x20000000",  # MSDOSFS debug output
-                              "-B", "le",  # byte order little endian
-                              "-N", self.user_group_db_dir,
-                              str(efi_partition), str(tmp_mtree.name)], cwd=self.rootfs_dir)
+                self.run_cmd(
+                    [
+                        self.makefs_cmd,
+                        "-t",
+                        "msdos",
+                        "-s",
+                        "2m",
+                        # "-d", "0x2fffffff",  # super verbose output
+                        # "-d", "0x20000000",  # MSDOSFS debug output
+                        "-B",
+                        "le",  # byte order little endian
+                        "-N",
+                        self.user_group_db_dir,
+                        str(efi_partition),
+                        str(tmp_mtree.name),
+                    ],
+                    cwd=self.rootfs_dir,
+                )
             else:
                 # Use this (and mtools) instead: https://wiki.osdev.org/UEFI_Bare_Bones#Creating_the_FAT_image
                 if not (mtools_bin / "mformat").exists():
@@ -649,8 +753,13 @@ class BuildDiskImageBase(SimpleProject):
                 self.run_cmd(mtools_bin / "mformat", "-i", efi_partition, "-f", "2048", "::")
                 self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI")
                 self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI/BOOT")
-                self.run_cmd(mtools_bin / "mcopy", "-i", efi_partition,
-                             self.rootfs_dir / "boot" / loader_file, "::/EFI/BOOT/" + efi_file.upper())
+                self.run_cmd(
+                    mtools_bin / "mcopy",
+                    "-i",
+                    efi_partition,
+                    self.rootfs_dir / "boot" / loader_file,
+                    "::/EFI/BOOT/" + efi_file.upper(),
+                )
             if (mtools_bin / "minfo").exists():
                 # Get some information about the created image information:
                 self.run_cmd(mtools_bin / "minfo", "-i", efi_partition)
@@ -666,9 +775,12 @@ class BuildDiskImageBase(SimpleProject):
         makefs_flags = []
         if self.rootfs_type == FileSystemType.ZFS:
             makefs_flags = [
-                "-t", "zfs",
-                "-o", "poolname=zroot,rootpath=/,bootfs=zroot",
-                "-s", "5g",
+                "-t",
+                "zfs",
+                "-o",
+                "poolname=zroot,rootpath=/,bootfs=zroot",
+                "-s",
+                "5g",
             ]
         elif self.rootfs_type == FileSystemType.UFS:
             debug_options = []
@@ -685,31 +797,52 @@ class BuildDiskImageBase(SimpleProject):
             if self.is_x86:
                 # x86: -t ffs -f 200000 -s 8g -o version=2,bsize=32768,fsize=4096
                 extra_flags = ["-o", "bsize=32768,fsize=4096,label=root"]
-            makefs_flags = debug_options + extra_flags + [
-                "-t", "ffs",  # BSD fast file system
-                "-o", "version=2,label=root",  # UFS2
-                "-o", "softupdates=1",  # Enable soft updates journaling
-                "-Z",  # sparse file output
-                "-b", free_blocks,
-                "-f", "1k" if self.is_minimal else "200k",
-                # minimum 1024 free inodes for minimal, otherwise at least 1M
-                "-R", "4m",  # round up size to the next 4m multiple
-                "-M", self.minimum_image_size,
-                "-B", "be" if self.big_endian else "le",  # byte order
-            ]
+            makefs_flags = (
+                debug_options
+                + extra_flags
+                + [
+                    "-t",
+                    "ffs",  # BSD fast file system
+                    "-o",
+                    "version=2,label=root",  # UFS2
+                    "-o",
+                    "softupdates=1",  # Enable soft updates journaling
+                    "-Z",  # sparse file output
+                    "-b",
+                    free_blocks,
+                    "-f",
+                    "1k" if self.is_minimal else "200k",
+                    # minimum 1024 free inodes for minimal, otherwise at least 1M
+                    "-R",
+                    "4m",  # round up size to the next 4m multiple
+                    "-M",
+                    self.minimum_image_size,
+                    "-B",
+                    "be" if self.big_endian else "le",  # byte order
+                ]
+            )
         try:
-            self.run_cmd([self.makefs_cmd, *makefs_flags,
-                          "-N", self.user_group_db_dir,
-                          # use master.passwd from the cheribsd source not the current systems passwd file
-                          # which makes sure that the numeric UID values are correct
-                          rootfs_img,  # output file
-                          self.manifest_file,  # use METALOG as the manifest for the disk image
-                          ], cwd=self.rootfs_dir)
+            self.run_cmd(
+                [
+                    self.makefs_cmd,
+                    *makefs_flags,
+                    "-N",
+                    self.user_group_db_dir,
+                    # use master.passwd from the cheribsd source not the current systems passwd file
+                    # which makes sure that the numeric UID values are correct
+                    rootfs_img,  # output file
+                    self.manifest_file,  # use METALOG as the manifest for the disk image
+                ],
+                cwd=self.rootfs_dir,
+            )
         except Exception:
-            self.warning("makefs failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
-                         " or cheribsd) and attach the METALOG file.")
-            self.query_yes_no("About to delete the temporary directory. Copy any files you need before pressing enter.",
-                              yes_no_str="")
+            self.warning(
+                "makefs failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
+                " or cheribsd) and attach the METALOG file."
+            )
+            self.query_yes_no(
+                "About to delete the temporary directory. Copy any files you need before pressing enter.", yes_no_str=""
+            )
             raise
 
     def make_disk_image(self):
@@ -746,11 +879,16 @@ class BuildDiskImageBase(SimpleProject):
             if not qemu_img_command.exists():
                 self.fatal("Cannot create QCOW2 image without qemu-img command!")
             # create a qcow2 version from the raw image:
-            self.run_cmd(qemu_img_command, "convert",
-                         "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
-                         "-O", "qcow2",  # convert to qcow2 format
-                         raw_img,  # input file
-                         self.disk_image_path)  # output file
+            self.run_cmd(
+                qemu_img_command,
+                "convert",
+                "-f",
+                "raw",  # input file is in raw format (not required as QEMU can detect it
+                "-O",
+                "qcow2",  # convert to qcow2 format
+                raw_img,  # input file
+                self.disk_image_path,
+            )  # output file
             self.delete_file(raw_img, print_verbose_only=True)
             if self.config.verbose:
                 self.run_cmd(qemu_img_command, "info", self.disk_image_path)
@@ -784,10 +922,13 @@ class BuildDiskImageBase(SimpleProject):
                 # with --clean always delete the image
                 opt = self.get_config_option_name("force_overwrite")
                 self.info("An image already exists (" + str(self.disk_image_path) + "). ", end="")
-                self.info("Note: Pass", coloured(AnsiColour.yellow, "--" + opt),
-                          coloured(AnsiColour.cyan, "to skip this prompt or add"),
-                          coloured(AnsiColour.yellow, "\"" + opt + "\": true"),
-                          coloured(AnsiColour.cyan, "to", self.config.loader.config_file_path))
+                self.info(
+                    "Note: Pass",
+                    coloured(AnsiColour.yellow, "--" + opt),
+                    coloured(AnsiColour.cyan, "to skip this prompt or add"),
+                    coloured(AnsiColour.yellow, '"' + opt + '": true'),
+                    coloured(AnsiColour.cyan, "to", self.config.loader.config_file_path),
+                )
                 if not self.query_yes_no("Overwrite?", default_result=True):
                     return  # we are done here
             self.delete_file(self.disk_image_path)
@@ -812,9 +953,12 @@ class BuildDiskImageBase(SimpleProject):
                 self.mkimg_cmd = mkimg_xtool
 
         if not self.makefs_cmd or not self.makefs_cmd.exists():
-            self.fatal("Missing makefs command ('{}')! Should be found in FreeBSD build dir ({})".format(
-                self.makefs_cmd, freebsd_builddir),
-                fixit_hint="Pass an explicit path to makefs by setting the MAKEFS_CMD environment variable")
+            self.fatal(
+                "Missing makefs command ('{}')! Should be found in FreeBSD build dir ({})".format(
+                    self.makefs_cmd, freebsd_builddir
+                ),
+                fixit_hint="Pass an explicit path to makefs by setting the MAKEFS_CMD environment variable",
+            )
         self.info("Disk image will be saved to", self.disk_image_path)
         self.info("Disk image root fs is", self.rootfs_dir)
         self.info("Extra files for the disk image will be copied from", self.extra_files_dir)
@@ -870,8 +1014,9 @@ class BuildDiskImageBase(SimpleProject):
             print("Found the following files in the rootfs that are not listed in METALOG:")
             for i in unlisted_files:
                 print("\t", i[1])
-            if self.query_yes_no("Should these files also be added to the image?", default_result=True,
-                                 force_result=True):
+            if self.query_yes_no(
+                "Should these files also be added to the image?", default_result=True, force_result=True
+            ):
                 for i in unlisted_files:
                     self.mtree.add_file(i[0], i[1], print_status=self.config.verbose)
 
@@ -888,9 +1033,15 @@ class BuildDiskImageBase(SimpleProject):
             private_key = ssh_dir / private_key_name
             public_key = ssh_dir / (private_key_name + ".pub")
             if not private_key.is_file():
-                self.run_cmd("ssh-keygen", "-t", key_type,
-                             "-N", "",  # no passphrase
-                             "-f", str(private_key))
+                self.run_cmd(
+                    "ssh-keygen",
+                    "-t",
+                    key_type,
+                    "-N",
+                    "",  # no passphrase
+                    "-f",
+                    str(private_key),
+                )
             self.add_file_to_image(private_key, base_directory=self.extra_files_dir, mode="0600")
             self.add_file_to_image(public_key, base_directory=self.extra_files_dir, mode="0644")
 
@@ -908,17 +1059,23 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        super().setup_config_options(default_hostname=_default_disk_image_hostname("cheribsd-minimal"),
-                                     extra_files_suffix="-minimal", **kwargs)
+        super().setup_config_options(
+            default_hostname=_default_disk_image_hostname("cheribsd-minimal"), extra_files_suffix="-minimal", **kwargs
+        )
         cls.strip_binaries = cls.add_bool_option(
-            "strip", default=True, help="strip ELF files to reduce size of generated image")
+            "strip", default=True, help="strip ELF files to reduce size of generated image"
+        )
         cls.include_cheribsdtest = cls.add_bool_option(
-            "include-cheribsdtest", default=True, help="Also add static cheribsdtest base variants to the disk image")
-        cls.include_pmc = cls.add_bool_option("include-pmc", default=True,
-                                              help="Include PMC tools and kernel modules in the disk image")
-        cls.kernels = cls.add_list_option("kernel-names", default=[""],
-                                          help="Kernel(s) to include in the image; empty string or '/' for "
-                                               "/boot/kernel/, X for /boot/kernel.X/")
+            "include-cheribsdtest", default=True, help="Also add static cheribsdtest base variants to the disk image"
+        )
+        cls.include_pmc = cls.add_bool_option(
+            "include-pmc", default=True, help="Include PMC tools and kernel modules in the disk image"
+        )
+        cls.kernels = cls.add_list_option(
+            "kernel-names",
+            default=[""],
+            help="Kernel(s) to include in the image; empty string or '/' for " "/boot/kernel/, X for /boot/kernel.X/",
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -959,8 +1116,10 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
     def add_unlisted_files_to_metalog(self):
         # Now add all the files from *.files to the image:
         self.verbose_print("Adding files from rootfs to minimal image:")
-        files_to_add = [include_local_file("files/minimal-image/base.files"),
-                        include_local_file("files/minimal-image/etc.files")]
+        files_to_add = [
+            include_local_file("files/minimal-image/base.files"),
+            include_local_file("files/minimal-image/etc.files"),
+        ]
         if self._have_cplusplus_support(["lib", "usr/lib"]):
             files_to_add.append(include_local_file("files/minimal-image/need-cplusplus.files"))
 
@@ -1000,8 +1159,9 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             fullpath = self.rootfs_dir / "usr" / libcompat_dir
             if fullpath.is_symlink():
                 # add the libcompat symlinks to ensure that we can always use lib64/lib64c in test scripts
-                self.mtree.add_symlink(src_symlink=self.rootfs_dir / "usr" / libcompat_dir,
-                                       path_in_image="usr/" + libcompat_dir)
+                self.mtree.add_symlink(
+                    src_symlink=self.rootfs_dir / "usr" / libcompat_dir, path_in_image="usr/" + libcompat_dir
+                )
                 if (self.rootfs_dir / libcompat_dir).is_symlink():
                     self.mtree.add_symlink(src_symlink=self.rootfs_dir / libcompat_dir, path_in_image=libcompat_dir)
             elif (fullpath / "libc.so").exists():
@@ -1063,13 +1223,16 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         # required, but versions were bumped with changes to ncurses
         optional_libs += [
             # needed by /bin/sh & /bin/csh (if we included the purecap sh/csh)
-            "libedit.so.7", "libedit.so.8",
+            "libedit.so.7",
+            "libedit.so.8",
         ]
         # required, but versions were bumped for OpenSSL 3
         optional_libs += [
             # cheribsdbox depends on SSL
-            "libcrypto.so.111", "libcrypto.so.30",
-            "libssl.so.111", "libssl.so.30",
+            "libcrypto.so.111",
+            "libcrypto.so.30",
+            "libssl.so.111",
+            "libssl.so.30",
         ]
         # additional cheribsdbox dependencies (PAM+SSL+BSM)
         # We don't know what ABI cheribsdbox is built for so let's just add the libraries for all ABIs
@@ -1113,25 +1276,47 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                     else:
                         prefix = "{" + ",".join(libdirs) + "}/"
                     if required and not ignore_required:
-                        self.fatal("Could not find required library '", prefix + library_basename, "' in rootfs ",
-                                   self.rootfs_dir, sep="")
+                        self.fatal(
+                            "Could not find required library '",
+                            prefix + library_basename,
+                            "' in rootfs ",
+                            self.rootfs_dir,
+                            sep="",
+                        )
                     else:
-                        self.info("Could not find optional library '", prefix + library_basename, "' in rootfs ",
-                                  self.rootfs_dir, sep="")
+                        self.info(
+                            "Could not find optional library '",
+                            prefix + library_basename,
+                            "' in rootfs ",
+                            self.rootfs_dir,
+                            sep="",
+                        )
                     continue
                 self.add_file_to_image(full_lib_path, base_directory=self.rootfs_dir)
 
     def prepare_rootfs(self):
         super().prepare_rootfs()
         # Add the additional sysctl configs
-        self.create_file_for_image("/etc/pam.d/system", mode=0o644, show_contents_non_verbose=False,
-                                   contents=include_local_file("files/minimal-image/pam.d/system"))
+        self.create_file_for_image(
+            "/etc/pam.d/system",
+            mode=0o644,
+            show_contents_non_verbose=False,
+            contents=include_local_file("files/minimal-image/pam.d/system"),
+        )
         # disable coredumps (since there is almost no space on the image)
-        self.create_file_for_image("/etc/sysctl.conf", mode=0o644, show_contents_non_verbose=False,
-                                   contents=include_local_file("files/minimal-image/etc/sysctl.conf"))
+        self.create_file_for_image(
+            "/etc/sysctl.conf",
+            mode=0o644,
+            show_contents_non_verbose=False,
+            contents=include_local_file("files/minimal-image/etc/sysctl.conf"),
+        )
         # The actual minimal startup file:
-        self.create_file_for_image("/etc/rc", mode=0o644, show_contents_non_verbose=False,
-                                   contents=include_local_file("files/minimal-image/etc/rc"))
+        self.create_file_for_image(
+            "/etc/rc",
+            mode=0o644,
+            show_contents_non_verbose=False,
+            contents=include_local_file("files/minimal-image/etc/rc"),
+        )
 
     def make_rootfs_image(self, rootfs_img: Path):
         # update cheribsdbox link in case we stripped it:
@@ -1147,8 +1332,10 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                 self.delete_file(dummy_hardlink)
                 os.link(str(cheribsdbox_path), str(dummy_hardlink))
                 if Path(cheribsdbox_path).stat().st_nlink < 2:
-                    self.fatal("Need at least one hardlink to cheribsdbox so that makefs can detect deduplicate. "
-                               "This should have been created by cheribuild but something must have gone wrong")
+                    self.fatal(
+                        "Need at least one hardlink to cheribsdbox so that makefs can detect deduplicate. "
+                        "This should have been created by cheribuild but something must have gone wrong"
+                    )
             print("Relocating mtree path ./bin/cheribsdbox to use", cheribsdbox_path)
             # noinspection PyProtectedMember
             for i in self.mtree._mtree.values():
@@ -1217,7 +1404,8 @@ class BuildCheriBSDTarball(BuildCheriBSDDiskImage):
 
     default_disk_image_path = ComputedDefaultValue(
         function=lambda conf, proj: _default_tar_name(conf, conf.output_root, proj),
-        as_string=lambda cls: "$OUTPUT_ROOT/" + cls.disk_image_prefix + "-<TARGET>.tar.xz depending on architecture")
+        as_string=lambda cls: "$OUTPUT_ROOT/" + cls.disk_image_prefix + "-<TARGET>.tar.xz depending on architecture",
+    )
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
@@ -1234,10 +1422,13 @@ class BuildCheriBSDTarball(BuildCheriBSDDiskImage):
         try:
             self.run_cmd([bsdtar_path, "acf", self.disk_image_path, "@" + str(self.manifest_file)], cwd=self.rootfs_dir)
         except Exception:
-            self.warning("bsdtar failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
-                         " or cheribsd) and attach the METALOG file.")
-            self.query_yes_no("About to delete the temporary directory. Copy any files you need before pressing enter.",
-                              yes_no_str="")
+            self.warning(
+                "bsdtar failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
+                " or cheribsd) and attach the METALOG file."
+            )
+            self.query_yes_no(
+                "About to delete the temporary directory. Copy any files you need before pressing enter.", yes_no_str=""
+            )
             raise
 
 

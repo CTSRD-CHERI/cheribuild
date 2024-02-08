@@ -35,11 +35,13 @@ from .simple_project import BoolConfigOption
 
 class BuildGnuBinutils(AutotoolsProject):
     target = "gnu-binutils"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/binutils.git", default_branch="cheribsd",
-                               force_branch=True)
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/binutils.git", default_branch="cheribsd", force_branch=True
+    )
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    full_install = BoolConfigOption("install-all-tools", help="Whether to install all binutils tools instead"
-                                                              "of only as, ld and objdump")
+    full_install = BoolConfigOption(
+        "install-all-tools", help="Whether to install all binutils tools instead" "of only as, ld and objdump"
+    )
 
     def setup(self):
         super().setup()
@@ -61,24 +63,26 @@ class BuildGnuBinutils(AutotoolsProject):
         #    elf64ltsmip_fbsd
         #    elf32btsmipn32_fbsd
         #    elf32ltsmipn32_fbsd
-        self.configure_args.extend([
-            # on cheri gcc -dumpmachine returns mips64-undermydesk-freebsd, however this is not accepted by BFD
-            # if we just pass --target=mips64 this apparently defaults to mips64-unknown-elf on freebsd
-            # and also on Linux, but let's be explicit in case it assumes ELF binaries to target linux
-            # "--target=mips64-undermydesk-freebsd",  # binutils for MIPS64/CHERI
-            "--target=mips64-unknown-freebsd",  # binutils for MIPS64/FreeBSD
-            "--disable-werror",  # -Werror won't work with recent compilers
-            "--enable-ld",  # enable linker (is default, but just be safe)
-            "--enable-libssp",  # not sure if this is needed
-            "--enable-64-bit-bfd",  # Make sure we always have 64 bit support
-            "--enable-targets=all",
-            "--disable-gprof",
-            "--disable-gold",
-            "--disable-nls",
-            "--disable-info",
-            #  "--program-prefix=cheri-unknown-freebsd-",
-            "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems
-            ])
+        self.configure_args.extend(
+            [
+                # on cheri gcc -dumpmachine returns mips64-undermydesk-freebsd, however this is not accepted by BFD
+                # if we just pass --target=mips64 this apparently defaults to mips64-unknown-elf on freebsd
+                # and also on Linux, but let's be explicit in case it assumes ELF binaries to target linux
+                # "--target=mips64-undermydesk-freebsd",  # binutils for MIPS64/CHERI
+                "--target=mips64-unknown-freebsd",  # binutils for MIPS64/FreeBSD
+                "--disable-werror",  # -Werror won't work with recent compilers
+                "--enable-ld",  # enable linker (is default, but just be safe)
+                "--enable-libssp",  # not sure if this is needed
+                "--enable-64-bit-bfd",  # Make sure we always have 64 bit support
+                "--enable-targets=all",
+                "--disable-gprof",
+                "--disable-gold",
+                "--disable-nls",
+                "--disable-info",
+                #  "--program-prefix=cheri-unknown-freebsd-",
+                "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems
+            ]
+        )
         self.configure_args.append("--disable-shared")
         # newer compilers will default to -std=c99 which will break binutils:
         cflags = "-std=gnu89 -O2"
@@ -124,8 +128,10 @@ class BuildGnuBinutils(AutotoolsProject):
         return ["cheri-unknown-freebsd-"]  # compat only
 
     def process(self):
-        self.warning("GNU binutils should only be built if you know what you are doing since the linker "
-                     "is incredibly buggy and the assembler doesn't support all features that clang does.")
+        self.warning(
+            "GNU binutils should only be built if you know what you are doing since the linker "
+            "is incredibly buggy and the assembler doesn't support all features that clang does."
+        )
         if not self.query_yes_no("Are you sure you want to build this code?"):
             return
         super().process()

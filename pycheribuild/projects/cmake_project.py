@@ -50,6 +50,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     Sets configure command to CMake, adds -DCMAKE_INSTALL_PREFIX=installdir
     and checks that CMake is installed
     """
+
     do_not_add_to_targets: bool = True
     compile_db_requires_bear: bool = False  # cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON does it
     generate_cmakelists: bool = False  # There is already a CMakeLists.txt
@@ -79,8 +80,16 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         return "TRUE" if value else "FALSE"
 
     def _configure_tool_install_instructions(self) -> InstallInstructions:
-        return OSInfo.install_instructions("cmake", False, default="cmake", homebrew="cmake", zypper="cmake",
-                                           apt="cmake", freebsd="cmake", cheribuild_target="cmake")
+        return OSInfo.install_instructions(
+            "cmake",
+            False,
+            default="cmake",
+            homebrew="cmake",
+            zypper="cmake",
+            apt="cmake",
+            freebsd="cmake",
+            cheribuild_target="cmake",
+        )
 
     @property
     def _get_version_args(self) -> dict:
@@ -94,8 +103,9 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
-        cls.cmake_options = cls.add_list_option("cmake-options", metavar="OPTIONS",
-                                                help="Additional command line options to pass to CMake")
+        cls.cmake_options = cls.add_list_option(
+            "cmake-options", metavar="OPTIONS", help="Additional command line options to pass to CMake"
+        )
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -163,18 +173,20 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             # TODO: set CMAKE_STRIP, CMAKE_NM, CMAKE_OBJDUMP, CMAKE_READELF, CMAKE_DLLTOOL, CMAKE_DLLTOOL,
             #  CMAKE_ADDR2LINE
             self.add_cmake_options(
-                _CMAKE_TOOLCHAIN_LOCATION=self.target_info.sdk_root_dir / "bin",
-                CMAKE_LINKER=self.target_info.linker)
+                _CMAKE_TOOLCHAIN_LOCATION=self.target_info.sdk_root_dir / "bin", CMAKE_LINKER=self.target_info.linker
+            )
 
         if self.force_static_linkage:
             self.add_cmake_options(
                 CMAKE_SHARED_LIBRARY_SUFFIX=".a",
                 CMAKE_FIND_LIBRARY_SUFFIXES=".a",
                 CMAKE_EXTRA_SHARED_LIBRARY_SUFFIXES=".a",
-                CMAKE_SKIP_RPATH=True)
+                CMAKE_SKIP_RPATH=True,
+            )
             if self.compiling_for_host():
                 self.add_cmake_options(
-                    CMAKE_PROJECT_INCLUDE=Path(__file__).absolute().parent.parent / "files/ForceStaticLibraries.cmake")
+                    CMAKE_PROJECT_INCLUDE=Path(__file__).absolute().parent.parent / "files/ForceStaticLibraries.cmake"
+                )
         else:
             # Use $ORIGIN in the build RPATH (this should make it easier to run tests without having the absolute
             # build directory mounted).
@@ -187,7 +199,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                 # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
                 # Fixed in https://gitlab.kitware.com/cmake/cmake/-/merge_requests/6240 (3.21.20210625)
                 self.add_cmake_options(
-                    CMAKE_BUILD_WITH_INSTALL_RPATH=self._get_configure_tool_version() < (3, 21, 20210625))
+                    CMAKE_BUILD_WITH_INSTALL_RPATH=self._get_configure_tool_version() < (3, 21, 20210625)
+                )
         # NB: Don't add the user provided options here, we append add them in setup_late() so that they are put last.
 
     def setup_late(self):
@@ -223,8 +236,12 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             flags = " " + commandline_to_str(self.optimization_flags)
             if self.build_type.is_release:
                 flags += " -DNDEBUG"
-            self.add_cmake_options(**{f"CMAKE_C_FLAGS{self.build_type_var_suffix}": flags,
-                                      f"CMAKE_CXX_FLAGS{self.build_type_var_suffix}": flags})
+            self.add_cmake_options(
+                **{
+                    f"CMAKE_C_FLAGS{self.build_type_var_suffix}": flags,
+                    f"CMAKE_CXX_FLAGS{self.build_type_var_suffix}": flags,
+                }
+            )
         # Add the options from the config file now so that they are added after child class setup() calls.
         self.configure_args.extend(self.cmake_options)
 
@@ -236,8 +253,12 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             self.check_required_system_tool("make")
 
     def add_cmake_options(self, *, _include_empty_vars=False, _replace=True, **kwargs) -> None:
-        return self._add_configure_options(_config_file_options=self.cmake_options, _replace=_replace,
-                                           _include_empty_vars=_include_empty_vars, **kwargs)
+        return self._add_configure_options(
+            _config_file_options=self.cmake_options,
+            _replace=_replace,
+            _include_empty_vars=_include_empty_vars,
+            **kwargs,
+        )
 
     def set_minimum_cmake_version(self, major: int, minor: int, patch: int = 0) -> None:
         new_version = (major, minor, patch)
@@ -287,8 +308,9 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             self.generate_cmake_toolchain_file(self._toolchain_file)
         super().configure(**kwargs)
         if self.config.copy_compilation_db_to_source_dir and (self.build_dir / "compile_commands.json").exists():
-            self.install_file(self.build_dir / "compile_commands.json", self.source_dir / "compile_commands.json",
-                              force=True)
+            self.install_file(
+                self.build_dir / "compile_commands.json", self.source_dir / "compile_commands.json", force=True
+            )
 
     def install(self, *, _stdout_filter=_default_stdout_filter) -> None:
         if _stdout_filter is _default_stdout_filter:
@@ -299,26 +321,41 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         if (self.build_dir / "CTestTestfile.cmake").exists() or self.config.pretend:
             # We can run tests using CTest
             if self.compiling_for_host():
-                self.run_cmd(shutil.which(os.getenv("CTEST_COMMAND", "ctest")) or "ctest", "-V", "--output-on-failure",
-                             cwd=self.build_dir, env=self.ctest_environment)
+                self.run_cmd(
+                    shutil.which(os.getenv("CTEST_COMMAND", "ctest")) or "ctest",
+                    "-V",
+                    "--output-on-failure",
+                    cwd=self.build_dir,
+                    env=self.ctest_environment,
+                )
             else:
                 try:
                     cmake_xtarget = self.crosscompile_target
                     # Use a string here instead of BuildCrossCompiledCMake to avoid a cyclic import.
                     cmake_target = target_manager.get_target(
-                        "cmake-crosscompiled", required_arch=cmake_xtarget, config=self.config, caller=self,
+                        "cmake-crosscompiled",
+                        required_arch=cmake_xtarget,
+                        config=self.config,
+                        caller=self,
                     )
                     cmake_project = cmake_target.project_class.get_instance(self, cross_target=cmake_xtarget)
                     expected_ctest_path = cmake_project.install_dir / "bin/ctest"
                     if not expected_ctest_path.is_file():
-                        self.dependency_error(f"cannot find CTest binary ({expected_ctest_path}) to run tests.",
-                                              cheribuild_target=cmake_project.target, cheribuild_xtarget=cmake_xtarget)
+                        self.dependency_error(
+                            f"cannot find CTest binary ({expected_ctest_path}) to run tests.",
+                            cheribuild_target=cmake_project.target,
+                            cheribuild_xtarget=cmake_xtarget,
+                        )
                     # --output-junit needs version 3.21
                     min_version = "3.21"
                     if not list(cmake_project.install_dir.glob("share/*/Help/release/" + min_version + ".rst")):
-                        self.dependency_error("cannot find release notes for CMake", min_version,
-                                              "- installed CMake version is too old",
-                                              cheribuild_target=cmake_project.target, cheribuild_xtarget=cmake_xtarget)
+                        self.dependency_error(
+                            "cannot find release notes for CMake",
+                            min_version,
+                            "- installed CMake version is too old",
+                            cheribuild_target=cmake_project.target,
+                            cheribuild_xtarget=cmake_xtarget,
+                        )
                 except LookupError:
                     self.warning("Do not know how to cross-compile CTest for", self.target_info, "-> cannot run tests")
                     return
@@ -326,13 +363,22 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                 for var, value in self.ctest_environment.items():
                     args.append("--test-setup-command=export " + shlex.quote(var + "=" + value))
                 args.extend(self.ctest_script_extra_args)
-                self.target_info.run_cheribsd_test_script("run_ctest_tests.py", *args, mount_builddir=True,
-                                                          mount_sysroot=True, mount_sourcedir=True,
-                                                          use_full_disk_image=self.tests_need_full_disk_image)
+                self.target_info.run_cheribsd_test_script(
+                    "run_ctest_tests.py",
+                    *args,
+                    mount_builddir=True,
+                    mount_sysroot=True,
+                    mount_sourcedir=True,
+                    use_full_disk_image=self.tests_need_full_disk_image,
+                )
         else:
             if self.has_optional_tests:
-                self.fatal("Can't run tests for projects that were built with tests disabled. ",
-                           "Please re-run build the target with --", self.get_config_option_name("build_tests"), sep="")
+                self.fatal(
+                    "Can't run tests for projects that were built with tests disabled. ",
+                    "Please re-run build the target with --",
+                    self.get_config_option_name("build_tests"),
+                    sep="",
+                )
             self.warning("Do not know how to run tests for", self.target)
 
     def find_package(self, name: str) -> bool:
@@ -346,6 +392,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
 
 class MakefileProject(Project):
     """A very simple project that just set some defualt variables such as CC/CXX, etc"""
+
     do_not_add_to_targets: bool = True
     build_in_source_dir: bool = True  # Most makefile projects don't support out-of-source builds
     # Default to GNU make since that's what most makefile projects require.

@@ -47,8 +47,9 @@ class BuildGo(Project):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.go_bootstrap = cls.add_optional_path_option("bootstrap-toolchain", show_help=False,
-                                                        help="Path to alternate go bootstrap toolchain.")
+        cls.go_bootstrap = cls.add_optional_path_option(
+            "bootstrap-toolchain", show_help=False, help="Path to alternate go bootstrap toolchain."
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -71,8 +71,9 @@ class QEMUType(Enum):
 
 
 class ChosenQEMU:
-    def __init__(self, cls: "Optional[type[BuildQEMUBase]]", binary: Optional[Path],
-                 can_provide_src_via_smb: Optional[bool]):
+    def __init__(
+        self, cls: "Optional[type[BuildQEMUBase]]", binary: Optional[Path], can_provide_src_via_smb: Optional[bool]
+    ):
         self.cls = cls
         self._binary = binary
         self._can_provide_src_via_smb = can_provide_src_via_smb
@@ -106,8 +107,9 @@ class ChosenQEMU:
         # either explicitly or as the default. If using the default QEMU we
         # prefer CHERI QEMU's corresponding non-CHERI binary if it exists, in
         # part due to its SMBD support
-        assert launch.use_qemu == QEMUType.SYSTEM or launch.use_qemu == QEMUType.DEFAULT, \
-               "Unexpected use_qemu for lazy binary location: " + str(launch.use_qemu)
+        assert launch.use_qemu == QEMUType.SYSTEM or launch.use_qemu == QEMUType.DEFAULT, (
+            "Unexpected use_qemu for lazy binary location: " + str(launch.use_qemu)
+        )
         binary_name = "qemu-system-" + launch.qemu_options.qemu_arch_sufffix
         if (launch.config.qemu_bindir / binary_name).is_file() and launch.use_qemu != QEMUType.SYSTEM:
             # Only CHERI QEMU supports more than one SMB share
@@ -142,54 +144,82 @@ class LaunchQEMUBase(SimpleProject):
     disk_image_project: Optional[Project] = None
     _uses_disk_image = True
 
-    use_uboot = BoolConfigOption("use-u-boot", default=False,
-                                 help="Boot using U-Boot for UEFI if supported (only RISC-V)")
+    use_uboot = BoolConfigOption(
+        "use-u-boot", default=False, help="Boot using U-Boot for UEFI if supported (only RISC-V)"
+    )
     cvtrace = BoolConfigOption("cvtrace", help="Use binary trace output instead of textual")
 
     @classmethod
     def setup_config_options(cls, default_ssh_port: "Optional[int]" = None, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.use_qemu = typing.cast(QEMUType, cls.add_config_option(
-            "use-qemu", kind=QEMUType, default=QEMUType.DEFAULT, enum_choice_strings=[t.value for t in QEMUType],
-            help="The QEMU type to run with. When set to 'custom', the 'custom-qemu-path' option must also be set."))
+        cls.use_qemu = typing.cast(
+            QEMUType,
+            cls.add_config_option(
+                "use-qemu",
+                kind=QEMUType,
+                default=QEMUType.DEFAULT,
+                enum_choice_strings=[t.value for t in QEMUType],
+                help="The QEMU type to run with. When set to 'custom', the 'custom-qemu-path' option must also be set.",
+            ),
+        )
         cls.custom_qemu_path = cls.add_optional_path_option("custom-qemu-path", help="Path to the custom QEMU binary")
-        cls.extra_qemu_options = cls.add_list_option("extra-options", metavar="QEMU_OPTIONS",
-                                                     help="Additional command line flags to pass to qemu-system")
-        cls.logfile = cls.add_optional_path_option("logfile", metavar="LOGFILE",
-                                                   help="The logfile that QEMU should use.")
+        cls.extra_qemu_options = cls.add_list_option(
+            "extra-options", metavar="QEMU_OPTIONS", help="Additional command line flags to pass to qemu-system"
+        )
+        cls.logfile = cls.add_optional_path_option(
+            "logfile", metavar="LOGFILE", help="The logfile that QEMU should use."
+        )
         cls.log_directory = cls.add_optional_path_option(
-            "log-directory", metavar="DIR",
+            "log-directory",
+            metavar="DIR",
             help="If set QEMU will log to a timestamped file in this directory. "
-                 "Will be ignored if the 'logfile' option is set")
-        cls.use_telnet = cls.add_config_option("monitor-over-telnet", kind=int, metavar="PORT", show_help=False,
-                                               help="If set, the QEMU monitor will be reachable by connecting to "
-                                                    "localhost at $PORT via telnet instead of using CTRL+A,C")
+            "Will be ignored if the 'logfile' option is set",
+        )
+        cls.use_telnet = cls.add_config_option(
+            "monitor-over-telnet",
+            kind=int,
+            metavar="PORT",
+            show_help=False,
+            help="If set, the QEMU monitor will be reachable by connecting to "
+            "localhost at $PORT via telnet instead of using CTRL+A,C",
+        )
 
         cls.custom_qemu_smb_mount = cls.add_optional_path_option(
-            "smb-host-directory", metavar="DIR",
+            "smb-host-directory",
+            metavar="DIR",
             help="If set QEMU will provide this directory over smb with the name //10.0.2.4/qemu for use with "
-                 "mount_smbfs")
+            "mount_smbfs",
+        )
         # TODO: -s will no longer work, not sure anyone uses it though
         if cls.forward_ssh_port:
-            default_ssh_port_computed = ComputedDefaultValue(function=lambda p, _: default_ssh_port,
-                                                             as_string=str(default_ssh_port),
-                                                             as_readme_string="<UID-dependent>")
-            cls.ssh_forwarding_port = cls.add_config_option("ssh-forwarding-port", kind=int,
-                                                            default=default_ssh_port_computed, metavar="PORT",
-                                                            show_help=True,
-                                                            help="The port on localhost to forward to the QEMU ssh "
-                                                                 "port. You can then use `ssh root@localhost -p $PORT` "
-                                                                 "to connect to the VM")
+            default_ssh_port_computed = ComputedDefaultValue(
+                function=lambda p, _: default_ssh_port,
+                as_string=str(default_ssh_port),
+                as_readme_string="<UID-dependent>",
+            )
+            cls.ssh_forwarding_port = cls.add_config_option(
+                "ssh-forwarding-port",
+                kind=int,
+                default=default_ssh_port_computed,
+                metavar="PORT",
+                show_help=True,
+                help="The port on localhost to forward to the QEMU ssh "
+                "port. You can then use `ssh root@localhost -p $PORT` "
+                "to connect to the VM",
+            )
         cls.ephemeral = False
         if cls._uses_disk_image:
             cls.ephemeral = cls.add_bool_option(
-                "ephemeral", show_help=True,
-                help="Run qemu in 'snapshot' mode, changes to the disk image are non-persistent")
+                "ephemeral",
+                show_help=True,
+                help="Run qemu in 'snapshot' mode, changes to the disk image are non-persistent",
+            )
 
         # TODO: add a shortcut for vnc?
         cls.extra_tcp_forwarding = cls.add_list_option(
             "extra-tcp-forwarding",
-            help="Additional TCP bridge ports beyond ssh/22; list of [hostip:]port=[guestip:]port")
+            help="Additional TCP bridge ports beyond ssh/22; list of [hostip:]port=[guestip:]port",
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -243,8 +273,10 @@ class LaunchQEMUBase(SimpleProject):
             # guess what kind of QEMU this is
             can_provide_src_via_smb = xtarget.is_hybrid_or_purecap_cheri()
             if not cls.custom_qemu_path:
-                fatal_error("Must specify path to custom QEMU with --" + cls.target + "/custom-qemu-path",
-                            pretend=config.pretend)
+                fatal_error(
+                    "Must specify path to custom QEMU with --" + cls.target + "/custom-qemu-path",
+                    pretend=config.pretend,
+                )
                 qemu_binary = Path("/no/custom/path/to/qemu")
             else:
                 qemu_binary = Path(cls.custom_qemu_path)
@@ -261,8 +293,13 @@ class LaunchQEMUBase(SimpleProject):
                     QEMUType.UPSTREAM: BuildUpstreamQEMU,
                 }[cls.use_qemu]
                 if qemu_class not in supported_qemu_classes:
-                    fatal_error("Cannot use", cls.use_qemu.value, "QEMU with target", xtarget.generic_target_suffix,
-                                pretend=config.pretend)
+                    fatal_error(
+                        "Cannot use",
+                        cls.use_qemu.value,
+                        "QEMU with target",
+                        xtarget.generic_target_suffix,
+                        pretend=config.pretend,
+                    )
                     qemu_class = None
                     qemu_binary = Path("/target/not/supported/with/this/qemu")
                 else:
@@ -301,9 +338,12 @@ class LaunchQEMUBase(SimpleProject):
 
     def process(self):
         if not self.chosen_qemu.binary.exists():
-            self.dependency_error("QEMU is missing:", self.chosen_qemu.binary,
-                                  cheribuild_target=self.chosen_qemu.cls.target if self.chosen_qemu.cls else None,
-                                  cheribuild_xtarget=CompilationTargets.NATIVE)
+            self.dependency_error(
+                "QEMU is missing:",
+                self.chosen_qemu.binary,
+                cheribuild_target=self.chosen_qemu.cls.target if self.chosen_qemu.cls else None,
+                cheribuild_xtarget=CompilationTargets.NATIVE,
+            )
 
         qemu_loader_or_kernel = self.current_kernel
         if self.use_uboot:
@@ -318,20 +358,29 @@ class LaunchQEMUBase(SimpleProject):
             if uboot_xtarget is not None:
                 qemu_loader_or_kernel = BuildUBoot.get_firmware_path(self, self.config, cross_target=uboot_xtarget)
             else:
-                self.warning("Unsupported U-Boot QEMU target", xtarget.generic_target_suffix,
-                             "- falling back on kernel")
+                self.warning(
+                    "Unsupported U-Boot QEMU target", xtarget.generic_target_suffix, "- falling back on kernel"
+                )
 
         if qemu_loader_or_kernel is not None and not qemu_loader_or_kernel.exists():
             kernel_target_name = self.kernel_project.target if self.kernel_project is not None else None
             kernel_xtarget = self.kernel_project.crosscompile_target if self.kernel_project is not None else None
-            self.dependency_error("Loader/kernel is missing:", qemu_loader_or_kernel,
-                                  cheribuild_target=kernel_target_name, cheribuild_xtarget=kernel_xtarget)
+            self.dependency_error(
+                "Loader/kernel is missing:",
+                qemu_loader_or_kernel,
+                cheribuild_target=kernel_target_name,
+                cheribuild_xtarget=kernel_xtarget,
+            )
 
         if self.forward_ssh_port and not self.is_port_available(self.ssh_forwarding_port):
             self.print_port_usage(self.ssh_forwarding_port)
-            self.fatal("SSH forwarding port", self.ssh_forwarding_port, "is already in use! Make sure you don't "
-                       "already have a QEMU instance running or change the chosen port by setting the config option",
-                       self.get_config_option_name("ssh_forwarding_port"))
+            self.fatal(
+                "SSH forwarding port",
+                self.ssh_forwarding_port,
+                "is already in use! Make sure you don't "
+                "already have a QEMU instance running or change the chosen port by setting the config option",
+                self.get_config_option_name("ssh_forwarding_port"),
+            )
 
         monitor_options = []
         if self.use_telnet:
@@ -356,8 +405,9 @@ class LaunchQEMUBase(SimpleProject):
             if latest_symlink.is_symlink():
                 latest_symlink.unlink()
             if not latest_symlink.exists():
-                self.create_symlink(self.log_directory / filename, latest_symlink, relative=True,
-                                    cwd=self.log_directory)
+                self.create_symlink(
+                    self.log_directory / filename, latest_symlink, relative=True, cwd=self.log_directory
+                )
             logfile_options = ["-D", self.log_directory / filename]
 
         if self.cvtrace:
@@ -365,16 +415,23 @@ class LaunchQEMUBase(SimpleProject):
         if self.disk_image is not None and not self.disk_image.exists():
             disk_image_target_name = self.disk_image_project.target if self.disk_image_project is not None else None
             disk_image_xtarget = (
-                self.disk_image_project.crosscompile_target if self.disk_image_project is not None else None)
-            self.dependency_error("Disk image is missing:", self.disk_image, cheribuild_target=disk_image_target_name,
-                                  cheribuild_xtarget=disk_image_xtarget)
+                self.disk_image_project.crosscompile_target if self.disk_image_project is not None else None
+            )
+            self.dependency_error(
+                "Disk image is missing:",
+                self.disk_image,
+                cheribuild_target=disk_image_target_name,
+                cheribuild_xtarget=disk_image_xtarget,
+            )
 
         user_network_options = ""
         smb_dir_count = 0
         # TODO: use 9pfs once kernel support is merged
-        have_9pfs_support = False and (
-            self.crosscompile_target.is_native() or self.crosscompile_target.is_any_x86()
-        ) and qemu_supports_9pfs(self.chosen_qemu.binary, config=self.config)
+        have_9pfs_support = (
+            False
+            and (self.crosscompile_target.is_native() or self.crosscompile_target.is_any_x86())
+            and qemu_supports_9pfs(self.chosen_qemu.binary, config=self.config)
+        )
         # Only default to providing the smb mount if smbd exists
         have_smbfs_support = self.chosen_qemu.can_provide_src_via_smb and shutil.which("smbd")
 
@@ -398,25 +455,40 @@ class LaunchQEMUBase(SimpleProject):
                 else:
                     share_name = f"qemu{smb_dir_count}"
                 user_network_options += str(directory) + share_name_option + ("@ro" if readonly else "")
-                guest_cmd = coloured(AnsiColour.yellow,
-                                     f"mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name}"
-                                     f" {target}")
-                self.info("Providing ", coloured(AnsiColour.green, str(directory)),
-                          coloured(AnsiColour.cyan, " over SMB to the guest. Use `"), guest_cmd,
-                          coloured(AnsiColour.cyan, "` to mount it"), sep="")
+                guest_cmd = coloured(
+                    AnsiColour.yellow,
+                    f"mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name}" f" {target}",
+                )
+                self.info(
+                    "Providing ",
+                    coloured(AnsiColour.green, str(directory)),
+                    coloured(AnsiColour.cyan, " over SMB to the guest. Use `"),
+                    guest_cmd,
+                    coloured(AnsiColour.cyan, "` to mount it"),
+                    sep="",
+                )
             if have_9pfs_support:
                 if smb_dir_count > 1:
                     return  # FIXME: 9pfs panics if there is more than one device
                 # Also provide it via virtfs:
                 virtfs_args.append("-virtfs")
-                virtfs_args.append("local,id=virtfs{n},mount_tag={tag},path={path},security_model=none{ro}".format(
-                    n=smb_dir_count, path=directory, tag=share_name, ro=",readonly" if readonly else ""))
-                guest_cmd = coloured(AnsiColour.yellow,
-                                     "mkdir -p {tgt} && mount -t virtfs -o trans=virtio,version=9p2000.L {share_name} "
-                                     "{tgt}".format(tgt=target, share_name=share_name))
-                self.info("Providing ", coloured(AnsiColour.green, str(directory)),
-                          coloured(AnsiColour.cyan, " over 9pfs to the guest. Use `"), guest_cmd,
-                          coloured(AnsiColour.cyan, "` to mount it"), sep="")
+                virtfs_args.append(
+                    "local,id=virtfs{n},mount_tag={tag},path={path},security_model=none{ro}".format(
+                        n=smb_dir_count, path=directory, tag=share_name, ro=",readonly" if readonly else ""
+                    )
+                )
+                guest_cmd = coloured(
+                    AnsiColour.yellow,
+                    f"mkdir -p {target} && mount -t virtfs -o trans=virtio,version=9p2000.L {share_name} " "{tgt}",
+                )
+                self.info(
+                    "Providing ",
+                    coloured(AnsiColour.green, str(directory)),
+                    coloured(AnsiColour.cyan, " over 9pfs to the guest. Use `"),
+                    guest_cmd,
+                    coloured(AnsiColour.cyan, "` to mount it"),
+                    sep="",
+                )
 
         virtfs_args = []
         if have_smbfs_support or have_9pfs_support:  # for running CheriBSD + FreeBSD
@@ -430,19 +502,22 @@ class LaunchQEMUBase(SimpleProject):
             user_network_options += ",hostfwd=tcp::" + str(self.ssh_forwarding_port) + "-:22"
             # bind the qemu ssh port to the hosts port
             # qemu_command += ["-redir", "tcp:" + str(self.ssh_forwarding_port) + "::22"]
-            print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.ssh_forwarding_port,
-                           sep=""))
+            print(
+                coloured(
+                    AnsiColour.green, "\nListening for SSH connections on localhost:", self.ssh_forwarding_port, sep=""
+                )
+            )
 
         for x in self.extra_tcp_forwarding:
             # QEMU insists on having : field delimeters; add if not given
-            hg = x.split('=')
+            hg = x.split("=")
             if len(hg) != 2:
                 self.fatal("Bad extra-tcp-forwarding (not just one '=' in '%s')" % x)
             (h, g) = hg
-            if ':' not in h:
-                h = ':' + h
-            if ':' not in g:
-                g = ':' + g
+            if ":" not in h:
+                h = ":" + h
+            if ":" not in g:
+                g = ":" + g
 
             user_network_options += ",hostfwd=tcp:" + h + "-" + g
 
@@ -450,16 +525,18 @@ class LaunchQEMUBase(SimpleProject):
             self._after_disk_options += ["-snapshot"]
 
         # input("Press enter to continue")
-        qemu_command = self.qemu_options.get_commandline(qemu_command=self.chosen_qemu.binary,
-                                                         kernel_file=qemu_loader_or_kernel,
-                                                         disk_image=self.disk_image,
-                                                         disk_image_format=self.disk_image_format,
-                                                         add_network_device=self.qemu_user_networking,
-                                                         bios_args=self.bios_flags,
-                                                         user_network_args=user_network_options,
-                                                         trap_on_unrepresentable=self.config.trap_on_unrepresentable,
-                                                         debugger_on_cheri_trap=self.config.debugger_on_cheri_trap,
-                                                         add_virtio_rng=self._add_virtio_rng)
+        qemu_command = self.qemu_options.get_commandline(
+            qemu_command=self.chosen_qemu.binary,
+            kernel_file=qemu_loader_or_kernel,
+            disk_image=self.disk_image,
+            disk_image_format=self.disk_image_format,
+            add_network_device=self.qemu_user_networking,
+            bios_args=self.bios_flags,
+            user_network_args=user_network_options,
+            trap_on_unrepresentable=self.config.trap_on_unrepresentable,
+            debugger_on_cheri_trap=self.config.debugger_on_cheri_trap,
+            add_virtio_rng=self._add_virtio_rng,
+        )
         qemu_command += self._project_specific_options + self._after_disk_options + monitor_options
         qemu_command += logfile_options + self.extra_qemu_options + virtfs_args
         if self.disk_image is None:
@@ -471,8 +548,10 @@ class LaunchQEMUBase(SimpleProject):
         if self.config.wait_for_debugger or self.config.debugger_in_tmux_pane:
             gdb_socket_placeholder = find_free_port(preferred_port=1234)
             gdb_port = gdb_socket_placeholder.port if self.config.gdb_random_port else 1234
-            self.info(f"QEMU is waiting for GDB to attach (using `target remote :{gdb_port}`)."
-                      " Once connected enter 'continue\\n' to continue booting")
+            self.info(
+                f"QEMU is waiting for GDB to attach (using `target remote :{gdb_port}`)."
+                " Once connected enter 'continue\\n' to continue booting"
+            )
 
             def gdb_command(main_binary, bp=None, extra_binary=None) -> str:
                 gdb_cmd = BuildGDB.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"
@@ -482,10 +561,13 @@ class LaunchQEMUBase(SimpleProject):
                     # It seems this does not always work as expected, so also set substitute-path and
                     # debug-file-directory.
                     assert self.rootfs_path is not None
-                    result.extend(["--init-eval-command=set sysroot " + str(self.rootfs_path),
-                                   "--init-eval-command=set substitute-path " + str(self.rootfs_path) + " /",
-                                   "--init-eval-command=set debug-file-directory " + str(
-                                       self.rootfs_path / "usr/lib/debug")])
+                    result.extend(
+                        [
+                            "--init-eval-command=set sysroot " + str(self.rootfs_path),
+                            "--init-eval-command=set substitute-path " + str(self.rootfs_path) + " /",
+                            "--init-eval-command=set debug-file-directory " + str(self.rootfs_path / "usr/lib/debug"),
+                        ]
+                    )
                 # Once the file has been loaded set a breakpoint on panic() and connect to the remote host
                 if bp:
                     result.append("--eval-command=break " + bp)
@@ -510,20 +592,31 @@ class LaunchQEMUBase(SimpleProject):
             else:
                 self.info("\t", coloured(AnsiColour.red, gdb_command(path_to_kernel, "panic")), sep="")
                 if self.rootfs_path is not None:
-                    self.info("If you would like to debug /sbin/init (or any other statically linked program) run this"
-                              " inside GDB:")
+                    self.info(
+                        "If you would like to debug /sbin/init (or any other statically linked program) run this"
+                        " inside GDB:"
+                    )
                     self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0", str(self.rootfs_path / "sbin/init")))
-                    self.info("For dynamically linked programs you will have to add libraries at the correct offset."
-                              " For example:")
-                    self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0x40212000",
-                                       str(self.rootfs_path / "lib/libc.so.7")))
+                    self.info(
+                        "For dynamically linked programs you will have to add libraries at the correct offset."
+                        " For example:"
+                    )
+                    self.info(
+                        coloured(
+                            AnsiColour.red, "\tadd-symbol-file -o 0x40212000", str(self.rootfs_path / "lib/libc.so.7")
+                        )
+                    )
                     self.info("If you would like to debug a userspace program (e.g. sbin/init):")
-                    self.info("\t", coloured(AnsiColour.red, gdb_command(self.rootfs_path / "sbin/init", "main",
-                                                                         path_to_kernel)), sep="")
+                    self.info(
+                        "\t",
+                        coloured(AnsiColour.red, gdb_command(self.rootfs_path / "sbin/init", "main", path_to_kernel)),
+                        sep="",
+                    )
             self.info("Launching QEMU in suspended state...")
 
             def start_gdb_in_tmux_pane(command):
                 import libtmux
+
                 server = libtmux.Server()
                 if server is None:
                     raise Exception("Tmux server not found")
@@ -555,9 +648,11 @@ class LaunchQEMUBase(SimpleProject):
                     self.info(coloured(AnsiColour.red, f"Unable to start gdb in tmux: {e}"))
 
             gdb_socket_placeholder.socket.close()  # the port is now available for qemu
-            qemu_command += ["-gdb", f"tcp::{gdb_port}",  # wait for gdb on localhost:1234
-                             "-S",  # freeze CPU at startup (use 'c' to start execution)
-                             ]
+            qemu_command += [
+                "-gdb",
+                f"tcp::{gdb_port}",  # wait for gdb on localhost:1234
+                "-S",  # freeze CPU at startup (use 'c' to start execution)
+            ]
         # We want stdout/stderr here even when running with --quiet
         # FIXME: it seems like QEMU often breaks the line wrapping state: https://bugs.launchpad.net/qemu/+bug/1857449
         self.run_cmd(qemu_command, stdout=sys.stdout, stderr=sys.stderr, give_tty_control=True)
@@ -568,9 +663,9 @@ class LaunchQEMUBase(SimpleProject):
             self.run_cmd("sockstat", "-P", "tcp", "-p", str(port))
         elif OSInfo.IS_LINUX:
             if shutil.which("ss"):
-                self.run_cmd("sh", "-c", "ss -tulpne | grep \":" + str(port) + "\"")
+                self.run_cmd("sh", "-c", 'ss -tulpne | grep ":' + str(port) + '"')
             elif shutil.which("netstat"):
-                self.run_cmd("sh", "-c", "netstat -tulpne | grep \":" + str(port) + "\"")
+                self.run_cmd("sh", "-c", 'netstat -tulpne | grep ":' + str(port) + '"')
             else:
                 self.info(coloured(AnsiColour.yellow, "Missing ss and netstat; unable to report port usage"))
         elif OSInfo.IS_MAC:
@@ -599,20 +694,33 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase, LaunchFreeBSDInterface):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.remote_kernel_path = cls.add_config_option(
-            "remote-kernel-path", show_help=True,
+            "remote-kernel-path",
+            show_help=True,
             help="When set rsync will be used to update the kernel image from a remote host before launching QEMU. "
-                 "Useful when building and running on separate machines.")
+            "Useful when building and running on separate machines.",
+        )
         cls.kernel_config = cls.add_config_option(
-            "alternative-kernel", show_help=True,
+            "alternative-kernel",
+            show_help=True,
             help="Select the kernel to run by specifying the kernel build configuration name."
-                 "The list of available kernel configurations is given by --list-kernels")
+            "The list of available kernel configurations is given by --list-kernels",
+        )
         cls.kernel_abi = cls.add_config_option(
-            "kernel-abi", show_help=True,
-            kind=KernelABI, enum_choices=[KernelABI.HYBRID, KernelABI.PURECAP],
-            help="Select extra kernel variant with the given ABI to run.")
+            "kernel-abi",
+            show_help=True,
+            kind=KernelABI,
+            enum_choices=[KernelABI.HYBRID, KernelABI.PURECAP],
+            help="Select extra kernel variant with the given ABI to run.",
+        )
 
-    def __init__(self, config: CheriConfig, *, freebsd_class: "Optional[type[BuildFreeBSD]]" = None,
-                 disk_image_class: "Optional[type[BuildDiskImageBase]]" = None, **kwargs):
+    def __init__(
+        self,
+        config: CheriConfig,
+        *,
+        freebsd_class: "Optional[type[BuildFreeBSD]]" = None,
+        disk_image_class: "Optional[type[BuildDiskImageBase]]" = None,
+        **kwargs,
+    ):
         super().__init__(config, **kwargs)
         self.freebsd_class = freebsd_class
         self.disk_image_class = disk_image_class
@@ -693,7 +801,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
 
     @classmethod
     def get_cross_target_index(cls, **kwargs):
-        xtarget = kwargs.get('xtarget', cls._xtarget)
+        xtarget = kwargs.get("xtarget", cls._xtarget)
         for idx, value in enumerate(cls.supported_architectures):
             if xtarget is value:
                 return idx
@@ -738,9 +846,13 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
             extra_args.append(f"--test-output-dir={tests_dir}")
         if self.kernel_abi is not None and self.crosscompile_target.is_hybrid_or_purecap_cheri():
             extra_args.append(f"--expected-kernel-abi={self.kernel_abi.value}")
-        self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", *extra_args,
-                                                  disk_image_path=self.disk_image, kernel_path=self.current_kernel,
-                                                  rootfs_alternate_kernel_dir=rootfs_kernel_bootdir)
+        self.target_info.run_cheribsd_test_script(
+            "run_cheribsd_tests.py",
+            *extra_args,
+            disk_image_path=self.disk_image,
+            kernel_path=self.current_kernel,
+            rootfs_alternate_kernel_dir=rootfs_kernel_bootdir,
+        )
 
 
 class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
@@ -838,8 +950,10 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
     # XXX: Existing code isn't reqdy to run these but we want to support building them
     @classproperty
     def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
-        return tuple(set(super().supported_architectures) -
-                     {CompilationTargets.CHERIBSD_AARCH64, *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS})
+        return tuple(
+            set(super().supported_architectures)
+            - {CompilationTargets.CHERIBSD_AARCH64, *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS}
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -46,8 +46,8 @@ class BuildEffectiveSan(BuildLLVMMonoRepoBase):
     default_directory_basename = "EffectiveSan"
     repository = GitRepository("https://github.com/GJDuck/EffectiveSan")
     _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, project: project.get_native_install_path(config),
-        as_string="$INSTALL_ROOT/effectivesan")
+        function=lambda config, project: project.get_native_install_path(config), as_string="$INSTALL_ROOT/effectivesan"
+    )
     skip_cheri_symlinks = True
     root_cmakelists_subdirectory = Path("llvm-4.0.1.src")
 

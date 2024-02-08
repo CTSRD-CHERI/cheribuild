@@ -48,8 +48,9 @@ from ..utils import OSInfo, ThreadJoiner
 class BuildSyzkaller(CrossCompileProject):
     dependencies = ("go",)
     target = "cheri-syzkaller"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-syzkaller.git", force_branch=True,
-                               default_branch="morello-syzkaller")
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/cheri-syzkaller.git", force_branch=True, default_branch="morello-syzkaller"
+    )
     # no_default_sysroot = None // probably useless??
     # skip_cheri_symlinks = True // llvm target only, useless here
     make_kind = MakeCommandKind.GnuMake
@@ -162,7 +163,8 @@ class RunSyzkaller(SimpleProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.syz_config = cls.add_optional_path_option(
-            "syz-config", help="Path to the syzkaller configuration file to use.", show_help=True)
+            "syz-config", help="Path to the syzkaller configuration file to use.", show_help=True
+        )
         cls.syz_ssh_key = cls.add_path_option(
             "ssh-privkey",
             show_help=True,
@@ -186,16 +188,16 @@ class RunSyzkaller(SimpleProject):
         )
 
     def syzkaller_config(self, syzkaller: BuildSyzkaller):
-        """ Get path of syzkaller configuration file to use. """
+        """Get path of syzkaller configuration file to use."""
         if self.syz_config:
             return self.syz_config
         else:
             xtarget = syzkaller.crosscompile_target.get_cheri_purecap_target()
             qemu_binary = BuildQEMU.qemu_binary(self, xtarget=xtarget)
             kernel_project = BuildCHERIBSD.get_instance(self, cross_target=xtarget)
-            kernel_config = CheriBSDConfigTable.get_configs(xtarget, platform=ConfigPlatform.QEMU,
-                                                            kernel_abi=kernel_project.get_default_kernel_abi(),
-                                                            fuzzing=True)
+            kernel_config = CheriBSDConfigTable.get_configs(
+                xtarget, platform=ConfigPlatform.QEMU, kernel_abi=kernel_project.get_default_kernel_abi(), fuzzing=True
+            )
             if len(kernel_config) == 0:
                 self.fatal("No kcov kernel configuration found")
                 return
