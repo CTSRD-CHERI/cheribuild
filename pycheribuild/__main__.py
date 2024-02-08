@@ -85,19 +85,24 @@ def _update_check(config: DefaultCheriConfig, d: Path) -> None:
     run_command(["git", "fetch"], cwd=project_dir, timeout=5, config=config)
     branch_info = GitRepository.get_branch_info(d, config=config)
     if branch_info is not None and branch_info.upstream_branch == "master":
-        if query_yes_no(config, f"The local {branch_info.local_branch} branch is tracking the obsolete remote 'master'"
-                                f" branch, would you like to switch to 'main'?", force_result=False):
+        if query_yes_no(
+            config,
+            f"The local {branch_info.local_branch} branch is tracking the obsolete remote 'master'"
+            f" branch, would you like to switch to 'main'?",
+            force_result=False,
+        ):
             # Update the remote ref to point to "main".
             run_command("git", "branch", f"--set-upstream-to={branch_info.remote_name}/main", cwd=d, config=config)
             if branch_info.local_branch == "master":
                 # And rename master to main if possible.
                 run_command("git", "branch", "-m", "main", cwd=d, allow_unexpected_returncode=True, config=config)
 
-    output = run_command(["git", "status", "-uno"], cwd=project_dir, config=config, capture_output=True,
-                         print_verbose_only=True).stdout
+    output = run_command(
+        ["git", "status", "-uno"], cwd=project_dir, config=config, capture_output=True, print_verbose_only=True
+    ).stdout
     behind_index = output.find(b"Your branch is behind ")
     if behind_index > 0:
-        msg_end = output.find(b"\n  (use \"git pull\" to update your local branch)")
+        msg_end = output.find(b'\n  (use "git pull" to update your local branch)')
         if msg_end > 0:
             output = output[behind_index:msg_end]
         status_update("Current", d.name, "checkout can be updated:", output.decode("utf-8"))
@@ -122,16 +127,21 @@ def ensure_fd_is_blocking(fd) -> None:
 
 def check_not_root() -> None:
     if os.geteuid() == 0:
-        fatal_error("You are running cheribuild as root. This is dangerous, bad practice and can cause builds to fail."
-                    " Please re-run as a non-root user.", pretend=False)
+        fatal_error(
+            "You are running cheribuild as root. This is dangerous, bad practice and can cause builds to fail."
+            " Please re-run as a non-root user.",
+            pretend=False,
+        )
 
 
 # noinspection PyProtectedMember
 def get_config_option_value(handle: ConfigOptionHandle, config: DefaultCheriConfig) -> str:
     option = handle._get_option()
     if option.is_fallback_only:
-        raise LookupError(f"Option '{option.full_option_name}' cannot be queried since it is a generic fallback value"
-                          f"for a target-specific option. Please use the target-suffixed on instead.")
+        raise LookupError(
+            f"Option '{option.full_option_name}' cannot be queried since it is a generic fallback value"
+            f"for a target-specific option. Please use the target-suffixed on instead."
+        )
     if option._owning_class is not None:
         project_cls: "type[SimpleProject]" = option._owning_class
         Target.instantiating_targets_should_warn = False
@@ -199,8 +209,9 @@ def real_main() -> None:
             fatal_error(*e.args, pretend=False)
         sys.exit()
 
-    assert any(x in cheri_config.action for x in (CheribuildAction.TEST, CheribuildAction.BUILD,
-                                                  CheribuildAction.BENCHMARK))
+    assert any(
+        x in cheri_config.action for x in (CheribuildAction.TEST, CheribuildAction.BUILD, CheribuildAction.BENCHMARK)
+    )
 
     if cheri_config.docker:
         cheribuild_dir = str(Path(__file__).absolute().parent.parent)
@@ -223,12 +234,16 @@ def real_main() -> None:
         try:
             docker_dir_mappings = [
                 # map cheribuild and the sources read-only into the container
-                "-v", cheribuild_dir + ":/cheribuild:ro",
-                "-v", str(cheri_config.source_root.absolute()) + ":/source",
+                "-v",
+                cheribuild_dir + ":/cheribuild:ro",
+                "-v",
+                str(cheri_config.source_root.absolute()) + ":/source",
                 # build and output are read-write:
-                "-v", str(cheri_config.build_root.absolute()) + ":/build",
-                "-v", str(cheri_config.output_root.absolute()) + ":/output",
-                ]
+                "-v",
+                str(cheri_config.build_root.absolute()) + ":/build",
+                "-v",
+                str(cheri_config.output_root.absolute()) + ":/output",
+            ]
             cheribuild_args = ["/cheribuild/cheribuild.py", "--skip-update", *filtered_cheribuild_args]
             if cheri_config.docker_reuse_container:
                 # Use docker restart + docker exec instead of docker run
@@ -241,8 +256,16 @@ def real_main() -> None:
                 subprocess.check_call(start_cmd)
                 docker_run_cmd = ["docker", "exec", cheri_config.docker_container, *cheribuild_args]
             else:
-                docker_run_cmd = ["docker", "run", "--user", str(os.getuid()) + ":" + str(os.getgid()), "--rm",
-                                  "--interactive", "--tty", *docker_dir_mappings]
+                docker_run_cmd = [
+                    "docker",
+                    "run",
+                    "--user",
+                    str(os.getuid()) + ":" + str(os.getgid()),
+                    "--rm",
+                    "--interactive",
+                    "--tty",
+                    *docker_dir_mappings,
+                ]
                 docker_run_cmd += [cheri_config.docker_container, *cheribuild_args]
             run_command(docker_run_cmd, config=cheri_config, give_tty_control=True)
         except subprocess.CalledProcessError as e:
@@ -251,8 +274,10 @@ def real_main() -> None:
                 status_update("It seems like the docker image", cheri_config.docker_container, "was not found.")
                 status_update("In order to build the default docker image for cheribuild (cheribuild-docker) run:")
                 print(
-                    coloured(AnsiColour.blue, "cd",
-                             cheribuild_dir + "/docker && docker build --tag cheribuild-docker ."))
+                    coloured(
+                        AnsiColour.blue, "cd", cheribuild_dir + "/docker && docker build --tag cheribuild-docker ."
+                    )
+                )
                 sys.exit(coloured(AnsiColour.red, "Failed to start docker!"))
             raise
         sys.exit()
@@ -287,17 +312,27 @@ def real_main() -> None:
             print("Failed to check for updates:", e)  # no-combine
     chosen_targets = target_manager.get_all_chosen_targets(cheri_config)
     if cheri_config.print_targets_only:
-        print("Will execute the following", len(chosen_targets), "targets:\n  ",
-              "\n   ".join(t.name for t in chosen_targets))
+        print(
+            "Will execute the following",
+            len(chosen_targets),
+            "targets:\n  ",
+            "\n   ".join(t.name for t in chosen_targets),
+        )
         # If --verbose is passed, also print the dependencies for each target
         if cheri_config.verbose:
             needed_by = {k.name: [] for k in chosen_targets}
             direct_deps = dict()
             for target in chosen_targets:
                 # noinspection PyProtectedMember
-                direct_deps[target.name] = [t.name for t in target.project_class._direct_dependencies(
-                    cheri_config, include_sdk_dependencies=True, include_toolchain_dependencies=True,
-                    explicit_dependencies_only=False)]
+                direct_deps[target.name] = [
+                    t.name
+                    for t in target.project_class._direct_dependencies(
+                        cheri_config,
+                        include_sdk_dependencies=True,
+                        include_toolchain_dependencies=True,
+                        explicit_dependencies_only=False,
+                    )
+                ]
                 for dep in direct_deps[target.name]:
                     needed_by[dep].append(target.name)
             for target in chosen_targets:
@@ -321,7 +356,7 @@ def main() -> None:
     except Exception as e:
         # If we are currently debugging, raise the exception to allow e.g. PyCharm's
         # "break on exception that terminates execution" feature works.
-        debugger_attached = getattr(sys, 'gettrace', lambda: None)() is not None
+        debugger_attached = getattr(sys, "gettrace", lambda: None)() is not None
         if debugger_attached:
             raise e
         else:

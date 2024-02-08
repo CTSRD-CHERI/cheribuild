@@ -68,7 +68,8 @@ __all__ = [
     "print_command",
     "run_and_kill_children_on_exit",
     "run_command",
-    "set_env"]
+    "set_env",
+]
 
 
 def __filter_env(env: "dict[str, str]") -> "dict[str, str]":
@@ -178,8 +179,16 @@ class TtyState:
         new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         if new_flags == self.flags:
             return
-        warning_message(self.context, "FD flags for", self.fd.name, "changed from", hex(self.flags),
-                        "to", hex(new_flags), "- resetting them.")
+        warning_message(
+            self.context,
+            "FD flags for",
+            self.fd.name,
+            "changed from",
+            hex(self.flags),
+            "to",
+            hex(new_flags),
+            "- resetting them.",
+        )
         fcntl.fcntl(self.fd, fcntl.F_SETFL, self.flags)
         new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         if new_flags != self.flags:
@@ -226,9 +235,18 @@ def keep_terminal_sane(gave_tty_control=False, command: Optional[list] = None):
             stderr_state.restore()
 
 
-def print_command(arg1: "Union[str, typing.Sequence[typing.Any]]", *remaining_args, output_file=None,
-                  colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", print_verbose_only=False,
-                  config: ConfigBase, **kwargs):
+def print_command(
+    arg1: "Union[str, typing.Sequence[typing.Any]]",
+    *remaining_args,
+    output_file=None,
+    colour=AnsiColour.yellow,
+    cwd=None,
+    env=None,
+    sep=" ",
+    print_verbose_only=False,
+    config: ConfigBase,
+    **kwargs,
+):
     if config.quiet or (print_verbose_only and not config.verbose):
         return
     # also allow passing a single string
@@ -290,11 +308,13 @@ def check_call_handle_noexec(cmdline: "list[str]", **kwargs):
         if interpreter:
             with keep_terminal_sane(command=cmdline):
                 return subprocess.check_call(interpreter + cmdline, **kwargs)
-        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None),
-                                         stderr=str(e).encode("utf-8")) from e
+        raise _make_called_process_error(
+            e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8")
+        ) from e
     except FileNotFoundError as e:
-        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None),
-                                         stderr=str(e).encode("utf-8")) from e
+        raise _make_called_process_error(
+            e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8")
+        ) from e
 
 
 def popen_handle_noexec(cmdline: "list[str]", **kwargs) -> subprocess.Popen:
@@ -304,11 +324,13 @@ def popen_handle_noexec(cmdline: "list[str]", **kwargs) -> subprocess.Popen:
         interpreter = get_interpreter(cmdline)
         if interpreter:
             return subprocess.Popen(interpreter + cmdline, **kwargs)
-        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None),
-                                         stderr=str(e).encode("utf-8")) from e
+        raise _make_called_process_error(
+            e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8")
+        ) from e
     except FileNotFoundError as e:
-        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None),
-                                         stderr=str(e).encode("utf-8")) from e
+        raise _make_called_process_error(
+            e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8")
+        ) from e
 
 
 @contextlib.contextmanager
@@ -335,7 +357,7 @@ def _new_tty_foreground_process_group() -> None:
         raise e
     with suppress_sigttou():
         try:
-            with scoped_open('/dev/tty', os.O_RDWR, ignore_open_error=True) as tty:
+            with scoped_open("/dev/tty", os.O_RDWR, ignore_open_error=True) as tty:
                 if tty is not None:
                     os.tcsetpgrp(tty, os.getpgrp())
         except Exception as e:
@@ -362,10 +384,12 @@ class FakePopen:
         pass
 
 
-def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, config: ConfigBase,
-          **kwargs) -> subprocess.Popen:
-    print_command(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), config=config,
-                  print_verbose_only=print_verbose_only)
+def popen(
+    cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, config: ConfigBase, **kwargs
+) -> subprocess.Popen:
+    print_command(
+        cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), config=config, print_verbose_only=print_verbose_only
+    )
     if not run_in_pretend_mode and config.pretend:
         # noinspection PyTypeChecker
         return FakePopen()  # pytype: disable=bad-return-type
@@ -373,11 +397,24 @@ def popen(cmdline, print_verbose_only=False, run_in_pretend_mode=False, *, confi
 
 
 # noinspection PyShadowingBuiltins
-def run_command(*args, capture_output=False, capture_error=False, input: "Optional[Union[str, bytes]]" = None,
-                timeout=None, print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False,
-                no_print=False, replace_env=False, give_tty_control=False, expected_exit_code=0,
-                allow_unexpected_returncode=False, config: ConfigBase,
-                env: "Optional[dict[str, str]]" = None, **kwargs) -> "CompletedProcess[bytes]":
+def run_command(
+    *args,
+    capture_output=False,
+    capture_error=False,
+    input: "Optional[Union[str, bytes]]" = None,
+    timeout=None,
+    print_verbose_only=False,
+    run_in_pretend_mode=False,
+    raise_in_pretend_mode=False,
+    no_print=False,
+    replace_env=False,
+    give_tty_control=False,
+    expected_exit_code=0,
+    allow_unexpected_returncode=False,
+    config: ConfigBase,
+    env: "Optional[dict[str, str]]" = None,
+    **kwargs,
+) -> "CompletedProcess[bytes]":
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
@@ -386,8 +423,9 @@ def run_command(*args, capture_output=False, capture_error=False, input: "Option
     cmdline = list(map(str, cmdline))  # ensure it's all strings so that subprocess can handle it
     # When running scripts from a noexec filesystem try to read the interpreter and run that
     if not no_print:
-        print_command(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), print_verbose_only=print_verbose_only,
-                      config=config)
+        print_command(
+            cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), print_verbose_only=print_verbose_only, config=config
+        )
     if "cwd" in kwargs:
         kwargs["cwd"] = str(kwargs["cwd"])
     else:
@@ -401,7 +439,7 @@ def run_command(*args, capture_output=False, capture_error=False, input: "Option
     # actually run the process now:
     if input is not None:
         assert "stdin" not in kwargs  # we need to use stdin here
-        kwargs['stdin'] = subprocess.PIPE
+        kwargs["stdin"] = subprocess.PIPE
         if not isinstance(input, bytes):
             input = str(input).encode("utf-8")
     if capture_output:
@@ -454,8 +492,14 @@ def run_command(*args, capture_output=False, capture_error=False, input: "Option
             if exc is not None:
                 if config.pretend and not raise_in_pretend_mode:
                     cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
-                    fatal_error("Command ", "`" + commandline_to_str(process.args) +
-                                "` failed with unexpected exit code ", retcode, *cwd, sep="", pretend=config.pretend)
+                    fatal_error(
+                        "Command ",
+                        "`" + commandline_to_str(process.args) + "` failed with unexpected exit code ",
+                        retcode,
+                        *cwd,
+                        sep="",
+                        pretend=config.pretend,
+                    )
                 else:
                     raise exc
             stdout = typing.cast(bytes, stdout)
@@ -480,8 +524,16 @@ def commandline_to_str(args: "typing.Iterable[Union[str,Path]]") -> str:
 
 
 class CompilerInfo:
-    def __init__(self, path: Path, compiler: str, version: "tuple[int, ...]", version_str: str, default_target: str,
-                 *, config: ConfigBase):
+    def __init__(
+        self,
+        path: Path,
+        compiler: str,
+        version: "tuple[int, ...]",
+        version_str: str,
+        default_target: str,
+        *,
+        config: ConfigBase,
+    ):
         self.path = path
         self.compiler = compiler
         self.version = version
@@ -501,15 +553,33 @@ class CompilerInfo:
                 return Path("/unknown/resource/dir")  # avoid failing in jenkins
             # Clang 5.0 added the -print-resource-dir flag
             if self.is_clang and self.version >= (5, 0):
-                resource_dir = run_command(self.path, "-print-resource-dir", config=self.config,
-                                           print_verbose_only=True, capture_output=True,
-                                           run_in_pretend_mode=True).stdout.decode("utf-8").strip()
+                resource_dir = (
+                    run_command(
+                        self.path,
+                        "-print-resource-dir",
+                        config=self.config,
+                        print_verbose_only=True,
+                        capture_output=True,
+                        run_in_pretend_mode=True,
+                    )
+                    .stdout.decode("utf-8")
+                    .strip()
+                )
                 assert resource_dir, "-print-resource-dir no longer works?"
                 self._resource_dir = Path(resource_dir)
             else:
                 # pretend to compile an existing source file and capture the -resource-dir output
-                cc1_cmd = run_command(self.path, "-###", "-xc", "-c", "/dev/null", config=self.config,
-                                      capture_error=True, print_verbose_only=True, run_in_pretend_mode=True)
+                cc1_cmd = run_command(
+                    self.path,
+                    "-###",
+                    "-xc",
+                    "-c",
+                    "/dev/null",
+                    config=self.config,
+                    capture_error=True,
+                    print_verbose_only=True,
+                    run_in_pretend_mode=True,
+                )
                 match = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"').search(cc1_cmd.stderr)
                 assert match is not None, f"Could not find -resource dir in {cc1_cmd.stderr}"
                 self._resource_dir = Path(match.group(1).decode("utf-8"))
@@ -521,9 +591,18 @@ class CompilerInfo:
             if not self.path.exists():
                 return [Path("/unknown/include/dir")]  # avoid failing in jenkins
             # pretend to compile an existing source file and capture the -resource-dir output
-            output = run_command(self.path, "-E", "-Wp,-v", "-xc", "/dev/null", config=self.config,
-                                 stdout=subprocess.DEVNULL, capture_error=True, print_verbose_only=True,
-                                 run_in_pretend_mode=True).stderr
+            output = run_command(
+                self.path,
+                "-E",
+                "-Wp,-v",
+                "-xc",
+                "/dev/null",
+                config=self.config,
+                stdout=subprocess.DEVNULL,
+                capture_error=True,
+                print_verbose_only=True,
+                run_in_pretend_mode=True,
+            ).stderr
             found_start = False
             include_dirs = []
             for line in io.BytesIO(output).readlines():
@@ -546,8 +625,16 @@ class CompilerInfo:
         try:
             if not self.path.exists():
                 return False  # avoid failing in jenkins
-            result = run_command(self.path, *other_args, flag, print_verbose_only=True, run_in_pretend_mode=True,
-                                 capture_error=True, allow_unexpected_returncode=True, config=self.config)
+            result = run_command(
+                self.path,
+                *other_args,
+                flag,
+                print_verbose_only=True,
+                run_in_pretend_mode=True,
+                capture_error=True,
+                allow_unexpected_returncode=True,
+                config=self.config,
+            )
         except (subprocess.CalledProcessError, OSError) as e:
             warning_message("Failed to check for", flag, "support:", e)
             return False
@@ -557,8 +644,9 @@ class CompilerInfo:
         result = self._supported_sanitizer_flags.get((sanitzer_flag, tuple(*arch_flags)))
         if result is None:
             assert sanitzer_flag.startswith("-fsanitize")
-            result = self._supports_flag(sanitzer_flag,
-                                         [*arch_flags, "-c", "-xc", "/dev/null", "-Werror", "-o", "/dev/null"])
+            result = self._supports_flag(
+                sanitzer_flag, [*arch_flags, "-c", "-xc", "/dev/null", "-Werror", "-o", "/dev/null"]
+            )
             self._supported_sanitizer_flags[(sanitzer_flag, tuple(*arch_flags))] = result
         return result
 
@@ -606,7 +694,7 @@ class CompilerInfo:
         version_suffix = ""
         for basename in ("clang++", "clang-cpp", "clang"):
             if name.startswith(basename):
-                version_suffix = name[len(basename):]
+                version_suffix = name[len(basename) :]
         # Try to find a binutil with the same version suffix first
         real_compiler_path = self.path.resolve() if self.path.exists() else self.path
         result = real_compiler_path.parent / (binutil + version_suffix)
@@ -670,9 +758,16 @@ def get_compiler_info(compiler: "Union[str, Path]", *, config: ConfigBase) -> Co
         try:
             # Use -v instead of --version to support both gcc and clang
             # Note: for clang-cpp/cpp we need to have stdin as devnull
-            version_cmd = run_command(compiler, "-v", capture_error=True, print_verbose_only=True,
-                                      run_in_pretend_mode=True, config=config,
-                                      stdin=subprocess.DEVNULL, capture_output=True)
+            version_cmd = run_command(
+                compiler,
+                "-v",
+                capture_error=True,
+                print_verbose_only=True,
+                run_in_pretend_mode=True,
+                config=config,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+            )
         except subprocess.CalledProcessError as e:
             stderr = e.stderr if e.stderr else b"FAILED: " + str(e).encode("utf-8")
             version_cmd = CompletedProcess(e.cmd, e.returncode, e.output, stderr)
@@ -717,16 +812,28 @@ def get_version_output(program: Path, command_args: Optional[tuple] = None, *, c
         command_args = ["--version"]
     if program == Path():
         raise ValueError("Empty path?")
-    prog = run_command([str(program), *list(command_args)], config=config, stdin=subprocess.DEVNULL,
-                       stderr=subprocess.STDOUT, capture_output=True,
-                       run_in_pretend_mode=True, raise_in_pretend_mode=True)
+    prog = run_command(
+        [str(program), *list(command_args)],
+        config=config,
+        stdin=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+        capture_output=True,
+        run_in_pretend_mode=True,
+        raise_in_pretend_mode=True,
+    )
     return prog.stdout
 
 
 @functools.lru_cache(maxsize=20)
-def get_program_version(program: Path, command_args: Optional[tuple] = None, component_kind: "type[Type_T]" = int,
-                        regex=None, program_name: Optional[bytes] = None, *,
-                        config: ConfigBase) -> "tuple[Type_T, ...]":
+def get_program_version(
+    program: Path,
+    command_args: Optional[tuple] = None,
+    component_kind: "type[Type_T]" = int,
+    regex=None,
+    program_name: Optional[bytes] = None,
+    *,
+    config: ConfigBase,
+) -> "tuple[Type_T, ...]":
     if program_name is None:
         program_name = program.name.encode("utf-8")
     try:
@@ -738,8 +845,12 @@ def get_program_version(program: Path, command_args: Optional[tuple] = None, com
 
 
 # extract the version component from program output such as "git version 2.7.4"
-def extract_version(output: bytes, component_kind: "type[Type_T]" = int, regex: "Optional[typing.Pattern]" = None,
-                    program_name: bytes = b"") -> "tuple[Type_T, ...]":
+def extract_version(
+    output: bytes,
+    component_kind: "type[Type_T]" = int,
+    regex: "Optional[typing.Pattern]" = None,
+    program_name: bytes = b"",
+) -> "tuple[Type_T, ...]":
     if regex is None:
         prefix = re.escape(program_name) + b" " if program_name else b""
         regex = re.compile(prefix + b"version\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?")
@@ -753,8 +864,7 @@ def extract_version(output: bytes, component_kind: "type[Type_T]" = int, regex: 
     return tuple(component_kind(x) for x in match.groups() if x is not None)
 
 
-def latest_system_clang_tool(config: ConfigBase, basename: str,
-                             fallback_basename: "Optional[str]") -> Optional[Path]:
+def latest_system_clang_tool(config: ConfigBase, basename: str, fallback_basename: "Optional[str]") -> Optional[Path]:
     if "_ARGCOMPLETE" in os.environ:  # Avoid expensive lookup when tab-completing
         return None if fallback_basename is None else Path(fallback_basename)
 
@@ -802,7 +912,7 @@ def run_and_kill_children_on_exit(fn: "Callable[[], typing.Any]"):
             os.setpgrp()
             # Preserve whether our process group is the terminal leader
             with suppress_sigttou():
-                with scoped_open('/dev/tty', os.O_RDWR, ignore_open_error=True) as tty:
+                with scoped_open("/dev/tty", os.O_RDWR, ignore_open_error=True) as tty:
                     if tty is not None and os.tcgetpgrp(tty) == opgrp:
                         os.tcsetpgrp(tty, os.getpgrp())
         fn()
@@ -816,12 +926,19 @@ def run_and_kill_children_on_exit(fn: "Callable[[], typing.Any]"):
             extra_msg += ("\nStandard error was:\n", err.stderr.decode("utf-8"))
         # If we are currently debugging, raise the exception to allow e.g. PyCharm's
         # "break on exception that terminates execution" feature works.
-        debugger_attached = getattr(sys, 'gettrace', lambda: None)() is not None
+        debugger_attached = getattr(sys, "gettrace", lambda: None)() is not None
         if debugger_attached:
             raise err
         else:
-            fatal_error("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
-                        err.returncode, *extra_msg, sep="", exit_code=err.returncode, pretend=False)
+            fatal_error(
+                "Command ",
+                "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
+                err.returncode,
+                *extra_msg,
+                sep="",
+                exit_code=err.returncode,
+                pretend=False,
+            )
     finally:
         if error:
             signal.signal(signal.SIGTERM, signal.SIG_IGN)

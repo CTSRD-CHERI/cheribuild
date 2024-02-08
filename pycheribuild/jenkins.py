@@ -65,8 +65,12 @@ class JenkinsConfigLoader(CommandLineConfigLoader):
 
     def finalize_options(self, available_targets: "list[str]", **kwargs) -> None:
         target_option = self._parser.add_argument(
-            "targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE, help="The target to build",
-            choices=[*available_targets, EXTRACT_SDK_TARGET, RUN_EVERYTHING_TARGET])
+            "targets",
+            metavar="TARGET",
+            nargs=argparse.ZERO_OR_MORE,
+            help="The target to build",
+            choices=[*available_targets, EXTRACT_SDK_TARGET, RUN_EVERYTHING_TARGET],
+        )
         if self.is_completing_arguments:
             try:
                 import argcomplete
@@ -78,12 +82,19 @@ class JenkinsConfigLoader(CommandLineConfigLoader):
                 self._parser,
                 always_complete_options=None,  # don't print -/-- by default
                 print_suppressed=True,  # also include target-specific options
-                )
+            )
 
 
 class SdkArchive:
-    def __init__(self, cheri_config: JenkinsConfig, name, *, required_globs: "Optional[list[str]]" = None,
-                 extra_args: "Optional[list[str]]" = None, output_dir: Path):
+    def __init__(
+        self,
+        cheri_config: JenkinsConfig,
+        name,
+        *,
+        required_globs: "Optional[list[str]]" = None,
+        extra_args: "Optional[list[str]]" = None,
+        output_dir: Path,
+    ):
         self.output_dir = output_dir
         self.cheri_config = cheri_config
         self.archive = cheri_config.workspace / name
@@ -93,8 +104,11 @@ class SdkArchive:
     def extract(self) -> None:
         assert self.archive.exists(), str(self.archive)
         self.cheri_config.FS.makedirs(self.output_dir)
-        run_command(["tar", "xf", self.archive, "-C", self.output_dir, *self.extra_args],
-                    cwd=self.cheri_config.workspace, config=self.cheri_config)
+        run_command(
+            ["tar", "xf", self.archive, "-C", self.output_dir, *self.extra_args],
+            cwd=self.cheri_config.workspace,
+            config=self.cheri_config,
+        )
         self.check_required_files()
 
     def check_required_files(self, fatal=True) -> bool:
@@ -116,9 +130,13 @@ class SdkArchive:
 
 
 def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "list[SdkArchive]":
-    clang_archive = SdkArchive(cheri_config, cheri_config.compiler_archive_name,
-                               output_dir=cheri_config.compiler_archive_output_path,
-                               required_globs=["bin/clang"], extra_args=["--strip-components", "1"])
+    clang_archive = SdkArchive(
+        cheri_config,
+        cheri_config.compiler_archive_name,
+        output_dir=cheri_config.compiler_archive_output_path,
+        required_globs=["bin/clang"],
+        extra_args=["--strip-components", "1"],
+    )
     all_archives = []
     if clang_archive.archive.exists():
         all_archives.append(clang_archive)
@@ -128,12 +146,19 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "list[SdkArc
         return all_archives  # only need the clang archive
     # if we only extracted the compiler, extract the sysroot now
     extra_args = ["--strip-components", "1"]
-    sysroot_archive = SdkArchive(cheri_config, cheri_config.sysroot_archive_name,
-                                 output_dir=cheri_config.sysroot_archive_output_path,
-                                 required_globs=["usr/include"], extra_args=extra_args)
+    sysroot_archive = SdkArchive(
+        cheri_config,
+        cheri_config.sysroot_archive_name,
+        output_dir=cheri_config.sysroot_archive_output_path,
+        required_globs=["usr/include"],
+        extra_args=extra_args,
+    )
     if not sysroot_archive.archive.exists():
-        warning_message("Project needs a sysroot archive but ", sysroot_archive.archive,
-                        "is missing. Will attempt to build anyway but build will most likely fail.")
+        warning_message(
+            "Project needs a sysroot archive but ",
+            sysroot_archive.archive,
+            "is missing. Will attempt to build anyway but build will most likely fail.",
+        )
         run_command("ls", "-la", cwd=cheri_config.workspace, config=cheri_config)
         return all_archives
     else:
@@ -141,7 +166,7 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "list[SdkArc
         # Old sysroot archives had a leading ./, newer ones don't anymore
         # TODO: remove when master has been updated
         contents = run_command("tar", "tf", sysroot_archive.archive, capture_output=True, config=cheri_config)
-        if contents.stdout.startswith(b'./'):
+        if contents.stdout.startswith(b"./"):
             warning_message("Old sysroot archive detected, stripping one more path component")
             sysroot_archive.extra_args = ["--strip-components", "2"]
     return all_archives
@@ -157,24 +182,27 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "list[SdkArchive
         archive.extract()
 
     if not expected_bindir.exists():
-        fatal_error("SDK bin dir", expected_bindir, "does not exist after extracting sysroot archives!",
-                    pretend=cheri_config.pretend)
+        fatal_error(
+            "SDK bin dir",
+            expected_bindir,
+            "does not exist after extracting sysroot archives!",
+            pretend=cheri_config.pretend,
+        )
 
     # Use llvm-ar/llvm-ranlib or the host ar/ranlib if they ar/ranlib are missing from archive
     for tool in ("ar", "ranlib", "nm"):
         if not (expected_bindir / tool).exists():
             # If llvm-ar/ranlib/nm exists use that
             if (expected_bindir / ("llvm-" + tool)).exists():
-                cheri_config.FS.create_symlink(expected_bindir / ("llvm-" + tool),
-                                               expected_bindir / tool, relative=True)
+                cheri_config.FS.create_symlink(
+                    expected_bindir / ("llvm-" + tool), expected_bindir / tool, relative=True
+                )
             else:
                 # otherwise fall back to the /usr/bin version
-                cheri_config.FS.create_symlink(Path(shutil.which(tool)), expected_bindir / tool,
-                                               relative=False)
+                cheri_config.FS.create_symlink(Path(shutil.which(tool)), expected_bindir / tool, relative=False)
     if not (expected_bindir / "ld").exists():
         status_update("Adding missing $SDK/ld link to ld.lld")
-        cheri_config.FS.create_symlink(expected_bindir / "ld.lld",
-                                       expected_bindir / "ld", relative=True)
+        cheri_config.FS.create_symlink(expected_bindir / "ld.lld", expected_bindir / "ld", relative=True)
 
 
 def create_sdk_from_archives(cheri_config: JenkinsConfig, needs_cheribsd_sysroot, extract_all: bool) -> None:
@@ -219,7 +247,8 @@ def _jenkins_main() -> None:
 
     # special target to extract the sdk
     if JenkinsAction.EXTRACT_SDK in cheri_config.action or (
-            len(cheri_config.targets) > 0 and cheri_config.targets[0] == EXTRACT_SDK_TARGET):
+        len(cheri_config.targets) > 0 and cheri_config.targets[0] == EXTRACT_SDK_TARGET
+    ):
         create_sdk_from_archives(cheri_config, not cheri_config.extract_compiler_only, extract_all=True)
         sys.exit()
 
@@ -284,7 +313,9 @@ def create_tarball(cheri_config) -> None:
     tar_flags = ["--invalid-flag"]
     if bsdtar_path:
         bsdtar_version = get_program_version(
-            Path(bsdtar_path), regex=b"bsdtar\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?", config=cheri_config,
+            Path(bsdtar_path),
+            regex=b"bsdtar\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?",
+            config=cheri_config,
         )
         if bsdtar_version > (3, 0, 0):
             # Only newer versions support --uid/--gid
