@@ -52,7 +52,7 @@ import typing
 from pathlib import Path
 from typing import Callable, Optional, Union
 
-from pycheribuild.colour import AnsiColour, coloured
+from ..colour import AnsiColour, coloured
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..processutils import commandline_to_str, keep_terminal_sane, run_and_kill_children_on_exit
 from ..qemu_utils import QemuOptions, riscv_bios_arguments

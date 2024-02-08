@@ -34,9 +34,9 @@ __all__ = [  # no-combine
     "ssh_config_parameters",  # no-combine
 ]  # no-combine
 
-from pycheribuild.filesystemutils import FileSystemUtils
-from pycheribuild.processutils import run_command
-from pycheribuild.utils import ConfigBase, warning_message
+from .filesystemutils import FileSystemUtils
+from .processutils import run_command
+from .utils import ConfigBase, warning_message
 
 
 def generate_ssh_config_file_for_qemu(

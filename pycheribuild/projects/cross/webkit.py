@@ -30,8 +30,8 @@
 
 from enum import Enum
 
-from pycheribuild.projects.cross.crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
-from pycheribuild.projects.simple_project import BoolConfigOption
+from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
+from ..simple_project import BoolConfigOption
 
 
 class JsBackend(Enum):
