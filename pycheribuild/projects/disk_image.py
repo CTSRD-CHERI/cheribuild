@@ -1056,6 +1056,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "libz.so.6",
             "librt.so.1",
         ]
+        # required, but only recently added so not always present
+        optional_libs += ["libsys.so.7"]
         # required, but versions were bumped with changes to ncurses
         optional_libs += [
             # needed by /bin/sh & /bin/csh (if we included the purecap sh/csh)
