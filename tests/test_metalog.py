@@ -12,7 +12,9 @@ except ImportError:
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
-from pycheribuild.mtree import MtreeFile  # noqa: E402
+# The following line triggers a flake8 warning, but ruff is able to ignore the
+# sys.path modification, so silence the ruff warning while we still use flake8.
+from pycheribuild.mtree import MtreeFile  # noqa: E402, RUF100
 
 HAVE_LCHMOD = True
 if "_TEST_SKIP_METALOG" in os.environ:

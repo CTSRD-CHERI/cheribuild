@@ -1,5 +1,7 @@
 [tool.ruff]
 # Extend the `pyproject.toml` file in the parent directory.
 extend = "../pyproject.toml"
+
+[tool.ruff.lint]
 # Also run the pytest inspects in this subdirectory
 extend-select = ["PT"]

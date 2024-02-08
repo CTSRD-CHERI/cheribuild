@@ -1,14 +1,9 @@
 [tool.ruff]
-select = ["E", "F", "I", "N", "W", "U", "COM", "RUF", "PLC", "PLE", "PLW"]
 # Ensure suggested fixes are compatible with our minimum supported version
 # XXX: Currently this is py36, but the minimum supported by ruff is py37.
 target-version = "py37"
-ignore = [
-    "UP037",  # Remove quotes from type annotation, not possible until we start using 3.7 as the minimum
-    "UP036", # 'Version block is outdated for minimum Python version' to be removed when we set the minimum to 3.8
-    "PLW2901", # `for` loop variable `value` overwritten by assignment target
-    "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar` (cannot be fixed due to bug)
-]
+line-length = 120
+src = ["pycheribuild", "release-scripts", "test-scripts", "tests"]
 exclude = [
     ".git",
     ".idea",
@@ -18,7 +13,21 @@ exclude = [
     "3rdparty",
     "venv",
 ]
-line-length = 120
+output-format = "full"
+show-fixes = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "U", "COM", "RUF", "PLC", "PLE", "PLW"]
+ignore = [
+    "UP037",  # Remove quotes from type annotation, not possible until we start using 3.7 as the minimum
+    "UP036", # 'Version block is outdated for minimum Python version' to be removed when we set the minimum to 3.8
+    "PLW2901", # `for` loop variable `value` overwritten by assignment target
+    "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar` (cannot be fixed due to bug)
+]
+
+[tool.ruff.lint.isort]
+relative-imports-order = "closest-to-furthest"
+known-local-folder = ["pycheribuild"]
 
 [tool.black]
 line-length = 120
@@ -29,7 +38,3 @@ target-version = ['py36']
 extend-exclude = '''3rdparty|\.pytype|pycheribuild'''
 preview = true
 required-version = '23'
-
-[tool.ruff.isort]
-relative-imports-order = "closest-to-furthest"
-known-local-folder = ["pycheribuild"]
