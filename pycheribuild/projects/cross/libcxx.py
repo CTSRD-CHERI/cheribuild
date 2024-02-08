@@ -686,6 +686,26 @@ class BuildLlvmLibs(_BuildLlvmRuntimes):
         return super().cross_install_dir
 
 
+class _HostCompilerMixin(CMakeProject if typing.TYPE_CHECKING else object):
+    supported_architectures = CompilationTargets.ALL_NATIVE
+    default_architecture = CompilationTargets.NATIVE
+
+    @property
+    def custom_c_preprocessor(self):
+        assert self.compiling_for_host()
+        return self.target_info.host_c_preprocessor(self.config)
+
+    @property
+    def custom_c_compiler(self):
+        assert self.compiling_for_host()
+        return self.target_info.host_c_compiler(self.config)
+
+    @property
+    def custom_cxx_compiler(self):
+        assert self.compiling_for_host()
+        return self.target_info.host_cxx_compiler(self.config)
+
+
 class BuildLibunwind(_BuildLlvmRuntimes):
     target = "libunwind"
     llvm_project = BuildCheriLLVM
@@ -728,28 +748,8 @@ class BuildUpstreamCompilerRtRuntimesBuild(BuildCompilerRtRuntimesBuild):
     )
 
 
-class BuildUpstreamCompilerRtRuntimesBuildWithHostCompiler(BuildUpstreamCompilerRtRuntimesBuild):
+class BuildUpstreamCompilerRtRuntimesBuildWithHostCompiler(_HostCompilerMixin, BuildUpstreamCompilerRtRuntimesBuild):
     target = "upstream-compiler-rt-runtimes-build-with-host-compiler"
-    llvm_project = BuildUpstreamLLVM
-    supported_architectures = CompilationTargets.ALL_NATIVE
-    default_architecture = CompilationTargets.NATIVE
-    default_build_type = BuildType.DEBUG
-    _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("compiler-rt",)
-
-    @property
-    def custom_c_preprocessor(self):
-        assert self.compiling_for_host()
-        return self.target_info.host_c_preprocessor(self.config)
-
-    @property
-    def custom_c_compiler(self):
-        assert self.compiling_for_host()
-        return self.target_info.host_c_compiler(self.config)
-
-    @property
-    def custom_cxx_compiler(self):
-        assert self.compiling_for_host()
-        return self.target_info.host_cxx_compiler(self.config)
 
 
 class BuildUpstreamLlvmLibs(_BuildLlvmRuntimes):
@@ -759,23 +759,5 @@ class BuildUpstreamLlvmLibs(_BuildLlvmRuntimes):
     default_architecture = CompilationTargets.NATIVE
 
 
-class BuildUpstreamLlvmLibsWithHostCompiler(_BuildLlvmRuntimes):
+class BuildUpstreamLlvmLibsWithHostCompiler(_HostCompilerMixin, BuildUpstreamLlvmLibs):
     target = "upstream-llvm-libs-with-host-compiler"
-    llvm_project = BuildUpstreamLLVM
-    supported_architectures = CompilationTargets.ALL_NATIVE
-    default_architecture = CompilationTargets.NATIVE
-
-    @property
-    def custom_c_preprocessor(self):
-        assert self.compiling_for_host()
-        return self.target_info.host_c_preprocessor(self.config)
-
-    @property
-    def custom_c_compiler(self):
-        assert self.compiling_for_host()
-        return self.target_info.host_c_compiler(self.config)
-
-    @property
-    def custom_cxx_compiler(self):
-        assert self.compiling_for_host()
-        return self.target_info.host_cxx_compiler(self.config)
