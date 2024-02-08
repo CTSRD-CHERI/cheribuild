@@ -30,6 +30,7 @@
 import collections
 import getpass
 import grp
+import inspect
 import os
 import re
 import shutil
@@ -577,7 +578,7 @@ class CheriConfig(ConfigBase):
             if key in self.__optional_properties:
                 continue
             # don't do the descriptor stuff:
-            value = object.__getattribute__(self, key)
+            value = inspect.getattr_static(self, key)
             if value is None:
                 raise RuntimeError("Required property " + key + " is not set!")
         assert self.cheri_sdk_dir.is_absolute(), self.cheri_sdk_dir

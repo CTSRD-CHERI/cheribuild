@@ -694,7 +694,7 @@ class LaunchFVPBase(SimpleProject):
                 tcp_ports += [gdb_port]
             # XXX this matches on any host address; that may not be quite right
             for x in self.extra_tcp_forwarding:
-                if x == "":
+                if not x:
                     self.fatal("Bad extra-tcp-forwarding (empty forward?)")
                     continue
                 hg = x.split("=")

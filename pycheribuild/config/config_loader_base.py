@@ -331,7 +331,7 @@ class ConfigOptionBase(AbstractConfigOption[T]):
         result = loaded_result.value
         # self.debug_msg("Converting", result, "to", self.value_type)
         # if the requested type is list, tuple, etc. use shlex.split() to convert strings to lists
-        if self.value_type != str and isinstance(result, str):
+        if self.value_type is not str and isinstance(result, str):
             if isinstance(self.value_type, type) and issubclass(self.value_type, collections.abc.Sequence):
                 string_value = result
                 result = shlex.split(string_value)
