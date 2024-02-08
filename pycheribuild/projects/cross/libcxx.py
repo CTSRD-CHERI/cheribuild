@@ -686,7 +686,7 @@ class BuildLlvmLibs(_BuildLlvmRuntimes):
         return super().cross_install_dir
 
 
-class _HostCompilerMixin(CMakeProject if typing.TYPE_CHECKING else object):
+class _HostCompilerMixin(_BuildLlvmRuntimes if typing.TYPE_CHECKING else object):
     supported_architectures = CompilationTargets.ALL_NATIVE
     default_architecture = CompilationTargets.NATIVE
 
@@ -706,6 +706,17 @@ class _HostCompilerMixin(CMakeProject if typing.TYPE_CHECKING else object):
         return self.target_info.host_cxx_compiler(self.config)
 
 
+class _UpstreamLLVMMixin(_BuildLlvmRuntimes if typing.TYPE_CHECKING else object):
+    llvm_project: "typing.ClassVar[type[BuildLLVMMonoRepoBase]]" = BuildUpstreamLLVM
+    supported_architectures = (
+        CompilationTargets.ALL_NATIVE
+        + CompilationTargets.ALL_PICOLIBC_TARGETS
+        + CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
+        + CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS
+        + CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS
+    )
+
+
 class BuildLibunwind(_BuildLlvmRuntimes):
     target = "libunwind"
     llvm_project = BuildCheriLLVM
@@ -715,16 +726,8 @@ class BuildLibunwind(_BuildLlvmRuntimes):
     _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("libunwind",)
 
 
-class BuildUpstreamLibunwind(BuildLibunwind):
+class BuildUpstreamLibunwind(_UpstreamLLVMMixin, BuildLibunwind):
     target = "upstream-libunwind"
-    llvm_project = BuildUpstreamLLVM
-    supported_architectures = (
-        CompilationTargets.ALL_NATIVE
-        + CompilationTargets.ALL_PICOLIBC_TARGETS
-        + CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
-        + CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS
-        + CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS
-    )
 
 
 class BuildUpstreamLibunwindWithHostCompiler(_HostCompilerMixin, BuildUpstreamLibunwind):
@@ -740,27 +743,16 @@ class BuildCompilerRtRuntimesBuild(_BuildLlvmRuntimes):
     _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("compiler-rt",)
 
 
-class BuildUpstreamCompilerRtRuntimesBuild(BuildCompilerRtRuntimesBuild):
+class BuildUpstreamCompilerRtRuntimesBuild(_UpstreamLLVMMixin, BuildCompilerRtRuntimesBuild):
     target = "upstream-compiler-rt-runtimes-build"
-    llvm_project = BuildUpstreamLLVM
-    supported_architectures = (
-        CompilationTargets.ALL_NATIVE
-        + CompilationTargets.ALL_PICOLIBC_TARGETS
-        + CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
-        + CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS
-        + CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS
-    )
 
 
 class BuildUpstreamCompilerRtRuntimesBuildWithHostCompiler(_HostCompilerMixin, BuildUpstreamCompilerRtRuntimesBuild):
     target = "upstream-compiler-rt-runtimes-build-with-host-compiler"
 
 
-class BuildUpstreamLlvmLibs(_BuildLlvmRuntimes):
+class BuildUpstreamLlvmLibs(_UpstreamLLVMMixin, _BuildLlvmRuntimes):
     target = "upstream-llvm-libs"
-    llvm_project = BuildUpstreamLLVM
-    supported_architectures = BuildUpstreamLibunwind.supported_architectures
-    default_architecture = CompilationTargets.NATIVE
 
 
 class BuildUpstreamLlvmLibsWithHostCompiler(_HostCompilerMixin, BuildUpstreamLlvmLibs):
