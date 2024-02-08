@@ -455,6 +455,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
         target_test_flags = self.commandline_to_str(self.essential_compiler_and_linker_flags)
 
         self.add_cmake_options(LLVM_INCLUDE_TESTS=True)  # Ensure that we also build tests
+        self.add_cmake_options(LLVM_ENABLE_ASSERTIONS=True)
         if "libunwind" in enabled_runtimes:
             self.add_cmake_options(
                 LIBUNWIND_ENABLE_STATIC=True,
@@ -498,8 +499,8 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 LIBCXX_ENABLE_RTTI=True,  # Ensure typeinfo symbols are always available
                 LIBCXX_TEST_TARGET_FLAGS=target_test_flags,
             )
-            if GitRepository.contains_commit(self, "d1367ca46ee40dd76661e3f551515d77301568c0", src_dir=self.source_dir):
-                self.add_cmake_options(LIBCXX_HARDENING_MODE="hardened")
+            if GitRepository.contains_commit(self, "64d413efdd76f2e6464ae6f578161811b9d12411", src_dir=self.source_dir):
+                self.add_cmake_options(LIBCXX_HARDENING_MODE="extensive")
             else:
                 self.add_cmake_options(LIBCXX_ENABLE_ASSERTIONS=True)
                 # Need to export the symbols from debug.cpp to allow linking code that defines _LIBCPP_DEBUG=1
