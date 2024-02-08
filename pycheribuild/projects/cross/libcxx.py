@@ -707,6 +707,51 @@ class BuildUpstreamLibunwind(BuildLibunwind):
     )
 
 
+class BuildCompilerRtRuntimesBuild(_BuildLlvmRuntimes):
+    target = "compiler-rt-runtimes-build"
+    llvm_project = BuildCheriLLVM
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
+    default_architecture = CompilationTargets.NATIVE
+    default_build_type = BuildType.DEBUG
+    _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("compiler-rt",)
+
+
+class BuildUpstreamCompilerRtRuntimesBuild(BuildCompilerRtRuntimesBuild):
+    target = "upstream-compiler-rt-runtimes-build"
+    llvm_project = BuildUpstreamLLVM
+    supported_architectures = (
+        CompilationTargets.ALL_NATIVE
+        + CompilationTargets.ALL_PICOLIBC_TARGETS
+        + CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
+        + CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS
+        + CompilationTargets.ALL_CHERIBSD_NON_CHERI_FOR_PURECAP_ROOTFS_TARGETS
+    )
+
+
+class BuildUpstreamCompilerRtRuntimesBuildWithHostCompiler(BuildUpstreamCompilerRtRuntimesBuild):
+    target = "upstream-compiler-rt-runtimes-build-with-host-compiler"
+    llvm_project = BuildUpstreamLLVM
+    supported_architectures = CompilationTargets.ALL_NATIVE
+    default_architecture = CompilationTargets.NATIVE
+    default_build_type = BuildType.DEBUG
+    _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("compiler-rt",)
+
+    @property
+    def custom_c_preprocessor(self):
+        assert self.compiling_for_host()
+        return self.target_info.host_c_preprocessor(self.config)
+
+    @property
+    def custom_c_compiler(self):
+        assert self.compiling_for_host()
+        return self.target_info.host_c_compiler(self.config)
+
+    @property
+    def custom_cxx_compiler(self):
+        assert self.compiling_for_host()
+        return self.target_info.host_cxx_compiler(self.config)
+
+
 class BuildUpstreamLlvmLibs(_BuildLlvmRuntimes):
     target = "upstream-llvm-libs"
     llvm_project = BuildUpstreamLLVM
