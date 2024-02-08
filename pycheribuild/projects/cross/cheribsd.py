@@ -40,7 +40,6 @@ from enum import Enum
 from pathlib import Path
 from typing import ClassVar, Optional, Union
 
-from .crosscompileproject import CrossCompileProject
 from .llvm import BuildLLVMMonoRepoBase
 from ..project import (
     BuildType,
@@ -57,8 +56,7 @@ from ..project import (
 from ..simple_project import SimpleProject, TargetAliasWithDependencies, _clear_line_sequence, flush_stdio
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ConfigOptionHandle
-from ...config.target_info import AutoVarInit, CrossCompileTarget
-from ...config.target_info import CompilerType as FreeBSDToolchainKind
+from ...config.target_info import AutoVarInit, CompilerType, CrossCompileTarget
 from ...processutils import latest_system_clang_tool, print_command
 from ...utils import OSInfo, ThreadJoiner, cached_property, classproperty, is_jenkins_build
 
@@ -405,7 +403,7 @@ class BuildFreeBSDBase(Project):
     has_optional_tests: bool = True
     default_build_tests: bool = True
     default_build_type: BuildType = BuildType.RELWITHDEBINFO
-    build_toolchain: "FreeBSDToolchainKind"  # Set in subclass
+    build_toolchain: "ClassVar[CompilerType]"  # Set in subclass
     # Define the command line arguments here to make type checkers happy.
     minimal: "ClassVar[bool]"
     build_tests: "ClassVar[bool]"
@@ -413,7 +411,7 @@ class BuildFreeBSDBase(Project):
 
     @property
     def use_bootstrapped_toolchain(self) -> bool:
-        return self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAPPED
+        return self.build_toolchain == CompilerType.BOOTSTRAPPED
 
     @classmethod
     def can_build_with_ccache(cls) -> bool:
@@ -538,7 +536,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     use_llvm_binutils: bool = False
 
     # The compiler to use for building freebsd (bundled/upstream-llvm/cheri-llvm/custom)
-    build_toolchain: FreeBSDToolchainKind = FreeBSDToolchainKind.DEFAULT_COMPILER
+    build_toolchain: "ClassVar[CompilerType]" = CompilerType.DEFAULT_COMPILER
     can_build_with_system_clang: bool = True  # Not true for CheriBSD
 
     # cheribsd-mfs-root-kernel doesn't have a default kernel-config, instead
@@ -569,21 +567,21 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # When targeting CHERI we have to use CHERI LLVM
             assert not use_upstream_llvm
             assert not bootstrap_toolchain
-            cls.build_toolchain = FreeBSDToolchainKind.DEFAULT_COMPILER
+            cls.build_toolchain = CompilerType.DEFAULT_COMPILER
             cls.linker_for_world = "lld"
             cls.linker_for_kernel = "lld"
         elif bootstrap_toolchain:
             assert not use_upstream_llvm
-            cls.build_toolchain = FreeBSDToolchainKind.BOOTSTRAPPED
+            cls.build_toolchain = CompilerType.BOOTSTRAPPED
             cls._cross_toolchain_root = None
             cls.linker_for_kernel = "should-not-be-used"
             cls.linker_for_world = "should-not-be-used"
         else:
             # Prefer using system clang for FreeBSD builds rather than a self-built snapshot of LLVM since that might
             # have new warnings that break the -Werror build.
-            cls.build_toolchain = typing.cast(FreeBSDToolchainKind, cls.add_config_option(
-                "toolchain", kind=FreeBSDToolchainKind, default=FreeBSDToolchainKind.DEFAULT_COMPILER,
-                enum_choice_strings=[t.value for t in FreeBSDToolchainKind],
+            cls.build_toolchain = typing.cast(CompilerType, cls.add_config_option(
+                "toolchain", kind=CompilerType, default=CompilerType.DEFAULT_COMPILER,
+                enum_choice_strings=[t.value for t in CompilerType],
                 help="The toolchain to use for building FreeBSD. When set to 'custom', the 'toolchain-path' option "
                      "must also be set"))
             cls._cross_toolchain_root = cls.add_optional_path_option(
@@ -785,23 +783,23 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     @cached_property
     def build_toolchain_root_dir(self) -> "Optional[Path]":
-        if self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAPPED:
+        if self.build_toolchain == CompilerType.BOOTSTRAPPED:
             return self.objdir / "tmp/usr"
-        elif self.build_toolchain in (FreeBSDToolchainKind.UPSTREAM_LLVM, FreeBSDToolchainKind.CHERI_LLVM,
-                                      FreeBSDToolchainKind.MORELLO_LLVM):
+        elif self.build_toolchain in (CompilerType.UPSTREAM_LLVM, CompilerType.CHERI_LLVM,
+                                      CompilerType.MORELLO_LLVM):
             return BuildLLVMMonoRepoBase.get_install_dir_for_type(self, self.build_toolchain)
-        elif self.build_toolchain == FreeBSDToolchainKind.SYSTEM_LLVM:
+        elif self.build_toolchain == CompilerType.SYSTEM_LLVM:
             system_clang_root, errmsg, fixit = self._try_find_compatible_system_clang()
             if system_clang_root is None:
                 self.fatal(errmsg, fixit)
             return system_clang_root
-        elif self.build_toolchain == FreeBSDToolchainKind.CUSTOM:
+        elif self.build_toolchain == CompilerType.CUSTOM:
             if self._cross_toolchain_root is None:
                 self.fatal("Requested custom toolchain but", self.get_config_option_name("_cross_toolchain_root"),
                            "is not set.")
             return self._cross_toolchain_root
         else:
-            assert self.build_toolchain == FreeBSDToolchainKind.DEFAULT_COMPILER
+            assert self.build_toolchain == CompilerType.DEFAULT_COMPILER
             if self.can_build_with_system_clang:
                 # Try to find system clang and if not we fall back to the default self-built clang
                 system_clang_root, errmsg, _ = self._try_find_compatible_system_clang()
@@ -966,6 +964,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     kernel_options.set(**{binutil_name: xbinutil})
                     kernel_options.remove_var("X" + binutil_name)
         if self.build_drm_kmod:
+            from .drm_kmod import BuildDrmKMod
             drm_kmod = BuildDrmKMod.get_instance(self)
             kernel_options.set(LOCAL_MODULES=drm_kmod.source_dir.name, LOCAL_MODULES_DIR=drm_kmod.source_dir.parent)
         kernel_options.set(KERNCONF=" ".join(kernconfs))
@@ -1510,7 +1509,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     default_install_dir: DefaultInstallDir = DefaultInstallDir.DO_NOT_INSTALL
     minimal: bool = False
     hide_options_from_help: bool = True  # hide this from --help for now
-    build_toolchain = FreeBSDToolchainKind.BOOTSTRAPPED
+    build_toolchain = CompilerType.BOOTSTRAPPED
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
@@ -2117,61 +2116,3 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
             if not libgcc_eh.is_file():
                 self.warning("CHERI libgcc_eh missing! You should probably update CheriBSD")
                 self.run_cmd("ar", "rc", libgcc_eh)
-
-
-class BuildDrmKMod(CrossCompileProject):
-    target: str = "drm-kmod"
-    repository: GitRepository = GitRepository("https://github.com/freebsd/drm-kmod",
-                                              default_branch="master", force_branch=True)
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS
-    build_in_source_dir: bool = False
-    use_buildenv: bool = False  # doesn't quite work yet (MAKEOBJDIRPREFIX isn't set)
-    freebsd_project: BuildFreeBSD
-    kernel_make_args: MakeOptions
-
-    def setup(self) -> None:
-        super().setup()
-        self.freebsd_project = self.target_info.get_rootfs_project(t=BuildFreeBSD, caller=self)
-        if self.use_buildenv:
-            extra_make_args = dict(SYSDIR=self.freebsd_project.source_dir / "sys")
-        else:
-            extra_make_args = dict(LOCAL_MODULES=self.source_dir.name,
-                                   LOCAL_MODULES_DIR=self.source_dir.parent,
-                                   MODULES_OVERRIDE="linuxkpi")
-        self.kernel_make_args = self.freebsd_project.kernel_make_args_for_config(self.freebsd_project.kernel_config,
-                                                                                 extra_make_args)
-        assert self.kernel_make_args.kind == MakeCommandKind.BsdMake
-
-    def clean(self, **kwargs) -> None:
-        # TODO: use buildenv and only build the kernel modules...
-        if self.use_buildenv:
-            self.info("Cleaning drm-kmod modules for configs:", self.freebsd_project.kernel_config)
-            self.freebsd_project.build_and_install_subdir(self.kernel_make_args, str(self.source_dir),
-                                                          skip_build=True, skip_clean=False, skip_install=True)
-        else:
-            self.info("Clean not supported yet")
-
-    def compile(self, **kwargs) -> None:
-        # TODO: use buildenv and only build the kernel modules...
-        self.info("Building drm-kmod modules for configs:", self.freebsd_project.kernel_config)
-        if self.use_buildenv:
-            self.freebsd_project.build_and_install_subdir(self.kernel_make_args, str(self.source_dir),
-                                                          skip_build=False, skip_clean=True, skip_install=True)
-        else:
-            self.run_make("buildkernel", options=self.kernel_make_args,
-                          cwd=self.freebsd_project.source_dir, parallel=True)
-
-    def install(self, **kwargs) -> None:
-        # TODO: use buildenv and only install the kernel modules...
-        self.info("Installing drm-kmod modules for configs:", self.freebsd_project.kernel_config)
-        make_args = self.kernel_make_args.copy()
-        # FIXME: it appears that installkernel removes all .ko files, so we can no longer create a disk image
-        # if we install with MODULES_OVERRIDE.
-        make_args.remove_var("MODULES_OVERRIDE")
-        make_args.set_env(METALOG=self.real_install_root_dir / "METALOG.drm-kmod")
-        if self.use_buildenv:
-            self.freebsd_project.build_and_install_subdir(make_args, str(self.source_dir),
-                                                          skip_build=True, skip_clean=True, skip_install=False)
-        else:
-            self.run_make_install(target="installkernel", options=make_args, cwd=self.freebsd_project.source_dir,
-                                  parallel=False)

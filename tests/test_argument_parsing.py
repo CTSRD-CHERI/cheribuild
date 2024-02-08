@@ -26,7 +26,7 @@ from pycheribuild.projects.cross.cheribsd import (
     BuildCHERIBSD,
     BuildCheriBsdMfsKernel,
     BuildFreeBSD,
-    FreeBSDToolchainKind,
+    CompilerType,
 )
 from pycheribuild.projects.cross.llvm import BuildCheriLLVM
 from pycheribuild.projects.cross.qt5 import BuildQtBase
@@ -708,37 +708,37 @@ class SystemClangIfExistsElse:
         pytest.param(
             "freebsd-riscv64",
             SystemClangIfExistsElse("$OUTPUT$/upstream-llvm/bin/clang"),
-            FreeBSDToolchainKind.DEFAULT_COMPILER,
+            CompilerType.DEFAULT_COMPILER,
             [],
         ),
-        pytest.param("freebsd-riscv64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
-        pytest.param("freebsd-riscv64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
+        pytest.param("freebsd-riscv64", "$OUTPUT$/upstream-llvm/bin/clang", CompilerType.UPSTREAM_LLVM, []),
+        pytest.param("freebsd-riscv64", "$OUTPUT$/sdk/bin/clang", CompilerType.CHERI_LLVM, []),
         pytest.param(
             "freebsd-riscv64",
             "$BUILD$/freebsd-riscv64-build/tmp/usr/bin/clang",
-            FreeBSDToolchainKind.BOOTSTRAPPED,
+            CompilerType.BOOTSTRAPPED,
             [],
         ),
         pytest.param(
             "freebsd-riscv64",
             "/path/to/custom/toolchain/bin/clang",
-            FreeBSDToolchainKind.CUSTOM,
+            CompilerType.CUSTOM,
             ["--freebsd-riscv64/toolchain-path", "/path/to/custom/toolchain"],
         ),
         # CheriBSD-mips can be built with all these toolchains (but defaults to CHERI LLVM):
-        pytest.param("cheribsd-riscv64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.DEFAULT_COMPILER, []),
-        pytest.param("cheribsd-riscv64", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
-        pytest.param("cheribsd-riscv64", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
+        pytest.param("cheribsd-riscv64", "$OUTPUT$/sdk/bin/clang", CompilerType.DEFAULT_COMPILER, []),
+        pytest.param("cheribsd-riscv64", "$OUTPUT$/upstream-llvm/bin/clang", CompilerType.UPSTREAM_LLVM, []),
+        pytest.param("cheribsd-riscv64", "$OUTPUT$/sdk/bin/clang", CompilerType.CHERI_LLVM, []),
         pytest.param(
             "cheribsd-riscv64",
             "$BUILD$/cheribsd-riscv64-build/tmp/usr/bin/clang",
-            FreeBSDToolchainKind.BOOTSTRAPPED,
+            CompilerType.BOOTSTRAPPED,
             [],
         ),
         pytest.param(
             "cheribsd-riscv64",
             "/path/to/custom/toolchain/bin/clang",
-            FreeBSDToolchainKind.CUSTOM,
+            CompilerType.CUSTOM,
             ["--cheribsd-riscv64/toolchain-path", "/path/to/custom/toolchain"],
         ),
     ],
@@ -746,7 +746,7 @@ class SystemClangIfExistsElse:
 def test_freebsd_toolchains(
     target: str,
     expected_path: Union[str, SystemClangIfExistsElse],
-    kind: FreeBSDToolchainKind,
+    kind: CompilerType,
     extra_args: "list[str]",
 ):
     # Avoid querying bmake for the objdir
@@ -760,7 +760,7 @@ def test_freebsd_toolchains(
     expected_path = expected_path.replace("$OUTPUT$", str(config.output_root))
     expected_path = expected_path.replace("$BUILD$", str(config.build_root))
     assert str(project.CC) == str(expected_path)
-    if kind == FreeBSDToolchainKind.BOOTSTRAPPED:
+    if kind == CompilerType.BOOTSTRAPPED:
         kernel_make_args = project.kernel_make_args_for_config(["GENERIC"], None)
         # If we override CC, we have to also override XCC
         for var, default in (("CC", "cc"), ("CPP", "cpp"), ("CXX", "c++")):
@@ -951,7 +951,7 @@ def test_mfsroot_kernel_configs(target: str, config_options: "list[str]", expect
 def test_freebsd_toolchains_cheribsd_purecap():
     # Targets that need CHERI don't have the --toolchain option:
     # Argparse should exit with exit code 2
-    for i in FreeBSDToolchainKind:
+    for i in CompilerType:
         for target in (
             "cheribsd-riscv64-hybrid",
             "cheribsd-riscv64-purecap",
