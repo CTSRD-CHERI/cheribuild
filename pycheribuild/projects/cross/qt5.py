@@ -64,22 +64,33 @@ class InstallDejaVuFonts(SimpleProject):
         subdir = "version_{}_{}".format(*version)
         filename = "dejavu-fonts-ttf-{}.{}.tar.bz2".format(*version)
         base_url = "https://github.com/dejavu-fonts/dejavu-fonts/releases/download"
-        self.download_file(self.config.build_root / filename,
-                           url=base_url + "/" + subdir + "/" + filename,
-                           sha256="fa9ca4d13871dd122f61258a80d01751d603b4d3ee14095d65453b4e846e17d7")
+        self.download_file(
+            self.config.build_root / filename,
+            url=base_url + "/" + subdir + "/" + filename,
+            sha256="fa9ca4d13871dd122f61258a80d01751d603b4d3ee14095d65453b4e846e17d7",
+        )
         # Install the fonts to /usr/local/share/fonts, so that fontconfig picks it up automatically.
         fonts_dir = self.target_info.sysroot_dir / "usr/local/share/fonts"
         self.makedirs(fonts_dir)
         # self.clean_directory(fonts_dir)
-        self.run_cmd("tar", "xvf", self.config.build_root / filename, "--strip-components=2",
-                     "-C", fonts_dir, "dejavu-fonts-ttf-{}.{}/ttf".format(*version))
+        self.run_cmd(
+            "tar",
+            "xvf",
+            self.config.build_root / filename,
+            "--strip-components=2",
+            "-C",
+            fonts_dir,
+            "dejavu-fonts-ttf-{}.{}/ttf".format(*version),
+        )
         self.run_cmd("find", fonts_dir)
 
 
 class BuildSharedMimeInfo(CrossCompileMesonProject):
     target = "shared-mime-info"
-    repository = GitRepository("https://gitlab.freedesktop.org/xdg/shared-mime-info.git",
-                               old_urls=[b"https://gitlab.freedesktop.org/arichardson/shared-mime-info.git"])
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/xdg/shared-mime-info.git",
+        old_urls=[b"https://gitlab.freedesktop.org/arichardson/shared-mime-info.git"],
+    )
     # We don't actually want to install the mime info, we just want the update-mime-info tool for native builds
     native_install_dir = DefaultInstallDir.KDE_PREFIX
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
@@ -94,8 +105,10 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
             result = native_instance.install_dir / "bin/update-mime-database"
             if not result.exists():
                 native_instance.dependency_error(
-                    "Cannot find native update-mime-database", cheribuild_target=native_instance.target,
-                    cheribuild_xtarget=CompilationTargets.NATIVE)
+                    "Cannot find native update-mime-database",
+                    cheribuild_target=native_instance.target,
+                    cheribuild_xtarget=CompilationTargets.NATIVE,
+                )
             return result
         else:
             # We are building on CheriBSD (purecap)
@@ -104,7 +117,8 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
             if not result:
                 native_instance.dependency_error(
                     "Cannot find native update-mime-database and can't build it for purecap yet",
-                    install_instructions=InstallInstructions("pkg64 install shared-mime-info"))
+                    install_instructions=InstallInstructions("pkg64 install shared-mime-info"),
+                )
             return Path(result)
 
     @property
@@ -114,8 +128,9 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
         self.check_required_system_tool("xmlto", homebrew="xmlto", apt="xmlto")
-        self.check_required_system_tool("xmllint", homebrew="libxml2", apt="libxml2-utils",
-                                        cheribuild_target="libxml2-native")
+        self.check_required_system_tool(
+            "xmllint", homebrew="libxml2", apt="libxml2-utils", cheribuild_target="libxml2-native",
+        )
         self.check_required_system_tool("msgfmt", freebsd="gettext-tools")  # no way to disable translations
 
     def setup(self):
@@ -127,6 +142,7 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
         if not self._can_build_tools:
             # Ensure that we have update-mime-database available as it will be used in a post-install action.
             self.get_update_mime_database_path(self)
+        # self.configure_args.append("--wrap-mode=default")
 
     def configure(self, **kwargs):
         if not self.compiling_for_host():
@@ -168,8 +184,21 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             return tuple(deps)
         if cls.use_x11:
             # The system X11 libraries might be too old, so add the cheribuild-provided ones as a dependency
-            deps.extend(["libx11", "libxcb", "libxkbcommon", "libxcb-cursor", "libxcb-util", "libxcb-image", "libice",
-                         "libsm", "libxext", "libxtst", "libxcb-render-util", "libxcb-wm", "libxcb-keysyms"])
+            deps.extend([
+                "libx11",
+                "libxcb",
+                "libxkbcommon",
+                "libxcb-cursor",
+                "libxcb-util",
+                "libxcb-image",
+                "libice",
+                "libsm",
+                "libxext",
+                "libxtst",
+                "libxcb-render-util",
+                "libxcb-wm",
+                "libxcb-keysyms",
+            ])
         # Always use our patched image/sql libraries instead of the host ones:
         deps.extend(["libpng", "libjpeg-turbo"])
         if not cls.get_crosscompile_target().is_native():
@@ -204,15 +233,21 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         cls.build_examples = cls.add_bool_option("build-examples", show_help=True, help="build the Qt examples")
         # Enable assertions by default for now
         assertions_by_default = True
-        cls.assertions = cls.add_bool_option("assertions", default=assertions_by_default, show_help=True,
-                                             help="Include assertions (even in release builds)")
+        cls.assertions = cls.add_bool_option(
+            "assertions",
+            default=assertions_by_default,
+            show_help=True,
+            help="Include assertions (even in release builds)",
+        )
         cls.minimal = cls.add_bool_option("minimal", show_help=True, help="Don't build QtWidgets or QtGui, etc")
         # Link against X11 libs by default if we aren't compiling for macOS
         native_is_macos = cls._xtarget is not None and cls._xtarget.target_info_cls.is_macos()
-        cls.use_x11 = cls.add_bool_option("use-x11", default=not native_is_macos,
-                                          show_help=False, help="Build Qt with the XCB backend.")
-        cls.use_opengl = cls.add_bool_option("use-opengl", default=True, show_help=False,
-                                             help="Build Qt with OpenGL support")
+        cls.use_x11 = cls.add_bool_option(
+            "use-x11", default=not native_is_macos, show_help=False, help="Build Qt with the XCB backend.",
+        )
+        cls.use_opengl = cls.add_bool_option(
+            "use-opengl", default=True, show_help=False, help="Build Qt with OpenGL support",
+        )
 
     def configure(self, **kwargs):
         if self.force_static_linkage:
@@ -239,7 +274,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 if kde_install_dir != self.install_dir:
                     self.configure_args.extend(["-additional-datadir", kde_install_dir / "share"])
                 # 5.15 hard-codes QMAKE_APPLE_DEVICE_ARCHS as x86_64
-                apple_arch = self.target_info.target_triple.split('-')[0]
+                apple_arch = self.target_info.target_triple.split("-")[0]
                 self.configure_args.append("QMAKE_APPLE_DEVICE_ARCHS=" + apple_arch)
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
@@ -251,19 +286,27 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             compiler_flags = filter(lambda s: not s.startswith("--sysroot"), compiler_flags)
             cross_tools_prefix = self.target_info.get_target_triple(include_version=False)
             self.configure_args.extend([
-                "-device", "freebsd-generic-clang",
-                "-device-option", f"CROSS_COMPILE={self.sdk_bindir}/{cross_tools_prefix}-",
-                "-device-option", "COMPILER_FLAGS=" + self.commandline_to_str(compiler_flags),
-                "-device-option", "LINKER_FLAGS=" + self.commandline_to_str(linker_flags),
-                "-sysroot", self.cross_sysroot_path,
-                "-prefix", self.install_prefix,
+                "-device",
+                "freebsd-generic-clang",
+                "-device-option",
+                f"CROSS_COMPILE={self.sdk_bindir}/{cross_tools_prefix}-",
+                "-device-option",
+                "COMPILER_FLAGS=" + self.commandline_to_str(compiler_flags),
+                "-device-option",
+                "LINKER_FLAGS=" + self.commandline_to_str(linker_flags),
+                "-sysroot",
+                self.cross_sysroot_path,
+                "-prefix",
+                self.install_prefix,
                 # The prefix for host tools such as qmake
-                "-hostprefix", str(self.qt_host_tools_path),
+                "-hostprefix",
+                str(self.qt_host_tools_path),
             ])
             xcb = BuildLibXCB.get_instance(self)
             if xcb.install_prefix != self.install_prefix:
                 self.configure_args.append(
-                    "QMAKE_RPATHDIR=" + str(xcb.install_prefix / self.target_info.default_libdir))
+                    "QMAKE_RPATHDIR=" + str(xcb.install_prefix / self.target_info.default_libdir),
+                )
             # Use the libpng/libjpeg versions with CHERI fixes.
             self.configure_args.append("-system-libpng")
             self.configure_args.append("-system-libjpeg")
@@ -274,8 +317,12 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configure_args.extend(["-sanitize", "address", "-sanitize", "undefined"])
 
         self.configure_args.extend([
-            # To ensure the host and cross-compiled version is the same also disable opengl
-            "-opengl" if self.use_opengl else "-no-opengl",
+            (
+                # To ensure the host and cross-compiled version is the same also disable opengl
+                "-opengl"
+                if self.use_opengl
+                else "-no-opengl"
+            ),
             # Since the cross-compiled version doesn't have glib, also disable it for the native on
             "-no-glib",
             # Needed for webkit:
@@ -537,8 +584,9 @@ class BuildQt5(BuildQtWithConfigureScript):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.all_modules = cls.add_bool_option("all-modules", show_help=True,
-                                              help="Build all modules (even those that don't make sense for CHERI)")
+        cls.all_modules = cls.add_bool_option(
+            "all-modules", show_help=True, help="Build all modules (even those that don't make sense for CHERI)",
+        )
 
     def configure(self, **kwargs):
         if not self.all_modules:
@@ -572,7 +620,10 @@ class BuildQtBase(BuildQtWithConfigureScript):
         # Some directories in the build system are broken and pick headers installed to the sysroot.
         # To avoid this problem we remove the conflicting headers first
         # We use the syncqt modules list to clean all of them:
-        modules_cmd = self.run_cmd("perl", "-e", """
+        modules_cmd = self.run_cmd(
+            "perl",
+            "-e",
+            """
 my $syncprofile = "./sync.profile";
 unless ($result = do "$syncprofile") {
     die "couldn't parse $syncprofile: $@" if $@;
@@ -582,7 +633,11 @@ if (! %modules) {
 }
 for my $module (keys %modules) {
     print "$module\n";
-}""", capture_output=True, run_in_pretend_mode=self.source_dir.exists() and shutil.which("perl"), cwd=self.source_dir)
+}""",
+            capture_output=True,
+            run_in_pretend_mode=self.source_dir.exists() and shutil.which("perl"),
+            cwd=self.source_dir,
+        )
         if not modules_cmd.stdout.strip():
             self.fatal("Coulnd't parse list of Qt Modules")
         for module in modules_cmd.stdout.decode("utf-8").strip().split():
@@ -593,9 +648,13 @@ for my $module (keys %modules) {
         # Build some examples (e.g. tetris demo and mimetype browser)
         for example in self._installed_examples:
             self.makedirs(self.build_dir / example)
-            self.run_cmd(self.build_dir / "bin/qmake", "-o", "Makefile",
-                         self.source_dir / example / Path(example + ".pro").name,
-                         cwd=self.build_dir / example)
+            self.run_cmd(
+                self.build_dir / "bin/qmake",
+                "-o",
+                "Makefile",
+                self.source_dir / example / Path(example + ".pro").name,
+                cwd=self.build_dir / example,
+            )
             self.run_make(cwd=self.build_dir / example)
 
     def install(self, **kwargs):
@@ -610,8 +669,9 @@ for my $module (keys %modules) {
             # remove old directories to replace them with a symlink
             self.clean_directory(qt_fonts_dir, ensure_dir_exists=False)
             self.makedirs(qt_fonts_dir.parent)
-            dejavu_fonts = InstallDejaVuFonts.get_instance(self,
-                                                           cross_target=self.crosscompile_target.get_rootfs_target())
+            dejavu_fonts = InstallDejaVuFonts.get_instance(
+                self, cross_target=self.crosscompile_target.get_rootfs_target(),
+            )
             self.create_symlink(dejavu_fonts.fonts_dir, qt_fonts_dir, print_verbose_only=False)
 
     def _compile_relevant_tests(self):
@@ -624,17 +684,24 @@ for my $module (keys %modules) {
         # Download the input files for the QMimeDatabase tests
         mimedb_tests_dir = self.build_dir / "tests/auto/corelib/mimetypes/qmimedatabase"
         # Only download the file once if possible:
-        self.download_file(self.config.build_root / "shared-mime-info-2.1.zip",
-                           "https://gitlab.freedesktop.org/xdg/shared-mime-info/-/archive/2.1/shared-mime-info-2.1.zip",
-                           sha256="ce16a44d70b683deb8a82b7203970b6f474f794c91fc4b103c6d8cf6c3c796fc")
+        self.download_file(
+            self.config.build_root / "shared-mime-info-2.1.zip",
+            "https://gitlab.freedesktop.org/xdg/shared-mime-info/-/archive/2.1/shared-mime-info-2.1.zip",
+            sha256="ce16a44d70b683deb8a82b7203970b6f474f794c91fc4b103c6d8cf6c3c796fc",
+        )
         self.makedirs(mimedb_tests_dir)
         if not (mimedb_tests_dir / "s-m-i/data").exists():
             # Delete any old files
             self.clean_directory(mimedb_tests_dir / "shared-mime-info-2.1")
-            self.run_cmd("unzip", self.config.build_root / "shared-mime-info-2.1.zip", cwd=mimedb_tests_dir,
-                         print_verbose_only=False)
-            self.create_symlink(mimedb_tests_dir / "shared-mime-info-2.1", mimedb_tests_dir / "s-m-i",
-                                print_verbose_only=False)
+            self.run_cmd(
+                "unzip",
+                self.config.build_root / "shared-mime-info-2.1.zip",
+                cwd=mimedb_tests_dir,
+                print_verbose_only=False,
+            )
+            self.create_symlink(
+                mimedb_tests_dir / "shared-mime-info-2.1", mimedb_tests_dir / "s-m-i", print_verbose_only=False,
+            )
         self._compile_relevant_tests()
         if self.compiling_for_host():
             # tst_QDate::startOfDay_endOfDay(epoch) is broken in BST (at least on macOS), use Europe/Oslo to match the
@@ -648,8 +715,12 @@ for my $module (keys %modules) {
             if "--test-subset" not in " ".join(self.config.test_extra_args):
                 command.append("--test-subset=corelib")
             self.target_info.run_cheribsd_test_script(
-                *command, use_benchmark_kernel_by_default=True, mount_sysroot=False, mount_sourcedir=True,
-                use_full_disk_image=True)
+                *command,
+                use_benchmark_kernel_by_default=True,
+                mount_sysroot=False,
+                mount_sourcedir=True,
+                use_full_disk_image=True,
+            )
 
 
 # This class is used to build individual Qt Modules instead of using the qt5 project
@@ -669,9 +740,14 @@ class BuildQtModuleWithQMake(CrossCompileProject):
 
     def configure(self, **kwargs):
         # Run the QtBase QMake to generate a makefile
-        self.run_cmd(BuildQtBase.get_instance(self).qt_host_tools_path / "bin/qmake",
-                     self.source_dir, "--", *self.configure_args, cwd=self.build_dir,
-                     env=self.configure_environment)
+        self.run_cmd(
+            BuildQtBase.get_instance(self).qt_host_tools_path / "bin/qmake",
+            self.source_dir,
+            "--",
+            *self.configure_args,
+            cwd=self.build_dir,
+            env=self.configure_environment,
+        )
 
     def compile(self, **kwargs):
         self.run_make("sub-src")
@@ -682,16 +758,23 @@ class BuildQtModuleWithQMake(CrossCompileProject):
         else:
             self.run_make("sub-tests-all")
             # We run tests using the full disk image since we want e.g. locales to be available.
-            self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True,
-                                                      mount_sysroot=True, mount_sourcedir=True,
-                                                      use_full_disk_image=True)
+            self.target_info.run_cheribsd_test_script(
+                "run_qtbase_tests.py",
+                use_benchmark_kernel_by_default=True,
+                mount_sysroot=True,
+                mount_sourcedir=True,
+                use_full_disk_image=True,
+            )
 
 
 class BuildQtSVG(BuildQtModuleWithQMake):
     target = "qtsvg"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qtsvg.git",
-                               old_urls=[b"https://code.qt.io/qt/qtsvg.git"],
-                               default_branch="5.15", force_branch=True)
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/qtsvg.git",
+        old_urls=[b"https://code.qt.io/qt/qtsvg.git"],
+        default_branch="5.15",
+        force_branch=True,
+    )
 
 
 class BuildQtX11Extras(BuildQtModuleWithQMake):
@@ -716,8 +799,9 @@ class BuildQtMacExtras(BuildQtModuleWithQMake):
 
 class BuildQtDeclarative(BuildQtModuleWithQMake):
     target = "qtdeclarative"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qtdeclarative.git", default_branch="5.15",
-                               force_branch=True)
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/qtdeclarative.git", default_branch="5.15", force_branch=True,
+    )
 
     def setup(self):
         super().setup()
@@ -754,10 +838,13 @@ class BuildQtTools(BuildQtModuleWithQMake):
 class BuildQtWayland(BuildQtModuleWithQMake):
     target = "qtwayland"
     dependencies = ("qtbase", "wayland", "wayland-native", "libxcomposite")
-    repository = GitRepository("https://code.qt.io/qt/qtwayland.git",
-                               temporary_url_override="https://github.com/CTSRD-CHERI/qtwayland",
-                               url_override_reason="Needs a patch to build on FreeBSD",
-                               default_branch="5.15", force_branch=True)
+    repository = GitRepository(
+        "https://code.qt.io/qt/qtwayland.git",
+        temporary_url_override="https://github.com/CTSRD-CHERI/qtwayland",
+        url_override_reason="Needs a patch to build on FreeBSD",
+        default_branch="5.15",
+        force_branch=True,
+    )
 
     def setup(self):
         super().setup()
@@ -779,9 +866,12 @@ class BuildQtWayland(BuildQtModuleWithQMake):
 class BuildQtQuickControls2(BuildQtModuleWithQMake):
     target = "qtquickcontrols2"
     dependencies = ("qtdeclarative",)
-    repository = GitRepository("https://invent.kde.org/qt/qt/qtquickcontrols2.git",
-                               old_urls=[b"https://code.qt.io/qt/qtquickcontrols2.git"],
-                               default_branch="kde/5.15", force_branch=True)
+    repository = GitRepository(
+        "https://invent.kde.org/qt/qt/qtquickcontrols2.git",
+        old_urls=[b"https://code.qt.io/qt/qtquickcontrols2.git"],
+        default_branch="kde/5.15",
+        force_branch=True,
+    )
 
     def compile(self, **kwargs):
         self.run_make()
@@ -790,9 +880,12 @@ class BuildQtQuickControls2(BuildQtModuleWithQMake):
 class BuildQtQuickControls(BuildQtModuleWithQMake):
     target = "qtquickcontrols"
     dependencies = ("qtdeclarative",)
-    repository = GitRepository("https://invent.kde.org/qt/qt/qtquickcontrols.git",
-                               old_urls=[b"https://code.qt.io/qt/qtquickcontrols.git"],
-                               default_branch="kde/5.15", force_branch=True)
+    repository = GitRepository(
+        "https://invent.kde.org/qt/qt/qtquickcontrols.git",
+        old_urls=[b"https://code.qt.io/qt/qtquickcontrols.git"],
+        default_branch="kde/5.15",
+        force_branch=True,
+    )
 
     def compile(self, **kwargs):
         self.run_make()
@@ -802,10 +895,15 @@ class BuildQtGraphicalEffects(BuildQtModuleWithQMake):
     target = "qtgraphicaleffects"
     dependencies = ("qtdeclarative",)
     # Depends on OpenGL to be useful, https://github.com/CTSRD-CHERI/qtgraphicaleffects allows compiling without OpenGL
-    repository = GitRepository("https://invent.kde.org/qt/qt/qtgraphicaleffects.git",
-                               old_urls=[b"https://github.com/CTSRD-CHERI/qtgraphicaleffects",
-                                         b"https://code.qt.io/qt/qtgraphicaleffects.git"],
-                               default_branch="kde/5.15", force_branch=True)
+    repository = GitRepository(
+        "https://invent.kde.org/qt/qt/qtgraphicaleffects.git",
+        old_urls=[
+            b"https://github.com/CTSRD-CHERI/qtgraphicaleffects",
+            b"https://code.qt.io/qt/qtgraphicaleffects.git",
+        ],
+        default_branch="kde/5.15",
+        force_branch=True,
+    )
 
     def compile(self, **kwargs):
         self.run_make()
@@ -815,7 +913,9 @@ class BuildQtMultimedia(BuildQtModuleWithQMake):
     target = "qtmultimedia"
     dependencies = ("qtbase", "qtdeclarative")
     repository = GitRepository(
-        "https://invent.kde.org/qt/qt/qtmultimedia.git", default_branch="kde/5.15", force_branch=True,
+        "https://invent.kde.org/qt/qt/qtmultimedia.git",
+        default_branch="kde/5.15",
+        force_branch=True,
     )
 
     def compile(self, **kwargs):
@@ -825,8 +925,12 @@ class BuildQtMultimedia(BuildQtModuleWithQMake):
 # Webkit needs ICU (and recommended for QtBase too):
 class BuildICU4C(CrossCompileAutotoolsProject):
     # noinspection PyUnreachableCode
-    repository = GitRepository("https://github.com/CTSRD-CHERI/icu.git", default_branch="maint/maint-70",
-                               force_branch=True, old_urls=[b"https://github.com/unicode-org/icu.git"])
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/icu.git",
+        default_branch="maint/maint-70",
+        force_branch=True,
+        old_urls=[b"https://github.com/unicode-org/icu.git"],
+    )
     default_directory_basename = "icu"
     target = "icu4c"
     build_dir_suffix = "4c"
@@ -837,9 +941,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     def setup(self):
         super().setup()
         self.configure_command = self.source_dir / "icu4c/source/configure"
-        self.configure_args.extend(["--disable-plugins", "--disable-dyload",
-                                    "--disable-tests",
-                                    "--disable-samples"])
+        self.configure_args.extend(["--disable-plugins", "--disable-dyload", "--disable-tests", "--disable-samples"])
         self.native_build_dir = self.build_dir_for_target(CompilationTargets.NATIVE)
         # we can't create objects for a different endianess:
         self.COMMON_FLAGS.append("-DU_DISABLE_OBJ_CODE")
@@ -863,8 +965,12 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 
     def process(self):
         if not self.compiling_for_host() and not (self.native_build_dir / "bin/icupkg").exists():
-            self.fatal("Missing host build directory", self.native_build_dir, " (needed for cross-compiling)",
-                       fixit_hint="Run `cheribuild.py " + self.target + "-native`")
+            self.fatal(
+                "Missing host build directory",
+                self.native_build_dir,
+                " (needed for cross-compiling)",
+                fixit_hint="Run `cheribuild.py " + self.target + "-native`",
+            )
         super().process()
 
 
@@ -895,8 +1001,9 @@ class BuildLibXslt(CrossCompileCMakeProject):
 
 
 class BuildQtWebkit(CrossCompileCMakeProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qtwebkit",
-                               default_branch="qtwebkit-5.212-cheri", force_branch=True)
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/qtwebkit", default_branch="qtwebkit-5.212-cheri", force_branch=True,
+    )
     is_large_source_repository = True
     dependencies = ("qtbase", "icu4c", "libxml2", "sqlite")
     # webkit is massive if we include debug info
@@ -917,44 +1024,52 @@ class BuildQtWebkit(CrossCompileCMakeProject):
 
     def setup(self):
         super().setup()
-        self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations",
-                                     "-Wno-error=cheri-capability-misuse",
-                                     "-Wno-error=format"]  # FIXME: build with capability -Werror
+        self.cross_warning_flags += [
+            "-Wno-error",
+            "-Wno-error=cheri-bitwise-operations",
+            "-Wno-error=cheri-capability-misuse",
+            "-Wno-error=format",
+        ]  # FIXME: build with capability -Werror
         # We are building an old version of webkit
         self.cross_warning_flags.append("-Wno-deprecated-copy")
         if self.should_include_debug_info:
             self.COMMON_FLAGS.append("-gline-tables-only")  # otherwise too much debug info
-        self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
-                               ENABLE_OPENGL=False,
-                               USE_LIBHYPHEN=False,  # we don't have libhyphen
-                               DEVELOPER_MODE=True,  # needed to enable DumpRenderTree and ImageDiff
-                               ENABLE_VIDEO=False,  # probably depends on lots of stuff
-                               ENABLE_XSLT=False,  # 1 less library to build
-                               USE_GSTREAMER=False,  # needs all the glib+gtk crap
-                               USE_LD_GOLD=False,  # Webkit wants to use gold by default...
-                               USE_SYSTEM_MALLOC=True,
-                               # we want bounds (instead of the fast bump-the-pointer bmalloc code)
-                               ENABLE_API_TESTS=False,
-                               )
+        self.add_cmake_options(
+            PORT="Qt",
+            ENABLE_X11_TARGET=False,
+            ENABLE_OPENGL=False,
+            USE_LIBHYPHEN=False,  # we don't have libhyphen
+            DEVELOPER_MODE=True,  # needed to enable DumpRenderTree and ImageDiff
+            ENABLE_VIDEO=False,  # probably depends on lots of stuff
+            ENABLE_XSLT=False,  # 1 less library to build
+            USE_GSTREAMER=False,  # needs all the glib+gtk crap
+            USE_LD_GOLD=False,  # Webkit wants to use gold by default...
+            USE_SYSTEM_MALLOC=True,
+            # we want bounds (instead of the fast bump-the-pointer bmalloc code)
+            ENABLE_API_TESTS=False,
+        )
         # TODO: when we use the full build of Qt enable these:
-        self.add_cmake_options(ENABLE_GEOLOCATION=False,  # needs QtPositioning
-                               ENABLE_PRINT_SUPPORT=False,  # needs QtPrintSupport
-                               ENABLE_DEVICE_ORIENTATION=False,  # needs QtSensors
-                               ENABLE_WEBKIT2=False,  # needs QtQuick
-                               )
+        self.add_cmake_options(
+            ENABLE_GEOLOCATION=False,  # needs QtPositioning
+            ENABLE_PRINT_SUPPORT=False,  # needs QtPrintSupport
+            ENABLE_DEVICE_ORIENTATION=False,  # needs QtSensors
+            ENABLE_WEBKIT2=False,  # needs QtQuick
+        )
         # Use llvm-{ar,ranlib} because elftoolchain's versions truncate libWebCore.a
         self.add_cmake_options(CMAKE_AR=self.llvm_binutils_dir / "llvm-ar")
         self.add_cmake_options(CMAKE_RANLIB=self.llvm_binutils_dir / "llvm-ranlib")
-        self.add_cmake_options(ENABLE_JIT=False,  # Not supported on MIPS
-                               QT_STATIC_BUILD=True,  # we always build qt static for now
-                               QT_BUNDLED_PNG=True,  # use libpng from Qt
-                               # QT_BUNDLED_JPEG=True,  # use libjpeg from Qt
-                               QTWEBKIT_LINK_STATIC_ONLY=self.force_static_linkage,
-                               )
+        self.add_cmake_options(
+            ENABLE_JIT=False,  # Not supported on MIPS
+            QT_STATIC_BUILD=True,  # we always build qt static for now
+            QT_BUNDLED_PNG=True,  # use libpng from Qt
+            # QT_BUNDLED_JPEG=True,  # use libjpeg from Qt
+            QTWEBKIT_LINK_STATIC_ONLY=self.force_static_linkage,
+        )
         if not self.compiling_for_host():
             # we need to find the installed Qt
             self.add_cmake_options(
-                Qt5_DIR=self.cross_sysroot_path / ("usr/local/" + self._xtarget.generic_arch_suffix) / "lib/cmake/Qt5")
+                Qt5_DIR=self.cross_sysroot_path / ("usr/local/" + self._xtarget.generic_arch_suffix) / "lib/cmake/Qt5",
+            )
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
             self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.get_source_dir(self) / "src/3rdparty/libpng")
             if self.force_static_linkage:
@@ -971,25 +1086,29 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.build_jsc_only = cls.add_bool_option("build-jsc-only", show_help=True,
-                                                 help="only build the JavaScript interpreter executable")
+        cls.build_jsc_only = cls.add_bool_option(
+            "build-jsc-only", show_help=True, help="only build the JavaScript interpreter executable",
+        )
 
     def compile(self, **kwargs):
         # Generate the shared mime info cache to MASSIVELY speed up tests
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
             update_mime = BuildSharedMimeInfo.get_update_mime_database_path(self)
             mime_info_src = BuildQtBase.get_source_dir(self) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
-            self.install_file(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True,
-                              print_verbose_only=False)
+            self.install_file(
+                mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True, print_verbose_only=False,
+            )
             self.run_cmd(update_mime, "-V", Path(td, "mime"), cwd="/")
 
             if not Path(td, "mime/mime.cache").exists():
                 self.fatal("Could not generated shared-mime-info cache!")
             # install mime.cache and freedesktop.org.xml into the build dir for tests
-            self.install_file(mime_info_src, self.build_dir / "freedesktop.org.xml", force=True,
-                              print_verbose_only=False)
-            self.install_file(Path(td, "mime/mime.cache"), self.build_dir / "mime.cache", force=True,
-                              print_verbose_only=False)
+            self.install_file(
+                mime_info_src, self.build_dir / "freedesktop.org.xml", force=True, print_verbose_only=False,
+            )
+            self.install_file(
+                Path(td, "mime/mime.cache"), self.build_dir / "mime.cache", force=True, print_verbose_only=False,
+            )
             # TODO: get https://github.com/annulen/webkit-test-fonts to run the full testsuite
         if self.build_jsc_only:
             self.run_make("jsc")
@@ -1000,8 +1119,9 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         # create a stripped version of DumpRenderTree and jsc since the one with debug info is too big
         if not self.build_jsc_only:
             dump_render_tree = self.build_dir / "bin/DumpRenderTree"
-            self.maybe_strip_elf_file(dump_render_tree, output_path=dump_render_tree.with_suffix(".stripped"),
-                                      print_verbose_only=False)
+            self.maybe_strip_elf_file(
+                dump_render_tree, output_path=dump_render_tree.with_suffix(".stripped"), print_verbose_only=False,
+            )
         jsc = self.build_dir / "bin/jsc"
         self.maybe_strip_elf_file(jsc, output_path=jsc.with_suffix(".stripped"), print_verbose_only=False)
         self.info("Not installing qtwebit since it uses too much space. If you really want this run `ninja install`")
@@ -1010,5 +1130,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         if self.compiling_for_host():
             self.fatal("Running host tests not implemented")
         else:
-            self.target_info.run_cheribsd_test_script("run_qtwebkit_tests.py", use_benchmark_kernel_by_default=True,
-                                                      mount_builddir=True, mount_sourcedir=True, mount_sysroot=True)
+            self.target_info.run_cheribsd_test_script(
+                "run_qtwebkit_tests.py",
+                use_benchmark_kernel_by_default=True,
+                mount_builddir=True,
+                mount_sourcedir=True,
+                mount_sysroot=True,
+            )
