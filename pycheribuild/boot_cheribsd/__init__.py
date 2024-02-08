@@ -685,7 +685,7 @@ def _set_pexpect_sh_prompt(child):
     child.sendline(f"PS2='{PEXPECT_CONTINUATION_PROMPT_SET_STR}'")
     child.sendline(f"PS1='{PEXPECT_PROMPT_SET_STR}'")
     # Find the prompt
-    child.expect_prompt(timeout=2*60)
+    child.expect_prompt(timeout=2 * 60)
     success("===> successfully set PS1/PS2")
 
 
