@@ -39,7 +39,7 @@ from ..config.chericonfig import BuildType
 from ..config.target_info import BasicCompilationTargets, NativeTargetInfo
 from ..utils import InstallInstructions, OSInfo, include_local_file, remove_duplicates
 
-__all__ = ["MesonProject"]  # no-combine
+__all__ = ["MesonProject"]
 
 
 class MesonProject(_CMakeAndMesonSharedLogic):

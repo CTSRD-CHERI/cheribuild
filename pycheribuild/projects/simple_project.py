@@ -74,11 +74,11 @@ from ..utils import (
     status_update,
 )
 
-__all__ = [  # no-combine
-    "_cached_get_homebrew_prefix", "_clear_line_sequence", "_default_stdout_filter",  # no-combine
-    "flush_stdio", "SimpleProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
-    "BoolConfigOption", "IntConfigOption",  # no-combine
-]  # no-combine
+__all__ = [
+    "_cached_get_homebrew_prefix", "_clear_line_sequence", "_default_stdout_filter",
+    "flush_stdio", "SimpleProject", "TargetAlias", "TargetAliasWithDependencies",
+    "BoolConfigOption", "IntConfigOption",
+]
 
 T = typing.TypeVar("T")
 
@@ -1312,7 +1312,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         # noinspection PyUnusedLocal
         script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
         # generate a sensible error when using remote-cheribuild.py by omitting this line:
-        script_dir = Path(__file__).parent.parent.parent / "test-scripts"  # no-combine
+        script_dir = Path(__file__).parent.parent.parent / "test-scripts"
         return script_dir / script_name
 
     def run_shell_script(self, script, shell="sh", **kwargs) -> "subprocess.CompletedProcess[bytes]":

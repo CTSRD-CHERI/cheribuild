@@ -40,9 +40,9 @@ from ..filesystemutils import FileSystemUtils
 from ..processutils import CompilerInfo, get_compiler_info
 from ..utils import OSInfo, cached_property, fatal_error, final, status_update, warning_message
 
-__all__ = ["AbstractProject", "AArch64FloatSimdOptions", "AutoVarInit", "BasicCompilationTargets",  # no-combine
-           "CPUArchitecture",  "CrossCompileTarget", "CompilerType", "MipsFloatAbi", "TargetInfo",  # no-combine
-           "NativeTargetInfo", "DefaultInstallDir"]  # no-combine
+__all__ = ["AbstractProject", "AArch64FloatSimdOptions", "AutoVarInit", "BasicCompilationTargets",
+           "CPUArchitecture",  "CrossCompileTarget", "CompilerType", "MipsFloatAbi", "TargetInfo",
+           "NativeTargetInfo", "DefaultInstallDir"]
 
 
 class CPUArchitecture(Enum):

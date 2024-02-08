@@ -92,7 +92,7 @@ def handle_line(line: str, src_file: Path, continued_import: bool):
     else:
         empty_lines = 0
 
-    if "include_local_file" in line:
+    if "include_local_file(" in line:
         insert_local_file(line, src_file)
     else:
         lines.append(line)

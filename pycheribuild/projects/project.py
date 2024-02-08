@@ -84,12 +84,12 @@ from ..utils import (
     status_update,
 )
 
-__all__ = ["Project", "AutotoolsProject", "CheriConfig", "MakeOptions", "MakeCommandKind",  # no-combine
-           "MercurialRepository", "CrossCompileTarget", "CPUArchitecture", "GitRepository",  # no-combine
-           "commandline_to_str", "ComputedDefaultValue", "TargetInfo", "ReuseOtherProjectRepository",  # no-combine
-           "ExternallyManagedSourceRepository", "ReuseOtherProjectDefaultTargetRepository",  # no-combine
-           "MakefileProject", "TargetBranchInfo", "Linkage", "BasicCompilationTargets",  # no-combine
-           "DefaultInstallDir", "BuildType", "SubversionRepository", "default_source_dir_in_subdir"]  # no-combine
+__all__ = ["Project", "AutotoolsProject", "CheriConfig", "MakeOptions", "MakeCommandKind",
+           "MercurialRepository", "CrossCompileTarget", "CPUArchitecture", "GitRepository",
+           "commandline_to_str", "ComputedDefaultValue", "TargetInfo", "ReuseOtherProjectRepository",
+           "ExternallyManagedSourceRepository", "ReuseOtherProjectDefaultTargetRepository",
+           "MakefileProject", "TargetBranchInfo", "Linkage", "BasicCompilationTargets",
+           "DefaultInstallDir", "BuildType", "SubversionRepository", "default_source_dir_in_subdir"]
 
 
 def install_dir_not_specified(_: CheriConfig, project: "Project"):

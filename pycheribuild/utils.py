@@ -44,15 +44,15 @@ from typing import Callable, Optional, Union
 
 from .colour import AnsiColour, coloured
 
-# reduce the number of import statements per project  # no-combine
-__all__ = ["typing", "include_local_file", "Type_T", "init_global_config",  # no-combine
-           "status_update", "fatal_error", "coloured", "AnsiColour", "query_yes_no",  # no-combine
-           "warning_message", "DoNotUseInIfStmt", "ThreadJoiner", "InstallInstructions",  # no-combine
-           "SafeDict", "error_message", "ConfigBase", "final", "add_error_context",  # no-combine
-           "default_make_jobs_count", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
-           "classproperty", "find_free_port", "have_working_internet_connection", "SocketAndPort",  # no-combine
-           "is_case_sensitive_dir", "replace_one", "cached_property", "remove_prefix",  # no-combine
-           "remove_duplicates", "remove_tuple_duplicates"]  # no-combine
+# reduce the number of import statements per project
+__all__ = ["typing", "include_local_file", "Type_T", "init_global_config",
+           "status_update", "fatal_error", "coloured", "AnsiColour", "query_yes_no",
+           "warning_message", "DoNotUseInIfStmt", "ThreadJoiner", "InstallInstructions",
+           "SafeDict", "error_message", "ConfigBase", "final", "add_error_context",
+           "default_make_jobs_count", "OSInfo", "is_jenkins_build", "get_global_config",
+           "classproperty", "find_free_port", "have_working_internet_connection", "SocketAndPort",
+           "is_case_sensitive_dir", "replace_one", "cached_property", "remove_prefix",
+           "remove_duplicates", "remove_tuple_duplicates"]
 
 if sys.version_info < (3, 6, 0):
     sys.exit("This script requires at least Python 3.6.0")

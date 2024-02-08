@@ -27,12 +27,12 @@ import functools
 import subprocess
 from pathlib import Path
 
-__all__ = [  # no-combine
-    "generate_ssh_config_file_for_qemu",  # no-combine
-    "ssh_host_accessible_cached",  # no-combine
-    "ssh_host_accessible_uncached",  # no-combine
-    "ssh_config_parameters",  # no-combine
-]  # no-combine
+__all__ = [
+    "generate_ssh_config_file_for_qemu",
+    "ssh_host_accessible_cached",
+    "ssh_host_accessible_uncached",
+    "ssh_config_parameters",
+]
 
 from .filesystemutils import FileSystemUtils
 from .processutils import run_command

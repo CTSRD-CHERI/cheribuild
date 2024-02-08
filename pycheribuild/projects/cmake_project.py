@@ -41,7 +41,7 @@ from ..processutils import commandline_to_str
 from ..targets import target_manager
 from ..utils import InstallInstructions, OSInfo, include_local_file
 
-__all__ = ["CMakeProject"]  # no-combine
+__all__ = ["CMakeProject"]
 
 
 class CMakeProject(_CMakeAndMesonSharedLogic):
