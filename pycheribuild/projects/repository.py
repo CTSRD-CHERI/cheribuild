@@ -39,8 +39,8 @@ from ..config.target_info import CrossCompileTarget
 from ..processutils import get_program_version, run_command
 from ..utils import AnsiColour, ConfigBase, coloured, remove_prefix, status_update
 
-if typing.TYPE_CHECKING:
-    from .project import Project
+if typing.TYPE_CHECKING:   # no-combine
+    from .project import Project  # no-combine
 
 __all__ = [
     "GitRepository",

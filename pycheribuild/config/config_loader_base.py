@@ -41,8 +41,8 @@ from ..utils import ConfigBase, fatal_error, warning_message
 
 T = typing.TypeVar('T')
 
-if typing.TYPE_CHECKING:
-    import argparse
+if typing.TYPE_CHECKING:  # no-combine
+    import argparse  # no-combine
 
 
 class _LoadedConfigValue:

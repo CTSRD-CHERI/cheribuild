@@ -31,9 +31,9 @@ import typing
 from typing import Any, Callable, Union
 
 T = typing.TypeVar("T")
-if typing.TYPE_CHECKING:
-    from ..utils import ConfigBase
-    ConfigTy = typing.TypeVar("ConfigTy", bound=ConfigBase)
+if typing.TYPE_CHECKING:  # no-combine
+    from ..utils import ConfigBase  # no-combine
+    ConfigTy = typing.TypeVar("ConfigTy", bound=ConfigBase)  # no-combine
 
 
 class ComputedDefaultValue(typing.Generic[T]):
