@@ -669,23 +669,6 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             self.run_cmd("cmake", "--build", self.build_dir, "--verbose", "--target", "check-runtimes")
 
 
-class BuildLlvmLibs(_BuildLlvmRuntimes):
-    target = "llvm-libs"
-    llvm_project = BuildCheriLLVM
-    supported_architectures = (
-        CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + CompilationTargets.ALL_PICOLIBC_TARGETS
-    )
-    default_architecture = CompilationTargets.NATIVE
-    default_build_type = BuildType.DEBUG
-
-    @classproperty
-    def cross_install_dir(self):
-        # For picolibc, we do actually want to install to the sysroot as this target provides the C++ standard library.
-        if self._xtarget in CompilationTargets.ALL_PICOLIBC_TARGETS:
-            return DefaultInstallDir.ROOTFS_LOCALBASE
-        return super().cross_install_dir
-
-
 class _HostCompilerMixin(_BuildLlvmRuntimes if typing.TYPE_CHECKING else object):
     supported_architectures = CompilationTargets.ALL_NATIVE
     default_architecture = CompilationTargets.NATIVE
@@ -751,8 +734,27 @@ class BuildUpstreamCompilerRtRuntimesBuildWithHostCompiler(_HostCompilerMixin, B
     target = "upstream-compiler-rt-runtimes-build-with-host-compiler"
 
 
+class BuildLlvmLibs(_BuildLlvmRuntimes):
+    target = "llvm-libs"
+    llvm_project = BuildCheriLLVM
+    supported_architectures = (
+        CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + CompilationTargets.ALL_PICOLIBC_TARGETS
+    )
+    default_architecture = CompilationTargets.NATIVE
+    default_build_type = BuildType.DEBUG
+
+    @classproperty
+    def cross_install_dir(self):
+        # For picolibc, we do actually want to install to the sysroot as this target provides the C++ standard library.
+        if self._xtarget in CompilationTargets.ALL_PICOLIBC_TARGETS:
+            return DefaultInstallDir.ROOTFS_LOCALBASE
+        return super().cross_install_dir
+
+
 class BuildUpstreamLlvmLibs(_UpstreamLLVMMixin, _BuildLlvmRuntimes):
     target = "upstream-llvm-libs"
+    default_architecture = CompilationTargets.NATIVE
+    default_build_type = BuildType.DEBUG
 
 
 class BuildUpstreamLlvmLibsWithHostCompiler(_HostCompilerMixin, BuildUpstreamLlvmLibs):
