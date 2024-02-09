@@ -72,12 +72,16 @@ class BuildPython(CrossCompileAutotoolsProject):
 
         if not self.compiling_for_host():
             self.configure_args.append("--without-doc-strings")  # should reduce size
-            native_python = self.get_instance_for_cross_target(CompilationTargets.NATIVE_NON_PURECAP,
-                                                               self.config).install_dir / "bin/python3"
+            native_python = (
+                self.get_instance_for_cross_target(CompilationTargets.NATIVE_NON_PURECAP, self.config).install_dir
+                / "bin/python3"
+            )
             if not native_python.exists():
-                self.dependency_error("Native python3 doesn't exist, you must build the `python-native` target first.",
-                                      cheribuild_target="python",
-                                      cheribuild_xtarget=CompilationTargets.NATIVE_NON_PURECAP)
+                self.dependency_error(
+                    "Native python3 doesn't exist, you must build the `python-native` target first.",
+                    cheribuild_target="python",
+                    cheribuild_xtarget=CompilationTargets.NATIVE_NON_PURECAP,
+                )
             self.add_configure_vars(
                 ac_cv_buggy_getaddrinfo="no",
                 # Doesn't work since that remove all flags, need to set PATH instead
@@ -98,10 +102,21 @@ class BuildPython(CrossCompileAutotoolsProject):
         # python build system adds .exe for case-insensitive dirs
         suffix = "" if is_case_sensitive_dir(self.build_dir) else ".exe"
         if self.compiling_for_host():
-            self.run_cmd(self.build_dir / ("python" + suffix), "-m", "test", "-w", "--junit-xml=python-tests.xml",
-                         self.config.make_j_flag, cwd=self.build_dir)
+            self.run_cmd(
+                self.build_dir / ("python" + suffix),
+                "-m",
+                "test",
+                "-w",
+                "--junit-xml=python-tests.xml",
+                self.config.make_j_flag,
+                cwd=self.build_dir,
+            )
         else:
             # Python executes tons of system calls, hopefully using the benchmark kernel helps
-            self.target_info.run_cheribsd_test_script("run_python_tests.py", "--buildexe-suffix=" + suffix,
-                                                      mount_installdir=True,
-                                                      mount_sourcedir=True, use_benchmark_kernel_by_default=True)
+            self.target_info.run_cheribsd_test_script(
+                "run_python_tests.py",
+                "--buildexe-suffix=" + suffix,
+                mount_installdir=True,
+                mount_sourcedir=True,
+                use_benchmark_kernel_by_default=True,
+            )

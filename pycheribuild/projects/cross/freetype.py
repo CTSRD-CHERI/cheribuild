@@ -33,8 +33,9 @@ from .crosscompileproject import CompilationTargets, CrossCompileMesonProject, G
 class BuildFreeType2(CrossCompileMesonProject):
     target = "freetype2"
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
-    repository = GitRepository("https://gitlab.freedesktop.org/freetype/freetype",
-                               old_urls=[b"https://github.com/freetype/freetype2.git"])
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/freetype/freetype", old_urls=[b"https://github.com/freetype/freetype2.git"]
+    )
     dependencies = ("libpng",)
 
     def setup(self):
@@ -53,7 +54,8 @@ class BuildFontConfig(CrossCompileMesonProject):
     repository = GitRepository(
         "https://gitlab.freedesktop.org/fontconfig/fontconfig",
         temporary_url_override="https://gitlab.freedesktop.org/arichardson/fontconfig",
-        url_override_reason="Needs pointer provenance fixes (no PR posted yet)")
+        url_override_reason="Needs pointer provenance fixes (no PR posted yet)",
+    )
 
     def setup(self):
         super().setup()

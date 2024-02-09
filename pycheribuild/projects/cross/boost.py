@@ -39,5 +39,6 @@ class BuildBoost(CrossCompileCMakeProject):
         included_libraries = [
             "range",  # used by kactivitymanagerd
         ]
-        self.add_cmake_options(BOOST_EXCLUDE_LIBRARIES=";".join(skipped_libraries),
-                               BOOST_INCLUDE_LIBRARIES=";".join(included_libraries))
+        self.add_cmake_options(
+            BOOST_EXCLUDE_LIBRARIES=";".join(skipped_libraries), BOOST_INCLUDE_LIBRARIES=";".join(included_libraries)
+        )

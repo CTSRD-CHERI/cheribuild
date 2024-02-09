@@ -110,8 +110,9 @@ class BuildXCBProto(X11AutotoolsProject):
         if self.config.pretend and not shutil.which("automake"):
             automake_version = (0, 0, 0)
         else:
-            automake_version = get_program_version(Path("automake"), config=self.config,
-                                                   regex=rb"automake\s+\(GNU automake\)\s+(\d+)\.(\d+)\.?(\d+)?")
+            automake_version = get_program_version(
+                Path("automake"), config=self.config, regex=rb"automake\s+\(GNU automake\)\s+(\d+)\.(\d+)\.?(\d+)?"
+            )
         if automake_version >= (1, 16, 4):
             self.info("Working around https://www.mail-archive.com/bug-automake@gnu.org/msg04957.html")
             self.replace_in_file(self.build_dir / "xcb-proto.pc", {"${PYTHON_PREFIX}": str(self.install_prefix)})
@@ -311,8 +312,9 @@ class BuildXAuth(X11AutotoolsProject):
         super().install(**kwargs)
         if not self.compiling_for_host() and not self.crosscompile_target.is_libcompat_target():
             # Ensure that xauth is in the default $PATH, so that ssh -X works
-            self.create_symlink(self.install_dir / "bin/xauth", self.rootfs_dir / "usr/local/bin/xauth",
-                                print_verbose_only=False)
+            self.create_symlink(
+                self.install_dir / "bin/xauth", self.rootfs_dir / "usr/local/bin/xauth", print_verbose_only=False
+            )
 
 
 class BuildXEyes(X11AutotoolsProject):
@@ -329,12 +331,14 @@ class BuildLibXKBCommon(X11MesonProject):
     def setup(self):
         # avoid wayland dep for now
         super().setup()
-        self.add_meson_options(**{
-            "enable-x11": True,
-            "enable-xkbregistry": False,  # Avoid dependency on libxml2
-            "enable-docs": False,  # Avoid lots of dependencies to build docs
-            "enable-tools": False,  # No need for wayland deps just for the xkbcli tool
-        })
+        self.add_meson_options(
+            **{
+                "enable-x11": True,
+                "enable-xkbregistry": False,  # Avoid dependency on libxml2
+                "enable-docs": False,  # Avoid lots of dependencies to build docs
+                "enable-tools": False,  # No need for wayland deps just for the xkbcli tool
+            }
+        )
 
     def process(self):
         newpath = os.getenv("PATH")
@@ -353,8 +357,10 @@ class BuildXorgFontUtil(X11AutotoolsProject):
 class BuildPixman(X11MesonProject):
     target = "pixman"
     dependencies = ("libpng",)
-    repository = GitRepository("https://gitlab.freedesktop.org/pixman/pixman.git",
-                               old_urls=[b"https://gitlab.freedesktop.org/arichardson/pixman.git"])
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/pixman/pixman.git",
+        old_urls=[b"https://gitlab.freedesktop.org/arichardson/pixman.git"],
+    )
 
     def setup(self):
         super().setup()
@@ -417,8 +423,10 @@ class BuildLibXScrnSaver(X11AutotoolsProject):
 
 class BuildLibJpegTurbo(X11CMakeProject):
     target = "libjpeg-turbo"
-    repository = GitRepository("https://github.com/libjpeg-turbo/libjpeg-turbo.git",
-                               old_urls=[b"https://github.com/arichardson/libjpeg-turbo.git"])
+    repository = GitRepository(
+        "https://github.com/libjpeg-turbo/libjpeg-turbo.git",
+        old_urls=[b"https://github.com/arichardson/libjpeg-turbo.git"],
+    )
 
     def setup(self):
         super().setup()
@@ -487,14 +495,28 @@ class BuildXVncServer(X11AutotoolsProject):
     target = "xvnc-server"
     # The actual XVnc source code is part of TigerVNC and not included in the xserver repository.
     # It also depends on build artifacts from an existing tigervnc build
-    dependencies = ("libx11", "xorg-font-util", "libxrender", "libxfont", "libxkbfile", "tigervnc", "xkeyboard-config",
-                    "xkbcomp", "dbus")
+    dependencies = (
+        "libx11",
+        "xorg-font-util",
+        "libxrender",
+        "libxfont",
+        "libxkbfile",
+        "tigervnc",
+        "xkeyboard-config",
+        "xkbcomp",
+        "dbus",
+    )
     # The tigervnc code requires the 1.20 release
-    repository = GitRepository("https://gitlab.freedesktop.org/xorg/xserver.git",
-                               default_branch="server-1.20-branch", force_branch=True,
-                               temporary_url_override="https://gitlab.freedesktop.org/arichardson/xserver.git",
-                               url_override_reason=["https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/721",
-                                                    "https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/720"])
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/xorg/xserver.git",
+        default_branch="server-1.20-branch",
+        force_branch=True,
+        temporary_url_override="https://gitlab.freedesktop.org/arichardson/xserver.git",
+        url_override_reason=[
+            "https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/721",
+            "https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/720",
+        ],
+    )
 
     def install(self, **kwargs):
         """
@@ -507,14 +529,22 @@ class BuildXVncServer(X11AutotoolsProject):
         super().install()
         # Install a script to start the Xvnc so I don't have to remember the arguments
         # TODO: should we install a service that we can start with `service xvnc start`?
-        self.write_file(self.install_dir / "bin/startxvnc", overwrite=True, mode=0o755,
-                        contents="#!/bin/sh\nXvnc -geometry 1024x768 -SecurityTypes=None \"$@\"\n")
+        self.write_file(
+            self.install_dir / "bin/startxvnc",
+            overwrite=True,
+            mode=0o755,
+            contents='#!/bin/sh\nXvnc -geometry 1024x768 -SecurityTypes=None "$@"\n',
+        )
         if not self.compiling_for_host() and not self.crosscompile_target.is_libcompat_target():
             # Ensure that Xvnc is in the default $PATH
-            self.create_symlink(self.install_dir / "bin/Xvnc", self.rootfs_dir / "usr/local/bin/Xvnc",
-                                print_verbose_only=False)
-            self.create_symlink(self.install_dir / "bin/startxvnc", self.rootfs_dir / "usr/local/bin/startxvnc",
-                                print_verbose_only=False)
+            self.create_symlink(
+                self.install_dir / "bin/Xvnc", self.rootfs_dir / "usr/local/bin/Xvnc", print_verbose_only=False
+            )
+            self.create_symlink(
+                self.install_dir / "bin/startxvnc",
+                self.rootfs_dir / "usr/local/bin/startxvnc",
+                print_verbose_only=False,
+            )
 
     def update(self):
         super().update()
@@ -523,12 +553,27 @@ class BuildXVncServer(X11AutotoolsProject):
             self.create_symlink(tigervnc_source / "unix/xserver/hw/vnc", self.source_dir / "hw/vnc")
         try:
             # Check if the patch was already applied with --dry-run
-            self.run_cmd("patch", "-p1", "--forward", "--dry-run", "-i",
-                         tigervnc_source / "unix/xserver120.patch", cwd=self.source_dir, capture_error=True,
-                         capture_output=True)
-            self.run_cmd("patch", "-p1", "--forward", "-i",
-                         tigervnc_source / "unix/xserver120.patch", cwd=self.source_dir, capture_error=True,
-                         capture_output=True)
+            self.run_cmd(
+                "patch",
+                "-p1",
+                "--forward",
+                "--dry-run",
+                "-i",
+                tigervnc_source / "unix/xserver120.patch",
+                cwd=self.source_dir,
+                capture_error=True,
+                capture_output=True,
+            )
+            self.run_cmd(
+                "patch",
+                "-p1",
+                "--forward",
+                "-i",
+                tigervnc_source / "unix/xserver120.patch",
+                cwd=self.source_dir,
+                capture_error=True,
+                capture_output=True,
+            )
         except subprocess.CalledProcessError as e:
             if b"Skipping patch" in e.stdout:
                 return
@@ -537,23 +582,37 @@ class BuildXVncServer(X11AutotoolsProject):
     def setup(self):
         super().setup()
         fonts_dir = Path("/", self.target_info.sysroot_install_prefix_relative, "share/fonts")
-        self.configure_args.extend([
-            "--without-dtrace", "--enable-static", "--disable-dri", "--disable-unit-tests",
-            "--disable-xinerama", "--disable-xvfb", "--disable-xnest", "--disable-xorg",
-            "--disable-dmx", "--disable-xwin", "--disable-xephyr", "--disable-kdrive",
-            "--disable-libdrm",
-            "--disable-config-dbus", "--disable-config-hal",
-            "--disable-dri", "--disable-dri2", "--disable-dri3",
-            "--enable-install-libxf86config",
-            "--disable-glx",  # "--enable-glx",
-            "-with-default-font-path=catalogue:" + str(fonts_dir) + ",built-ins",
-            "--with-serverconfig-path=" + str(self.install_prefix / "lib/X11"),
-            "--disable-selective-werror",
-            "--disable-xwayland",
-            "--with-fontrootdir=" + str(fonts_dir),
-            "--with-xkb-path=" + str(BuildXKeyboardConfig.get_instance(self).install_prefix / "share/X11/xkb"),
-            "--with-xkb-bin-directory=" + str(BuildXKkbcomp.get_instance(self).install_prefix / "bin"),
-        ])
+        self.configure_args.extend(
+            [
+                "--without-dtrace",
+                "--enable-static",
+                "--disable-dri",
+                "--disable-unit-tests",
+                "--disable-xinerama",
+                "--disable-xvfb",
+                "--disable-xnest",
+                "--disable-xorg",
+                "--disable-dmx",
+                "--disable-xwin",
+                "--disable-xephyr",
+                "--disable-kdrive",
+                "--disable-libdrm",
+                "--disable-config-dbus",
+                "--disable-config-hal",
+                "--disable-dri",
+                "--disable-dri2",
+                "--disable-dri3",
+                "--enable-install-libxf86config",
+                "--disable-glx",  # "--enable-glx",
+                "-with-default-font-path=catalogue:" + str(fonts_dir) + ",built-ins",
+                "--with-serverconfig-path=" + str(self.install_prefix / "lib/X11"),
+                "--disable-selective-werror",
+                "--disable-xwayland",
+                "--with-fontrootdir=" + str(fonts_dir),
+                "--with-xkb-path=" + str(BuildXKeyboardConfig.get_instance(self).install_prefix / "share/X11/xkb"),
+                "--with-xkb-bin-directory=" + str(BuildXKkbcomp.get_instance(self).install_prefix / "bin"),
+            ]
+        )
         tigervnc = BuildTigerVNC.get_instance(self)
         self.make_args.set(TIGERVNC_SRCDIR=tigervnc.source_dir, TIGERVNC_BUILDDIR=tigervnc.build_dir)
         self.COMMON_LDFLAGS.append("-Wl,-rpath," + str(BuildFreeType2.get_instance(self).install_prefix / "lib"))
@@ -611,10 +670,17 @@ class BuildLibXpm(X11AutotoolsProject):
 # Slightly more functional window manager than TWM
 class BuildIceWM(X11CMakeProject):
     target = "icewm"
-    dependencies = ("fontconfig", "libxcomposite", "libxdamage", "libpng", "libjpeg-turbo",
-                    "libxpm", "libxft", "libxrandr")
-    repository = GitRepository("https://github.com/bbidulock/icewm",
-                               old_urls=[b"https://github.com/arichardson/icewm"])
+    dependencies = (
+        "fontconfig",
+        "libxcomposite",
+        "libxdamage",
+        "libpng",
+        "libjpeg-turbo",
+        "libxpm",
+        "libxft",
+        "libxrandr",
+    )
+    repository = GitRepository("https://github.com/bbidulock/icewm", old_urls=[b"https://github.com/arichardson/icewm"])
 
     def setup(self):
         super().setup()

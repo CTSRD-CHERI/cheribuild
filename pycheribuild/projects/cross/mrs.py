@@ -46,32 +46,40 @@ class MRS(CrossCompileCMakeProject):
         cls.build_target = cls.add_config_option("build-target", kind=str, help="specify a target to build, or all")
 
         cls.debug = cls.add_bool_option("debug", help="enable debug output")
-        cls.offload_quarantine = cls.add_bool_option("offload-quarantine",
-                                                     help="process the quarantine in a separate worker thread")
+        cls.offload_quarantine = cls.add_bool_option(
+            "offload-quarantine", help="process the quarantine in a separate worker thread"
+        )
         cls.bypass_quarantine = cls.add_bool_option("bypass-quarantine", help="MADV_FREE freed page-size allocations")
         cls.clear_on_alloc = cls.add_bool_option("clear-on-alloc", help="zero regions during allocation")
         cls.clear_on_free = cls.add_bool_option("clear-on-free", help="zero regions as they come out of quarantine")
         cls.print_stats = cls.add_bool_option("print-stats", help="print heap statistics on exit")
         cls.print_caprevoke = cls.add_bool_option("print-caprevoke", help="print per-revocation statistics")
-        cls.concurrent_revocation_passes = cls.add_config_option("concurrent-revocation-passes", kind=int,
-                                                                 help="enable N concurrent revocation passes before "
-                                                                      "the stop-the-world pass")
-        cls.revoke_on_free = cls.add_bool_option("revoke-on-free",
-                                                 help="perform revocation on free rather than during allocation "
-                                                      "routines")
+        cls.concurrent_revocation_passes = cls.add_config_option(
+            "concurrent-revocation-passes",
+            kind=int,
+            help="enable N concurrent revocation passes before " "the stop-the-world pass",
+        )
+        cls.revoke_on_free = cls.add_bool_option(
+            "revoke-on-free", help="perform revocation on free rather than during allocation " "routines"
+        )
 
         cls.just_interpose = cls.add_bool_option("just-interpose", help="just call the real functions")
         cls.just_bookkeeping = cls.add_bool_option("just-bookkeeping", help="just update data structures")
         cls.just_quarantine = cls.add_bool_option("just-quarantine", help="do bookkeeping and quarantining")
-        cls.just_paint_bitmap = cls.add_bool_option("just-paint-bitmap",
-                                                    help="do bookkeeping, quarantining, and bitmap painting")
+        cls.just_paint_bitmap = cls.add_bool_option(
+            "just-paint-bitmap", help="do bookkeeping, quarantining, and bitmap painting"
+        )
 
-        cls.quarantine_ratio = cls.add_config_option("quarantine-ratio", kind=int,
-                                                     help="limit the quarantine size to 1/QUARANTINE_RATIO times the "
-                                                          "size of the heap")
-        cls.quarantine_highwater = cls.add_config_option("quarantine-highwater", kind=int,
-                                                         help="limit the quarantine size to QUARANTINE_HIGHWATER "
-                                                              "bytes (supersedes QUARANTINE_RATIO)")
+        cls.quarantine_ratio = cls.add_config_option(
+            "quarantine-ratio",
+            kind=int,
+            help="limit the quarantine size to 1/QUARANTINE_RATIO times the " "size of the heap",
+        )
+        cls.quarantine_highwater = cls.add_config_option(
+            "quarantine-highwater",
+            kind=int,
+            help="limit the quarantine size to QUARANTINE_HIGHWATER " "bytes (supersedes QUARANTINE_RATIO)",
+        )
 
     def setup(self):
         super().setup()

@@ -40,9 +40,11 @@ from ...utils import OSInfo
 
 class BuildEPollShim(CrossCompileCMakeProject):
     target = "epoll-shim"
-    repository = GitRepository("https://github.com/jiixyj/epoll-shim",
-                               temporary_url_override="https://github.com/arichardson/epoll-shim",
-                               url_override_reason="https://github.com/jiixyj/epoll-shim/pull/36")
+    repository = GitRepository(
+        "https://github.com/jiixyj/epoll-shim",
+        temporary_url_override="https://github.com/arichardson/epoll-shim",
+        url_override_reason="https://github.com/jiixyj/epoll-shim/pull/36",
+    )
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def configure(self, **kwargs):
@@ -70,8 +72,9 @@ class BuildEPollShim(CrossCompileCMakeProject):
 
 class BuildLibUdevDevd(CrossCompileMesonProject):
     target = "libudev-devd"
-    repository = GitRepository("https://github.com/wulf7/libudev-devd",
-                               old_urls=[b"https://github.com/FreeBSDDesktop/libudev-devd"])
+    repository = GitRepository(
+        "https://github.com/wulf7/libudev-devd", old_urls=[b"https://github.com/FreeBSDDesktop/libudev-devd"]
+    )
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.NATIVE_IF_FREEBSD
     dependencies = ("linux-input-h",)
 
@@ -96,8 +99,12 @@ class BuildLinuxInputH(SimpleProject):
             dev_evdev_h = src_headers / "dev/evdev" / header
             if not dev_evdev_h.is_file():
                 self.fatal("Missing evdev header:", dev_evdev_h)
-            self.write_file(self.include_install_dir / "linux" / header, contents=f"#include <dev/evdev/{header}>\n",
-                            overwrite=True, print_verbose_only=False)
+            self.write_file(
+                self.include_install_dir / "linux" / header,
+                contents=f"#include <dev/evdev/{header}>\n",
+                overwrite=True,
+                print_verbose_only=False,
+            )
 
     @property
     def include_install_dir(self) -> Path:
@@ -168,17 +175,22 @@ class BuildLibInput(CrossCompileMesonProject):
 
 
 class BuildDejaGNU(AutotoolsProject):
-    repository = GitRepository("https://git.savannah.gnu.org/git/dejagnu.git",
-                               temporary_url_override="https://github.com/arichardson/dejagnu.git",
-                               url_override_reason="Remote test execution is broken(-ish) upstream")
+    repository = GitRepository(
+        "https://git.savannah.gnu.org/git/dejagnu.git",
+        temporary_url_override="https://github.com/arichardson/dejagnu.git",
+        url_override_reason="Remote test execution is broken(-ish) upstream",
+    )
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
 
 class BuildLibFFI(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/libffi/libffi.git",
-                               temporary_url_override="https://github.com/CTSRD-CHERI/libffi.git",
-                               default_branch="v3.4.4-cheriabi", force_branch=True,
-                               url_override_reason="Needs lots of CHERI fixes")
+    repository = GitRepository(
+        "https://github.com/libffi/libffi.git",
+        temporary_url_override="https://github.com/CTSRD-CHERI/libffi.git",
+        default_branch="v3.4.4-cheriabi",
+        force_branch=True,
+        url_override_reason="Needs lots of CHERI fixes",
+    )
     target = "libffi"
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
@@ -193,29 +205,46 @@ class BuildLibFFI(CrossCompileAutotoolsProject):
     def run_tests(self):
         runtest_cmd = shutil.which("runtest")
         if not runtest_cmd:
-            self.dependency_error("DejaGNU is not installed.",
-                                  install_instructions=OSInfo.install_instructions("runtest", False, default="dejagnu",
-                                                                                   apt="dejagnu", homebrew="deja-gnu"),
-                                  cheribuild_target="dejagnu", cheribuild_xtarget=CompilationTargets.NATIVE)
+            self.dependency_error(
+                "DejaGNU is not installed.",
+                install_instructions=OSInfo.install_instructions(
+                    "runtest", False, default="dejagnu", apt="dejagnu", homebrew="deja-gnu"
+                ),
+                cheribuild_target="dejagnu",
+                cheribuild_xtarget=CompilationTargets.NATIVE,
+            )
         runtest_flags = "-a"
         if self.config.debug_output:
             runtest_flags += " -v -v -v"
         elif self.config.verbose:
             runtest_flags += " -v"
         if self.compiling_for_host():
-            self.run_cmd("make", "check", f"RUNTESTFLAGS={runtest_flags}", cwd=self.build_dir,
-                         env=dict(DEJAGNU=self.source_dir / ".ci/site.exp", BOARDSDIR=self.source_dir / ".ci"))
+            self.run_cmd(
+                "make",
+                "check",
+                f"RUNTESTFLAGS={runtest_flags}",
+                cwd=self.build_dir,
+                env=dict(DEJAGNU=self.source_dir / ".ci/site.exp", BOARDSDIR=self.source_dir / ".ci"),
+            )
         elif self.target_info.is_cheribsd():
             # We need two minor fixes for SSH execution:
-            runtest_ver = get_program_version(Path(runtest_cmd or "runtest"), program_name=b"DejaGnu",
-                                              config=self.config)
+            runtest_ver = get_program_version(
+                Path(runtest_cmd or "runtest"), program_name=b"DejaGnu", config=self.config
+            )
             if runtest_ver < (1, 6, 4):
-                self.dependency_error("DejaGnu version", runtest_ver, "cannot be used to run tests remotely,",
-                                      "please install a newer version with cheribuild",
-                                      cheribuild_target="dejagnu", cheribuild_xtarget=CompilationTargets.NATIVE)
+                self.dependency_error(
+                    "DejaGnu version",
+                    runtest_ver,
+                    "cannot be used to run tests remotely,",
+                    "please install a newer version with cheribuild",
+                    cheribuild_target="dejagnu",
+                    cheribuild_xtarget=CompilationTargets.NATIVE,
+                )
 
             if self.can_run_binaries_on_remote_morello_board():
-                self.write_file(self.build_dir / "site.exp", contents=f"""
+                self.write_file(
+                    self.build_dir / "site.exp",
+                    contents=f"""
 if ![info exists boards_dir] {{
     set boards_dir {{}}
 }}
@@ -223,11 +252,15 @@ lappend boards_dir "{self.build_dir}"
 verbose "Global Config File: target_triplet is $target_triplet" 2
 global target_list
 set target_list "remote-cheribsd"
-""", overwrite=True)
+""",
+                    overwrite=True,
+                )
                 ssh_options = "-o NoHostAuthenticationForLocalhost=yes"
                 ssh_port = ssh_config_parameters(self.config.remote_morello_board, self.config).get("port", "22")
                 ssh_user = ssh_config_parameters(self.config.remote_morello_board, self.config).get("user", "root")
-                self.write_file(self.build_dir / "remote-cheribsd.exp", contents=f"""
+                self.write_file(
+                    self.build_dir / "remote-cheribsd.exp",
+                    contents=f"""
 load_generic_config "unix"
 set_board_info connect ssh
 set_board_info hostname {self.config.remote_morello_board}
@@ -239,15 +272,24 @@ set_board_info ssh_opts "{ssh_options}"
 # set_board_info exec_shell "gdb-run-noninteractive.sh"
 # Build tests statically linked so they pick up the local libffi library
 set TOOL_OPTIONS -static
-""", overwrite=True)
-                self.run_cmd(["make", "check",
-                              f"RUNTESTFLAGS={runtest_flags} --target-board remote-cheribsd --xml"],
-                             env=dict(BOARDSDIR=self.build_dir, DEJAGNU=self.build_dir / "site.exp"),
-                             cwd=str(self.build_dir))
+""",
+                    overwrite=True,
+                )
+                self.run_cmd(
+                    ["make", "check", f"RUNTESTFLAGS={runtest_flags} --target-board remote-cheribsd --xml"],
+                    env=dict(BOARDSDIR=self.build_dir, DEJAGNU=self.build_dir / "site.exp"),
+                    cwd=str(self.build_dir),
+                )
             else:
-                self.target_info.run_cheribsd_test_script("run_libffi_tests.py", "--test-timeout", str(120 * 60),
-                                                          mount_builddir=True, mount_sourcedir=True,
-                                                          mount_sysroot=False, use_full_disk_image=True)
+                self.target_info.run_cheribsd_test_script(
+                    "run_libffi_tests.py",
+                    "--test-timeout",
+                    str(120 * 60),
+                    mount_builddir=True,
+                    mount_sourcedir=True,
+                    mount_sysroot=False,
+                    use_full_disk_image=True,
+                )
 
 
 class BuildWayland(CrossCompileMesonProject):
@@ -264,8 +306,13 @@ class BuildWayland(CrossCompileMesonProject):
         if target.target_info_cls.is_freebsd():
             deps += ("epoll-shim",)
         return deps
-    repository = GitRepository("https://gitlab.freedesktop.org/wayland/wayland.git", default_branch="main",
-                               force_branch=True, old_urls=[b"https://github.com/CTSRD-CHERI/wayland"])
+
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/wayland/wayland.git",
+        default_branch="main",
+        force_branch=True,
+        old_urls=[b"https://github.com/CTSRD-CHERI/wayland"],
+    )
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):

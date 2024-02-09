@@ -120,7 +120,9 @@ default_ram_size   = '0x00200000'
             # Symlink libgcc.a to the build dir to allow linking against it without adding all of <sysroot>/lib.
             self.makedirs(self.build_dir / "local-libgcc")
             self.create_symlink(
-                self.sdk_sysroot / "lib/libgcc.a", self.build_dir / "local-libgcc/libgcc.a", print_verbose_only=False,
+                self.sdk_sysroot / "lib/libgcc.a",
+                self.build_dir / "local-libgcc/libgcc.a",
+                print_verbose_only=False,
             )
         super().compile(**kwargs)
 

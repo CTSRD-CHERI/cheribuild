@@ -57,8 +57,11 @@ class BuildPkg(CrossCompileAutotoolsProject):
 
         if self.build_type.should_include_debug_info:
             self.COMMON_FLAGS.append("-g")
-        self.make_args.set_env(CPPFLAGS=self.commandline_to_str(
-            self.COMMON_FLAGS + self.compiler_warning_flags + self.optimization_flags + self.COMMON_FLAGS))
+        self.make_args.set_env(
+            CPPFLAGS=self.commandline_to_str(
+                self.COMMON_FLAGS + self.compiler_warning_flags + self.optimization_flags + self.COMMON_FLAGS
+            )
+        )
         self.make_args.set_env(LDFLAGS=self.commandline_to_str(self.default_ldflags))
 
     def compile(self, **kwargs):

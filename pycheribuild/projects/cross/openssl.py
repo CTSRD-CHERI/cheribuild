@@ -38,8 +38,9 @@ class BuildOpenSSL(CrossCompileProject):
     # nginx looks in /usr/local
     path_in_rootfs = "/usr/local"
 
-    repository = GitRepository("https://github.com/CTSRD-CHERI/openssl.git",
-                               default_branch="OpenSSL_1_1_1-stable-cheri")
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/openssl.git", default_branch="OpenSSL_1_1_1-stable-cheri"
+    )
 
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE

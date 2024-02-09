@@ -36,8 +36,7 @@ from ..run_qemu import LaunchQEMUBase
 
 
 class BuildRtems(CrossCompileProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/rtems",
-                               force_branch=True, default_branch="cheri_waf1")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/rtems", force_branch=True, default_branch="cheri_waf1")
     target = "rtems"
     include_os_in_target_suffix = False
     dependencies = ("newlib", "compiler-rt-builtins")
@@ -64,11 +63,12 @@ class BuildRtems(CrossCompileProject):
         return self.run_cmd(cmdline, cwd=self.source_dir, **kwargs)
 
     def configure(self, **kwargs):
-        waf_run = self._run_waf("bsp_defaults", "--rtems-bsps=" + ",".join(self.rtems_bsps), "--rtems-compiler=clang",
-                                capture_output=True)
+        waf_run = self._run_waf(
+            "bsp_defaults", "--rtems-bsps=" + ",".join(self.rtems_bsps), "--rtems-compiler=clang", capture_output=True
+        )
 
         # waf configure reads config.ini by default to read RTEMS flags from
-        self.write_file(self.source_dir / "config.ini", str(waf_run.stdout, 'utf-8'), overwrite=True)
+        self.write_file(self.source_dir / "config.ini", str(waf_run.stdout, "utf-8"), overwrite=True)
         self._run_waf("configure", "--prefix", self.destdir)
 
     def compile(self, **kwargs):
@@ -78,9 +78,11 @@ class BuildRtems(CrossCompileProject):
         self._run_waf("install")
 
     def process(self):
-        with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
-                          CFLAGS="--sysroot=" + str(self.sdk_sysroot),
-                          LDFLAGS="--sysroot=" + str(self.sdk_sysroot)):
+        with self.set_env(
+            PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
+            CFLAGS="--sysroot=" + str(self.sdk_sysroot),
+            LDFLAGS="--sysroot=" + str(self.sdk_sysroot),
+        ):
             super().process()
 
 

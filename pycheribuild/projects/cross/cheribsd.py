@@ -68,6 +68,7 @@ def _arch_suffixed_custom_install_dir(prefix: str) -> "ComputedDefaultValue[Path
         if not isinstance(project, BuildCHERIBSD) and xtarget.is_hybrid_or_purecap_cheri():
             raise ValueError(f"{project.target} should not build for CHERI architectures")
         return config.output_root / (prefix + project.build_configuration_suffix(xtarget))
+
     return ComputedDefaultValue(function=inner, as_string="$INSTALL_ROOT/" + prefix + "-<arch>")
 
 
@@ -111,8 +112,19 @@ class CheriBSDConfig:
     Cheribuild configuration descriptor for a CheriBSD kernel configuration file
     """
 
-    def __init__(self, kernconf: str, platforms: "set[ConfigPlatform]", kernel_abi=KernelABI.NOCHERI, default=False,
-                 nocaprevoke=False, mfsroot=False, debug=False, benchmark=False, fuzzing=False, fett=False):
+    def __init__(
+        self,
+        kernconf: str,
+        platforms: "set[ConfigPlatform]",
+        kernel_abi=KernelABI.NOCHERI,
+        default=False,
+        nocaprevoke=False,
+        mfsroot=False,
+        debug=False,
+        benchmark=False,
+        fuzzing=False,
+        fett=False,
+    ):
         self.kernconf = kernconf
         self.platforms = platforms
         self.kernel_abi = kernel_abi
@@ -127,12 +139,14 @@ class CheriBSDConfig:
     def __repr__(self) -> str:
         flags = [key for key, val in self.__dict__.items() if isinstance(val, bool) and val]
         return "CheriBSDConfig({kernconf} {platform}:{kernel_abi} [{flags}])".format(
-            kernconf=self.kernconf, platform=self.platforms, kernel_abi=self.kernel_abi.value, flags=" ".join(flags))
+            kernconf=self.kernconf, platform=self.platforms, kernel_abi=self.kernel_abi.value, flags=" ".join(flags)
+        )
 
 
 class KernelConfigFactory:
-    kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict([(k, None) for k in (
-        "kabi_name", "nocaprevoke", "platform_name", "flags")])
+    kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict(
+        [(k, None) for k in ("kabi_name", "nocaprevoke", "platform_name", "flags")]
+    )
     separator: str = "_"
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {}
 
@@ -151,8 +165,16 @@ class KernelConfigFactory:
                 return self.platform_name_map[platform]
         assert False, "Should not be reached..."
 
-    def get_flag_names(self, platforms: "set[ConfigPlatform]", kernel_abi: KernelABI, mfsroot=False, fuzzing=False,
-                       benchmark=False, default=False, nocaprevoke=False):
+    def get_flag_names(
+        self,
+        platforms: "set[ConfigPlatform]",
+        kernel_abi: KernelABI,
+        mfsroot=False,
+        fuzzing=False,
+        benchmark=False,
+        default=False,
+        nocaprevoke=False,
+    ):
         flags = []
         if mfsroot:
             flags.append(f"MFS{self.separator}ROOT")
@@ -186,8 +208,9 @@ class KernelConfigFactory:
 
 
 class RISCVKernelConfigFactory(KernelConfigFactory):
-    kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict([(k, None) for k in (
-        "kabi_name", "nocaprevoke", "platform_name", "flags")])
+    kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict(
+        [(k, None) for k in ("kabi_name", "nocaprevoke", "platform_name", "flags")]
+    )
     separator: str = "-"
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {
         ConfigPlatform.QEMU: "QEMU",
@@ -195,16 +218,27 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         ConfigPlatform.AWS: None,
     }
 
-    def get_flag_names(self, platforms: "set[ConfigPlatform]", kernel_abi: KernelABI, default=False, nocaprevoke=False,
-                       mfsroot=False, debug=False, benchmark=False, fuzzing=False, fett=False):
+    def get_flag_names(
+        self,
+        platforms: "set[ConfigPlatform]",
+        kernel_abi: KernelABI,
+        default=False,
+        nocaprevoke=False,
+        mfsroot=False,
+        debug=False,
+        benchmark=False,
+        fuzzing=False,
+        fett=False,
+    ):
         if ConfigPlatform.GFE in platforms:
             # Suppress mfsroot flag as it is implied for GFE configurations
             mfsroot = False
         flags = []
         if fett:
             flags.append("FETT")
-        flags += super().get_flag_names(platforms, kernel_abi, mfsroot=mfsroot, fuzzing=fuzzing, benchmark=benchmark,
-                                        nocaprevoke=nocaprevoke)
+        flags += super().get_flag_names(
+            platforms, kernel_abi, mfsroot=mfsroot, fuzzing=fuzzing, benchmark=benchmark, nocaprevoke=nocaprevoke
+        )
         return flags
 
     def make_all(self) -> "list[CheriBSDConfig]":
@@ -215,12 +249,14 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
             configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, benchmark=True, default=True))
             configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, mfsroot=True, default=True))
             configs.append(
-                self.make_config({ConfigPlatform.QEMU}, kernel_abi, mfsroot=True, benchmark=True, default=True))
+                self.make_config({ConfigPlatform.QEMU}, kernel_abi, mfsroot=True, benchmark=True, default=True)
+            )
         # Generate FPGA kernels
         for kernel_abi in KernelABI:
             configs.append(self.make_config({ConfigPlatform.GFE}, kernel_abi, mfsroot=True, default=True))
             configs.append(
-                self.make_config({ConfigPlatform.GFE}, kernel_abi, mfsroot=True, benchmark=True, default=True))
+                self.make_config({ConfigPlatform.GFE}, kernel_abi, mfsroot=True, benchmark=True, default=True)
+            )
             configs.append(self.make_config({ConfigPlatform.AWS}, kernel_abi, fett=True))
             configs.append(self.make_config({ConfigPlatform.AWS}, kernel_abi, fett=True, benchmark=True))
 
@@ -231,20 +267,25 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         for kernel_abi in KernelABI:
             configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, default=True))
             configs.append(
-                self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, benchmark=True, default=True))
+                self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, benchmark=True, default=True)
+            )
             configs.append(
-                self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, mfsroot=True, default=True))
+                self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, mfsroot=True, default=True)
+            )
             configs.append(
-                self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, benchmark=True, mfsroot=True,
-                                 default=True))
+                self.make_config(
+                    {ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, benchmark=True, mfsroot=True, default=True
+                )
+            )
             configs.append(self.make_config({ConfigPlatform.GFE}, kernel_abi, nocaprevoke=True, mfsroot=True))
 
         return configs
 
 
 class AArch64KernelConfigFactory(KernelConfigFactory):
-    kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict([(k, None) for k in (
-        "platform_name", "kabi_name", "nocaprevoke", "flags")])
+    kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict(
+        [(k, None) for k in ("platform_name", "kabi_name", "nocaprevoke", "flags")]
+    )
     separator: str = "-"
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {
         ConfigPlatform.QEMU: "GENERIC",
@@ -264,22 +305,37 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
         # Generate QEMU/FVP kernels
         for kernel_abi in KernelABI:
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
-                                            benchmark=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
-                                            mfsroot=True))
+            configs.append(
+                self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True, benchmark=True)
+            )
+            configs.append(
+                self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True, mfsroot=True)
+            )
         # Caprevoke kernels
         for kernel_abi in KernelABI:
-            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
-                                            nocaprevoke=True))
-            configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True,
-                                            nocaprevoke=True, benchmark=True))
+            configs.append(
+                self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True, nocaprevoke=True)
+            )
+            configs.append(
+                self.make_config(
+                    {ConfigPlatform.QEMU, ConfigPlatform.FVP},
+                    kernel_abi,
+                    default=True,
+                    nocaprevoke=True,
+                    benchmark=True,
+                )
+            )
 
         return configs
 
 
-def filter_kernel_configs(configs: "list[CheriBSDConfig]", *, platform: "Optional[ConfigPlatform]",
-                          kernel_abi: Optional[KernelABI], **filter_kwargs) -> "typing.Sequence[CheriBSDConfig]":
+def filter_kernel_configs(
+    configs: "list[CheriBSDConfig]",
+    *,
+    platform: "Optional[ConfigPlatform]",
+    kernel_abi: Optional[KernelABI],
+    **filter_kwargs,
+) -> "typing.Sequence[CheriBSDConfig]":
     """
     Helper function to filter kernel configuration lists.
     Keyword filter arguments are mapped to CheriBSDConfig properties.
@@ -346,17 +402,22 @@ class CheriBSDConfigTable:
         It is a fatal failure if 0 or more than one configurations exist.
         """
         configs = cls.get_configs(xtarget, platform=platform, kernel_abi=kernel_abi, default=True, **filter_kwargs)
-        assert len(configs) != 0, f"No matching default kernel configuration for xtarget={xtarget}, " \
-                                  f"platform={platform.name}, kernel_abi={kernel_abi.name}, " \
-                                  f"filter_kwargs={filter_kwargs}"
-        assert len(configs) == 1, f"Too many default kernel configurations {configs} for xtarget={xtarget}, " \
-                                  f"platform={platform.name}, kernel_abi={kernel_abi.name}, " \
-                                  f"filter_kwargs={filter_kwargs}"
+        assert len(configs) != 0, (
+            f"No matching default kernel configuration for xtarget={xtarget}, "
+            f"platform={platform.name}, kernel_abi={kernel_abi.name}, "
+            f"filter_kwargs={filter_kwargs}"
+        )
+        assert len(configs) == 1, (
+            f"Too many default kernel configurations {configs} for xtarget={xtarget}, "
+            f"platform={platform.name}, kernel_abi={kernel_abi.name}, "
+            f"filter_kwargs={filter_kwargs}"
+        )
         return configs[0]
 
     @classmethod
-    def get_configs(cls, xtarget, *, platform: "Optional[ConfigPlatform]", kernel_abi: "Optional[KernelABI]",
-                    **filter_kwargs):
+    def get_configs(
+        cls, xtarget, *, platform: "Optional[ConfigPlatform]", kernel_abi: "Optional[KernelABI]", **filter_kwargs
+    ):
         """
         Return all configurations for a combination of target, platform and kernel ABI.
         This filters out all the specialized configuration flags defaulting all of them
@@ -371,14 +432,16 @@ class CheriBSDConfigTable:
         return cls.get_all_configs(xtarget, platform=platform, kernel_abi=kernel_abi, **filter_kwargs)
 
     @classmethod
-    def get_all_configs(cls, xtarget, *, platform: "Optional[ConfigPlatform]", kernel_abi: "Optional[KernelABI]",
-                        **filter_kwargs):
+    def get_all_configs(
+        cls, xtarget, *, platform: "Optional[ConfigPlatform]", kernel_abi: "Optional[KernelABI]", **filter_kwargs
+    ):
         """
         Return all available configurations for a combination of
         target, group and kernel ABI filtered using kwargs.
         """
-        return filter_kernel_configs(cls.get_target_configs(xtarget), platform=platform, kernel_abi=kernel_abi,
-                                     **filter_kwargs)
+        return filter_kernel_configs(
+            cls.get_target_configs(xtarget), platform=platform, kernel_abi=kernel_abi, **filter_kwargs
+        )
 
 
 class BuildFreeBSDBase(Project):
@@ -425,20 +488,27 @@ class BuildFreeBSDBase(Project):
     def setup_config_options(cls, kernel_only_target=False, **kwargs) -> None:
         super().setup_config_options(**kwargs)
         cls.extra_make_args = cls.add_list_option(
-            "build-options", default=cls.default_extra_make_options, metavar="OPTIONS",
+            "build-options",
+            default=cls.default_extra_make_options,
+            metavar="OPTIONS",
             help="Additional make options to be passed to make when building FreeBSD/CheriBSD. See `man src.conf` "
-                 "for more info.", show_help=True)
-        cls.debug_kernel = cls.add_bool_option("debug-kernel", help="Build the kernel with -O0 and verbose boot output",
-                                               show_help=False)
+            "for more info.",
+            show_help=True,
+        )
+        cls.debug_kernel = cls.add_bool_option(
+            "debug-kernel", help="Build the kernel with -O0 and verbose boot output", show_help=False
+        )
         if kernel_only_target:
             cls.minimal = False
             cls.build_tests = False
             return  # The remaining options only affect the userspace build
 
         if "minimal" not in cls.__dict__:
-            cls.minimal = cls.add_bool_option("minimal", show_help=False,
-                                              help="Don't build all of FreeBSD, just what is needed for running most "
-                                                   "CHERI tests/benchmarks")
+            cls.minimal = cls.add_bool_option(
+                "minimal",
+                show_help=False,
+                help="Don't build all of FreeBSD, just what is needed for running most " "CHERI tests/benchmarks",
+            )
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
@@ -455,8 +525,10 @@ class BuildFreeBSDBase(Project):
 
         if self.crossbuild:
             # Use the script that I added for building on Linux/MacOS:
-            self.make_args.set_command(self.source_dir / "tools/build/make.py",
-                                       early_args=["--bootstrap-toolchain"] if self.use_bootstrapped_toolchain else [])
+            self.make_args.set_command(
+                self.source_dir / "tools/build/make.py",
+                early_args=["--bootstrap-toolchain"] if self.use_bootstrapped_toolchain else [],
+            )
 
         self.make_args.set(
             DB_FROM_SRC=True,  # don't use the system passwd file
@@ -468,8 +540,19 @@ class BuildFreeBSDBase(Project):
         self.make_args.set_with_options(CLEAN=False)
 
         if self.minimal:
-            self.make_args.set_with_options(MAN=False, KERBEROS=False, SVN=False, SVNLITE=False, MAIL=False, ZFS=False,
-                                            SENDMAIL=False, EXAMPLES=False, LOCALES=False, NLS=False, CDDL=False)
+            self.make_args.set_with_options(
+                MAN=False,
+                KERBEROS=False,
+                SVN=False,
+                SVNLITE=False,
+                MAIL=False,
+                ZFS=False,
+                SENDMAIL=False,
+                EXAMPLES=False,
+                LOCALES=False,
+                NLS=False,
+                CDDL=False,
+            )
 
         # tests off by default because they take a long time and often seems to break
         # the creation of disk-image (METALOG is invalid)
@@ -489,9 +572,15 @@ class BuildFreeBSDBase(Project):
 
         for option in self.extra_make_args:
             if not self.crosscompile_target.is_hybrid_or_purecap_cheri() and "CHERI_" in option:
-                self.warning("Should not be adding CHERI specific make option", option, "for", self.target,
-                             " -- consider setting separate", self.get_config_option_name("extra_make_args"),
-                             "in the config file.")
+                self.warning(
+                    "Should not be adding CHERI specific make option",
+                    option,
+                    "for",
+                    self.target,
+                    " -- consider setting separate",
+                    self.get_config_option_name("extra_make_args"),
+                    "in the config file.",
+                )
             if "=" in option:
                 key, value = option.split("=", 1)
                 args = {key: value}
@@ -548,20 +637,32 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return cls.get_install_dir(caller, cross_target)
 
     @classmethod
-    def setup_config_options(cls, bootstrap_toolchain=False, use_upstream_llvm: Optional[bool] = None,
-                             debug_info_by_default=True, kernel_only_target=False, **kwargs) -> None:
+    def setup_config_options(
+        cls,
+        bootstrap_toolchain=False,
+        use_upstream_llvm: Optional[bool] = None,
+        debug_info_by_default=True,
+        kernel_only_target=False,
+        **kwargs,
+    ) -> None:
         super().setup_config_options(kernel_only_target=kernel_only_target, **kwargs)
         if cls._xtarget:
             # KERNCONF always depends on the target, so we don't inherit this config option. The only exception is
             # the global --kernel-config option that is provided for convenience and backwards compat.
             cls.kernel_config = cls.add_config_option(
-                "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
+                "kernel-config",
+                metavar="CONFIG",
+                show_help=True,
+                extra_fallback_config_names=["kernel-config"],
                 default=ComputedDefaultValue(
-                    function=lambda _, p:
-                        p.default_kernel_config() if p.has_default_buildkernel_kernel_config else None,
-                    as_string="target-dependent, usually GENERIC"),
+                    function=lambda _, p: p.default_kernel_config()
+                    if p.has_default_buildkernel_kernel_config
+                    else None,
+                    as_string="target-dependent, usually GENERIC",
+                ),
                 use_default_fallback_config_names=False,  #
-                help="The kernel configuration to use for `make buildkernel`")
+                help="The kernel configuration to use for `make buildkernel`",
+            )
 
         if cls._xtarget is not None and cls._xtarget.is_hybrid_or_purecap_cheri():
             # When targeting CHERI we have to use CHERI LLVM
@@ -579,25 +680,40 @@ class BuildFreeBSD(BuildFreeBSDBase):
         else:
             # Prefer using system clang for FreeBSD builds rather than a self-built snapshot of LLVM since that might
             # have new warnings that break the -Werror build.
-            cls.build_toolchain = typing.cast(CompilerType, cls.add_config_option(
-                "toolchain", kind=CompilerType, default=CompilerType.DEFAULT_COMPILER,
-                enum_choice_strings=[t.value for t in CompilerType],
-                help="The toolchain to use for building FreeBSD. When set to 'custom', the 'toolchain-path' option "
-                     "must also be set"))
+            cls.build_toolchain = typing.cast(
+                CompilerType,
+                cls.add_config_option(
+                    "toolchain",
+                    kind=CompilerType,
+                    default=CompilerType.DEFAULT_COMPILER,
+                    enum_choice_strings=[t.value for t in CompilerType],
+                    help="The toolchain to use for building FreeBSD. When set to 'custom', the 'toolchain-path' option "
+                    "must also be set",
+                ),
+            )
             cls._cross_toolchain_root = cls.add_optional_path_option(
-                "toolchain-path", help="Path to the cross toolchain tools")
+                "toolchain-path", help="Path to the cross toolchain tools"
+            )
             # override in CheriBSD
-            cls.linker_for_world = cls.add_config_option("linker-for-world", default="lld", choices=["bfd", "lld"],
-                                                         help="The linker to use for world")
-            cls.linker_for_kernel = cls.add_config_option("linker-for-kernel", default="lld", choices=["bfd", "lld"],
-                                                          help="The linker to use for the kernel")
+            cls.linker_for_world = cls.add_config_option(
+                "linker-for-world", default="lld", choices=["bfd", "lld"], help="The linker to use for world"
+            )
+            cls.linker_for_kernel = cls.add_config_option(
+                "linker-for-kernel", default="lld", choices=["bfd", "lld"], help="The linker to use for the kernel"
+            )
 
-        cls.with_debug_info = cls.add_bool_option("debug-info", default=debug_info_by_default, show_help=True,
-                                                  help="pass make flags for building with debug info")
-        cls.with_debug_files = cls.add_bool_option("debug-files", default=True,
-                                                   help="Use split DWARF debug files if building with debug info")
+        cls.with_debug_info = cls.add_bool_option(
+            "debug-info",
+            default=debug_info_by_default,
+            show_help=True,
+            help="pass make flags for building with debug info",
+        )
+        cls.with_debug_files = cls.add_bool_option(
+            "debug-files", default=True, help="Use split DWARF debug files if building with debug info"
+        )
         cls.fast_rebuild = cls.add_bool_option(
-            "fast", help="Skip some (usually) unnecessary build steps to speed up rebuilds")
+            "fast", help="Skip some (usually) unnecessary build steps to speed up rebuilds"
+        )
 
         if kernel_only_target:
             cls.build_lib32 = False
@@ -605,26 +721,39 @@ class BuildFreeBSD(BuildFreeBSDBase):
             cls.with_manpages = False
             return  # The remaining options only affect the userspace build
 
-        subdir_default = ComputedDefaultValue(function=lambda config, proj: config.freebsd_subdir,
-                                              as_string="the value of the global --freebsd-subdir options")
+        subdir_default = ComputedDefaultValue(
+            function=lambda config, proj: config.freebsd_subdir,
+            as_string="the value of the global --freebsd-subdir options",
+        )
 
         cls.explicit_subdirs_only = cls.add_list_option(
-            "subdir", metavar="SUBDIRS", show_help=True, default=subdir_default,
+            "subdir",
+            metavar="SUBDIRS",
+            show_help=True,
+            default=subdir_default,
             help="Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding individual"
-                 " programs/libraries. If more than one dir is passed, they will be processed in order. Note: This"
-                 " will break if not all dependencies have been built.")
+            " programs/libraries. If more than one dir is passed, they will be processed in order. Note: This"
+            " will break if not all dependencies have been built.",
+        )
 
         cls.keep_old_rootfs = cls.add_bool_option(
-            "keep-old-rootfs", help="Don't remove the whole old rootfs directory.  This can speed up installing but"
-                                    " may cause strange errors so is off by default.")
-        cls.with_manpages = cls.add_bool_option("with-manpages", help="Also install manpages. This is off by default"
-                                                                      " since they can just be read from the host.")
-        cls.build_drm_kmod = cls.add_bool_option("build-drm-kmod", help="Also build drm-kmod during buildkernel",
-                                                 show_help=False)
+            "keep-old-rootfs",
+            help="Don't remove the whole old rootfs directory.  This can speed up installing but"
+            " may cause strange errors so is off by default.",
+        )
+        cls.with_manpages = cls.add_bool_option(
+            "with-manpages",
+            help="Also install manpages. This is off by default" " since they can just be read from the host.",
+        )
+        cls.build_drm_kmod = cls.add_bool_option(
+            "build-drm-kmod", help="Also build drm-kmod during buildkernel", show_help=False
+        )
         if cls._xtarget is None or not cls._xtarget.cpu_architecture.is_32bit():
             cls.build_lib32 = cls.add_bool_option(
-                "build-lib32", default=False,
-                help="Build the 32-bit compatibility userspace libraries (if supported for the current architecture)")
+                "build-lib32",
+                default=False,
+                help="Build the 32-bit compatibility userspace libraries (if supported for the current architecture)",
+            )
         else:
             # XXX: this is not correct if we were to support a CHERI-64 userspace
             assert not cls._xtarget.is_hybrid_or_purecap_cheri()
@@ -743,20 +872,31 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if cc_info.is_clang and not cc_info.is_apple_clang and cc_info.version >= min_version:
                 compiler_path = cc_info.path
             else:
-                return (None, "Could not find a system installation of clang.",
-                        "Please install a recent upstream clang or use the 'custom' or 'upstream-llvm' toolchain "
-                        "option.")
+                return (
+                    None,
+                    "Could not find a system installation of clang.",
+                    "Please install a recent upstream clang or use the 'custom' or 'upstream-llvm' toolchain "
+                    "option.",
+                )
         self.info("Checking if", compiler_path, "can be used to build FreeBSD...")
         cc_info = self.get_compiler_info(compiler_path)
         if cc_info.is_apple_clang:
-            return (None, "Cannot build FreeBSD with Apple clang.",
-                    "Please install a recent upstream clang (e.g. with homebrew) or use the 'custom' "
-                    "or 'upstream-llvm' toolchain option.")
+            return (
+                None,
+                "Cannot build FreeBSD with Apple clang.",
+                "Please install a recent upstream clang (e.g. with homebrew) or use the 'custom' "
+                "or 'upstream-llvm' toolchain option.",
+            )
         if cc_info.version < min_version:
-            return (None, "Cannot build FreeBSD with Clang older than " + ".".join(map(str, min_version)) +
-                    ". Found clang = " + str(compiler_path),
-                    "Please install a recent upstream clang (e.g. with homebrew) or use the 'custom' "
-                    "or 'upstream-llvm' toolchain option.")
+            return (
+                None,
+                "Cannot build FreeBSD with Clang older than "
+                + ".".join(map(str, min_version))
+                + ". Found clang = "
+                + str(compiler_path),
+                "Please install a recent upstream clang (e.g. with homebrew) or use the 'custom' "
+                "or 'upstream-llvm' toolchain option.",
+            )
         # Note: FreeBSD installs shell script wrappers for clang, so we can't just use
         # Path(compiler_path).resolve().parent.parent since that will try to use /usr/local/bin/clang. Instead
         # we print the resource dir (<clang-root>/lib/clang/<version>) and go up three levels from there.
@@ -785,8 +925,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def build_toolchain_root_dir(self) -> "Optional[Path]":
         if self.build_toolchain == CompilerType.BOOTSTRAPPED:
             return self.objdir / "tmp/usr"
-        elif self.build_toolchain in (CompilerType.UPSTREAM_LLVM, CompilerType.CHERI_LLVM,
-                                      CompilerType.MORELLO_LLVM):
+        elif self.build_toolchain in (CompilerType.UPSTREAM_LLVM, CompilerType.CHERI_LLVM, CompilerType.MORELLO_LLVM):
             return BuildLLVMMonoRepoBase.get_install_dir_for_type(self, self.build_toolchain)
         elif self.build_toolchain == CompilerType.SYSTEM_LLVM:
             system_clang_root, errmsg, fixit = self._try_find_compatible_system_clang()
@@ -795,8 +934,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return system_clang_root
         elif self.build_toolchain == CompilerType.CUSTOM:
             if self._cross_toolchain_root is None:
-                self.fatal("Requested custom toolchain but", self.get_config_option_name("_cross_toolchain_root"),
-                           "is not set.")
+                self.fatal(
+                    "Requested custom toolchain but",
+                    self.get_config_option_name("_cross_toolchain_root"),
+                    "is not set.",
+                )
             return self._cross_toolchain_root
         else:
             assert self.build_toolchain == CompilerType.DEFAULT_COMPILER
@@ -814,10 +956,14 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         self.cross_toolchain_config.set_with_options(
             # TODO: should we have an option to include a compiler in the target system?
-            GCC=False, CLANG=False, LLD=False,  # Take a long time and not needed in the target system
+            GCC=False,
+            CLANG=False,
+            LLD=False,  # Take a long time and not needed in the target system
             LLDB=False,  # may be useful but means we need to build LLVM
             # Bootstrap compiler/ linker are not needed:
-            GCC_BOOTSTRAP=False, CLANG_BOOTSTRAP=False, LLD_BOOTSTRAP=False,
+            GCC_BOOTSTRAP=False,
+            CLANG_BOOTSTRAP=False,
+            LLD_BOOTSTRAP=False,
         )
         if not self.build_lib32:
             # takes a long time and usually not needed.
@@ -838,7 +984,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if not xccinfo.is_clang:
             self.ask_for_confirmation("Cross compiler is not clang, are you sure you want to continue?")
         self.cross_toolchain_config.set_env(
-            XCC=self.CC, XCXX=self.CXX, XCPP=self.CPP,
+            XCC=self.CC,
+            XCXX=self.CXX,
+            XCPP=self.CPP,
             X_COMPILER_TYPE=xccinfo.compiler,  # This is needed otherwise the build assumes it should build with $CC
         )
         if not self.use_llvm_binutils:
@@ -898,8 +1046,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # TODO: should probably set that inside CheriBSD makefiles instead
             if self.target_info.is_cheribsd():
                 target_flags += " -mcpu=beri"
-            self.cross_toolchain_config.set_with_options(RESCUE=False,  # Won't compile with CHERI clang yet
-                                                         BOOT=False)  # bootloaders won't link with LLD yet
+            self.cross_toolchain_config.set_with_options(
+                RESCUE=False,  # Won't compile with CHERI clang yet
+                BOOT=False,
+            )  # bootloaders won't link with LLD yet
         elif self.compiling_for_riscv(include_purecap=True):
             target_flags = ""
         else:
@@ -965,6 +1115,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     kernel_options.remove_var("X" + binutil_name)
         if self.build_drm_kmod:
             from .drm_kmod import BuildDrmKMod
+
             drm_kmod = BuildDrmKMod.get_instance(self)
             kernel_options.set(LOCAL_MODULES=drm_kmod.source_dir.name, LOCAL_MODULES_DIR=drm_kmod.source_dir.parent)
         kernel_options.set(KERNCONF=" ".join(kernconfs))
@@ -985,7 +1136,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 cleaning_kerneldir = True
                 if kernel_dir.exists() and self.build_dir.exists():
                     assert not os.path.relpath(str(kernel_dir.resolve()), str(self.build_dir.resolve())).startswith(
-                        ".."), builddir
+                        ".."
+                    ), builddir
             else:
                 self.warning("Do not know the full path to the kernel build directory, will clean the whole tree!")
         if self.crossbuild:
@@ -1001,20 +1153,28 @@ class BuildFreeBSD(BuildFreeBSDBase):
         blacklist = ["NOTES", "LINT", "DEFAULTS"]
         self.info("Valid kernel configuration files for --" + self.target + "/kernel-config:")
         for conf in configs:
-            if (conf.name in blacklist or conf.name.startswith("std.") or conf.name.endswith(".hints") or
-                    conf.name.endswith("~")):
+            if (
+                conf.name in blacklist
+                or conf.name.startswith("std.")
+                or conf.name.endswith(".hints")
+                or conf.name.endswith("~")
+            ):
                 continue
             self.info(conf.name)
 
-    def _buildkernel(self, kernconfs: "list[str]", mfs_root_image: "Optional[Path]" = None, extra_make_args=None,
-                     ignore_skip_kernel=False) -> None:
+    def _buildkernel(
+        self,
+        kernconfs: "list[str]",
+        mfs_root_image: "Optional[Path]" = None,
+        extra_make_args=None,
+        ignore_skip_kernel=False,
+    ) -> None:
         # Check that --skip-kernel is respected. However, we ignore it for the cheribsd-mfs-root-kernel targets
         # since those targets only build a kernel.
         assert not self.config.skip_kernel or ignore_skip_kernel, "--skip-kernel set but building kernel"
         kernel_make_args = self.kernel_make_args_for_config(kernconfs, extra_make_args)
         if not self.use_bootstrapped_toolchain and not self.CC.exists():
-            self.fatal("Requested build of kernel with external toolchain, but", self.CC,
-                       "doesn't exist!")
+            self.fatal("Requested build of kernel with external toolchain, but", self.CC, "doesn't exist!")
         if self.debug_kernel:
             if any(x.endswith(("_BENCHMARK", "-NODEBUG")) for x in kernconfs):
                 if not self.query_yes_no("Trying to build BENCHMARK kernel without optimization. Continue?"):
@@ -1035,11 +1195,15 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.run_make("kernel-toolchain", options=kernel_toolchain_opts)
             self.kernel_toolchain_exists = True
         self.info("Building kernels for configs:", " ".join(kernconfs))
-        self.run_make("buildkernel", options=kernel_make_args,
-                      compilation_db_name="compile_commands_" + " ".join(kernconfs).replace(" ", "_") + ".json")
+        self.run_make(
+            "buildkernel",
+            options=kernel_make_args,
+            compilation_db_name="compile_commands_" + " ".join(kernconfs).replace(" ", "_") + ".json",
+        )
 
-    def _installkernel(self, kernconfs: "list[str]", *, install_dir: Path, extra_make_args=None,
-                       ignore_skip_kernel=False) -> None:
+    def _installkernel(
+        self, kernconfs: "list[str]", *, install_dir: Path, extra_make_args=None, ignore_skip_kernel=False
+    ) -> None:
         # Check that --skip-kernel is respected. However, we ignore it for the cheribsd-mfs-root-kernel targets
         # since those targets only build a kernel.
         assert not self.config.skip_kernel or ignore_skip_kernel, "--skip-kernel set but building kernel"
@@ -1057,8 +1221,15 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.delete_file(install_dir / "METALOG.kernel")  # Ensure that METALOG does not contain stale values.
         self.run_make("installkernel", options=install_kernel_args, parallel=False)
 
-    def _copykernel(self, kernconfs: "list[str]", rootfs_dir: Path, dest_dir: Path, *,
-                    dest_kernel_suffix: str = "", dest_all_extra: bool = False) -> None:
+    def _copykernel(
+        self,
+        kernconfs: "list[str]",
+        rootfs_dir: Path,
+        dest_dir: Path,
+        *,
+        dest_kernel_suffix: str = "",
+        dest_all_extra: bool = False,
+    ) -> None:
         """
         Copy kernels from the rootfs to the given directory (for MFS-ROOT kernels and Jenkins)
         """
@@ -1124,10 +1295,24 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if os.getuid() == 0:
                 # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
                 self._remove_schg_flag(
-                    "lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3",
-                    "libexec/ld-elf.so.1", "sbin/init", "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass",
-                    "usr/bin/ypchfn", "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
-                    "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab", "usr/lib/librt.so.1",
+                    "lib/libc.so.7",
+                    "lib/libcrypt.so.5",
+                    "lib/libthr.so.3",
+                    "libexec/ld-elf.so.1",
+                    "sbin/init",
+                    "usr/bin/chpass",
+                    "usr/bin/chsh",
+                    "usr/bin/ypchpass",
+                    "usr/bin/ypchfn",
+                    "usr/bin/ypchsh",
+                    "usr/bin/login",
+                    "usr/bin/opieinfo",
+                    "usr/bin/opiepasswd",
+                    "usr/bin/passwd",
+                    "usr/bin/yppasswd",
+                    "usr/bin/su",
+                    "usr/bin/crontab",
+                    "usr/lib/librt.so.1",
                     "var/empty",
                 )
             # We keep 3rd-party programs (anything installed in /usr/local + /opt), but delete everything else prior
@@ -1163,19 +1348,30 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 return None
             query_args = args.copy()
             query_args.set_command(bmake_binary)
-            bw_flags = [*query_args.all_commandline_args(self.config),
-                        "BUILD_WITH_STRICT_TMPPATH=0",
-                        "-f", self.source_dir / "Makefile.inc1",
-                        "-m", self.source_dir / "share/mk",
-                        "showconfig",
-                        "-D_NO_INCLUDE_COMPILERMK",  # avoid calling ${CC} --version
-                        "-V", var]
+            bw_flags = [
+                *query_args.all_commandline_args(self.config),
+                "BUILD_WITH_STRICT_TMPPATH=0",
+                "-f",
+                self.source_dir / "Makefile.inc1",
+                "-m",
+                self.source_dir / "share/mk",
+                "showconfig",
+                "-D_NO_INCLUDE_COMPILERMK",  # avoid calling ${CC} --version
+                "-V",
+                var,
+            ]
             if not self.source_dir.exists():
                 assert self.config.pretend, "This should only happen when running in a test environment"
                 return None
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
-            cmd = self.run_cmd([bmake_binary, *bw_flags], env=args.env_vars, cwd=self.source_dir,
-                               run_in_pretend_mode=True, capture_output=True, print_verbose_only=True)
+            cmd = self.run_cmd(
+                [bmake_binary, *bw_flags],
+                env=args.env_vars,
+                cwd=self.source_dir,
+                run_in_pretend_mode=True,
+                capture_output=True,
+                print_verbose_only=True,
+            )
             lines = cmd.stdout.strip().split(b"\n")
             last_line = lines[-1].decode("utf-8").strip()
             if last_line.startswith("/") and cmd.returncode == 0:
@@ -1193,8 +1389,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if result is None:
             result = Path()
         if self.realpath(result) == self.realpath(self.source_dir):
-            self.warning("bmake claims the build dir for", self.target, "is the source dir, assuming",
-                         self.build_dir, "instead.")
+            self.warning(
+                "bmake claims the build dir for", self.target, "is the source dir, assuming", self.build_dir, "instead."
+            )
             return self.build_dir
         if not result or result == Path():
             # just clean the whole directory instead
@@ -1239,8 +1436,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     # support building old versions of cheribsd before _compiler-metadata was renamed to _build-metadata
                     self.run_make("_compiler-metadata", options=install_world_args)
                 except subprocess.CalledProcessError:
-                    self.warning("Failed to run either target _compiler-metadata or "
-                                 "_build_metadata, build system has changed!")
+                    self.warning(
+                        "Failed to run either target _compiler-metadata or "
+                        "_build_metadata, build system has changed!"
+                    )
             # By default also create a sysroot when installing world
             installsysroot_args = install_world_args.copy()
             if self.has_installsysroot_target:
@@ -1271,18 +1470,19 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 def rewrite_passwd(old):
                     new = []
                     for line in old:
-                        fields = line.split(':')
+                        fields = line.split(":")
                         if len(fields) == 10 and fields[0] == "toor" and fields[1] == "*" and not fields[9]:
                             fields[1] = ""
                             fields[9] = "/bin/sh"
-                            line = ':'.join(fields)
+                            line = ":".join(fields)
                         new.append(line)
                     return new
 
                 pwd_mkdb_cmd = self.objdir / "tmp/legacy/usr/bin/pwd_mkdb"
                 self.rewrite_file(self.destdir / "etc/master.passwd", rewrite_passwd)
-                self.run_cmd([pwd_mkdb_cmd, "-p", "-d", self.install_dir / "etc",
-                              self.install_dir / "etc/master.passwd"])
+                self.run_cmd(
+                    [pwd_mkdb_cmd, "-p", "-d", self.install_dir / "etc", self.install_dir / "etc/master.passwd"]
+                )
 
         assert not sysroot_only, "Should not end up here"
         if self.config.skip_kernel:
@@ -1298,8 +1498,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self._copykernel(kernconfs=kernconfs, rootfs_dir=self.install_dir, dest_dir=self.config.output_root)
 
     def add_cross_build_options(self) -> None:
-        self.make_args.set_env(CC=self.host_CC, CXX=self.host_CXX, CPP=self.host_CPP,
-                               STRIPBIN=shutil.which("strip") or shutil.which("llvm-strip") or "strip")
+        self.make_args.set_env(
+            CC=self.host_CC,
+            CXX=self.host_CXX,
+            CPP=self.host_CPP,
+            STRIPBIN=shutil.which("strip") or shutil.which("llvm-strip") or "strip",
+        )
         if self.use_bootstrapped_toolchain:
             assert "XCC" not in self.make_args.env_vars
             # We have to provide the default X* values so that Makefile.inc1 does not disable MK_CLANG_BOOTSTRAP and
@@ -1342,22 +1546,39 @@ class BuildFreeBSD(BuildFreeBSDBase):
             args = self.buildworld_args
             args.remove_flag("-s")  # buildenv should not be silent
             if "bash" in os.getenv("SHELL", ""):
-                args.set(BUILDENV_SHELL="env -u PROMPT_COMMAND 'PS1=" + self.target + "-buildenv:\\w> ' " +
-                                        shutil.which("bash") + " --norc --noprofile")
+                args.set(
+                    BUILDENV_SHELL="env -u PROMPT_COMMAND 'PS1="
+                    + self.target
+                    + "-buildenv:\\w> ' "
+                    + shutil.which("bash")
+                    + " --norc --noprofile"
+                )
             else:
                 args.set(BUILDENV_SHELL="/bin/sh")
             buildenv_target = "buildenv"
             if self.config.libcompat_buildenv and self.libcompat_name():
                 buildenv_target = self.libcompat_name() + "buildenv"
-            self.run_cmd([self.make_args.command, *args.all_commandline_args(self.config), buildenv_target],
-                         env=args.env_vars, cwd=self.source_dir)
+            self.run_cmd(
+                [self.make_args.command, *args.all_commandline_args(self.config), buildenv_target],
+                env=args.env_vars,
+                cwd=self.source_dir,
+            )
         else:
             super().process()
 
-    def build_and_install_subdir(self, make_args, subdir, skip_build=False, skip_clean=None, skip_install=None,
-                                 install_to_internal_sysroot=True, libcompat_only=False, noncheri_only=False) -> None:
+    def build_and_install_subdir(
+        self,
+        make_args,
+        subdir,
+        skip_build=False,
+        skip_clean=None,
+        skip_install=None,
+        install_to_internal_sysroot=True,
+        libcompat_only=False,
+        noncheri_only=False,
+    ) -> None:
         is_lib = subdir.startswith("lib/") or "/lib/" in subdir or subdir.endswith("/lib")
-        make_in_subdir = "make -C \"" + subdir + "\" "
+        make_in_subdir = 'make -C "' + subdir + '" '
         if skip_clean is None:
             skip_clean = not self.with_clean
         if skip_install is None:
@@ -1367,10 +1588,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         install_to_sysroot_cmd = ""
         # We have to override INSTALL so that the sysroot installations don't end up in METALOG
         # This happens after https://github.com/freebsd/freebsd/commit/5496ab2ac950813edbd55d73c967184e033bea2f
-        install_nometalog_cmd = "INSTALL=\"install -N " + str(self.source_dir / "etc") + " -U\" METALOG=/dev/null"
+        install_nometalog_cmd = 'INSTALL="install -N ' + str(self.source_dir / "etc") + ' -U" METALOG=/dev/null'
         if is_lib and install_to_internal_sysroot:
             # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
-            sysroot_var = "\"$$$${SYSROOT}\""
+            sysroot_var = '"$$$${SYSROOT}"'
             install_to_sysroot_cmd = (
                 f"if [ -n {sysroot_var} ]; then"
                 f"  {make_in_subdir} install {install_nometalog_cmd} MK_TESTS=no DESTDIR={sysroot_var}; "
@@ -1380,7 +1601,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if install_to_sysroot_cmd:
                 install_cmd = install_to_sysroot_cmd
             else:
-                install_cmd = "echo \"  Skipping make install\""
+                install_cmd = 'echo "  Skipping make install"'
         else:
             # if we are building a library also install to the sysroot so that other targets afterwards use the
             # updated static lib
@@ -1391,11 +1612,14 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Note that installconfig doesn't fail if there is no configuration in a subdirectory.
             install_cmd = install_to_sysroot_cmd + make_in_subdir + "install installconfig " + install_nometalog_cmd
         colour_diags = "export CLANG_FORCE_COLOR_DIAGNOSTICS=always; " if self.config.clang_colour_diags else ""
-        build_cmd = "{colour_diags} {clean} && {build} && {install} && echo \"  Done.\"".format(
-            build=make_in_subdir + "all " + self.commandline_to_str(
-                self.jflag) if not skip_build else "echo \"  Skipping make all\"",
-            clean=make_in_subdir + "clean" if not skip_clean else "echo \"  Skipping make clean\"",
-            install=install_cmd, colour_diags=colour_diags)
+        build_cmd = '{colour_diags} {clean} && {build} && {install} && echo "  Done."'.format(
+            build=make_in_subdir + "all " + self.commandline_to_str(self.jflag)
+            if not skip_build
+            else 'echo "  Skipping make all"',
+            clean=make_in_subdir + "clean" if not skip_clean else 'echo "  Skipping make clean"',
+            install=install_cmd,
+            colour_diags=colour_diags,
+        )
         make_args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
         # If --libcompat-buildenv was passed skip the MIPS lib
         has_libcompat = self.crosscompile_target.is_hybrid_or_purecap_cheri() and is_lib  # TODO: handle lib32
@@ -1403,8 +1627,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.info("Skipping default ABI build of", subdir, "since --libcompat-buildenv was passed.")
         else:
             self.info("Building", subdir, "using buildenv target")
-            self.run_cmd([self.make_args.command, *make_args.all_commandline_args(self.config), "buildenv"],
-                         env=make_args.env_vars, cwd=self.source_dir)
+            self.run_cmd(
+                [self.make_args.command, *make_args.all_commandline_args(self.config), "buildenv"],
+                env=make_args.env_vars,
+                cwd=self.source_dir,
+            )
         # If we are building a library, we want to build both the CHERI and the mips version (unless the
         # user explicitly specified --libcompat-buildenv)
         if has_libcompat and not noncheri_only and self.libcompat_name():
@@ -1413,10 +1640,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
             extra_flags = ["MK_TESTS=no"]  # don't build tests since they will overwrite the non-compat ones
             self.run_cmd(
                 [self.make_args.command, *make_args.all_commandline_args(self.config), *extra_flags, compat_target],
-                env=make_args.env_vars, cwd=self.source_dir)
+                env=make_args.env_vars,
+                cwd=self.source_dir,
+            )
 
-    def _get_kernel_rootfs_install_path(self, kernconf: "Optional[str]", rootfs: Path,
-                                        default_kernconf: "Optional[str]") -> Path:
+    def _get_kernel_rootfs_install_path(
+        self, kernconf: "Optional[str]", rootfs: Path, default_kernconf: "Optional[str]"
+    ) -> Path:
         if kernconf is None or kernconf == default_kernconf:
             kerndir = "kernel"
         else:
@@ -1473,17 +1703,20 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     def clean(self) -> ThreadJoiner:
         # Bootstrapping LLVM takes forever with FreeBSD makefiles
         if self.use_bootstrapped_toolchain and not self.query_yes_no(
-                "You are about to do a clean FreeBSD build (without external toolchain). This will rebuild all of "
-                "LLVM and take a long time. Are you sure?", default_result=True):
+            "You are about to do a clean FreeBSD build (without external toolchain). This will rebuild all of "
+            "LLVM and take a long time. Are you sure?",
+            default_result=True,
+        ):
             return ThreadJoiner(None)
         return super().clean()
 
     @classmethod
     def setup_config_options(cls, install_directory_help=None, **kwargs) -> None:
         super().setup_config_options(bootstrap_toolchain=True)
-        cls.include_llvm = cls.add_bool_option("build-target-llvm",
-                                               help="Build LLVM for the target architecture. Note: this adds "
-                                                    "significant time to the build")
+        cls.include_llvm = cls.add_bool_option(
+            "build-target-llvm",
+            help="Build LLVM for the target architecture. Note: this adds " "significant time to the build",
+        )
 
     def add_cross_build_options(self) -> None:
         # Just try to build as much as possible (but using make.py)
@@ -1516,20 +1749,27 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
         super().setup_config_options(**kwargs)
         cls.tinderbox = cls.add_bool_option("tinderbox", help="Use `make tinderbox` instead of `make universe`")
         cls.worlds_only = cls.add_bool_option("worlds-only", help="Only build worlds (skip building kernels)")
-        cls.kernels_only = cls.add_bool_option("kernels-only", help="Only build kernels (skip building worlds)",
-                                               default=ComputedDefaultValue(
-                                                   function=lambda conf, proj: conf.skip_world,
-                                                   as_string="true if --skip-world is set"))
+        cls.kernels_only = cls.add_bool_option(
+            "kernels-only",
+            help="Only build kernels (skip building worlds)",
+            default=ComputedDefaultValue(
+                function=lambda conf, proj: conf.skip_world, as_string="true if --skip-world is set"
+            ),
+        )
 
-        cls.jflag_in_subjobs = cls.add_config_option("jflag-in-subjobs",
-                                                     help="Number of jobs in each world/kernel build",
-                                                     kind=int, default=ComputedDefaultValue(jflag_in_subjobs,
-                                                                                            "default -j flag / 2"))
+        cls.jflag_in_subjobs = cls.add_config_option(
+            "jflag-in-subjobs",
+            help="Number of jobs in each world/kernel build",
+            kind=int,
+            default=ComputedDefaultValue(jflag_in_subjobs, "default -j flag / 2"),
+        )
 
-        cls.jflag_for_universe = cls.add_config_option("jflag-for-universe",
-                                                       help="Number of parallel world/kernel builds",
-                                                       kind=int, default=ComputedDefaultValue(jflag_for_universe,
-                                                                                              "default -j flag / 4"))
+        cls.jflag_for_universe = cls.add_config_option(
+            "jflag-for-universe",
+            help="Number of parallel world/kernel builds",
+            kind=int,
+            default=ComputedDefaultValue(jflag_for_universe, "default -j flag / 4"),
+        )
 
     def compile(self, **kwargs) -> None:
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
@@ -1574,8 +1814,9 @@ class BuildCHERIBSD(BuildFreeBSD):
     default_directory_basename: str = "cheribsd"
     target: str = "cheribsd"
     can_build_with_system_clang: bool = False  # We need CHERI LLVM for most architectures
-    repository: GitRepository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git",
-                                              old_branches={"master": "main"})
+    repository: GitRepository = GitRepository(
+        "https://github.com/CTSRD-CHERI/cheribsd.git", old_branches={"master": "main"}
+    )
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("rootfs")
     supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
     is_sdk_target: bool = True
@@ -1595,46 +1836,70 @@ class BuildCHERIBSD(BuildFreeBSD):
     def setup_config_options(cls, kernel_only_target=False, install_directory_help=None, **kwargs) -> None:
         if install_directory_help is None:
             install_directory_help = "Install directory for CheriBSD root file system"
-        super().setup_config_options(install_directory_help=install_directory_help, use_upstream_llvm=False,
-                                     kernel_only_target=kernel_only_target)
+        super().setup_config_options(
+            install_directory_help=install_directory_help,
+            use_upstream_llvm=False,
+            kernel_only_target=kernel_only_target,
+        )
         fpga_targets = CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS
-        cls.build_fpga_kernels = cls.add_bool_option("build-fpga-kernels", show_help=True, _allow_unknown_targets=True,
-                                                     only_add_for_targets=fpga_targets,
-                                                     help="Also build kernels for the FPGA.")
-        cls.build_fett_kernels = cls.add_bool_option("build-fett-kernels", show_help=False, _allow_unknown_targets=True,
-                                                     only_add_for_targets=fpga_targets,
-                                                     help="Also build kernels for FETT.")
+        cls.build_fpga_kernels = cls.add_bool_option(
+            "build-fpga-kernels",
+            show_help=True,
+            _allow_unknown_targets=True,
+            only_add_for_targets=fpga_targets,
+            help="Also build kernels for the FPGA.",
+        )
+        cls.build_fett_kernels = cls.add_bool_option(
+            "build-fett-kernels",
+            show_help=False,
+            _allow_unknown_targets=True,
+            only_add_for_targets=fpga_targets,
+            help="Also build kernels for FETT.",
+        )
         cls.mfs_root_image = cls.add_optional_path_option(
-            "mfs-root-image", help="Path to an MFS root image to be embedded in the kernel for booting")
+            "mfs-root-image", help="Path to an MFS root image to be embedded in the kernel for booting"
+        )
 
         cls.default_kernel_abi = cls.add_config_option(
-            "default-kernel-abi", show_help=True, _allow_unknown_targets=True,
+            "default-kernel-abi",
+            show_help=True,
+            _allow_unknown_targets=True,
             only_add_for_targets=cls.purecap_kernel_targets,
-            kind=KernelABI, default=KernelABI.HYBRID,
+            kind=KernelABI,
+            default=KernelABI.HYBRID,
             enum_choices=[KernelABI.HYBRID, KernelABI.PURECAP],
-            help="Select default kernel to build")
+            help="Select default kernel to build",
+        )
 
         # We also want to add this config option to the fake "cheribsd" target (to keep the config file manageable)
         cls.build_alternate_abi_kernels = cls.add_bool_option(
-            "build-alternate-abi-kernels", show_help=True,
+            "build-alternate-abi-kernels",
+            show_help=True,
             _allow_unknown_targets=True,
             only_add_for_targets=cls.purecap_kernel_targets,
             default=True,
-            help="Also build kernels with non-default ABI (purecap or hybrid)")
+            help="Also build kernels with non-default ABI (purecap or hybrid)",
+        )
 
-        cls.build_bench_kernels = cls.add_bool_option("build-bench-kernels", show_help=True,
-                                                      _allow_unknown_targets=True,
-                                                      help="Also build benchmark kernels")
+        cls.build_bench_kernels = cls.add_bool_option(
+            "build-bench-kernels", show_help=True, _allow_unknown_targets=True, help="Also build benchmark kernels"
+        )
 
         cls.build_nocaprevoke_kernels = cls.add_bool_option(
-            "build-nocaprevoke-kernels", show_help=True, _allow_unknown_targets=True,
+            "build-nocaprevoke-kernels",
+            show_help=True,
+            _allow_unknown_targets=True,
             only_add_for_targets=CompilationTargets.ALL_CHERIBSD_CHERI_TARGETS_WITH_HYBRID,
-            help="Build kernels without caprevoke support")
+            help="Build kernels without caprevoke support",
+        )
         if kernel_only_target:
             return  # The remaining options only affect the userspace build
-        cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=False,
-                                               help="Only build a sysroot instead of the full system. This will only "
-                                                    "build the libraries and skip all binaries")
+        cls.sysroot_only = cls.add_bool_option(
+            "sysroot-only",
+            show_help=False,
+            help="Only build a sysroot instead of the full system. This will only "
+            "build the libraries and skip all binaries",
+        )
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -1655,16 +1920,22 @@ class BuildCHERIBSD(BuildFreeBSD):
             kernel_abi = KernelABI.NOCHERI
         return kernel_abi
 
-    def _get_config_variants(self, platforms: "set[ConfigPlatform]", kernel_abis: "list[KernelABI]",
-                             combine_flags: "list[str]", **filter_kwargs) -> "list[CheriBSDConfig]":
+    def _get_config_variants(
+        self,
+        platforms: "set[ConfigPlatform]",
+        kernel_abis: "list[KernelABI]",
+        combine_flags: "list[str]",
+        **filter_kwargs,
+    ) -> "list[CheriBSDConfig]":
         flag_values = itertools.product([False, True], repeat=len(combine_flags))
         combine_tuples = list(itertools.product(platforms, kernel_abis, flag_values))
         configs = []
         for platform, kernel_abi, flag_tuple in combine_tuples:
             combined_filter = {flag: v for flag, v in zip(combine_flags, flag_tuple)}
             filter_kwargs.update(combined_filter)
-            configs += CheriBSDConfigTable.get_configs(self.crosscompile_target, platform=platform,
-                                                       kernel_abi=kernel_abi, **filter_kwargs)
+            configs += CheriBSDConfigTable.get_configs(
+                self.crosscompile_target, platform=platform, kernel_abi=kernel_abi, **filter_kwargs
+            )
         return configs
 
     def _get_kernel_abis_to_build(self) -> "list[KernelABI]":
@@ -1692,8 +1963,9 @@ class BuildCHERIBSD(BuildFreeBSD):
             combinations.append("fett")
         configs = self._get_config_variants({platform}, kernel_abis, combinations)
         if self.build_fpga_kernels:
-            configs += self._get_config_variants(ConfigPlatform.fpga_platforms(), kernel_abis,
-                                                 [*combinations, "mfsroot"])
+            configs += self._get_config_variants(
+                ConfigPlatform.fpga_platforms(), kernel_abis, [*combinations, "mfsroot"]
+            )
         return configs
 
     def default_kernel_config(self, platform: "Optional[ConfigPlatform]" = None, **filter_kwargs) -> str:
@@ -1750,8 +2022,9 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def install(self, **kwargs) -> None:
         # When building we build MFS and
-        super().install(kernconfs=self.kernconf_list() + self.extra_kernels_with_mfs,
-                        sysroot_only=self.sysroot_only, **kwargs)
+        super().install(
+            kernconfs=self.kernconf_list() + self.extra_kernels_with_mfs, sysroot_only=self.sysroot_only, **kwargs
+        )
 
 
 class BuildCheriBsdMfsKernel(BuildCHERIBSD):
@@ -1763,9 +2036,9 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS,
         *CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS,
     )
-    default_build_dir: ComputedDefaultValue[Path] = \
-        ComputedDefaultValue(function=cheribsd_reuse_build_dir,
-                             as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
+    default_build_dir: ComputedDefaultValue[Path] = ComputedDefaultValue(
+        function=cheribsd_reuse_build_dir, as_string=lambda cls: BuildCHERIBSD.project_build_dir_help()
+    )
     # This exists specifically for this target
     has_default_buildkernel_kernel_config: bool = False
     # We want the CheriBSD config options as well, so that defaults (e.g. build-alternate-abi-kernels) are inherited.
@@ -1780,6 +2053,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     @cached_property
     def image(self) -> Path:
         from ..disk_image import BuildMfsRootCheriBSDDiskImage
+
         return BuildMfsRootCheriBSDDiskImage.get_instance(self).disk_image_path
 
     @classmethod
@@ -1806,16 +2080,23 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         # Install to a temporary directory and then copy the kernel to OUTPUT_ROOT
         # Don't bother with modules for the MFS kernels:
         extra_make_args = dict(NO_MODULES="yes")
-        self._buildkernel(kernconfs=kernconfs, mfs_root_image=image, extra_make_args=extra_make_args,
-                          ignore_skip_kernel=True)
+        self._buildkernel(
+            kernconfs=kernconfs, mfs_root_image=image, extra_make_args=extra_make_args, ignore_skip_kernel=True
+        )
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
             temp_rootfs = Path(td)
             build_suffix = self.crosscompile_target.build_suffix(self.config, include_os=False)
 
-            self._installkernel(kernconfs=kernconfs, install_dir=temp_rootfs, extra_make_args=extra_make_args,
-                                ignore_skip_kernel=True)
-            self._copykernel(kernconfs=kernconfs, rootfs_dir=temp_rootfs, dest_dir=self.config.cheribsd_image_root,
-                             dest_kernel_suffix=build_suffix, dest_all_extra=True)
+            self._installkernel(
+                kernconfs=kernconfs, install_dir=temp_rootfs, extra_make_args=extra_make_args, ignore_skip_kernel=True
+            )
+            self._copykernel(
+                kernconfs=kernconfs,
+                rootfs_dir=temp_rootfs,
+                dest_dir=self.config.cheribsd_image_root,
+                dest_kernel_suffix=build_suffix,
+                dest_all_extra=True,
+            )
 
     def _get_all_kernel_configs(self) -> "list[CheriBSDConfig]":
         kernel_abis = self._get_kernel_abis_to_build()
@@ -1827,8 +2108,9 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
             combinations.append("nocaprevoke")
         configs = self._get_config_variants({platform}, kernel_abis, combinations, mfsroot=True)
         if self.build_fpga_kernels:
-            configs += self._get_config_variants(ConfigPlatform.fpga_platforms(), kernel_abis,
-                                                 combinations, mfsroot=True)
+            configs += self._get_config_variants(
+                ConfigPlatform.fpga_platforms(), kernel_abis, combinations, mfsroot=True
+            )
         return configs
 
     def default_kernel_config(self, platform: "Optional[ConfigPlatform]" = None, **filter_kwargs) -> str:
@@ -1846,10 +2128,10 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
         return [c.kernconf for c in filter_kernel_configs(configs, platform=platform, kernel_abi=None)]
 
     def get_kernel_install_path(self, kernconf: "Optional[str]" = None) -> Path:
-        """ Get the installed kernel path for an MFS kernel config that has been built. """
+        """Get the installed kernel path for an MFS kernel config that has been built."""
         path = self.config.cheribsd_image_root / (
-            "kernel" + self.crosscompile_target.build_suffix(self.config, include_os=False) +
-            "." + kernconf)
+            "kernel" + self.crosscompile_target.build_suffix(self.config, include_os=False) + "." + kernconf
+        )
         return path
 
 
@@ -1946,8 +2228,9 @@ class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
             self.objdir / "tmp/legacy/bin",
             self.objdir / "tmp/obj-tools/usr.sbin/makefs",
         ]
-        release_args.set_env(PATH=":".join(map(str, extra_path_entries)) + ":" +
-                                  release_args.env_vars.get("PATH", os.getenv("PATH")))
+        release_args.set_env(
+            PATH=":".join(map(str, extra_path_entries)) + ":" + release_args.env_vars.get("PATH", os.getenv("PATH"))
+        )
 
         # DESTDIR for install target is where to install the media, as you'd
         # expect, unlike the release target where it leaks into installworld
@@ -1965,9 +2248,9 @@ class BuildFreeBSDRelease(BuildFreeBSDReleaseMixin, BuildFreeBSD):
     dependencies: "tuple[str, ...]" = ("freebsd",)
     repository: ReuseOtherProjectRepository = ReuseOtherProjectRepository(source_project=BuildFreeBSD)
     _always_add_suffixed_targets: bool = True
-    default_build_dir: ComputedDefaultValue[Path] = \
-        ComputedDefaultValue(function=freebsd_reuse_build_dir,
-                             as_string=lambda cls: BuildFreeBSD.project_build_dir_help())
+    default_build_dir: ComputedDefaultValue[Path] = ComputedDefaultValue(
+        function=freebsd_reuse_build_dir, as_string=lambda cls: BuildFreeBSD.project_build_dir_help()
+    )
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("freebsd-release")
     # We want the FreeBSD config options as well so the release installworld,
     # distributeworld etc. calls match what was built.
@@ -1979,9 +2262,9 @@ class BuildCheriBSDRelease(BuildFreeBSDReleaseMixin, BuildCHERIBSD):
     dependencies: "tuple[str, ...]" = ("cheribsd",)
     repository: ReuseOtherProjectRepository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD)
     _always_add_suffixed_targets: bool = True
-    default_build_dir: ComputedDefaultValue[Path] = \
-        ComputedDefaultValue(function=cheribsd_reuse_build_dir,
-                             as_string=lambda cls: BuildCHERIBSD.project_build_dir_help())
+    default_build_dir: ComputedDefaultValue[Path] = ComputedDefaultValue(
+        function=cheribsd_reuse_build_dir, as_string=lambda cls: BuildCHERIBSD.project_build_dir_help()
+    )
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("cheribsd-release")
     # We want the CheriBSD config options as well so the release installworld,
     # distributeworld etc. calls match what was built.
@@ -2014,25 +2297,35 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
         self.check_required_system_tool("bsdtar", cheribuild_target="bsdtar", apt="libarchive-tools")
-        if not OSInfo.IS_FREEBSD and not self.remote_path and not self.rootfs_source_class.get_instance(
-                self).crossbuild:
+        if (
+            not OSInfo.IS_FREEBSD
+            and not self.remote_path
+            and not self.rootfs_source_class.get_instance(self).crossbuild
+        ):
             config_option = "'--" + self.get_config_option_name("remote_path") + "'"
-            self.fatal("Path to the remote SDK is not set, option", config_option,
-                       "must be set to a path that scp understands (e.g. vica:~foo/cheri/output/sdk)")
+            self.fatal(
+                "Path to the remote SDK is not set, option",
+                config_option,
+                "must be set to a path that scp understands (e.g. vica:~foo/cheri/output/sdk)",
+            )
             if not self.config.pretend:
                 sys.exit("Cannot continue...")
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
-        cls.copy_remote_sysroot = cls.add_bool_option("copy-remote-sysroot",
-                                                      help="Copy sysroot from remote server instead of from local "
-                                                           "machine")
-        cls.remote_path = cls.add_config_option("remote-sdk-path", show_help=True, metavar="PATH",
-                                                help="The path to the CHERI SDK on the remote FreeBSD machine (e.g. "
-                                                     "vica:~foo/cheri/output/sdk)")
+        cls.copy_remote_sysroot = cls.add_bool_option(
+            "copy-remote-sysroot", help="Copy sysroot from remote server instead of from local " "machine"
+        )
+        cls.remote_path = cls.add_config_option(
+            "remote-sdk-path",
+            show_help=True,
+            metavar="PATH",
+            help="The path to the CHERI SDK on the remote FreeBSD machine (e.g. " "vica:~foo/cheri/output/sdk)",
+        )
         cls.install_dir_override = cls.add_optional_path_option(
-            "install-directory", help="Override for the sysroot install directory")
+            "install-directory", help="Override for the sysroot install directory"
+        )
 
     @property
     def cross_sysroot_path(self) -> Path:
@@ -2045,7 +2338,8 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         self.info("Copying sysroot from remote system.")
         if not self.remote_path:
             self.fatal(
-                "Missing remote SDK path: Please set --cheribsd-sysroot/remote-sdk-path (or --freebsd/crossbuild)")
+                "Missing remote SDK path: Please set --cheribsd-sysroot/remote-sdk-path (or --freebsd/crossbuild)"
+            )
             if self.config.pretend:
                 self.remote_path = "someuser@somehose:this/path/does/not/exist"
         # noinspection PyAttributeOutsideInit
@@ -2073,18 +2367,32 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
         bsdtar_path = shutil.which(str(self.bsdtar_cmd))
         if not bsdtar_path:
             bsdtar_path = str(self.bsdtar_cmd)
-        tar_cmd = [bsdtar_path, "cf", "-", "--include=./lib/", "--include=./usr/include/",
-                   "--include=./usr/lib/", "--include=./usr/libdata/",
-                   "--include=./usr/lib32", "--include=./usr/lib64",
-                   "--include=./usr/lib64c", "--include=./usr/lib64cb",
-                   "--include=./usr/lib128", "--include=./usr/lib128g",
-                   # only pack those files that are mentioned in METALOG
-                   "@METALOG.world"]
+        tar_cmd = [
+            bsdtar_path,
+            "cf",
+            "-",
+            "--include=./lib/",
+            "--include=./usr/include/",
+            "--include=./usr/lib/",
+            "--include=./usr/libdata/",
+            "--include=./usr/lib32",
+            "--include=./usr/lib64",
+            "--include=./usr/lib64c",
+            "--include=./usr/lib64cb",
+            "--include=./usr/lib128",
+            "--include=./usr/lib128g",
+            # only pack those files that are mentioned in METALOG
+            "@METALOG.world",
+        ]
         rootfs_target = self.rootfs_source_class.get_instance(self)
         rootfs_dir = rootfs_target.real_install_root_dir
         if not (rootfs_dir / "lib/libc.so.7").is_file():
-            self.fatal("Sysroot source directory", rootfs_dir, "does not contain libc.so.7",
-                       fixit_hint="Run `cheribuild.py " + rootfs_target.target + "` first")
+            self.fatal(
+                "Sysroot source directory",
+                rootfs_dir,
+                "does not contain libc.so.7",
+                fixit_hint="Run `cheribuild.py " + rootfs_target.target + "` first",
+            )
         print_command(tar_cmd, cwd=rootfs_dir, config=self.config)
         if not self.config.pretend:
             tar_cwd = str(rootfs_dir)
@@ -2095,8 +2403,9 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
 
         # create an archive to make it easier to copy the sysroot to another machine
         self.delete_file(self.sysroot_archive, print_verbose_only=True)
-        self.run_cmd("tar", "-caf", self.sysroot_archive, self.cross_sysroot_path.name,
-                     cwd=self.cross_sysroot_path.parent)
+        self.run_cmd(
+            "tar", "-caf", self.sysroot_archive, self.cross_sysroot_path.name, cwd=self.cross_sysroot_path.parent
+        )
         self.info("Successfully populated sysroot")
 
     def process(self) -> None:

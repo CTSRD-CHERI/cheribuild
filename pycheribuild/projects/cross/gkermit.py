@@ -40,8 +40,7 @@ class BuildGKermit(CrossCompileMakefileProject):
         super().setup()
         self.common_warning_flags.append("-Wno-unused-value")
         self.common_warning_flags.append("-Wno-non-literal-null-conversion")
-        self.make_args.set_env(KFLAGS=self.commandline_to_str(
-            [*self.default_compiler_flags, "-include", "unistd.h"]))
+        self.make_args.set_env(KFLAGS=self.commandline_to_str([*self.default_compiler_flags, "-include", "unistd.h"]))
 
     def update(self):
         filename = "gku201.tar.gz"

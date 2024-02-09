@@ -60,10 +60,8 @@ class BuildGit(CrossCompileAutotoolsProject):
                 ac_cv_snprintf_returns_bogus="no",
             )
             # Doesn't use pkg-config
-            self.configure_args.extend([
-                "--with-curl=" + str(BuildCurl.get_install_dir(self)),
-                "--with-expat=" + str(BuildExpat.get_install_dir(self)),
-                ])
+            self.configure_args.append(f"--with-curl={BuildCurl.get_install_dir(self)}")
+            self.configure_args.append(f"--with-expat={BuildExpat.get_install_dir(self)}")
             # Build-time detection of uname to determine more properties
             # Only S and R seem to be used currently, but provide sensible
             # values or, for V, a dummy kernconf (and format it like a release

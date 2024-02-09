@@ -47,8 +47,7 @@ class BuildCheriExercises(CrossCompileProject):
 
     target = "cheri-exercises"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-exercises.git")
-    supported_architectures = (CompilationTargets.CHERIBSD_RISCV_PURECAP,
-                               CompilationTargets.CHERIBSD_MORELLO_PURECAP)
+    supported_architectures = (CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_MORELLO_PURECAP)
     default_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     path_in_rootfs = "/opt/cheri-exercises"
 
@@ -58,82 +57,102 @@ class BuildCheriExercises(CrossCompileProject):
 
     def _compile_file(self, output: Path, *args, target_override: "Optional[CrossCompileTarget]" = None):
         assert isinstance(self.target_info, CheriBSDTargetInfo)
-        target_flags = self.target_info.get_essential_compiler_and_linker_flags(xtarget=target_override,
-                                                                                default_flags_only=True)
+        target_flags = self.target_info.get_essential_compiler_and_linker_flags(
+            xtarget=target_override, default_flags_only=True
+        )
         warning_flags = ["-Wall", "-Wcheri"]
-        self.run_cmd([str(self.CC), *target_flags, *warning_flags, "-g", "-fuse-ld=lld", "-o", output, *args],
-                     print_verbose_only=False)
+        self.run_cmd(
+            [str(self.CC), *target_flags, *warning_flags, "-g", "-fuse-ld=lld", "-o", output, *args],
+            print_verbose_only=False,
+        )
         self.compiled_files.append(output)
 
     def _compile_for_cheri_and_non_cheri(self, output_name_prefix: str, *src_and_args):
         non_cheri_target = self.crosscompile_target.get_non_cheri_target()
-        self._compile_file(self.build_dir / (output_name_prefix + "-" + non_cheri_target.generic_arch_suffix),
-                           *src_and_args, target_override=non_cheri_target)
+        self._compile_file(
+            self.build_dir / (output_name_prefix + "-" + non_cheri_target.generic_arch_suffix),
+            *src_and_args,
+            target_override=non_cheri_target,
+        )
         self._compile_file(self.build_dir / (output_name_prefix + "-cheri"), *src_and_args)
 
     def compile(self, **kwargs):
         # Compile and run RISC-V and CHERI-RISC-V programs
         self._compile_for_cheri_and_non_cheri(
-            "print-pointer", self.source_dir / "src/exercises/compile-and-run/print-pointer.c")
-        self._compile_file(self.build_dir / "print-capability",
-                           self.source_dir / "src/exercises/compile-and-run/print-capability.c")
+            "print-pointer", self.source_dir / "src/exercises/compile-and-run/print-pointer.c"
+        )
+        self._compile_file(
+            self.build_dir / "print-capability", self.source_dir / "src/exercises/compile-and-run/print-capability.c"
+        )
 
         # Exercise sundry inter-object buffer overflows (needs -G0)
         self._compile_for_cheri_and_non_cheri(
             "buffer-overflow-global",
-            self.source_dir / "src/exercises/buffer-overflow-global/buffer-overflow-global.c", "-G0")
+            self.source_dir / "src/exercises/buffer-overflow-global/buffer-overflow-global.c",
+            "-G0",
+        )
         self._compile_for_cheri_and_non_cheri(
-            "buffer-overflow-heap",
-            self.source_dir / "src/exercises/buffer-overflow-heap/buffer-overflow-heap.c", "-G0")
+            "buffer-overflow-heap", self.source_dir / "src/exercises/buffer-overflow-heap/buffer-overflow-heap.c", "-G0"
+        )
         self._compile_for_cheri_and_non_cheri(
             "buffer-overflow-stack",
-            self.source_dir / "src/exercises/buffer-overflow-stack/buffer-overflow-stack.c", "-G0")
+            self.source_dir / "src/exercises/buffer-overflow-stack/buffer-overflow-stack.c",
+            "-G0",
+        )
 
         # Exercise a subobject buffer overflow
         self._compile_for_cheri_and_non_cheri(
-            "subobject-bounds",
-            self.source_dir / "src/exercises/subobject-bounds/buffer-overflow-subobject.c")
+            "subobject-bounds", self.source_dir / "src/exercises/subobject-bounds/buffer-overflow-subobject.c"
+        )
         self._compile_file(
             self.build_dir / "subobject-bounds-cheri-subobject-safe",
             self.source_dir / "src/exercises/subobject-bounds/buffer-overflow-subobject.c",
-            "-Xclang", "-cheri-bounds=subobject-safe")  # compile another version with subobject bounds
+            "-Xclang",
+            "-cheri-bounds=subobject-safe",
+        )  # compile another version with subobject bounds
 
         # Corrupt a data pointer by improperly manipulating it.
         self._compile_for_cheri_and_non_cheri(
-            "corrupt-pointer", self.source_dir / "src/exercises/cheri-tags/corrupt-pointer.c")
+            "corrupt-pointer", self.source_dir / "src/exercises/cheri-tags/corrupt-pointer.c"
+        )
 
         # Corrupt a control-flow pointer using a subobject buffer overflow
         self._compile_for_cheri_and_non_cheri(
-            "buffer-overflow-fnptr", self.source_dir / "src/exercises/control-flow-pointer/buffer-overflow-fnptr.c")
+            "buffer-overflow-fnptr", self.source_dir / "src/exercises/control-flow-pointer/buffer-overflow-fnptr.c"
+        )
 
         # Exercise integer-pointer type confusion bug
         self._compile_for_cheri_and_non_cheri(
-            "union-int-ptr", self.source_dir / "src/exercises/type-confusion/union-int-ptr.c")
+            "union-int-ptr", self.source_dir / "src/exercises/type-confusion/union-int-ptr.c"
+        )
 
         # Demonstrate pointer injection
         self._compile_for_cheri_and_non_cheri(
-            "long-over-pipe", self.source_dir / "src/exercises/pointer-injection/long-over-pipe.c")
+            "long-over-pipe", self.source_dir / "src/exercises/pointer-injection/long-over-pipe.c"
+        )
         self._compile_for_cheri_and_non_cheri(
-            "ptr-over-pipe", self.source_dir / "src/exercises/pointer-injection/ptr-over-pipe.c")
+            "ptr-over-pipe", self.source_dir / "src/exercises/pointer-injection/ptr-over-pipe.c"
+        )
 
         # Demonstrate pointer revocation
         self._compile_file(
             self.build_dir / "pointer-revocation-temporal-control",
-            self.source_dir / "src/exercises/pointer-revocation/temporal-control.c")
+            self.source_dir / "src/exercises/pointer-revocation/temporal-control.c",
+        )
         self._compile_file(
             self.build_dir / "pointer-revocation-temporal-control-caprevoke",
             self.source_dir / "src/exercises/pointer-revocation/temporal-control.c",
-            "-DCAPREVOKE")
+            "-DCAPREVOKE",
+        )
 
         # Demonstrate various CheriABI properties
         self._compile_for_cheri_and_non_cheri(
-            "kern-read-over", self.source_dir / "src/exercises/cheriabi/kern-read-over.c")
+            "kern-read-over", self.source_dir / "src/exercises/cheriabi/kern-read-over.c"
+        )
 
-        self._compile_for_cheri_and_non_cheri(
-            "perm-vmem", self.source_dir / "src/exercises/cheriabi/perm-vmem.c")
+        self._compile_for_cheri_and_non_cheri("perm-vmem", self.source_dir / "src/exercises/cheriabi/perm-vmem.c")
 
-        self._compile_for_cheri_and_non_cheri(
-            "print-more", self.source_dir / "src/exercises/cheriabi/print-more.c")
+        self._compile_for_cheri_and_non_cheri("print-more", self.source_dir / "src/exercises/cheriabi/print-more.c")
 
         # TODO: Demonstrate pointer revocation (however that needs caprevoke)
 
@@ -147,8 +166,10 @@ class BuildCheriExercises(CrossCompileProject):
             self.install_file(i, self.install_dir / i.name, print_verbose_only=False)
         # Also install them to the hybrid rootfs:
         hybrid_target = self.crosscompile_target.get_cheri_hybrid_target()
-        hybrid_install_dir = self.target_info.get_rootfs_project(
-            t=Project, xtarget=hybrid_target, caller=self).install_dir / self.path_in_rootfs[1:]
+        hybrid_install_dir = (
+            self.target_info.get_rootfs_project(t=Project, xtarget=hybrid_target, caller=self).install_dir
+            / self.path_in_rootfs[1:]
+        )
         self.makedirs(hybrid_install_dir)
         if self.with_clean:
             self.clean_directory(hybrid_install_dir, ensure_dir_exists=True)

@@ -48,12 +48,15 @@ class BuildNginx(CrossCompileAutotoolsProject):
         super().setup()
         self.configure_command = self.source_dir / "auto/configure"
         if not self.compiling_for_host():
-            self.COMMON_FLAGS.extend(["-pedantic",
-                                      "-Wno-gnu-statement-expression",
-                                      "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
-                                      # "-Wno-extended-offsetof",
-                                      "-Wno-format-pedantic",
-                                      ])
+            self.COMMON_FLAGS.extend(
+                [
+                    "-pedantic",
+                    "-Wno-gnu-statement-expression",
+                    "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
+                    # "-Wno-extended-offsetof",
+                    "-Wno-format-pedantic",
+                ]
+            )
             self.configure_environment["AR"] = str(self.sdk_bindir / "cheri-unknown-freebsd-ar")
         # The makefile expects the current working directory to be the source dir. Therefore we add -f $build/Makefile
         # This is also in the makefile generated in the source dir but it doesn't work with multiple build dirs
@@ -67,9 +70,10 @@ class BuildNginx(CrossCompileAutotoolsProject):
         # install the benchmark script
         benchmark = self.read_file(self.source_dir / "nginx-benchmark.sh")
         if not self.compiling_for_host():
-            benchmark = re.sub(r'NGINX=.*', "NGINX=\"" + str(self.install_prefix / "sbin/nginx") + "\"", benchmark)
-            benchmark = re.sub(r'FETCHBENCH=.*', "FETCHBENCH=\"" + str(self.install_prefix / "sbin/fetchbench") + "\"",
-                               benchmark)
+            benchmark = re.sub(r"NGINX=.*", 'NGINX="' + str(self.install_prefix / "sbin/nginx") + '"', benchmark)
+            benchmark = re.sub(
+                r"FETCHBENCH=.*", 'FETCHBENCH="' + str(self.install_prefix / "sbin/fetchbench") + '"', benchmark
+            )
         self.write_file(self.real_install_root_dir / "nginx-benchmark.sh", benchmark, overwrite=True, mode=0o755)
 
     def needs_configure(self):
@@ -78,21 +82,28 @@ class BuildNginx(CrossCompileAutotoolsProject):
     def configure(self):
         if self.should_include_debug_info:
             self.configure_args.append("--with-debug")
-        self.configure_args.extend(["--without-pcre",
-                                    "--without-http_rewrite_module",
-                                    "--with-http_v2_module",
-                                    "--with-http_ssl_module",
-                                    "--without-http_gzip_module",
-                                    "--without-http_rewrite_module",
-                                    "--without-pcre",
-                                    "--builddir=" + str(self.build_dir)])
+        self.configure_args.extend(
+            [
+                "--without-pcre",
+                "--without-http_rewrite_module",
+                "--with-http_v2_module",
+                "--with-http_ssl_module",
+                "--without-http_gzip_module",
+                "--without-http_rewrite_module",
+                "--without-pcre",
+                "--builddir=" + str(self.build_dir),
+            ]
+        )
         if not self.compiling_for_host():
             self.LDFLAGS.append("-v")
-            self.configure_args.extend(["--crossbuild=FreeBSD:12.0-CURRENT:mips",
-                                        "--with-cc-opt=" + self.commandline_to_str(self.default_compiler_flags),
-                                        "--with-ld-opt=" + self.commandline_to_str(self.default_ldflags),
-                                        "--sysroot=" + str(self.sdk_sysroot),
-                                        ])
+            self.configure_args.extend(
+                [
+                    "--crossbuild=FreeBSD:12.0-CURRENT:mips",
+                    "--with-cc-opt=" + self.commandline_to_str(self.default_compiler_flags),
+                    "--with-ld-opt=" + self.commandline_to_str(self.default_ldflags),
+                    "--sysroot=" + str(self.sdk_sysroot),
+                ]
+            )
             self.configure_environment["CC_TEST_FLAGS"] = self.commandline_to_str(self.default_compiler_flags)
             self.configure_environment["NGX_TEST_LD_OPT"] = self.commandline_to_str(self.default_ldflags)
             self.configure_environment["NGX_SIZEOF_int"] = "4"

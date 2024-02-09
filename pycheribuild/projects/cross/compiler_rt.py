@@ -63,8 +63,9 @@ class BuildCompilerRt(CrossCompileCMakeProject):
         if is_jenkins_build():
             llvm_tools_bindir = self.llvm_project.get_native_install_path(self.config) / "bin"
         else:
-            llvm_tools_bindir = self.llvm_project.get_build_dir(
-                self, cross_target=CompilationTargets.NATIVE_NON_PURECAP) / "bin"
+            llvm_tools_bindir = (
+                self.llvm_project.get_build_dir(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP) / "bin"
+            )
         self.add_cmake_options(
             LLVM_CONFIG_PATH=llvm_tools_bindir / "llvm-config",
             LLVM_EXTERNAL_LIT=llvm_tools_bindir / "llvm-lit",
@@ -80,7 +81,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             COMPILER_RT_DEFAULT_TARGET_ONLY=not self.compiling_for_host(),
             # Per-target runtime directories don't add the purecap suffix so can't be used right now.
             LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=False,
-            )
+        )
         if self.should_include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
 
@@ -94,7 +95,8 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             # HACK: we don't really need the ubsan runtime but the toolchain pulls it in automatically
             # TODO: is there an easier way to create an empty archive?
             ubsan_runtime_path = self.install_dir / (
-                    "lib/freebsd/libclang_rt.ubsan_standalone-mips64c" + self.config.mips_cheri_bits_str + ".a")
+                "lib/freebsd/libclang_rt.ubsan_standalone-mips64c" + self.config.mips_cheri_bits_str + ".a"
+            )
             if not ubsan_runtime_path.exists():
                 self.warning("Did not install ubsan runtime", ubsan_runtime_path)
         if self.target_info.is_rtems():
@@ -103,8 +105,9 @@ class BuildCompilerRt(CrossCompileCMakeProject):
                 self.warning("Did not install compiler runtime", rt_runtime_path.exists)
             else:
                 print(self.target_info.sysroot_dir)
-                self.create_symlink(rt_runtime_path,
-                                    self.target_info.sysroot_dir / "lib/libclang_rt.builtins-riscv64.a")
+                self.create_symlink(
+                    rt_runtime_path, self.target_info.sysroot_dir / "lib/libclang_rt.builtins-riscv64.a"
+                )
 
     def run_tests(self):
         self.run_make("check-compiler-rt")
@@ -127,10 +130,12 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     is_sdk_target = True
     root_cmakelists_subdirectory = Path("lib/builtins")
     needs_sysroot = False  # We don't need a complete sysroot
-    supported_architectures = (CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS +
-                               CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS +
-                               CompilationTargets.ALL_FREESTANDING_TARGETS +
-                               CompilationTargets.ALL_NATIVE)
+    supported_architectures = (
+        CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS
+        + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
+        + CompilationTargets.ALL_FREESTANDING_TARGETS
+        + CompilationTargets.ALL_NATIVE
+    )
 
     # Note: needs to be @classproperty since it is called before __init__
     @classproperty
@@ -182,8 +187,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             self.move_file(self.install_dir / "lib/rtems5" / libname, self.install_dir / "lib" / libname)
         elif self.target_info.is_baremetal():
             self.move_file(self.install_dir / "lib/baremetal" / libname, self.real_install_root_dir / "lib" / libname)
-            self.create_symlink(self.install_dir / "lib" / libname, self.install_dir / "lib/libgcc.a",
-                                print_verbose_only=False)
+            self.create_symlink(
+                self.install_dir / "lib" / libname, self.install_dir / "lib/libgcc.a", print_verbose_only=False
+            )
 
 
 class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):

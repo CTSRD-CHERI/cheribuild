@@ -93,7 +93,8 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
             TEST_SUITE_LIT=self.llvm_lit,
             TEST_SUITE_COLLECT_CODE_SIZE=self.collect_stats,
             TEST_SUITE_COLLECT_COMPILE_TIME=self.collect_stats,
-            TEST_SUITE_COLLECT_STATS=self.collect_stats)
+            TEST_SUITE_COLLECT_STATS=self.collect_stats,
+        )
         if self.compiling_for_host() and self.target_info.is_linux() and shutil.which("perf") is not None:
             self.add_cmake_options(TEST_SUITE_USE_PERF=True)
 
@@ -103,8 +104,9 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
             self.add_cmake_options(TEST_SUITE_CXX_LIBRARY="-lc++;-lgcc_eh")
             self.add_cmake_options(BENCHMARK_USE_LIBCXX=True)
             if self.can_run_binaries_on_remote_morello_board():
-                self.add_cmake_options(TEST_SUITE_RUN_BENCHMARKS=True,
-                                       TEST_SUITE_REMOTE_HOST=self.config.remote_morello_board)
+                self.add_cmake_options(
+                    TEST_SUITE_RUN_BENCHMARKS=True, TEST_SUITE_REMOTE_HOST=self.config.remote_morello_board
+                )
             else:
                 self.add_cmake_options(TEST_SUITE_RUN_BENCHMARKS=False)  # Would need to set up custom executor
             if self.crosscompile_target.is_any_x86():
@@ -148,8 +150,10 @@ class BuildLLVMTestSuiteCheriBSDUpstreamLLVM(BuildLLVMTestSuite):
 
     @property
     def custom_c_preprocessor(self):
-        return self.llvm_project.get_install_dir(
-            self, cross_target=CompilationTargets.NATIVE_NON_PURECAP) / "bin/clang-cpp"
+        return (
+            self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP)
+            / "bin/clang-cpp"
+        )
 
     @property
     def custom_c_compiler(self):
@@ -157,5 +161,6 @@ class BuildLLVMTestSuiteCheriBSDUpstreamLLVM(BuildLLVMTestSuite):
 
     @property
     def custom_cxx_compiler(self):
-        return self.llvm_project.get_install_dir(
-            self, cross_target=CompilationTargets.NATIVE_NON_PURECAP) / "bin/clang++"
+        return (
+            self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP) / "bin/clang++"
+        )

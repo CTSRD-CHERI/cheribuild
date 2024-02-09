@@ -47,19 +47,19 @@ class DLMalloc(CrossCompileProject):
 
         cls.cheri_set_bounds = cls.add_bool_option("cheri-bounds", default=True, help="Set bounds on allocations")
 
-        cls.qmabs = cls.add_config_option("qmabs", kind=int,
-                                          help="Quarantine memory absolute threshold")
+        cls.qmabs = cls.add_config_option("qmabs", kind=int, help="Quarantine memory absolute threshold")
 
-        cls.qmratio = cls.add_config_option("qmratio", kind=float,
-                                            help="Quarantine memory ratio threshold")
+        cls.qmratio = cls.add_config_option("qmratio", kind=float, help="Quarantine memory ratio threshold")
 
-        cls.qmmin = cls.add_config_option("qmmin", kind=int,
-                                          help="Minimum amount quarantined to trigger a revocation based on ratio")
+        cls.qmmin = cls.add_config_option(
+            "qmmin", kind=int, help="Minimum amount quarantined to trigger a revocation based on ratio"
+        )
 
         cls.revoke = cls.add_bool_option("revoke", help="Revoke quarantine before reusing")
 
-        cls.consolidate_on_free = cls.add_bool_option("consolidate", default=True,
-                                                      help="Consolidate memory when quarantining")
+        cls.consolidate_on_free = cls.add_bool_option(
+            "consolidate", default=True, help="Consolidate memory when quarantining"
+        )
 
         cls.zero_memory = cls.add_bool_option("zero-memory", help="Zero allocated memory")
 
@@ -67,11 +67,12 @@ class DLMalloc(CrossCompileProject):
 
         cls.unmap_support = cls.add_bool_option("unmap-support", default=True, help="support for unmapping")
 
-        cls.unmap_threshold = cls.add_config_option("unmap-threshold", kind=int,
-                                                    help="Threshold (in pages) at which interior pages of quanantined "
-                                                         "chunks are unmapped")
-        cls.quar_unsafe = cls.add_bool_option("unsafe-quarantine",
-                                              help="Don't isolate quarantine structures")
+        cls.unmap_threshold = cls.add_config_option(
+            "unmap-threshold",
+            kind=int,
+            help="Threshold (in pages) at which interior pages of quanantined " "chunks are unmapped",
+        )
+        cls.quar_unsafe = cls.add_bool_option("unsafe-quarantine", help="Don't isolate quarantine structures")
 
     def setup(self):
         super().setup()

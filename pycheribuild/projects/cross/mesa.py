@@ -35,9 +35,11 @@ from ...utils import InstallInstructions
 class BuildLibDrm(CrossCompileMesonProject):
     target = "libdrm"
     dependencies = ("libpciaccess", "xorg-pthread-stubs")
-    repository = GitRepository("https://gitlab.freedesktop.org/mesa/drm.git",
-                               temporary_url_override="https://gitlab.freedesktop.org/arichardson/drm.git",
-                               url_override_reason="Lots of uinptr_t != u64 fun")
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/mesa/drm.git",
+        temporary_url_override="https://gitlab.freedesktop.org/arichardson/drm.git",
+        url_override_reason="Lots of uinptr_t != u64 fun",
+    )
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
@@ -55,8 +57,10 @@ class BuildLibDrm(CrossCompileMesonProject):
 class BuildLibGlvnd(CrossCompileMesonProject):
     target = "libglvnd"
     dependencies = ("libx11", "libxext")
-    repository = GitRepository("https://gitlab.freedesktop.org/glvnd/libglvnd.git",
-                               old_urls=[b"https://gitlab.freedesktop.org/arichardson/libglvnd.git"])
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/glvnd/libglvnd.git",
+        old_urls=[b"https://gitlab.freedesktop.org/arichardson/libglvnd.git"],
+    )
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
@@ -73,11 +77,14 @@ class BuildLibGlvnd(CrossCompileMesonProject):
 
 class BuildMesa(CrossCompileMesonProject):
     target = "mesa"
-    repository = GitRepository("https://gitlab.freedesktop.org/mesa/mesa.git",
-                               temporary_url_override="https://github.com/CTSRD-CHERI/mesa",
-                               url_override_reason="Various changes to allow purecap compilation",
-                               old_urls=[b"https://gitlab.freedesktop.org/arichardson/mesa.git"],
-                               force_branch=True, default_branch="mesa-22.3.7-cheriabi")
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/mesa/mesa.git",
+        temporary_url_override="https://github.com/CTSRD-CHERI/mesa",
+        url_override_reason="Various changes to allow purecap compilation",
+        old_urls=[b"https://gitlab.freedesktop.org/arichardson/mesa.git"],
+        force_branch=True,
+        default_branch="mesa-22.3.7-cheriabi",
+    )
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
     include_x11 = True
     include_wayland = True
@@ -96,8 +103,9 @@ class BuildMesa(CrossCompileMesonProject):
         try:
             self.run_cmd(sys.executable, "-c", "import mako")
         except subprocess.CalledProcessError:
-            self.dependency_error("Missing python module mako",
-                                  install_instructions=InstallInstructions("pip3 install --user mako"))
+            self.dependency_error(
+                "Missing python module mako", install_instructions=InstallInstructions("pip3 install --user mako")
+            )
 
     def setup(self):
         super().setup()
@@ -116,8 +124,16 @@ class BuildMesa(CrossCompileMesonProject):
             meson_args["gallium-drivers"].append("panfrost")
             # Does not compile yet: meson_args["vulkan-drivers"].append("panfrost")
         meson_args = {k: str(v) for k, v in meson_args.items()}
-        self.add_meson_options(gbm="enabled", egl="enabled", glvnd=True, llvm="disabled", osmesa=False,
-                               platforms=str(platforms), _include_empty_vars=True, **meson_args)
+        self.add_meson_options(
+            gbm="enabled",
+            egl="enabled",
+            glvnd=True,
+            llvm="disabled",
+            osmesa=False,
+            platforms=str(platforms),
+            _include_empty_vars=True,
+            **meson_args,
+        )
         # threads_posix.h:274:13: error: releasing mutex 'mtx' that was not held [-Werror,-Wthread-safety-analysis]
         self.cross_warning_flags.append("-Wno-thread-safety-analysis")
         # There are quite a lot of -Wcheri-capability-misuse warnings, but for now we just want the library to exist
@@ -131,8 +147,9 @@ class BuildMesa(CrossCompileMesonProject):
 class BuildLibEpoxy(CrossCompileMesonProject):
     target = "libepoxy"
     dependencies = ("libglvnd",)
-    repository = GitRepository("https://github.com/anholt/libepoxy",
-                               old_urls=[b"https://github.com/arichardson/libepoxy"])
+    repository = GitRepository(
+        "https://github.com/anholt/libepoxy", old_urls=[b"https://github.com/arichardson/libepoxy"]
+    )
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):

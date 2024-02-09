@@ -84,7 +84,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             self.add_configure_env_arg(k, v)
             # self.make_args.env_vars[k] = str(v)
             if k.endswith("_FOR_BUILD"):
-                k2 = k[0:-len("_FOR_BUILD")]
+                k2 = k[0 : -len("_FOR_BUILD")]
                 self.add_configure_env_arg(k2, v)
                 # self.make_args.env_vars[k2] = str(v)
 
@@ -101,10 +101,13 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             AS_FOR_TARGET=str(self.CC),  # + target_cflags,
             CC_FOR_TARGET=str(self.CC),  # + target_cflags,
             CXX_FOR_TARGET=str(self.CXX),  # + target_cflags,
-            AR_FOR_TARGET=self.target_info.ar, STRIP_FOR_TARGET=self.target_info.strip_tool,
-            OBJCOPY_FOR_TARGET=bindir / "objcopy", RANLIB_FOR_TARGET=self.target_info.ranlib,
+            AR_FOR_TARGET=self.target_info.ar,
+            STRIP_FOR_TARGET=self.target_info.strip_tool,
+            OBJCOPY_FOR_TARGET=bindir / "objcopy",
+            RANLIB_FOR_TARGET=self.target_info.ranlib,
             OBJDUMP_FOR_TARGET=bindir / "llvm-objdump",
-            READELF_FOR_TARGET=bindir / "readelf", NM_FOR_TARGET=self.target_info.nm,
+            READELF_FOR_TARGET=bindir / "readelf",
+            NM_FOR_TARGET=self.target_info.nm,
             # Set all the flags:
             CFLAGS_FOR_TARGET=target_cflags,
             CCASFLAGS_FOR_TARGET=target_cflags,
@@ -115,7 +118,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             CPP_FOR_BUILD=self.host_CPP,
             LD_FOR_TARGET=str(self.target_info.linker),
             LDFLAGS_FOR_TARGET=commandline_to_str(self.default_ldflags),
-            )
+        )
 
         if self.compiling_for_mips(include_purecap=True):
             # long double is the same as double for MIPS
@@ -127,36 +130,36 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             self.configure_args.append("--disable-libgloss")
 
         if self.target_info.is_baremetal():
-            self.configure_args.extend([
-                "--enable-malloc-debugging",
-                "--enable-newlib-long-time_t",  # we want time_t to be long and not int!
-                "--enable-newlib-io-c99-formats",
-                "--enable-newlib-io-long-long",
-                # --enable-newlib-io-pos-args (probably not needed)
-                "--disable-newlib-io-long-double",  # we don't need this, MIPS long double == double
-                "--enable-newlib-io-float",
-                # "--disable-newlib-supplied-syscalls"
-                "--disable-libstdcxx",  # not sure if this is needed
-
-                # we don't have any multithreading support on baremetal
-                "--disable-newlib-multithread",
-
-                "--enable-newlib-global-atexit",  # TODO: is this needed?
-                # --enable-newlib-nano-malloc (should we do this?)
-                "--disable-multilib",
-
-                # TODO: smaller lib? "--enable-target-optspace"
-
-                # FIXME: these don't seem to work
-                "--enable-serial-build-configure",
-                "--enable-serial-target-configure",
-                "--enable-serial-host-configure",
-                ])
+            self.configure_args.extend(
+                [
+                    "--enable-malloc-debugging",
+                    "--enable-newlib-long-time_t",  # we want time_t to be long and not int!
+                    "--enable-newlib-io-c99-formats",
+                    "--enable-newlib-io-long-long",
+                    # --enable-newlib-io-pos-args (probably not needed)
+                    "--disable-newlib-io-long-double",  # we don't need this, MIPS long double == double
+                    "--enable-newlib-io-float",
+                    # "--disable-newlib-supplied-syscalls"
+                    "--disable-libstdcxx",  # not sure if this is needed
+                    # we don't have any multithreading support on baremetal
+                    "--disable-newlib-multithread",
+                    "--enable-newlib-global-atexit",  # TODO: is this needed?
+                    # --enable-newlib-nano-malloc (should we do this?)
+                    "--disable-multilib",
+                    # TODO: smaller lib? "--enable-target-optspace"
+                    # FIXME: these don't seem to work
+                    "--enable-serial-build-configure",
+                    "--enable-serial-target-configure",
+                    "--enable-serial-host-configure",
+                ]
+            )
         elif self.target_info.is_rtems():
-            self.configure_args.extend([
-                "--enable-newlib-io-c99-formats",
-                "--disable-libstdcxx",  # not sure if this is needed
-                ])
+            self.configure_args.extend(
+                [
+                    "--enable-newlib-io-c99-formats",
+                    "--disable-libstdcxx",  # not sure if this is needed
+                ]
+            )
 
         if self.locale_support:
             # needed for locale support
@@ -182,21 +185,37 @@ class BuildNewlib(CrossCompileAutotoolsProject):
 
     def run_tests(self):
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
-            self.write_file(Path(td, "main.c"), contents="""
+            self.write_file(
+                Path(td, "main.c"),
+                contents="""
 #include <stdio.h>
 int main(int argc, char** argv) {
   for (int i = 0; i < argc; i++) {
     printf("argv[%d] = '%s'\\n", i, argv[i]);
   }
 }
-""", overwrite=True)
+""",
+                overwrite=True,
+            )
             test_exe = Path(td, "test.exe")
             # FIXME: CHERI helloworld
-            compiler_flags = self.essential_compiler_and_linker_flags + self.COMMON_FLAGS + [
-                "-Wl,-T,qemu-malta.ld", "-Wl,-verbose", "--sysroot=" + str(self.sdk_sysroot)]
+            compiler_flags = (
+                self.essential_compiler_and_linker_flags
+                + self.COMMON_FLAGS
+                + ["-Wl,-T,qemu-malta.ld", "-Wl,-verbose", "--sysroot=" + str(self.sdk_sysroot)]
+            )
             self.run_cmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe, *compiler_flags, "-###"], cwd=td)
             self.run_cmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe, *compiler_flags], cwd=td)
             self.run_cmd(self.sdk_bindir / "llvm-readobj", "-h", test_exe)
             from ..build_qemu import BuildQEMU
-            self.run_cmd(self.sdk_sysroot / "bin/run_with_qemu.py", "--qemu", BuildQEMU.qemu_binary(self),
-                         "--timeout", "20", test_exe, "HELLO", "WORLD")
+
+            self.run_cmd(
+                self.sdk_sysroot / "bin/run_with_qemu.py",
+                "--qemu",
+                BuildQEMU.qemu_binary(self),
+                "--timeout",
+                "20",
+                test_exe,
+                "HELLO",
+                "WORLD",
+            )

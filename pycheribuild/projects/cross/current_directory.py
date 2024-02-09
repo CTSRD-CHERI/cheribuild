@@ -48,8 +48,7 @@ def _cwd_directory_basename(_, _1):
 
 class CurrentDirectoryMixin:
     do_not_add_to_targets = True
-    default_directory_basename = ComputedDefaultValue(function=_cwd_directory_basename,
-                                                      as_string="$SOURCE_DIR_NAME")
+    default_directory_basename = ComputedDefaultValue(function=_cwd_directory_basename, as_string="$SOURCE_DIR_NAME")
     inherit_default_directory_basename = True
     repository = ExternallyManagedSourceRepository()
     source_dir = ComputedDefaultValue(function=_cwd_source_dir, as_string="$CWD")
@@ -83,11 +82,11 @@ class BuildCurrent_Directory(CurrentDirectoryMixin, CrossCompileSimpleProject): 
     @classmethod
     def dependencies(cls, _) -> "tuple[str, ...]":
         classes = [
-                BuildCurrent_Directory_Autotools,
-                BuildCurrent_Directory_CMake,
-                BuildCurrent_Directory_Makefile,
-                BuildCurrent_Directory_Meson,
-            ]
+            BuildCurrent_Directory_Autotools,
+            BuildCurrent_Directory_CMake,
+            BuildCurrent_Directory_Makefile,
+            BuildCurrent_Directory_Meson,
+        ]
         for c in classes:
             for f in c.autodetect_files:
                 if (_cwd_path / f).is_file():
