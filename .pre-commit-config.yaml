@@ -17,6 +17,9 @@ repos:
     hooks:
       - id: ruff
         stages: [ push, commit, manual ]
+      # Run the formatter.
+      - id: ruff-format
+        stages: [ push, commit, manual ]
   -   repo: https://github.com/pycqa/flake8
       rev: '7.0.0'  # pick a git hash / tag to point to
       hooks:
