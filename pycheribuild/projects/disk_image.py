@@ -306,13 +306,13 @@ class BuildDiskImageBase(SimpleProject):
         if self.include_swap_partition:
             fstab_contents += "/dev/gpt/swap none swap sw 0 0\n"
         fstab_contents += self.file_templates.get_fstab_template()
-        self.create_file_for_image("/etc/fstab", contents=fstab_contents, 
+        self.create_file_for_image("/etc/fstab", contents=fstab_contents,
                                    mode=0o644, show_contents_non_verbose=True)
 
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
         rc_conf_contents = self.file_templates.get_rc_conf_template().format(hostname=self.hostname)
-        self.create_file_for_image("/etc/rc.conf", contents=rc_conf_contents, 
+        self.create_file_for_image("/etc/rc.conf", contents=rc_conf_contents,
                                    mode=0o644, show_contents_non_verbose=False)
 
         cshrc_contents = self.file_templates.get_cshrc_template().format(SRCPATH=self.config.source_root,
