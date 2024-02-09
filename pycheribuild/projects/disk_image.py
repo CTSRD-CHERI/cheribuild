@@ -306,27 +306,29 @@ class BuildDiskImageBase(SimpleProject):
         if self.include_swap_partition:
             fstab_contents += "/dev/gpt/swap none swap sw 0 0\n"
         fstab_contents += self.file_templates.get_fstab_template()
-        self.create_file_for_image("/etc/fstab", contents=fstab_contents, show_contents_non_verbose=True)
+        self.create_file_for_image("/etc/fstab", contents=fstab_contents, 
+                                   mode=0o664, show_contents_non_verbose=True)
 
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
         rc_conf_contents = self.file_templates.get_rc_conf_template().format(hostname=self.hostname)
-        self.create_file_for_image("/etc/rc.conf", contents=rc_conf_contents, show_contents_non_verbose=False)
+        self.create_file_for_image("/etc/rc.conf", contents=rc_conf_contents, 
+                                   mode=0o664, show_contents_non_verbose=False)
 
         cshrc_contents = self.file_templates.get_cshrc_template().format(SRCPATH=self.config.source_root,
                                                                          ROOTFS_DIR=self.rootfs_dir)
-        self.create_file_for_image("/etc/csh.cshrc", contents=cshrc_contents)
+        self.create_file_for_image("/etc/csh.cshrc", contents=cshrc_contents, mode=0o664)
 
         # Basic .bashrc/.bash_profile template
         dot_bashrc_contents = self.file_templates.get_dot_bashrc_template().format(SRCPATH=self.config.source_root,
                                                                                    ROOTFS_DIR=self.rootfs_dir)
-        self.create_file_for_image("/root/.bashrc", contents=dot_bashrc_contents)
-        self.create_file_for_image("/usr/share/skel/dot.bashrc", contents=dot_bashrc_contents)
+        self.create_file_for_image("/root/.bashrc", contents=dot_bashrc_contents, mode=0o664)
+        self.create_file_for_image("/usr/share/skel/dot.bashrc", contents=dot_bashrc_contents, mode=0o664)
         dot_bash_profile_contents = self.file_templates.get_dot_bash_profile_template().format(
             SRCPATH=self.config.source_root,
             ROOTFS_DIR=self.rootfs_dir)
-        self.create_file_for_image("/root/.bash_profile", contents=dot_bash_profile_contents)
-        self.create_file_for_image("/usr/share/skel/dot.bash_profile", contents=dot_bash_profile_contents)
+        self.create_file_for_image("/root/.bash_profile", contents=dot_bash_profile_contents, mode=0o664)
+        self.create_file_for_image("/usr/share/skel/dot.bash_profile", contents=dot_bash_profile_contents, mode=0o664)
 
         # Add the mount-source/mount-rootfs/do-reroot scripts (even in the minimal image)
         # TODO: should we omit this from the minimal image?
@@ -390,7 +392,7 @@ class BuildDiskImageBase(SimpleProject):
             new_kyua_config_contents = self.read_file(kyua_config)
             new_kyua_config_contents += include_local_file("files/cheribsd/kyua.conf.append")
             self.create_file_for_image("/" + kyua_config_path, contents=new_kyua_config_contents,
-                                       show_contents_non_verbose=False)
+                                       mode=0o664, show_contents_non_verbose=False)
 
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
@@ -406,7 +408,7 @@ class BuildDiskImageBase(SimpleProject):
             new_sshd_config_contents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
             new_sshd_config_contents += "\n# Major speedup to SSH performance:\n UseDNS no\n"
             self.create_file_for_image("/etc/ssh/sshd_config", contents=new_sshd_config_contents,
-                                       show_contents_non_verbose=False)
+                                       mode=0o664, show_contents_non_verbose=False)
         # now try adding the right ~/.ssh/authorized_keys
         authorized_keys = self.extra_files_dir / "root/.ssh/authorized_keys"
         if not authorized_keys.is_file():
@@ -1125,10 +1127,10 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         self.create_file_for_image("/etc/pam.d/system", mode=0o644, show_contents_non_verbose=False,
                                    contents=include_local_file("files/minimal-image/pam.d/system"))
         # disable coredumps (since there is almost no space on the image)
-        self.create_file_for_image("/etc/sysctl.conf", show_contents_non_verbose=False,
+        self.create_file_for_image("/etc/sysctl.conf", mode=0o644, show_contents_non_verbose=False,
                                    contents=include_local_file("files/minimal-image/etc/sysctl.conf"))
         # The actual minimal startup file:
-        self.create_file_for_image("/etc/rc", show_contents_non_verbose=False,
+        self.create_file_for_image("/etc/rc", mode=0o644, show_contents_non_verbose=False,
                                    contents=include_local_file("files/minimal-image/etc/rc"))
 
     def make_rootfs_image(self, rootfs_img: Path):
