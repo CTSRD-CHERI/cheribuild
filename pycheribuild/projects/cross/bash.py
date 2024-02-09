@@ -31,12 +31,12 @@ from ..simple_project import BoolConfigOption
 
 
 class BuildBash(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/bash",
-                               default_branch="cheri")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/bash", default_branch="cheri")
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     path_in_rootfs = "/usr/local"
-    set_as_root_shell = BoolConfigOption("set-as-root-shell", show_help=True,
-                                         help="Set root's shell to bash (in the target rootfs)")
+    set_as_root_shell = BoolConfigOption(
+        "set-as-root-shell", show_help=True, help="Set root's shell to bash (in the target rootfs)"
+    )
 
     def setup(self):
         super().setup()
@@ -63,12 +63,13 @@ class BuildBash(CrossCompileAutotoolsProject):
             self.create_symlink(Path("/usr/local/bin/bash"), self.destdir / "bin/bash", relative=False)
             self.add_unique_line_to_file(self.destdir / "etc/shells", "/usr/local/bin/bash")
             if self.set_as_root_shell:
+
                 def rewrite(old):
                     new = []
                     for line in old:
-                        fields = line.split(':')
+                        fields = line.split(":")
                         if len(fields) == 10 and fields[0] == "root":
-                            line = ':'.join(fields[0:9] + ["/usr/local/bin/bash"])
+                            line = ":".join(fields[0:9] + ["/usr/local/bin/bash"])
                         new.append(line)
                     return new
 

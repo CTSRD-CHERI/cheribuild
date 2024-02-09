@@ -40,22 +40,25 @@ from ..run_qemu import LaunchQEMUBase
 
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/FreeRTOS-mirror",
-                               force_branch=True, default_branch="cheri")
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/FreeRTOS-mirror", force_branch=True, default_branch="cheri"
+    )
     target = "freertos"
     dependencies = ("newlib", "compiler-rt-builtins")
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = (
         CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
-        CompilationTargets.BAREMETAL_NEWLIB_RISCV64)
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
+    )
     default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     # FreeRTOS Demos to build
     supported_freertos_demos = [
         # Generic/simple (CHERI-)RISC-V Demo that runs main_blinky on simulators
         # and simple SoCs
-        "RISC-V-Generic"]
+        "RISC-V-Generic"
+    ]
 
     # Map Demos and the FreeRTOS apps we support building/running for
     supported_demo_apps = {"RISC-V-Generic": ["main_blinky"]}
@@ -68,9 +71,11 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.default_demo_app = "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target,
-                                                                                      softfloat=True) + \
-                                self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
+        self.default_demo_app = (
+            "qemu_virt-"
+            + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True)
+            + self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
+        )
 
     def setup(self):
         super().setup()
@@ -100,26 +105,47 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
-        cls.demo: str = typing.cast(str, cls.add_config_option(
-            "demo", metavar="DEMO", show_help=True, default=cls.default_demo,
-            help="The FreeRTOS Demo build."))
+        cls.demo: str = typing.cast(
+            str,
+            cls.add_config_option(
+                "demo", metavar="DEMO", show_help=True, default=cls.default_demo, help="The FreeRTOS Demo build."
+            ),
+        )
 
-        cls.demo_app: str = typing.cast(str, cls.add_config_option(
-            "prog", metavar="PROG", show_help=True, default=cls.default_demo_app,
-            help="The FreeRTOS program to build."))
+        cls.demo_app: str = typing.cast(
+            str,
+            cls.add_config_option(
+                "prog",
+                metavar="PROG",
+                show_help=True,
+                default=cls.default_demo_app,
+                help="The FreeRTOS program to build.",
+            ),
+        )
 
-        cls.demo_bsp: str = typing.cast(str, cls.add_config_option(
-            "bsp", metavar="BSP", show_help=True,
-            default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
-                                         as_string="target-dependent default"),
-            help="The FreeRTOS BSP to build. This is only valid for the "
-                 "paramterized RISC-V-Generic. The BSP option chooses "
-                 "platform, RISC-V arch and RISC-V abi in the "
-                 "$platform-$arch-$abi format. See RISC-V-Generic/README for more details"))
+        cls.demo_bsp: str = typing.cast(
+            str,
+            cls.add_config_option(
+                "bsp",
+                metavar="BSP",
+                show_help=True,
+                default=ComputedDefaultValue(
+                    function=lambda _, p: p.default_demo_bsp(), as_string="target-dependent default"
+                ),
+                help="The FreeRTOS BSP to build. This is only valid for the "
+                "paramterized RISC-V-Generic. The BSP option chooses "
+                "platform, RISC-V arch and RISC-V abi in the "
+                "$platform-$arch-$abi format. See RISC-V-Generic/README for more details",
+            ),
+        )
 
     def default_demo_bsp(self):
-        return "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True) + "-" + \
-               self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
+        return (
+            "qemu_virt-"
+            + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True)
+            + "-"
+            + self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
+        )
 
     def compile(self, **kwargs):
         self.make_args.set(BSP=self.demo_bsp)
@@ -129,8 +155,10 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         self.make_args.set(PROG=self.demo_app)
         self.run_make("clean", cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
         self.run_make(cwd=self.source_dir / str("FreeRTOS/Demo/" + self.demo))
-        self.move_file(self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo_app + ".elf"),
-                       self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"))
+        self.move_file(
+            self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo_app + ".elf"),
+            self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"),
+        )
 
     def configure(self):
         pass
@@ -141,7 +169,8 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     def install(self, **kwargs):
         self.install_file(
             self.source_dir / str("FreeRTOS/Demo/" + self.demo + "/" + self.demo + self.demo_app + ".elf"),
-            self.real_install_root_dir / str("FreeRTOS/Demo/" + self.demo + "_" + self.demo_app + ".elf"))
+            self.real_install_root_dir / str("FreeRTOS/Demo/" + self.demo + "_" + self.demo_app + ".elf"),
+        )
 
     def process(self):
         if self.demo not in self.supported_freertos_demos:
@@ -150,17 +179,21 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         if self.demo_app not in self.supported_demo_apps[self.demo]:
             self.fatal(self.demo + " Demo doesn't support/have " + self.demo_app)
 
-        with self.set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
-                          # Add compiler-rt location to the search path
-                          LDFLAGS="-L" + str(BuildCompilerRtBuiltins.get_install_dir(self) / "lib")):
+        with self.set_env(
+            PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
+            # Add compiler-rt location to the search path
+            LDFLAGS="-L" + str(BuildCompilerRtBuiltins.get_install_dir(self) / "lib"),
+        ):
             super().process()
 
 
 class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     target = "run-freertos"
     dependencies = ("freertos",)
-    supported_architectures = (CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
-                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64)
+    supported_architectures = (
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
+    )
     forward_ssh_port = False
     qemu_user_networking = False
     _enable_smbfs_support = False
@@ -179,26 +212,47 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(defaultSshPort=None, **kwargs)
 
-        cls.demo: str = typing.cast(str, cls.add_config_option(
-            "demo", metavar="DEMO", show_help=True, default=cls.default_demo,
-            help="The FreeRTOS Demo to run."))
+        cls.demo: str = typing.cast(
+            str,
+            cls.add_config_option(
+                "demo", metavar="DEMO", show_help=True, default=cls.default_demo, help="The FreeRTOS Demo to run."
+            ),
+        )
 
-        cls.demo_app: str = typing.cast(str, cls.add_config_option(
-            "prog", metavar="PROG", show_help=True, default=cls.default_demo_app,
-            help="The FreeRTOS program to run."))
+        cls.demo_app: str = typing.cast(
+            str,
+            cls.add_config_option(
+                "prog",
+                metavar="PROG",
+                show_help=True,
+                default=cls.default_demo_app,
+                help="The FreeRTOS program to run.",
+            ),
+        )
 
-        cls.demo_bsp = typing.cast(str, cls.add_config_option(
-            "bsp", metavar="BSP", show_help=True,
-            default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
-                                         as_string="target-dependent default"),
-            help="The FreeRTOS BSP to run. This is only valid for the "
-                 "paramterized RISC-V-Generic. The BSP option chooses "
-                 "platform, RISC-V arch and RISC-V abi in the "
-                 "$platform-$arch-$abi format. See RISC-V-Generic/README for more details"))
+        cls.demo_bsp = typing.cast(
+            str,
+            cls.add_config_option(
+                "bsp",
+                metavar="BSP",
+                show_help=True,
+                default=ComputedDefaultValue(
+                    function=lambda _, p: p.default_demo_bsp(), as_string="target-dependent default"
+                ),
+                help="The FreeRTOS BSP to run. This is only valid for the "
+                "paramterized RISC-V-Generic. The BSP option chooses "
+                "platform, RISC-V arch and RISC-V abi in the "
+                "$platform-$arch-$abi format. See RISC-V-Generic/README for more details",
+            ),
+        )
 
     def default_demo_bsp(self):
-        return "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True) + "-" + \
-               self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
+        return (
+            "qemu_virt-"
+            + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True)
+            + "-"
+            + self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
+        )
 
     def get_riscv_bios_args(self) -> "list[str]":
         # Use -bios none to ensure the FreeRTOS demo application runs in machine mode.

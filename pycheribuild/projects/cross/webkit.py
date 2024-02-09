@@ -41,30 +41,39 @@ class JsBackend(Enum):
 
 
 class BuildMorelloWebkit(CrossCompileCMakeProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/webkit",
-                               default_branch="master")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/webkit", default_branch="master")
     default_directory_basename = "webkit"
     target = "morello-webkit"
     dependencies = ("icu4c",)
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     tier2ptrliterals = BoolConfigOption(
-        "tier2ptrliterals", default=True, show_help=True,
+        "tier2ptrliterals",
+        default=True,
+        show_help=True,
         help="When true pointers are represented as atomic literals and loaded as data and when false pointers "
-             "are represented as numeric values which can be splitted and are encoded into instructions. "
-             "This option only affects the non-purecap tier2 backend.")
+        "are represented as numeric values which can be splitted and are encoded into instructions. "
+        "This option only affects the non-purecap tier2 backend.",
+    )
     jsheapoffsets = BoolConfigOption(
-        "jsheapoffsets", default=False, show_help=True,
+        "jsheapoffsets",
+        default=False,
+        show_help=True,
         help="Use offsets into the JS heap for object references instead of capabilities. "
-             "This option only affects the purecap backends.")
+        "This option only affects the purecap backends.",
+    )
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.backend = cls.add_config_option(
-            "backend", kind=JsBackend,
-            default=JsBackend.CLOOP, enum_choice_strings=[t.value for t in JsBackend],
-            show_help=True, help="The JavaScript backend to use for building WebKit")
+            "backend",
+            kind=JsBackend,
+            default=JsBackend.CLOOP,
+            enum_choice_strings=[t.value for t in JsBackend],
+            show_help=True,
+            help="The JavaScript backend to use for building WebKit",
+        )
 
     @property
     def build_dir_suffix(self):
@@ -109,7 +118,7 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
             ENABLE_YARR_JIT=False,
             ENABLE_SAMPLING_PROFILER=False,
             CHERI_PURE_CAPABILITY=self.crosscompile_target.is_cheri_purecap(),
-            )
+        )
 
         if self.crosscompile_target.is_cheri_purecap():
             # TODO: we can get this from the pre-processor instead
@@ -122,19 +131,29 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
 
         # Add options for each backend
         if self.backend == JsBackend.CLOOP:
-            self.add_cmake_options(ENABLE_C_LOOP=True, ENABLE_ASSEMBLER=False, ENABLE_JIT=False,
-                                   ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=False)
+            self.add_cmake_options(
+                ENABLE_C_LOOP=True,
+                ENABLE_ASSEMBLER=False,
+                ENABLE_JIT=False,
+                ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=False,
+            )
         elif self.backend == JsBackend.TIER1ASM:
-            self.add_cmake_options(ENABLE_C_LOOP=False, ENABLE_ASSEMBLER=True, ENABLE_JIT=False,
-                                   ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=True)
+            self.add_cmake_options(
+                ENABLE_C_LOOP=False,
+                ENABLE_ASSEMBLER=True,
+                ENABLE_JIT=False,
+                ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=True,
+            )
         elif self.backend == JsBackend.TIER2ASM:
-            self.add_cmake_options(ENABLE_C_LOOP=False, ENABLE_ASSEMBLER=True, ENABLE_DISASSEMBLER=True,
-                                   ENABLE_JIT=True)
+            self.add_cmake_options(
+                ENABLE_C_LOOP=False, ENABLE_ASSEMBLER=True, ENABLE_DISASSEMBLER=True, ENABLE_JIT=True
+            )
             if self.crosscompile_target.is_cheri_purecap():
                 if self.jsheapoffsets:
                     self.warning("integer heap offsets are not yet supported for the tier 2 backend!")
-                self.add_cmake_options(ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=True,
-                                       ENABLE_JSHEAP_CHERI_OFFSET_REFS=False)
+                self.add_cmake_options(
+                    ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=True, ENABLE_JSHEAP_CHERI_OFFSET_REFS=False
+                )
             else:
                 self.add_cmake_options(ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=self.tier2ptrliterals)
 
@@ -143,5 +162,6 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
             self.fatal("Running host tests not implemented")
         else:
             # full disk image to get icu library
-            self.target_info.run_cheribsd_test_script("run_morello_webkit_tests.py", mount_sourcedir=True,
-                                                      use_full_disk_image=True)
+            self.target_info.run_cheribsd_test_script(
+                "run_morello_webkit_tests.py", mount_sourcedir=True, use_full_disk_image=True
+            )

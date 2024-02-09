@@ -46,8 +46,9 @@ class BuildRLBox(CrossCompileCMakeProject):
             self.run_make("test")
         else:
             args = ["--verbose"] if self.config.verbose else []
-            self.target_info.run_cheribsd_test_script("run_rlbox_tests.py", *args, mount_builddir=True,
-                                                      mount_sourcedir=True, mount_sysroot=True)
+            self.target_info.run_cheribsd_test_script(
+                "run_rlbox_tests.py", *args, mount_builddir=True, mount_sourcedir=True, mount_sysroot=True
+            )
 
 
 class BuildCatch2(CrossCompileCMakeProject):

@@ -48,26 +48,27 @@ class SNMalloc(CrossCompileCMakeProject):
 
         cls.check_client = cls.add_bool_option("check-client", help="Don't accept malformed input to free")
 
-        cls.pagemap_pointers = cls.add_bool_option("pagemap-pointers",
-                                                   help="Change pagemap data structure to store pointers")
-        cls.pagemap_rederive = cls.add_bool_option("pagemap-rederive",
-                                                   help="Rederive internal pointers using the pagemap")
+        cls.pagemap_pointers = cls.add_bool_option(
+            "pagemap-pointers", help="Change pagemap data structure to store pointers"
+        )
+        cls.pagemap_rederive = cls.add_bool_option(
+            "pagemap-rederive", help="Rederive internal pointers using the pagemap"
+        )
         cls.cheri_align = cls.add_bool_option("cheri-align", help="Align sizes for CHERI bounds setting")
         cheri_bounds_default = cls._xtarget is not None and cls._xtarget.is_cheri_purecap()
-        cls.cheri_bounds = cls.add_bool_option("cheri-bounds", default=cheri_bounds_default,
-                                               help="Set bounds on returned allocations")
+        cls.cheri_bounds = cls.add_bool_option(
+            "cheri-bounds", default=cheri_bounds_default, help="Set bounds on returned allocations"
+        )
 
         cls.quarantine = cls.add_bool_option("quarantine", help="Quarantine deallocations")
 
-        cls.qpathresh = cls.add_config_option("qpathresh", kind=int,
-                                              help="Quarantine physical memory per allocator threshold")
-        cls.qpacthresh = cls.add_config_option("qpacthresh", kind=int,
-                                               help="Quarantine chunk per allocator threshold")
-        cls.qcsc = cls.add_config_option("qcsc", kind=int,
-                                         help="Quarantine chunk size class")
+        cls.qpathresh = cls.add_config_option(
+            "qpathresh", kind=int, help="Quarantine physical memory per allocator threshold"
+        )
+        cls.qpacthresh = cls.add_config_option("qpacthresh", kind=int, help="Quarantine chunk per allocator threshold")
+        cls.qcsc = cls.add_config_option("qcsc", kind=int, help="Quarantine chunk size class")
 
-        cls.decommit = cls.add_config_option("decommit", kind=str,
-                                             help="Specify memory decommit policy")
+        cls.decommit = cls.add_config_option("decommit", kind=str, help="Specify memory decommit policy")
 
         cls.zero = cls.add_bool_option("zero", help="Specify memory decommit policy")
 
@@ -106,8 +107,9 @@ class SNMalloc(CrossCompileCMakeProject):
         self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_PARANOIA=%d" % self.revoke_paranoia)
         self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_THROUGHPUT=%d" % self.revoke_tput)
         self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_CHATTY=%d" % self.revoke_verbose)
-        self.COMMON_FLAGS.append("-DSNMALLOC_DEFAULT_ZERO=%s" %
-                                 ("ZeroMem::YesZero" if self.zero else "ZeroMem::NoZero"))
+        self.COMMON_FLAGS.append(
+            "-DSNMALLOC_DEFAULT_ZERO=%s" % ("ZeroMem::YesZero" if self.zero else "ZeroMem::NoZero")
+        )
 
         if self.decommit is not None:
             self.COMMON_FLAGS.append("-DUSE_DECOMMIT_STRATEGY=%s" % self.decommit)

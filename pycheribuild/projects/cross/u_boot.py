@@ -51,8 +51,7 @@ def uboot_install_dir(config: CheriConfig, project: "BuildUBoot") -> Path:
 
 class BuildUBoot(Project):
     target = "u-boot"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/u-boot",
-                               default_branch="cheri")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/u-boot", default_branch="cheri")
     dependencies = ("compiler-rt-builtins",)
     needs_sysroot = False  # We don't need a complete sysroot
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
@@ -64,9 +63,9 @@ class BuildUBoot(Project):
     )
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
-    _default_install_dir_fn: ComputedDefaultValue[Path] = \
-        ComputedDefaultValue(function=uboot_install_dir,
-                             as_string="$SDK_ROOT/u-boot/riscv{32,64}{,-hybrid,-purecap}")
+    _default_install_dir_fn: ComputedDefaultValue[Path] = ComputedDefaultValue(
+        function=uboot_install_dir, as_string="$SDK_ROOT/u-boot/riscv{32,64}{,-hybrid,-purecap}"
+    )
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
@@ -95,7 +94,7 @@ class BuildUBoot(Project):
             # any relocations (and BFD lets it do this).
             OBJCOPY=str(self.sdk_bindir / "llvm-objcopy") + " --allow-broken-links",
             OBJDUMP=self.sdk_bindir / "llvm-objdump",
-            )
+        )
 
         self.kconfig_overrides = {
             "CONFIG_SREC": False,
@@ -124,8 +123,9 @@ class BuildUBoot(Project):
         return self.install_dir / "u-boot"
 
     @classmethod
-    def get_firmware_path(cls, caller, config: "Optional[CheriConfig]" = None,
-                          cross_target: "Optional[CrossCompileTarget]" = None):
+    def get_firmware_path(
+        cls, caller, config: "Optional[CheriConfig]" = None, cross_target: "Optional[CrossCompileTarget]" = None
+    ):
         return cls.get_instance(caller, config=config, cross_target=cross_target).firmware_path
 
     def configure(self, **kwargs):
@@ -156,7 +156,7 @@ class BuildUBoot(Project):
             self.install_file(self.build_dir / "u-boot", qemu_fw_path)
 
     def run_make(self, *args, **kwargs):
-        if 'cwd' in kwargs:
-            assert kwargs['cwd'] == self.build_dir
-            del kwargs['cwd']
+        if "cwd" in kwargs:
+            assert kwargs["cwd"] == self.build_dir
+            del kwargs["cwd"]
         super().run_make(*args, **kwargs, cwd=self.source_dir)

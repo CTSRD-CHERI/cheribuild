@@ -47,13 +47,12 @@ class BuildDeviceModel(CrossCompileAutotoolsProject):
         self.run_make("purecap")
 
     def install(self, **kwargs):
-        self.install_file(self.build_dir / "obj/device-model-riscv.bin",
-                          self.real_install_root_dir / "device-model-riscv.bin")
+        self.install_file(
+            self.build_dir / "obj/device-model-riscv.bin", self.real_install_root_dir / "device-model-riscv.bin"
+        )
 
     def setup(self):
         super().setup()
         cc = self.config.cheri_sdk_bindir / "clang"
         objcopy = self.config.cheri_sdk_bindir / "objcopy"
-        self.make_args.env_vars = {"CC": str(cc),
-                                   "AS": str(cc),
-                                   "OBJCOPY": str(objcopy)}
+        self.make_args.env_vars = {"CC": str(cc), "AS": str(cc), "OBJCOPY": str(objcopy)}

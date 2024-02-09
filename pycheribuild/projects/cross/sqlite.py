@@ -31,8 +31,9 @@ from .crosscompileproject import CrossCompileAutotoolsProject, GitRepository
 
 
 class BuildSQLite(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
-                               default_branch="3.22.0-cheri", force_branch=True)
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/sqlite.git", default_branch="3.22.0-cheri", force_branch=True
+    )
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()

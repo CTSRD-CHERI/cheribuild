@@ -70,7 +70,8 @@ __all__ = [
     "Linkage",
     "MakeCommandKind",
     "SubversionRepository",
-    "commandline_to_str"]
+    "commandline_to_str",
+]
 
 
 if typing.TYPE_CHECKING:
@@ -180,8 +181,13 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         env = {k: v for k, v in self.configure_environment.items() if v}
         self.configure_environment.clear()
         self.configure_environment.update(env)
-        self.print(coloured(AnsiColour.yellow, "Cross configure environment:\n\t",
-                            "\n\t".join(k + "=" + str(v) for k, v in self.configure_environment.items())))
+        self.print(
+            coloured(
+                AnsiColour.yellow,
+                "Cross configure environment:\n\t",
+                "\n\t".join(k + "=" + str(v) for k, v in self.configure_environment.items()),
+            )
+        )
         super().configure(**kwargs)
 
     def process(self):

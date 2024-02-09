@@ -42,9 +42,17 @@ class BuildSimpleCheriBenchmarks(BenchmarkMixin, CrossCompileCMakeProject):
 
     def create_test_dir(self, outdir: Path):
         self.clean_directory(outdir)
-        for f in ("run_jenkins-bluehive.sh", "libqsort_default.so", "test_qsort_default", "test_qsort_static",
-                  "benchmark_qsort", "malloc_bench_shared", "malloc_bench_static", "malloc_benchmark.sh",
-                  "run_cheribsd.sh"):
+        for f in (
+            "run_jenkins-bluehive.sh",
+            "libqsort_default.so",
+            "test_qsort_default",
+            "test_qsort_static",
+            "benchmark_qsort",
+            "malloc_bench_shared",
+            "malloc_bench_static",
+            "malloc_benchmark.sh",
+            "run_cheribsd.sh",
+        ):
             self.install_file(self.build_dir / f, outdir / f, force=True, print_verbose_only=False)
         return outdir
 
@@ -59,9 +67,11 @@ class BuildSimpleCheriBenchmarks(BenchmarkMixin, CrossCompileCMakeProject):
         self.create_test_dir(self.build_dir / "test-dir")
         # testing, not benchmarking -> run only once: (-s small / -s large?)
         test_command = "cd /build/test-dir && ./run_jenkins-bluehive.sh -d0 -r1 -o {output} -a {tgt}".format(
-            tgt=self.archname_column, output=self.default_statcounters_csv_name)
-        self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
-                                                  "--test-timeout", str(120 * 60), mount_builddir=True)
+            tgt=self.archname_column, output=self.default_statcounters_csv_name
+        )
+        self.target_info.run_cheribsd_test_script(
+            "run_simple_tests.py", "--test-command", test_command, "--test-timeout", str(120 * 60), mount_builddir=True
+        )
 
     def run_benchmarks(self):
         if not self.compiling_for_mips(include_purecap=True):
@@ -69,6 +79,15 @@ class BuildSimpleCheriBenchmarks(BenchmarkMixin, CrossCompileCMakeProject):
             return
         with tempfile.TemporaryDirectory() as td:
             benchmarks_dir = self.create_test_dir(Path(td))
-            self.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
-                                    benchmark_script_args=["-d1", "-r10", "-o", self.default_statcounters_csv_name,
-                                                           "-a", self.archname_column])
+            self.run_fpga_benchmark(
+                benchmarks_dir,
+                output_file=self.default_statcounters_csv_name,
+                benchmark_script_args=[
+                    "-d1",
+                    "-r10",
+                    "-o",
+                    self.default_statcounters_csv_name,
+                    "-a",
+                    self.archname_column,
+                ],
+            )

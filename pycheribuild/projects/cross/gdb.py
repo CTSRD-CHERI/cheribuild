@@ -106,22 +106,24 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         install_root = self.install_dir if self.compiling_for_host() else self.install_prefix
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
         # ./configure flags
-        self.configure_args.extend([
-            "--disable-nls",
-            "--enable-tui",
-            "--disable-ld",
-            "--disable-gold",
-            "--disable-sim",
-            "--enable-64-bit-bfd",
-            "--without-gnu-as",
-            "--mandir=" + str(install_root / "man"),
-            "--infodir=" + str(install_root / "info"),
-            "--disable-werror",
-            "MAKEINFO=" + str(shutil.which("false")),
-            "--with-gdb-datadir=" + str(install_root / "share/gdb"),
-            "--disable-libstdcxx",
-            "--with-guile=no",
-            ])
+        self.configure_args.extend(
+            [
+                "--disable-nls",
+                "--enable-tui",
+                "--disable-ld",
+                "--disable-gold",
+                "--disable-sim",
+                "--enable-64-bit-bfd",
+                "--without-gnu-as",
+                "--mandir=" + str(install_root / "man"),
+                "--infodir=" + str(install_root / "info"),
+                "--disable-werror",
+                "MAKEINFO=" + str(shutil.which("false")),
+                "--with-gdb-datadir=" + str(install_root / "share/gdb"),
+                "--disable-libstdcxx",
+                "--with-guile=no",
+            ]
+        )
 
         if self.target_info.is_freebsd():
             self.configure_args.append("--with-separate-debug-dir=/usr/lib/debug")
@@ -162,14 +164,15 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
             self.configure_args.append("--with-expat")
         else:
             self.configure_args.extend(["--without-python", "--without-expat", "--without-libunwind-ia64"])
-            self.configure_environment.update(gl_cv_func_gettimeofday_clobber="no",
-                                              lt_cv_sys_max_cmd_len="262144",
-                                              # The build system run CC without any flags to detect dependency style...
-                                              # (ZW_PROG_COMPILER_DEPENDENCIES([CC])) -> for gcc3 mode which seems
-                                              # correct
-                                              am_cv_CC_dependencies_compiler_type="gcc3",
-                                              MAKEINFO="/bin/false",
-                                              )
+            self.configure_environment.update(
+                gl_cv_func_gettimeofday_clobber="no",
+                lt_cv_sys_max_cmd_len="262144",
+                # The build system run CC without any flags to detect dependency style...
+                # (ZW_PROG_COMPILER_DEPENDENCIES([CC])) -> for gcc3 mode which seems
+                # correct
+                am_cv_CC_dependencies_compiler_type="gcc3",
+                MAKEINFO="/bin/false",
+            )
             self.configure_args.append("--with-gmp=" + str(BuildGmp.get_install_dir(self)))
             self.configure_args.append("--with-mpfr=" + str(BuildMpfr.get_install_dir(self)))
             # GDB > 12 only uses --with-gmp
@@ -241,8 +244,14 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
             self.install_file(self.build_dir / "binutils/strip-new", bindir / "gstrip")
 
             if self.native_target_prefix is not None:
-                gdbfiles = ("man/man5/gdbinit.5", "man/man1/gdbserver.1", "man/man1/gdb.1", "man/man1/gdb-add-index.1",
-                            "bin/gdb", "bin/gdb-add-index")
+                gdbfiles = (
+                    "man/man5/gdbinit.5",
+                    "man/man1/gdbserver.1",
+                    "man/man1/gdb.1",
+                    "man/man1/gdb-add-index.1",
+                    "bin/gdb",
+                    "bin/gdb-add-index",
+                )
                 for file in gdbfiles:
                     dst = self.install_dir / file
                     src = dst.parent / (self.native_target_prefix + dst.name)
@@ -253,12 +262,13 @@ class BuildUpstreamGDB(BuildGDBBase):
     repository = GitRepository("git://sourceware.org/git/binutils-gdb.git")
     target = "upstream-gdb"
     _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, proj:
-            config.output_root / "upstream-gdb" if proj._xtarget.is_native() else None,
+        function=lambda config, proj: config.output_root / "upstream-gdb" if proj._xtarget.is_native() else None,
         # NB: We set default_architecture so the unsuffixed target is native
-        as_string=lambda cls:
-            "$INSTALL_ROOT/upstream-gdb" if cls._xtarget is None or cls._xtarget.is_native() else None,
-        inherit=BuildGDBBase._default_install_dir_fn)
+        as_string=lambda cls: "$INSTALL_ROOT/upstream-gdb"
+        if cls._xtarget is None or cls._xtarget.is_native()
+        else None,
+        inherit=BuildGDBBase._default_install_dir_fn,
+    )
 
 
 class BuildGDB(BuildGDBBase):
@@ -269,12 +279,15 @@ class BuildGDB(BuildGDBBase):
         "https://github.com/CTSRD-CHERI/gdb.git",
         # Branch name is changed for every major GDB release:
         default_branch=default_branch,
-        old_branches={"mips_cheri_7.12": default_branch,
-                      "mips_cheri-8.0.1": default_branch,
-                      "mips_cheri-8.2": default_branch,
-                      "mips_cheri-8.3": default_branch,
-                      "morello-8.3": default_branch},
-        old_urls=[b'https://github.com/bsdjhb/gdb.git'])
+        old_branches={
+            "mips_cheri_7.12": default_branch,
+            "mips_cheri-8.0.1": default_branch,
+            "mips_cheri-8.2": default_branch,
+            "mips_cheri-8.3": default_branch,
+            "morello-8.3": default_branch,
+        },
+        old_urls=[b"https://github.com/bsdjhb/gdb.git"],
+    )
 
 
 class BuildKGDB(BuildGDB):
@@ -284,4 +297,5 @@ class BuildKGDB(BuildGDB):
         # Branch name is changed for every major GDB release:
         default_branch=default_branch,
         old_branches={"mips_cheri-8.3-kgdb": default_branch},
-        old_urls=[b'https://github.com/bsdjhb/gdb.git'])
+        old_urls=[b"https://github.com/bsdjhb/gdb.git"],
+    )

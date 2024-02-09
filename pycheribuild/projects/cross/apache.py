@@ -42,8 +42,7 @@ from ..project import ReuseOtherProjectRepository
 class BuildPcre(CrossCompileAutotoolsProject):
     target = "pcre"
 
-    repository = SubversionRepository("svn://vcs.pcre.org/pcre",
-                                      default_branch="code/trunk")
+    repository = SubversionRepository("svn://vcs.pcre.org/pcre", default_branch="code/trunk")
 
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
@@ -54,8 +53,7 @@ class BuildPcre(CrossCompileAutotoolsProject):
 
 class BuildApr(CrossCompileAutotoolsProject):
     target = "apr"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/apr.git",
-                               default_branch="cheri")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/apr.git", default_branch="cheri")
 
     dependencies = ("libexpat",)
 
@@ -63,12 +61,14 @@ class BuildApr(CrossCompileAutotoolsProject):
 
     def setup(self):
         super().setup()
-        self.configure_args.extend([
-            "--enable-threads",
-            "--enable-posix-shm",
-            "--with-devrandom",
-            "--with-expat=" + str(BuildExpat.get_install_dir(self)),
-            ])
+        self.configure_args.extend(
+            [
+                "--enable-threads",
+                "--enable-posix-shm",
+                "--with-devrandom",
+                "--with-expat=" + str(BuildExpat.get_install_dir(self)),
+            ]
+        )
         if self.build_type.is_debug:
             self.configure_args.append("--enable-debug")
 
@@ -79,17 +79,18 @@ class BuildApr(CrossCompileAutotoolsProject):
 
         if not self.compiling_for_host():
             # Can't determine these when cross-compiling
-            self.configure_environment.update(ac_cv_file__dev_zero="yes",
-                                              ac_cv_mmap__dev_zero="yes",
-                                              # XXX: This might be yes on Linux
-                                              ac_cv_func_setpgrp_void="no",
-                                              ac_cv_struct_rlimit="yes",
-                                              ac_cv_func_sem_open="yes",
-                                              apr_cv_process_shared_works="yes",
-                                              apr_cv_mutex_robust_shared="yes",
-                                              # XXX: This might be yes on Linux
-                                              apr_cv_tcp_nodelay_with_cork="no",
-                                              )
+            self.configure_environment.update(
+                ac_cv_file__dev_zero="yes",
+                ac_cv_mmap__dev_zero="yes",
+                # XXX: This might be yes on Linux
+                ac_cv_func_setpgrp_void="no",
+                ac_cv_struct_rlimit="yes",
+                ac_cv_func_sem_open="yes",
+                apr_cv_process_shared_works="yes",
+                apr_cv_mutex_robust_shared="yes",
+                # XXX: This might be yes on Linux
+                apr_cv_tcp_nodelay_with_cork="no",
+            )
 
     def configure(self, **kwargs):
         self.run_cmd("./buildconf", cwd=self.source_dir)
@@ -98,21 +99,22 @@ class BuildApr(CrossCompileAutotoolsProject):
 
 class BuildApache(CrossCompileAutotoolsProject):
     target = "apache"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/apache-httpd.git",
-                               default_branch="2.4.x-cheri")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/apache-httpd.git", default_branch="2.4.x-cheri")
 
     dependencies = ("apr", "pcre")
 
     def setup(self):
         super().setup()
-        self.configure_args.extend([
-            "--enable-layout=FreeBSD",
-            "--enable-http",
-            "--enable-mod-ssl",
-            "--with-expat=" + str(BuildExpat.get_install_dir(self)),
-            "--with-pcre=" + str(BuildPcre.get_install_dir(self)),
-            "--with-apr=" + str(BuildApr.get_install_dir(self)),
-            ])
+        self.configure_args.extend(
+            [
+                "--enable-layout=FreeBSD",
+                "--enable-http",
+                "--enable-mod-ssl",
+                "--with-expat=" + str(BuildExpat.get_install_dir(self)),
+                "--with-pcre=" + str(BuildPcre.get_install_dir(self)),
+                "--with-apr=" + str(BuildApr.get_install_dir(self)),
+            ]
+        )
         if self.build_type.is_debug:
             self.configure_args.append("--enable-debugger-mode")
 
@@ -130,12 +132,16 @@ class BuildApache(CrossCompileAutotoolsProject):
 
         # gen_test_char rules in server/ assume a native build
         if not self.compiling_for_host():
-            self.run_cmd(str(self.host_CC), "-DCROSS_COMPILE", "-c",
-                         self.source_dir / "server" / "gen_test_char.c",
-                         "-o", "gen_test_char.lo",
-                         cwd=self.build_dir / "server")
-            self.run_cmd(str(self.host_CC), "gen_test_char.lo", "-o",
-                         "gen_test_char", cwd=self.build_dir / "server")
+            self.run_cmd(
+                str(self.host_CC),
+                "-DCROSS_COMPILE",
+                "-c",
+                self.source_dir / "server" / "gen_test_char.c",
+                "-o",
+                "gen_test_char.lo",
+                cwd=self.build_dir / "server",
+            )
+            self.run_cmd(str(self.host_CC), "gen_test_char.lo", "-o", "gen_test_char", cwd=self.build_dir / "server")
 
 
 class BuildSSLProc(CrossCompileCMakeProject):
@@ -163,4 +169,4 @@ class BuildSSLProcApache(BuildApache):
         super().setup()
         self.configure_args.append(
             "--with-sslproc=" + str(BuildSSLProc.get_install_dir(self)),
-            )
+        )

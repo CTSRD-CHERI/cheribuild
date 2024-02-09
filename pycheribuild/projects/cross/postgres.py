@@ -35,8 +35,9 @@ from ...utils import OSInfo
 
 
 class BuildPostgres(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/postgres.git",
-                               default_branch="96-cheri", force_branch=True)
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/postgres.git", default_branch="96-cheri", force_branch=True
+    )
     # we have to build in the source directory, out-of-source is broken
     # build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake
@@ -50,9 +51,14 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             # self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
             self.configure_args.append("--enable-cassert")
 
-        self.common_warning_flags.extend(["-pedantic", "-Wno-gnu-statement-expression",
-                                          "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
-                                          "-Wno-format-pedantic"])
+        self.common_warning_flags.extend(
+            [
+                "-pedantic",
+                "-Wno-gnu-statement-expression",
+                "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
+                "-Wno-format-pedantic",
+            ]
+        )
         self.LDFLAGS.append("-pthread")
         if OSInfo.IS_FREEBSD and self.compiling_for_host():
             # Something werid is happending with the locale code (somehow not being built -FPIC?):
@@ -99,10 +105,11 @@ class BuildPostgres(CrossCompileAutotoolsProject):
                 pg_root = str(self.install_prefix)
             else:
                 pg_root = str(self.install_dir)
-            benchmark = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + pg_root + "\"", benchmark)
+            benchmark = re.sub(r'POSTGRES_ROOT=".*"', 'POSTGRES_ROOT="' + pg_root + '"', benchmark)
             self.write_file(self.real_install_root_dir / benchname, benchmark, overwrite=True, mode=0o755)
-        self.install_file(self.source_dir / "run-postgres-tests.sh",
-                          self.real_install_root_dir / "run-postgres-tests.sh")
+        self.install_file(
+            self.source_dir / "run-postgres-tests.sh", self.real_install_root_dir / "run-postgres-tests.sh"
+        )
 
     @property
     def default_ldflags(self):
@@ -124,9 +131,14 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             # self.run_make("check", cwd=self.build_dir / "src/interfaces/ecpg/test", stdout_filter=None)
         else:
             locale_dir = self.rootfs_dir / "usr/share/locale"
-            self.target_info.run_cheribsd_test_script("run_postgres_tests.py", "--smb-mount-directory",
-                                                      str(self.install_dir) + ":" + str(self.install_prefix),
-                                                      "--locale-files-dir", locale_dir, mount_builddir=False,
-                                                      # long running test -> speed up by using a kernel without
-                                                      # invariants
-                                                      use_benchmark_kernel_by_default=True)
+            self.target_info.run_cheribsd_test_script(
+                "run_postgres_tests.py",
+                "--smb-mount-directory",
+                str(self.install_dir) + ":" + str(self.install_prefix),
+                "--locale-files-dir",
+                locale_dir,
+                mount_builddir=False,
+                # long running test -> speed up by using a kernel without
+                # invariants
+                use_benchmark_kernel_by_default=True,
+            )

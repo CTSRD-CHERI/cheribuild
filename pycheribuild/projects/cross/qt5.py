@@ -129,16 +129,21 @@ class BuildSharedMimeInfo(CrossCompileMesonProject):
         super().check_system_dependencies()
         self.check_required_system_tool("xmlto", homebrew="xmlto", apt="xmlto")
         self.check_required_system_tool(
-            "xmllint", homebrew="libxml2", apt="libxml2-utils", cheribuild_target="libxml2-native",
+            "xmllint",
+            homebrew="libxml2",
+            apt="libxml2-utils",
+            cheribuild_target="libxml2-native",
         )
         self.check_required_system_tool("msgfmt", freebsd="gettext-tools")  # no way to disable translations
 
     def setup(self):
         super().setup()
-        self.add_meson_options(**{
-            "update-mimedb": True,
-            "build-tools": self._can_build_tools,
-        })
+        self.add_meson_options(
+            **{
+                "update-mimedb": True,
+                "build-tools": self._can_build_tools,
+            }
+        )
         if not self._can_build_tools:
             # Ensure that we have update-mime-database available as it will be used in a post-install action.
             self.get_update_mime_database_path(self)
@@ -184,21 +189,23 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             return tuple(deps)
         if cls.use_x11:
             # The system X11 libraries might be too old, so add the cheribuild-provided ones as a dependency
-            deps.extend([
-                "libx11",
-                "libxcb",
-                "libxkbcommon",
-                "libxcb-cursor",
-                "libxcb-util",
-                "libxcb-image",
-                "libice",
-                "libsm",
-                "libxext",
-                "libxtst",
-                "libxcb-render-util",
-                "libxcb-wm",
-                "libxcb-keysyms",
-            ])
+            deps.extend(
+                [
+                    "libx11",
+                    "libxcb",
+                    "libxkbcommon",
+                    "libxcb-cursor",
+                    "libxcb-util",
+                    "libxcb-image",
+                    "libice",
+                    "libsm",
+                    "libxext",
+                    "libxtst",
+                    "libxcb-render-util",
+                    "libxcb-wm",
+                    "libxcb-keysyms",
+                ]
+            )
         # Always use our patched image/sql libraries instead of the host ones:
         deps.extend(["libpng", "libjpeg-turbo"])
         if not cls.get_crosscompile_target().is_native():
@@ -243,10 +250,16 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         # Link against X11 libs by default if we aren't compiling for macOS
         native_is_macos = cls._xtarget is not None and cls._xtarget.target_info_cls.is_macos()
         cls.use_x11 = cls.add_bool_option(
-            "use-x11", default=not native_is_macos, show_help=False, help="Build Qt with the XCB backend.",
+            "use-x11",
+            default=not native_is_macos,
+            show_help=False,
+            help="Build Qt with the XCB backend.",
         )
         cls.use_opengl = cls.add_bool_option(
-            "use-opengl", default=True, show_help=False, help="Build Qt with OpenGL support",
+            "use-opengl",
+            default=True,
+            show_help=False,
+            help="Build Qt with OpenGL support",
         )
 
     def configure(self, **kwargs):
@@ -285,23 +298,25 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             linker_flags = filter(lambda s: not s.startswith("--sysroot"), linker_flags)
             compiler_flags = filter(lambda s: not s.startswith("--sysroot"), compiler_flags)
             cross_tools_prefix = self.target_info.get_target_triple(include_version=False)
-            self.configure_args.extend([
-                "-device",
-                "freebsd-generic-clang",
-                "-device-option",
-                f"CROSS_COMPILE={self.sdk_bindir}/{cross_tools_prefix}-",
-                "-device-option",
-                "COMPILER_FLAGS=" + self.commandline_to_str(compiler_flags),
-                "-device-option",
-                "LINKER_FLAGS=" + self.commandline_to_str(linker_flags),
-                "-sysroot",
-                self.cross_sysroot_path,
-                "-prefix",
-                self.install_prefix,
-                # The prefix for host tools such as qmake
-                "-hostprefix",
-                str(self.qt_host_tools_path),
-            ])
+            self.configure_args.extend(
+                [
+                    "-device",
+                    "freebsd-generic-clang",
+                    "-device-option",
+                    f"CROSS_COMPILE={self.sdk_bindir}/{cross_tools_prefix}-",
+                    "-device-option",
+                    "COMPILER_FLAGS=" + self.commandline_to_str(compiler_flags),
+                    "-device-option",
+                    "LINKER_FLAGS=" + self.commandline_to_str(linker_flags),
+                    "-sysroot",
+                    self.cross_sysroot_path,
+                    "-prefix",
+                    self.install_prefix,
+                    # The prefix for host tools such as qmake
+                    "-hostprefix",
+                    str(self.qt_host_tools_path),
+                ]
+            )
             xcb = BuildLibXCB.get_instance(self)
             if xcb.install_prefix != self.install_prefix:
                 self.configure_args.append(
@@ -316,25 +331,25 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         if self.use_asan:
             self.configure_args.extend(["-sanitize", "address", "-sanitize", "undefined"])
 
-        self.configure_args.extend([
-            (
-                # To ensure the host and cross-compiled version is the same also disable opengl
-                "-opengl"
-                if self.use_opengl
-                else "-no-opengl"
-            ),
-            # Since the cross-compiled version doesn't have glib, also disable it for the native on
-            "-no-glib",
-            # Needed for webkit:
-            # "-icu",
-            # "-no-Werror",
-            "-no-use-gold-linker",
-            "-no-iconv",
-            "-no-headersclean",
-            # Don't embed the mimetype DB in libQt5Core.so. It's huge and results in lots XML parsing. Instead, we just
-            # ensure that the binary cache exists in the disk image.
-            "-no-mimetype-database",
-        ])
+        self.configure_args.extend(
+            [
+                (
+                    # To ensure the host and cross-compiled version is the same also disable opengl
+                    "-opengl" if self.use_opengl else "-no-opengl"
+                ),
+                # Since the cross-compiled version doesn't have glib, also disable it for the native on
+                "-no-glib",
+                # Needed for webkit:
+                # "-icu",
+                # "-no-Werror",
+                "-no-use-gold-linker",
+                "-no-iconv",
+                "-no-headersclean",
+                # Don't embed the mimetype DB in libQt5Core.so. It's huge and results in lots XML parsing.
+                # Instead, we just ensure that the binary cache exists in the disk image.
+                "-no-mimetype-database",
+            ]
+        )
         if self.build_tests:
             self.configure_args.append("-developer-build")
             if self.target_info.is_macos():
@@ -387,16 +402,18 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         # self.configure_args.append("-reduce-relocations")
 
         if self.minimal:
-            self.configure_args.extend([
-                "-no-widgets",
-                "-no-glib",
-                "-no-gtk",
-                "-no-opengl",
-                "-no-cups",
-                "-no-syslog",
-                "-no-gui",
-                "-no-iconv",
-            ])
+            self.configure_args.extend(
+                [
+                    "-no-widgets",
+                    "-no-glib",
+                    "-no-gtk",
+                    "-no-opengl",
+                    "-no-cups",
+                    "-no-syslog",
+                    "-no-gui",
+                    "-no-iconv",
+                ]
+            )
         else:
             self.configure_args.append("-dbus")  # we want to build QtDBus
             if not self.target_info.is_macos():
@@ -436,7 +453,10 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
     gui: bool = BoolConfigOption("gui", show_help=True, default=True, help="Include QtGui")
     use_opengl: bool = BoolConfigOption("opengl", show_help=True, default=False, help="Include QtOpenGl")
     minimal: bool = BoolConfigOption(
-        "minimal", show_help=True, default=True, help="Don't build QtWidgets or QtSql, etc",
+        "minimal",
+        show_help=True,
+        default=True,
+        help="Don't build QtWidgets or QtSql, etc",
     )
 
     @classmethod
@@ -446,22 +466,24 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
         deps.append(BuildSharedMimeInfo.get_class_for_target(rootfs_target).target)
         if cls.gui:
             # The system X11 libraries might be too old, so add the cheribuild-provided ones as a dependency
-            deps.extend([
-                "libx11",
-                "libxkbcommon",
-                "libinput",
-                "libxcb",
-                "libxcb-cursor",
-                "libxcb-util",
-                "libxcb-image",
-                "libice",
-                "libsm",
-                "libxext",
-                "libxtst",
-                "libxcb-render-util",
-                "libxcb-wm",
-                "libxcb-keysyms",
-            ])
+            deps.extend(
+                [
+                    "libx11",
+                    "libxkbcommon",
+                    "libinput",
+                    "libxcb",
+                    "libxcb-cursor",
+                    "libxcb-util",
+                    "libxcb-image",
+                    "libice",
+                    "libsm",
+                    "libxext",
+                    "libxtst",
+                    "libxcb-render-util",
+                    "libxcb-wm",
+                    "libxcb-keysyms",
+                ]
+            )
         # Always use our patched image/sql libraries instead of the host ones:
         deps.extend(["libpng", "libjpeg-turbo"])
         if not cls.get_crosscompile_target().is_native():
@@ -573,7 +595,10 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
         else:
             # TODO: run `ctest --show-only=json-v1` to get list of tests
             self.target_info.run_cheribsd_test_script(
-                "run_qtbase_tests.py", use_benchmark_kernel_by_default=False, mount_sysroot=True, mount_sourcedir=True,
+                "run_qtbase_tests.py",
+                use_benchmark_kernel_by_default=False,
+                mount_sysroot=True,
+                mount_sourcedir=True,
             )
 
 
@@ -585,7 +610,9 @@ class BuildQt5(BuildQtWithConfigureScript):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.all_modules = cls.add_bool_option(
-            "all-modules", show_help=True, help="Build all modules (even those that don't make sense for CHERI)",
+            "all-modules",
+            show_help=True,
+            help="Build all modules (even those that don't make sense for CHERI)",
         )
 
     def configure(self, **kwargs):
@@ -670,7 +697,8 @@ for my $module (keys %modules) {
             self.clean_directory(qt_fonts_dir, ensure_dir_exists=False)
             self.makedirs(qt_fonts_dir.parent)
             dejavu_fonts = InstallDejaVuFonts.get_instance(
-                self, cross_target=self.crosscompile_target.get_rootfs_target(),
+                self,
+                cross_target=self.crosscompile_target.get_rootfs_target(),
             )
             self.create_symlink(dejavu_fonts.fonts_dir, qt_fonts_dir, print_verbose_only=False)
 
@@ -700,7 +728,9 @@ for my $module (keys %modules) {
                 print_verbose_only=False,
             )
             self.create_symlink(
-                mimedb_tests_dir / "shared-mime-info-2.1", mimedb_tests_dir / "s-m-i", print_verbose_only=False,
+                mimedb_tests_dir / "shared-mime-info-2.1",
+                mimedb_tests_dir / "s-m-i",
+                print_verbose_only=False,
             )
         self._compile_relevant_tests()
         if self.compiling_for_host():
@@ -800,15 +830,19 @@ class BuildQtMacExtras(BuildQtModuleWithQMake):
 class BuildQtDeclarative(BuildQtModuleWithQMake):
     target = "qtdeclarative"
     repository = GitRepository(
-        "https://github.com/CTSRD-CHERI/qtdeclarative.git", default_branch="5.15", force_branch=True,
+        "https://github.com/CTSRD-CHERI/qtdeclarative.git",
+        default_branch="5.15",
+        force_branch=True,
     )
 
     def setup(self):
         super().setup()
-        self.configure_args.extend([
-            "-no-qml-debug",  # debugger not compatibale with CHERI purecap
-            "-quick-designer",  # needed for quickcontrols2
-        ])
+        self.configure_args.extend(
+            [
+                "-no-qml-debug",  # debugger not compatibale with CHERI purecap
+                "-quick-designer",  # needed for quickcontrols2
+            ]
+        )
 
 
 class BuildQtTools(BuildQtModuleWithQMake):
@@ -825,14 +859,16 @@ class BuildQtTools(BuildQtModuleWithQMake):
         super().setup()
         # No need to build all the developer GUI tools, we only want programs that are
         # useful inside the disk image.
-        self.configure_args.extend([
-            "-no-feature-assistant",
-            # Some KDE programs/libraries install designer plugins, so for now we install it by default.
-            # This avoids having to patch those projects to make the feature optional.
-            # "-no-feature-designer",
-            # kColorPicker (which is used by Gwenview needs linguist, so we build this too).
-            # "-no-feature-linguist",
-        ])
+        self.configure_args.extend(
+            [
+                "-no-feature-assistant",
+                # Some KDE programs/libraries install designer plugins, so for now we install it by default.
+                # This avoids having to patch those projects to make the feature optional.
+                # "-no-feature-designer",
+                # kColorPicker (which is used by Gwenview needs linguist, so we build this too).
+                # "-no-feature-linguist",
+            ]
+        )
 
 
 class BuildQtWayland(BuildQtModuleWithQMake):
@@ -848,10 +884,12 @@ class BuildQtWayland(BuildQtModuleWithQMake):
 
     def setup(self):
         super().setup()
-        self.configure_args.extend([
-            "-feature-wayland-client",
-            "-feature-wayland-server",
-        ])
+        self.configure_args.extend(
+            [
+                "-feature-wayland-client",
+                "-feature-wayland-server",
+            ]
+        )
 
     # def compile(self, **kwargs):
     #     self.run_make()
@@ -1002,7 +1040,9 @@ class BuildLibXslt(CrossCompileCMakeProject):
 
 class BuildQtWebkit(CrossCompileCMakeProject):
     repository = GitRepository(
-        "https://github.com/CTSRD-CHERI/qtwebkit", default_branch="qtwebkit-5.212-cheri", force_branch=True,
+        "https://github.com/CTSRD-CHERI/qtwebkit",
+        default_branch="qtwebkit-5.212-cheri",
+        force_branch=True,
     )
     is_large_source_repository = True
     dependencies = ("qtbase", "icu4c", "libxml2", "sqlite")
@@ -1087,7 +1127,9 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.build_jsc_only = cls.add_bool_option(
-            "build-jsc-only", show_help=True, help="only build the JavaScript interpreter executable",
+            "build-jsc-only",
+            show_help=True,
+            help="only build the JavaScript interpreter executable",
         )
 
     def compile(self, **kwargs):
@@ -1096,7 +1138,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             update_mime = BuildSharedMimeInfo.get_update_mime_database_path(self)
             mime_info_src = BuildQtBase.get_source_dir(self) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
             self.install_file(
-                mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True, print_verbose_only=False,
+                mime_info_src,
+                Path(td, "mime/packages/freedesktop.org.xml"),
+                force=True,
+                print_verbose_only=False,
             )
             self.run_cmd(update_mime, "-V", Path(td, "mime"), cwd="/")
 
@@ -1104,10 +1149,16 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                 self.fatal("Could not generated shared-mime-info cache!")
             # install mime.cache and freedesktop.org.xml into the build dir for tests
             self.install_file(
-                mime_info_src, self.build_dir / "freedesktop.org.xml", force=True, print_verbose_only=False,
+                mime_info_src,
+                self.build_dir / "freedesktop.org.xml",
+                force=True,
+                print_verbose_only=False,
             )
             self.install_file(
-                Path(td, "mime/mime.cache"), self.build_dir / "mime.cache", force=True, print_verbose_only=False,
+                Path(td, "mime/mime.cache"),
+                self.build_dir / "mime.cache",
+                force=True,
+                print_verbose_only=False,
             )
             # TODO: get https://github.com/annulen/webkit-test-fonts to run the full testsuite
         if self.build_jsc_only:
@@ -1120,7 +1171,9 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         if not self.build_jsc_only:
             dump_render_tree = self.build_dir / "bin/DumpRenderTree"
             self.maybe_strip_elf_file(
-                dump_render_tree, output_path=dump_render_tree.with_suffix(".stripped"), print_verbose_only=False,
+                dump_render_tree,
+                output_path=dump_render_tree.with_suffix(".stripped"),
+                print_verbose_only=False,
             )
         jsc = self.build_dir / "bin/jsc"
         self.maybe_strip_elf_file(jsc, output_path=jsc.with_suffix(".stripped"), print_verbose_only=False)

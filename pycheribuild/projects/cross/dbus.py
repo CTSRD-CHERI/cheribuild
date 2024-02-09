@@ -28,8 +28,10 @@ from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, G
 class BuildDBus(CrossCompileCMakeProject):
     target = "dbus"
     supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
-    repository = GitRepository("https://gitlab.freedesktop.org/dbus/dbus.git",
-                               old_urls=[b"https://gitlab.freedesktop.org/arichardson/dbus.git"])
+    repository = GitRepository(
+        "https://gitlab.freedesktop.org/dbus/dbus.git",
+        old_urls=[b"https://gitlab.freedesktop.org/arichardson/dbus.git"],
+    )
     dependencies = ("libexpat",)
     ctest_script_extra_args = ["--test-timeout", str(120 * 60)]  # Tests can take a long time to run
 
@@ -52,11 +54,17 @@ class BuildDBus(CrossCompileCMakeProject):
     def install(self, **kwargs):
         super().install()
         if not self.compiling_for_host() and self.target_info.is_freebsd():
-            self.write_file(self.rootfs_dir / "etc/rc.conf.d/dbus", contents="dbus_enable=\"YES\"\n",
-                            overwrite=True, print_verbose_only=False)
+            self.write_file(
+                self.rootfs_dir / "etc/rc.conf.d/dbus",
+                contents='dbus_enable="YES"\n',
+                overwrite=True,
+                print_verbose_only=False,
+            )
             # Slightly modified version of https://cgit.freebsd.org/ports/plain/devel/dbus/files/dbus.in
             # to add the necessary users on-demand and chmod/chown the rsync'd files
-            self.write_file(self.rootfs_dir / self.target_info.localbase / "etc/rc.d/dbus", contents=f"""#!/bin/sh
+            self.write_file(
+                self.rootfs_dir / self.target_info.localbase / "etc/rc.d/dbus",
+                contents=f"""#!/bin/sh
 
 # PROVIDE: dbus
 # REQUIRE: DAEMON ldconfig
@@ -103,4 +111,7 @@ dbus_poststop()
 
 load_rc_config ${{name}}
 run_rc_command "$1"
-""", overwrite=True, mode=0o755)
+""",
+                overwrite=True,
+                mode=0o755,
+            )

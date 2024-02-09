@@ -67,13 +67,20 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.benchmark_size = cls.add_config_option("benchmark-size", choices=("small", "large"), default="large",
-                                                   kind=str, help="Size of benchmark input data to use")
+        cls.benchmark_size = cls.add_config_option(
+            "benchmark-size",
+            choices=("small", "large"),
+            default="large",
+            kind=str,
+            help="Size of benchmark input data to use",
+        )
 
     @property
     def bundle_dir(self):
-        return Path(self.build_dir, self.crosscompile_target.generic_target_suffix +
-                    self.build_configuration_suffix() + "-bundle")
+        return Path(
+            self.build_dir,
+            self.crosscompile_target.generic_target_suffix + self.build_configuration_suffix() + "-bundle",
+        )
 
     @property
     def benchmark_version(self):
@@ -88,18 +95,21 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
     def compile(self, **kwargs):
         new_env = dict()
         if not self.compiling_for_host():
-            new_env = dict(MIPS_SDK=self.target_info.sdk_root_dir,
-                           CHERI128_SDK=self.target_info.sdk_root_dir,
-                           CHERI256_SDK=self.target_info.sdk_root_dir,
-                           CHERI_SDK=self.target_info.sdk_root_dir)
+            new_env = dict(
+                MIPS_SDK=self.target_info.sdk_root_dir,
+                CHERI128_SDK=self.target_info.sdk_root_dir,
+                CHERI256_SDK=self.target_info.sdk_root_dir,
+                CHERI_SDK=self.target_info.sdk_root_dir,
+            )
         with self.set_env(**new_env):
             # We can't fall back to /usr/bin/ar here since that breaks on MacOS
             if not self.compiling_for_host():
                 self.make_args.set(AR=str(self.sdk_bindir / "llvm-ar") + " rc")
                 self.make_args.set(AR2=str(self.sdk_bindir / "llvm-ranlib"))
                 self.make_args.set(RANLIB=str(self.sdk_bindir / "llvm-ranlib"))
-                self.make_args.set(MIPS_SYSROOT=self.sdk_sysroot, CHERI128_SYSROOT=self.sdk_sysroot,
-                                   CHERI256_SYSROOT=self.sdk_sysroot)
+                self.make_args.set(
+                    MIPS_SYSROOT=self.sdk_sysroot, CHERI128_SYSROOT=self.sdk_sysroot, CHERI256_SYSROOT=self.sdk_sysroot
+                )
 
             self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(self.default_compiler_flags))
             self.make_args.set(ADDITIONAL_LDFLAGS=self.commandline_to_str(self.default_ldflags))
@@ -144,9 +154,11 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
             return
         # testing, not benchmarking -> run only once: (-s small / -s large?)
         test_command = "cd '/build/{dirname}' && ./run_jenkins-bluehive.sh -d0 -r1 -s {size} {version}".format(
-            dirname=self.bundle_dir.name, size=self.benchmark_size, version=self.benchmark_version)
-        self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
-                                                  "--test-timeout", str(120 * 60), mount_builddir=True)
+            dirname=self.bundle_dir.name, size=self.benchmark_size, version=self.benchmark_version
+        )
+        self.target_info.run_cheribsd_test_script(
+            "run_simple_tests.py", "--test-command", test_command, "--test-timeout", str(120 * 60), mount_builddir=True
+        )
 
     def run_benchmarks(self):
         if not self.compiling_for_mips(include_purecap=True):
@@ -158,11 +170,19 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
             if not (benchmark_dir / "run_jenkins-bluehive.sh").exists():
                 self.fatal("Created invalid benchmark bundle...")
             num_iterations = self.config.benchmark_iterations or 10
-            self.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
-                                    benchmark_script_args=["-d1", "-r" + str(num_iterations),
-                                                           "-s", self.benchmark_size,
-                                                           "-o", self.default_statcounters_csv_name,
-                                                           self.benchmark_version])
+            self.run_fpga_benchmark(
+                benchmark_dir,
+                output_file=self.default_statcounters_csv_name,
+                benchmark_script_args=[
+                    "-d1",
+                    "-r" + str(num_iterations),
+                    "-s",
+                    self.benchmark_size,
+                    "-o",
+                    self.default_statcounters_csv_name,
+                    self.benchmark_version,
+                ],
+            )
 
 
 class BuildMiBenchNew(BuildLLVMTestSuiteBase):
@@ -171,19 +191,19 @@ class BuildMiBenchNew(BuildLLVMTestSuiteBase):
 
     def setup(self):
         super().setup()
-        self.add_cmake_options(TEST_SUITE_SUBDIRS="MultiSource/Benchmarks/MiBench",
-                               TEST_SUITE_COPY_DATA=True)
+        self.add_cmake_options(TEST_SUITE_SUBDIRS="MultiSource/Benchmarks/MiBench", TEST_SUITE_COPY_DATA=True)
 
     def compile(self, **kwargs):
         super().compile(**kwargs)
-        self.install_file(self.source_dir / "MultiSource/lit.local.cfg",
-                          self.build_dir / "MultiSource/lit.local.cfg", force=True)
+        self.install_file(
+            self.source_dir / "MultiSource/lit.local.cfg", self.build_dir / "MultiSource/lit.local.cfg", force=True
+        )
 
     def install(self, **kwargs):
         root_dir = str(self.build_dir / "MultiSource/Benchmarks/MiBench")
         for curdir, dirnames, filenames in os.walk(root_dir):
             # We don't run some benchmarks (e.g. consumer-typeset or consumer-lame) yet
-            for ignored_dirname in ('CMakeFiles', 'consumer-typeset', 'consumer-lame', 'office-ispell', 'telecomm-gsm'):
+            for ignored_dirname in ("CMakeFiles", "consumer-typeset", "consumer-lame", "office-ispell", "telecomm-gsm"):
                 if ignored_dirname in dirnames:
                     dirnames.remove(ignored_dirname)
             relpath = os.path.relpath(curdir, root_dir)
@@ -208,10 +228,12 @@ class BuildOlden(BenchmarkMixin, CrossCompileProject):
     def compile(self, **kwargs):
         new_env = dict()
         if not self.compiling_for_host():
-            new_env = dict(MIPS_SDK=self.target_info.sdk_root_dir,
-                           CHERI128_SDK=self.target_info.sdk_root_dir,
-                           CHERI256_SDK=self.target_info.sdk_root_dir,
-                           CHERI_SDK=self.target_info.sdk_root_dir)
+            new_env = dict(
+                MIPS_SDK=self.target_info.sdk_root_dir,
+                CHERI128_SDK=self.target_info.sdk_root_dir,
+                CHERI256_SDK=self.target_info.sdk_root_dir,
+                CHERI_SDK=self.target_info.sdk_root_dir,
+            )
         with self.set_env(**new_env):
             if not self.compiling_for_host():
                 self.make_args.set(SYSROOT_DIRNAME=self.cross_sysroot_path.name)
@@ -228,8 +250,9 @@ class BuildOlden(BenchmarkMixin, CrossCompileProject):
                 self.fatal("Unknown target: ", self.crosscompile_target)
         # copy asan libraries and the run script to the bin dir to ensure that we can run with --test from the
         # build directory.
-        self.install_file(self.source_dir / "run_jenkins-bluehive.sh",
-                          self.build_dir / "bin/run_jenkins-bluehive.sh", force=True)
+        self.install_file(
+            self.source_dir / "run_jenkins-bluehive.sh", self.build_dir / "bin/run_jenkins-bluehive.sh", force=True
+        )
         if self.compiling_for_mips(include_purecap=False) and self.use_asan:
             self.copy_asan_dependencies(self.build_dir / "bin/lib")
 
@@ -267,9 +290,9 @@ class BuildOlden(BenchmarkMixin, CrossCompileProject):
             return
         # testing, not benchmarking -> run only once: (-s small / -s large?)
         test_command = f"cd /build/bin && ./run_jenkins-bluehive.sh -d0 -r1 {self.test_arch_suffix}"
-        self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
-                                                  "--test-timeout", str(120 * 60),
-                                                  mount_builddir=True)
+        self.target_info.run_cheribsd_test_script(
+            "run_simple_tests.py", "--test-command", test_command, "--test-timeout", str(120 * 60), mount_builddir=True
+        )
 
     def run_benchmarks(self):
         if not self.compiling_for_mips(include_purecap=True):
@@ -282,10 +305,17 @@ class BuildOlden(BenchmarkMixin, CrossCompileProject):
             if not (benchmark_dir / "run_jenkins-bluehive.sh").exists():
                 self.fatal("Created invalid benchmark bundle...")
             num_iterations = self.config.benchmark_iterations or 15
-            self.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
-                                    benchmark_script_args=["-d1", "-r" + str(num_iterations), "-o",
-                                                           self.default_statcounters_csv_name,
-                                                           self.test_arch_suffix])
+            self.run_fpga_benchmark(
+                benchmark_dir,
+                output_file=self.default_statcounters_csv_name,
+                benchmark_script_args=[
+                    "-d1",
+                    "-r" + str(num_iterations),
+                    "-o",
+                    self.default_statcounters_csv_name,
+                    self.test_arch_suffix,
+                ],
+            )
 
 
 class BuildSpec2006New(BuildLLVMTestSuiteBase):
@@ -297,8 +327,9 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.spec_iso_path = cls.add_optional_path_option("iso-path", altname="spec-sources",
-                                                         help="Path to the SPEC2006 ISO image or extracted sources")
+        cls.spec_iso_path = cls.add_optional_path_option(
+            "iso-path", altname="spec-sources", help="Path to the SPEC2006 ISO image or extracted sources"
+        )
         cls.fast_benchmarks_only = cls.add_bool_option("fast-benchmarks-only", default=False)
         cls.workload = cls.add_config_option("workload", choices=("test", "train", "ref"), default="test")
         cls.benchmark_override = cls.add_list_option("benchmarks", help="override the list of benchmarks to run")
@@ -328,7 +359,7 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
             "471.omnetpp",  # 3 runs = 0:05:09 -> ~1:45min per run
             "473.astar",  # 3 runs = 0:31:41  -> ~10:30 mins per run
             "483.xalancbmk",  # 3 runs = 0:00:55 -> ~20 secs per run"
-            ]
+        ]
         self.complete_benchmark_list = [*self.working_benchmark_list, "400.perlbench", "403.gcc", "429.mcf"]
         self.fast_list = ["471.omnetpp", "483.xalancbmk", "456.hmmer", "462.libquantum"]
         if self.benchmark_override:
@@ -345,16 +376,19 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
         super().setup()
         # Only build spec2006
         # self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006;External/SPEC/CFP2006",
-        self.add_cmake_options(TEST_SUITE_SUBDIRS="External/SPEC/CINT2006",
-                               TEST_SUITE_COPY_DATA=True,
-                               TEST_SUITE_RUN_TYPE=self.workload,
-                               TEST_SUITE_SPEC2006_ROOT=self.extracted_spec_sources)
+        self.add_cmake_options(
+            TEST_SUITE_SUBDIRS="External/SPEC/CINT2006",
+            TEST_SUITE_COPY_DATA=True,
+            TEST_SUITE_RUN_TYPE=self.workload,
+            TEST_SUITE_SPEC2006_ROOT=self.extracted_spec_sources,
+        )
 
     def _check_broken_bsdtar(self, bsdtar: Path) -> "tuple[bool, tuple[int, ...]]":
         if self.config.pretend and not bsdtar.exists():
             return False, (0, 0, 0)
-        bsdtar_version = get_program_version(bsdtar, regex=rb"bsdtar\s+(\d+)\.(\d+)\.?(\d+)? \- libarchive",
-                                             config=self.config)
+        bsdtar_version = get_program_version(
+            bsdtar, regex=rb"bsdtar\s+(\d+)\.(\d+)\.?(\d+)? \- libarchive", config=self.config
+        )
         # At least version 3.3.2 of libarchive fails to extract the SPEC ISO image correctly (at least two files
         # are missing). This does not appear to be a problem with Ubuntu 18.04's version 3.2.2.
         return (3, 3) <= bsdtar_version < (3, 5), bsdtar_version
@@ -370,9 +404,13 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
                 bsdtar = libarchive_path / "bin/bsdtar"
             bsdtar_broken, bsdtar_version = self._check_broken_bsdtar(bsdtar)
             if bsdtar_broken:
-                self.fatal("The installed version of libarchive (", ".".join(map(str, bsdtar_version)),
-                           ") has a bug that results in some files not being extracted from the SPEC ISO.",
-                           fixit_hint="Please update bsdtar to at least 3.5.0", sep="")
+                self.fatal(
+                    "The installed version of libarchive (",
+                    ".".join(map(str, bsdtar_version)),
+                    ") has a bug that results in some files not being extracted from the SPEC ISO.",
+                    fixit_hint="Please update bsdtar to at least 3.5.0",
+                    sep="",
+                )
 
             self.run_cmd(bsdtar, "xf", self.spec_iso_path, "-C", self.extracted_spec_sources, cwd=self.build_dir)
             # Some of the files in that archive are not user-writable; go pave
@@ -394,7 +432,7 @@ class BuildSpec2006New(BuildLLVMTestSuiteBase):
     def install_benchmark_dir(self, root_dir: str):
         for curdir, dirnames, filenames in os.walk(root_dir):
             # We don't run some benchmarks (e.g. consumer-typeset or consumer-lame) yet
-            for ignored_dirname in ('CMakeFiles', ):
+            for ignored_dirname in ("CMakeFiles",):
                 if ignored_dirname in dirnames:
                     dirnames.remove(ignored_dirname)
             relpath = os.path.relpath(curdir, root_dir)
@@ -427,8 +465,10 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
 
     @property
     def bundle_dir(self):
-        return Path(self.build_dir, "lmbench-" + self.crosscompile_target.generic_target_suffix +
-                    self.build_configuration_suffix() + "-bundle")
+        return Path(
+            self.build_dir,
+            "lmbench-" + self.crosscompile_target.generic_target_suffix + self.build_configuration_suffix() + "-bundle",
+        )
 
     @property
     def benchmark_version(self):
@@ -443,9 +483,11 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
     def compile(self, **kwargs):
         new_env = dict()
         if not self.compiling_for_host():
-            new_env = dict(MIPS_SDK=self.target_info.sdk_root_dir,
-                           CHERI128_SDK=self.target_info.sdk_root_dir,
-                           CHERI_SDK=self.target_info.sdk_root_dir)
+            new_env = dict(
+                MIPS_SDK=self.target_info.sdk_root_dir,
+                CHERI128_SDK=self.target_info.sdk_root_dir,
+                CHERI_SDK=self.target_info.sdk_root_dir,
+            )
         with self.set_env(**new_env):
             self.make_args.set(CC="clang")
             if not self.compiling_for_host():
@@ -461,14 +503,11 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
 
     def _create_benchmark_dir(self, install_dir: Path):
         self.makedirs(install_dir)
-        self.clean_directory(install_dir / "bin", keep_root=False,
-                             ensure_dir_exists=False)
-        self.clean_directory(install_dir / "scripts", keep_root=False,
-                             ensure_dir_exists=False)
+        self.clean_directory(install_dir / "bin", keep_root=False, ensure_dir_exists=False)
+        self.clean_directory(install_dir / "scripts", keep_root=False, ensure_dir_exists=False)
         self.copy_directory(self.build_dir / "bin", install_dir / "bin")
         self.copy_directory(self.build_dir / "scripts", install_dir / "scripts")
-        self.install_file(self.source_dir / "src" / "Makefile",
-                          install_dir / "src" / "Makefile")
+        self.install_file(self.source_dir / "src" / "Makefile", install_dir / "src" / "Makefile")
         self.install_file(self.source_dir / "Makefile", install_dir / "Makefile")
 
     def install(self, **kwargs):
@@ -484,8 +523,9 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
             return
         # testing, not benchmarking -> run only once
         test_command = f"cd '/build/{self.bundle_dir.name}' && ./run_jenkins-bluehive.sh -d0 -r1 -s"
-        self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
-                                                  "--test-timeout", str(120 * 60), mount_builddir=True)
+        self.target_info.run_cheribsd_test_script(
+            "run_simple_tests.py", "--test-command", test_command, "--test-timeout", str(120 * 60), mount_builddir=True
+        )
 
 
 class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
@@ -505,13 +545,18 @@ class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.fixed_iterations = cls.add_bool_option(
-            "fixed-iterations", default=False,
-            help="Run benchmarks for given number of iterations instead of duration.")
+            "fixed-iterations", default=False, help="Run benchmarks for given number of iterations instead of duration."
+        )
 
     @property
     def bundle_dir(self):
-        return Path(self.build_dir, "unixbench-" + self.crosscompile_target.generic_target_suffix +
-                    self.build_configuration_suffix() + "-bundle")
+        return Path(
+            self.build_dir,
+            "unixbench-"
+            + self.crosscompile_target.generic_target_suffix
+            + self.build_configuration_suffix()
+            + "-bundle",
+        )
 
     @property
     def benchmark_version(self):
@@ -526,9 +571,11 @@ class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
     def compile(self, **kwargs):
         new_env = dict()
         if not self.compiling_for_host():
-            new_env = dict(MIPS_SDK=self.target_info.sdk_root_dir,
-                           CHERI128_SDK=self.target_info.sdk_root_dir,
-                           CHERI_SDK=self.target_info.sdk_root_dir)
+            new_env = dict(
+                MIPS_SDK=self.target_info.sdk_root_dir,
+                CHERI128_SDK=self.target_info.sdk_root_dir,
+                CHERI_SDK=self.target_info.sdk_root_dir,
+            )
         with self.set_env(**new_env):
             self.make_args.set(CC="clang")
             if self.compiling_for_mips(include_purecap=True):
@@ -550,8 +597,7 @@ class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
 
     def _create_benchmark_dir(self, install_dir: Path):
         self.makedirs(install_dir)
-        self.clean_directory(install_dir / "pgms", keep_root=False,
-                             ensure_dir_exists=False)
+        self.clean_directory(install_dir / "pgms", keep_root=False, ensure_dir_exists=False)
         self.copy_directory(self.build_dir / "UnixBench" / "pgms", install_dir / "pgms")
         self.install_file(self.source_dir / "run.sh", install_dir / "run.sh")
 
@@ -569,16 +615,21 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     # The makefiles here can't support any other tagets:
-    supported_architectures = (CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
-                               CompilationTargets.CHERIBSD_RISCV_HYBRID,
-                               CompilationTargets.CHERIBSD_RISCV_PURECAP)
+    supported_architectures = (
+        CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+        CompilationTargets.CHERIBSD_RISCV_HYBRID,
+        CompilationTargets.CHERIBSD_RISCV_PURECAP,
+    )
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.hw_counters = cls.add_config_option("enable-hw-counters",
-                                                choices=("pmc", "statcounters"), default="statcounters",
-                                                help="Use hardware performance counters")
+        cls.hw_counters = cls.add_config_option(
+            "enable-hw-counters",
+            choices=("pmc", "statcounters"),
+            default="statcounters",
+            help="Use hardware performance counters",
+        )
 
     def configure(self, **kwargs):
         self.configure_args.append("--enable-unixdomain")
@@ -588,8 +639,7 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
         super().configure(**kwargs)
 
     def process(self):
-        if (self.compiling_for_riscv(include_purecap=True) and
-                self.hw_counters == "pmc"):
+        if self.compiling_for_riscv(include_purecap=True) and self.hw_counters == "pmc":
             self.fatal("hwpmc not supported on riscv")
             return
         super().process()

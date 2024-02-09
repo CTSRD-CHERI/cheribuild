@@ -43,8 +43,9 @@ from ...utils import OSInfo
 
 class BuildBODiagSuite(CrossCompileCMakeProject):
     target = "bodiagsuite"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/bodiagsuite",
-                               old_urls=[b"https://github.com/nwf/bodiagsuite"])
+    repository = GitRepository(
+        "https://github.com/CTSRD-CHERI/bodiagsuite", old_urls=[b"https://github.com/nwf/bodiagsuite"]
+    )
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     default_build_type = BuildType.DEBUG
     default_use_asan = True
@@ -69,19 +70,27 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.use_valgrind = cls.add_bool_option("use-valgrind", help="Run tests using valgrind (native only)",
-                                               only_add_for_targets=(CompilationTargets.NATIVE,))
-        cls.use_stack_protector = cls.add_bool_option("use-stack-protector",
-                                                      help="Compile tests with stack-protector (non-CHERI only)")
-        cls.use_fortify_source = cls.add_bool_option("use-fortify-source",
-                                                     help="Compile tests with _DFORTIFY_SOURCE=2 (no effect on "
-                                                          "FreeBSD)")
-        cls.use_softboundcets = cls.add_bool_option("use-softboundcets",
-                                                    help="Compile tests with SoftBoundCETS (native only)",
-                                                    only_add_for_targets=(CompilationTargets.NATIVE,))
-        cls.use_effectivesan = cls.add_bool_option("use-effectivesan",
-                                                   help="Compile tests with EffectiveSan (native only)",
-                                                   only_add_for_targets=(CompilationTargets.NATIVE,))
+        cls.use_valgrind = cls.add_bool_option(
+            "use-valgrind",
+            help="Run tests using valgrind (native only)",
+            only_add_for_targets=(CompilationTargets.NATIVE,),
+        )
+        cls.use_stack_protector = cls.add_bool_option(
+            "use-stack-protector", help="Compile tests with stack-protector (non-CHERI only)"
+        )
+        cls.use_fortify_source = cls.add_bool_option(
+            "use-fortify-source", help="Compile tests with _DFORTIFY_SOURCE=2 (no effect on " "FreeBSD)"
+        )
+        cls.use_softboundcets = cls.add_bool_option(
+            "use-softboundcets",
+            help="Compile tests with SoftBoundCETS (native only)",
+            only_add_for_targets=(CompilationTargets.NATIVE,),
+        )
+        cls.use_effectivesan = cls.add_bool_option(
+            "use-effectivesan",
+            help="Compile tests with EffectiveSan (native only)",
+            only_add_for_targets=(CompilationTargets.NATIVE,),
+        )
 
     @property
     def CC(self):  # noqa: N802
@@ -136,8 +145,9 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             assert "-lsoftboundcets_rt" in self.default_ldflags
         # FIXME: add option to disable FORTIFY_SOURCE
         if self.build_type != BuildType.DEBUG:
-            self.warning("BODiagsuite contains undefined behaviour that might be optimized away unless you compile"
-                         " at -O0.")
+            self.warning(
+                "BODiagsuite contains undefined behaviour that might be optimized away unless you compile" " at -O0."
+            )
             self.ask_for_confirmation("Are you sure you want to continue?")
         super().process()
 
@@ -187,10 +197,19 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
 
         extra_args.extend(["--junit-testsuite-name", testsuite_prefix])
         if self.compiling_for_host():
-            extra_args.extend(["--test-native", "--bmake-path", bmake,
-                               "--jobs", str(self.config.make_jobs),
-                               "--build-dir", self.build_dir])
+            extra_args.extend(
+                [
+                    "--test-native",
+                    "--bmake-path",
+                    bmake,
+                    "--jobs",
+                    str(self.config.make_jobs),
+                    "--build-dir",
+                    self.build_dir,
+                ]
+            )
             self.run_cmd(self.get_test_script_path("run_bodiagsuite.py"), *extra_args)
         else:
-            self.target_info.run_cheribsd_test_script("run_bodiagsuite.py", *extra_args,
-                                                      mount_sourcedir=False, mount_builddir=True)
+            self.target_info.run_cheribsd_test_script(
+                "run_bodiagsuite.py", *extra_args, mount_sourcedir=False, mount_builddir=True
+            )

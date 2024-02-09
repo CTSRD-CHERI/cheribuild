@@ -44,9 +44,11 @@ class BuildLittleKernel(CrossCompileMakefileProject):
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP,
     )
-    repository = GitRepository("https://github.com/littlekernel/lk",
-                               temporary_url_override="https://github.com/arichardson/lk.git",
-                               url_override_reason="Fixes to allow building with Clang")
+    repository = GitRepository(
+        "https://github.com/littlekernel/lk",
+        temporary_url_override="https://github.com/arichardson/lk.git",
+        url_override_reason="Fixes to allow building with Clang",
+    )
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     set_pkg_config_path = False
     needs_sysroot = False
@@ -73,15 +75,19 @@ class BuildLittleKernel(CrossCompileMakefileProject):
     def compiler_rt_builtins_path(self) -> Path:
         path = BuildCompilerRtBuiltins.get_build_dir(self) / f"lib/baremetal/libclang_rt.builtins-{self.triple_arch}.a"
         if not path.exists():
-            self.dependency_error("Compiler builtins library", path, "does not exist",
-                                  cheribuild_target="compiler-rt-builtins")
+            self.dependency_error(
+                "Compiler builtins library", path, "does not exist", cheribuild_target="compiler-rt-builtins"
+            )
         return path
 
     @property
     def essential_compiler_and_linker_flags(self) -> "list[str]":
         if self.compiling_for_cheri():
-            return [*self.target_info.get_essential_compiler_and_linker_flags(softfloat=False),
-                    "-Werror=cheri-capability-misuse", "-Werror=shorten-cap-to-int"]
+            return [
+                *self.target_info.get_essential_compiler_and_linker_flags(softfloat=False),
+                "-Werror=cheri-capability-misuse",
+                "-Werror=shorten-cap-to-int",
+            ]
         return ["--target=" + self.target_info.target_triple]
 
     def setup(self):
@@ -103,8 +109,11 @@ class BuildLittleKernel(CrossCompileMakefileProject):
         self.set_make_cmd_with_args("LD", self.target_info.linker, ["--unresolved-symbols=report-all"])
         if self.crosscompile_target.is_riscv(include_purecap=True) and self.use_mmu:
             self.make_args.set(RISCV_MMU="sv39", RISCV_MODE="supervisor")
-        self.make_args.set(TOOLCHAIN_PREFIX=toolchain_prefix, ARCH_arm64_TOOLCHAIN_PREFIX=toolchain_prefix,
-                           ARCH_riscv64_TOOLCHAIN_PREFIX=toolchain_prefix)
+        self.make_args.set(
+            TOOLCHAIN_PREFIX=toolchain_prefix,
+            ARCH_arm64_TOOLCHAIN_PREFIX=toolchain_prefix,
+            ARCH_riscv64_TOOLCHAIN_PREFIX=toolchain_prefix,
+        )
 
     def setup_late(self) -> None:
         super().setup_late()
@@ -121,16 +130,43 @@ class BuildLittleKernel(CrossCompileMakefileProject):
 
     def run_tests(self):
         if self.compiling_for_aarch64(include_purecap=True):
-            cmd = [self.config.qemu_bindir / "qemu-system-aarch64", "-cpu",
-                   "cortex-a53", "-m", "512", "-smp", "1", "-machine", "virt",
-                   "-net", "none", "-nographic",
-                   "-kernel", self.kernel_path]
+            cmd = [
+                self.config.qemu_bindir / "qemu-system-aarch64",
+                "-cpu",
+                "cortex-a53",
+                "-m",
+                "512",
+                "-smp",
+                "1",
+                "-machine",
+                "virt",
+                "-net",
+                "none",
+                "-nographic",
+                "-kernel",
+                self.kernel_path,
+            ]
         elif self.compiling_for_riscv(include_purecap=True):
             bios_args = ["-bios", "none"]
             if self.use_mmu:
                 bios_args = riscv_bios_arguments(self.crosscompile_target, self)
-            cmd = [self.config.qemu_bindir / "qemu-system-riscv64cheri", "-cpu", "rv64", "-m", "512", "-smp", "1",
-                   "-machine", "virt", "-net", "none", "-nographic", "-kernel", self.kernel_path, *bios_args]
+            cmd = [
+                self.config.qemu_bindir / "qemu-system-riscv64cheri",
+                "-cpu",
+                "rv64",
+                "-m",
+                "512",
+                "-smp",
+                "1",
+                "-machine",
+                "virt",
+                "-net",
+                "none",
+                "-nographic",
+                "-kernel",
+                self.kernel_path,
+                *bios_args,
+            ]
         else:
             return self.fatal("Unsupported arch")
         self.run_cmd(cmd, cwd=self.build_dir, give_tty_control=True)

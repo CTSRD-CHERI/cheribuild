@@ -32,8 +32,9 @@ from ...utils import InstallInstructions
 
 class BuildRos2(CrossCompileCMakeProject):
     target = "ros2"
-    repository = GitRepository("https://github.com/dodsonmg/ros2_dashing_minimal.git", default_branch="master",
-                               force_branch=True)
+    repository = GitRepository(
+        "https://github.com/dodsonmg/ros2_dashing_minimal.git", default_branch="master", force_branch=True
+    )
     # it may eventually be useful to install to rootfs or sysroot depending on whether we want to use ROS2
     # as a library for building other applications using cheribuild
     # therefore, the _install_dir doesn't do anything, but cheribuild requires them
@@ -49,21 +50,28 @@ class BuildRos2(CrossCompileCMakeProject):
     def _run_vcs(self):
         # this is the meta version control system used by ros for downloading and unpacking repos
         if not shutil.which("vcs"):
-            self.dependency_error("Missing vcs command",
-                                  install_instructions=InstallInstructions("pip3 install --user vcstool"))
+            self.dependency_error(
+                "Missing vcs command", install_instructions=InstallInstructions("pip3 install --user vcstool")
+            )
         cmdline = ["vcs", "import", "--input", "ros2_minimal.repos", "src"]
         self.run_cmd(cmdline, cwd=self.source_dir)
 
     def _run_colcon(self, **kwargs):
         # colcon is the meta build system (on top of cmake) used by ros
         if not shutil.which("colcon"):
-            self.dependency_error("Missing colcon command",
-                                  install_instructions=InstallInstructions(
-                                      "pip3 install --user colcon-common-extensions"))
-        colcon_cmd = ["colcon", "build",
-                      "--install-base", self.install_dir,
-                      "--build-base", self.build_dir,
-                      "--merge-install"]
+            self.dependency_error(
+                "Missing colcon command",
+                install_instructions=InstallInstructions("pip3 install --user colcon-common-extensions"),
+            )
+        colcon_cmd = [
+            "colcon",
+            "build",
+            "--install-base",
+            self.install_dir,
+            "--build-base",
+            self.build_dir,
+            "--merge-install",
+        ]
         colcon_args = ["--no-warn-unused-cli", "--packages-skip-build-finished"]
         cmake_args = ["--cmake-args", "-DBUILD_TESTING=NO"]
         if not self.compiling_for_host():
@@ -134,7 +142,7 @@ if (! $?LD_LIBRARY_PATH ) then
 endif
 setenv LD_LIBRARY_PATH {ld_library_path}:${{LD_LIBRARY_PATH}}
 """
-        self.write_file(self.install_dir / 'cheri_setup.csh', csh_script, overwrite=True)
+        self.write_file(self.install_dir / "cheri_setup.csh", csh_script, overwrite=True)
         # write LD_64C_LIBRARY_PATH to a text file to source from sh in CheriBSD
         posix_sh_script = f"""#!/bin/sh
 rootdir=`pwd`
@@ -142,7 +150,7 @@ export LD_64C_LIBRARY_PATH={ld_library_path}:${{LD_LIBRARY_PATH}}
 export LD_CHERI_LIBRARY_PATH={ld_library_path}:${{LD_LIBRARY_PATH}}
 export LD_LIBRARY_PATH={ld_library_path}:${{LD_LIBRARY_PATH}}
 """
-        self.write_file(self.install_dir / 'cheri_setup.sh', posix_sh_script, overwrite=True)
+        self.write_file(self.install_dir / "cheri_setup.sh", posix_sh_script, overwrite=True)
 
     def update(self):
         super().update()
@@ -171,7 +179,6 @@ export LD_LIBRARY_PATH={ld_library_path}:${{LD_LIBRARY_PATH}}
     def run_tests(self):
         # only test when not compiling for host
         if not self.compiling_for_host():
-            self.target_info.run_cheribsd_test_script("run_ros2_tests.py",
-                                                      mount_sourcedir=True,
-                                                      mount_installdir=True,
-                                                      mount_sysroot=True)
+            self.target_info.run_cheribsd_test_script(
+                "run_ros2_tests.py", mount_sourcedir=True, mount_installdir=True, mount_sysroot=True
+            )

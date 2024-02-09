@@ -28,9 +28,11 @@ from .crosscompileproject import CrossCompileAutotoolsProject, GitRepository
 
 class BuildFfmpeg(CrossCompileAutotoolsProject):
     target = "ffmpeg"
-    repository = GitRepository("https://github.com/FFmpeg/FFmpeg.git",
-                               temporary_url_override="https://github.com/arichardson/FFmpeg.git",
-                               url_override_reason="Needs --disable-neon workarounds")
+    repository = GitRepository(
+        "https://github.com/FFmpeg/FFmpeg.git",
+        temporary_url_override="https://github.com/arichardson/FFmpeg.git",
+        url_override_reason="Needs --disable-neon workarounds",
+    )
     ctest_script_extra_args = ["--test-timeout", str(180 * 60)]  # Tests take a long time to run
     add_host_target_build_config_options = False  # doesn't understand --host
     _configure_supports_variables_on_cmdline = False  # not really an autotools project
@@ -39,31 +41,35 @@ class BuildFfmpeg(CrossCompileAutotoolsProject):
     def setup(self):
         super().setup()
         cflags = self.default_compiler_flags
-        self.configure_args.extend([
-            f"--ar={self.target_info.ar}",
-            f"--as={self.CC}",
-            f"--cc={self.CC}",
-            f"--cxx={self.CXX}",
-            f"--ld={self.CC}",
-            f"--nm={self.target_info.nm}",
-            f"--ranlib={self.target_info.ranlib}",
-            f"--strip={self.target_info.strip_tool}",
-            f"--extra-cflags={self.commandline_to_str(cflags + self.CFLAGS)}",
-            f"--extra-cxxflags={self.commandline_to_str(cflags + self.CXXFLAGS)}",
-            f"--extra-ldflags={self.commandline_to_str(self.default_ldflags + self.LDFLAGS)}",
-            "--enable-pic",
-            "--disable-doc",
-            "--disable-ffplay",
-            "--disable-ffprobe",
-        ])
+        self.configure_args.extend(
+            [
+                f"--ar={self.target_info.ar}",
+                f"--as={self.CC}",
+                f"--cc={self.CC}",
+                f"--cxx={self.CXX}",
+                f"--ld={self.CC}",
+                f"--nm={self.target_info.nm}",
+                f"--ranlib={self.target_info.ranlib}",
+                f"--strip={self.target_info.strip_tool}",
+                f"--extra-cflags={self.commandline_to_str(cflags + self.CFLAGS)}",
+                f"--extra-cxxflags={self.commandline_to_str(cflags + self.CXXFLAGS)}",
+                f"--extra-ldflags={self.commandline_to_str(self.default_ldflags + self.LDFLAGS)}",
+                "--enable-pic",
+                "--disable-doc",
+                "--disable-ffplay",
+                "--disable-ffprobe",
+            ]
+        )
         if not self.compiling_for_host():
-            self.configure_args.extend([
-                "--enable-cross-compile",
-                f"--host-cc={self.host_CC}",
-                f"--host-ld={self.host_CC}",
-                f"--arch={self.crosscompile_target.cpu_architecture.value}",
-                f"--target-os={self.target_info.cmake_system_name.lower()}",
-            ])
+            self.configure_args.extend(
+                [
+                    "--enable-cross-compile",
+                    f"--host-cc={self.host_CC}",
+                    f"--host-ld={self.host_CC}",
+                    f"--arch={self.crosscompile_target.cpu_architecture.value}",
+                    f"--target-os={self.target_info.cmake_system_name.lower()}",
+                ]
+            )
 
         if self.compiling_for_cheri():
             self.configure_args.append("--disable-neon")  # NEON asm needs some adjustments

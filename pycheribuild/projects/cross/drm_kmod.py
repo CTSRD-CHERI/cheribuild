@@ -29,7 +29,8 @@ class BuildDrmKMod(CrossCompileProject):
                 MODULES_OVERRIDE="linuxkpi",
             )
         self.kernel_make_args = self.freebsd_project.kernel_make_args_for_config(
-            self.freebsd_project.kernel_config, extra_make_args,
+            self.freebsd_project.kernel_config,
+            extra_make_args,
         )
         assert self.kernel_make_args.kind == MakeCommandKind.BsdMake
 
@@ -38,7 +39,11 @@ class BuildDrmKMod(CrossCompileProject):
         if self.use_buildenv:
             self.info("Cleaning drm-kmod modules for configs:", self.freebsd_project.kernel_config)
             self.freebsd_project.build_and_install_subdir(
-                self.kernel_make_args, str(self.source_dir), skip_build=True, skip_clean=False, skip_install=True,
+                self.kernel_make_args,
+                str(self.source_dir),
+                skip_build=True,
+                skip_clean=False,
+                skip_install=True,
             )
         else:
             self.info("Clean not supported yet")
@@ -48,11 +53,18 @@ class BuildDrmKMod(CrossCompileProject):
         self.info("Building drm-kmod modules for configs:", self.freebsd_project.kernel_config)
         if self.use_buildenv:
             self.freebsd_project.build_and_install_subdir(
-                self.kernel_make_args, str(self.source_dir), skip_build=False, skip_clean=True, skip_install=True,
+                self.kernel_make_args,
+                str(self.source_dir),
+                skip_build=False,
+                skip_clean=True,
+                skip_install=True,
             )
         else:
             self.run_make(
-                "buildkernel", options=self.kernel_make_args, cwd=self.freebsd_project.source_dir, parallel=True,
+                "buildkernel",
+                options=self.kernel_make_args,
+                cwd=self.freebsd_project.source_dir,
+                parallel=True,
             )
 
     def install(self, **kwargs) -> None:
@@ -65,9 +77,16 @@ class BuildDrmKMod(CrossCompileProject):
         make_args.set_env(METALOG=self.real_install_root_dir / "METALOG.drm-kmod")
         if self.use_buildenv:
             self.freebsd_project.build_and_install_subdir(
-                make_args, str(self.source_dir), skip_build=True, skip_clean=True, skip_install=False,
+                make_args,
+                str(self.source_dir),
+                skip_build=True,
+                skip_clean=True,
+                skip_install=False,
             )
         else:
             self.run_make_install(
-                target="installkernel", options=make_args, cwd=self.freebsd_project.source_dir, parallel=False,
+                target="installkernel",
+                options=make_args,
+                cwd=self.freebsd_project.source_dir,
+                parallel=False,
             )

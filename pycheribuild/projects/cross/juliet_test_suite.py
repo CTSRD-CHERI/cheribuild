@@ -52,8 +52,10 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
 
     def process(self):
         if self.build_type != BuildType.DEBUG:
-            self.warning("The Juliet test suite contains undefined behaviour that might be optimized away unless "
-                         "you compile at -O0.")
+            self.warning(
+                "The Juliet test suite contains undefined behaviour that might be optimized away unless "
+                "you compile at -O0."
+            )
             self.ask_for_confirmation("Are you sure you want to continue?")
         super().process()
 
@@ -112,78 +114,80 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
         # For stdin redirection
         args.append("--test-setup-command=touch /tmp/in.txt")
 
-        self.target_info.run_cheribsd_test_script("run_juliet_tests.py", *args, mount_sourcedir=True,
-                                                  mount_sysroot=True, mount_builddir=True)
+        self.target_info.run_cheribsd_test_script(
+            "run_juliet_tests.py", *args, mount_sourcedir=True, mount_sysroot=True, mount_builddir=True
+        )
 
 
 class BuildJulietCWE121(BuildJulietCWESubdir):
     target = "juliet-cwe-121"
     cwe_number = 121
-    repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
-                                             subdirectory="testcases/CWE121_Stack_Based_Buffer_Overflow")
+    repository = ReuseOtherProjectRepository(
+        BuildJulietTestSuite, subdirectory="testcases/CWE121_Stack_Based_Buffer_Overflow"
+    )
     cwe_setup_commands = [
-                "echo 500 > /tmp/in.txt",
-            ]
+        "echo 500 > /tmp/in.txt",
+    ]
 
 
 class BuildJulietCWE122(BuildJulietCWESubdir):
     target = "juliet-cwe-122"
     cwe_number = 122
-    repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
-                                             subdirectory="testcases/CWE122_Heap_Based_Buffer_Overflow")
+    repository = ReuseOtherProjectRepository(
+        BuildJulietTestSuite, subdirectory="testcases/CWE122_Heap_Based_Buffer_Overflow"
+    )
     cwe_setup_commands = [
-                "echo 500 > /tmp/in.txt",
-            ]
+        "echo 500 > /tmp/in.txt",
+    ]
 
 
 class BuildJulietCWE124(BuildJulietCWESubdir):
     target = "juliet-cwe-124"
     cwe_number = 124
-    repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
-                                             subdirectory="testcases/CWE124_Buffer_Underwrite")
+    repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE124_Buffer_Underwrite")
     cwe_setup_commands = [
-                "echo -500 > /tmp/in.txt",
-            ]
+        "echo -500 > /tmp/in.txt",
+    ]
 
 
 class BuildJulietCWE126(BuildJulietCWESubdir):
     target = "juliet-cwe-126"
     cwe_number = 126
-    repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
-                                             subdirectory="testcases/CWE126_Buffer_Overread")
+    repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE126_Buffer_Overread")
     cwe_setup_commands = [
-                "echo 500 > /tmp/in.txt",
-            ]
+        "echo 500 > /tmp/in.txt",
+    ]
 
 
 class BuildJulietCWE127(BuildJulietCWESubdir):
     target = "juliet-cwe-127"
     cwe_number = 127
-    repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
-                                             subdirectory="testcases/CWE127_Buffer_Underread")
+    repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE127_Buffer_Underread")
     cwe_setup_commands = [
-                "echo -500 > /tmp/in.txt",
-            ]
+        "echo -500 > /tmp/in.txt",
+    ]
 
 
 class BuildJulietCWE134(BuildJulietCWESubdir):
     target = "juliet-cwe-134"
     cwe_number = 134
-    repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
-                                             subdirectory="testcases/CWE134_Uncontrolled_Format_String")
+    repository = ReuseOtherProjectRepository(
+        BuildJulietTestSuite, subdirectory="testcases/CWE134_Uncontrolled_Format_String"
+    )
     cwe_warning_flags = ["-Wno-error=format-security"]
     cwe_setup_commands = [
-                "export ADD=%s%d%s",
-                "echo Format string: %s %d %s > /tmp/file.txt",
-                "echo Format string: %s %d %s > /tmp/in.txt",
-            ]
+        "export ADD=%s%d%s",
+        "echo Format string: %s %d %s > /tmp/file.txt",
+        "echo Format string: %s %d %s > /tmp/in.txt",
+    ]
 
 
 class BuildJulietCWE188(BuildJulietCWESubdir):
     target = "juliet-cwe-188"
     cwe_number = 188
-    repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
-                                             subdirectory="testcases/CWE188_Reliance_on_Data_Memory_Layout")
+    repository = ReuseOtherProjectRepository(
+        BuildJulietTestSuite, subdirectory="testcases/CWE188_Reliance_on_Data_Memory_Layout"
+    )
 
     def setup(self):
         super().setup()
@@ -206,31 +210,33 @@ class BuildJulietCWE416(BuildJulietCWESubdir):
 class BuildJulietCWE587(BuildJulietCWESubdir):
     target = "juliet-cwe-587"
     cwe_number = 587
-    repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
-                                             subdirectory="testcases/CWE587_Assignment_of_Fixed_Address_to_Pointer")
+    repository = ReuseOtherProjectRepository(
+        BuildJulietTestSuite, subdirectory="testcases/CWE587_Assignment_of_Fixed_Address_to_Pointer"
+    )
 
 
 class BuildJulietCWE588(BuildJulietCWESubdir):
     target = "juliet-cwe-588"
     cwe_number = 588
     repository = ReuseOtherProjectRepository(
-            BuildJulietTestSuite,
-            subdirectory="testcases/CWE588_Attempt_to_Access_Child_of_Non_Structure_Pointer")
+        BuildJulietTestSuite, subdirectory="testcases/CWE588_Attempt_to_Access_Child_of_Non_Structure_Pointer"
+    )
 
 
 class BuildJulietCWE680(BuildJulietCWESubdir):
     target = "juliet-cwe-680"
     cwe_number = 680
-    repository = ReuseOtherProjectRepository(BuildJulietTestSuite,
-                                             subdirectory="testcases/CWE680_Integer_Overflow_to_Buffer_Overflow")
+    repository = ReuseOtherProjectRepository(
+        BuildJulietTestSuite, subdirectory="testcases/CWE680_Integer_Overflow_to_Buffer_Overflow"
+    )
 
 
 class BuildJulietCWE685(BuildJulietCWESubdir):
     target = "juliet-cwe-685"
     cwe_number = 685
     repository = ReuseOtherProjectRepository(
-            BuildJulietTestSuite,
-            subdirectory="testcases/CWE685_Function_Call_With_Incorrect_Number_of_Arguments")
+        BuildJulietTestSuite, subdirectory="testcases/CWE685_Function_Call_With_Incorrect_Number_of_Arguments"
+    )
     cwe_warning_flags = ["-Wno-error=format-insufficient-args"]
 
 

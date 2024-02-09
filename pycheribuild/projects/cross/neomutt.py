@@ -29,15 +29,14 @@ from ..project import GitRepository
 
 class BuildNeomutt(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/neomutt/neomutt.git")
-    dependencies = ('libxml2',)
+    dependencies = ("libxml2",)
 
     def setup(self):
         super().setup()
 
         # neomutt's build system doesn't use autotools, it justs pretends to look the same
         # - but it doesn't implement the --target option, so we strip it
-        self.configure_args[:] = [arg for arg in self.configure_args if not arg.startswith('--target=')]
+        self.configure_args[:] = [arg for arg in self.configure_args if not arg.startswith("--target=")]
 
         # enable OpenSSL (in base system), disable internationalisation libs we don't have
-        self.configure_args.extend(['--disable-nls', '--disable-idn',
-                                    '--disable-doc', '--ssl'])
+        self.configure_args.extend(["--disable-nls", "--disable-idn", "--disable-doc", "--ssl"])

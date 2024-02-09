@@ -32,9 +32,12 @@ from ..project import ExternallyManagedSourceRepository, GitRepository
 
 class BuildChocolateDoom(CrossCompileAutotoolsProject):
     target = "chocolate-doom"
-    repository = GitRepository("https://github.com/chocolate-doom/chocolate-doom.git",
-                               old_urls=[b"https://github.com/jrtc27/chocolate-doom.git"],
-                               default_branch="master", force_branch=True)
+    repository = GitRepository(
+        "https://github.com/chocolate-doom/chocolate-doom.git",
+        old_urls=[b"https://github.com/jrtc27/chocolate-doom.git"],
+        default_branch="master",
+        force_branch=True,
+    )
     dependencies = ("sdl", "sdl-mixer", "sdl-net", "libpng")
     _can_use_autogen_sh = False  # Can't use autogen.sh since it will run configure in the wrong dir
 
@@ -55,14 +58,14 @@ class BuildFreedoom(CrossCompileProject):
     version = "0.12.1"
     url_prefix: str = f"https://github.com/freedoom/freedoom/releases/download/v{version}/"
     packages: "dict[str, list[str]]" = {
-        'freedoom': ['freedoom1', 'freedoom2'],
-        'freedm': ['freedm'],
+        "freedoom": ["freedoom1", "freedoom2"],
+        "freedm": ["freedm"],
     }
 
     def compile(self, **kwargs):
         for pkgname, wads in self.packages.items():
             filename = f"{pkgname}-{self.version}.zip"
-            wadfiles = ['*/' + wad + ".wad" for wad in wads]
+            wadfiles = ["*/" + wad + ".wad" for wad in wads]
             if not (self.build_dir / filename).is_file():
                 self.download_file(self.build_dir / filename, self.url_prefix + filename)
             self.run_cmd("unzip", "-jo", filename, *wadfiles, cwd=self.build_dir)
@@ -73,6 +76,11 @@ class BuildFreedoom(CrossCompileProject):
                 wadfile = wad + ".wad"
                 wadpath = Path("share/doom") / wadfile
                 self.install_file(self.build_dir / wadfile, self.install_dir / wadpath)
-                self.write_file(self.install_dir / "bin" / wad, overwrite=True, mode=0o755,
-                                contents="#!/bin/sh\nexec {0}/bin/chocolate-doom -iwad {0}/{1} \"$@\"\n".format(
-                                    self.install_prefix, wadpath))
+                self.write_file(
+                    self.install_dir / "bin" / wad,
+                    overwrite=True,
+                    mode=0o755,
+                    contents='#!/bin/sh\nexec {0}/bin/chocolate-doom -iwad {0}/{1} "$@"\n'.format(
+                        self.install_prefix, wadpath
+                    ),
+                )

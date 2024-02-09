@@ -48,8 +48,9 @@ else:
 
 # We also build benchmarks for hybrid to see whether those compilation flags change the results
 class BenchmarkMixin(_BenchmarkMixinBase):
-    supported_architectures = (CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID_FOR_PURECAP_ROOTFS +
-                               CompilationTargets.ALL_NATIVE)
+    supported_architectures = (
+        CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID_FOR_PURECAP_ROOTFS + CompilationTargets.ALL_NATIVE
+    )
     default_build_type = BuildType.RELEASE
     prefer_full_lto_over_thin_lto = True
 
@@ -59,10 +60,15 @@ class BenchmarkMixin(_BenchmarkMixinBase):
             return ["-O3"]
         return super().optimization_flags
 
-    def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: "Optional[str]" = None,
-                           benchmark_script: "Optional[str]" = None,
-                           benchmark_script_args: "Optional[list[str]]" = None,
-                           extra_runbench_args: "Optional[list[str]]" = None):
+    def run_fpga_benchmark(
+        self,
+        benchmarks_dir: Path,
+        *,
+        output_file: "Optional[str]" = None,
+        benchmark_script: "Optional[str]" = None,
+        benchmark_script_args: "Optional[list[str]]" = None,
+        extra_runbench_args: "Optional[list[str]]" = None,
+    ):
         assert benchmarks_dir is not None
         assert output_file is not None, "output_file must be set to a valid value"
         xtarget = self.crosscompile_target
@@ -80,12 +86,16 @@ class BenchmarkMixin(_BenchmarkMixinBase):
         basic_args = []
         if self.config.benchmark_with_qemu:
             from ...projects.build_qemu import BuildQEMU
+
             qemu_path = BuildQEMU.qemu_binary(self)
             qemu_ssh_socket = find_free_port()
             if not qemu_path.exists():
                 self.fatal("QEMU binary", qemu_path, "doesn't exist")
-            basic_args += ["--use-qemu-instead-of-fpga", "--qemu-path=" + str(qemu_path),
-                           "--qemu-ssh-port=" + str(qemu_ssh_socket.port)]
+            basic_args += [
+                "--use-qemu-instead-of-fpga",
+                "--qemu-path=" + str(qemu_path),
+                "--qemu-ssh-port=" + str(qemu_ssh_socket.port),
+            ]
         elif not self.compiling_for_mips(include_purecap=True):
             self.fatal("run_fpga_benchmark has not been updated for RISC-V/AArch64")
             return
@@ -101,11 +111,13 @@ class BenchmarkMixin(_BenchmarkMixinBase):
                 env_var = "LD_64_PRELOAD"
             else:
                 env_var = "LD_PRELOAD"
-            pre_cmd = "export {}={};".format(env_var,
-                                             shlex.quote("/tmp/benchdir/" + self.config.benchmark_ld_preload.name))
+            pre_cmd = "export {}={};".format(
+                env_var, shlex.quote("/tmp/benchdir/" + self.config.benchmark_ld_preload.name)
+            )
             if env_var == "LD_64C_PRELOAD":
-                pre_cmd += "export {}={};".format("LD_CHERI_PRELOAD",
-                                                  shlex.quote("/tmp/benchdir/" + self.config.benchmark_ld_preload.name))
+                pre_cmd += "export {}={};".format(
+                    "LD_CHERI_PRELOAD", shlex.quote("/tmp/benchdir/" + self.config.benchmark_ld_preload.name)
+                )
             runbench_args.append("--pre-command=" + pre_cmd)
         if self.config.benchmark_fpga_extra_args:
             basic_args.extend(self.config.benchmark_fpga_extra_args)
@@ -115,6 +127,7 @@ class BenchmarkMixin(_BenchmarkMixinBase):
             runbench_args.append("--interact")
 
         from ...projects.cross.cheribsd import BuildCheriBsdMfsKernel, ConfigPlatform
+
         if self.config.benchmark_with_qemu:
             # When benchmarking with QEMU we always spawn a new instance
             target = self.target_info
@@ -128,10 +141,12 @@ class BenchmarkMixin(_BenchmarkMixinBase):
             # use a bitfile from jenkins. TODO: add option for overriding
             assert xtarget.is_riscv(include_purecap=True)
             basic_args.append("--jenkins-bitfile")
-            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(xtarget.get_rootfs_target(), self.config,
-                                                                              caller=self)
-            kernel_config = mfs_kernel.default_kernel_config(ConfigPlatform.GFE,
-                                                             benchmark=not self.config.benchmark_with_debug_kernel)
+            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(
+                xtarget.get_rootfs_target(), self.config, caller=self
+            )
+            kernel_config = mfs_kernel.default_kernel_config(
+                ConfigPlatform.GFE, benchmark=not self.config.benchmark_with_debug_kernel
+            )
             kernel_image = mfs_kernel.get_kernel_install_path(kernel_config)
             basic_args.append("--kernel-img=" + str(kernel_image))
         else:
@@ -150,4 +165,5 @@ class BenchmarkMixin(_BenchmarkMixinBase):
                 qemu_ssh_socket.socket.close()
         self.run_cmd(
             [str(cheribuild_path / "vcu118-bsd-boot.py"), *basic_args, "-vvvvv", "runbench", *runbench_args],
-            give_tty_control=True)
+            give_tty_control=True,
+        )

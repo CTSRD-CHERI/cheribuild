@@ -61,11 +61,12 @@ class BuildOpenSBI(Project):
         CompilationTargets.FREESTANDING_RISCV64_HYBRID,
         CompilationTargets.FREESTANDING_RISCV64,
         # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_PURECAP
-        )
+    )
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
-    _default_install_dir_fn = ComputedDefaultValue(function=opensbi_install_dir,
-                                                   as_string="$SDK_ROOT/opensbi/riscv{32,64}{-hybrid,-purecap,}")
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=opensbi_install_dir, as_string="$SDK_ROOT/opensbi/riscv{32,64}{-hybrid,-purecap,}"
+    )
 
     @classproperty
     def needs_sysroot(self):
@@ -99,7 +100,7 @@ class BuildOpenSBI(Project):
             PLATFORM_RISCV_ABI=self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True),
             PLATFORM_RISCV_ISA=self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True),
             PLATFORM_RISCV_XLEN=64,
-            )
+        )
         if self.config.verbose:
             self.make_args.set(V=True)
 
@@ -135,14 +136,21 @@ class BuildOpenSBI(Project):
             # Install into the QEMU firware directory so that `-bios default` works
             qemu_fw_dir = BuildQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "share/qemu/"
             self.makedirs(qemu_fw_dir)
-            self.run_cmd(self.sdk_bindir / "llvm-objcopy", "-S", "-O", "binary",
-                         self._fw_jump_path(), qemu_fw_dir / "opensbi-riscv64cheri-virt-fw_jump.bin",
-                         print_verbose_only=False)
+            self.run_cmd(
+                self.sdk_bindir / "llvm-objcopy",
+                "-S",
+                "-O",
+                "binary",
+                self._fw_jump_path(),
+                qemu_fw_dir / "opensbi-riscv64cheri-virt-fw_jump.bin",
+                print_verbose_only=False,
+            )
 
     def _fw_jump_path(self) -> Path:
         # share/opensbi/lp64/generic/firmware//fw_payload.bin
         return self.install_dir / "share/opensbi/{abi}/generic/firmware/fw_jump.elf".format(
-            abi=self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True))
+            abi=self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
+        )
 
     @classmethod
     def get_nocap_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":
@@ -170,20 +178,27 @@ class BuildOpenSBIGFE(BuildOpenSBI):
 
     def setup(self):
         super().setup()
-        self.make_args.set(FW_TEXT_START=0xc0000000)
+        self.make_args.set(FW_TEXT_START=0xC0000000)
 
 
 class BuildUpstreamOpenSBI(BuildOpenSBI):
     target = "upstream-opensbi"
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, p: config.cheri_sdk_dir / "upstream-opensbi/riscv64",
-        as_string="$SDK_ROOT/upstream-opensbi/riscv64")
+        as_string="$SDK_ROOT/upstream-opensbi/riscv64",
+    )
     repository = GitRepository("https://github.com/riscv-software-src/opensbi.git")
     supported_architectures = (CompilationTargets.FREESTANDING_RISCV64,)
 
     def run_tests(self):
         options = QemuOptions(self.crosscompile_target)
-        self.run_cmd(options.get_commandline(
-            qemu_command=BuildQEMU.qemu_binary(self), add_network_device=False, bios_args=["-bios", "none"],
-            kernel_file=self.install_dir / "share/opensbi/lp64/generic/firmware//fw_payload.elf"),
-            give_tty_control=True, cwd="/")
+        self.run_cmd(
+            options.get_commandline(
+                qemu_command=BuildQEMU.qemu_binary(self),
+                add_network_device=False,
+                bios_args=["-bios", "none"],
+                kernel_file=self.install_dir / "share/opensbi/lp64/generic/firmware//fw_payload.elf",
+            ),
+            give_tty_control=True,
+            cwd="/",
+        )
