@@ -1657,7 +1657,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def _get_config_variants(self, platforms: "set[ConfigPlatform]", kernel_abis: "list[KernelABI]",
                              combine_flags: "list[str]", **filter_kwargs) -> "list[CheriBSDConfig]":
-        flag_values = itertools.product([True, False], repeat=len(combine_flags))
+        flag_values = itertools.product([False, True], repeat=len(combine_flags))
         combine_tuples = list(itertools.product(platforms, kernel_abis, flag_values))
         configs = []
         for platform, kernel_abi, flag_tuple in combine_tuples:
@@ -1704,8 +1704,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         if platform is None:
             platform = self.get_default_kernel_platform()
         kernel_abi = filter_kwargs.pop("kernel_abi", self.get_default_kernel_abi())
-        if xtarget.is_riscv(include_purecap=True):
-            filter_kwargs.setdefault("fett", self.build_fett_kernels)
         config = CheriBSDConfigTable.get_default(xtarget, platform, kernel_abi, **filter_kwargs)
         return config.kernconf
 
