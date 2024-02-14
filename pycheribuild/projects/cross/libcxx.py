@@ -600,7 +600,8 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 self.add_cmake_options(LIBCXX_ENABLE_ASSERTIONS=True)
                 # Need to export the symbols from debug.cpp to allow linking code that defines _LIBCPP_DEBUG=1
                 self.add_cmake_options(LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS=True)
-        if not GitRepository.contains_commit(self, "f4fdc4f4d9f6903808541645d383be2ee759f400", src_dir=self.source_dir):
+        if not GitRepository.contains_commit(self, "f4fdc4f4d9f6903808541645d383be2ee759f400", src_dir=self.source_dir,
+                                             invalid_commit_ref_result=True):
             self.fatal(f"LLVM revision in {self.source_dir} is too old for this target, please update.")
         super().configure(**kwargs)
 
