@@ -614,7 +614,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                 cmd.append("--test-ld-preload-variable=LD_64_PRELOAD")
             else:
                 cmd.append("--test-ld-preload-variable=LD_PRELOAD")
-        if rootfs_alternate_kernel_dir and not qemu_options.can_boot_kernel_directly:
+        if rootfs_alternate_kernel_dir:
             cmd.extend(["--alternate-kernel-rootfs-path", rootfs_alternate_kernel_dir])
 
         cmd.extend(map(str, script_args))

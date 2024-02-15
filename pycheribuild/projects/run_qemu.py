@@ -727,9 +727,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         return []
 
     def run_tests(self):
-        rootfs_kernel_bootdir = None
-        if not self.qemu_options.can_boot_kernel_directly:
-            rootfs_kernel_bootdir = self.kernel_project.get_kern_module_path(self.kernel_config)
+        rootfs_kernel_bootdir = self.kernel_project.get_kern_module_path(self.kernel_config)
         extra_args = self._extra_test_args
         if self.kyua_test_files and "--kyua-tests-files" not in self.config.test_extra_args:
             extra_args.extend("--kyua-tests-files=" + x for x in self.kyua_test_files)

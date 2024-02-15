@@ -778,8 +778,6 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: Optional[Path], kerne
     if not qemu_options.can_boot_kernel_directly:
         if not disk_image:
             failure("Cannot boot kernel directly and no disk image passed!", exit=True)
-    else:
-        assert boot_alternate_kernel_dir is None, "Unexpected alternate kernel parameter for loader(8)"
     if bios_path is not None:
         bios_args = ["-bios", str(bios_path)]
     elif qemu_options.xtarget.is_riscv(include_purecap=True):
@@ -795,6 +793,11 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: Optional[Path], kerne
                                              )
     qemu_args.extend(smp_args)
     kernel_commandline = []
+    if qemu_options.can_boot_kernel_directly and kernel_image and boot_alternate_kernel_dir:
+        kernel_commandline.append(f"kern.module_path={boot_alternate_kernel_dir}")
+        loader_kernel_dir = None
+    else:
+        loader_kernel_dir = boot_alternate_kernel_dir
     if kernel_init_only:
         kernel_commandline.append("init_path=/sbin/startup-benchmark.sh")
     if skip_ssh_setup:
@@ -834,14 +837,14 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: Optional[Path], kerne
         kernel_init_only=kernel_init_only,
         network_iface=qemu_options.network_interface_name(),
         expected_kernel_abi_msg=expected_kernel_abi_arg_to_regex[expected_kernel_abi],
-        boot_alternate_kernel_dir=boot_alternate_kernel_dir,
+        loader_kernel_dir=loader_kernel_dir,
     )
     return child
 
 
 def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=False,
                    network_iface: Optional[str], expected_kernel_abi_msg: Optional[str] = None,
-                   boot_alternate_kernel_dir: "Optional[Path]" = None) -> None:
+                   loader_kernel_dir: "Optional[Path]" = None) -> None:
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -876,7 +879,7 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
             # Skip 10s wait from loader(8) if we see the autoboot message
             if i == loader_boot_messages.index(AUTOBOOT_PROMPT):  # Hit Enter
                 success("===> loader(8) autoboot")
-                if boot_alternate_kernel_dir:
+                if loader_kernel_dir:
                     # Stop autoboot and enter console
                     child.send("\x1b")
                     i = child.expect(loader_boot_prompt_messages, timeout=60,
@@ -889,10 +892,10 @@ def boot_and_login(child: CheriBSDSpawnMixin, *, starttime, kernel_init_only=Fal
             if i == loader_boot_messages.index(BOOT_LOADER_PROMPT):  # loader(8) prompt
                 success("===> loader(8) waiting boot commands")
                 # Just boot the default kernel if no alternate kernel directory is given
-                child.sendline("boot {}".format(boot_alternate_kernel_dir or ""))
+                child.sendline("boot {}".format(loader_kernel_dir or ""))
                 ran_manual_boot = True
             i = child.expect(boot_messages, timeout=20 * 60, timeout_msg="timeout before kernel")
-        if boot_alternate_kernel_dir and not ran_manual_boot:
+        if loader_kernel_dir and not ran_manual_boot:
             failure("failed to enter boot loader prompt", exit=True)
 
         # Check that we are booting the expected kind of CheriBSD kernel (hybrid/purecap)
