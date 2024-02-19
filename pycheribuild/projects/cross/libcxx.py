@@ -585,8 +585,8 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 "test-against-running-qemu-instance",
                 help="Run tests against a currently running QEMU instance using the ssh.py executor.",
             )
-        cls.test_jobs = cls.add_config_option(
-            "parallel-test-jobs",
+        cls.qemu_test_jobs = cls.add_config_option(
+            "parallel-qemu-test-jobs",
             help="Number of QEMU instances spawned to run tests (default: number of build jobs (-j flag) / 2)",
             default=lambda c, p: max(c.make_jobs / 2, 1),
             kind=int,
@@ -618,7 +618,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
         return super().compile()
 
     def run_tests(self):
-        test_jobs = self.test_jobs
+        test_jobs = self.config.make_jobs
         executor_lit_args = []
         if self.test_against_running_qemu_instance:
             test_jobs = 1
@@ -642,6 +642,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             # The Morello board has 4 CPUs, so run 4 tests in parallel.
             test_jobs = 4
         elif self.target_info.is_cheribsd() and not self.compiling_for_host():
+            test_jobs = self.qemu_test_jobs
             if "libunwind" in self.get_enabled_runtimes():
                 self.target_info.run_cheribsd_test_script(
                     "run_libunwind_tests.py",
@@ -657,7 +658,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                     "--ssh-executor-script",
                     self.source_dir / "../libcxx/utils/ssh.py",
                     "--parallel-jobs",
-                    self.test_jobs,
+                    test_jobs,
                     mount_sysroot=True,
                 )
             return
