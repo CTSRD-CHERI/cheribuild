@@ -88,7 +88,7 @@ def _update_check(config: DefaultCheriConfig, d: Path) -> None:
         if query_yes_no(
             config,
             f"The local {branch_info.local_branch} branch is tracking the obsolete remote 'master'"
-            f" branch, would you like to switch to 'main'?",
+            " branch, would you like to switch to 'main'?",
             force_result=False,
         ):
             # Update the remote ref to point to "main".
@@ -140,7 +140,7 @@ def get_config_option_value(handle: ConfigOptionHandle, config: DefaultCheriConf
     if option.is_fallback_only:
         raise LookupError(
             f"Option '{option.full_option_name}' cannot be queried since it is a generic fallback value"
-            f"for a target-specific option. Please use the target-suffixed on instead."
+            "for a target-specific option. Please use the target-suffixed on instead."
         )
     if option._owning_class is not None:
         project_cls: "type[SimpleProject]" = option._owning_class

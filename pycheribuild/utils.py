@@ -165,7 +165,7 @@ else:
                 self.attrname = name
             elif name != self.attrname:
                 raise TypeError(
-                    "Cannot assign the same cached_property to two different names " f"({self.attrname} and {name})."
+                    f"Cannot assign the same cached_property to two different names ({self.attrname} and {name})."
                 )
 
         def __get__(self, instance, owner=None) -> Type_T:
@@ -529,10 +529,7 @@ class OSInfo:
                             if msg_start:
                                 hint = hint[msg_start:]
                             return hint
-                        return (
-                            "Could not find package for program " + name + ". "
-                            "Maybe `zypper in " + name + "` will work."
-                        )
+                        return f"Could not find package for program {name}. Maybe `zypper in {name}` will work."
 
                     return InstallInstructions(command_not_found, cheribuild_target, alternative)
                 guessed_package = True
@@ -548,7 +545,7 @@ class OSInfo:
             # not sure if the package name is correct:
             return InstallInstructions(
                 f"Possibly running `{cls.package_manager(compat_abi)} install {install_name}"
-                f"` fixes this. Note: package name may not be correct.",
+                "` fixes this. Note: package name may not be correct.",
                 cheribuild_target,
                 alternative,
             )

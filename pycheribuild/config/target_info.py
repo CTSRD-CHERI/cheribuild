@@ -51,7 +51,8 @@ __all__ = [
     "DefaultInstallDir",
     "MipsFloatAbi",
     "NativeTargetInfo",
-    "TargetInfo"]
+    "TargetInfo",
+]
 
 
 class CPUArchitecture(Enum):
@@ -101,6 +102,7 @@ class CompilerType(Enum):
     """
     Used by the jenkins script to detect which compiler directory should be used
     """
+
     DEFAULT_COMPILER = "default-compiler"  # Default system compiler (i.e. the argument passed to cheribuild)
     CHERI_LLVM = "cheri-llvm"  # Compile with CHERI LLVM built by cheribuild
     MORELLO_LLVM = "morello-llvm"  # Compile with Morello LLVM built by cheribuild
@@ -120,8 +122,10 @@ class AutoVarInit(Enum):
         if self is None:
             return []  # Equivalent to -ftrivial-auto-var-init=uninitialized
         elif self is AutoVarInit.ZERO:
-            return ["-ftrivial-auto-var-init=zero",
-                    "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang"]
+            return [
+                "-ftrivial-auto-var-init=zero",
+                "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang",
+            ]
         elif self is AutoVarInit.PATTERN:
             return ["-ftrivial-auto-var-init=pattern"]
         else:
@@ -152,6 +156,7 @@ _DO_NOT_INSTALL_PATH: Path = Path("/this/project/should/not/be/installed!!!!")
 
 class AbstractProject(FileSystemUtils):
     """A base class for (Simple)Project that exposes only the fields/methods needed in target_info."""
+
     _xtarget: "ClassVar[Optional[CrossCompileTarget]]" = None
     default_architecture: "ClassVar[Optional[CrossCompileTarget]]"
     needs_sysroot: "ClassVar[bool]"
@@ -184,8 +189,13 @@ class AbstractProject(FileSystemUtils):
         warning_message(*args, **kwargs)
 
     def fatal(self, *args, sep=" ", fixit_hint=None, fatal_when_pretending=False) -> None:
-        fatal_error(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending,
-                    pretend=self.config.pretend)
+        fatal_error(
+            *args,
+            sep=sep,
+            fixit_hint=fixit_hint,
+            fatal_when_pretending=fatal_when_pretending,
+            pretend=self.config.pretend,
+        )
 
     @classmethod
     def get_crosscompile_target(cls) -> "CrossCompileTarget":
@@ -194,9 +204,12 @@ class AbstractProject(FileSystemUtils):
         return target
 
     @classmethod
-    def get_instance(cls: "type[_AnyProject]", caller: "Optional[AbstractProject]",
-                     config: "Optional[CheriConfig]" = None,
-                     cross_target: "Optional[CrossCompileTarget]" = None) -> "_AnyProject":
+    def get_instance(
+        cls: "type[_AnyProject]",
+        caller: "Optional[AbstractProject]",
+        config: "Optional[CheriConfig]" = None,
+        cross_target: "Optional[CrossCompileTarget]" = None,
+    ) -> "_AnyProject":
         raise NotImplementedError()
 
     @classmethod
@@ -316,20 +329,34 @@ class TargetInfo(ABC):
 
     @classmethod
     @abstractmethod
-    def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
-                                                 perform_sanity_checks=True, default_flags_only=False,
-                                                 softfloat: Optional[bool] = None) -> "list[str]":
+    def essential_compiler_and_linker_flags_impl(
+        cls,
+        instance: "TargetInfo",
+        *,
+        xtarget: "CrossCompileTarget",
+        perform_sanity_checks=True,
+        default_flags_only=False,
+        softfloat: Optional[bool] = None,
+    ) -> "list[str]":
         """
         :return: flags such as -target + -mabi which are needed for both compiler and linker
         """
         ...
 
-    def get_essential_compiler_and_linker_flags(self, xtarget: "Optional[CrossCompileTarget]" = None,
-                                                perform_sanity_checks=True, default_flags_only=False,
-                                                softfloat: Optional[bool] = None) -> "list[str]":
-        return self.essential_compiler_and_linker_flags_impl(self, perform_sanity_checks=perform_sanity_checks,
-                                                             xtarget=xtarget if xtarget is not None else self.target,
-                                                             default_flags_only=default_flags_only, softfloat=softfloat)
+    def get_essential_compiler_and_linker_flags(
+        self,
+        xtarget: "Optional[CrossCompileTarget]" = None,
+        perform_sanity_checks=True,
+        default_flags_only=False,
+        softfloat: Optional[bool] = None,
+    ) -> "list[str]":
+        return self.essential_compiler_and_linker_flags_impl(
+            self,
+            perform_sanity_checks=perform_sanity_checks,
+            xtarget=xtarget if xtarget is not None else self.target,
+            default_flags_only=default_flags_only,
+            softfloat=softfloat,
+        )
 
     @property
     def additional_executable_link_flags(self) -> "list[str]":
@@ -412,8 +439,9 @@ class TargetInfo(ABC):
         return False
 
     @final
-    def get_rootfs_project(self, *, t: "type[_AnyProject]", caller: AbstractProject,
-                           xtarget: "Optional[CrossCompileTarget]" = None) -> _AnyProject:
+    def get_rootfs_project(
+        self, *, t: "type[_AnyProject]", caller: AbstractProject, xtarget: "Optional[CrossCompileTarget]" = None
+    ) -> _AnyProject:
         if xtarget is None:
             xtarget = self.target
         xtarget = xtarget.get_rootfs_target()
@@ -448,11 +476,20 @@ class TargetInfo(ABC):
     def is_cheribsd(cls) -> bool:
         return False
 
-    def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
-                                 mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
-                                 use_full_disk_image=False, mount_installdir=False,
-                                 use_benchmark_kernel_by_default=False,
-                                 rootfs_alternate_kernel_dir=None) -> None:
+    def run_cheribsd_test_script(
+        self,
+        script_name,
+        *script_args,
+        kernel_path=None,
+        disk_image_path=None,
+        mount_builddir=True,
+        mount_sourcedir=False,
+        mount_sysroot=False,
+        use_full_disk_image=False,
+        mount_installdir=False,
+        use_benchmark_kernel_by_default=False,
+        rootfs_alternate_kernel_dir=None,
+    ) -> None:
         raise ValueError("run_cheribsd_test_script only supports CheriBSD targets")
 
     @classmethod
@@ -512,8 +549,11 @@ class TargetInfo(ABC):
 
     def pkgconfig_candidates(self, prefix: Path) -> "list[str]":
         """:return: a list of potential candidates for pkgconfig .pc files inside prefix"""
-        return [str(prefix / self.default_libdir / "pkgconfig"), str(prefix / "share/pkgconfig"),
-                str(prefix / "libdata/pkgconfig")]
+        return [
+            str(prefix / self.default_libdir / "pkgconfig"),
+            str(prefix / "share/pkgconfig"),
+            str(prefix / "libdata/pkgconfig"),
+        ]
 
 
 class NativeTargetInfo(TargetInfo):
@@ -646,8 +686,9 @@ class NativeTargetInfo(TargetInfo):
         # Directory suffix for compat ABI (currently only "64"/"" should be valid)
         if _is_native_purecap() and not self.target.is_cheri_purecap():
             return "64"
-        assert _is_native_purecap() == self.target.is_cheri_purecap(), \
-            "Building purecap natively is only supported on purecap installations"
+        assert (
+            _is_native_purecap() == self.target.is_cheri_purecap()
+        ), "Building purecap natively is only supported on purecap installations"
         return ""
 
     @property
@@ -689,9 +730,15 @@ class NativeTargetInfo(TargetInfo):
         return result
 
     @classmethod
-    def essential_compiler_and_linker_flags_impl(cls, instance: "TargetInfo", *, xtarget: "CrossCompileTarget",
-                                                 perform_sanity_checks=True, default_flags_only=False,
-                                                 softfloat: Optional[bool] = None) -> "list[str]":
+    def essential_compiler_and_linker_flags_impl(
+        cls,
+        instance: "TargetInfo",
+        *,
+        xtarget: "CrossCompileTarget",
+        perform_sanity_checks=True,
+        default_flags_only=False,
+        softfloat: Optional[bool] = None,
+    ) -> "list[str]":
         result = []
         if instance.project.auto_var_init != AutoVarInit.NONE:
             compiler = instance.project.get_compiler_info(instance.c_compiler)
@@ -704,8 +751,9 @@ class NativeTargetInfo(TargetInfo):
             if valid_clang_version:
                 result += instance.project.auto_var_init.clang_flags()
             else:
-                instance.project.fatal("Requested automatic variable initialization, but don't know how to for",
-                                       compiler)
+                instance.project.fatal(
+                    "Requested automatic variable initialization, but don't know how to for", compiler
+                )
         if xtarget.is_cheri_hybrid():
             if xtarget.is_aarch64(include_purecap=True):
                 result.append("-mabi=aapcs")
@@ -718,17 +766,25 @@ class CrossCompileTarget:
     # Currently the same for all targets
     DEFAULT_SUBOBJECT_BOUNDS: str = "conservative"
 
-    def __init__(self, arch_suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "type[TargetInfo]",
-                 *, is_cheri_purecap=False, is_cheri_hybrid=False, extra_target_suffix: str = "",
-                 check_conflict_with: "Optional[CrossCompileTarget]" = None,
-                 rootfs_target: "Optional[CrossCompileTarget]" = None,
-                 non_cheri_target: "Optional[CrossCompileTarget]" = None,
-                 hybrid_target: "Optional[CrossCompileTarget]" = None,
-                 purecap_target: "Optional[CrossCompileTarget]" = None,
-                 non_cheri_for_hybrid_rootfs_target: "Optional[CrossCompileTarget]" = None,
-                 non_cheri_for_purecap_rootfs_target: "Optional[CrossCompileTarget]" = None,
-                 hybrid_for_purecap_rootfs_target: "Optional[CrossCompileTarget]" = None,
-                 purecap_for_hybrid_rootfs_target: "Optional[CrossCompileTarget]" = None) -> None:
+    def __init__(
+        self,
+        arch_suffix: str,
+        cpu_architecture: CPUArchitecture,
+        target_info_cls: "type[TargetInfo]",
+        *,
+        is_cheri_purecap=False,
+        is_cheri_hybrid=False,
+        extra_target_suffix: str = "",
+        check_conflict_with: "Optional[CrossCompileTarget]" = None,
+        rootfs_target: "Optional[CrossCompileTarget]" = None,
+        non_cheri_target: "Optional[CrossCompileTarget]" = None,
+        hybrid_target: "Optional[CrossCompileTarget]" = None,
+        purecap_target: "Optional[CrossCompileTarget]" = None,
+        non_cheri_for_hybrid_rootfs_target: "Optional[CrossCompileTarget]" = None,
+        non_cheri_for_purecap_rootfs_target: "Optional[CrossCompileTarget]" = None,
+        hybrid_for_purecap_rootfs_target: "Optional[CrossCompileTarget]" = None,
+        purecap_for_hybrid_rootfs_target: "Optional[CrossCompileTarget]" = None,
+    ) -> None:
         assert not arch_suffix.startswith("-"), arch_suffix
         assert not extra_target_suffix or extra_target_suffix.startswith("-"), extra_target_suffix
         name_prefix = target_info_cls.shortname
@@ -774,9 +830,15 @@ class CrossCompileTarget:
     def _set_from(self, other_target: "CrossCompileTarget") -> None:
         if self is other_target:
             return
-        for attr in ("_hybrid_target", "_non_cheri_target", "_purecap_target", "_non_cheri_for_hybrid_rootfs_target",
-                     "_non_cheri_for_purecap_rootfs_target", "_hybrid_for_purecap_rootfs_target",
-                     "_purecap_for_hybrid_rootfs_target"):
+        for attr in (
+            "_hybrid_target",
+            "_non_cheri_target",
+            "_purecap_target",
+            "_non_cheri_for_hybrid_rootfs_target",
+            "_non_cheri_for_purecap_rootfs_target",
+            "_hybrid_for_purecap_rootfs_target",
+            "_purecap_for_hybrid_rootfs_target",
+        ):
             if getattr(self, attr) is None and getattr(other_target, attr) is not None:
                 setattr(self, attr, getattr(other_target, attr))
                 # noinspection PyProtectedMember
@@ -787,10 +849,13 @@ class CrossCompileTarget:
         if other_target is not None and self is not other_target:
             if self._is_cheri_hybrid:
                 if self._rootfs_target is not None:
-                    assert self._rootfs_target._is_cheri_purecap, \
-                           "Only support purecap separate rootfs for hybrid targets"
-                    assert other_target._hybrid_for_purecap_rootfs_target is None or \
-                           other_target._hybrid_for_purecap_rootfs_target is self, "Already set?"
+                    assert (
+                        self._rootfs_target._is_cheri_purecap
+                    ), "Only support purecap separate rootfs for hybrid targets"
+                    assert (
+                        other_target._hybrid_for_purecap_rootfs_target is None
+                        or other_target._hybrid_for_purecap_rootfs_target is self
+                    ), "Already set?"
                     other_target._hybrid_for_purecap_rootfs_target = self
                     self._hybrid_for_purecap_rootfs_target = self
                 else:
@@ -799,10 +864,13 @@ class CrossCompileTarget:
                     self._hybrid_target = self
             elif self._is_cheri_purecap:
                 if self._rootfs_target is not None:
-                    assert self._rootfs_target._is_cheri_hybrid, \
-                           "Only support hybrid separate rootfs for purecap targets"
-                    assert other_target._purecap_for_hybrid_rootfs_target is None or \
-                           other_target._purecap_for_hybrid_rootfs_target is self, "Already set?"
+                    assert (
+                        self._rootfs_target._is_cheri_hybrid
+                    ), "Only support hybrid separate rootfs for purecap targets"
+                    assert (
+                        other_target._purecap_for_hybrid_rootfs_target is None
+                        or other_target._purecap_for_hybrid_rootfs_target is self
+                    ), "Already set?"
                     other_target._purecap_for_hybrid_rootfs_target = self
                     self._purecap_for_hybrid_rootfs_target = self
                 else:
@@ -812,20 +880,25 @@ class CrossCompileTarget:
             else:
                 if self._rootfs_target is not None:
                     if self._rootfs_target._is_cheri_hybrid:
-                        assert other_target._non_cheri_for_hybrid_rootfs_target is None or \
-                               other_target._non_cheri_for_hybrid_rootfs_target is self, "Already set?"
+                        assert (
+                            other_target._non_cheri_for_hybrid_rootfs_target is None
+                            or other_target._non_cheri_for_hybrid_rootfs_target is self
+                        ), "Already set?"
                         other_target._non_cheri_for_hybrid_rootfs_target = self
                         self._non_cheri_for_hybrid_rootfs_target = self
                     else:
                         assert self._rootfs_target._is_cheri_purecap, "Separate non-CHERI rootfs for non-CHERI target?"
-                        assert other_target._non_cheri_for_purecap_rootfs_target is None or \
-                               other_target._non_cheri_for_purecap_rootfs_target is self, "Already set?"
+                        assert (
+                            other_target._non_cheri_for_purecap_rootfs_target is None
+                            or other_target._non_cheri_for_purecap_rootfs_target is self
+                        ), "Already set?"
                         other_target._non_cheri_for_purecap_rootfs_target = self
                         self._non_cheri_for_purecap_rootfs_target = self
                 else:
                     assert self._rootfs_target is None, "Separate rootfs targets only supported for CHERI targets"
-                    assert other_target._non_cheri_target is None or other_target._non_cheri_target is self, \
-                           "Already set?"
+                    assert (
+                        other_target._non_cheri_target is None or other_target._non_cheri_target is self
+                    ), "Already set?"
                     other_target._non_cheri_target = self
                     self._non_cheri_target = self
             if also_set_other:
@@ -962,16 +1035,24 @@ class CrossCompileTarget:
         raise ValueError("Don't know non-CHERI version of " + repr(self))
 
     def get_non_cheri_for_hybrid_rootfs_target(self) -> "CrossCompileTarget":
-        if not self._is_cheri_purecap and not self._is_cheri_hybrid and self._rootfs_target is not None and \
-           self._rootfs_target._is_cheri_hybrid:
+        if (
+            not self._is_cheri_purecap
+            and not self._is_cheri_hybrid
+            and self._rootfs_target is not None
+            and self._rootfs_target._is_cheri_hybrid
+        ):
             return self
         elif self._non_cheri_for_hybrid_rootfs_target is not None:
             return self._non_cheri_for_hybrid_rootfs_target
         raise ValueError("Don't know non-CHERI for hybrid rootfs version of " + repr(self))
 
     def get_non_cheri_for_purecap_rootfs_target(self) -> "CrossCompileTarget":
-        if not self._is_cheri_purecap and not self._is_cheri_hybrid and self._rootfs_target is not None and \
-           self._rootfs_target._is_cheri_purecap:
+        if (
+            not self._is_cheri_purecap
+            and not self._is_cheri_hybrid
+            and self._rootfs_target is not None
+            and self._rootfs_target._is_cheri_purecap
+        ):
             return self
         elif self._non_cheri_for_purecap_rootfs_target is not None:
             return self._non_cheri_for_purecap_rootfs_target
@@ -1006,9 +1087,16 @@ class CrossCompileTarget:
 
     def _dump_target_relations(self) -> None:
         self_repr = repr(self)
-        for n in ('non_cheri', 'hybrid', 'purecap', 'non_cheri_for_hybrid_rootfs', 'non_cheri_for_purecap_rootfs',
-                  'hybrid_for_purecap_rootfs', 'purecap_for_hybrid_rootfs'):
-            k = '_' + n + '_target'
+        for n in (
+            "non_cheri",
+            "hybrid",
+            "purecap",
+            "non_cheri_for_hybrid_rootfs",
+            "non_cheri_for_purecap_rootfs",
+            "hybrid_for_purecap_rootfs",
+            "purecap_for_hybrid_rootfs",
+        ):
+            k = "_" + n + "_target"
             v = self.__dict__[k]
             print(self_repr + "." + n + ": " + repr(v))
 
@@ -1041,14 +1129,20 @@ class BasicCompilationTargets:
     # Some projects (LLVM, QEMU, GDB, etc.) don't build as purecap binaries, so we have to build them hybrid instead.
     if _is_native_purecap():
         NATIVE = CrossCompileTarget("native", _native_cpu_arch(), NativeTargetInfo, is_cheri_purecap=True)
-        NATIVE_HYBRID = CrossCompileTarget("native-hybrid", _native_cpu_arch(), NativeTargetInfo, is_cheri_hybrid=True,
-                                           purecap_target=NATIVE, check_conflict_with=NATIVE)
+        NATIVE_HYBRID = CrossCompileTarget(
+            "native-hybrid",
+            _native_cpu_arch(),
+            NativeTargetInfo,
+            is_cheri_hybrid=True,
+            purecap_target=NATIVE,
+            check_conflict_with=NATIVE,
+        )
         NATIVE_NON_PURECAP = NATIVE_HYBRID
         ALL_NATIVE = (NATIVE, NATIVE_HYBRID)
     else:
         NATIVE = CrossCompileTarget("native", _native_cpu_arch(), NativeTargetInfo)
         NATIVE_NON_PURECAP = NATIVE
-        ALL_NATIVE = (NATIVE, )
+        ALL_NATIVE = (NATIVE,)
     NATIVE_IF_FREEBSD = ALL_NATIVE if OSInfo.IS_FREEBSD else tuple()
     NATIVE_IF_LINUX = ALL_NATIVE if OSInfo.IS_LINUX else tuple()
     NATIVE_IF_MACOS = ALL_NATIVE if OSInfo.IS_MAC else tuple()
