@@ -198,7 +198,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             CMAKE_CXX_COMPILER=self.CXX,
             CMAKE_ASM_COMPILER=self.CC,  # Compile assembly files with the default compiler
         )
-        if not self.compiling_for_host():
+        if not self.compiling_for_host() or self.compiling_for_host_hybrid():
             # Add compiler/linker flags (for cross-compilation these are defined in the toolchain file).
             # Note: All of these should be commandlines not CMake lists.
             self.add_cmake_options(
