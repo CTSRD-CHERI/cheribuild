@@ -33,20 +33,26 @@ from typing import Any, Callable, Union
 T = typing.TypeVar("T")
 if typing.TYPE_CHECKING:  # no-combine
     from ..utils import ConfigBase  # no-combine
+
     ConfigTy = typing.TypeVar("ConfigTy", bound=ConfigBase)  # no-combine
 
 
 class ComputedDefaultValue(typing.Generic[T]):
-    def __init__(self, function: "Callable[[ConfigTy, Any], T]",
-                 as_string: "Union[str, Callable[[Any], str]]",
-                 as_readme_string: "Union[str, Callable[[Any], str], None]" = None,
-                 inherit: "typing.Optional[ComputedDefaultValue[T]]" = None):
+    def __init__(
+        self,
+        function: "Callable[[ConfigTy, Any], T]",
+        as_string: "Union[str, Callable[[Any], str]]",
+        as_readme_string: "Union[str, Callable[[Any], str], None]" = None,
+        inherit: "typing.Optional[ComputedDefaultValue[T]]" = None,
+    ):
         if inherit is not None:
+
             def inheriting_function(config, project):
                 val = function(config, project)
                 if val is None:
                     val = inherit.function(config, project)
                 return val
+
             self.function = inheriting_function
         else:
             assert function is not None, "Must provide function or inherit"
@@ -56,8 +62,10 @@ class ComputedDefaultValue(typing.Generic[T]):
             assert callable(as_string), "Inheriting only makes sense with callable as_string"
 
             if not callable(inherit.as_string):
+
                 def inherit_as_string_wrapper(cls):
                     return inherit.as_string
+
                 inherited_as_string = inherit_as_string_wrapper
             else:
                 inherited_as_string = inherit.as_string
@@ -79,11 +87,14 @@ class ComputedDefaultValue(typing.Generic[T]):
 
                 def as_readme_string_none_wrapper(cls):
                     return None
+
                 as_readme_string = as_readme_string_none_wrapper
 
             if not callable(inherit.as_readme_string):
+
                 def inherit_as_readme_string_wrapper(cls):
                     return inherit.as_readme_string
+
                 inherited_as_readme_string = inherit_as_readme_string_wrapper
             else:
                 inherited_as_readme_string = inherit.as_readme_string

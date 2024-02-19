@@ -207,13 +207,16 @@ def test_contents_root():
 # END
 """
     mtree = MtreeFile(file=io.StringIO(file), contents_root=Path("/path/to/rootfs"), verbose=False)
-    assert _get_as_str(mtree) == """#mtree 2.0
+    assert (
+        _get_as_str(mtree)
+        == """#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
 ./bin type=dir uname=root gname=wheel mode=0755
 ./bin/cat type=file uname=root gname=wheel mode=0755 contents=/path/to/rootfs/bin/cheribsdbox
 ./bin/cheribsdbox type=file uname=root gname=wheel mode=0755 contents=/path/to/rootfs/bin/cheribsdbox
 # END
 """
+    )
 
 
 def test_add_file():

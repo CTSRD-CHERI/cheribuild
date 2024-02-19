@@ -429,7 +429,7 @@ class TargetManager:
             ):
                 return (
                     f"{target.name} is a hybrid target, which should not be used unless you know what you're doing. "
-                    f"If you are still sure you want to build this, use --enable-hybrid-targets."
+                    "If you are still sure you want to build this, use --enable-hybrid-targets."
                 )
         return None
 
@@ -482,7 +482,7 @@ class TargetManager:
             target = target.get_real_target(arch_for_unqualified_targets, config, caller=caller)
         if required_arch is not None and target.xtarget != required_arch:
             raise LookupError(
-                f"Target {target.name} has wrong architecture:" f"{target.xtarget} but expected {required_arch}"
+                f"Target {target.name} has wrong architecture: {target.xtarget} but expected {required_arch}"
             )
         # print(" ->", target)
         return target

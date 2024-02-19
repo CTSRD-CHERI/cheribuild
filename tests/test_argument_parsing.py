@@ -937,8 +937,12 @@ def test_kernel_configs(target, config_options: "list[str]", expected_kernels: "
         pytest.param(
             "cheribsd-mfs-root-kernel-riscv64-purecap",
             ["--cheribsd/build-nocaprevoke-kernel"],
-            ["CHERI-QEMU-MFS-ROOT", "CHERI-NOCAPREVOKE-QEMU-MFS-ROOT", "CHERI-PURECAP-QEMU-MFS-ROOT",
-             "CHERI-PURECAP-NOCAPREVOKE-QEMU-MFS-ROOT"],
+            [
+                "CHERI-QEMU-MFS-ROOT",
+                "CHERI-NOCAPREVOKE-QEMU-MFS-ROOT",
+                "CHERI-PURECAP-QEMU-MFS-ROOT",
+                "CHERI-PURECAP-NOCAPREVOKE-QEMU-MFS-ROOT",
+            ],
         ),
     ],
 )
@@ -1404,7 +1408,9 @@ def test_jenkins_hack_disk_image():
     config = _parse_arguments(args)
     jenkins_override_install_dirs_hack(config, Path("/rootfs"))
     disk_image = _get_target_instance(
-        "disk-image-aarch64", config, BuildCheriBSDDiskImage,
+        "disk-image-aarch64",
+        config,
+        BuildCheriBSDDiskImage,
     )
     assert disk_image.disk_image_path == Path("/tmp/tarball/cheribsd-aarch64.img")
     assert disk_image.rootfs_dir == Path("/tmp/tarball/rootfs")

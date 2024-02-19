@@ -182,7 +182,8 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         config: "CheriConfig",
         *,
         include_version: bool,
-    ) -> str: ...
+    ) -> str:
+        ...
 
     def get_target_triple(self, *, include_version: bool) -> str:
         return self.triple_for_target(self.target, self.config, include_version=include_version)

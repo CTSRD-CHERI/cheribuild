@@ -55,14 +55,13 @@ from .config_loader_base import (  # noqa: F401
 from ..colour import AnsiColour, coloured
 from ..utils import ConfigBase, error_message, fatal_error, status_update, warning_message
 
-T = typing.TypeVar('T')
-EnumTy = typing.TypeVar('EnumTy', bound=Enum)
+T = typing.TypeVar("T")
+EnumTy = typing.TypeVar("EnumTy", bound=Enum)
 
 
 # From https://bugs.python.org/issue25061
 class _EnumArgparseType(typing.Generic[EnumTy]):
-    """Factory for creating enum object types
-    """
+    """Factory for creating enum object types"""
 
     def __init__(self, enumclass: "type[EnumTy]"):
         self.enums: "type[EnumTy]" = enumclass
@@ -74,8 +73,15 @@ class _EnumArgparseType(typing.Generic[EnumTy]):
                     continue
                 if c.isalpha() and c.isupper():
                     continue
-                raise RuntimeError("Invalid character '" + c + "' found in enum " + str(enumclass) +
-                                   " member " + member.name + ": must all be upper case letters or _ or digits.")
+                raise RuntimeError(
+                    "Invalid character '"
+                    + c
+                    + "' found in enum "
+                    + str(enumclass)
+                    + " member "
+                    + member.name
+                    + ": must all be upper case letters or _ or digits."
+                )
         # self.action = action
 
     def __call__(self, astring: "Union[str, list[str], EnumTy]") -> "Union[EnumTy, list[EnumTy]]":
@@ -94,16 +100,16 @@ class _EnumArgparseType(typing.Generic[EnumTy]):
                     return e
             v = self.enums[enum_value_name]
         except KeyError:
-            msg = ', '.join([t.name.lower() for t in self.enums])
-            msg = f'{name}: use one of {{{msg}}}'
+            msg = ", ".join([t.name.lower() for t in self.enums])
+            msg = f"{name}: use one of {{{msg}}}"
             raise argparse.ArgumentTypeError(msg)
         #       else:
         #           self.action.choices = None  # hugly hack to prevent post validation from choices
         return v
 
     def __repr__(self) -> str:
-        astr = ', '.join([t.name.lower() for t in self.enums])
-        return f'{self.enums.__name__}({astr})'
+        astr = ", ".join([t.name.lower() for t in self.enums])
+        return f"{self.enums.__name__}({astr})"
 
 
 # custom encoder to handle pathlib.Path and _LoadedConfigValue objects
@@ -151,66 +157,123 @@ def get_argcomplete_prefix() -> str:
 # Based on Python 3.9 BooleanOptionalAction, but places the "no" after the first /
 class BooleanNegatableAction(argparse.Action):
     # noinspection PyShadowingBuiltins
-    def __init__(self, option_strings: "list[str]", dest, default=None, type=None, choices=None, required=False,
-                 help=None, metavar=None):
+    def __init__(
+        self,
+        option_strings: "list[str]",
+        dest,
+        default=None,
+        type=None,
+        choices=None,
+        required=False,
+        help=None,
+        metavar=None,
+    ):
         # Add the negated option, placing the "no" after the / instead of the start -> --cheribsd/no-build-tests
         def collect_option_strings(original_strings):
             for opt in original_strings:
                 all_option_strings.append(opt)
-                if opt.startswith('--'):
+                if opt.startswith("--"):
                     slash_index = opt.rfind("/")
                     if slash_index == -1:
                         negated_opt = "--no-" + opt[2:]
                     else:
-                        negated_opt = opt[:slash_index + 1] + "no-" + opt[slash_index + 1:]
+                        negated_opt = opt[: slash_index + 1] + "no-" + opt[slash_index + 1 :]
                     all_option_strings.append(negated_opt)
                     self._negated_option_strings.append(negated_opt)
+
         all_option_strings = []
         self._negated_option_strings = []
         collect_option_strings(option_strings)
         # Don't show the alias options in --help output
         self.displayed_option_count = len(all_option_strings)
-        super().__init__(option_strings=all_option_strings, dest=dest, nargs=0,
-                         default=default, type=type, choices=choices, required=required, help=help, metavar=metavar)
+        super().__init__(
+            option_strings=all_option_strings,
+            dest=dest,
+            nargs=0,
+            default=default,
+            type=type,
+            choices=choices,
+            required=required,
+            help=help,
+            metavar=metavar,
+        )
 
     def __call__(self, parser, namespace, values, option_string=None) -> None:
         if option_string in self.option_strings:
             setattr(namespace, self.dest, option_string not in self._negated_option_strings)
 
     def format_usage(self) -> str:
-        return ' | '.join(self.option_strings[:self.displayed_option_count])
+        return " | ".join(self.option_strings[: self.displayed_option_count])
 
 
 # argparse._StoreAction but with a possible list of aliases
 class StoreActionWithPossibleAliases(argparse.Action):
     # noinspection PyShadowingBuiltins
-    def __init__(self, option_strings: "list[str]", dest, nargs=None, default=None, type=None, choices=None,
-                 required=False, help=None, metavar=None):
+    def __init__(
+        self,
+        option_strings: "list[str]",
+        dest,
+        nargs=None,
+        default=None,
+        type=None,
+        choices=None,
+        required=False,
+        help=None,
+        metavar=None,
+    ):
         if nargs == 1:
             raise ValueError("nargs for store actions must be 1")
         self.displayed_option_count = len(option_strings)
-        super().__init__(option_strings=option_strings, dest=dest, nargs=nargs, default=default, type=type,
-                         choices=choices, required=required, help=help, metavar=metavar)
+        super().__init__(
+            option_strings=option_strings,
+            dest=dest,
+            nargs=nargs,
+            default=default,
+            type=type,
+            choices=choices,
+            required=required,
+            help=help,
+            metavar=metavar,
+        )
 
     def __call__(self, parser, namespace, values, option_string=None) -> None:
         setattr(namespace, self.dest, values)
 
     def format_usage(self) -> str:
-        return ' | '.join(self.option_strings[:self.displayed_option_count])
+        return " | ".join(self.option_strings[: self.displayed_option_count])
 
 
 class CommandLineConfigOption(ConfigOptionBase[T]):
     _loader: "JsonAndCommandLineConfigLoader"
 
     # noinspection PyProtectedMember,PyUnresolvedReferences
-    def __init__(self, name: str, shortname: "Optional[str]", default,
-                 value_type: "Union[type[T], Callable[[Any], T]]", _owning_class, *,
-                 _loader: "JsonAndCommandLineConfigLoader", help_hidden: bool,
-                 group: "Optional[argparse._ArgumentGroup]", _fallback_names: "Optional[list[str]]" = None,
-                 _legacy_alias_names: "Optional[list[str]]" = None, is_fallback: bool = False, **kwargs):
-        super().__init__(name, shortname, default, value_type, _owning_class, _loader=_loader,
-                         _fallback_names=_fallback_names, _legacy_alias_names=_legacy_alias_names,
-                         is_fallback=is_fallback)
+    def __init__(
+        self,
+        name: str,
+        shortname: "Optional[str]",
+        default,
+        value_type: "Union[type[T], Callable[[Any], T]]",
+        _owning_class,
+        *,
+        _loader: "JsonAndCommandLineConfigLoader",
+        help_hidden: bool,
+        group: "Optional[argparse._ArgumentGroup]",
+        _fallback_names: "Optional[list[str]]" = None,
+        _legacy_alias_names: "Optional[list[str]]" = None,
+        is_fallback: bool = False,
+        **kwargs,
+    ):
+        super().__init__(
+            name,
+            shortname,
+            default,
+            value_type,
+            _owning_class,
+            _loader=_loader,
+            _fallback_names=_fallback_names,
+            _legacy_alias_names=_legacy_alias_names,
+            is_fallback=is_fallback,
+        )
         # hide obscure options unless --help-hidden/--help/all is passed
         if help_hidden and not self._loader.show_all_help:
             kwargs["help"] = argparse.SUPPRESS
@@ -230,7 +293,8 @@ class CommandLineConfigOption(ConfigOptionBase[T]):
                     self.default_str = "[]"
                 else:
                     assert isinstance(value_type, _EnumArgparseType), "default is enum but value type isn't: " + str(
-                        value_type)
+                        value_type
+                    )
                     assert isinstance(default, Enum), "Should use enum constant for default and not " + str(default)
                     self.default_str = default.name.lower()
             else:
@@ -265,7 +329,7 @@ class CommandLineConfigOption(ConfigOptionBase[T]):
             action = parser_obj.add_argument("--" + name, **kwargs)
         if self.default is not None and action.help is not None and has_default_help_text:
             if action.help != argparse.SUPPRESS:
-                action.help = action.help + " (default: \'" + self.default_str + "\')"
+                action.help = action.help + " (default: '" + self.default_str + "')"
         action.default = None  # we don't want argparse default values!
         assert not action.type  # we handle the type of the value manually
         return action
@@ -305,8 +369,15 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption[T]):
         # self.debug_msg(full_option_name, "from JSON:", from_json)
         if from_json is not None:
             if not config.quiet:
-                status_update("Overriding default value for", target_option_name, "with value from JSON key",
-                              from_json.used_key, "->", from_json.value, file=sys.stderr)
+                status_update(
+                    "Overriding default value for",
+                    target_option_name,
+                    "with value from JSON key",
+                    from_json.used_key,
+                    "->",
+                    from_json.value,
+                    file=sys.stderr,
+                )
             return from_json
         return None  # not found -> fall back to default
 
@@ -348,8 +419,9 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption[T]):
 
 class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
     def __init__(self) -> None:
-        super().__init__(option_cls=DefaultValueOnlyConfigOption,
-                         command_line_only_options_cls=DefaultValueOnlyConfigOption)
+        super().__init__(
+            option_cls=DefaultValueOnlyConfigOption, command_line_only_options_cls=DefaultValueOnlyConfigOption
+        )
         # Ignore options stored in other classes
         self.option_handles = dict()
 
@@ -383,42 +455,63 @@ def dict_raise_on_duplicates_and_store_src(ordered_pairs, src_file) -> "dict[Any
 class ArgparseSetGivenAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None) -> None:
         setattr(namespace, self.dest, values)
-        setattr(namespace, self.dest + '_given', True)
+        setattr(namespace, self.dest + "_given", True)
 
 
 class CommandLineConfigLoader(ConfigLoaderBase):
     _parsed_args: argparse.Namespace
 
-    show_all_help: bool = any(
-        s in sys.argv for s in ("--help-all", "--help-hidden")) or ConfigLoaderBase.is_completing_arguments
+    show_all_help: bool = (
+        any(s in sys.argv for s in ("--help-all", "--help-hidden")) or ConfigLoaderBase.is_completing_arguments
+    )
     _argcomplete_prefix: "Optional[str]" = (
-        get_argcomplete_prefix() if ConfigLoaderBase.is_completing_arguments else None)
+        get_argcomplete_prefix() if ConfigLoaderBase.is_completing_arguments else None
+    )
     _argcomplete_prefix_includes_slash: bool = "/" in _argcomplete_prefix if _argcomplete_prefix else False
 
-    def __init__(self, argparser_class: "type[argparse.ArgumentParser]" = argparse.ArgumentParser, *,
-                 option_cls=CommandLineConfigOption, command_line_only_options_cls=CommandLineConfigOption):
+    def __init__(
+        self,
+        argparser_class: "type[argparse.ArgumentParser]" = argparse.ArgumentParser,
+        *,
+        option_cls=CommandLineConfigOption,
+        command_line_only_options_cls=CommandLineConfigOption,
+    ):
         if self.is_completing_arguments or self.is_running_unit_tests:
             self._parser = argparser_class(formatter_class=NoOpHelpFormatter)
         else:
             terminal_width = shutil.get_terminal_size(fallback=(120, 24))[0]
             self._parser = argparser_class(
-                formatter_class=lambda prog: argparse.HelpFormatter(prog, width=terminal_width))
+                formatter_class=lambda prog: argparse.HelpFormatter(prog, width=terminal_width)
+            )
         super().__init__(option_cls=option_cls, command_line_only_options_cls=command_line_only_options_cls)
-        self._parser.add_argument("--help-all", "--help-hidden", action="help", help="Show all help options, including"
-                                                                                     " the target-specific ones.")
+        self._parser.add_argument(
+            "--help-all",
+            "--help-hidden",
+            action="help",
+            help="Show all help options, including" " the target-specific ones.",
+        )
 
     # noinspection PyShadowingBuiltins
-    def add_option(self, name: str, shortname=None, *, type: "Union[type[T], Callable[[str], T]]" = str,
-                   default: "Union[ComputedDefaultValue[T], Optional[T], Callable[[ConfigBase, typing.Any], T]]" = None,
-                   group=None, help_hidden=False, **kwargs) -> T:
+    def add_option(
+        self,
+        name: str,
+        shortname=None,
+        *,
+        type: "Union[type[T], Callable[[str], T]]" = str,
+        default: "Union[ComputedDefaultValue[T], Optional[T], Callable[[ConfigBase, typing.Any], T]]" = None,
+        group=None,
+        help_hidden=False,
+        **kwargs,
+    ) -> T:
         if not self.is_needed_for_completion(name, shortname, type):
             # We are autocompleting and there is a prefix that won't match this option, so we just return the
             # default value since it won't be displayed anyway. This should noticeably speed up tab-completion.
             return default  # pytype: disable=bad-return-type
         if isinstance(type, builtins.type) and issubclass(type, Enum):
             # Handle enums as the argparse type
-            assert "action" not in kwargs or kwargs[
-                "action"] == "append", "action should be none or append for Enum options"
+            assert (
+                "action" not in kwargs or kwargs["action"] == "append"
+            ), "action should be none or append for Enum options"
             assert "choices" not in kwargs, "for enum options choices are the enum names (or set enum_choices)!"
             if "enum_choices" in kwargs:
                 kwargs["choices"] = tuple(t.name.lower().replace("_", "-") for t in kwargs["enum_choices"])
@@ -432,8 +525,9 @@ class CommandLineConfigLoader(ConfigLoaderBase):
                 # noinspection PyTypeChecker
                 kwargs["choices"] = tuple(t.name.lower() for t in type)
             type = _EnumArgparseType(type)
-        return super().add_option(name, shortname, default=default, type=type, group=group, help_hidden=help_hidden,
-                                  **kwargs)
+        return super().add_option(
+            name, shortname, default=default, type=type, group=group, help_hidden=help_hidden, **kwargs
+        )
 
     def debug_msg(self, *args, sep=" ", **kwargs) -> None:
         if self._parsed_args and self._parsed_args.verbose is True:
@@ -453,7 +547,8 @@ class CommandLineConfigLoader(ConfigLoaderBase):
                         exclude=self.completion_excludes,  # hide these options from the output
                         print_suppressed=True,  # also include target-specific options
                         output_stream=output,
-                        exit_method=sys.exit)  # ensure that cprofile data is written
+                        exit_method=sys.exit,
+                    )  # ensure that cprofile data is written
             else:
                 argcomplete.autocomplete(
                     self._parser,
@@ -470,8 +565,9 @@ class CommandLineConfigLoader(ConfigLoaderBase):
         for x in trailing:
             # filter out unknown options (like -b)
             # exit with error
-            if x.startswith('-'):
+            if x.startswith("-"):
                 import difflib
+
                 # There is no officially supported API to get back all option strings, but fortunately we store
                 # all the actions here anyway
                 all_options = getattr(self._parser, "_option_string_actions", {}).keys()
@@ -512,7 +608,7 @@ class CommandLineConfigLoader(ConfigLoaderBase):
             return True  # Okay, prefix matches shortname
         elif option_type is bool and (comp_prefix.startswith("--no-") or self._argcomplete_prefix_includes_slash):
             slash_index = name.rfind("/")
-            negated_name = name[:slash_index + 1] + "no-" + name[slash_index + 1:]
+            negated_name = name[: slash_index + 1] + "no-" + name[slash_index + 1 :]
             if negated_name.startswith(comp_prefix[2:]):
                 # self.debug_msg("comp_prefix '", comp_prefix, "' matches negated option: ", negated_name, sep="")
                 return True  # Okay, prefix matches negated long name
@@ -524,10 +620,16 @@ class CommandLineConfigLoader(ConfigLoaderBase):
 
 
 class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
-    def __init__(self, argparser_class: "type[argparse.ArgumentParser]" = argparse.ArgumentParser, *,
-                 option_cls=JsonAndCommandLineConfigOption, command_line_only_options_cls=CommandLineConfigOption):
-        super().__init__(argparser_class, option_cls=option_cls,
-                         command_line_only_options_cls=command_line_only_options_cls)
+    def __init__(
+        self,
+        argparser_class: "type[argparse.ArgumentParser]" = argparse.ArgumentParser,
+        *,
+        option_cls=JsonAndCommandLineConfigOption,
+        command_line_only_options_cls=CommandLineConfigOption,
+    ):
+        super().__init__(
+            argparser_class, option_cls=option_cls, command_line_only_options_cls=command_line_only_options_cls
+        )
         self._config_path: "Optional[Path]" = None
         # Choose the default config file based on argv[0]
         # This allows me to have symlinks for e.g. stable-cheribuild.py release-cheribuild.py debug-cheribuild.py
@@ -535,10 +637,16 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
         cheribuild_rootdir = Path(__file__).absolute().parent.parent.parent
         self._inferred_config_prefix = self.get_config_prefix()
         self.default_config_path = Path(cheribuild_rootdir, self._inferred_config_prefix + "cheribuild.json")
-        self.path_group.add_argument("--config-file", metavar="FILE", type=str, default=str(self.default_config_path),
-                                     action=ArgparseSetGivenAction,
-                                     help="The config file that is used to load the default settings (default: '" +
-                                          str(self.default_config_path) + "')")
+        self.path_group.add_argument(
+            "--config-file",
+            metavar="FILE",
+            type=str,
+            default=str(self.default_config_path),
+            action=ArgparseSetGivenAction,
+            help="The config file that is used to load the default settings (default: '"
+            + str(self.default_config_path)
+            + "')",
+        )
 
     @staticmethod
     def get_config_prefix() -> str:
@@ -546,7 +654,7 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
         suffixes = ["cheribuild", "cheribuild.py"]
         for suffix in suffixes:
             if program.endswith(suffix):
-                return program[0:-len(suffix)]
+                return program[0 : -len(suffix)]
         return ""
 
     def __load_json_with_comments(self, config_path: Path) -> "dict[str, Any]":
@@ -565,15 +673,24 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
                 result = dict()
                 status_update("JSON config file", config_path, "was empty.")
             else:
-                result = json.loads("".join(json_lines),
-                                    object_pairs_hook=lambda o: dict_raise_on_duplicates_and_store_src(o, config_path))
-            self.debug_msg("Parsed", config_path, "as",
-                           coloured(AnsiColour.cyan, json.dumps(result, cls=MyJsonEncoder)))
+                result = json.loads(
+                    "".join(json_lines),
+                    object_pairs_hook=lambda o: dict_raise_on_duplicates_and_store_src(o, config_path),
+                )
+            self.debug_msg(
+                "Parsed", config_path, "as", coloured(AnsiColour.cyan, json.dumps(result, cls=MyJsonEncoder))
+            )
             return result
 
     # Based on https://stackoverflow.com/a/7205107/894271
-    def merge_dict_recursive(self, a: "dict[str, _LoadedConfigValue]", b: "dict[str, _LoadedConfigValue]",
-                             included_file: Path, base_file: Path, path=None) -> dict:
+    def merge_dict_recursive(
+        self,
+        a: "dict[str, _LoadedConfigValue]",
+        b: "dict[str, _LoadedConfigValue]",
+        included_file: Path,
+        base_file: Path,
+        path=None,
+    ) -> dict:
         """merges b into a"""
         if path is None:
             path = []
@@ -585,8 +702,16 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
                     self.merge_dict_recursive(a[key].value, b[key].value, included_file, base_file, [*path, str(key)])
                 elif a[key] != b[key]:
                     if self._parsed_args:
-                        self.debug_msg("Overriding '" + '.'.join([*path, str(key)]) + "' value", b[key], " from",
-                                       included_file, "with value ", a[key], "from", base_file)
+                        self.debug_msg(
+                            "Overriding '" + ".".join([*path, str(key)]) + "' value",
+                            b[key],
+                            " from",
+                            included_file,
+                            "with value ",
+                            a[key],
+                            "from",
+                            base_file,
+                        )
                 else:
                     pass  # same leaf value
             else:
@@ -599,8 +724,9 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
             result = self.__load_json_with_comments(config_path)
         except Exception as e:
             error_message("Could not load config file ", config_path, ": ", e, sep="")
-            if not sys.__stdin__.isatty() or not input("Invalid config file " + str(config_path) +
-                                                       ". Continue? y/[N]").lower().startswith("y"):
+            if not sys.__stdin__.isatty() or not input(
+                "Invalid config file " + str(config_path) + ". Continue? y/[N]"
+            ).lower().startswith("y"):
                 raise
         include_value = result.get("#include")
         if include_value:
@@ -632,31 +758,51 @@ class JsonAndCommandLineConfigLoader(CommandLineConfigLoader):
             # XXX: Ideally we would always load this file and merge the two if
             # both exist, with the bundled config file setting new defaults.
             configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-            print("Checking", Path(configdir, self._config_path.name), "since", self._config_path, "doesn't exist",
-                  file=sys.stderr)
+            print(
+                "Checking",
+                Path(configdir, self._config_path.name),
+                "since",
+                self._config_path,
+                "doesn't exist",
+                file=sys.stderr,
+            )
             self._config_path = Path(configdir, self._config_path.name)
             if self._inferred_config_prefix:
-                print(coloured(AnsiColour.green, "Note: Configuration file path inferred as"),
-                      coloured(AnsiColour.blue, self._config_path),
-                      coloured(AnsiColour.green, "based on command name"),
-                      file=sys.stderr)
+                print(
+                    coloured(AnsiColour.green, "Note: Configuration file path inferred as"),
+                    coloured(AnsiColour.blue, self._config_path),
+                    coloured(AnsiColour.green, "based on command name"),
+                    file=sys.stderr,
+                )
             if self._config_path.exists():
                 self._json = self.__load_json_with_includes(self._config_path)
             else:
                 if self._inferred_config_prefix:
                     # If the user invoked foo-cheribuild.py but foo-cheribuild.json does not exist that is almost
                     # certainly an error. Report it as such and don't
-                    print(coloured(AnsiColour.green, "Note: Configuration file path inferred as"),
-                          coloured(AnsiColour.blue, self._config_path),
-                          coloured(AnsiColour.green, "based on command name"),
-                          file=sys.stderr)
-                    fatal_error("Configuration file ", self._config_path, "matching prefixed command was not found.",
-                                "If this is intended pass an explicit `--config-file=/dev/null` argument.",
-                                pretend=False)
+                    print(
+                        coloured(AnsiColour.green, "Note: Configuration file path inferred as"),
+                        coloured(AnsiColour.blue, self._config_path),
+                        coloured(AnsiColour.green, "based on command name"),
+                        file=sys.stderr,
+                    )
+                    fatal_error(
+                        "Configuration file ",
+                        self._config_path,
+                        "matching prefixed command was not found.",
+                        "If this is intended pass an explicit `--config-file=/dev/null` argument.",
+                        pretend=False,
+                    )
                     raise FileNotFoundError(self._parsed_args.config_file)
-                print(coloured(AnsiColour.green, "Note: Configuration file", self._config_path,
-                               "does not exist, using only command line arguments."),
-                      file=sys.stderr)
+                print(
+                    coloured(
+                        AnsiColour.green,
+                        "Note: Configuration file",
+                        self._config_path,
+                        "does not exist, using only command line arguments.",
+                    ),
+                    file=sys.stderr,
+                )
 
     def load(self) -> None:
         super().load()
