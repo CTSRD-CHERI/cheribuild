@@ -340,7 +340,7 @@ VOLUME /diskimg
 
                         def get_ap_port():
                             (ap_sock, _) = ap_servsock.socket.accept()
-                            with open(ap_sock.fileno()) as f:
+                            with open(ap_sock.fileno(), encoding="utf-8") as f:
                                 # Check the port in the container is the
                                 # expected default.
                                 port = int(f.readline())
@@ -358,7 +358,7 @@ VOLUME /diskimg
                         fvp_kwargs["pass_fds"] = [ap_pipe_wfd]
 
                         def get_ap_port():
-                            with open(ap_pipe_rfd) as f:
+                            with open(ap_pipe_rfd, encoding="utf-8") as f:
                                 return int(f.readline())
 
                     # Pass os.setsid to create a new process group so signals

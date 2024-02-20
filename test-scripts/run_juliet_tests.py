@@ -39,7 +39,7 @@ from run_tests_common import boot_cheribsd, junitparser, run_tests_main
 def output_to_junit_suite(xml, output_path, suite_name, good=True):
     suite = junitparser.TestSuite(suite_name)
 
-    with open(output_path) as output_file:
+    with open(output_path, encoding="utf-8") as output_file:
         next(output_file)  # skip first header
         for line in output_file:
             if line[0] == "=":  # stop on next header

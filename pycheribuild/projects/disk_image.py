@@ -711,7 +711,7 @@ class BuildDiskImageBase(SimpleProject):
         # Use loader_simp for minimal images as it's smaller and doesn't require any additional files
         loader_file = "loader_simp.efi" if self.is_minimal else "loader.efi"
 
-        with tempfile.NamedTemporaryFile(mode="w+") as tmp_mtree:
+        with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as tmp_mtree:
             use_makefs = True
             mtools = BuildMtools.get_instance(self, cross_target=CompilationTargets.NATIVE)
             mtools_bin = mtools.install_dir / "bin"

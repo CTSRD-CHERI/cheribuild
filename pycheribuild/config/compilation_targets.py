@@ -692,7 +692,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def cheribsd_version(self) -> "Optional[int]":
         pattern = re.compile(r"#define\s+__CheriBSD_version\s+([0-9]+)")
         try:
-            with open(self.sysroot_dir / "usr/include/sys/param.h") as f:
+            with open(self.sysroot_dir / "usr/include/sys/param.h", encoding="utf-8") as f:
                 for line in f:
                     match = pattern.match(line)
                     if match:
