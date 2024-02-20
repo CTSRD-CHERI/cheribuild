@@ -234,7 +234,7 @@ def default_make_jobs_count() -> Optional[int]:
 
 
 def maybe_add_space(msg: str, sep: str) -> "tuple[str, ...]":
-    if sep == "":
+    if not sep:
         return msg, " "
     return (msg,)
 
@@ -468,7 +468,7 @@ class OSInfo:
             d = {}
             for line in f:
                 line = line.strip()
-                if line == "" or line[0] == "#":
+                if not line or line[0] == "#":
                     continue
                 k, v = line.split("=", maxsplit=1)
                 # .strip('"') will remove if there or else do nothing
