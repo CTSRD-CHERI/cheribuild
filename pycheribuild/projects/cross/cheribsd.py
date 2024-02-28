@@ -1487,10 +1487,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # links from /usr/bin/mail to /usr/bin/Mail won't work on case-insensitve fs
         self.make_args.set_with_options(MAIL=False)
 
-        if self.crosscompile_target.is_any_x86():
-            # seems to be missing some include paths which appears to work on freebsd
-            self.make_args.set_with_options(BHYVE=False)
-
     def libcompat_name(self) -> str:
         if self.crosscompile_target.is_cheri_purecap():
             return "lib64"
