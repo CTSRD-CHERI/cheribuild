@@ -1074,33 +1074,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.compiling_for_mips(include_purecap=True):
             # Don't build kernel modules for MIPS
             kernel_options.set(NO_MODULES="yes")
-        elif self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-            # Disable CTF for now to avoid the following errors:
-            # ERROR: cam_periph.c: die 25130: unknown base type encoding 0xffffffffffffffa1
-            kernel_options.set_with_options(CTF=False)
-            # TODO: Turn this into additional checks in sys/modules/Makefile
-            # rather than requiring cheribuild to fix things.
-            broken_modules = []
-            # TODO: Fix armv8crypto for the purecap kernel; overrides
-            # -march=morello by passing -march=armv8-a+crypto, but should
-            # *only* enable crypto, not override the baseline. Otherwise it
-            # fails to build (currently hits a frontend assertion because
-            # Morello Clang doesn't actually validate the arguments properly).
-            broken_modules.append("armv8crypto")
-            # Linux (and, similarly, CloudABI) module support is broken, even
-            # for hybrid kernels (since various APIs take user pointers).
-            broken_modules += ["cloudabi32", "cloudabi64", "linprocfs", "linux64", "linux_common"]
-            # efirt is verboten (might work ok in hybrid kernels, but we
-            # deliberately turn it off there out of fear of capabilities being
-            # clobbered, and in a purecap kernel you need a purecap interface).
-            broken_modules.append("efirt")
-            # TODO: ena(4) has its own copy of ERR_PTR etc that need porting to
-            # using intptr_t like LinuxKPI now does even upstream.
-            broken_modules.append("ena")
-            # TODO: mlx(4) uses LinuxKPI's scatterlist.h which is too Linux-y,
-            # using long in place of intptr_t.
-            broken_modules += ["mlx4", "mlx4en", "mlx5", "mlx5en"]
-            kernel_options.set(WITHOUT_MODULES=" ".join(broken_modules))
         if not self.use_bootstrapped_toolchain:
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
             kernel_options.update(self.cross_toolchain_config)
