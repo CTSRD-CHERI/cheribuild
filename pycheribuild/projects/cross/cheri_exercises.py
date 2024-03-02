@@ -36,7 +36,6 @@ from ...config.target_info import CrossCompileTarget
 
 
 class BuildCheriExercises(CrossCompileProject):
-
     """
     Automatically build parts of cheri-exercises that demonstrate CHERI
     properties or require dynamic debugging, such as those illustrating the

@@ -242,8 +242,7 @@ class TargetInfo(ABC):
 
     @property
     @abstractmethod
-    def cmake_system_name(self) -> str:
-        ...
+    def cmake_system_name(self) -> str: ...
 
     @property
     def toolchain_system_version(self) -> "Optional[str]":
@@ -258,13 +257,11 @@ class TargetInfo(ABC):
 
     @property
     @abstractmethod
-    def sdk_root_dir(self) -> Path:
-        ...
+    def sdk_root_dir(self) -> Path: ...
 
     @property
     @abstractmethod
-    def sysroot_dir(self) -> Path:
-        ...
+    def sysroot_dir(self) -> Path: ...
 
     @property
     def sysroot_install_prefix_absolute(self) -> Path:
@@ -289,43 +286,35 @@ class TargetInfo(ABC):
         return self.get_target_triple(include_version=True)
 
     @abstractmethod
-    def get_target_triple(self, *, include_version: bool) -> str:
-        ...
+    def get_target_triple(self, *, include_version: bool) -> str: ...
 
     @property
     @abstractmethod
-    def c_compiler(self) -> Path:
-        ...
+    def c_compiler(self) -> Path: ...
 
     @property
     @abstractmethod
-    def cxx_compiler(self) -> Path:
-        ...
+    def cxx_compiler(self) -> Path: ...
 
     @property
     @abstractmethod
-    def linker(self) -> Path:
-        ...
+    def linker(self) -> Path: ...
 
     @property
     @abstractmethod
-    def ar(self) -> Path:
-        ...
+    def ar(self) -> Path: ...
 
     @property
     @abstractmethod
-    def ranlib(self) -> Path:
-        ...
+    def ranlib(self) -> Path: ...
 
     @property
     @abstractmethod
-    def nm(self) -> Path:
-        ...
+    def nm(self) -> Path: ...
 
     @property
     @abstractmethod
-    def strip_tool(self) -> Path:
-        ...
+    def strip_tool(self) -> Path: ...
 
     @classmethod
     @abstractmethod
@@ -389,8 +378,7 @@ class TargetInfo(ABC):
 
     @property
     @abstractmethod
-    def c_preprocessor(self) -> Path:
-        ...
+    def c_preprocessor(self) -> Path: ...
 
     @classmethod
     @abstractmethod
