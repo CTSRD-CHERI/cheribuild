@@ -24,12 +24,12 @@
 #
 
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir
-from ..project import MercurialRepository
+from ..project import GitRepository
 from ...config.compilation_targets import CompilationTargets
 
 
 class BuildGmp(CrossCompileAutotoolsProject):
-    repository = MercurialRepository("https://gmplib.org/repo/gmp")
+    repository = GitRepository("https://github.com/gmp-mirror/gmp")
     supported_architectures = (
         CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
         + CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS
