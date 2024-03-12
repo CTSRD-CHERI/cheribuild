@@ -1835,7 +1835,7 @@ class BuildCHERIBSD(BuildFreeBSD):
             _allow_unknown_targets=True,
             only_add_for_targets=cls.purecap_kernel_targets,
             kind=KernelABI,
-            default=KernelABI.HYBRID,
+            default=KernelABI.PURECAP,
             enum_choices=[KernelABI.HYBRID, KernelABI.PURECAP],
             help="Select default kernel to build",
         )
