@@ -266,7 +266,8 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
             LIBCXX_ENABLE_STATIC=True,
-            LIBCXX_ENABLE_THREADS=not self.target_info.is_baremetal(),  # no threads on baremetal newlib
+            # no threads on baremetal newlib
+            LIBCXX_ENABLE_THREADS=not self.target_info.is_baremetal(),
             # baremetal the -fPIC build doesn't work for some reason (runs out of CALL16 relocations)
             # Not sure how this can happen since LLD includes multigot
             LIBCXX_BUILD_POSITION_DEPENDENT=self.target_info.is_baremetal(),
@@ -438,12 +439,13 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
 
     def setup(self):
         super().setup()
-        lit_args = f'--xunit-xml-output "{self.build_dir}/test-results.xml" --max-time 3600 --timeout 300 -s'
+        lit_args = f'--xunit-xml-output "{self.build_dir}/test-results.xml" --max-time 3600 --timeout 120 -sv'
         external_cxxabi = None
         enabled_runtimes = self.get_enabled_runtimes()
         # CMake will attempt to build a C++ executable when detecting compiler features, but
         # it's possible that this target is the actual provider of libc++ (e.g. for baremetal)
-        self.add_cmake_options(_CMAKE_FEATURE_DETECTION_TARGET_TYPE="STATIC_LIBRARY")
+        if not self.compiling_for_host():
+            self.add_cmake_options(_CMAKE_FEATURE_DETECTION_TARGET_TYPE="STATIC_LIBRARY")
         if self.target_info.is_freebsd() and self.llvm_project is not BuildUpstreamLLVM:
             # When targeting FreeBSD we use libcxxrt instead of the local libc++abi:
             with suppress(ValueError):
@@ -456,6 +458,20 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
 
         self.add_cmake_options(LLVM_INCLUDE_TESTS=True)  # Ensure that we also build tests
         self.add_cmake_options(LLVM_ENABLE_ASSERTIONS=True)
+        if "compiler-rt" in enabled_runtimes:
+            self.add_cmake_options(
+                COMPILER_RT_INCLUDE_TESTS=True,
+                # Currently causes lots of test failures if true.
+                # TODO: COMPILER_RT_DEBUG=self.build_type.is_debug,
+                COMPILER_RT_DEBUG=False,
+                COMPILER_RT_TEST_COMPILER_CFLAGS=self.commandline_to_str(self.essential_compiler_and_linker_flags),
+                CMAKE_LINKER=self.target_info.linker,  # set to ld.lld to ensure compiler-rt tests run
+            )
+            if self.get_compiler_info(self.CC).is_clang:
+                # Some of the tests (most/only compiler-rt) want to find the LLVM utilities. Make sure that the ones
+                # from the compiler are picked up rather than whatever system-wide LLVM happens to be installed.
+                self.add_cmake_options(LLVM_BINARY_DIR=self.CC.parent.parent)
+
         if "libunwind" in enabled_runtimes:
             self.add_cmake_options(
                 LIBUNWIND_ENABLE_STATIC=True,
