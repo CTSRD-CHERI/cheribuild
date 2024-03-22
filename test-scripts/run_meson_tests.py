@@ -72,6 +72,7 @@ def run_meson_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
                 "cd {cwd} &&{env} {cmd}".format(cwd=ti.cwd or "/build", cmd=commandline, env=env_cmd),
                 timeout=ti.timeout or 10 * 60,
             )
+            # TODO: TAP protocol parsing instead of using 0/1 return code.
         except boot_cheribsd.CheriBSDCommandFailed as e:
             boot_cheribsd.failure("Failed to run ", ti.name, ": ", str(e), exit=False)
             if isinstance(e, boot_cheribsd.CheriBSDCommandTimeout):
@@ -120,7 +121,7 @@ def adjust_args(args: argparse.Namespace):
         for test in tests_json:
             protocol = test.get("protocol", None)
             name = test["name"]
-            if protocol != "exitcode":
+            if protocol not in ("exitcode", "tap"):
                 boot_cheribsd.failure(
                     "Unknown/unsupported testing protocol '",
                     protocol,
