@@ -954,9 +954,8 @@ class BuildDiskImageBase(SimpleProject):
 
         if not self.makefs_cmd or not self.makefs_cmd.exists():
             self.fatal(
-                "Missing makefs command ('{}')! Should be found in FreeBSD build dir ({})".format(
-                    self.makefs_cmd, freebsd_builddir
-                ),
+                f"Missing makefs command ('{self.makefs_cmd}')! "
+                f"Should be found in FreeBSD build dir ({freebsd_builddir})",
                 fixit_hint="Pass an explicit path to makefs by setting the MAKEFS_CMD environment variable",
             )
         self.info("Disk image will be saved to", self.disk_image_path)

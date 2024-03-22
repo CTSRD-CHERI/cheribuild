@@ -148,9 +148,8 @@ class BuildOpenSBI(Project):
 
     def _fw_jump_path(self) -> Path:
         # share/opensbi/lp64/generic/firmware//fw_payload.bin
-        return self.install_dir / "share/opensbi/{abi}/generic/firmware/fw_jump.elf".format(
-            abi=self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
-        )
+        abi = self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
+        return self.install_dir / f"share/opensbi/{abi}/generic/firmware/fw_jump.elf"
 
     @classmethod
     def get_nocap_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":

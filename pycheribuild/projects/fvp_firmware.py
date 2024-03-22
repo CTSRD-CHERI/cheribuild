@@ -305,7 +305,7 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
         with tempfile.TemporaryDirectory() as td:
             self._compile(Path(td))
 
-    def _compile(self, fake_compiler_dir: Path):
+    def _compile(self, fake_cc_dir: Path):
         acpica_build = BuildMorelloACPICA.get_build_dir(self, cross_target=CompilationTargets.NATIVE)
         iasl = acpica_build / "generate/unix/bin/iasl"
         if not iasl.exists():
@@ -313,8 +313,8 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
         # Create the fake compiler directory with the tools and a clang wrapper script that forces bfd
         # Also disable lto since we don't install the LLVM LTO plugin
         self.write_file(
-            fake_compiler_dir / "clang",
-            contents="""#!/usr/bin/env python3
+            fake_cc_dir / "clang",
+            contents=f"""#!/usr/bin/env python3
 import subprocess
 import sys
 
@@ -324,12 +324,12 @@ for arg in sys.argv[1:]:
     if arg.startswith("-Wl,-plugin-opt="):
         continue
     args.append(arg)
-subprocess.check_call(["{real_clang}", "-B{fake_dir}"] + args + ["-fuse-ld=bfd", "-fno-lto", "-Qunused-arguments"])
-""".format(real_clang=self.CC, fake_dir=fake_compiler_dir),
+subprocess.check_call(["{self.CC}", "-B{fake_cc_dir}"] + args + ["-fuse-ld=bfd", "-fno-lto", "-Qunused-arguments"])
+""",
             overwrite=True,
             mode=0o755,
         )
-        self.run_cmd(fake_compiler_dir / "clang", "-v")  # check that the script works
+        self.run_cmd(fake_cc_dir / "clang", "-v")  # check that the script works
         for i in (
             "llvm-objcopy",
             "llvm-objdump",
@@ -344,14 +344,14 @@ subprocess.check_call(["{real_clang}", "-B{fake_dir}"] + args + ["-fuse-ld=bfd",
             "size",
             "llvm-size",
         ):
-            self.create_symlink(self.sdk_bindir / i, fake_compiler_dir / i, relative=False)
+            self.create_symlink(self.sdk_bindir / i, fake_cc_dir / i, relative=False)
 
         # EDK2 needs bfd until the lld target is merged
         bfd_path = BuildGDB.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/ld.bfd"
         if not bfd_path.exists():
             self.fatal("Missing ld.bfd, please run `cheribuild.py gdb-native --reconfigure`")
-        self.create_symlink(bfd_path, fake_compiler_dir / "ld", relative=False)
-        self.create_symlink(bfd_path, fake_compiler_dir / "ld.bfd", relative=False)
+        self.create_symlink(bfd_path, fake_cc_dir / "ld", relative=False)
+        self.create_symlink(bfd_path, fake_cc_dir / "ld.bfd", relative=False)
         firmware_ver = (
             self.run_cmd(
                 "git",
@@ -370,12 +370,12 @@ subprocess.check_call(["{real_clang}", "-B{fake_dir}"] + args + ["-fuse-ld=bfd",
         #   FIRMWARE_VER="${FIRMWARE_VER}-dirty"
         # fi
         with self.set_env(
-            CROSS_COMPILE=str(fake_compiler_dir) + "/",
-            CLANG_BIN=fake_compiler_dir,
+            CROSS_COMPILE=str(fake_cc_dir) + "/",
+            CLANG_BIN=fake_cc_dir,
             EDK2_TOOLCHAIN="CLANG38",
             VERBOSE=1,
             IASL_PREFIX=str(iasl.parent) + "/",
-            PATH=str(fake_compiler_dir) + ":" + os.getenv("PATH"),
+            PATH=str(fake_cc_dir) + ":" + os.getenv("PATH"),
         ):
             platform_desc = "Platform/ARM/Morello/MorelloPlatformFvp.dsc"
             if not (self.source_dir / "edk2-platforms" / platform_desc).exists():
@@ -384,8 +384,8 @@ subprocess.check_call(["{real_clang}", "-B{fake_dir}"] + args + ["-fuse-ld=bfd",
 . edksetup.sh --reconfig
 make -C BaseTools
 export PACKAGES_PATH=:{self.source_dir}:{self.source_dir}/edk2-platforms:
-export CLANG38_AARCH64_PREFIX={fake_compiler_dir}/llvm-
-export CLANG38_BIN={fake_compiler_dir}/
+export CLANG38_AARCH64_PREFIX={fake_cc_dir}/llvm-
+export CLANG38_BIN={fake_cc_dir}/
 build -n {self.config.make_jobs} -a AARCH64 -t CLANG38 -p {platform_desc} \
     -b {self.build_mode} -s -D EDK2_OUT_DIR=Build/morellofvp -D PLAT_TYPE_FVP \
     -D ENABLE_MORELLO_CAP -D FIRMWARE_VER={firmware_ver}"""

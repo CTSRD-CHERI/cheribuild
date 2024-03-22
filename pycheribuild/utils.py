@@ -176,8 +176,8 @@ else:
             try:
                 cache = instance.__dict__
             except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
-                msg = "No '__dict__' attribute on {} instance to cache {} property.".format(
-                    type(instance).__name__, self.attrname
+                msg = (
+                    f"No '__dict__' attribute on {type(instance).__name__} instance to cache {self.attrname} property."
                 )
                 raise TypeError(msg) from None
             val = cache.get(self.attrname, _NOT_FOUND)
@@ -191,8 +191,8 @@ else:
                             cache[self.attrname] = val
                         except TypeError:
                             msg = (
-                                "The '__dict__' attribute on {} instance does not support item assignment for"
-                                " caching {} property.".format(type(instance).__name__, self.attrname)
+                                f"The '__dict__' attribute on {type(instance).__name__} instance does not support "
+                                f"item assignment for caching {self.attrname} property."
                             )
                             raise TypeError(msg) from None
             return val
