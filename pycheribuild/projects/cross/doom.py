@@ -80,7 +80,6 @@ class BuildFreedoom(CrossCompileProject):
                     self.install_dir / "bin" / wad,
                     overwrite=True,
                     mode=0o755,
-                    contents='#!/bin/sh\nexec {0}/bin/chocolate-doom -iwad {0}/{1} "$@"\n'.format(
-                        self.install_prefix, wadpath
-                    ),
+                    contents=f"#!/bin/sh\n"
+                    f'exec {self.install_prefix}/bin/chocolate-doom -iwad {self.install_prefix}/{wadpath} "$@"\n',
                 )

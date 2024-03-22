@@ -1587,8 +1587,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         return prefix
 
     @abstractmethod
-    def process(self) -> None:
-        ...
+    def process(self) -> None: ...
 
     def run_tests(self) -> None:
         # for the --test option

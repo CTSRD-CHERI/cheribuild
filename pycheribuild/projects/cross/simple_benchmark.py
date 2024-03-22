@@ -66,8 +66,9 @@ class BuildSimpleCheriBenchmarks(BenchmarkMixin, CrossCompileCMakeProject):
             return
         self.create_test_dir(self.build_dir / "test-dir")
         # testing, not benchmarking -> run only once: (-s small / -s large?)
-        test_command = "cd /build/test-dir && ./run_jenkins-bluehive.sh -d0 -r1 -o {output} -a {tgt}".format(
-            tgt=self.archname_column, output=self.default_statcounters_csv_name
+        test_command = (
+            f"cd /build/test-dir && "
+            f"./run_jenkins-bluehive.sh -d0 -r1 -o {self.default_statcounters_csv_name} -a {self.archname_column}"
         )
         self.target_info.run_cheribsd_test_script(
             "run_simple_tests.py", "--test-command", test_command, "--test-timeout", str(120 * 60), mount_builddir=True

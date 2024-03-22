@@ -121,16 +121,13 @@ class RunTestRIGBase(SimpleProject):
         return self.target
 
     @abstractmethod
-    def get_reference_implementation_command(self, port: int) -> "list[str]":
-        ...
+    def get_reference_implementation_command(self, port: int) -> "list[str]": ...
 
     @abstractmethod
-    def get_test_implementation_command(self, port: int) -> "list[str]":
-        ...
+    def get_test_implementation_command(self, port: int) -> "list[str]": ...
 
     @abstractmethod
-    def _get_vengine_action_args(self, log_dir: Path) -> "list[str]":
-        ...
+    def _get_vengine_action_args(self, log_dir: Path) -> "list[str]": ...
 
     @cached_property
     def run_implementations_with_tracing(self):

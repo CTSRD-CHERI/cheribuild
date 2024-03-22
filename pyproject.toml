@@ -24,6 +24,7 @@ ignore = [
     "PLW2901", # `for` loop variable `value` overwritten by assignment target
     "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar` (cannot be fixed due to bug)
     "COM812",  # Incompatible with `ruff format`
+    "PLC0415",  # `import` should be at the top-level of a file
 ]
 
 [tool.ruff.lint.isort]

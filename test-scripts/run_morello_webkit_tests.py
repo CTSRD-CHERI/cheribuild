@@ -39,7 +39,8 @@ from run_tests_common import (
 
 def setup_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, _: argparse.Namespace) -> None:
     qemu.checked_run(
-        "export LD_LIBRARY_PATH=/opt/{ta}/webkit/lib:/usr/local/{ta}/lib/".format(ta=qemu.xtarget.generic_arch_suffix),
+        f"export LD_LIBRARY_PATH=/opt/{qemu.xtarget.generic_arch_suffix}/webkit/lib:"
+        f"/usr/local/{qemu.xtarget.generic_arch_suffix}/lib/",
     )
 
 
@@ -81,10 +82,8 @@ def run_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
         starttime = datetime.datetime.utcnow()
         try:
             qemu.checked_run(
-                "/opt/{ta}/webkit/bin/jsc /source/PerformanceTests/SunSpider/tests/sunspider-1.0.2/{test}".format(
-                    ta=qemu.xtarget.generic_arch_suffix,
-                    test=test,
-                ),
+                f"/opt/{qemu.xtarget.generic_arch_suffix}/webkit/bin/jsc"
+                f" /source/PerformanceTests/SunSpider/tests/sunspider-1.0.2/{test}",
                 timeout=300,
             )
         except boot_cheribsd.CheriBSDCommandFailed as e:

@@ -45,10 +45,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     native_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     _check_install_dir_conflict = False
-    supported_architectures = (
-        *CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS,
-        *CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS,
-    )
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
 
     def setup(self):
         # For the NATIVE variant we want to install to the compiler resource dir:
@@ -69,6 +66,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
         self.add_cmake_options(
             LLVM_CONFIG_PATH=llvm_tools_bindir / "llvm-config",
             LLVM_EXTERNAL_LIT=llvm_tools_bindir / "llvm-lit",
+            COMPILER_RT_HAS_LLD=True,  # We need ld.lld to ensure all compiler-rt tests run
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=True,
             COMPILER_RT_BUILD_XRAY=False,

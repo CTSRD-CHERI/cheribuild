@@ -243,7 +243,7 @@ def main():
         add_args(parser)
         parser.add_argument("--test-native", action="store_true")
         parser.add_argument("--build-dir")
-        args, remaining = parser.parse_known_args()
+        args, _ = parser.parse_known_args()
         if args.test_native and not args.junit_xml_only:
             cmd = [args.bmake_path, "-r", "-f", args.build_dir + "/Makefile.bsd-run", "all"]
             if args.jobs > 1:

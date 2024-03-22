@@ -176,8 +176,8 @@ else:
             try:
                 cache = instance.__dict__
             except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
-                msg = "No '__dict__' attribute on {} instance to cache {} property.".format(
-                    type(instance).__name__, self.attrname
+                msg = (
+                    f"No '__dict__' attribute on {type(instance).__name__} instance to cache {self.attrname} property."
                 )
                 raise TypeError(msg) from None
             val = cache.get(self.attrname, _NOT_FOUND)
@@ -191,8 +191,8 @@ else:
                             cache[self.attrname] = val
                         except TypeError:
                             msg = (
-                                "The '__dict__' attribute on {} instance does not support item assignment for"
-                                " caching {} property.".format(type(instance).__name__, self.attrname)
+                                f"The '__dict__' attribute on {type(instance).__name__} instance does not support "
+                                f"item assignment for caching {self.attrname} property."
                             )
                             raise TypeError(msg) from None
             return val
@@ -234,7 +234,7 @@ def default_make_jobs_count() -> Optional[int]:
 
 
 def maybe_add_space(msg: str, sep: str) -> "tuple[str, ...]":
-    if sep == "":
+    if not sep:
         return msg, " "
     return (msg,)
 
@@ -468,7 +468,7 @@ class OSInfo:
             d = {}
             for line in f:
                 line = line.strip()
-                if line == "" or line[0] == "#":
+                if not line or line[0] == "#":
                     continue
                 k, v = line.split("=", maxsplit=1)
                 # .strip('"') will remove if there or else do nothing

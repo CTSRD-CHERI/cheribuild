@@ -38,6 +38,6 @@ from pathlib import Path
 module_dir = Path(__file__).resolve().parent
 sys.path.append(str(module_dir))
 # noinspection PyPep8
-from pycheribuild.__main__ import main  # "__main__" case  # noqa: E402
+from pycheribuild.__main__ import main  # "__main__" case  # noqa: E402, PLC2701, RUF100
 
 main()
