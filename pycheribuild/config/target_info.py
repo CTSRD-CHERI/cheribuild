@@ -29,6 +29,7 @@
 #
 import functools
 import platform
+import re
 import typing
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -52,6 +53,8 @@ __all__ = [
     "MipsFloatAbi",
     "NativeTargetInfo",
     "TargetInfo",
+    "sys_param_h_cheribsd_version",
+    "cheribsd_morello_version_dependent_flags",
 ]
 
 
@@ -742,11 +745,18 @@ class NativeTargetInfo(TargetInfo):
                 instance.project.fatal(
                     "Requested automatic variable initialization, but don't know how to for", compiler
                 )
-        if xtarget.is_cheri_hybrid():
+        if cls.is_cheribsd():
             if xtarget.is_aarch64(include_purecap=True):
-                result.append("-mabi=aapcs")
+                cheribsd_version = sys_param_h_cheribsd_version(Path("/"))
+                result.extend(cheribsd_morello_version_dependent_flags(cheribsd_version, xtarget.is_cheri_purecap()))
+                if xtarget.is_cheri_purecap():
+                    result.append("-mabi=purecap")
+                else:
+                    assert xtarget.is_cheri_hybrid(), "non-cheri not supported"
+                    result.append("-mabi=aapcs")  # in case cc defaults to -mabi=purecap
+                result.append("-mcpu=rainier")
             else:
-                instance.project.fatal("-native-hybrid not supported yet for non-Morello targets")
+                instance.project.fatal("Native CheriBSD compilation currently only supported for Morello targets")
         return result  # default host compiler should not need any extra flags
 
 
@@ -1109,6 +1119,38 @@ def _native_cpu_arch() -> CPUArchitecture:
 def _is_native_purecap():
     # TODO: should we check if `cc -E -dM -xc /dev/null` contains __CHERI_PURE_CAPABILITY__ instead?
     return OSInfo.is_cheribsd() and platform.processor() in ("aarch64c", "riscv64c")
+
+
+@functools.lru_cache(maxsize=3)
+def sys_param_h_cheribsd_version(sysroot: Path) -> "Optional[int]":
+    pattern = re.compile(r"#define\s+__CheriBSD_version\s+([0-9]+)")
+    try:
+        with open(sysroot / "usr/include/sys/param.h", encoding="utf-8") as f:
+            for line in f:
+                match = pattern.match(line)
+                if match:
+                    return int(match.groups()[0])
+    except FileNotFoundError:
+        return None
+    return 0
+
+
+def cheribsd_morello_version_dependent_flags(cheribsd_version: "Optional[int]", is_purecap) -> "list[str]":
+    result = []
+    # NB: If version is None, no CheriBSD tree exists, so we assume the new
+    # ABI will be used when CheriBSD is eventually built. This ensures the
+    # LLVM config files for the SDK utilities get the right flags in the
+    # common case as otherwise there is a circular dependency.
+    if cheribsd_version is None or cheribsd_version >= 20220511:
+        # Use new var-args ABI
+        result.extend(["-Xclang", "-morello-vararg=new"])
+    if cheribsd_version is None or cheribsd_version >= 20230804:
+        # Use new function call ABI
+        result.extend(["-Xclang", "-morello-bounded-memargs=caller-only"])
+    if is_purecap and cheribsd_version is not None and cheribsd_version < 20220511:
+        # Use emulated TLS on older purecap
+        result.append("-femulated-tls")
+    return result
 
 
 # This is a separate class to avoid cyclic dependencies.

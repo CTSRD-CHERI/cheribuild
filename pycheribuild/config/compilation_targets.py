@@ -51,6 +51,8 @@ from .target_info import (
     DefaultInstallDir,
     MipsFloatAbi,
     TargetInfo,
+    cheribsd_morello_version_dependent_flags,
+    sys_param_h_cheribsd_version,
 )
 from ..processutils import extract_version, get_compiler_info, get_version_output
 from ..projects.simple_project import SimpleProject
@@ -689,16 +691,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         return SimpleProject.get_class_for_target_name("cheribsd", xtarget)
 
     def cheribsd_version(self) -> "Optional[int]":
-        pattern = re.compile(r"#define\s+__CheriBSD_version\s+([0-9]+)")
-        try:
-            with open(self.sysroot_dir / "usr/include/sys/param.h", encoding="utf-8") as f:
-                for line in f:
-                    match = pattern.match(line)
-                    if match:
-                        return int(match.groups()[0])
-        except FileNotFoundError:
-            return None
-        return 0
+        return sys_param_h_cheribsd_version(self.sysroot_dir)
 
 
 class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
@@ -729,19 +722,7 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     def essential_compiler_and_linker_flags_impl(cls, instance: "CheriBSDTargetInfo", *args, xtarget, **kwargs):
         result = super().essential_compiler_and_linker_flags_impl(instance, *args, xtarget=xtarget, **kwargs)
         version = instance.cheribsd_version()
-        # NB: If version is None, no CheriBSD tree exists, so we assume the new
-        # ABI will be used when CheriBSD is eventually built. This ensures the
-        # LLVM config files for the SDK utilities get the right flags in the
-        # common case as otherwise there is a circular dependency.
-        if version is None or version >= 20220511:
-            # Use new var-args ABI
-            result.extend(["-Xclang", "-morello-vararg=new"])
-        if version is None or version >= 20230804:
-            # Use new function call ABI
-            result.extend(["-Xclang", "-morello-bounded-memargs=caller-only"])
-        if xtarget.is_cheri_purecap([CPUArchitecture.AARCH64]) and version is not None and version < 20220511:
-            # Use emulated TLS on older purecap
-            result.append("-femulated-tls")
+        result.extend(cheribsd_morello_version_dependent_flags(version, xtarget.is_cheri_purecap()))
         return result
 
 
