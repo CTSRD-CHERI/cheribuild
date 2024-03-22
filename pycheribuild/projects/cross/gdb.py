@@ -161,6 +161,9 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
 
             if self.target_info.is_freebsd():
                 self.LDFLAGS.append(f"-L{self.target_info.localbase}/lib")  # Expat/GMP are in $LOCALBASE
+                if self.compiling_for_cheri_hybrid():
+                    self.configure_args.append(f"--with-gmp={self.target_info.localbase}")
+                    self.configure_args.append(f"--with-mpfr={self.target_info.localbase}")
             self.configure_args.append("--with-expat")
         else:
             self.configure_args.extend(["--without-python", "--without-expat", "--without-libunwind-ia64"])
