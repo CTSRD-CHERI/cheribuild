@@ -149,6 +149,7 @@ class MakeOptions:
         self.__can_pass_j_flag: "Optional[bool]" = None
         self.__command: "Optional[str]" = None
         self.__command_args: "list[str]" = []
+        self.exclude_from_csa: "bool" = False
 
     def __deepcopy__(self, memo) -> "typing.NoReturn":
         raise RuntimeError("Should not be called!")
@@ -1275,7 +1276,7 @@ class Project(SimpleProject):
             ),
         ]
 
-        if self.use_csa:
+        if self.use_csa and not options.exclude_from_csa:
             all_args = self._get_scan_build_args() + all_args
 
         if not self.config.make_without_nice:
