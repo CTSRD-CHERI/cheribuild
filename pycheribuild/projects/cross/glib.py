@@ -41,6 +41,11 @@ class BuildGlib(CrossCompileMesonProject):
     def setup(self) -> None:
         super().setup()
         self.add_meson_options(tests=True)
+        if not self.compiling_for_host():
+            # When cross-compiling, tests are only built if there is an exe
+            # wrapper or they are installed for running later.
+            self.add_meson_options(installed_tests=True)
+
         if self.compiling_for_host() and self.target_info.is_linux():
             self.add_meson_options(documentation=True)
         self.common_warning_flags.append("-Werror=int-conversion")
