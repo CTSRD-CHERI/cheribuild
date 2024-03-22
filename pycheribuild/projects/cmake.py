@@ -85,7 +85,12 @@ class BuildCMake(AutotoolsProject):
             # CTest is broken on purecap Morello with the bundled libuv (passes pointers via a pipe)
             # NB: --bootstrap-system-libuv is not needed since the usage outside CTest is fine.
             self.configure_args.append("--system-libuv")
-            self.configure_environment["CMAKE_PREFIX_PATH"] = BuildLibuv.get_install_dir(self)
+            self.configure_args.append("--bootstrap-system-libuv")
+            self.configure_environment["CMAKE_PREFIX_PATH"] = str(BuildLibuv.get_install_dir(self))
+            self.configure_environment["LDFLAGS"] = (
+                f"-L{BuildLibuv.get_install_dir(self) / 'lib'} "
+                f"-Wl,-rpath,{BuildLibuv.get_install_dir(self) / 'lib'}"
+            )
 
     def run_tests(self) -> None:
         self.run_make("test", logfile_name="test")
