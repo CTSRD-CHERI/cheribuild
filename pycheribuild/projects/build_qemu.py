@@ -188,7 +188,14 @@ class BuildQEMUBase(AutotoolsProject):
         super().setup()
         # Disable some more unneeded things (we don't usually need the GUI frontends)
         if not self.gui:
-            self.configure_args.extend(["--disable-sdl", "--disable-gtk", "--disable-opengl"])
+            self.configure_args.extend(
+                [
+                    "--disable-sdl",
+                    "--disable-gtk",
+                    "--disable-opengl",
+                    "--disable-virglrenderer",
+                ],
+            )
             if self.target_info.is_macos():
                 self.configure_args.append("--disable-cocoa")
 
