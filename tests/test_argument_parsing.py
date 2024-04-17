@@ -813,37 +813,69 @@ def test_disk_image_path(target, expected_name):
     ("target", "config_options", "expected_kernels"),
     [
         # RISCV kernconf tests
-        pytest.param("cheribsd-riscv64-purecap", ["--cheribsd/no-build-alternate-abi-kernels"], ["CHERI-QEMU"]),
+        pytest.param(
+            "cheribsd-riscv64-purecap",
+            ["--cheribsd/no-build-alternate-abi-kernels"],
+            ["CHERI-QEMU"],
+        ),
         pytest.param(
             "cheribsd-riscv64-purecap",
             ["--cheribsd/build-fpga-kernels"],
-            ["CHERI-QEMU", "CHERI-PURECAP-QEMU"],
+            [
+                "CHERI-QEMU",
+                "CHERI-PURECAP-QEMU",
+            ],
         ),
-        pytest.param("cheribsd-riscv64-purecap", [], ["CHERI-QEMU", "CHERI-PURECAP-QEMU"]),
+        pytest.param(
+            "cheribsd-riscv64-purecap",
+            [],
+            [
+                "CHERI-QEMU",
+                "CHERI-PURECAP-QEMU"
+            ],
+        ),
         pytest.param(
             "cheribsd-riscv64-purecap",
             ["--cheribsd/build-alternate-abi-kernels", "--cheribsd/default-kernel-abi", "purecap"],
-            ["CHERI-PURECAP-QEMU", "CHERI-QEMU"],
+            [
+                "CHERI-PURECAP-QEMU",
+                "CHERI-QEMU",
+            ],
         ),
         pytest.param(
             "cheribsd-riscv64-purecap",
             ["--cheribsd/build-fett-kernels", "--cheribsd/no-build-alternate-abi-kernels"],
-            ["CHERI-QEMU", "CHERI-QEMU-FETT"],
+            [
+                "CHERI-QEMU",
+                "CHERI-QEMU-FETT",
+            ],
         ),
         pytest.param(
             "cheribsd-riscv64-purecap",
             ["--cheribsd/build-fett-kernels"],
-            ["CHERI-QEMU", "CHERI-QEMU-FETT", "CHERI-PURECAP-QEMU"],
+            [
+                "CHERI-QEMU",
+                "CHERI-QEMU-FETT",
+                "CHERI-PURECAP-QEMU",
+            ],
         ),
         pytest.param(
             "cheribsd-riscv64-purecap",
             ["--cheribsd/build-bench-kernels", "--cheribsd/no-build-alternate-abi-kernels"],
-            ["CHERI-QEMU", "CHERI-QEMU-NODEBUG"],
+            [
+                "CHERI-QEMU",
+                "CHERI-QEMU-NODEBUG",
+            ],
         ),
         pytest.param(
             "cheribsd-riscv64-purecap",
             ["--cheribsd/build-bench-kernels"],
-            ["CHERI-QEMU", "CHERI-QEMU-NODEBUG", "CHERI-PURECAP-QEMU", "CHERI-PURECAP-QEMU-NODEBUG"],
+            [
+                "CHERI-QEMU",
+                "CHERI-QEMU-NODEBUG",
+                "CHERI-PURECAP-QEMU",
+                "CHERI-PURECAP-QEMU-NODEBUG",
+            ],
         ),
         pytest.param(
             "cheribsd-riscv64-purecap",
@@ -852,12 +884,22 @@ def test_disk_image_path(target, expected_name):
                 "--cheribsd/build-fpga-kernels",
                 "--cheribsd/no-build-alternate-abi-kernels",
             ],
-            ["CHERI-QEMU", "CHERI-QEMU-FETT", "CHERI-FETT"],
+            [
+                "CHERI-QEMU",
+                "CHERI-QEMU-FETT",
+                "CHERI-FETT",
+            ],
         ),
         pytest.param(
             "cheribsd-riscv64-purecap",
             ["--cheribsd/build-fett-kernels", "--cheribsd/build-fpga-kernels"],
-            ["CHERI-QEMU", "CHERI-QEMU-FETT", "CHERI-PURECAP-QEMU", "CHERI-FETT", "CHERI-PURECAP-FETT"],
+            [
+                "CHERI-QEMU",
+                "CHERI-QEMU-FETT",
+                "CHERI-PURECAP-QEMU",
+                "CHERI-FETT",
+                "CHERI-PURECAP-FETT",
+            ],
         ),
         pytest.param(
             "cheribsd-riscv64-purecap",
@@ -865,9 +907,23 @@ def test_disk_image_path(target, expected_name):
             ["CUSTOM-KERNEL-CONFIG"],
         ),
         # Morello kernconf tests
-        pytest.param("cheribsd-aarch64", [], ["GENERIC"]),
-        pytest.param("cheribsd-morello-purecap", ["--cheribsd/no-build-alternate-abi-kernels"], ["GENERIC-MORELLO"]),
-        pytest.param("cheribsd-morello-purecap", [], ["GENERIC-MORELLO", "GENERIC-MORELLO-PURECAP"]),
+        pytest.param(
+            "cheribsd-aarch64",
+            [],
+            ["GENERIC"]),
+        pytest.param(
+            "cheribsd-morello-purecap",
+            ["--cheribsd/no-build-alternate-abi-kernels"],
+            ["GENERIC-MORELLO"],
+        ),
+        pytest.param(
+            "cheribsd-morello-purecap",
+            [],
+            [
+                "GENERIC-MORELLO",
+                "GENERIC-MORELLO-PURECAP",
+            ],
+        ),
         pytest.param(
             "cheribsd-morello-purecap",
             ["--cheribsd-morello-purecap/kernel-config", "CUSTOM-KERNEL-CONFIG"],
@@ -908,12 +964,20 @@ def test_kernel_configs(target, config_options: "list[str]", expected_kernels: "
                 "--cheribsd-mfs-root-kernel-riscv64-purecap/build-fpga-kernels",
                 "--cheribsd-mfs-root-kernel-riscv64-purecap/no-build-alternate-abi-kernels",
             ],
-            ["CHERI-QEMU-MFS-ROOT", "CHERI-GFE"],
+            [
+                "CHERI-QEMU-MFS-ROOT",
+                "CHERI-GFE",
+            ],
         ),
         pytest.param(
             "cheribsd-mfs-root-kernel-riscv64-purecap",
             ["--cheribsd-mfs-root-kernel-riscv64-purecap/build-fpga-kernels"],
-            ["CHERI-QEMU-MFS-ROOT", "CHERI-PURECAP-QEMU-MFS-ROOT", "CHERI-GFE", "CHERI-PURECAP-GFE"],
+            [
+                "CHERI-QEMU-MFS-ROOT",
+                "CHERI-PURECAP-QEMU-MFS-ROOT",
+                "CHERI-GFE",
+                "CHERI-PURECAP-GFE",
+            ],
         ),
         pytest.param(
             "cheribsd-mfs-root-kernel-riscv64-purecap",
