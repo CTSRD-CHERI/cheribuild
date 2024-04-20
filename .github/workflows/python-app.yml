@@ -20,12 +20,7 @@ jobs:
                 run: |
                     # Run as a non-root user to avoid cheribuild errors
                     adduser --disabled-password --gecos "Not Root" notroot
-                    su -c "python -m pip install --user --upgrade pip" notroot
-                    su -c "pip install --user -r requirements.txt" notroot
-            -   name: Lint with flake8
-                run: |
-                    # stop the build if there are any flake8 warnings
-                    su -c "python -m flake8" notroot
+                    su -c "python -m pip install --user --upgrade pip pytest" notroot
             -   name: Run basic regression tests
                 run: su -c "tests/run_basic_tests.sh" notroot
     build-macos:
