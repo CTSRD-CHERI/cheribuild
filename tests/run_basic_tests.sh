@@ -12,9 +12,6 @@ try_run_verbose() {
     fi
 }
 
-# check for errors that would fail the GitHub CI:
-try_run_verbose python3 -m flake8
-
 # check that there are no obvious mistakes:
 sh "$SCRIPT_DIR/run_smoke_tests.sh"
 
