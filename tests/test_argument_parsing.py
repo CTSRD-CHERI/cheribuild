@@ -829,10 +829,7 @@ def test_disk_image_path(target, expected_name):
         pytest.param(
             "cheribsd-riscv64-purecap",
             [],
-            [
-                "CHERI-QEMU",
-                "CHERI-PURECAP-QEMU"
-            ],
+            ["CHERI-QEMU", "CHERI-PURECAP-QEMU"],
         ),
         pytest.param(
             "cheribsd-riscv64-purecap",
@@ -907,10 +904,7 @@ def test_disk_image_path(target, expected_name):
             ["CUSTOM-KERNEL-CONFIG"],
         ),
         # Morello kernconf tests
-        pytest.param(
-            "cheribsd-aarch64",
-            [],
-            ["GENERIC"]),
+        pytest.param("cheribsd-aarch64", [], ["GENERIC"]),
         pytest.param(
             "cheribsd-morello-purecap",
             ["--cheribsd/no-build-alternate-abi-kernels"],
