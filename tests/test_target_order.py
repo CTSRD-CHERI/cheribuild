@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
 from pycheribuild.config.compilation_targets import CompilationTargets, enable_hybrid_for_purecap_rootfs_targets
 from pycheribuild.config.target_info import CrossCompileTarget
 
@@ -33,7 +34,6 @@ from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.projects.spike import RunCheriSpikeBase
 from pycheribuild.projects.syzkaller import BuildSyzkaller, RunSyzkaller
 from pycheribuild.targets import Target, target_manager
-from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
 
 
 # noinspection PyProtectedMember

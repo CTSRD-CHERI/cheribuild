@@ -3,11 +3,11 @@ from pathlib import Path
 
 import pytest
 
+from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
 from pycheribuild.config.target_info import BasicCompilationTargets, DefaultInstallDir
 from pycheribuild.projects.cmake_project import CMakeProject
 from pycheribuild.projects.repository import ExternallyManagedSourceRepository
 from pycheribuild.targets import target_manager
-from .setup_mock_chericonfig import CheriConfig, setup_mock_chericonfig
 
 
 def test_add_cmake_option():

@@ -10,7 +10,7 @@ on:
         branches: [ main ]
 
 env:
-    RUFF_VERSION: 0.3.4
+    RUFF_VERSION: 0.4.1
 
 jobs:
     build-baseline:

@@ -5,9 +5,9 @@ import unittest
 from pathlib import Path
 from unittest import TestCase
 
+from .setup_mock_chericonfig import MockConfig, setup_mock_chericonfig
 from pycheribuild.config.compilation_targets import CompilationTargets
 from pycheribuild.projects.project import DefaultInstallDir, ExternallyManagedSourceRepository, Project
-from .setup_mock_chericonfig import MockConfig, setup_mock_chericonfig
 
 
 # noinspection PyTypeChecker
