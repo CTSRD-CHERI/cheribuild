@@ -1236,8 +1236,9 @@ class Project(SimpleProject):
                 )
                 tool_path = self._compiledb_tool
             options.set_command(tool_path, can_pass_j_flag=options.can_pass_jflag, early_args=compdb_extra_args)
-            # Ensure that recursive make invocations reuse the compilation DB tool
-            options.set(MAKE=commandline_to_str([options.command, *compdb_extra_args]))
+            # Ensure that recursive make invocations reuse the compilation DB tool when not using bear.
+            if self._compiledb_tool == "compiledb":
+                options.set(MAKE=commandline_to_str([options.command, *compdb_extra_args]))
             make_command = options.command
 
         all_args = [
