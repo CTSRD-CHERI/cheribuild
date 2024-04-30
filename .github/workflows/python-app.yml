@@ -34,9 +34,9 @@ jobs:
                 run: |
                     # Use the system-provided python3 instead of actions/setup-python@v4
                     python3 --version
-                    python3 -m pip install --upgrade pip
-                    python3 -m pip install --upgrade pre-commit ruff==${{ env.RUFF_VERSION }}
-                    python3 -m pip install -r requirements.txt
+                    python3 -m pip install --break-system-packages --upgrade pip
+                    python3 -m pip install --break-system-packages --upgrade pre-commit ruff==${{ env.RUFF_VERSION }}
+                    python3 -m pip install --break-system-packages -r requirements.txt
             -   name: Lint with flake8
                 run: flake8
             -   name: Lint with ruff
