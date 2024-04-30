@@ -564,18 +564,31 @@ class OSInfo:
 
 
 class ThreadJoiner:
-    def __init__(self, thread: "Optional[threading.Thread]"):
-        self.thread = thread
+    def __init__(self, threads: "Optional[Union[threading.Thread, list[threading.Thread]]]" = None):
+        if not isinstance(threads, list):
+            if threads is None:
+                self.threads = []
+            else:
+                self.threads = [threads]
+        else:
+            self.threads = threads
 
     def __enter__(self) -> None:
-        if self.thread is not None:
-            self.thread.start()
+        for thread in self.threads:
+            thread.start()
 
     def __exit__(self, *args) -> None:
-        if self.thread is not None:
-            if self.thread.is_alive():
-                status_update("Waiting for '", self.thread.name, "' to complete", sep="")
-            self.thread.join()
+        for thread in self.threads:
+            if thread.is_alive():
+                status_update("Waiting for '", thread.name, "' to complete", sep="")
+            thread.join()
+
+    def __add__(self, other: "ThreadJoiner") -> "ThreadJoiner":
+        return ThreadJoiner(self.threads + other.threads)
+
+    def __iadd__(self, other: "ThreadJoiner") -> "ThreadJoiner":
+        self.threads += other.threads
+        return self
 
 
 def replace_one(s: str, old, new) -> str:

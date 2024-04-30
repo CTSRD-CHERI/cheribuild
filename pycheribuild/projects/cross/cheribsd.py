@@ -1099,25 +1099,35 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return kernel_options
 
     def clean(self) -> ThreadJoiner:
-        cleaning_kerneldir = False
-        builddir = self.build_dir
+        cleaning_kerneldirs = False
+        builddirs = None
         if self.config.skip_world:
-            kernel_dir = self.kernel_objdir(self.kernel_config)
-            print(kernel_dir)
-            if kernel_dir and kernel_dir.parent.exists():
-                builddir = kernel_dir
-                cleaning_kerneldir = True
-                if kernel_dir.exists() and self.build_dir.exists():
-                    assert not os.path.relpath(str(kernel_dir.resolve()), str(self.build_dir.resolve())).startswith(
-                        ".."
-                    ), builddir
-            else:
-                self.warning("Do not know the full path to the kernel build directory, will clean the whole tree!")
+            kernel_dirs = [self.kernel_objdir(k) for k in self.kernconf_list()]
+            for kernel_dir in kernel_dirs:
+                print(kernel_dir)
+                if kernel_dir and kernel_dir.parent.exists():
+                    if builddirs is None:
+                        builddirs = []
+                    builddirs.append(kernel_dir)
+                    cleaning_kerneldirs = True
+                    if kernel_dir.exists() and self.build_dir.exists():
+                        assert not os.path.relpath(str(kernel_dir.resolve()), str(self.build_dir.resolve())).startswith(
+                            ".."
+                        ), kernel_dir
+            if builddirs is None:
+                self.warning("Do not know the full path to any kernel build directories, will clean the whole tree!")
+        if builddirs is None:
+            builddirs = [self.build_dir]
+        clean_kwargs = {}
         if self.crossbuild:
             # avoid rebuilding bmake when crossbuilding:
-            return self.async_clean_directory(builddir, keep_root=not cleaning_kerneldir, keep_dirs=["bmake-install"])
-        else:
-            return self.async_clean_directory(builddir)
+            # XXX: Should keep_root be conditional on crossbuild?
+            clean_kwargs["keep_root"] = not cleaning_kerneldirs
+            clean_kwargs["keep_dirs"] = ["bmake-install"]
+        joiner = ThreadJoiner()
+        for builddir in builddirs:
+            joiner += self.async_clean_directory(builddir, **clean_kwargs)
+        return joiner
 
     def _list_kernel_configs(self) -> None:
         """Emit a list of valid kernel configurations that can be given as --kernel-config overrides"""
