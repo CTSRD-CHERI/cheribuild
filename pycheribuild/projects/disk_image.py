@@ -948,13 +948,16 @@ class BuildDiskImageBase(SimpleProject):
         # Try to find makefs and install in the freebsd build dir
         freebsd_builddir = self.source_project.objdir
         if not self.makefs_cmd:
-            makefs_xtool = freebsd_builddir / "tmp/usr/sbin/makefs"
-            if makefs_xtool.exists():
-                self.makefs_cmd = makefs_xtool
+            for d in ("legacy/bin", "usr/sbin"):
+                makefs_xtool = freebsd_builddir / "tmp" / d / "makefs"
+                if makefs_xtool.exists():
+                    self.makefs_cmd = makefs_xtool
+                    break
         if not self.mkimg_cmd:
-            mkimg_xtool = freebsd_builddir / "tmp/usr/bin/mkimg"
-            if mkimg_xtool.exists():
-                self.mkimg_cmd = mkimg_xtool
+            for d in ("legacy/bin", "usr/bin"):
+                mkimg_xtool = freebsd_builddir / "tmp" / d / "mkimg"
+                if mkimg_xtool.exists():
+                    self.mkimg_cmd = mkimg_xtool
 
         if not self.makefs_cmd or not self.makefs_cmd.exists():
             self.fatal(
