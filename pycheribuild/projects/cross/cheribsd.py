@@ -1332,6 +1332,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 return None
             query_args = args.copy()
             query_args.set_command(bmake_binary)
+            # --freebsd/toolchain=bootstrap ends up here before its setup has
+            # initialised the environment, so make sure that's correct when
+            # querying .OBJDIR lest the wrong value be cached.
+            if "MAKEOBJDIRPREFIX" not in query_args.env_vars:
+                query_args.set_env(MAKEOBJDIRPREFIX=str(self.build_dir))
             bw_flags = [
                 *query_args.all_commandline_args(self.config),
                 "BUILD_WITH_STRICT_TMPPATH=0",
@@ -1350,7 +1355,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
             cmd = self.run_cmd(
                 [bmake_binary, *bw_flags],
-                env=args.env_vars,
+                env=query_args.env_vars,
                 cwd=self.source_dir,
                 run_in_pretend_mode=True,
                 capture_output=True,
