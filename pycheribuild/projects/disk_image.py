@@ -618,7 +618,11 @@ class BuildDiskImageBase(SimpleProject):
             return True
         # Upstream's QEMU config wants /dev/vtbd0 (ours also looks for
         # /dev/ufs/root), so until we boot with UEFI we have to use that
-        if not self.target_info.is_cheribsd() and self.crosscompile_target.is_riscv():
+        if (
+            not self.target_info.is_cheribsd()
+            and self.crosscompile_target.is_riscv()
+            and self.source_project.kernel_config == "QEMU"
+        ):
             return True
         return False
 
