@@ -838,11 +838,25 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # provide one then debug info will be omitted.
             self.make_args.set_with_options(DEBUG_FILES=False)
 
-        # we want to build makefs for the disk image (makefs depends on libnetbsd which will not be
-        # bootstrapped on FreeBSD, and the same goes for libsbuf in recent versions since config(8) no longer
-        # depends on it)
-        # TODO: upstream a patch to bootstrap them by default
-        self.make_args.set(LOCAL_XTOOL_DIRS="lib/libnetbsd lib/libsbuf usr.sbin/makefs usr.bin/mkimg")
+        # Enable building makefs/mkimg/etdump so we can create disk images and
+        # release media.
+        self.make_args.set_with_options(DISK_IMAGE_TOOLS_BOOTSTRAP=True)
+
+        # Compatibility for versions where WITH_DISK_IMAGE_TOOLS_BOOTSTRAP has
+        # not been MFC'ed (i.e. FreeBSD 14 and below, and CheriBSD 22.12).
+        # Must be set in the environment so it remains lazily evaluated for
+        # recursive makes.
+        #
+        # TODO: Remove once no longer needed.
+        #
+        # NB: makefs depends on libnetbsd which will not be bootstrapped on
+        # FreeBSD, and the same goes for libsbuf in recent versions since
+        # config(8) no longer depends on it.
+        self.make_args.set_env(
+            LOCAL_XTOOL_DIRS=(
+                "${MK_DISK_IMAGE_TOOLS_BOOTSTRAP:D:Ulib/libnetbsd lib/libsbuf usr.sbin/makefs usr.bin/mkimg}"
+            )
+        )
 
         if self.add_custom_make_options:
             self.make_args.set_with_options(PROFILE=False)  # PROFILE is useless and just slows down the build
