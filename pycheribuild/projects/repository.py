@@ -94,12 +94,12 @@ class ReuseOtherProjectRepository(SourceRepository):
         source_project: "type[Project]",
         *,
         subdirectory=".",
-        repo_for_target: "Optional[CrossCompileTarget]" = None,
+        dir_for_target: "Optional[CrossCompileTarget]" = None,
         do_update=False,
     ):
         self.source_project = source_project
         self.subdirectory = subdirectory
-        self.repo_for_target = repo_for_target
+        self.dir_for_target = dir_for_target
         self.do_update = do_update
 
     def ensure_cloned(self, current_project: "Project", **kwargs) -> None:
@@ -118,11 +118,11 @@ class ReuseOtherProjectRepository(SourceRepository):
     def get_real_source_dir(self, caller: SimpleProject, base_project_source_dir: Optional[Path]) -> Path:
         if base_project_source_dir is not None:
             return base_project_source_dir
-        return self.source_project.get_source_dir(caller, cross_target=self.repo_for_target) / self.subdirectory
+        return self.source_project.get_source_dir(caller, cross_target=self.dir_for_target) / self.subdirectory
 
     def update(self, current_project: "Project", *, src_dir: Path, **kwargs):
         if self.do_update:
-            src_proj = self.source_project.get_instance(current_project, cross_target=self.repo_for_target)
+            src_proj = self.source_project.get_instance(current_project, cross_target=self.dir_for_target)
             src_proj.update()
         else:
             current_project.info(
@@ -143,7 +143,7 @@ class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
             source_project,
             subdirectory=subdirectory,
             do_update=do_update,
-            repo_for_target=xtarget,
+            dir_for_target=xtarget,
         )
 
 
