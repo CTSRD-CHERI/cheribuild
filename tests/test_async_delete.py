@@ -28,7 +28,7 @@ class MockProject(Project):
         self.expected_install = config.source_root / "install" / name
         self._install_dir = self.expected_install
         self.expected_build = Path(config.source_root, "build", name + "-build")
-        self.build_dir = self.expected_build
+        self._initial_build_dir = self.expected_build
         super().__init__(config, crosscompile_target=CompilationTargets.NATIVE)
 
     def setup(self):

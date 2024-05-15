@@ -53,7 +53,7 @@ from .repository import (
     SubversionRepository,
     TargetBranchInfo,
 )
-from .simple_project import SimpleProject, _default_stdout_filter
+from .simple_project import ReuseOtherProjectBuildDir, SimpleProject, _default_stdout_filter
 from ..config.chericonfig import BuildType, CheriConfig, ComputedDefaultValue, Linkage, supported_build_type_strings
 from ..config.config_loader_base import ConfigOptionHandle
 from ..config.target_info import (
@@ -101,6 +101,7 @@ __all__ = [
     "MakefileProject",
     "MercurialRepository",
     "Project",
+    "ReuseOtherProjectBuildDir",
     "ReuseOtherProjectDefaultTargetRepository",
     "ReuseOtherProjectRepository",
     "SubversionRepository",
@@ -117,6 +118,9 @@ def install_dir_not_specified(_: CheriConfig, project: "Project"):
 
 def _default_build_dir(_: CheriConfig, project: "SimpleProject"):
     assert isinstance(project, Project)
+    if project._build_dir is not None and isinstance(project._build_dir, ReuseOtherProjectBuildDir):
+        # For projects that reuse other source directories, we return None to use the default for the source project.
+        return None
     return project.build_dir_for_target(project.crosscompile_target)
 
 
@@ -476,10 +480,6 @@ class Project(SimpleProject):
         return cls._get_instance_no_setup(caller, cross_target).source_dir
 
     @classmethod
-    def get_build_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
-        return cls._get_instance_no_setup(caller, cross_target).build_dir
-
-    @classmethod
     def get_install_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
         return cls._get_instance_no_setup(caller, cross_target).real_install_root_dir
 
@@ -641,7 +641,7 @@ class Project(SimpleProject):
         # supported target).
         default_xtarget = cls.default_architecture
         if cls._xtarget is not None or default_xtarget is not None:
-            cls.build_dir = cls.add_path_option(
+            cls._initial_build_dir = cls.add_path_option(
                 "build-directory",
                 metavar="DIR",
                 default=cls.default_build_dir,
@@ -940,7 +940,7 @@ class Project(SimpleProject):
             assert not self.build_via_symlink_farm, "Using a symlink farm only makes sense with a separate build dir"
             if self.config.debug_output:
                 self.info("Cannot build", self.target, "in a separate build dir, will build in", self.source_dir)
-            self.build_dir = self.source_dir
+            self._initial_build_dir = self.source_dir
 
         self.configure_command = None
         # non-assignable variables:

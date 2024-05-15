@@ -1249,13 +1249,13 @@ def test_mfs_root_kernel_config_options():
     ]
     config_options.sort()
     assert config_options == [
+        "_initial_build_dir",
         "_initial_source_dir",
         "_install_dir",
         "_linkage",
         "auto_var_init",
         "build_alternate_abi_kernels",
         "build_bench_kernels",
-        "build_dir",
         "build_fett_kernels",
         "build_fpga_kernels",
         "build_nocaprevoke_kernels",

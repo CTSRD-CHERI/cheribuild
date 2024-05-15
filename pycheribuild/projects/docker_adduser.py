@@ -42,7 +42,7 @@ class DockerAdduser(SimpleProject):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.build_dir = self.config.build_root / (self.target + "-build")
+        self._initial_build_dir = self.config.build_root / (self.target + "-build")
 
     def process(self):
         if not self.build_dir.is_dir():

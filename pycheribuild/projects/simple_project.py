@@ -254,6 +254,26 @@ class PerProjectConfigOption:
         return ValueError("Should have been replaced!")
 
 
+class ReuseOtherProjectBuildDir:
+    def __init__(
+        self,
+        build_project: "type[SimpleProject]",
+        *,
+        subdirectory=".",
+        dir_for_target: "Optional[CrossCompileTarget]" = None,
+        do_update=False,
+    ):
+        self.build_project = build_project
+        self.subdirectory = subdirectory
+        self.dir_for_target = dir_for_target
+        self.do_update = do_update
+
+    def get_real_build_dir(self, caller: "type[SimpleProject]", base_project_build_dir: Optional[Path]) -> Path:
+        if base_project_build_dir is not None:
+            return base_project_build_dir
+        return self.build_project.get_build_dir(caller, cross_target=self.dir_for_target) / self.subdirectory
+
+
 if typing.TYPE_CHECKING:
 
     def BoolConfigOption(  # noqa: N802
@@ -374,7 +394,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     # freebsd-freebsd-amd64, etc.)
     include_os_in_target_suffix: bool = True
     source_dir: Optional[Path] = None
-    build_dir: Optional[Path] = None
     install_dir: Optional[Path] = None
     build_dir_suffix: str = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
     use_asan: bool = False
@@ -406,6 +425,12 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     __checked_pkg_config: "dict[str, InstallInstructions]" = {}
 
     custom_target_name: "Optional[typing.Callable[[str, CrossCompileTarget], str]]" = None
+    _build_dir: Optional[Path] = None
+    _initial_build_dir: Optional[Path] = None
+
+    @classmethod
+    def get_build_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
+        return cls._get_instance_no_setup(caller, cross_target).build_dir
 
     @classmethod
     def is_toolchain_target(cls) -> bool:
@@ -1064,6 +1089,19 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         self._setup_late_called = False
         self._last_stdout_line_can_be_overwritten = False
         assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
+        if self._build_dir is not None:
+            assert isinstance(self._build_dir, ReuseOtherProjectBuildDir)
+            initial_build_dir = inspect.getattr_static(self, "_initial_build_dir")
+            assert isinstance(initial_build_dir, ConfigOptionHandle)
+            # noinspection PyProtectedMember
+            assert (
+                initial_build_dir._get_default_value(self.config, self) is None
+            ), "initial build dir != None for ReuseOtherProjectBuildDir"
+            self._initial_build_dir = self._build_dir.get_real_build_dir(self, self._initial_build_dir)
+
+    @property
+    def build_dir(self) -> Path:
+        return self._initial_build_dir
 
     def setup(self) -> None:
         """
