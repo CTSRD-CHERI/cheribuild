@@ -90,6 +90,7 @@ class KernelABI(Enum):
     NOCHERI = "no-cheri"
     HYBRID = "hybrid"
     PURECAP = "purecap"
+    PURECAP_BENCHMARK = "purecap-benchmark"
 
 
 class ConfigPlatform(Enum):
@@ -160,6 +161,9 @@ class KernelConfigFactory:
             if platform in self.platform_name_map:
                 return self.platform_name_map[platform]
         assert False, "Should not be reached..."
+
+    def get_available_kabis(self) -> "list[KernelABI]":
+        return [KernelABI.NOCHERI, KernelABI.HYBRID, KernelABI.PURECAP]
 
     def get_flag_names(
         self,
@@ -240,7 +244,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
     def make_all(self) -> "list[CheriBSDConfig]":
         configs = []
         # Generate QEMU kernels
-        for kernel_abi in KernelABI:
+        for kernel_abi in self.get_available_kabis():
             configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, default=True))
             configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, benchmark=True, default=True))
             configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, mfsroot=True, default=True))
@@ -248,7 +252,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
                 self.make_config({ConfigPlatform.QEMU}, kernel_abi, mfsroot=True, benchmark=True, default=True)
             )
         # Generate FPGA kernels
-        for kernel_abi in KernelABI:
+        for kernel_abi in self.get_available_kabis():
             configs.append(self.make_config({ConfigPlatform.GFE}, kernel_abi, mfsroot=True, default=True))
             configs.append(
                 self.make_config({ConfigPlatform.GFE}, kernel_abi, mfsroot=True, benchmark=True, default=True)
@@ -260,7 +264,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
         configs.append(self.make_config({ConfigPlatform.QEMU}, KernelABI.HYBRID, fett=True, default=True))
 
         # Caprevoke kernels
-        for kernel_abi in KernelABI:
+        for kernel_abi in self.get_available_kabis():
             configs.append(self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, default=True))
             configs.append(
                 self.make_config({ConfigPlatform.QEMU}, kernel_abi, nocaprevoke=True, benchmark=True, default=True)
@@ -295,11 +299,17 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
             return "MORELLO"
         elif kernel_abi == KernelABI.PURECAP:
             return f"MORELLO{self.separator}PURECAP"
+        elif kernel_abi == KernelABI.PURECAP_BENCHMARK:
+            return f"MORELLO{self.separator}PURECAP{self.separator}BENCHMARK"
+
+    def get_available_kabis(self) -> "list[KernelABI]":
+        abis = super().get_available_kabis()
+        return [*abis, KernelABI.PURECAP_BENCHMARK]
 
     def make_all(self) -> "list[CheriBSDConfig]":
         configs = []
         # Generate QEMU/FVP kernels
-        for kernel_abi in KernelABI:
+        for kernel_abi in self.get_available_kabis():
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True))
             configs.append(
                 self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True, benchmark=True)
@@ -308,7 +318,7 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
                 self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True, mfsroot=True)
             )
         # Caprevoke kernels
-        for kernel_abi in KernelABI:
+        for kernel_abi in self.get_available_kabis():
             configs.append(
                 self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True, nocaprevoke=True)
             )
@@ -1876,6 +1886,17 @@ class BuildCHERIBSD(BuildFreeBSD):
             help="Also build kernels with non-default ABI (purecap or hybrid)",
         )
 
+        cls.build_benchmark_abi_kernels = cls.add_bool_option(
+            "build-benchmark-abi-kernels",
+            show_help=True,
+            only_add_for_targets=(
+                CompilationTargets.CHERIBSD_MORELLO_HYBRID,
+                CompilationTargets.CHERIBSD_MORELLO_PURECAP,
+            ),
+            default=False,
+            help="Also build Morello Benchmark ABI kernels",
+        )
+
         cls.build_bench_kernels = cls.add_bool_option(
             "build-bench-kernels", show_help=True, _allow_unknown_targets=True, help="Also build benchmark kernels"
         )
@@ -1942,6 +1963,10 @@ class BuildCHERIBSD(BuildFreeBSD):
         if self.crosscompile_target in self.purecap_kernel_targets and self.build_alternate_abi_kernels:
             other_abi = KernelABI.PURECAP if default_kernel_abi != KernelABI.PURECAP else KernelABI.HYBRID
             kernel_abis.append(other_abi)
+        if self.build_benchmark_abi_kernels and default_kernel_abi != KernelABI.PURECAP_BENCHMARK:
+            # Enable benchmark ABI kernels
+            kernel_abis.append(KernelABI.PURECAP_BENCHMARK)
+
         return kernel_abis
 
     def _get_all_kernel_configs(self) -> "list[CheriBSDConfig]":

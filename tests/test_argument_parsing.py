@@ -912,9 +912,23 @@ def test_disk_image_path(target, expected_name):
         pytest.param(
             "cheribsd-morello-purecap",
             [],
+            ["GENERIC-MORELLO-PURECAP", "GENERIC-MORELLO"],
+        ),
+        pytest.param(
+            "cheribsd-morello-purecap",
+            ["--cheribsd/build-benchmark-abi-kernels"],
+            ["GENERIC-MORELLO-PURECAP", "GENERIC-MORELLO", "GENERIC-MORELLO-PURECAP-BENCHMARK"],
+        ),
+        pytest.param(
+            "cheribsd-morello-purecap",
+            ["--cheribsd/build-benchmark-abi-kernels", "--cheribsd/build-bench-kernels"],
             [
                 "GENERIC-MORELLO-PURECAP",
+                "GENERIC-MORELLO-PURECAP-NODEBUG",
                 "GENERIC-MORELLO",
+                "GENERIC-MORELLO-NODEBUG",
+                "GENERIC-MORELLO-PURECAP-BENCHMARK",
+                "GENERIC-MORELLO-PURECAP-BENCHMARK-NODEBUG",
             ],
         ),
         pytest.param(
@@ -1252,6 +1266,7 @@ def test_mfs_root_kernel_config_options():
         "auto_var_init",
         "build_alternate_abi_kernels",
         "build_bench_kernels",
+        "build_benchmark_abi_kernels",
         "build_fett_kernels",
         "build_fpga_kernels",
         "build_nocaprevoke_kernels",
