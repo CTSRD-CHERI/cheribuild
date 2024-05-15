@@ -1005,8 +1005,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if not xccinfo.is_clang:
             self.ask_for_confirmation("Cross compiler is not clang, are you sure you want to continue?")
         self.cross_toolchain_config.set_env(
-            XCC=self.CC,
-            XCXX=self.CXX,
+            XCC=self.cc_wrapper,
+            XCXX=self.cxx_wrapper,
             XCPP=self.CPP,
             X_COMPILER_TYPE=xccinfo.compiler,  # This is needed otherwise the build assumes it should build with $CC
         )
@@ -1196,9 +1196,14 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Don't build a compiler if we are using and external toolchain (only build config, etc)
             if not self.use_bootstrapped_toolchain:
                 kernel_toolchain_opts.set_with_options(LLD_BOOTSTRAP=False, CLANG=False, CLANG_BOOTSTRAP=False)
+            kernel_toolchain_opts.exclude_from_csa = True
             self.run_make("kernel-toolchain", options=kernel_toolchain_opts)
             self.kernel_toolchain_exists = True
         self.info("Building kernels for configs:", " ".join(kernconfs))
+
+        if self.use_csa:
+            kernel_make_args.set(BUILD_WITH_STRICT_TMPPATH=False)  # Look for perl in PATH
+
         self.run_make(
             "buildkernel",
             options=kernel_make_args,
@@ -1522,6 +1527,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.make_args.set_with_options(MAN=False)
         # links from /usr/bin/mail to /usr/bin/Mail won't work on case-insensitve fs
         self.make_args.set_with_options(MAIL=False)
+
+        if self.use_csa:
+            ccinfo = self.get_compiler_info(self.host_CC)
+            self.make_args.set_env(COMPILER_TYPE=ccinfo.compiler)
 
     def libcompat_name(self) -> str:
         if self.crosscompile_target.is_cheri_purecap():
@@ -1916,6 +1925,10 @@ class BuildCHERIBSD(BuildFreeBSD):
             help="Only build a sysroot instead of the full system. This will only "
             "build the libraries and skip all binaries",
         )
+
+    @classmethod
+    def can_build_with_csa(cls) -> bool:
+        return True
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
