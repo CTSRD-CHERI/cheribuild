@@ -1930,6 +1930,10 @@ class BuildCHERIBSD(BuildFreeBSD):
     def can_build_with_csa(cls) -> bool:
         return True
 
+    @classproperty
+    def extra_scan_build_args(self) -> "list[str]":
+        return ["-disable-checker", "alpha.core.PointerSub"]
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.extra_kernels_with_mfs: "list[str]" = []

@@ -509,6 +509,10 @@ class Project(SimpleProject):
         return False
 
     @classproperty
+    def extra_scan_build_args(self) -> "list[str]":
+        return []
+
+    @classproperty
     def can_build_with_ccache(self) -> bool:
         return False
 
@@ -1231,6 +1235,8 @@ class Project(SimpleProject):
             "--use-c++",
             commandline_to_str([self.CXX]),
         ]
+        if self.extra_scan_build_args:
+            scan_build_args = scan_build_args + self.extra_scan_build_args
         return scan_build_args
 
     def _get_make_commandline(
