@@ -51,6 +51,7 @@ from ..project import (
     MakeCommandKind,
     MakeOptions,
     Project,
+    ReuseOtherProjectBuildDir,
     ReuseOtherProjectRepository,
 )
 from ..simple_project import SimpleProject, TargetAliasWithDependencies, _clear_line_sequence, flush_stdio
@@ -70,11 +71,6 @@ def _arch_suffixed_custom_install_dir(prefix: str) -> "ComputedDefaultValue[Path
         return config.output_root / (prefix + project.build_configuration_suffix(xtarget))
 
     return ComputedDefaultValue(function=inner, as_string="$INSTALL_ROOT/" + prefix + "-<arch>")
-
-
-def freebsd_reuse_build_dir(config: CheriConfig, project: "SimpleProject") -> Path:
-    build_freebsd = BuildFreeBSD.get_instance(project, config)
-    return build_freebsd.default_build_dir(config, build_freebsd)
 
 
 def cheribsd_reuse_build_dir(config: CheriConfig, project: "SimpleProject") -> Path:
@@ -2247,9 +2243,7 @@ class BuildFreeBSDRelease(BuildFreeBSDReleaseMixin, BuildFreeBSD):
     dependencies: "tuple[str, ...]" = ("freebsd",)
     repository: ReuseOtherProjectRepository = ReuseOtherProjectRepository(source_project=BuildFreeBSD)
     _always_add_suffixed_targets: bool = True
-    default_build_dir: ComputedDefaultValue[Path] = ComputedDefaultValue(
-        function=freebsd_reuse_build_dir, as_string=lambda cls: BuildFreeBSD.project_build_dir_help()
-    )
+    _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildFreeBSD)
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("freebsd-release")
     # We want the FreeBSD config options as well so the release installworld,
     # distributeworld etc. calls match what was built.
@@ -2261,9 +2255,7 @@ class BuildCheriBSDRelease(BuildFreeBSDReleaseMixin, BuildCHERIBSD):
     dependencies: "tuple[str, ...]" = ("cheribsd",)
     repository: ReuseOtherProjectRepository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD)
     _always_add_suffixed_targets: bool = True
-    default_build_dir: ComputedDefaultValue[Path] = ComputedDefaultValue(
-        function=cheribsd_reuse_build_dir, as_string=lambda cls: BuildCHERIBSD.project_build_dir_help()
-    )
+    _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildCHERIBSD)
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("cheribsd-release")
     # We want the CheriBSD config options as well so the release installworld,
     # distributeworld etc. calls match what was built.
