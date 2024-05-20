@@ -199,6 +199,11 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                  "platform, RISC-V arch and RISC-V abi in the "
                  "$platform-$arch-$abi format. See RISC-V-Generic/README for more details")
 
+        cls.implicit_mem_0 = cls.add_bool_option(
+            "implicit_mem_0", show_help=True, default=False,
+            help="Set if running on a simulation platform which initializes memory to zero. "
+                 "This allows the boot phase to skip zero-initialization steps.")
+
     def default_demo_bsp(self):
         return "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True) + "-" + \
                self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
@@ -286,6 +291,9 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
             if self.log_udp:
               config_options += ["--log_udp"]
+
+            if self.implicit_mem_0:
+              config_options += ["--implicit-mem-0"]
 
             self._run_waf("distclean", "configure", *config_options)
 
