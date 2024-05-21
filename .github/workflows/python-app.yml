@@ -16,7 +16,7 @@ jobs:
     build-baseline:
         runs-on: ubuntu-latest
         container:
-          image: python:3.6.0
+          image: python:3.8
         steps:
             -   uses: actions/checkout@v3
             -   name: Install dependencies
@@ -49,10 +49,10 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             -   uses: actions/checkout@v3
-            -   name: Set up Python 3.11
+            -   name: Set up Python 3.12
                 uses: actions/setup-python@v4
                 with:
-                    python-version: '3.11'
+                    python-version: '3.12'
                     cache: 'pip'
             -   name: Install dependencies
                 run: |

@@ -1,4 +1,4 @@
-FROM python:rc
+FROM python:latest
 
 LABEL maintainer="Alexander.Richardson@cl.cam.ac.uk"
 

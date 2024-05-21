@@ -1,4 +1,4 @@
-FROM ubuntu:bionic-20180426
+FROM ubuntu:latest
 
 LABEL maintainer="Alexander.Richardson@cl.cam.ac.uk"
 
