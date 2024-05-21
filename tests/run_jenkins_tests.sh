@@ -13,7 +13,7 @@ esac
 set -e
 set -x
 
-if [ -z "${HOME:-}" ]; then
+if [ "${HOME:-/}" = "/" ]; then
   export HOME="$PWD/home"
   mkdir "$HOME"
 fi
