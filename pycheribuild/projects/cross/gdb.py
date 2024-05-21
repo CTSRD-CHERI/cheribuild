@@ -277,7 +277,7 @@ class BuildUpstreamGDB(BuildGDBBase):
 class BuildGDB(BuildGDBBase):
     path_in_rootfs = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    default_branch = "cheri-12"
+    default_branch = "cheri-14"
     repository = GitRepository(
         "https://github.com/CTSRD-CHERI/gdb.git",
         # Branch name is changed for every major GDB release:
@@ -288,17 +288,21 @@ class BuildGDB(BuildGDBBase):
             "mips_cheri-8.2": default_branch,
             "mips_cheri-8.3": default_branch,
             "morello-8.3": default_branch,
+            "cheri-12": default_branch,
         },
         old_urls=[b"https://github.com/bsdjhb/gdb.git"],
     )
 
 
 class BuildKGDB(BuildGDB):
-    default_branch = "cheri-12-kgdb"
+    default_branch = "cheri-14-kgdb"
     repository = GitRepository(
         "https://github.com/CTSRD-CHERI/gdb.git",
         # Branch name is changed for every major GDB release:
         default_branch=default_branch,
-        old_branches={"mips_cheri-8.3-kgdb": default_branch},
+        old_branches={
+            "mips_cheri-8.3-kgdb": default_branch,
+            "cheri-12-kgdb": default_branch,
+        },
         old_urls=[b"https://github.com/bsdjhb/gdb.git"],
     )
