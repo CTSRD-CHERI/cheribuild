@@ -33,7 +33,7 @@ else
     cd "$_srcdir"
 fi
 
-if ! python3 -m pip install --user -r requirements.txt; then
+if ! PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install --user -r requirements.txt; then
   echo "FATAL: could not install requirements"
   exit 1
 fi
