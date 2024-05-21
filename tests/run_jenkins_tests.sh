@@ -44,7 +44,7 @@ pytest_binary="python3 -m pytest"
 
 # Run unit tests
 rm -f "$test_results"
-$pytest_binary -v --junit-xml "../$test_prefix-results.xml" tests || echo "Some tests failed"
+$pytest_binary -v --junit-xml "$test_results" tests || echo "Some tests failed"
 if [ ! -e "$test_results" ]; then
   echo "FATAL: could not find test results xml"
   exit 1
