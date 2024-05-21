@@ -13,7 +13,7 @@ case $1 in
     ;;
 esac
 
-test_results="$PWD/$test_prefix-results.xml"
+test_results="$PWD/../$test_prefix-results.xml"
 
 if [ "${HOME:-/}" = "/" ]; then
   export HOME="$PWD/home"
