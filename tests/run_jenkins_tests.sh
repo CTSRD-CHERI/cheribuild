@@ -10,19 +10,25 @@ case $1 in
     ;;
 esac
 
-_srcdir=../src
 set -e
 set -x
+
+if [ -z "${HOME:-}" ]; then
+  export HOME="$PWD/home"
+  mkdir "$HOME"
+fi
 
 export CHERIBUILD_DEBUG=1
 
 # Copy cheribuild to a temporary director
+_srcdir=../src
 if command -v git >/dev/null && [[ -z "$FORCE_RUN" ]]; then
     echo "GIT IS INSTALLED, copying to tempdir to avoid chowning files to root"
     if [[ -e ".git" ]]; then
         echo ".git already exists, cannot continue!"; exit 1
     fi
-    git clone "$_srcdir" "." < /dev/null
+    git clone "$_srcdir" "src" < /dev/null
+    cd src
 else
     cd "$_srcdir"
 fi
