@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-pytest_binary="python3 -m pytest"
-
-
 case $1 in
   baseline|latest|ubuntu-baseline|ubuntu-latest)
     test_prefix=$1
@@ -29,6 +26,13 @@ if command -v git >/dev/null && [[ -z "$FORCE_RUN" ]]; then
 else
     cd "$_srcdir"
 fi
+
+if ! python3 -m pip install --user -r requirements.txt; then
+  echo "FATAL: could not install requirements"
+  exit 1
+fi
+
+pytest_binary="python3 -m pytest"
 
 # Run unit tests
 rm -f "../$test_prefix-results.xml"
