@@ -268,7 +268,7 @@ class ReuseOtherProjectBuildDir:
         self.dir_for_target = dir_for_target
         self.do_update = do_update
 
-    def get_real_build_dir(self, caller: "type[SimpleProject]", base_project_build_dir: Optional[Path]) -> Path:
+    def get_real_build_dir(self, caller: "SimpleProject", base_project_build_dir: Optional[Path]) -> Path:
         if base_project_build_dir is not None:
             return base_project_build_dir
         return self.build_project.get_build_dir(caller, cross_target=self.dir_for_target) / self.subdirectory
