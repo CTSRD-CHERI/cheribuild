@@ -4,7 +4,7 @@ pytest_binary="python3 -m pytest"
 
 
 case $1 in
-  baseline|latest|ubuntu)
+  baseline|latest|ubuntu-baseline|ubuntu-latest)
     test_prefix=$1
     ;;
   *)
