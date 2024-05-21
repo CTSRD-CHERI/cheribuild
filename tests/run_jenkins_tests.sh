@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+set -e
+set -x
+
 case $1 in
   baseline|latest|ubuntu-baseline|ubuntu-latest)
     test_prefix=$1
@@ -10,8 +13,7 @@ case $1 in
     ;;
 esac
 
-set -e
-set -x
+test_results="$PWD/$test_prefix-results.xml"
 
 if [ "${HOME:-/}" = "/" ]; then
   export HOME="$PWD/home"
@@ -41,9 +43,9 @@ fi
 pytest_binary="python3 -m pytest"
 
 # Run unit tests
-rm -f "../$test_prefix-results.xml"
+rm -f "$test_results"
 $pytest_binary -v --junit-xml "../$test_prefix-results.xml" tests || echo "Some tests failed"
-if [ ! -e "../$test_prefix-results.xml" ]; then
+if [ ! -e "$test_results" ]; then
   echo "FATAL: could not find test results xml"
   exit 1
 fi
