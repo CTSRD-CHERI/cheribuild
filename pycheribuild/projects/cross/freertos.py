@@ -38,7 +38,7 @@ from ...config.loader import ComputedDefaultValue
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/FreeRTOS",
-                               force_branch=True, default_branch="hmka2")
+                               force_branch=True, default_branch="sws35")
     target = "freertos"
     dependencies = ["newlib", "compiler-rt-builtins"]
     is_sdk_target = True
