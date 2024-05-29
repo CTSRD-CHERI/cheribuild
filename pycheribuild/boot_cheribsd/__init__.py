@@ -1019,6 +1019,7 @@ def boot_and_login(
             STARTING_INIT,
             CHERI_HYBRID_KERNEL_MSG,
             CHERI_PURECAP_KERNEL_MSG,
+            CHERI_PURECAP_BENCHMARK_KERNEL_MSG,
             BOOT_FAILURE,
             BOOT_FAILURE2,
             BOOT_FAILURE3,
