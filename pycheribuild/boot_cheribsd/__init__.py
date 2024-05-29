@@ -84,6 +84,7 @@ AUTOBOOT_PROMPT = re.compile(r"((H|, h)it \[Enter] to boot |\[Space] to pause)")
 BOOT_LOADER_PROMPT = "OK "
 CHERI_HYBRID_KERNEL_MSG = "CHERI hybrid kernel."
 CHERI_PURECAP_KERNEL_MSG = "CHERI pure-capability kernel."
+CHERI_PURECAP_BENCHMARK_KERNEL_MSG = "CHERI pure-capability benchmark ABI kernel."
 
 STARTING_INIT = "start_init: trying /sbin/init"
 TRYING_TO_MOUNT_ROOT = re.compile(r"Trying to mount root from .+\.\.\.")
@@ -975,6 +976,7 @@ def boot_cheribsd(
     expected_kernel_abi_arg_to_regex = {
         "hybrid": CHERI_HYBRID_KERNEL_MSG,
         "purecap": CHERI_PURECAP_KERNEL_MSG,
+        "purecap-benchmark": CHERI_PURECAP_BENCHMARK_KERNEL_MSG,
         "any": None,
     }
     boot_and_login(
@@ -1457,7 +1459,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--expected-kernel-abi",
-        choices=["any", "hybrid", "purecap"],
+        choices=["any", "hybrid", "purecap", "purecap-benchmark"],
         default="any",
         help="The kernel kind that is expected ('any' to skip checks)",
     )
