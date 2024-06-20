@@ -383,7 +383,7 @@ class BuildUpstreamQEMU(BuildQEMUBase):
     else:
         user_targets = ""
     default_targets = (
-        "arm-softmmu,aarch64-softmmu,mips64-softmmu," "riscv64-softmmu,riscv32-softmmu,x86_64-softmmu" + user_targets
+        "arm-softmmu,aarch64-softmmu,mips64-softmmu,riscv64-softmmu,riscv32-softmmu,x86_64-softmmu" + user_targets
     )
 
     def setup(self):
@@ -418,7 +418,7 @@ class BuildQEMU(BuildQEMUBase):
     target = "qemu"
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri")
     default_targets = (
-        "aarch64-softmmu,morello-softmmu,"
+        "arm-softmmu,aarch64-softmmu,morello-softmmu,"
         "mips64-softmmu,mips64cheri128-softmmu,"
         "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
         "x86_64-softmmu"
@@ -449,6 +449,8 @@ class BuildQEMU(BuildQEMUBase):
                 binary_name = "qemu-system-aarch64"
         elif xtarget.is_any_x86():
             binary_name = "qemu-system-x86_64"
+        elif xtarget.cpu_architecture == CPUArchitecture.ARM32:
+            binary_name = "qemu-system-arm"
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
         return config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
