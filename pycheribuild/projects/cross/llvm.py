@@ -871,3 +871,43 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
                 src_dir=self.source_dir / "tools/lldb",
                 revision=self.lldb_revision,
             )
+
+
+class BuildCheriLLVMWithCSA(BuildCheriLLVM):
+    repository = GitRepository(
+        "https://github.com/rems-project/llvm-project.git", force_branch=True, default_branch="cheri-csa"
+    )
+    default_directory_basename = "cheri-csa"
+    target = "cheri-csa"
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, project: config.output_root / "cheri-csa", as_string="$INSTALL_ROOT/cheri-csa"
+    )
+
+    skip_misc_llvm_tools = True
+    included_projects = ["clang"]
+    skip_static_analyzer = False
+    hide_options_from_help = True
+
+    @classmethod
+    def get_native_install_path(cls, config: CheriConfig):
+        return config.output_root / "cheri-csa"
+
+
+class BuildMorelloLLVMWithCSA(BuildMorelloLLVM):
+    repository = GitRepository(
+        "https://github.com/rems-project/llvm-project.git", force_branch=True, default_branch="morello-csa-llvm-14"
+    )
+    default_directory_basename = "morello-csa"
+    target = "morello-csa"
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, project: config.output_root / "morello-csa", as_string="$INSTALL_ROOT/morello-csa"
+    )
+
+    skip_misc_llvm_tools = True
+    included_projects = ["clang"]
+    skip_static_analyzer = False
+    hide_options_from_help = True
+
+    @classmethod
+    def get_native_install_path(cls, config: CheriConfig):
+        return config.output_root / "morello-csa"
