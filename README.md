@@ -40,7 +40,7 @@ If you are building CHERI on a RHEL/Fedora-based machine, the following command 
 the most commonly used cheribuild targets:
 
 ```shell
-dnf install libtool clang-devel bison cmake mercurial ninja-build samba flex texinfo glib2-devel pixman-devel libarchive-devel bsdtar bzip2-devel libattr-devel libcap-ng-devel expat-devel
+dnf install libtool clang-devel bison cmake mercurial ninja-build samba flex texinfo glib2-devel pixman-devel libarchive-devel bsdtar bzip2-devel libattr-devel libcap-ng-devel expat-devel time
 ```
 
 #### FreeBSD
