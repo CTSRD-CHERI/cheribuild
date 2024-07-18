@@ -523,11 +523,15 @@ class BuildFreeBSDBase(Project):
         if not OSInfo.IS_FREEBSD:
             self.check_required_pkg_config("libarchive", apt="libarchive-dev", zypper="libarchive-devel")
 
-    def setup(self) -> None:
-        super().setup()
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        # Needed pre-setup for _query_make_var() (e.g. via objdir)
         self.make_args.set_env(MAKEOBJDIRPREFIX=str(self.build_dir))
         # TODO? Avoid lots of nested child directories by using MAKEOBJDIR instead of MAKEOBJDIRPREFIX
         # self.make_args.set_env(MAKEOBJDIR=str(self.build_dir))
+
+    def setup(self) -> None:
+        super().setup()
 
         if self.crossbuild:
             # Use the script that I added for building on Linux/MacOS:
@@ -1352,11 +1356,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 return None
             query_args = args.copy()
             query_args.set_command(bmake_binary)
-            # --freebsd/toolchain=bootstrap ends up here before its setup has
-            # initialised the environment, so make sure that's correct when
-            # querying .OBJDIR lest the wrong value be cached.
-            if "MAKEOBJDIRPREFIX" not in query_args.env_vars:
-                query_args.set_env(MAKEOBJDIRPREFIX=str(self.build_dir))
             bw_flags = [
                 *query_args.all_commandline_args(self.config),
                 "BUILD_WITH_STRICT_TMPPATH=0",
