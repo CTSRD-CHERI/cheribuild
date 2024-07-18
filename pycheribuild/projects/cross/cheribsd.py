@@ -525,13 +525,22 @@ class BuildFreeBSDBase(Project):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self._setup_core_make_args_called = False
+
+    def _setup_core_make_args(self) -> None:
+        if self._setup_core_make_args_called:
+            return
+
         # Needed pre-setup for _query_make_var() (e.g. via objdir)
         self.make_args.set_env(MAKEOBJDIRPREFIX=str(self.build_dir))
         # TODO? Avoid lots of nested child directories by using MAKEOBJDIR instead of MAKEOBJDIRPREFIX
         # self.make_args.set_env(MAKEOBJDIR=str(self.build_dir))
 
+        self._setup_core_make_args_called = True
+
     def setup(self) -> None:
         super().setup()
+        self._setup_core_make_args()
 
         if self.crossbuild:
             # Use the script that I added for building on Linux/MacOS:
@@ -828,6 +837,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # Same as setup() but can be called multiple times.
         if self._setup_make_args_called:
             return
+
+        self._setup_core_make_args()
+
         # Must be called after __init__() to ensure that CHERI LLVM/upstream LLVM have been built
         # before querying the compiler.
         if self.crossbuild:
