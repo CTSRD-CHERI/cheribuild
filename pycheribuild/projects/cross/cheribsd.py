@@ -525,9 +525,9 @@ class BuildFreeBSDBase(Project):
 
     def setup(self) -> None:
         super().setup()
-        self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.build_dir)}
+        self.make_args.set_env(MAKEOBJDIRPREFIX=str(self.build_dir))
         # TODO? Avoid lots of nested child directories by using MAKEOBJDIR instead of MAKEOBJDIRPREFIX
-        # self.make_args.env_vars = {"MAKEOBJDIR": str(self.build_dir)}
+        # self.make_args.set_env(MAKEOBJDIR=str(self.build_dir))
 
         if self.crossbuild:
             # Use the script that I added for building on Linux/MacOS:
