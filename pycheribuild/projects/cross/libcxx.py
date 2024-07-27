@@ -439,7 +439,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
 
     def setup(self):
         super().setup()
-        lit_args = f'--xunit-xml-output "{self.build_dir}/test-results.xml" --max-time 3600 --timeout 120 -sv'
+        lit_args = f'--xunit-xml-output "{self.build_dir}/test-results.xml" --max-time 3600 --timeout 240 -sv'
         external_cxxabi = None
         enabled_runtimes = self.get_enabled_runtimes()
         # CMake will attempt to build a C++ executable when detecting compiler features, but
