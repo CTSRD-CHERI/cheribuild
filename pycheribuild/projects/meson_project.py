@@ -94,7 +94,7 @@ class MesonProject(_CMakeAndMesonSharedLogic):
         assert not self.compiling_for_host()
         return self.build_dir / "meson-native-file.ini"
 
-    def add_meson_options(self, _include_empty_vars=False, _replace=True, **kwargs) -> None:
+    def add_meson_options(self, *, _include_empty_vars=False, _replace=True, **kwargs) -> None:
         return self._add_configure_options(
             _config_file_options=self.meson_options,
             _replace=_replace,
