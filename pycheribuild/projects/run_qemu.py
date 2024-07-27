@@ -512,7 +512,7 @@ class LaunchQEMUBase(SimpleProject):
             # QEMU insists on having : field delimeters; add if not given
             hg = x.split("=")
             if len(hg) != 2:
-                self.fatal("Bad extra-tcp-forwarding (not just one '=' in '%s')" % x)
+                self.fatal(f"Bad extra-tcp-forwarding (not just one '=' in '{x}')")
             (h, g) = hg
             if ":" not in h:
                 h = ":" + h

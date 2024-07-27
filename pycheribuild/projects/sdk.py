@@ -95,7 +95,7 @@ class BuildFreestandingSdk(SimpleProject):
         self.makedirs(self.config.cheri_sdk_bindir)
         self.run_cmd(
             "cc",
-            '-DLLVM_PATH="%s/"' % str(self.config.cheri_sdk_bindir),
+            f'-DLLVM_PATH="{self.config.cheri_sdk_bindir}/"',
             "-x",
             "c",
             "-",

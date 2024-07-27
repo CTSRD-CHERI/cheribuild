@@ -83,13 +83,13 @@ class DLMalloc(CrossCompileProject):
             self.CFLAGS.append("-DCAPREVOKE")
 
         if self.qmabs:
-            self.CFLAGS.append("-DDEFAULT_MAX_FREEBUFBYTES=%d" % self.qmabs)
+            self.CFLAGS.append(f"-DDEFAULT_MAX_FREEBUFBYTES={self.qmabs}")
 
         if self.qmratio:
-            self.CFLAGS.append("-DDEFAULT_FREEBUF_PERCENT=%f" % self.qmratio)
+            self.CFLAGS.append(f"-DDEFAULT_FREEBUF_PERCENT={self.qmratio:f}")
 
         if self.qmmin:
-            self.CFLAGS.append("-DDEFAULT_MIN_FREEBUFBYTES=%d" % self.qmmin)
+            self.CFLAGS.append(f"-DDEFAULT_MIN_FREEBUFBYTES={self.qmmin}")
 
         if self.consolidate_on_free:
             self.CFLAGS.append("-DCONSOLIDATE_ON_FREE=1")
@@ -107,7 +107,7 @@ class DLMalloc(CrossCompileProject):
             self.CFLAGS.append("-DSUPPORT_UNMAP=0")
 
         if self.unmap_threshold:
-            self.CFLAGS.append("-DDEFAULT_UNMAP_THRESHOLD=%d" % self.unmap_threshold)
+            self.CFLAGS.append(f"-DDEFAULT_UNMAP_THRESHOLD={self.unmap_threshold}")
 
         if not self.quar_unsafe:
             self.CFLAGS.append("-DSAFE_FREEBUF")

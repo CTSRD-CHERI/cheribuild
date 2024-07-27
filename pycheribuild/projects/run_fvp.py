@@ -814,11 +814,11 @@ class LaunchFVPBase(SimpleProject):
                     continue
                 hg = x.split("=")
                 if len(hg) != 2:
-                    self.fatal("Bad extra-tcp-forwarding (not just one '=' in '%s')" % x)
+                    self.fatal(f"Bad extra-tcp-forwarding (not just one '=' in '{x}')")
                     continue
                 gaddrport = hg[1].split(":")
                 if len(gaddrport) > 2:
-                    self.fatal("Bad extra-tcp-forwarding (excess ':' in '%s')" % x)
+                    self.fatal(f"Bad extra-tcp-forwarding (excess ':' in '{x}')")
                     continue
                 tcp_ports += gaddrport[-1]  # either just port or last in "host:port".split(":")
 

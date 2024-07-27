@@ -112,7 +112,7 @@ class SNMalloc(CrossCompileCMakeProject):
         )
 
         if self.decommit is not None:
-            self.COMMON_FLAGS.append("-DUSE_DECOMMIT_STRATEGY=%s" % self.decommit)
+            self.COMMON_FLAGS.append(f"-DUSE_DECOMMIT_STRATEGY={self.decommit}")
 
         if self.qpathresh is not None:
             self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_PER_ALLOC_THRESHOLD=%d" % self.qpathresh)
