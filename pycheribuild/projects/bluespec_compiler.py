@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 from .project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
+from .simple_project import TargetAliasWithDependencies
 from ..utils import OSInfo
 
 
@@ -86,3 +87,26 @@ class BuildBluespecCompiler(Project):
 
     def run_tests(self) -> None:
         self.run_cmd("check-smoke")
+
+
+class BuildBluespecLibraries(Project):
+    target = "bluespec-libraries"
+    dependencies = ("bluespec-compiler",)
+    default_directory_basename = "bsc-contrib"
+    repository = GitRepository("https://github.com/B-Lang-org/bsc-contrib.git")
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
+    build_in_source_dir = True
+    make_kind = MakeCommandKind.GnuMake
+
+    def compile(self, **kwargs):
+        self.make_args.set(PREFIX=self.install_dir)
+        self.run_make("all")
+
+    def clean(self):
+        self.make_args.set(PREFIX=self.install_dir)
+        self.run_make("full_clean", cwd=self.source_dir)
+
+
+class BuildBluespec(TargetAliasWithDependencies):
+    target = "bluespec"
+    dependencies = ("bluespec-libraries",)
