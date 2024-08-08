@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 from .project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
-from .project import ExternallyManagedSourceRepository
 from .simple_project import TargetAliasWithDependencies
 from ..utils import OSInfo
 
