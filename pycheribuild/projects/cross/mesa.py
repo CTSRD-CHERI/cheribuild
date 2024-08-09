@@ -51,7 +51,7 @@ class BuildLibDrm(CrossCompileMesonProject):
             self.cross_warning_flags.append("-Werror=cheri-capability-misuse")
             self.cross_warning_flags.append("-Werror=shorten-cap-to-int")
         if not self.compiling_for_host():
-            self.add_meson_options(valgrind=False, **{"cairo-tests": False, "freedreno-kgsl": False})
+            self.add_meson_options(valgrind="disabled", **{"cairo-tests": "disabled", "freedreno-kgsl": False})
 
 
 class BuildLibGlvnd(CrossCompileMesonProject):
