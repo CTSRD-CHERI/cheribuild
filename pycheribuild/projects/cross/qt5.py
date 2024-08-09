@@ -230,6 +230,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             assert "-mxgot" in self.default_compiler_flags
         if self.config.verbose:
             self.configure_args.append("-verbose")
+        # Work around https://bugreports.qt.io/browse/QTBUG-111514
+        self.COMMON_LDFLAGS.append("-Wl,--undefined-version")
 
     has_optional_tests = True
     default_build_tests = False
