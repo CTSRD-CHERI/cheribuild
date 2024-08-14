@@ -1144,8 +1144,11 @@ def cheribsd_morello_version_dependent_flags(cheribsd_version: "Optional[int]", 
     if cheribsd_version is None or cheribsd_version >= 20220511:
         # Use new var-args ABI
         result.extend(["-Xclang", "-morello-vararg=new"])
-    if cheribsd_version is None or cheribsd_version >= 20230804:
+    if cheribsd_version is None or cheribsd_version >= 20240315:
         # Use new function call ABI
+        result.extend(["-Xclang", "-morello-bounded-memargs"])
+    elif cheribsd_version >= 20230804:
+        # Use transitionary function call ABI on older purecap
         result.extend(["-Xclang", "-morello-bounded-memargs=caller-only"])
     if is_purecap and cheribsd_version is not None and cheribsd_version < 20220511:
         # Use emulated TLS on older purecap
