@@ -54,3 +54,7 @@ class BuildGmake(CrossCompileAutotoolsProject):
             # when the locale is something like en_GB.UTF-8. C.UTF-8 seems to
             # work fine, not just C, so use that for the build.
             self.make_args.set_env(LC_ALL="C.UTF-8")
+
+    def configure(self, **kwargs):
+        self.run_cmd(self.source_dir / "bootstrap", cwd=self.source_dir)
+        super().configure(**kwargs)
