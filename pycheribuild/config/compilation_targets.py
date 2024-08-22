@@ -507,10 +507,11 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             CPUArchitecture.X86_64,
             CPUArchitecture.AARCH64,
         ):
-            self.project.warning("CheriBSD test scripts currently only work for MIPS, RISC-V, AArch64, and x86-64")
+            self.project.warning("FreeBSD test scripts currently only work for MIPS, RISC-V, AArch64, and x86-64")
             return
+        if not self.is_cheribsd():
+            use_full_disk_image = True  # The minimal disk images only exist for CheriBSD for now.
         if use_full_disk_image:
-            assert self.is_cheribsd(), "Not supported for FreeBSD yet"
             if qemu_options.can_boot_kernel_directly:
                 if kernel_path is None and not has_test_extra_arg_override("--kernel"):
                     kernel_path = run_instance.current_kernel
