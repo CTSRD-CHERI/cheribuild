@@ -618,25 +618,22 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 self.add_cmake_options(LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS=True)
         super().configure(**kwargs)
 
-    def compile(self, **kwargs):
-        if self.qemu_instance is not None:
-            config_contents = generate_ssh_config_file_for_qemu(
-                ssh_port=self.qemu_instance.ssh_forwarding_port,
-                ssh_key=self.config.test_ssh_key,
-                config=self.config,
-            )
-            self.write_file(
-                self.test_ssh_config_path,
-                contents=config_contents,
-                overwrite=True,
-                print_verbose_only=False,
-            )
-        return super().compile()
-
     def run_tests(self):
         test_jobs = self.config.make_jobs
         executor_lit_args = []
         if self.test_against_running_qemu_instance:
+            if self.qemu_instance is not None:
+                config_contents = generate_ssh_config_file_for_qemu(
+                    ssh_port=self.qemu_instance.ssh_forwarding_port,
+                    ssh_key=self.config.test_ssh_key,
+                    config=self.config,
+                )
+                self.write_file(
+                    self.test_ssh_config_path,
+                    contents=config_contents,
+                    overwrite=True,
+                    print_verbose_only=False,
+                )
             test_jobs = 1
             if not ssh_host_accessible_uncached(
                 "cheribsd-test-instance",
@@ -657,7 +654,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             executor_lit_args = ["-Dexecutor=" + self.commandline_to_str(executor)]
             # The Morello board has 4 CPUs, so run 4 tests in parallel.
             test_jobs = 4
-        elif self.target_info.is_cheribsd() and not self.compiling_for_host():
+        elif self.target_info.is_freebsd() and not self.compiling_for_host():
             test_jobs = self.qemu_test_jobs
             if "libunwind" in self.get_enabled_runtimes():
                 self.target_info.run_cheribsd_test_script(
@@ -723,7 +720,10 @@ class _UpstreamLLVMMixin(_BuildLlvmRuntimes if typing.TYPE_CHECKING else object)
 class BuildLibunwind(_BuildLlvmRuntimes):
     target = "libunwind"
     llvm_project = BuildCheriLLVM
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
+    supported_architectures = (
+        CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
+        + CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
+    )
     default_architecture = CompilationTargets.NATIVE
     default_build_type = BuildType.DEBUG
     _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("libunwind",)
@@ -766,7 +766,9 @@ class BuildLlvmLibs(_BuildLlvmRuntimes):
     target = "llvm-libs"
     llvm_project = BuildCheriLLVM
     supported_architectures = (
-        CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + CompilationTargets.ALL_PICOLIBC_TARGETS
+        *CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS,
+        *CompilationTargets.ALL_PICOLIBC_TARGETS,
+        *CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS,
     )
     default_architecture = CompilationTargets.NATIVE
     default_build_type = BuildType.DEBUG
