@@ -1026,6 +1026,10 @@ class BuildLibXml2(CrossCompileCMakeProject):
         self.add_cmake_options(LIBXML2_WITH_PYTHON=False, LIBXML2_WITH_LZMA=False)
         self.add_cmake_options(LIBXML2_WITH_MODULES=not self.force_static_linkage)
         self.add_cmake_options(BUILD_SHARED_LIBS=not self.force_static_linkage)
+        if not self.target_info.is_macos():
+            # Recent LLD will complain about undefined symbols such as
+            # version script assignment of 'LIBXML2_2.4.30' to symbol 'xmlXPtrBuildNodeList' failed: symbol not defined
+            self.COMMON_LDFLAGS.append("-Wl,--undefined-version")
 
 
 class BuildLibXslt(CrossCompileCMakeProject):
