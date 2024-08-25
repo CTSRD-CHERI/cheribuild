@@ -906,6 +906,13 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
         return SimpleProject.get_class_for_target_name("newlib", xtarget)
 
 
+class PicolibcMemoryLayout(typing.NamedTuple):
+    flash_start: int
+    flash_size: int
+    dram_start: int
+    dram_size: int
+
+
 class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
     shortname: str = "Picolibc"
 
@@ -921,12 +928,21 @@ set(CMAKE_DL_LIBS "")
         return False
 
     @classmethod
-    def essential_compiler_and_linker_flags_impl(cls, *args, xtarget, **kwargs) -> "list[str]":
+    def essential_compiler_and_linker_flags_impl(cls, *args, xtarget: "CrossCompileTarget", **kwargs) -> "list[str]":
+        result = super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs)
         # We are linking baremetal binaries -> always use local-exec TLS
-        return [
-            *super().essential_compiler_and_linker_flags_impl(*args, xtarget=xtarget, **kwargs),
-            "-ftls-model=local-exec",
-        ]
+        result.append("-ftls-model=local-exec")
+        if xtarget.cpu_architecture == CPUArchitecture.ARM32:
+            # TODO: Use an ArmV8 triple once QEMU has been updated to a newer version
+            qemu_aarch32_support_good_enough = False
+            if qemu_aarch32_support_good_enough:
+                result.append("-mcpu=cortex-a32")
+                result.append("-mfpu=fp-armv8")
+            else:
+                result.append("-mcpu=cortex-a15")
+                result.append("-mfpu=vfpv4")
+            result.append("-mfloat-abi=softfp")
+        return result
 
     @property
     def sysroot_dir(self) -> Path:
@@ -937,22 +953,45 @@ set(CMAKE_DL_LIBS "")
     def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
-    def semihosting_ldflags(self) -> "list[str]":
-        stack_size = "4k"
+    @property
+    def memory_layout(self) -> PicolibcMemoryLayout:
         if self.target.is_riscv64(include_purecap=True) or self.target.is_riscv32(include_purecap=True):
             flash_start = 0x80000000
             flash_size = 8 * 1024 * 1024
             dram_start = flash_start + flash_size * 2  # Use flash_size*2 to ensure there is a gap between
             dram_size = 32 * 1024 * 1024
+        elif self.target.cpu_architecture == CPUArchitecture.ARM32:
+            qemu_machine = "none"
+            # Picolibc uses QEMU "none" machine which starts executing at address 0.
+            # "virt" has 0x00100000 bytes reserved for fdt when using -kernel.
+            if qemu_machine == "virt":
+                flash_start = 0x00100000
+                flash_size = 0x08000000 - flash_start
+                dram_start = 0x40000000 + 0x100000  # RAM starts at 1GiB, but QEMU might place DTB first
+            else:
+                flash_start = 0
+                flash_size = 64 * 1024 * 1024
+                dram_start = flash_size
+            dram_size = 64 * 1024 * 1024  # up to 1G, but let's use 64M for baremetal programs
         else:
             raise ValueError(f"Unsupported architecture {self.target}")
+        return PicolibcMemoryLayout(
+            flash_start=flash_start,
+            flash_size=flash_size,
+            dram_start=dram_start,
+            dram_size=dram_size,
+        )
+
+    def semihosting_ldflags(self) -> "list[str]":
+        stack_size = "4k"
+        layout = self.memory_layout
         # Always use the C++ linker script since the only difference is whether .eh_frame is discarded.
         return [
             "-Wl,-T," + str(self.sysroot_dir / "lib/picolibcpp.ld"),
-            f"-Wl,--defsym=__flash={hex(flash_start)}",
-            f"-Wl,--defsym=__flash_size={hex(flash_size)}",
-            f"-Wl,--defsym=__ram={hex(dram_start)}",
-            f"-Wl,--defsym=__ram_size={hex(dram_size)}",
+            f"-Wl,--defsym=__flash={hex(layout.flash_start)}",
+            f"-Wl,--defsym=__flash_size={hex(layout.flash_size)}",
+            f"-Wl,--defsym=__ram={hex(layout.dram_start)}",
+            f"-Wl,--defsym=__ram_size={hex(layout.dram_size)}",
             f"-Wl,--defsym=__stack_size={stack_size}",
             "-lsemihost",
             str(self.sysroot_dir / "lib/crt0-semihost.o"),
@@ -962,6 +1001,8 @@ set(CMAKE_DL_LIBS "")
     def triple_for_target(cls, target, config, include_version: bool) -> str:
         if target.is_riscv(include_purecap=True):
             return target.cpu_architecture.value + "-unknown-elf"
+        if target.cpu_architecture == CPUArchitecture.ARM32:
+            return "armv7-unknown-none-eabi"  # TODO: Use an ArmV8 triple once QEMU supports it
         assert False, "Other baremetal cases have not been tested yet!"
 
     @classmethod
@@ -1377,7 +1418,13 @@ class CompilationTargets(BasicCompilationTargets):
         is_cheri_purecap=True,
         non_cheri_target=BAREMETAL_PICOLIBC_RISCV64,
     )
-    ALL_PICOLIBC_TARGETS = (BAREMETAL_PICOLIBC_RISCV32, BAREMETAL_PICOLIBC_RISCV64, BAREMETAL_PICOLIBC_RISCV64_PURECAP)
+    BAREMETAL_PICOLIBC_ARM32 = CrossCompileTarget("arm32", CPUArchitecture.ARM32, PicolibcBaremetalTargetInfo)
+    ALL_PICOLIBC_TARGETS = (
+        BAREMETAL_PICOLIBC_ARM32,
+        BAREMETAL_PICOLIBC_RISCV32,
+        BAREMETAL_PICOLIBC_RISCV64,
+        BAREMETAL_PICOLIBC_RISCV64_PURECAP,
+    )
 
     # FreeBSD targets
     FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, FreeBSDTargetInfo)

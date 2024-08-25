@@ -28,7 +28,8 @@ import os
 from .crosscompileproject import CrossCompileMesonProject, GitRepository
 from ..build_qemu import BuildQEMU
 from ..project import DefaultInstallDir
-from ...config.compilation_targets import CompilationTargets
+from ...config.compilation_targets import CompilationTargets, PicolibcBaremetalTargetInfo
+from ...config.target_info import CPUArchitecture
 
 
 class BuildPicoLibc(CrossCompileMesonProject):
@@ -51,21 +52,27 @@ class BuildPicoLibc(CrossCompileMesonProject):
     @property
     def _meson_extra_binaries(self):
         if not self.compiling_for_host():
-            assert self.compiling_for_riscv(include_purecap=True), "Only tested riscv so far"
-            return "exe_wrapper = ['sh', '-c', 'test -z \"$PICOLIBC_TEST\" || run-riscv \"$@\"', 'run-riscv']"
+            if self.compiling_for_riscv(include_purecap=True):
+                return "exe_wrapper = ['sh', '-c', 'test -z \"$PICOLIBC_TEST\" || run-riscv \"$@\"', 'run-riscv']"
+            elif self.crosscompile_target.cpu_architecture == CPUArchitecture.ARM32:
+                return "exe_wrapper = ['sh', '-c', 'test -z \"$PICOLIBC_TEST\" || run-arm \"$@\"', 'run-arm']"
+            else:
+                assert False, "Not supported yet"
         return ""
 
     @property
     def _meson_extra_properties(self):
-        if not self.compiling_for_host():
-            assert self.compiling_for_riscv(include_purecap=True), "Only tested riscv so far"
-            return """
-default_flash_addr = '0x80000000'
-default_flash_size = '0x00400000'
-default_ram_addr   = '0x80400000'
-default_ram_size   = '0x00200000'
+        if self.compiling_for_host():
+            return ""
+        else:
+            assert isinstance(self.target_info, PicolibcBaremetalTargetInfo)
+            layout = self.target_info.memory_layout
+            return f"""
+default_flash_addr = '{hex(layout.flash_start)}'
+default_flash_size = '{hex(layout.flash_size)}'
+default_ram_addr   = '{hex(layout.dram_start)}'
+default_ram_size   = '{hex(layout.dram_size)}'
 """
-        return ""
 
     def setup(self):
         super().setup()
@@ -95,6 +102,8 @@ default_ram_size   = '0x00200000'
                     "posix-console": True,
                 },
             )
+        else:
+            self.add_meson_options(**{"picocrt": True})
 
     @property
     def default_compiler_flags(self):
@@ -140,7 +149,10 @@ default_ram_size   = '0x00200000'
     def run_tests(self):
         if not self.compiling_for_host():
             qemu = BuildQEMU.qemu_binary_for_target(self.crosscompile_target, self.config)
-            with self.set_env(PATH=str(qemu.parent) + ":" + os.getenv("PATH", ""), print_verbose_only=False):
+            new_env = dict(PATH=str(qemu.parent) + ":" + os.getenv("PATH", ""), QEMU_BIN=qemu)
+            if self.crosscompile_target.cpu_architecture == CPUArchitecture.ARM32:
+                new_env["QEMU_CPU"] = "max"
+            with self.set_env(**new_env, print_verbose_only=False):
                 self.run_cmd(self.configure_command, "test", "--print-errorlogs", cwd=self.build_dir)
         else:
             super().run_tests()
