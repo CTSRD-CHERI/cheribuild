@@ -35,7 +35,7 @@ import re
 import subprocess
 import sys
 import typing
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
 
@@ -96,7 +96,7 @@ def _linker_supports_riscv_relaxations(linker: Path, config: CheriConfig) -> boo
     return False
 
 
-class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
+class _ClangBasedTargetInfo(TargetInfo, ABC):
     uses_morello_llvm: bool = False
 
     def __init__(self, target, project) -> None:
@@ -821,7 +821,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
             assert False, "No support for building RTEMS for non RISC-V targets yet"
 
 
-class BaremetalClangTargetInfo(_ClangBasedTargetInfo, metaclass=ABCMeta):
+class BaremetalClangTargetInfo(_ClangBasedTargetInfo, ABC):
     @property
     def cmake_system_name(self) -> str:
         return "Generic"  # CMake requires the value to be set to "Generic" for baremetal targets
