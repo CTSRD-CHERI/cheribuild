@@ -71,6 +71,9 @@ def add_common_cmdline_args(parser: argparse.ArgumentParser, default_xunit_outpu
     parser.add_argument("--no-use-shared-mount-for-tests", dest="use-shared-mount-for-tests", action="store_false")
     parser.add_argument("--llvm-lit-path")
     parser.add_argument("--xunit-output", default=default_xunit_output)
+    parser.add_argument(
+        "--include-long-tests", action="store_true", help="Include slow tests (generally these will time out in QEMU)"
+    )
     parser.add_argument("--lit-debug-output", action="store_true")
     # For the parallel jobs
     if allow_multiprocessing:
@@ -320,6 +323,8 @@ def run_remote_lit_tests_impl(
         if xunit_file:
             assert qemu_logfile is not None, "Should have a valid logfile when running multiple shards"
             boot_cheribsd.success("Writing QEMU output to ", qemu_logfile)
+    if not args.include_long_tests:
+        lit_cmd.append("-Dlong_tests=False")
     # Fixme starting lit at the same time does not work!
     # TODO: add the polling to the main thread instead of having another thread?
     # start the qemu output flushing thread so that we can see the kernel panic
