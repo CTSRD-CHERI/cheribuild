@@ -1388,7 +1388,11 @@ class BuildKPty(KDECMakeProject):
 
 class BuildKonsole(KDECMakeProject):
     target = "konsole"
-    repository = GitRepository("https://invent.kde.org/utilities/konsole.git")
+    repository = GitRepository(
+        "https://invent.kde.org/utilities/konsole.git",
+        default_branch="release/23.08",  # release/23.08 is the last Qt5 release
+        force_branch=True,
+    )
     dependencies = (
         "extra-cmake-modules",
         "kbookmarks",
@@ -1414,6 +1418,7 @@ class BuildKonsole(KDECMakeProject):
         "kxmlgui",
         "qtbase",
         "qtmultimedia",
+        "icu4c",
     )
 
 
