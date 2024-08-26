@@ -1239,7 +1239,11 @@ class BuildSystemSettings(KDECMakeProject):
 class BuildDoplhin(KDECMakeProject):
     target = "dolphin"
     dependencies = ("kparts", "kxmlgui", "knewstuff", "kio", "kcmutils", "kio-extras", "kfilemetadata")
-    repository = GitRepository("https://invent.kde.org/system/dolphin.git")
+    repository = GitRepository(
+        "https://invent.kde.org/system/dolphin.git",
+        default_branch="release/23.08",  # release/23.08 is the last Qt5 release
+        force_branch=True,
+    )
 
 
 class BuildLibPng(CrossCompileCMakeProject):
