@@ -1211,6 +1211,7 @@ class BuildPlasmaDesktop(KDECMakeProject):
         temporary_url_override="https://invent.kde.org/arichardson/plasma-desktop.git",
         url_override_reason="https://invent.kde.org/plasma/plasma-desktop/-/merge_requests/944",
     )
+    _uses_wayland_scanner = True
     dependencies = (
         "plasma-workspace",
         "kirigami",
