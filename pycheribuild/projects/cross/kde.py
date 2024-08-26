@@ -1295,13 +1295,21 @@ class BuildExiv2(CrossCompileCMakeProject):
 
 class BuildKColorPicker(KDECMakeProject):
     target = "kcolorpicker"
-    repository = GitRepository("https://github.com/ksnip/kColorPicker.git")
+    repository = GitRepository(
+        "https://github.com/ksnip/kColorPicker.git",
+        default_branch="v0.2.0",  # v0.2.0 is the last version that works with kimageannotator 0.6.1
+        force_branch=True,
+    )
 
 
 class BuildKImageAnnotator(KDECMakeProject):
     target = "kimageannotator"
     dependencies = ("kcolorpicker", "qttools")
-    repository = GitRepository("https://github.com/ksnip/kImageAnnotator.git")
+    repository = GitRepository(
+        "https://github.com/ksnip/kImageAnnotator.git",
+        default_branch="v0.6.1",  # v0.6.1 is the last version that works with gwenview 23.08
+        force_branch=True,
+    )
 
 
 class BuildGwenview(KDECMakeProject):
@@ -1317,7 +1325,12 @@ class BuildGwenview(KDECMakeProject):
         "exiv2",
         "kimageannotator",
     )
-    repository = GitRepository("https://invent.kde.org/graphics/gwenview.git")
+    repository = GitRepository(
+        "https://invent.kde.org/graphics/gwenview.git",
+        default_branch="release/23.08",  # release/23.08 is the last Qt5 release
+        force_branch=True,
+    )
+    _uses_wayland_scanner = True
 
 
 class BuildOpenJPEG(CrossCompileCMakeProject):
