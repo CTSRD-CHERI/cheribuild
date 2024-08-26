@@ -1500,7 +1500,11 @@ class BuildKTextEditor(KDECMakeProject):
 
 class BuildKate(KDECMakeProject):
     target = "kate"
-    repository = GitRepository("https://invent.kde.org/utilities/kate.git")
+    repository = GitRepository(
+        "https://invent.kde.org/utilities/kate.git",
+        default_branch="release/23.08",  # release/23.08 is the last Qt5 release
+        force_branch=True,
+    )
     dependencies = (
         "extra-cmake-modules",
         "kactivities",
