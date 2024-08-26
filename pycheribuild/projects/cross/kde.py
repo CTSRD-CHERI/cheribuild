@@ -1437,7 +1437,10 @@ class BuildOkular(KDECMakeProject):
     dependencies = ("poppler", "threadweaver", "kparts", "kio", "kiconthemes", "kpty", "kwallet", "libtiff")
     # TODO: after the next exiv2 release add "libkexiv2" (currently fails to build due to auto_ptr).
     repository = GitRepository(
-        "https://invent.kde.org/graphics/okular.git", old_urls=[b"https://invent.kde.org/arichardson/okular.git"]
+        "https://invent.kde.org/graphics/okular.git",
+        old_urls=[b"https://invent.kde.org/arichardson/okular.git"],
+        default_branch="release/23.08",  # release/23.08 is the last Qt5 release
+        force_branch=True,
     )
 
     def setup(self):
