@@ -142,6 +142,7 @@ class BuildMesa(CrossCompileMesonProject):
         self.cross_warning_flags.append("-Werror=cheri-capability-misuse")
         self.cross_warning_flags.append("-Werror=cheri-provenance")
         self.cross_warning_flags.append("-Wshorten-cap-to-int")
+        self.COMMON_LDFLAGS.append("-Wl,--undefined-version")
 
 
 class BuildLibEpoxy(CrossCompileMesonProject):
