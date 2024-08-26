@@ -190,7 +190,7 @@ def test_target_subsets(args: "list[str]", expected):
         ),
         pytest.param(
             ["--include-dependencies", "--skip-sdk", "--skip-dependency-filter=qtbase.*", "kcoreaddons-amd64"],
-            ["qttools-native", "extra-cmake-modules-amd64", "kcoreaddons-amd64"],
+            ["qtdeclarative-native", "qttools-native", "extra-cmake-modules-amd64", "kcoreaddons-amd64"],
             id="kcoreaddons-amd64-without-qtbase",
         ),
         pytest.param(
@@ -227,6 +227,7 @@ def test_target_subsets(args: "list[str]", expected):
                 "qtbase-amd64",
                 "sqlite-native",
                 "qtbase-native",
+                "qtdeclarative-native",
                 "qttools-native",
                 "extra-cmake-modules-amd64",
                 "kcoreaddons-amd64",

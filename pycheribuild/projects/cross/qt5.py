@@ -849,7 +849,7 @@ class BuildQtDeclarative(BuildQtModuleWithQMake):
 
 class BuildQtTools(BuildQtModuleWithQMake):
     target = "qttools"
-    dependencies = ("qtbase",)
+    dependencies = ("qtbase", "qtdeclarative")
     repository = GitRepository(
         "https://invent.kde.org/qt/qt/qttools.git",
         old_urls=[b"https://code.qt.io/qt/qttools.git"],
