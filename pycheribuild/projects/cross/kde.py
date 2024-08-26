@@ -1334,7 +1334,7 @@ class BuildOpenJPEG(CrossCompileCMakeProject):
 
 class BuildPoppler(CrossCompileCMakeProject):
     target = "poppler"
-    dependencies = ("freetype2", "fontconfig", "qtbase", "libtiff", "openjpeg")
+    dependencies = ("freetype2", "fontconfig", "qtbase", "libtiff", "openjpeg", "curl")
     repository = GitRepository(
         "https://gitlab.freedesktop.org/poppler/poppler.git",
         old_urls=[b"https://gitlab.freedesktop.org/arichardson/poppler.git"],
@@ -1343,7 +1343,8 @@ class BuildPoppler(CrossCompileCMakeProject):
     def setup(self):
         super().setup()
         # Avoid boost dependency:
-        self.add_cmake_options(ENABLE_BOOST=False)
+        self.add_cmake_options(ENABLE_BOOST=False, ENABLE_NSS3=False, ENABLE_GPGME=False)
+        self.add_cmake_options(ENABLE_QT6=False, ENABLE_QT5=True)
         self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_Boost=True)
         self.add_cmake_options(TESTDATADIR=self.source_dir / "testdata")
 
