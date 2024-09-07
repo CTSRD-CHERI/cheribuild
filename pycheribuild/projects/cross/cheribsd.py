@@ -1527,8 +1527,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.use_bootstrapped_toolchain:
             assert "XCC" not in self.make_args.env_vars
             # We have to provide the default X* values so that Makefile.inc1 does not disable MK_CLANG_BOOTSTRAP and
-            # doesn't try to cross-compile using the host compilers
-            self.make_args.set_env(XCC="cc", XCXX="c++", XCPP="cpp")
+            # doesn't try to use the host toolchain for cross-building
+            self.make_args.set_env(XCC="cc", XCXX="c++", XCPP="cpp", XSTRIPBIN="strip")
         # won't work on a case-insensitive file system and is also really slow (and missing tools on linux)
         self.make_args.set_with_options(MAN=False)
         # links from /usr/bin/mail to /usr/bin/Mail won't work on case-insensitve fs
