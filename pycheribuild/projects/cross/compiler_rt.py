@@ -31,7 +31,7 @@
 from pathlib import Path
 
 from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
-from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
+from .llvm import BuildCheriLLVM, BuildMorelloLLVM, BuildUpstreamLLVM
 from ..project import Linkage, ReuseOtherProjectDefaultTargetRepository
 from ...config.target_info import CPUArchitecture
 from ...utils import classproperty, is_jenkins_build
@@ -39,13 +39,22 @@ from ...utils import classproperty, is_jenkins_build
 
 class BuildCompilerRt(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
-    llvm_project = BuildCheriLLVM
+    # TODO: use morello-llvm-project if the target is morello-purecap, hardcode for now
+    llvm_project = BuildMorelloLLVM # BuildCheriLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
     target = "compiler-rt"
     native_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     _check_install_dir_conflict = False
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+
+    @classmethod
+    def setup_config_options(self, **kwargs):
+        super().setup_config_options(**kwargs)
+        self.enabled_sanitizers = self.add_list_option("enabled-sanitizers",
+            default=["Address"],
+            help="List of sanitizers to build in compiler-rt",
+        )
 
     def setup(self):
         # For the NATIVE variant we want to install to the compiler resource dir:
@@ -73,12 +82,14 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             COMPILER_RT_INCLUDE_TESTS=True,
             COMPILER_RT_BUILD_LIBFUZZER=True,
             COMPILER_RT_BUILD_PROFILE=False,
+            COMPILER_RT_BUILD_ORC=False, # it is not yet supported
             COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN=False,
             COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal(),
             # Needed after https://reviews.llvm.org/D99621
             COMPILER_RT_DEFAULT_TARGET_ONLY=not self.compiling_for_host(),
             # Per-target runtime directories don't add the purecap suffix so can't be used right now.
             LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=False,
+            LLVM_USE_SANITIZER=';'.join(self.enabled_sanitizers),
         )
         if self.should_include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
