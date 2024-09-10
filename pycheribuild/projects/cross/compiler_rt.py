@@ -38,9 +38,7 @@ from ...utils import classproperty, is_jenkins_build
 
 
 class BuildCompilerRt(CrossCompileCMakeProject):
-    # TODO: add an option to allow upstream llvm?
-    # TODO: use morello-llvm-project if the target is morello-purecap, hardcode for now
-    llvm_project = BuildMorelloLLVM # BuildCheriLLVM
+    llvm_project = BuildCheriLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
     target = "compiler-rt"
     native_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
@@ -58,9 +56,8 @@ class BuildCompilerRt(CrossCompileCMakeProject):
 
     def setup(self):
         # For the NATIVE variant we want to install to the compiler resource dir:
-        if self.compiling_for_host():
-            cc = self.llvm_project.get_native_install_path(self.config) / "bin/clang"
-            self._install_dir = self.get_compiler_info(cc).get_resource_dir()
+        cc = self.llvm_project.get_native_install_path(self.config) / "bin/clang"
+        self._install_dir = self._install_prefix = self.get_compiler_info(cc).get_resource_dir()
         super().setup()
         if self.target_info.is_rtems() or self.target_info.is_baremetal():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")  # RTEMS only needs static libs
@@ -89,7 +86,8 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             COMPILER_RT_DEFAULT_TARGET_ONLY=not self.compiling_for_host(),
             # Per-target runtime directories don't add the purecap suffix so can't be used right now.
             LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=False,
-            LLVM_USE_SANITIZER=';'.join(self.enabled_sanitizers),
+            LLVM_BUILD_EXTERNAL_COMPILER_RT=True,
+            # XXXR3: how to selectively build sanitizers?
         )
         if self.should_include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
@@ -128,6 +126,15 @@ class BuildUpstreamCompilerRt(BuildCompilerRt):
     target = "upstream-compiler-rt"
     default_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     supported_architectures = (CompilationTargets.NATIVE,)
+
+
+class BuildMorelloCompilerRt(BuildCompilerRt):
+    llvm_project = BuildMorelloLLVM
+    repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
+    target = "morello-compiler-rt"
+    native_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
+    cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
 
 
 class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
