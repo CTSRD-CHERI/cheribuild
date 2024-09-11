@@ -30,24 +30,52 @@
 import inspect
 from pathlib import Path
 
-from .config.chericonfig import CheriConfig
+from .config.jenkinsconfig import CheriConfig, JenkinsConfig
 from .config.loader import CommandLineConfigOption
+from .config.target_info import AbstractProject
 from .projects.project import Project
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
-from .utils import status_update
+from .utils import fatal_error, status_update
 
 
 def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix: Path):
-    expected_install_path = Path(f"{cheri_config.output_root}{install_prefix}")
     # Ugly workaround to override all install dirs to go to the tarball
     all_targets = [
         x
         for x in target_manager.targets(cheri_config)
         if not isinstance(x, (SimpleTargetAlias, MultiArchTargetAlias)) and issubclass(x.project_class, Project)
     ]
+    if isinstance(cheri_config, JenkinsConfig):
+        sysroot_targets = [
+            target_manager.get_chosen_target(cheri_config, target_name)
+            for target_name in cheri_config.sysroot_install_dir_targets
+        ]
+    else:
+        sysroot_targets = []
+
+    for target in sysroot_targets:
+        if target.xtarget.is_native():
+            fatal_error("Cannot use non-existent sysroot for native target", target.name, pretend=False)
+
+    def expected_install_root(target):
+        if target in sysroot_targets:
+            project = target._try_get_project()
+            if project is None:
+                target_info = target.xtarget.create_target_info(AbstractProject(cheri_config))
+            else:
+                target_info = project.target_info
+            sysroot_dir = target_info.sysroot_dir
+            return sysroot_dir
+        else:
+            return cheri_config.output_root
+
+    def expected_install_path(target):
+        root_dir = expected_install_root(target)
+        return Path(f"{root_dir}{install_prefix}")
+
     for target in all_targets:
         cls = target.project_class
-        cls._default_install_dir_fn = expected_install_path
+        cls._default_install_dir_fn = expected_install_path(target)
 
     Target.instantiating_targets_should_warn = False
     # Now that we have set the _install_dir member, override the prefix/destdir after instantiating.
@@ -66,15 +94,15 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
             status_update("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
             project._install_dir = from_cmdline
         else:
-            project._install_dir = cheri_config.output_root
+            project._install_dir = expected_install_root(target)
             project._check_install_dir_conflict = False
             # Using "/" as the install prefix results inconsistently prefixing some paths with '/usr/'.
             # To avoid this, just use the full install path as the prefix.
             if install_prefix == Path("/"):
-                project._install_prefix = expected_install_path
+                project._install_prefix = expected_install_path(target)
                 project.destdir = Path("/")
             else:
                 project._install_prefix = install_prefix
-                project.destdir = cheri_config.output_root
-            assert project.real_install_root_dir == expected_install_path
+                project.destdir = expected_install_root(target)
+            assert project.real_install_root_dir == expected_install_path(target)
         assert isinstance(inspect.getattr_static(project, "_install_dir"), Path)

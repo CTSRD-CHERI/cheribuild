@@ -137,6 +137,10 @@ class JenkinsConfig(CheriConfig):
             "sysroot-extra-archives",
             help="Addition archives to extract within the sysroot",
         )
+        self.sysroot_install_dir_targets = loader.add_commandline_only_list_option(
+            "sysroot-install-dir-targets",
+            help="Targets for which to use the sysroot/rootfs rather than the output path",
+        )
         self.keep_install_dir = loader.add_commandline_only_bool_option(
             "keep-install-dir", help="Don't delete the install dir prior to build"
         )

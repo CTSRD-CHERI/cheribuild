@@ -83,6 +83,9 @@ class Target:
     ) -> "Target":
         return self
 
+    def _try_get_project(self) -> "Optional[SimpleProject]":
+        return self.__project
+
     def _get_or_create_project_no_setup(
         self, _: Optional[CrossCompileTarget], config, caller: "Optional[AbstractProject]"
     ) -> "SimpleProject":
@@ -542,6 +545,29 @@ class TargetManager:
             for target in chosen_targets:
                 target.execute(config)
 
+    def get_chosen_target(self, config, target_name) -> Target:
+        if target_name not in self._all_targets:
+            # See if it was a target alias without a default
+            if target_name in self._targets_for_command_line_options_only:
+                alias = self._targets_for_command_line_options_only[target_name]
+                errmsg = coloured(AnsiColour.red, "Target", target_name, "is ambiguous.")
+                suggestions = sorted([tgt.name for tgt in alias.derived_targets])
+            else:
+                import difflib
+
+                errmsg = coloured(AnsiColour.red, "Target", target_name, "does not exist.")
+                suggestions = difflib.get_close_matches(target_name, self.target_names(config))
+            if suggestions:
+                errmsg += " Did you mean " + " or ".join(coloured(AnsiColour.blue, s) for s in suggestions) + "?"
+            else:
+                errmsg += (
+                    " See "
+                    + coloured(AnsiColour.yellow, os.path.basename(sys.argv[0]), "--list-targets")
+                    + " for the list of available targets."
+                )
+            sys.exit(errmsg)
+        return self.get_target(target_name, config=config, caller="cmdline parsing")
+
     def get_all_chosen_targets(self, config) -> "list[Target]":
         # check that all target dependencies are correct:
         if os.getenv("CHERIBUILD_DEBUG"):
@@ -557,29 +583,7 @@ class TargetManager:
         # assert self._all_targets["llvm"] < self._all_targets["all"]
         # assert self._all_targets["disk-image"] > self._all_targets["qemu"]
         # assert self._all_targets["sdk"] > self._all_targets["sdk-sysroot"]
-        explicitly_chosen_targets: "list[Target]" = []
-        for target_name in config.targets:
-            if target_name not in self._all_targets:
-                # See if it was a target alias without a default
-                if target_name in self._targets_for_command_line_options_only:
-                    alias = self._targets_for_command_line_options_only[target_name]
-                    errmsg = coloured(AnsiColour.red, "Target", target_name, "is ambiguous.")
-                    suggestions = sorted([tgt.name for tgt in alias.derived_targets])
-                else:
-                    import difflib
-
-                    errmsg = coloured(AnsiColour.red, "Target", target_name, "does not exist.")
-                    suggestions = difflib.get_close_matches(target_name, self.target_names(config))
-                if suggestions:
-                    errmsg += " Did you mean " + " or ".join(coloured(AnsiColour.blue, s) for s in suggestions) + "?"
-                else:
-                    errmsg += (
-                        " See "
-                        + coloured(AnsiColour.yellow, os.path.basename(sys.argv[0]), "--list-targets")
-                        + " for the list of available targets."
-                    )
-                sys.exit(errmsg)
-            explicitly_chosen_targets.append(self.get_target(target_name, config=config, caller="cmdline parsing"))
+        explicitly_chosen_targets = [self.get_chosen_target(config, target_name) for target_name in config.targets]
         chosen_targets = self.get_all_targets(explicitly_chosen_targets, config)
         for target in chosen_targets:
             disabled = self.target_disabled_reason(target, config)
