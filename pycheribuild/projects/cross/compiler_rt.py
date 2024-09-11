@@ -50,8 +50,8 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     def setup_config_options(self, **kwargs):
         super().setup_config_options(**kwargs)
         self.enabled_sanitizers = self.add_list_option("enabled-sanitizers",
-            default=["Address"],
-            help="List of sanitizers to build in compiler-rt",
+            default=["asan"],
+            help="List of compiler-rt sanitizers to build (), e.g. asan msan",
         )
 
     def setup(self):
@@ -87,7 +87,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             # Per-target runtime directories don't add the purecap suffix so can't be used right now.
             LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=False,
             LLVM_BUILD_EXTERNAL_COMPILER_RT=True,
-            # XXXR3: how to selectively build sanitizers?
+            COMPILER_RT_SANITIZERS_TO_BUILD=';'.join(self.enabled_sanitizers),
         )
         if self.should_include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
