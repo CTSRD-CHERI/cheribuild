@@ -43,7 +43,16 @@ from ..config.chericonfig import CheriConfig, ComputedDefaultValue
 from ..config.compilation_targets import CompilationTargets
 from ..config.target_info import CrossCompileTarget
 from ..processutils import extract_version, popen
-from ..utils import AnsiColour, OSInfo, SocketAndPort, cached_property, classproperty, coloured, find_free_port
+from ..utils import (
+    AnsiColour,
+    OSInfo,
+    SocketAndPort,
+    cached_property,
+    classproperty,
+    coloured,
+    find_free_port,
+    is_jenkins_build,
+)
 
 
 class InstallMorelloFVP(SimpleProject):
@@ -723,7 +732,11 @@ class LaunchFVPBase(SimpleProject):
             mcp_fw_bin = self.ensure_file_exists(
                 "MCP firmware", flash_images.mcp_ram_firmware_image, fixit_hint=firmware_fixit
             )
-            assert uefi_bin.parent == scp_fw_bin.parent and scp_fw_bin.parent == scp_rom_bin.parent, "Different dirs?"
+            # XXX: jenkins-cheri-build overrides install directories so this currently doesn't hold there
+            if not is_jenkins_build():
+                assert (
+                    uefi_bin.parent == scp_fw_bin.parent and scp_fw_bin.parent == scp_rom_bin.parent
+                ), "Different dirs?"
             # fmt: off
             fvp_args += [
                 # "-a", "Morello_Top.css.scp.armcortexm7ct=" + str(scp_romfw_elf),

@@ -38,7 +38,12 @@ from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_man
 from .utils import fatal_error, status_update
 
 
-def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix: Path):
+def default_install_prefix(xtarget, cheri_config: CheriConfig):
+    dirname = xtarget.target_info_cls._install_prefix_dirname(xtarget, cheri_config)
+    return Path("/opt", dirname)
+
+
+def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix_arg: Path):
     # Ugly workaround to override all install dirs to go to the tarball
     all_targets = [
         x
@@ -69,8 +74,15 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
         else:
             return cheri_config.output_root
 
+    def expected_install_prefix(target):
+        if install_prefix_arg is None:
+            return default_install_prefix(target.xtarget, cheri_config)
+        else:
+            return install_prefix_arg
+
     def expected_install_path(target):
         root_dir = expected_install_root(target)
+        install_prefix = expected_install_prefix(target)
         return Path(f"{root_dir}{install_prefix}")
 
     for target in all_targets:
@@ -98,11 +110,11 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
             project._check_install_dir_conflict = False
             # Using "/" as the install prefix results inconsistently prefixing some paths with '/usr/'.
             # To avoid this, just use the full install path as the prefix.
-            if install_prefix == Path("/"):
+            if expected_install_prefix(target) == Path("/"):
                 project._install_prefix = expected_install_path(target)
                 project.destdir = Path("/")
             else:
-                project._install_prefix = install_prefix
+                project._install_prefix = expected_install_prefix(target)
                 project.destdir = expected_install_root(target)
             assert project.real_install_root_dir == expected_install_path(target)
         assert isinstance(inspect.getattr_static(project, "_install_dir"), Path)

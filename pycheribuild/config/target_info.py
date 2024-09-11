@@ -411,14 +411,18 @@ class TargetInfo(ABC):
     def pkg_config_libdir_override(self) -> "Optional[str]":
         return None
 
+    @classmethod
+    def _install_prefix_dirname(cls, target: "CrossCompileTarget", config: CheriConfig) -> str:
+        result = target.generic_arch_suffix
+        if config.cross_target_suffix:
+            result += "-" + config.cross_target_suffix
+        return result
+
     @property
     def install_prefix_dirname(self) -> str:
         """The name of the root directory to install to: i.e. for CheriBSD /usr/local/mips64-purecap or
         /usr/local/riscv64-hybrid"""
-        result = self.target.generic_arch_suffix
-        if self.config.cross_target_suffix:
-            result += "-" + self.config.cross_target_suffix
-        return result
+        return self._install_prefix_dirname(self.target, self.config)
 
     @property
     def config(self) -> CheriConfig:

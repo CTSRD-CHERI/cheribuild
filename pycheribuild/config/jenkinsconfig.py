@@ -38,10 +38,6 @@ from ..filesystemutils import FileSystemUtils
 from ..utils import OSInfo, default_make_jobs_count, fatal_error, warning_message
 
 
-def default_install_prefix(conf: "JenkinsConfig", _):
-    return "/opt/" + conf.targets[0]
-
-
 def default_jenkins_make_jobs_count(conf: "JenkinsConfig", _):
     if conf.use_all_cores:
         return os.cpu_count()
@@ -169,8 +165,7 @@ class JenkinsConfig(CheriConfig):
         self.installation_prefix = loader.add_commandline_only_option(
             "install-prefix",
             type=absolute_path_only,
-            default=default_install_prefix,
-            help="The install prefix for cross compiled projects (the path in the install image)",
+            help="Override the install prefix for cross compiled projects (the path in the install image)",
         )
         self.use_system_compiler_for_native = loader.add_commandline_only_bool_option(
             "use-system-compiler-for-native",
