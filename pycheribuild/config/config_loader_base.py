@@ -103,9 +103,8 @@ class ConfigLoaderBase(ABC):
 
     def add_commandline_only_bool_option(self, *args, default=False, **kwargs) -> bool:
         assert default is False or kwargs.get("negatable") is True
-        return self.add_option(
+        return self.add_commandline_only_option(
             *args,
-            option_cls=self.__command_line_only_options_cls,
             default=default,
             negatable=kwargs.pop("negatable", False),
             type=bool,
