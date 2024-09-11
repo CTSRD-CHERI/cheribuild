@@ -111,6 +111,17 @@ class ConfigLoaderBase(ABC):
             **kwargs,
         )
 
+    def add_commandline_only_list_option(self, *args, default: "Optional[list[str]]" = None, **kwargs) -> "list[str]":
+        return typing.cast(
+            typing.List[str],
+            self.add_commandline_only_option(
+                *args,
+                default=[] if default is None else default,
+                type=list,
+                **kwargs,
+            ),
+        )
+
     # noinspection PyShadowingBuiltins
     def add_option(
         self,
