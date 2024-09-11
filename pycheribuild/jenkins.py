@@ -168,6 +168,17 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "list[SdkArc
         if contents.stdout.startswith(b"./"):
             warning_message("Old sysroot archive detected, stripping one more path component")
             sysroot_archive.extra_args = ["--strip-components", "2"]
+    for extra_name in cheri_config.sysroot_extra_archive_names:
+        extra_path = Path(extra_name)
+        extra_archive = SdkArchive(
+            cheri_config,
+            extra_path,
+            output_dir=cheri_config.sysroot_archive_output_path,
+        )
+        if not extra_archive.archive.exists():
+            fatal_error("Extra archive", extra_archive.archive, "does not exist", pretend=cheri_config.pretend)
+        else:
+            all_archives.append(extra_archive)
     return all_archives
 
 

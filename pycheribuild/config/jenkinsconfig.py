@@ -133,6 +133,10 @@ class JenkinsConfig(CheriConfig):
             ),
             help="The path where to extract the sysroot (default=",
         )
+        self.sysroot_extra_archive_names = loader.add_commandline_only_list_option(
+            "sysroot-extra-archives",
+            help="Addition archives to extract within the sysroot",
+        )
         self.keep_install_dir = loader.add_commandline_only_bool_option(
             "keep-install-dir", help="Don't delete the install dir prior to build"
         )
