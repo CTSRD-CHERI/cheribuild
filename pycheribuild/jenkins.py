@@ -160,7 +160,6 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "list[SdkArc
             "is missing. Will attempt to build anyway but build will most likely fail.",
         )
         run_command("ls", "-la", cwd=cheri_config.workspace, config=cheri_config)
-        return all_archives
     else:
         all_archives.append(sysroot_archive)
         # Old sysroot archives had a leading ./, newer ones don't anymore
