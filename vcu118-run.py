@@ -38,6 +38,7 @@ import time
 import typing
 from abc import abstractmethod
 from pathlib import Path
+from threading import Thread
 from typing import Optional
 
 _cheribuild_root = Path(__file__).resolve().parent
@@ -268,6 +269,16 @@ class FpgaConnection:
         self.serial = serial
 
 
+class BackgroundExpectEOF(Thread):
+    def __init__(self, child):
+        Thread.__init__(self)
+        self.child = child
+        self.daemon = True
+
+    def run(self):
+        self.child.expect(pexpect.EOF, timeout=None)
+
+
 def reset_soc(conn: FpgaConnection):
     # On the rare occasion you need to reset SoC stuff not just the core, set *(0x6fff0000)=1 does a write to a GPIO
     # block whose output is connected to the SoC's reset so that lets you reset the whole SoC
@@ -327,12 +338,26 @@ def load_and_start_kernel(
     gdb_start_time = datetime.datetime.utcnow()
     openocd, openocd_gdb_port = start_openocd(openocd_cmd, num_cores)
     # openocd is running, now start GDB
-    args = [str(Path(bios_image).absolute()), "-ex", "target extended-remote :" + str(openocd_gdb_port)]
+    # NB: Cannot set the actual file since GDB will then expect OpenOCD's
+    # gdbserver to provide capabilities and fail to read the PC (PCC).
+    args = ["-ex", "set architecture riscv"]
+    # NB: Avoids software single stepping as writing ebreak to the bootrom
+    # doesn't work (silently fails at least with Toooba at time of writing).
+    args += ["-ex", "set os none"]
+    args += ["-ex", "symbol-file " + str(Path(bios_image).absolute())]
+    args += ["-ex", "target extended-remote :" + str(openocd_gdb_port)]
     args += ["-ex", "set confirm off"]  # avoid interactive prompts
     args += ["-ex", "set pagination off"]  # avoid paginating output, requiring input
     args += ["-ex", "set style enabled off"]  # disable colours since they break the matcher strings
     args += ["-ex", "monitor reset init"]  # reset and go back to boot room
+    if num_cores > 1:
+        args += ["-ex", "thread 1"]  # ensure we're on core 0
     args += ["-ex", "si 5"]  # we need to run the first few instructions to get a valid DTB
+    if num_cores > 1:
+        for core in range(1, num_cores):
+            args += ["-ex", f"thread {core + 1:d}"]  # switch to thread (core + 1) (GDB counts from 1)
+            args += ["-ex", "si 5"]  # execute bootrom on every other core
+        args += ["-ex", "thread 1"]  # switch back to core 0
     args += ["-ex", "set disassemble-next-line on"]
     # Load the kernel image first since load changes the next PC to the entry point
     if kernel_image is not None:
@@ -351,8 +376,6 @@ def load_and_start_kernel(
     if num_cores > 1:
         args += ["-ex", "set $entry_point = $pc"]  # Record the entry point to the bios
         for core in range(1, num_cores):
-            args += ["-ex", f"thread {core + 1:d}"]  # switch to thread (core + 1) (GDB counts from 1)
-            args += ["-ex", "si 5"]  # execute bootrom on every other core
             args += ["-ex", "set $pc=$entry_point"]  # set every other core to the start of the bios
         args += ["-ex", "thread 1"]  # switch back to core 0
     if extra_gdb_commands is not None:
@@ -368,6 +391,9 @@ def load_and_start_kernel(
     # openOCD should acknowledge the GDB connection:
     openocd.expect_exact([f"Info : accepting 'gdb' connection on tcp/{openocd_gdb_port}"])
     success("openocd accepted GDB connection")
+    # Now we're done with OpenOCD and want to ensure anything it logs doesn't
+    # lead to backpressure and block it
+    BackgroundExpectEOF(openocd).start()
     gdb.expect_exact(["Remote debugging using :" + str(openocd_gdb_port)])
     success("GDB connected to openocd")
     # XXX: doesn't match with recent GDB:  gdb.expect_exact(["0x0000000070000000 in ??"])
@@ -376,6 +402,10 @@ def load_and_start_kernel(
     # XXX: doesn't match with recent GDB: gdb.expect_exact(["0x0000000044000000 in ??"])
     gdb.expect_exact(["0x0000000044000000"])
     success("Done executing bootrom")
+    if num_cores > 1:
+        for core in range(1, num_cores):
+            gdb.expect_exact(["0x0000000044000000"])
+        success("Done executing bootrom on all other cores")
     if kernel_image is not None:
         gdb.expect_exact(["Loading section .text"])
         load_start_time = datetime.datetime.utcnow()
@@ -391,10 +421,6 @@ def load_and_start_kernel(
     load_end_time = datetime.datetime.utcnow()
     success("Finished loading bootloader image in ", load_end_time - load_start_time)
     gdb_finish_time = load_end_time
-    if num_cores > 1:
-        for core in range(1, num_cores):
-            gdb.expect_exact(["0x0000000044000000"])
-        success("Done executing bootrom on all other cores")
     gdb.expect_exact(["ready to continue"])
     gdb.sendline("continue")
     success("Starting CheriBSD after ", datetime.datetime.utcnow() - gdb_start_time)
