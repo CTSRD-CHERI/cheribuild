@@ -440,13 +440,19 @@ def find_vcu118_tty(pretend: bool) -> ListPortInfo:
     # find the serial port:
     expected_vendor_id = 0x10C4
     expected_product_id = 0xEA70
+    expected_endpoint = ":1.1"
     for portinfo in comports(include_links=True):
         assert isinstance(portinfo, ListPortInfo)
-        if portinfo.pid == expected_product_id and portinfo.vid == expected_vendor_id:
+        if (
+            portinfo.pid == expected_product_id
+            and portinfo.vid == expected_vendor_id
+            and portinfo.location.endswith(expected_endpoint)
+        ):
             return portinfo
     if pretend:
         return ListPortInfo("/dev/fakeTTY")
-    raise ValueError("Could not find USB TTY with VID", hex(expected_vendor_id), "PID", hex(expected_product_id))
+    raise ValueError("Could not find USB TTY with VID", hex(expected_vendor_id), "PID", hex(expected_product_id),
+                     "endpoint", expected_endpoint)
 
 
 def main():
