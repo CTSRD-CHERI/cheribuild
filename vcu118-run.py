@@ -376,6 +376,7 @@ def load_and_start_kernel(
     if num_cores > 1:
         args += ["-ex", "set $entry_point = $pc"]  # Record the entry point to the bios
         for core in range(1, num_cores):
+            args += ["-ex", f"thread {core + 1:d}"]  # switch to thread (core + 1) (GDB counts from 1)
             args += ["-ex", "set $pc=$entry_point"]  # set every other core to the start of the bios
         args += ["-ex", "thread 1"]  # switch back to core 0
     if extra_gdb_commands is not None:
