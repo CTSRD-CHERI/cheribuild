@@ -62,7 +62,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     kernel_class = None
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     without_payload = False
-    enable_zero_bss = True
+    enable_zero_bss = False
     custom_payload: Optional[str] = None
     mem_start = "0x80000000"
     supported_architectures = (
@@ -206,6 +206,7 @@ class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
     target = "bbl-gfe"
     default_directory_basename = "bbl"  # reuse same source dir
     build_dir_suffix = "-gfe"  # but not the build dir
+    enable_zero_bss = True
 
     _default_install_dir_fn = ComputedDefaultValue(
         function=_bbl_install_dir,
