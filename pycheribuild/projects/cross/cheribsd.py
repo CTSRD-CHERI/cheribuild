@@ -1044,6 +1044,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 XSTRINGS=cross_bindir / "llvm-strings",
                 XOBJCOPY=cross_bindir / "llvm-objcopy",
                 XRANLIB=cross_bindir / "llvm-ranlib",
+                XLLVM_LINK=cross_bindir / "llvm-link",
             )
         if xccinfo.is_clang and xccinfo.version < (10, 0):
             # llvm-ranlib didn't support -D flag (see https://bugs.llvm.org/show_bug.cgi?id=41707)
