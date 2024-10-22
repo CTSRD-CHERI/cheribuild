@@ -174,6 +174,7 @@ class BuildLLVMBase(CMakeProject):
         "lld",
         "llvm-ar",
         "llvm-cxxfilt",
+        "llvm-link",
         "llvm-mc",
         "llvm-nm",
         "llvm-objcopy",
