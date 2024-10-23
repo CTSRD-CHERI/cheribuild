@@ -452,8 +452,14 @@ def find_vcu118_tty(pretend: bool) -> ListPortInfo:
             return portinfo
     if pretend:
         return ListPortInfo("/dev/fakeTTY")
-    raise ValueError("Could not find USB TTY with VID", hex(expected_vendor_id), "PID", hex(expected_product_id),
-                     "endpoint", expected_endpoint)
+    raise ValueError(
+        "Could not find USB TTY with VID",
+        hex(expected_vendor_id),
+        "PID",
+        hex(expected_product_id),
+        "endpoint",
+        expected_endpoint,
+    )
 
 
 def main():
