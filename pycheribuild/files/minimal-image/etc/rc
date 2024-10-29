@@ -94,6 +94,9 @@ else
     /usr/sbin/sshd
 fi
 
+if [ -f /etc/rc.local ]; then
+    . /etc/rc.local
+fi
 
 echo "Logging in as root..."
 /usr/bin/login -f root
