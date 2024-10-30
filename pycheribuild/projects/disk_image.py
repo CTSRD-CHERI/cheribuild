@@ -1161,7 +1161,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
 
         self.add_required_libraries(["lib", "usr/lib"])
         # Add compat libraries (may not exist if it was built with -DWITHOUT_LIB64, etc.)
-        for libcompat_dir in ("lib/c18n", "lib32", "lib64", "lib64c", "lib64cb", "lib128", "lib128g"):
+        for libcompat_dir in ("lib/c18n", "lib64cb/c18n", "lib32", "lib64", "lib64c", "lib64cb", "lib128", "lib128g"):
             fullpath = self.rootfs_dir / "usr" / libcompat_dir
             if fullpath.is_symlink():
                 # add the libcompat symlinks to ensure that we can always use lib64/lib64c in test scripts
@@ -1171,7 +1171,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                 if (self.rootfs_dir / libcompat_dir).is_symlink():
                     self.mtree.add_symlink(src_symlink=self.rootfs_dir / libcompat_dir, path_in_image=libcompat_dir)
             elif (fullpath / "libc.so").exists():
-                ignore_required = libcompat_dir in ("lib/c18n", "lib128", "lib128g")
+                ignore_required = libcompat_dir in ("lib/c18n", "lib64cb/c18n", "lib128", "lib128g")
                 self.add_required_libraries(["usr/" + libcompat_dir], ignore_required=ignore_required)
 
         if self.include_cheribsdtest:
