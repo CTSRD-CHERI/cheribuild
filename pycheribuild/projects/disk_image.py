@@ -1161,7 +1161,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
 
         self.add_required_libraries(["lib", "usr/lib"])
         # Add compat libraries (may not exist if it was built with -DWITHOUT_LIB64, etc.)
-        for libcompat_dir in ("lib/c18n", "lib64cb/c18n", "lib32", "lib64", "lib64c", "lib64cb", "lib128", "lib128g"):
+        for libcompat_dir in ("lib/c18n", "lib32", "lib64", "lib64c", "lib64cb", "lib64cb/c18n", "lib128", "lib128g"):
             fullpath = self.rootfs_dir / "usr" / libcompat_dir
             if fullpath.is_symlink():
                 # add the libcompat symlinks to ensure that we can always use lib64/lib64c in test scripts
