@@ -127,7 +127,9 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
     if not qemu.check_ssh_connection():
         tests_successful = False
 
-    host_has_kyua = shutil.which("kyua") is not None
+    # Host version can be too old
+    # TODO: Compare versions?
+    host_has_kyua = False # shutil.which("kyua") is not None
 
     # Run the various cheribsdtest binaries
     if args.run_cheribsdtest:
