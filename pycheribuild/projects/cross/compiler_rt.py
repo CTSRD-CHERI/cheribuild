@@ -134,7 +134,8 @@ class BuildMorelloCompilerRt(BuildCompilerRt):
     target = "morello-compiler-rt"
     native_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+    supported_architectures = (*CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS, \
+                                CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS)
 
 
 class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
