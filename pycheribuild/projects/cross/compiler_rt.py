@@ -53,9 +53,17 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             default=["asan"],
             help="List of compiler-rt sanitizers to build (), e.g. asan msan",
         )
+        self.build_benchmark    = self.add_bool_option("benchmark",
+            default=False,
+            help="Build purecap benchmark sanitizer",
+        )
 
     def setup(self):
         # For the NATIVE variant we want to install to the compiler resource dir:
+        # HACK: even for the non-native variant we can choose to install to the resource dir to link
+        # when cross-compiling
+        if self.build_benchmark:
+            self.crosscompile_target._is_cheri_purecap_benchmark = True
         cc = self.llvm_project.get_native_install_path(self.config) / "bin/clang"
         self._install_dir = self._install_prefix = self.get_compiler_info(cc).get_resource_dir()
         super().setup()

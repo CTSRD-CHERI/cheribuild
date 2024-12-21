@@ -805,6 +805,7 @@ class CrossCompileTarget:
         self.cpu_architecture = cpu_architecture
         # TODO: self.operating_system = ...
         self._is_cheri_purecap = is_cheri_purecap
+        self._is_cheri_purecap_benchmark = False
         self._is_cheri_hybrid = is_cheri_hybrid
         assert not (is_cheri_purecap and is_cheri_hybrid), "Can't be both hybrid and purecap"
         self.check_conflict_with = check_conflict_with  # Check that we don't reuse install-dir, etc for this target
@@ -995,6 +996,11 @@ class CrossCompileTarget:
         for a in valid_cpu_archs:
             if a is self.cpu_architecture:
                 return True
+        return False
+
+    def is_cheri_purecap_benchmark(self) -> bool:
+        if self._is_cheri_purecap and self._is_cheri_purecap_benchmark:
+            return True
         return False
 
     def is_cheri_hybrid(self, valid_cpu_archs: "Optional[list[CPUArchitecture]]" = None) -> bool:

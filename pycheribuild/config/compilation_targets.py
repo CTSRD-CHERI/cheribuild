@@ -291,7 +291,10 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             if xtarget.is_hybrid_or_purecap_cheri():
                 result.append(f"-march=morello{march_suffix}")
                 if xtarget.is_cheri_purecap():
-                    result.append("-mabi=purecap")
+                    if xtarget.is_cheri_purecap_benchmark():
+                        result.append("-mabi=purecap-benchmark")
+                    else:
+                        result.append("-mabi=purecap")
                 else:
                     result.append("-mabi=aapcs")
             else:
