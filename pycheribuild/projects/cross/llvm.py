@@ -405,7 +405,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
                 self.CC,
                 "version",
                 version_str,
-                "is not supported. Clang version %d.%d or newer is required." % (major, minor),
+                f"is not supported. Clang version {major}.{minor} or newer is required.",
                 install_instructions=self.clang_install_hint(),
             )
 

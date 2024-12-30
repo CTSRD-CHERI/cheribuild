@@ -97,16 +97,16 @@ class SNMalloc(CrossCompileCMakeProject):
 
         self.add_cmake_options(USE_REVOCATION=self.revoke)
         self.add_cmake_options(USE_SNMALLOC_STATS=self.stats)
-        self.COMMON_FLAGS.append("-DSNMALLOC_CHERI_ALIGN=%d" % self.cheri_align)
-        self.COMMON_FLAGS.append("-DSNMALLOC_PAGEMAP_POINTERS=%d" % self.pagemap_pointers)
-        self.COMMON_FLAGS.append("-DSNMALLOC_PAGEMAP_REDERIVE=%d" % self.pagemap_rederive)
-        self.COMMON_FLAGS.append("-DSNMALLOC_CHERI_SETBOUNDS=%d" % self.cheri_bounds)
-        self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_DEALLOC=%d" % self.quarantine)
-        self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_QUARANTINE=%d" % self.revoke)
-        self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_DRY_RUN=%d" % self.revoke_dry_run)
-        self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_PARANOIA=%d" % self.revoke_paranoia)
-        self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_THROUGHPUT=%d" % self.revoke_tput)
-        self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_CHATTY=%d" % self.revoke_verbose)
+        self.COMMON_FLAGS.append(f"-DSNMALLOC_CHERI_ALIGN={int(self.cheri_align)}")
+        self.COMMON_FLAGS.append(f"-DSNMALLOC_PAGEMAP_POINTERS={int(self.pagemap_pointers)}")
+        self.COMMON_FLAGS.append(f"-DSNMALLOC_PAGEMAP_REDERIVE={int(self.pagemap_rederive)}")
+        self.COMMON_FLAGS.append(f"-DSNMALLOC_CHERI_SETBOUNDS={int(self.cheri_bounds)}")
+        self.COMMON_FLAGS.append(f"-DSNMALLOC_QUARANTINE_DEALLOC={int(self.quarantine)}")
+        self.COMMON_FLAGS.append(f"-DSNMALLOC_REVOKE_QUARANTINE={int(self.revoke)}")
+        self.COMMON_FLAGS.append(f"-DSNMALLOC_REVOKE_DRY_RUN={int(self.revoke_dry_run)}")
+        self.COMMON_FLAGS.append(f"-DSNMALLOC_REVOKE_PARANOIA={int(self.revoke_paranoia)}")
+        self.COMMON_FLAGS.append(f"-DSNMALLOC_REVOKE_THROUGHPUT={int(self.revoke_tput)}")
+        self.COMMON_FLAGS.append(f"-DSNMALLOC_QUARANTINE_CHATTY={int(self.revoke_verbose)}")
         self.COMMON_FLAGS.append(
             "-DSNMALLOC_DEFAULT_ZERO=%s" % ("ZeroMem::YesZero" if self.zero else "ZeroMem::NoZero")
         )
@@ -115,13 +115,13 @@ class SNMalloc(CrossCompileCMakeProject):
             self.COMMON_FLAGS.append(f"-DUSE_DECOMMIT_STRATEGY={self.decommit}")
 
         if self.qpathresh is not None:
-            self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_PER_ALLOC_THRESHOLD=%d" % self.qpathresh)
+            self.COMMON_FLAGS.append(f"-DSNMALLOC_QUARANTINE_PER_ALLOC_THRESHOLD={self.qpathresh}")
 
         if self.qpacthresh is not None:
-            self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_PER_ALLOC_CHUNK_THRESHOLD=%d" % self.qpacthresh)
+            self.COMMON_FLAGS.append(f"-DSNMALLOC_QUARANTINE_PER_ALLOC_CHUNK_THRESHOLD={self.qpacthresh}")
 
         if self.qcsc is not None:
-            self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_CHUNK_SIZECLASS=%d" % self.qcsc)
+            self.COMMON_FLAGS.append(f"-DSNMALLOC_QUARANTINE_CHUNK_SIZECLASS={self.qcsc}")
 
         if not self.debug:
             self.COMMON_FLAGS.append("-DNDEBUG")

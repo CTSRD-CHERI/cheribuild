@@ -84,7 +84,7 @@ class TestAsyncDelete(TestCase):
         assert stat.st_atime_ns == stat.st_ctime_ns, message + " -> atime and ctime should be the same"
 
     def _assert_num_files(self, path, num_files):
-        assert len(list(path.iterdir())) == num_files, "expected %d files in %s" % (num_files, path)
+        assert len(list(path.iterdir())) == num_files, f"expected {num_files} files in {path}"
 
     # noinspection PyUnreachableCode
     def test_keeproot(self):
