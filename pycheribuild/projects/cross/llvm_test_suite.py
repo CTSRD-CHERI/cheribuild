@@ -50,6 +50,9 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
     default_build_type = BuildType.RELEASE
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     collect_stats = BoolConfigOption("collect-stats", help="Collect statistics from the compiler")
+    supported_architectures = (
+        CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + CompilationTargets.ALL_PICOLIBC_TARGETS
+    )
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
@@ -97,6 +100,10 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
         )
         if self.compiling_for_host() and self.target_info.is_linux() and shutil.which("perf") is not None:
             self.add_cmake_options(TEST_SUITE_USE_PERF=True)
+        elif self.target_info.is_baremetal():
+            # Avoid building timeit-target
+            self.add_cmake_options(TEST_SUITE_USE_PERF=True)
+            self.COMMON_FLAGS.append("-D_GNU_SOURCE=1")
 
         if not self.compiling_for_host():
             self.add_cmake_options(TEST_SUITE_HOST_CC=self.host_CC)
