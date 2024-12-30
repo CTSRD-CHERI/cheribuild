@@ -399,7 +399,7 @@ VOLUME /diskimg
                 # messages about first trying to connect to ::1.
                 return self.run_cmd(["telnet", "127.0.0.1", str(ap_port)], **kwargs)
         finally:
-            while len(bg_processes):
+            while bg_processes:
                 (p, is_fvp) = bg_processes.pop()
                 try:
                     if p.poll() is not None:

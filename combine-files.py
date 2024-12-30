@@ -47,7 +47,7 @@ def insert_local_file(line: str, _: Path):
         lines.append(line)
         return  # don't replace the function definition
 
-    pattern = re.compile('include_local_file\\("(.*)"\\)')
+    pattern = re.compile(r'include_local_file\("(.*)"\)')
     match = re.search(pattern, line)
     if not match or len(match.groups()) < 1:
         sys.exit("Invalid include_local_file: " + line)

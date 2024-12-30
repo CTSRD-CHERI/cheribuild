@@ -580,7 +580,7 @@ class CompilerInfo:
                     print_verbose_only=True,
                     run_in_pretend_mode=True,
                 )
-                match = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"').search(cc1_cmd.stderr)
+                match = re.compile(rb'"-cc1".+"-resource-dir" "([^"]+)"').search(cc1_cmd.stderr)
                 assert match is not None, f"Could not find -resource dir in {cc1_cmd.stderr}"
                 self._resource_dir = Path(match.group(1).decode("utf-8"))
         return self._resource_dir
@@ -748,11 +748,11 @@ def get_compiler_info(compiler: "Union[str, Path]", *, config: ConfigBase) -> Co
             _cached_compiler_infos[compiler] = _cached_compiler_infos[compiler_realpath]
         compiler = compiler_realpath
     if compiler not in _cached_compiler_infos:
-        clang_version_pattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-        gcc_version_pattern = re.compile(b"gcc version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-        apple_llvm_version_pattern = re.compile(b"Apple (?:clang|LLVM) version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        clang_version_pattern = re.compile(rb"clang version (\d+)\.(\d+)\.?(\d+)?")
+        gcc_version_pattern = re.compile(rb"gcc version (\d+)\.(\d+)\.?(\d+)?")
+        apple_llvm_version_pattern = re.compile(rb"Apple (?:clang|LLVM) version (\d+)\.(\d+)\.?(\d+)?")
         # TODO: could also use -dumpmachine to get the triple
-        target_pattern = re.compile(b"Target: (.+)")
+        target_pattern = re.compile(rb"Target: (.+)")
         executed_sucessfully = True
         # clang prints this output to stderr
         try:

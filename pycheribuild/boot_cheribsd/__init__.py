@@ -640,8 +640,8 @@ def debug_kernel_panic(qemu: CheriBSDSpawnMixin):
     # print("\n\npexpect info = ", qemu)
 
 
-SH_PROGRAM_NOT_FOUND = re.compile("/bin/sh: [/\\w\\d_-]+: not found")
-RTLD_DSO_NOT_FOUND = re.compile('ld-elf[\\w\\d_-]*.so.1: Shared object ".+" not found, required by ".+"')
+SH_PROGRAM_NOT_FOUND = re.compile(r"/bin/sh: [/\w_-]+: not found")
+RTLD_DSO_NOT_FOUND = re.compile(r'ld-elf[\w_-]*.so.1: Shared object ".+" not found, required by ".+"')
 
 
 def run_cheribsd_command(
