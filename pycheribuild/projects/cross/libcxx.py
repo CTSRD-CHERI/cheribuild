@@ -712,6 +712,12 @@ class _HostCompilerMixin(_BuildLlvmRuntimes if typing.TYPE_CHECKING else object)
         assert self.compiling_for_host()
         return self.target_info.host_cxx_compiler(self.config)
 
+    def setup(self):
+        super().setup()
+        # Don't attempt to find the LLVM/Clang installations when building with the host compiler, the CMake files
+        # shipped on Debian/Ubuntu generally don't work unless all -dev packages are installed.
+        self.add_cmake_options(CMAKE_DISABLE_FIND_PACKAGE_LLVM=True, CMAKE_DISABLE_FIND_PACKAGE_Clang=True)
+
 
 class _UpstreamLLVMMixin(_BuildLlvmRuntimes if typing.TYPE_CHECKING else object):
     llvm_project: "typing.ClassVar[type[BuildLLVMMonoRepoBase]]" = BuildUpstreamLLVM
