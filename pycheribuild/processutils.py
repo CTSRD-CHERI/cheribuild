@@ -647,7 +647,7 @@ class CompilerInfo:
             result = self._supports_flag(
                 sanitzer_flag, [*arch_flags, "-c", "-xc", "/dev/null", "-Werror", "-o", "/dev/null"]
             )
-            self._supported_sanitizer_flags[(sanitzer_flag, tuple(*arch_flags))] = result
+            self._supported_sanitizer_flags[sanitzer_flag, tuple(*arch_flags)] = result
         return result
 
     def supports_warning_flag(self, flag: str) -> bool:

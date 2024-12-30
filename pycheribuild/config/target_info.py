@@ -53,8 +53,8 @@ __all__ = [
     "MipsFloatAbi",
     "NativeTargetInfo",
     "TargetInfo",
-    "sys_param_h_cheribsd_version",
     "cheribsd_morello_version_dependent_flags",
+    "sys_param_h_cheribsd_version",
 ]
 
 
