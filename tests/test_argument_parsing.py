@@ -431,7 +431,7 @@ def test_build_dir_not_inherited():
     # An unsuffixed build-directory argument should not be allowed
     with pytest.raises(KeyError, match="error: unknown argument '--cheribsd/build-directory=/foo/bar'"):
         _parse_arguments(["--cheribsd/build-directory=/foo/bar"])
-    with pytest.raises(ValueError, match="^Unknown config option 'cheribsd/build-directory'$"):
+    with pytest.raises(ValueError, match=r"^Unknown config option 'cheribsd/build-directory'$"):
         _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar"}')
 
     # The only exception are targets that have a default architecture (in which case the unsuffixed version can be used)
@@ -560,12 +560,12 @@ def test_kernconf():
     assert freebsd_native.kernel_config == "GENERIC"
 
     # kernel-config/--kernconf should only be valid on the command line:
-    with pytest.raises(ValueError, match="^Unknown config option 'freebsd/kernel-config'$"):
+    with pytest.raises(ValueError, match=r"^Unknown config option 'freebsd/kernel-config'$"):
         _parse_config_file_and_args(b'{ "freebsd/kernel-config": "GENERIC" }')
     # kernel-config/--kernconf should only be valid on the command line:
-    with pytest.raises(ValueError, match="^Option 'kernel-config' cannot be used in the config file$"):
+    with pytest.raises(ValueError, match=r"^Option 'kernel-config' cannot be used in the config file$"):
         _parse_config_file_and_args(b'{ "kernel-config": "GENERIC" }')
-    with pytest.raises(ValueError, match="^Option 'kernconf' cannot be used in the config file$"):
+    with pytest.raises(ValueError, match=r"^Option 'kernconf' cannot be used in the config file$"):
         _parse_config_file_and_args(b'{ "kernconf": "GENERIC" }')
 
     # There should not be any unsuffixed kernel-config options:
