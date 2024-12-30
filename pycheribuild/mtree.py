@@ -314,7 +314,7 @@ class MtreeFile:
         if pretend:
             return
         if isinstance(output, Path):
-            with output.open("w") as f:
+            with output.open("w", encoding="utf-8") as f:
                 self.write(f, pretend=pretend)
                 return
         output.write("#mtree 2.0\n")

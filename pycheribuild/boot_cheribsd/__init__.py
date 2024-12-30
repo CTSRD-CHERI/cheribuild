@@ -969,7 +969,7 @@ def boot_cheribsd(
     # child.logfile=sys.stdout.buffer
     child.smb_dirs = smb_dirs
     if QEMU_LOGFILE:
-        child.logfile = QEMU_LOGFILE.open("w")
+        child.logfile = QEMU_LOGFILE.open("w", encoding="utf-8")
     else:
         child.logfile_read = sys.stdout
 

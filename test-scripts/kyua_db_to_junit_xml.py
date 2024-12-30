@@ -39,7 +39,7 @@ from pycheribuild.utils import get_global_config
 
 def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path, prefix: "Optional[str]" = None):
     assert output_file.resolve() != db_file.resolve()
-    with output_file.open("w") as output_stream:
+    with output_file.open("w", encoding="utf-8") as output_stream:
         command = ["kyua", "report-junit", "--results-file=" + str(db_file)]
         boot_cheribsd.run_host_command(command, stdout=output_stream)
         # TODO: xml escape the file?

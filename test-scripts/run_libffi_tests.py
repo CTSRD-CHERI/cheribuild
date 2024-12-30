@@ -49,6 +49,7 @@ verbose "Global Config File: target_triplet is $target_triplet" 2
 global target_list
 set target_list "remote-cheribsd"
 """,
+        encoding="utf-8",
     )
     ssh_options = "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o NoHostAuthenticationForLocalhost=yes"
     Path(args.build_dir, "remote-cheribsd.exp").write_text(
@@ -65,6 +66,7 @@ set_board_info ssh_useropts "-i {qemu.ssh_private_key} {ssh_options}"
 set_board_info ssh_opts "-i {qemu.ssh_private_key} {ssh_options}"
 # set_board_info exec_shell "gdb-run-noninteractive.sh"
 """,
+        encoding="utf-8",
     )
     boot_cheribsd.run_host_command(["runtest", "--version"])
     tests_okay = False

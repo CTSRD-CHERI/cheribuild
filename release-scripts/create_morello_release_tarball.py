@@ -101,7 +101,7 @@ args.append(output_root / "extra-files")
 
 command = [str((Path(__file__).parent / "cheribuild.py").absolute()), *args, *remaining]
 with tempfile.NamedTemporaryFile() as tf:
-    Path(tf.name).write_text("{}")
+    Path(tf.name).write_text("{}", encoding="utf-8")
     command.append("--config-file=" + tf.name)  # default values please
     if not cmdline.skip_build:
         run_command([sys.executable, "-u", *command], give_tty_control=True, config=GlobalConfig)
@@ -121,6 +121,7 @@ install_script.write_text(
 dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 exec "${dir}/cheribuild.py" install-morello-fvp run-fvp-morello-purecap "$@"
 """,
+    encoding="utf-8",
 )
 install_script.chmod(0o755)
 
@@ -133,6 +134,7 @@ Path(output_root, "sources/cheribuild/cheribuild.json").write_text(
    "skip-update": true
 }
 """,
+    encoding="utf-8",
 )
 # Create the tarball
 run_command(

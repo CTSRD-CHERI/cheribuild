@@ -225,7 +225,7 @@ def run_remote_lit_tests_impl(
         ssh_key=Path(args.ssh_key).with_suffix(""),
         config=get_global_config(),
     )
-    with Path(tempdir, "config").open("w") as c:
+    with Path(tempdir, "config").open("w", encoding="utf-8") as c:
         c.write(config_contents)
     boot_cheribsd.run_host_command(["cat", str(Path(tempdir, "config"))])
 
@@ -260,7 +260,7 @@ def run_remote_lit_tests_impl(
             "WARNING: Could not connect to ControlMaster SSH connection. Running tests will be slower",
             exit=False,
         )
-        with Path(tempdir, "config").open("w") as c:
+        with Path(tempdir, "config").open("w", encoding="utf-8") as c:
             c.write(config_contents.format(control_persist="no"))
         check_ssh_connection("Second SSH connection (without controlmaster)")
 

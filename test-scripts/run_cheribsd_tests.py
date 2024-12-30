@@ -308,7 +308,7 @@ def cheribsd_setup_args(args: argparse.Namespace):
         args.test_output_dir = str(real_output_dir)
         boot_cheribsd.run_host_command(["mkdir", "-p", str(real_output_dir)])
         if not get_global_config().pretend:
-            (real_output_dir / "cmdline").write_text(str(sys.argv))
+            (real_output_dir / "cmdline").write_text(str(sys.argv), encoding="utf-8")
         args.smb_mount_directories.append(
             boot_cheribsd.SmbMount(real_output_dir, readonly=False, in_target="/test-results"),
         )
