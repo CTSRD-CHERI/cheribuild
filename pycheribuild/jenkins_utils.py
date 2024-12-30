@@ -29,21 +29,23 @@
 #
 import inspect
 from pathlib import Path
+from typing import Optional
 
 from .config.jenkinsconfig import CheriConfig, JenkinsConfig
 from .config.loader import CommandLineConfigOption
-from .config.target_info import AbstractProject
+from .config.target_info import AbstractProject, CrossCompileTarget
 from .projects.project import Project
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
 from .utils import fatal_error, status_update
 
 
-def default_install_prefix(xtarget, cheri_config: CheriConfig):
+def default_install_prefix(xtarget: CrossCompileTarget, cheri_config: CheriConfig) -> Path:
+    # noinspection PyProtectedMember
     dirname = xtarget.target_info_cls._install_prefix_dirname(xtarget, cheri_config)
     return Path("/opt", dirname)
 
 
-def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix_arg: Path):
+def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix_arg: Optional[Path]):
     # Ugly workaround to override all install dirs to go to the tarball
     all_targets = [
         x
@@ -62,27 +64,28 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
         if target.xtarget.is_native():
             fatal_error("Cannot use non-existent sysroot for native target", target.name, pretend=False)
 
-    def expected_install_root(target):
-        if target in sysroot_targets:
-            project = target._try_get_project()
-            if project is None:
-                target_info = target.xtarget.create_target_info(AbstractProject(cheri_config))
+    def expected_install_root(tgt: Target) -> Path:
+        if tgt in sysroot_targets:
+            # noinspection PyProtectedMember
+            proj = tgt._try_get_project()
+            if proj is None:
+                target_info = tgt.xtarget.create_target_info(AbstractProject(cheri_config))
             else:
-                target_info = project.target_info
+                target_info = proj.target_info
             sysroot_dir = target_info.sysroot_dir
             return sysroot_dir
         else:
             return cheri_config.output_root
 
-    def expected_install_prefix(target):
+    def expected_install_prefix(tgt: Target) -> Path:
         if install_prefix_arg is None:
-            return default_install_prefix(target.xtarget, cheri_config)
+            return default_install_prefix(tgt.xtarget, cheri_config)
         else:
             return install_prefix_arg
 
-    def expected_install_path(target):
-        root_dir = expected_install_root(target)
-        install_prefix = expected_install_prefix(target)
+    def expected_install_path(tgt: Target) -> Path:
+        root_dir = expected_install_root(tgt)
+        install_prefix = expected_install_prefix(tgt)
         return Path(f"{root_dir}{install_prefix}")
 
     for target in all_targets:
@@ -95,6 +98,7 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
         # noinspection PyProtectedMember
         project = target._get_or_create_project_no_setup(None, cheri_config, caller=None)
         assert isinstance(project, Project)
+        # noinspection PyProtectedMember
         i = inspect.getattr_static(project, "_install_dir")._get_option()
         assert isinstance(i, CommandLineConfigOption)
         # But don't change it if it was specified on the command line. Note: This also does the config
