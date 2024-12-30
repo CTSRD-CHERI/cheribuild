@@ -39,6 +39,7 @@ class BuildPicoLibc(CrossCompileMesonProject):
     # Installing the native headers and libraries to <output>/local breaks other native project builds.
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     needs_sysroot = False
+    is_rootfs_target = True
     include_os_in_target_suffix = False  # Avoid adding -picolibc- as we are building picolibc here
     # ld.lld: error: -r and --gdb-index may not be used together
     add_gdb_index = False

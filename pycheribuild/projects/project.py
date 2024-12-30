@@ -1183,7 +1183,9 @@ class Project(SimpleProject):
     def rootfs_dir(self) -> Path:
         xtarget = self.crosscompile_target.get_rootfs_target()
         # noinspection PyProtectedMember
-        return self.target_info._get_rootfs_class(xtarget).get_install_dir(self, xtarget)
+        rootfs_cls: "type[AbstractProject]" = self.target_info._get_rootfs_class(xtarget)
+        assert rootfs_cls.is_rootfs_target
+        return rootfs_cls.get_install_dir(self, xtarget)
 
     @property
     def _no_overwrite_allowed(self) -> "Sequence[str]":

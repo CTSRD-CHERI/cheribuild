@@ -42,6 +42,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
     target = "newlib"
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
+    is_rootfs_target = True
     needs_sysroot = False  # We are building newlib so we don't need a sysroot
     add_host_target_build_config_options = False
     _configure_supports_libdir = False

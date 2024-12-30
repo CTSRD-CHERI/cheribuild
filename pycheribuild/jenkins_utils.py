@@ -79,6 +79,8 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
 
     def expected_install_prefix(tgt: Target) -> Path:
         if install_prefix_arg is None:
+            if tgt.project_class.is_rootfs_target:
+                return Path("/")
             return default_install_prefix(tgt.xtarget, cheri_config)
         else:
             return install_prefix_arg

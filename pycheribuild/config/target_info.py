@@ -163,6 +163,7 @@ class AbstractProject(FileSystemUtils):
     _xtarget: "ClassVar[Optional[CrossCompileTarget]]" = None
     default_architecture: "ClassVar[Optional[CrossCompileTarget]]"
     needs_sysroot: "ClassVar[bool]"
+    is_rootfs_target: typing.ClassVar[bool] = False  # Whether this project installation directory is a rootfs dir
 
     auto_var_init: AutoVarInit  # Needed for essential_compiler_flags
     config: CheriConfig
