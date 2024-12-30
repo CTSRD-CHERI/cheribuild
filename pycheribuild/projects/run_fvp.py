@@ -756,7 +756,8 @@ class LaunchFVPBase(SimpleProject):
                 # "-C", "css.nonTrustedROMloader.fname=" + str(uefi_bin),
                 # "-C", "css.trustedBootROMloader.fname=" + str(trusted_fw),
                 "-C", "css.pl011_uart_ap.unbuffered_output=1",
-            ]  # fmt: on
+            ]
+            # fmt: on
 
             gdb_port = None
             if self.config.wait_for_debugger:
@@ -767,7 +768,8 @@ class LaunchFVPBase(SimpleProject):
                     "--plugin", self.fvp_project.plugin_dir / "GDBRemoteConnection.so",
                     "-C", "REMOTE_CONNECTION.GDBRemoteConnection.listen_address=127.0.0.1",
                     "-C", f"REMOTE_CONNECTION.GDBRemoteConnection.port={gdb_port}"
-                ]  # fmt: on
+                ]
+                # fmt: on
 
             if self.fvp_trace:
                 # fmt: off
@@ -798,7 +800,8 @@ class LaunchFVPBase(SimpleProject):
                     "-C", "css.cluster0.cpu1.trace_special_hlt_imm16=0xbeef",
                     "-C", "css.cluster1.cpu0.trace_special_hlt_imm16=0xbeef",
                     "-C", "css.cluster1.cpu1.trace_special_hlt_imm16=0xbeef",
-                ]   # fmt: on
+                ]
+                # fmt: on
                 if self.fvp_trace_unbuffered:
                     fvp_args += ["-C", "TRACE.TarmacTrace.unbuffered=true"]
                 if self.fvp_trace_icount:

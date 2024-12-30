@@ -102,7 +102,8 @@ class KDECMakeProject(CrossCompileCMakeProject):
             "--test-setup-command",
             f"mkdir -p {kde_prefix.parent} && ln -sn /sysroot{kde_prefix} {kde_prefix}",
             "--test-setup-command", ". /build/prefix.sh && env | sort"
-        ]  # fmt: on
+        ]
+        # fmt: on
 
     def setup(self):
         super().setup()
