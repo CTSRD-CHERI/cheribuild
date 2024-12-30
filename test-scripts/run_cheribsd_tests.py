@@ -36,7 +36,6 @@ import itertools
 import operator
 import os
 import shlex
-import shutil
 import sys
 import time
 from pathlib import Path
@@ -129,7 +128,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
 
     # Host version can be too old
     # TODO: Compare versions?
-    host_has_kyua = False # shutil.which("kyua") is not None
+    host_has_kyua = False  # shutil.which("kyua") is not None
 
     # Run the various cheribsdtest binaries
     if args.run_cheribsdtest:
