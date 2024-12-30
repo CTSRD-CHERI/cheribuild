@@ -525,6 +525,9 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 # LIBCXX_ENABLE_ABI_LINKER_SCRIPT is needed if we use libcxxrt/system libc++abi in the tests
                 self.add_cmake_options(LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
                 self.add_cmake_options(LIBCXX_ENABLE_ABI_LINKER_SCRIPT=not self.target_info.must_link_statically)
+                if external_cxxabi == "libcxxrt":
+                    # libcxxrt does not provide aligned new delete operator.
+                    self.add_cmake_options(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS=True)
             else:
                 # When using the locally-built libc++abi, we link the ABI library objects as part of libc++.so
                 assert "libcxxabi" in enabled_runtimes, enabled_runtimes
@@ -612,6 +615,10 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
         if "libcxx" in self.get_enabled_runtimes():
             if GitRepository.contains_commit(self, "64d413efdd76f2e6464ae6f578161811b9d12411", src_dir=self.source_dir):
                 self.add_cmake_options(LIBCXX_HARDENING_MODE="extensive")
+            elif GitRepository.contains_commit(
+                self, "f0dfe682bca0b39d1fd64845f1576243d00c9d59", src_dir=self.source_dir
+            ):
+                self.add_cmake_options(LIBCXX_HARDENING_MODE="debug")
             else:
                 self.add_cmake_options(LIBCXX_ENABLE_ASSERTIONS=True)
                 # Need to export the symbols from debug.cpp to allow linking code that defines _LIBCPP_DEBUG=1
