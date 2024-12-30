@@ -1486,6 +1486,38 @@ def test_jenkins_hack_disk_image():
     assert disk_image.rootfs_dir == Path("/tmp/tarball/rootfs")
 
 
+def test_jenkins_hack_hybrid_for_purecap_rootfs_prefix_none(monkeypatch):
+    # Regression test for the jenkins install dir hack breaking hybrid-for-purecap-rootfs KDE targets
+    config = _parse_arguments(["--output-root=/tmp/tarball", "--enable-hybrid-for-purecap-rootfs-targets"])
+    jenkins_override_install_dirs_hack(config, None)
+    cheribsd_morello_purecap = _get_target_instance("cheribsd-morello-purecap", config, BuildCHERIBSD)
+    # FIXME: we implicitly add /opt/morello-purecap for the rootfs dir here which does not make any sense
+    assert cheribsd_morello_purecap.target_info.install_prefix_dirname == "morello-purecap"
+    assert cheribsd_morello_purecap.install_dir == Path("/tmp/tarball/opt/morello-purecap")
+    assert cheribsd_morello_purecap.rootfs_dir == Path("/tmp/tarball/opt/morello-purecap")
+    # FIXME: assert cheribsd_morello_purecap.install_dir == Path("/tmp/tarball")
+    # FIXME: assert cheribsd_morello_purecap.rootfs_dir == Path("/tmp/tarball")
+    # When building against the rootfs we do want the prefix though:
+    gmp_morello_purecap = _get_target_instance("gmp-morello-purecap", config, Project)
+    assert gmp_morello_purecap.crosscompile_target.is_cheri_purecap()
+    assert gmp_morello_purecap.target_info.install_prefix_dirname == "morello-purecap"
+    assert gmp_morello_purecap.install_dir == Path("/tmp/tarball/opt/morello-purecap")
+    assert gmp_morello_purecap.rootfs_dir == Path("/tmp/tarball/opt/morello-purecap")
+    # FIXME: gmp_morello_purecap.rootfs_dir == Path("/tmp/tarball")
+    assert gmp_morello_purecap.rootfs_dir == cheribsd_morello_purecap.install_dir
+
+    # The -hybrid-for-purecap-rootfs should install to the same rootfs but a different prefix:
+    gmp_morello_hybrid_for_purecap = _get_target_instance("gmp-morello-hybrid-for-purecap-rootfs", config, Project)
+    assert gmp_morello_hybrid_for_purecap.crosscompile_target.is_cheri_hybrid()
+    assert gmp_morello_hybrid_for_purecap.target_info.install_prefix_dirname == "morello-hybrid"
+    assert gmp_morello_hybrid_for_purecap.install_dir == Path("/tmp/tarball/opt/morello-hybrid")
+    assert gmp_morello_hybrid_for_purecap.rootfs_dir == cheribsd_morello_purecap.install_dir
+    # FIXME: rootfs should be the same as the gmp-purecap
+    # FIXME: assert gmp_morello_hybrid_for_purecap.rootfs_dir == gmp_morello_purecap.rootfs_dir
+    # FIXME: gmp_morello_hybrid_for_purecap.rootfs_dir == Path("/tmp/tarball")
+    assert gmp_morello_hybrid_for_purecap.rootfs_dir == Path("/tmp/tarball/opt/morello-purecap")
+
+
 # Another regression test, explicitly overriding the installation directory triggered an assertion
 @pytest.mark.parametrize(
     ("target", "args", "expected_install_dir"),
