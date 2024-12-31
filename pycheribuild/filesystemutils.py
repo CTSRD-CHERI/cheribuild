@@ -127,11 +127,15 @@ class FileSystemUtils:
                             all_entries_new.append(i)
                     all_entries = all_entries_new
                 all_entries = list(map(str, all_entries))
-                if all_entries:
-                    run_command(["mv", *all_entries, str(tempdir)], print_verbose_only=True, config=self.config)
+                print_command(["mv", *all_entries, str(tempdir)], print_verbose_only=True, config=self.config)
+                for entry in all_entries:
+                    if not self.config.pretend:
+                        shutil.move(entry, tempdir)
             else:
                 # rename the directory, create a new dir and then delete it in a background thread
-                run_command("mv", path, tempdir, config=self.config)
+                print_command("mv", path, tempdir, print_verbose_only=True, config=self.config)
+                if not self.config.pretend:
+                    shutil.move(path, tempdir)
                 self.makedirs(path)
         if not self.config.pretend:
             assert path.is_dir()
