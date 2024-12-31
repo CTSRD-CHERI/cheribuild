@@ -1,4 +1,3 @@
-import subprocess
 import tempfile
 import time
 import unittest
@@ -121,8 +120,8 @@ class TestAsyncDelete(TestCase):
         print("State for test", message)
         if not directory.exists():
             print("(nonexistant)", directory)
-        files = subprocess.check_output(["find", str(directory)]).rstrip().decode("utf-8").split("\n")
-        print("   ", "\n    ".join(files))
+        for f in directory.rglob("*"):
+            print("    ", f.relative_to(directory))
 
     def _check_async_delete(self, message, tmpdir_expected: bool):
         self._dump_dir_tree(self.config.source_root / "build", message)
