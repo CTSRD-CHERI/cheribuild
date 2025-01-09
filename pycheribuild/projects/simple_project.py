@@ -789,6 +789,9 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def compiling_for_aarch64(self, include_purecap: bool) -> bool:
         return self.crosscompile_target.is_aarch64(include_purecap=include_purecap)
 
+    def compiling_for_arm32(self) -> bool:
+        return self.crosscompile_target.is_arm32()
+
     def build_configuration_suffix(self, target: Optional[CrossCompileTarget] = None) -> str:
         """
         :param target: the target to use

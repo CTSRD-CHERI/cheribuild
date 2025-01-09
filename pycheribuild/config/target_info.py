@@ -971,6 +971,9 @@ class CrossCompileTarget:
     def is_riscv(self, include_purecap: Optional[bool] = None) -> bool:
         return self.is_riscv32(include_purecap) or self.is_riscv64(include_purecap)
 
+    def is_arm32(self, include_purecap: Optional[bool] = None) -> bool:
+        return self._check_arch(CPUArchitecture.ARM32, include_purecap)
+
     def is_aarch64(self, include_purecap: Optional[bool] = None) -> bool:
         return self._check_arch(CPUArchitecture.AARCH64, include_purecap)
 

@@ -27,6 +27,7 @@ from pathlib import Path
 
 from .compiler_rt import BuildCompilerRtBuiltins
 from .crosscompileproject import CompilationTargets, CrossCompileMakefileProject, GitRepository
+from ..build_qemu import BuildQEMU
 from ..project import DefaultInstallDir
 from ..run_qemu import LaunchQEMUBase
 from ..simple_project import BoolConfigOption
@@ -39,8 +40,11 @@ class BuildLittleKernel(CrossCompileMakefileProject):
     target = "littlekernel"
     default_directory_basename = "lk"
     supported_architectures = (
+        CompilationTargets.FREESTANDING_ARM32,
+        CompilationTargets.FREESTANDING_AARCH64,
         CompilationTargets.FREESTANDING_MORELLO_NO_CHERI,
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV32,
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP,
     )
@@ -97,22 +101,28 @@ class BuildLittleKernel(CrossCompileMakefileProject):
         self.make_args.set(BUILDROOT=self.build_dir)
         if self.config.verbose:
             self.make_args.set(NOECHO="")
-        for var in ["CFLAGS", "CPPFLAGS", "CXXFLAGS", "LDFLAGS"]:
+        for var in ["CFLAGS", "CPPFLAGS", "CXXFLAGS", "LDFLAGS", "AR"]:
             del self.make_args.env_vars[var]
-        toolchain_prefix = str(self.sdk_bindir) + "/"
-        if self.compiling_for_riscv(include_purecap=True):
-            # Use hardfloat to avoid libgcc deps
-            self.make_args.set(RISCV_FPU=True)
         if self.compiling_for_cheri():
             self.make_args.set(ARCH_COMPILEFLAGS="")  # dont' override the default -mabi=
 
+        if self.compiling_for_arm32():
+            # Work around "error: unknown argument: '-mthumb-interwork'"
+            self.make_args.set(ENABLE_THUMB=0)
+
         self.set_make_cmd_with_args("LD", self.target_info.linker, ["--unresolved-symbols=report-all"])
-        if self.crosscompile_target.is_riscv(include_purecap=True) and self.use_mmu:
+        if self.crosscompile_target.is_riscv64(include_purecap=True) and self.use_mmu:
             self.make_args.set(RISCV_MMU="sv39", RISCV_MODE="supervisor")
+            # Use hardfloat to avoid libgcc deps
+            self.make_args.set(RISCV_FPU=1)
+        elif self.crosscompile_target.is_riscv32(include_purecap=True):
+            if self.use_mmu:
+                self.make_args.set(RISCV_MMU="sv32", RISCV_MODE="supervisor")
+            # Use softfloat to match compiler-rt ABI
+            self.make_args.set(RISCV_FPU=0)
         self.make_args.set(
-            TOOLCHAIN_PREFIX=toolchain_prefix,
-            ARCH_arm64_TOOLCHAIN_PREFIX=toolchain_prefix,
-            ARCH_riscv64_TOOLCHAIN_PREFIX=toolchain_prefix,
+            TOOLCHAIN_PREFIX=str(self.sdk_bindir) + "/llvm-",
+            CPPFILT=self.sdk_bindir / "llvm-cxxfilt",  # does not match the normal llvm-<binutil> pattern
         )
 
     def setup_late(self) -> None:
@@ -123,15 +133,20 @@ class BuildLittleKernel(CrossCompileMakefileProject):
     def kernel_path(self) -> Path:
         if self.compiling_for_aarch64(include_purecap=True):
             return self.build_dir / "build-qemu-virt-arm64-test/lk.elf"
-        elif self.compiling_for_riscv(include_purecap=True):
+        elif self.crosscompile_target.is_riscv32(include_purecap=True):
+            return self.build_dir / "build-qemu-virt-riscv32-test/lk.elf"
+        elif self.crosscompile_target.is_riscv64(include_purecap=True):
             return self.build_dir / "build-qemu-virt-riscv64-test/lk.elf"
+        elif self.compiling_for_arm32():
+            return self.build_dir / "build-qemu-virt-arm32-test/lk.elf"
         else:
             raise ValueError("Unsupported arch")
 
     def run_tests(self):
+        qemu = BuildQEMU.qemu_binary(self, xtarget=self.crosscompile_target)
         if self.compiling_for_aarch64(include_purecap=True):
             cmd = [
-                self.config.qemu_bindir / "qemu-system-aarch64",
+                qemu,
                 "-cpu",
                 "cortex-a53",
                 "-m",
@@ -151,9 +166,9 @@ class BuildLittleKernel(CrossCompileMakefileProject):
             if self.use_mmu:
                 bios_args = riscv_bios_arguments(self.crosscompile_target, self)
             cmd = [
-                self.config.qemu_bindir / "qemu-system-riscv64cheri",
+                qemu,
                 "-cpu",
-                "rv64",
+                "rv64" if self.crosscompile_target.is_riscv64(include_purecap=True) else "rv32",
                 "-m",
                 "512",
                 "-smp",
@@ -167,6 +182,23 @@ class BuildLittleKernel(CrossCompileMakefileProject):
                 self.kernel_path,
                 *bios_args,
             ]
+        elif self.compiling_for_arm32():
+            cmd = [
+                qemu,
+                "-cpu",
+                "cortex-a15",
+                "-m",
+                "512",
+                "-smp",
+                "1",
+                "-machine",
+                "virt,highmem=off",
+                "-net",
+                "none",
+                "-nographic",
+                "-kernel",
+                self.kernel_path,
+            ]
         else:
             return self.fatal("Unsupported arch")
         self.run_cmd(cmd, cwd=self.build_dir, give_tty_control=True)
@@ -175,7 +207,10 @@ class BuildLittleKernel(CrossCompileMakefileProject):
         if self.compiling_for_aarch64(include_purecap=True):
             self.run_make("qemu-virt-arm64-test", cwd=self.source_dir, parallel=True)
         elif self.compiling_for_riscv(include_purecap=True):
-            self.run_make("qemu-virt-riscv64-test", cwd=self.source_dir, parallel=True)
+            xlen = 64 if self.crosscompile_target.is_riscv64(include_purecap=True) else 32
+            self.run_make(f"qemu-virt-riscv{xlen}-test", cwd=self.source_dir, parallel=True)
+        elif self.compiling_for_arm32():
+            self.run_make("qemu-virt-arm32-test", cwd=self.source_dir, parallel=True)
         else:
             return self.fatal("Unsupported arch")
 

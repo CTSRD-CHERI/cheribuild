@@ -1033,6 +1033,8 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
 
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", *, include_version: bool) -> str:
+        if target.cpu_architecture == CPUArchitecture.ARM32:
+            return "armv7-unknown-none-eabi"  # TODO: Use an ArmV8 triple once QEMU supports it
         return target.cpu_architecture.value + "-unknown-elf"
 
     @property
@@ -1336,6 +1338,8 @@ class CompilationTargets(BasicCompilationTargets):
         BAREMETAL_NEWLIB_RISCV64_HYBRID,
         BAREMETAL_NEWLIB_RISCV64_PURECAP,
     )
+    FREESTANDING_ARM32 = CrossCompileTarget("arm32", CPUArchitecture.ARM32, BaremetalFreestandingTargetInfo)
+    FREESTANDING_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, BaremetalFreestandingTargetInfo)
     FREESTANDING_MIPS64 = CrossCompileTarget("mips64", CPUArchitecture.MIPS64, BaremetalFreestandingTargetInfo)
     FREESTANDING_MORELLO_NO_CHERI = CrossCompileTarget(
         "morello-aarch64",
@@ -1389,6 +1393,8 @@ class CompilationTargets(BasicCompilationTargets):
         hybrid_target=FREESTANDING_RISCV64_HYBRID,
     )
     ALL_FREESTANDING_TARGETS = (
+        FREESTANDING_AARCH64,
+        FREESTANDING_ARM32,
         FREESTANDING_MIPS64,
         FREESTANDING_MORELLO_NO_CHERI,
         FREESTANDING_MORELLO_HYBRID,

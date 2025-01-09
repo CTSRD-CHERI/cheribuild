@@ -86,6 +86,10 @@ class QemuOptions:
             self.qemu_arch_sufffix = "aarch64"
             self.can_boot_kernel_directly = False  # boot from disk
             self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "cortex-a72", "-bios", "edk2-aarch64-code.fd"]
+        elif xtarget.is_arm32(include_purecap=False):
+            self.qemu_arch_sufffix = "arm"
+            self.can_boot_kernel_directly = False  # boot from disk
+            self.machine_flags = ["-M", "virt", "-cpu", "cortex-15"]
         else:
             raise ValueError("Unknown target " + str(xtarget))
 

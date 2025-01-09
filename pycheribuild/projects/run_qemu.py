@@ -261,7 +261,11 @@ class LaunchQEMUBase(SimpleProject):
             supported_qemu_classes += [BuildQEMU]
             if not xtarget.is_hybrid_or_purecap_cheri():
                 supported_qemu_classes += [BuildUpstreamQEMU, None]
-        elif xtarget.is_any_x86() or xtarget.is_aarch64(include_purecap=False):
+        elif xtarget.is_arm32(include_purecap=False):
+            can_provide_src_via_smb = True
+            # Prefer CHERI QEMU for AArch64 like other architectures.
+            supported_qemu_classes += [BuildQEMU, BuildUpstreamQEMU, None]
+        elif xtarget.is_any_x86():
             # Default to CHERI QEMU instead of the system QEMU (for now)
             # Note: x86_64 can be either CHERI QEMU or system QEMU:
             supported_qemu_classes += [BuildQEMU, BuildUpstreamQEMU, None]
