@@ -173,6 +173,10 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         cls.use_virtio_blk = cls.add_bool_option("use_virtio_blk", show_help=True,
             default=False,
             help="Use VirtIO Block as a disk for FreeRTOS")
+        
+        cls.use_virtio_iocaps = cls.add_bool_option("use_virtio_iocaps", show_help=True,
+            default=False,
+            help="Enable VirtIO devices to use IOcaps as descriptors where negotiated")
 
         cls.create_disk_image = cls.add_bool_option("create_disk_image", show_help=True,
             default=False,
@@ -279,6 +283,9 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
             if self.use_virtio_blk:
               config_options += ["--use-virtio-blk"]
+
+            if self.use_virtio_iocaps:
+              config_options += ["--use-virtio-iocaps"]
 
             if self.create_disk_image:
               config_options += ["--create-disk-image"]
