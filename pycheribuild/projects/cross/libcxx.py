@@ -611,13 +611,24 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             kind=int,
         )
 
+    def _supported_libcxx_hardening_modes(self) -> "list[str]":
+        # We may have a partial history, so prefer scanning the CMakeLists.txt
+        prefix = "set(LIBCXX_SUPPORTED_HARDENING_MODES "
+        for line in self.read_file(self.source_dir / "../libcxx/CMakeLists.txt").splitlines():
+            if line.startswith(prefix):
+                return line[len(prefix) : -1].split()
+        # Not found in the CMakeLists.txt, assume old version of LLVM
+        return []
+
     def configure(self, **kwargs) -> None:
         if "libcxx" in self.get_enabled_runtimes():
-            if GitRepository.contains_commit(self, "64d413efdd76f2e6464ae6f578161811b9d12411", src_dir=self.source_dir):
+            # LLVM 16+ use hardening modes instead of LIBCXX_ENABLE_ASSERTIONS
+            # Commit 64d413efdd76f2e6464ae6f578161811b9d12411 renamed safe to extensive, which is the one we prefer.
+            # Commit f0dfe682bca0b39d1fd64845f1576243d00c9d59 removed the old LIBCXX_ENABLE_ASSERTIONS
+            hardening_modes = self._supported_libcxx_hardening_modes()
+            if "extensive" in hardening_modes:
                 self.add_cmake_options(LIBCXX_HARDENING_MODE="extensive")
-            elif GitRepository.contains_commit(
-                self, "f0dfe682bca0b39d1fd64845f1576243d00c9d59", src_dir=self.source_dir
-            ):
+            elif "debug" in hardening_modes:
                 self.add_cmake_options(LIBCXX_HARDENING_MODE="debug")
             else:
                 self.add_cmake_options(LIBCXX_ENABLE_ASSERTIONS=True)
