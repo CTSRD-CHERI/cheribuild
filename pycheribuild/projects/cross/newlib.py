@@ -59,6 +59,10 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             return base_target + "-baremetal-" + xtarget.base_arch_suffix
         return base_target + "-" + xtarget.generic_target_suffix
 
+    @classmethod
+    def can_build_with_csa(cls) -> bool:
+        return True
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert self._install_prefix == Path("/", self.target_info.target_triple)
@@ -100,8 +104,8 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         bindir = self.sdk_bindir
         self.add_configure_vars(
             AS_FOR_TARGET=str(self.CC),  # + target_cflags,
-            CC_FOR_TARGET=str(self.CC),  # + target_cflags,
-            CXX_FOR_TARGET=str(self.CXX),  # + target_cflags,
+            CC_FOR_TARGET=str(self.cc_wrapper),  # + target_cflags,
+            CXX_FOR_TARGET=str(self.cxx_wrapper),  # + target_cflags,
             AR_FOR_TARGET=self.target_info.ar,
             STRIP_FOR_TARGET=self.target_info.strip_tool,
             OBJCOPY_FOR_TARGET=bindir / "objcopy",

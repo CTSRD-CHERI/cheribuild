@@ -320,6 +320,14 @@ class TargetInfo(ABC):
     @abstractmethod
     def strip_tool(self) -> Path: ...
 
+    @property
+    @abstractmethod
+    def ccc_analyzer(self) -> Path: ...
+
+    @property
+    @abstractmethod
+    def cxx_analyzer(self) -> Path: ...
+
     @classmethod
     @abstractmethod
     def essential_compiler_and_linker_flags_impl(
@@ -639,6 +647,14 @@ class NativeTargetInfo(TargetInfo):
     @property
     def strip_tool(self) -> Path:
         return self.c_compiler.parent / "strip"
+
+    @property
+    def ccc_analyzer(self) -> Path:
+        raise NotImplementedError
+
+    @property
+    def cxx_analyzer(self) -> Path:
+        raise NotImplementedError
 
     @classmethod
     def is_freebsd(cls) -> bool:

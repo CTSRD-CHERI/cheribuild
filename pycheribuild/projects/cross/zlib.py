@@ -34,6 +34,10 @@ from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir
 class BuildZlib(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/zlib.git")
 
+    @classmethod
+    def can_build_with_csa(cls) -> bool:
+        return True
+
     # Enable the same hacks as nginx since this isn't really autoconf...
     add_host_target_build_config_options = False
     _configure_understands_enable_static = False

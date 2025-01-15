@@ -1281,6 +1281,7 @@ def test_mfs_root_kernel_config_options():
         "mfs_root_image",
         "skip_update",
         "use_ccache",
+        "use_csa",
         "use_lto",
         "with_clean",
         "with_debug_files",
