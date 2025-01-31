@@ -45,7 +45,6 @@ from ..project import (
     BuildType,
     CheriConfig,
     ComputedDefaultValue,
-    CPUArchitecture,
     DefaultInstallDir,
     GitRepository,
     MakeCommandKind,
@@ -1099,10 +1098,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def buildworld_args(self) -> MakeOptions:
         self._setup_make_args()  # ensure make args are complete
         result = self.make_args.copy()
-        if self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.RISCV64]):
-            # CheriBSD installworld currently gets very confused that libcheri CCDL is forced to false and attempts
-            # to install the files during installworld.
-            result.set_with_options(CDDL=False)
         result.update(self.cross_toolchain_config)
         return result
 
