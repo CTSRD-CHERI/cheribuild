@@ -640,10 +640,10 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     @classmethod
     def cached_full_dependencies(cls) -> "list[Target]":
         # look only in __dict__ to avoid parent class lookup
-        _cached: "Optional[list[Target]]" = cls.__dict__.get("_cached_full_deps", None)
-        if _cached is None:
+        cached: "Optional[list[Target]]" = cls.__dict__.get("_cached_full_deps", None)
+        if cached is None:
             raise ValueError("cached_full_dependencies called before value was cached")
-        return _cached
+        return cached
 
     @classmethod
     def _cache_full_dependencies(cls, config, *, allow_already_cached=False) -> None:
