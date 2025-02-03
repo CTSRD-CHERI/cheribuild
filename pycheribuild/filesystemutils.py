@@ -135,7 +135,7 @@ class FileSystemUtils:
                 # rename the directory, create a new dir and then delete it in a background thread
                 print_command("mv", path, tempdir, print_verbose_only=True, config=self.config)
                 if not self.config.pretend:
-                    shutil.move(path, tempdir)
+                    shutil.move(str(path), str(tempdir))
                 self.makedirs(path)
         if not self.config.pretend:
             assert path.is_dir()
