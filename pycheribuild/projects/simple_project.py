@@ -564,8 +564,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     @classmethod
     def recursive_dependencies(cls, config: CheriConfig) -> "list[Target]":
         """
-        Returns the list of recursive depdencies. If filtered is False this returns all dependencies, if True the result
-        is filtered based on various parameters such as config.include_dependencies.
+        Returns the list of recursive dependencies. If filtered is False this returns all dependencies, if True the
+        result is filtered based on various parameters such as config.include_dependencies.
         """
         # look only in __dict__ to avoid parent class lookup
         result: "Optional[list[Target]]" = cls.__dict__.get("_cached_filtered_deps", None)
