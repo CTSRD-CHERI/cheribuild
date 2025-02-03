@@ -79,7 +79,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             "use-stack-protector", help="Compile tests with stack-protector (non-CHERI only)"
         )
         cls.use_fortify_source = cls.add_bool_option(
-            "use-fortify-source", help="Compile tests with _DFORTIFY_SOURCE=2 (no effect on " "FreeBSD)"
+            "use-fortify-source", help="Compile tests with _DFORTIFY_SOURCE=2 (no effect on FreeBSD)"
         )
         cls.use_softboundcets = cls.add_bool_option(
             "use-softboundcets",
@@ -146,7 +146,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         # FIXME: add option to disable FORTIFY_SOURCE
         if self.build_type != BuildType.DEBUG:
             self.warning(
-                "BODiagsuite contains undefined behaviour that might be optimized away unless you compile" " at -O0."
+                "BODiagsuite contains undefined behaviour that might be optimized away unless you compile at -O0."
             )
             self.ask_for_confirmation("Are you sure you want to continue?")
         super().process()

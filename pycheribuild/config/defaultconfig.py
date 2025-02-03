@@ -52,8 +52,7 @@ class CheribuildAction(CheribuildActionEnum):
     LIST_TARGETS = ("--list-targets", "List all available targets and exit")
     DUMP_CONFIGURATION = (
         "--dump-configuration",
-        "Print the current configuration as JSON. This can be saved to "
-        "~/.config/cheribuild.json to make it persistent",
+        "Print the current configuration as JSON. This can be saved to ~/.config/cheribuild.json to make it persistent",
     )
 
     def __init__(self, option_name, help_message, altname=None, actions=None) -> None:
@@ -124,7 +123,7 @@ class DefaultCheriConfig(CheriConfig):
             "confirm-clone", help="Ask for confirmation before cloning repositories."
         )
         self.force_update = loader.add_bool_option(
-            "force-update", help="Always update (with autostash) even if there " "are uncommitted changes"
+            "force-update", help="Always update (with autostash) even if there are uncommitted changes"
         )
 
         self.presume_connectivity = loader.add_bool_option(
@@ -141,7 +140,7 @@ class DefaultCheriConfig(CheriConfig):
             "reconfigure",
             "-force-configure",
             group=configure_group,
-            help="Always run the configure step, even for CMake projects " "with a valid cache.",
+            help="Always run the configure step, even for CMake projects with a valid cache.",
         )
         self.include_dependencies = loader.add_commandline_only_bool_option(
             "include-dependencies",
@@ -211,19 +210,19 @@ class DefaultCheriConfig(CheriConfig):
             "output-root",
             default=lambda p, cls: (p.source_root / "output"),
             group=loader.path_group,
-            help="The directory to store all output (default: " "'<SOURCE_ROOT>/output')",
+            help="The directory to store all output (default: '<SOURCE_ROOT>/output')",
         )
         self.build_root = loader.add_path_option(
             "build-root",
             default=lambda p, cls: (p.source_root / "build"),
             group=loader.path_group,
-            help="The directory for all the builds (default: " "'<SOURCE_ROOT>/build')",
+            help="The directory for all the builds (default: '<SOURCE_ROOT>/build')",
         )
         self.tools_root = loader.add_path_option(
             "tools-root",
             default=lambda p, cls: p.output_root,
             group=loader.path_group,
-            help="The directory to find sdk and bootstrap tools (default: " "'<OUTPUT_ROOT>')",
+            help="The directory to find sdk and bootstrap tools (default: '<OUTPUT_ROOT>')",
         )
         default_morello_sdk = ComputedDefaultValue(
             function=lambda p, cls: (p.tools_root / p.default_morello_sdk_directory_name),

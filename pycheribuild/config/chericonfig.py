@@ -207,21 +207,21 @@ class CheriConfig(ConfigBase):
             shortname="-cc-path",
             default=lambda c, _: latest_system_clang_tool(c, "clang", "cc"),
             group=loader.path_group,
-            help="The C compiler to use for host binaries (must be compatible " "with Clang >= 3.7)",
+            help="The C compiler to use for host binaries (must be compatible with Clang >= 3.7)",
         )
         self.clang_plusplus_path = loader.add_path_option(
             "clang++-path",
             shortname="-c++-path",
             default=lambda c, _: latest_system_clang_tool(c, "clang++", "c++"),
             group=loader.path_group,
-            help="The C++ compiler to use for host binaries (must be " "compatible with Clang >= 3.7)",
+            help="The C++ compiler to use for host binaries (must be compatible with Clang >= 3.7)",
         )
         self.clang_cpp_path = loader.add_path_option(
             "clang-cpp-path",
             shortname="-cpp-path",
             default=lambda c, _: latest_system_clang_tool(c, "clang-cpp", "cpp"),
             group=loader.path_group,
-            help="The C preprocessor to use for host binaries (must be " "compatible with Clang >= 3.7)",
+            help="The C preprocessor to use for host binaries (must be compatible with Clang >= 3.7)",
         )
 
         self.pass_dash_k_to_make = loader.add_commandline_only_bool_option(
@@ -230,7 +230,7 @@ class CheriConfig(ConfigBase):
         self.with_libstatcounters = loader.add_bool_option(
             "with-libstatcounters",
             group=loader.cross_compile_options_group,
-            help="Link cross compiled CHERI project with " "libstatcounters.",
+            help="Link cross compiled CHERI project with libstatcounters.",
         )
         self.skip_world = loader.add_bool_option(
             "skip-world",
@@ -334,7 +334,7 @@ class CheriConfig(ConfigBase):
             type=Linkage,
             group=loader.cross_compile_options_group,
             enum_choices=(Linkage.DEFAULT, Linkage.DYNAMIC, Linkage.STATIC),
-            help="Whether to link cross-compile projects static or dynamic " "by default",
+            help="Whether to link cross-compile projects static or dynamic by default",
         )
         self.csetbounds_stats = loader.add_bool_option(
             "collect-csetbounds-stats",
@@ -347,7 +347,7 @@ class CheriConfig(ConfigBase):
             type=str,
             group=loader.cross_compile_options_group,
             choices=("conservative", "subobject-safe", "aggressive", "very-aggressive", "everywhere-unsafe"),
-            help="Whether to add additional CSetBounds to subobject " "references/&-operator",
+            help="Whether to add additional CSetBounds to subobject references/&-operator",
         )
         self.use_cheri_ubsan = loader.add_bool_option(
             "use-cheri-ubsan",
@@ -380,7 +380,7 @@ class CheriConfig(ConfigBase):
         self.use_sdk_clang_for_native_xbuild = loader.add_bool_option(
             "use-sdk-clang-for-native-xbuild",
             group=loader.cross_compile_options_group,
-            help="Compile cross-compile project with CHERI " "clang from the SDK instead of host " "compiler",
+            help="Compile cross-compile project with CHERI clang from the SDK instead of host compiler",
         )
 
         self.configure_only = loader.add_bool_option(
@@ -427,7 +427,7 @@ class CheriConfig(ConfigBase):
         self.include_toolchain_dependencies = True
         self.enable_hybrid_targets = False
         self.only_dependencies = loader.add_bool_option(
-            "only-dependencies", help="Only build dependencies of targets, " "not the targets themselves"
+            "only-dependencies", help="Only build dependencies of targets, not the targets themselves"
         )
         self.start_with: Optional[str] = None
         self.start_after: Optional[str] = None
@@ -466,7 +466,7 @@ class CheriConfig(ConfigBase):
         self.create_compilation_db = loader.add_bool_option(
             "compilation-db",
             "-cdb",
-            help="Create a compile_commands.json file in the build dir " "(requires Bear for non-CMake projects)",
+            help="Create a compile_commands.json file in the build dir (requires Bear for non-CMake projects)",
         )
         self.copy_compilation_db_to_source_dir = None  # False for jenkins, an option for cheribuild
         self.generate_cmakelists = False  # False for jenkins, an option for cheribuild
@@ -475,7 +475,7 @@ class CheriConfig(ConfigBase):
         self.wait_for_debugger = loader.add_bool_option(
             "wait-for-debugger",
             group=loader.run_group,
-            help="Start QEMU in the 'wait for a debugger' state when" "launching CheriBSD,FreeBSD, etc.",
+            help="Start QEMU in the 'wait for a debugger' state whenlaunching CheriBSD,FreeBSD, etc.",
         )
 
         self.debugger_in_tmux_pane = loader.add_bool_option(
@@ -489,7 +489,7 @@ class CheriConfig(ConfigBase):
         self.run_under_gdb = loader.add_bool_option(
             "run-under-gdb",
             group=loader.run_group,
-            help="Run tests/benchmarks under GDB. Note: currently most " "targets ignore this flag.",
+            help="Run tests/benchmarks under GDB. Note: currently most targets ignore this flag.",
         )
 
         # Test options:
@@ -520,17 +520,17 @@ class CheriConfig(ConfigBase):
             group=loader.tests_group,
             type=list,
             metavar="ARGS",
-            help="Additional flags to pass to the test script " "in --test",
+            help="Additional flags to pass to the test script in --test",
         )
         self.tests_interact = loader.add_commandline_only_bool_option(
             "interact-after-tests",
             group=loader.tests_group,
-            help="Interact with the CheriBSD instance after " "running the tests on QEMU (only for " "--test)",
+            help="Interact with the CheriBSD instance after running the tests on QEMU (only for --test)",
         )
         self.tests_env_only = loader.add_commandline_only_bool_option(
             "test-environment-only",
             group=loader.tests_group,
-            help="Don't actually run the tests. Instead " "setup a QEMU instance with the right " "paths set up.",
+            help="Don't actually run the tests. Instead setup a QEMU instance with the right paths set up.",
         )
         self.test_ld_preload = loader.add_optional_path_option(
             "test-ld-preload", group=loader.tests_group, help="Preload the given library before running tests"
@@ -586,7 +586,7 @@ class CheriConfig(ConfigBase):
             "benchmark-iterations",
             type=int,
             group=loader.benchmark_group,
-            help="Override the number of iterations for the benchmark. " "Note: not all benchmarks support this option",
+            help="Override the number of iterations for the benchmark. Note: not all benchmarks support this option",
         )
         self.benchmark_with_qemu = loader.add_bool_option(
             "benchmark-with-qemu",

@@ -345,9 +345,9 @@ class SimpleTargetAlias(_TargetAliasBase):
     def __init__(self, name, real_target_name: str, t: "TargetManager"):
         self._real_target = t.get_target_raw(real_target_name)
         real_cls = self._real_target.project_class
-        assert not isinstance(
-            self._real_target, _TargetAliasBase
-        ), "Target aliases must reference a real target not another alias"
+        assert not isinstance(self._real_target, _TargetAliasBase), (
+            "Target aliases must reference a real target not another alias"
+        )
         super().__init__(name, real_cls)
         self.real_target_name = real_target_name
         # Add the alias name for config lookups so that old configs remain valid

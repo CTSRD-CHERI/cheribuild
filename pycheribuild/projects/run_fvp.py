@@ -565,7 +565,7 @@ class LaunchFVPBase(SimpleProject):
         )
         cls.remote_disk_image_path = cls.add_config_option(
             "remote-disk-image-path",
-            help="When set rsync will be used to update the image from " "the remote server prior to running it.",
+            help="When set rsync will be used to update the image from the remote server prior to running it.",
         )
         cls.extra_tcp_forwarding = cls.add_list_option(
             "extra-tcp-forwarding",
@@ -734,9 +734,9 @@ class LaunchFVPBase(SimpleProject):
             )
             # XXX: jenkins-cheri-build overrides install directories so this currently doesn't hold there
             if not is_jenkins_build():
-                assert (
-                    uefi_bin.parent == scp_fw_bin.parent and scp_fw_bin.parent == scp_rom_bin.parent
-                ), "Different dirs?"
+                assert uefi_bin.parent == scp_fw_bin.parent and scp_fw_bin.parent == scp_rom_bin.parent, (
+                    "Different dirs?"
+                )
             # fmt: off
             fvp_args += [
                 # "-a", "Morello_Top.css.scp.armcortexm7ct=" + str(scp_romfw_elf),

@@ -513,7 +513,7 @@ class BuildFreeBSDBase(Project):
             cls.minimal = cls.add_bool_option(
                 "minimal",
                 show_help=False,
-                help="Don't build all of FreeBSD, just what is needed for running most " "CHERI tests/benchmarks",
+                help="Don't build all of FreeBSD, just what is needed for running most CHERI tests/benchmarks",
             )
 
     def check_system_dependencies(self) -> None:
@@ -763,7 +763,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         )
         cls.with_manpages = cls.add_bool_option(
             "with-manpages",
-            help="Also install manpages. This is off by default" " since they can just be read from the host.",
+            help="Also install manpages. This is off by default since they can just be read from the host.",
         )
         cls.build_drm_kmod = cls.add_bool_option(
             "build-drm-kmod", help="Also build drm-kmod during buildkernel", show_help=False
@@ -913,8 +913,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 return (
                     None,
                     "Could not find a system installation of clang.",
-                    "Please install a recent upstream clang or use the 'custom' or 'upstream-llvm' toolchain "
-                    "option.",
+                    "Please install a recent upstream clang or use the 'custom' or 'upstream-llvm' toolchain option.",
                 )
         self.info("Checking if", compiler_path, "can be used to build FreeBSD...")
         cc_info = self.get_compiler_info(compiler_path)
@@ -1459,8 +1458,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     self.run_make("_compiler-metadata", options=install_world_args)
                 except subprocess.CalledProcessError:
                     self.warning(
-                        "Failed to run either target _compiler-metadata or "
-                        "_build_metadata, build system has changed!"
+                        "Failed to run either target _compiler-metadata or _build_metadata, build system has changed!"
                     )
             # By default also create a sysroot when installing world
             installsysroot_args = install_world_args.copy()
@@ -1733,7 +1731,7 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
         super().setup_config_options(bootstrap_toolchain=True)
         cls.include_llvm = cls.add_bool_option(
             "build-target-llvm",
-            help="Build LLVM for the target architecture. Note: this adds " "significant time to the build",
+            help="Build LLVM for the target architecture. Note: this adds significant time to the build",
         )
 
     def add_cross_build_options(self) -> None:
@@ -2344,13 +2342,13 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
         cls.copy_remote_sysroot = cls.add_bool_option(
-            "copy-remote-sysroot", help="Copy sysroot from remote server instead of from local " "machine"
+            "copy-remote-sysroot", help="Copy sysroot from remote server instead of from local machine"
         )
         cls.remote_path = cls.add_config_option(
             "remote-sdk-path",
             show_help=True,
             metavar="PATH",
-            help="The path to the CHERI SDK on the remote FreeBSD machine (e.g. " "vica:~foo/cheri/output/sdk)",
+            help="The path to the CHERI SDK on the remote FreeBSD machine (e.g. vica:~foo/cheri/output/sdk)",
         )
         cls.install_dir_override = cls.add_optional_path_option(
             "install-directory", help="Override for the sysroot install directory"

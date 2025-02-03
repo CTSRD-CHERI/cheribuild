@@ -57,10 +57,10 @@ class MRS(CrossCompileCMakeProject):
         cls.concurrent_revocation_passes = cls.add_config_option(
             "concurrent-revocation-passes",
             kind=int,
-            help="enable N concurrent revocation passes before " "the stop-the-world pass",
+            help="enable N concurrent revocation passes before the stop-the-world pass",
         )
         cls.revoke_on_free = cls.add_bool_option(
-            "revoke-on-free", help="perform revocation on free rather than during allocation " "routines"
+            "revoke-on-free", help="perform revocation on free rather than during allocation routines"
         )
 
         cls.just_interpose = cls.add_bool_option("just-interpose", help="just call the real functions")
@@ -73,12 +73,12 @@ class MRS(CrossCompileCMakeProject):
         cls.quarantine_ratio = cls.add_config_option(
             "quarantine-ratio",
             kind=int,
-            help="limit the quarantine size to 1/QUARANTINE_RATIO times the " "size of the heap",
+            help="limit the quarantine size to 1/QUARANTINE_RATIO times the size of the heap",
         )
         cls.quarantine_highwater = cls.add_config_option(
             "quarantine-highwater",
             kind=int,
-            help="limit the quarantine size to QUARANTINE_HIGHWATER " "bytes (supersedes QUARANTINE_RATIO)",
+            help="limit the quarantine size to QUARANTINE_HIGHWATER bytes (supersedes QUARANTINE_RATIO)",
         )
 
     def setup(self):

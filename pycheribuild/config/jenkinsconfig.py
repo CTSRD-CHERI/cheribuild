@@ -113,7 +113,7 @@ class JenkinsConfig(CheriConfig):
             type=CompilerType,
             default=CompilerType.CHERI_LLVM,
             enum_choices=[CompilerType.CHERI_LLVM, CompilerType.MORELLO_LLVM, CompilerType.UPSTREAM_LLVM],
-            help="The type of the compiler to extract (used to infer the output " " path)",
+            help="The type of the compiler to extract (used to infer the output  path)",
         )
         self.sysroot_archive_name = loader.add_commandline_only_option(
             "sysroot-archive",
@@ -158,9 +158,7 @@ class JenkinsConfig(CheriConfig):
         )
         self.use_all_cores = loader.add_commandline_only_bool_option(
             "use-all-cores",
-            help="Use all available cores for building ("
-            "Note: Should only be used for LLVM or "
-            "short-running jobs!)",
+            help="Use all available cores for building (Note: Should only be used for LLVM or short-running jobs!)",
         )
         self.installation_prefix = loader.add_commandline_only_option(
             "install-prefix",

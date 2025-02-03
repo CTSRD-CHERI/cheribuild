@@ -683,7 +683,7 @@ class Project(SimpleProject):
         cls.skip_update = cls.add_bool_option(
             "skip-update",
             default=ComputedDefaultValue(
-                lambda config, proj: config.skip_update, "the value of the global --skip-update " "option"
+                lambda config, proj: config.skip_update, "the value of the global --skip-update option"
             ),
             help="Override --skip-update/--no-skip-update for this target only ",
         )
@@ -694,7 +694,7 @@ class Project(SimpleProject):
                 lambda config, proj: config.force_configure,
                 "the value of the global --reconfigure/--force-configure option",
             ),
-            help="Override --(no-)reconfigure/--(no-)force-configure for this " "target only",
+            help="Override --(no-)reconfigure/--(no-)force-configure for this target only",
         )
 
         if not install_directory_help:
@@ -926,9 +926,9 @@ class Project(SimpleProject):
             initial_source_dir = inspect.getattr_static(self, "_initial_source_dir")
             assert isinstance(initial_source_dir, ConfigOptionHandle)
             # noinspection PyProtectedMember
-            assert (
-                initial_source_dir._get_default_value(self.config, self) is None
-            ), "initial source dir != None for ReuseOtherProjectRepository"
+            assert initial_source_dir._get_default_value(self.config, self) is None, (
+                "initial source dir != None for ReuseOtherProjectRepository"
+            )
         if self.source_dir is None:
             self.source_dir = self.repository.get_real_source_dir(self, self._initial_source_dir)
         else:
@@ -1200,7 +1200,7 @@ class Project(SimpleProject):
             # assert name not in ("source_dir", "build_dir", "install_dir")
             assert name != "install_dir", "install_dir should not be modified, only _install_dir or _install_prefix"
             assert name != "install_prefix", (
-                "install_prefix should not be modified, only _install_dir or " "_install_prefix"
+                "install_prefix should not be modified, only _install_dir or _install_prefix"
             )
             if name in self._no_overwrite_allowed:
                 import traceback

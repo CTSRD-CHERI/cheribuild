@@ -771,12 +771,12 @@ def test_no_dependencies_in_build_dir(config: CheriConfig, native_target: Target
         assert issubclass(dep_project, SimpleProject)
         if not issubclass(dep_project, Project):
             continue
-        assert (
-            dep_project.get_default_install_dir_kind() != DefaultInstallDir.IN_BUILD_DIRECTORY
-        ), f"{proj.target} depends on {dep_project.target} which is installed to the build dir!"
-        assert (
-            dep_project.get_default_install_dir_kind() != DefaultInstallDir.DO_NOT_INSTALL
-        ), f"{proj.target} depends on {dep_project.target} which is not installed!"
+        assert dep_project.get_default_install_dir_kind() != DefaultInstallDir.IN_BUILD_DIRECTORY, (
+            f"{proj.target} depends on {dep_project.target} which is installed to the build dir!"
+        )
+        assert dep_project.get_default_install_dir_kind() != DefaultInstallDir.DO_NOT_INSTALL, (
+            f"{proj.target} depends on {dep_project.target} which is not installed!"
+        )
 
 
 @pytest.mark.parametrize(
