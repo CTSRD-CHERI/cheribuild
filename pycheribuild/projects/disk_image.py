@@ -1226,6 +1226,10 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         ]
         # required, but only recently added so not always present
         optional_libs += ["libsys.so.7"]
+        # required for libcrypto.so.5 versions newer than CheriBSD
+        # commit 4ca6f578846d947386821de5e740062c83f8376a, but
+        # recently bumped from libmd.so.6 so not always present
+        optional_libs += ["libmd.so.7"]
         # required, but versions were bumped with changes to ncurses
         optional_libs += [
             # needed by /bin/sh & /bin/csh (if we included the purecap sh/csh)
