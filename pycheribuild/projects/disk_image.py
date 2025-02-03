@@ -1080,7 +1080,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         cls.kernels = cls.add_list_option(
             "kernel-names",
             default=[""],
-            help="Kernel(s) to include in the image; empty string or '/' for " "/boot/kernel/, X for /boot/kernel.X/",
+            help="Kernel(s) to include in the image; empty string or '/' for /boot/kernel/, X for /boot/kernel.X/",
         )
 
     def __init__(self, *args, **kwargs):

@@ -682,9 +682,9 @@ class NativeTargetInfo(TargetInfo):
         # Directory suffix for compat ABI (currently only "64"/"" should be valid)
         if _is_native_purecap() and not self.target.is_cheri_purecap():
             return "64"
-        assert (
-            _is_native_purecap() == self.target.is_cheri_purecap()
-        ), "Building purecap natively is only supported on purecap installations"
+        assert _is_native_purecap() == self.target.is_cheri_purecap(), (
+            "Building purecap natively is only supported on purecap installations"
+        )
         return ""
 
     @property
@@ -852,9 +852,9 @@ class CrossCompileTarget:
         if other_target is not None and self is not other_target:
             if self._is_cheri_hybrid:
                 if self._rootfs_target is not None:
-                    assert (
-                        self._rootfs_target._is_cheri_purecap
-                    ), "Only support purecap separate rootfs for hybrid targets"
+                    assert self._rootfs_target._is_cheri_purecap, (
+                        "Only support purecap separate rootfs for hybrid targets"
+                    )
                     assert (
                         other_target._hybrid_for_purecap_rootfs_target is None
                         or other_target._hybrid_for_purecap_rootfs_target is self
@@ -867,9 +867,9 @@ class CrossCompileTarget:
                     self._hybrid_target = self
             elif self._is_cheri_purecap:
                 if self._rootfs_target is not None:
-                    assert (
-                        self._rootfs_target._is_cheri_hybrid
-                    ), "Only support hybrid separate rootfs for purecap targets"
+                    assert self._rootfs_target._is_cheri_hybrid, (
+                        "Only support hybrid separate rootfs for purecap targets"
+                    )
                     assert (
                         other_target._purecap_for_hybrid_rootfs_target is None
                         or other_target._purecap_for_hybrid_rootfs_target is self
@@ -899,9 +899,9 @@ class CrossCompileTarget:
                         self._non_cheri_for_purecap_rootfs_target = self
                 else:
                     assert self._rootfs_target is None, "Separate rootfs targets only supported for CHERI targets"
-                    assert (
-                        other_target._non_cheri_target is None or other_target._non_cheri_target is self
-                    ), "Already set?"
+                    assert other_target._non_cheri_target is None or other_target._non_cheri_target is self, (
+                        "Already set?"
+                    )
                     other_target._non_cheri_target = self
                     self._non_cheri_target = self
             if also_set_other:

@@ -488,7 +488,7 @@ class CommandLineConfigLoader(ConfigLoaderBase):
             "--help-all",
             "--help-hidden",
             action="help",
-            help="Show all help options, including" " the target-specific ones.",
+            help="Show all help options, including the target-specific ones.",
         )
 
     # noinspection PyShadowingBuiltins
@@ -509,9 +509,9 @@ class CommandLineConfigLoader(ConfigLoaderBase):
             return default  # pytype: disable=bad-return-type
         if isinstance(type, builtins.type) and issubclass(type, Enum):
             # Handle enums as the argparse type
-            assert (
-                "action" not in kwargs or kwargs["action"] == "append"
-            ), "action should be none or append for Enum options"
+            assert "action" not in kwargs or kwargs["action"] == "append", (
+                "action should be none or append for Enum options"
+            )
             assert "choices" not in kwargs, "for enum options choices are the enum names (or set enum_choices)!"
             if "enum_choices" in kwargs:
                 kwargs["choices"] = tuple(t.name.lower().replace("_", "-") for t in kwargs["enum_choices"])

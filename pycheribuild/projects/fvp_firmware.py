@@ -143,7 +143,7 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
             self.fatal(
                 "Could not find",
                 self.CC,
-                fixit_hint="Install the ARM GCC manually or use " "`cheribuild.py " + ArmNoneEabiToolchain.target + "`",
+                fixit_hint="Install the ARM GCC manually or use `cheribuild.py " + ArmNoneEabiToolchain.target + "`",
             )
         super().process()
 

@@ -70,7 +70,7 @@ class DLMalloc(CrossCompileProject):
         cls.unmap_threshold = cls.add_config_option(
             "unmap-threshold",
             kind=int,
-            help="Threshold (in pages) at which interior pages of quanantined " "chunks are unmapped",
+            help="Threshold (in pages) at which interior pages of quanantined chunks are unmapped",
         )
         cls.quar_unsafe = cls.add_bool_option("unsafe-quarantine", help="Don't isolate quarantine structures")
 

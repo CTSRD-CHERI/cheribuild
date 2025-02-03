@@ -393,9 +393,9 @@ class GitRepository(SourceRepository):
         target_override = self.per_target_branches.get(current_project.crosscompile_target, None)
         default_clone_branch = self.get_default_branch(current_project, include_per_target=False)
         assert target_override is not None, "Default src != base src -> must have a per-target override"
-        assert (
-            target_override.branch != default_clone_branch
-        ), f"Cannot create worktree with same branch as base repo: {target_override.branch} vs {default_clone_branch}"
+        assert target_override.branch != default_clone_branch, (
+            f"Cannot create worktree with same branch as base repo: {target_override.branch} vs {default_clone_branch}"
+        )
         if (src_dir / ".git").exists():
             return
         current_project.info(

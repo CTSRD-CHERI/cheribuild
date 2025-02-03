@@ -109,7 +109,7 @@ class BuildSyzkaller(CrossCompileProject):
         )
         cflags = self.default_compiler_flags + self.default_ldflags
         self.make_args.set_env(CFLAGS=" ".join(cflags))
-        self.make_args.set_env(PATH=f'{goroot / "bin"}:{self.config.dollar_path_with_other_tools}')
+        self.make_args.set_env(PATH=f"{goroot / 'bin'}:{self.config.dollar_path_with_other_tools}")
 
     def syzkaller_install_path(self):
         return self.real_install_root_dir / "bin"

@@ -40,7 +40,7 @@ class BuildGnuBinutils(AutotoolsProject):
     )
     native_install_dir = DefaultInstallDir.CHERI_SDK
     full_install = BoolConfigOption(
-        "install-all-tools", help="Whether to install all binutils tools instead" "of only as, ld and objdump"
+        "install-all-tools", help="Whether to install all binutils tools instead of only as, ld and objdump"
     )
 
     def setup(self):

@@ -461,7 +461,7 @@ class LaunchQEMUBase(SimpleProject):
                 user_network_options += str(directory) + share_name_option + ("@ro" if readonly else "")
                 guest_cmd = coloured(
                     AnsiColour.yellow,
-                    f"mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name}" f" {target}",
+                    f"mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/{share_name} {target}",
                 )
                 self.info(
                     "Providing ",
@@ -483,7 +483,7 @@ class LaunchQEMUBase(SimpleProject):
                 )
                 guest_cmd = coloured(
                     AnsiColour.yellow,
-                    f"mkdir -p {target} && mount -t virtfs -o trans=virtio,version=9p2000.L {share_name} " "{tgt}",
+                    f"mkdir -p {target} && mount -t virtfs -o trans=virtio,version=9p2000.L {share_name} {{tgt}}",
                 )
                 self.info(
                     "Providing ",

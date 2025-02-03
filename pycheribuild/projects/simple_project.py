@@ -704,7 +704,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         found_target = result.get_crosscompile_target()
         # XXX: FIXME: add cross target to every call
         assert found_target is cross_target, (
-            f"Didn't find right instance of {target_name}: {found_target} vs " f"{cross_target}, caller was {caller!r}"
+            f"Didn't find right instance of {target_name}: {found_target} vs {cross_target}, caller was {caller!r}"
         )
         return result
 
@@ -1097,9 +1097,9 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             initial_build_dir = inspect.getattr_static(self, "_initial_build_dir")
             assert isinstance(initial_build_dir, ConfigOptionHandle)
             # noinspection PyProtectedMember
-            assert (
-                initial_build_dir._get_default_value(self.config, self) is None
-            ), "initial build dir != None for ReuseOtherProjectBuildDir"
+            assert initial_build_dir._get_default_value(self.config, self) is None, (
+                "initial build dir != None for ReuseOtherProjectBuildDir"
+            )
             self._initial_build_dir = self._build_dir.get_real_build_dir(self, self._initial_build_dir)
 
     @property
