@@ -1,4 +1,6 @@
 libtmux>=0.37
+# libtmux 0.40+ uses typing_extensions
+typing-extensions>=4.12.2
 pytest>=7.0,<9.0
 pytest-pycharm>=0.7.0
 argcomplete>=2.0.0
