@@ -192,7 +192,7 @@ class KernelConfigFactory:
             ctx["kabi_name"] = self.get_kabi_name(kernel_abi)
         if "platform_name" in ctx:
             ctx["platform_name"] = self.get_platform_name(platforms)
-        if "nocaprevoke" in ctx and kwargs.get("nocaprevoke", False):
+        if "nocaprevoke" in ctx and kwargs.get("nocaprevoke"):
             ctx["nocaprevoke"] = "NOCAPREVOKE"
         if "flags" in ctx:
             flag_list = self.get_flag_names(platforms, kernel_abi, **kwargs)
