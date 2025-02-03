@@ -1634,40 +1634,6 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 sep="",
             )
 
-        if self.use_asan and self.compiling_for_mips(include_purecap=False):
-            # copy the ASAN lib into the right directory:
-            resource_dir = self.get_compiler_info(self.CC).get_resource_dir()
-            status_update("Copying ASAN libs to", resource_dir)
-            expected_path = resource_dir / "lib/freebsd/"
-            asan_libdir_candidates = list((self.sdk_sysroot / "usr/lib/clang").glob("*"))
-            versions = [a.name for a in asan_libdir_candidates]
-            # Find the newest ASAN runtime library versions from the FreeBSD sysroot
-            found_asan_lib = None
-            from distutils.version import StrictVersion
-
-            libname = "libclang_rt.asan-mips64.a"
-            for version in reversed(sorted(versions, key=StrictVersion)):
-                asan_libs = self.sdk_sysroot / "usr/lib/clang" / version / "lib/freebsd"
-                if (asan_libs / libname).exists():
-                    found_asan_lib = asan_libs / libname
-                    break
-            if not found_asan_lib:
-                self.fatal(
-                    "Cannot find",
-                    libname,
-                    "library in sysroot dirs",
-                    asan_libdir_candidates,
-                    "-- Compilation will fail!",
-                )
-                found_asan_lib = Path("/some/invalid/path/to/lib")
-            self.makedirs(expected_path)
-            self.run_cmd("cp", "-av", found_asan_lib.parent, expected_path.parent)
-            # For some reason they are 644 so we can't overwrite for the next build unless we chmod first
-            self.run_cmd("chmod", "-R", "u+w", expected_path.parent)
-            if not (expected_path / libname).exists():
-                self.fatal(
-                    "Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!"
-                )
         install_dir_kind = self.get_default_install_dir_kind()
         if install_dir_kind != DefaultInstallDir.DO_NOT_INSTALL and self._check_install_dir_conflict:
             xtarget: CrossCompileTarget = self._xtarget
