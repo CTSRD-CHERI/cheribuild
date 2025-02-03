@@ -194,8 +194,7 @@ class Target:
         self._project_class.targets_reset()
 
     # noinspection PyProtectedMember
-    def __lt__(self, other: "Target"):
-        # print(self, "__lt__", other)
+    def should_run_before(self, other: "Target"):
         # if this target is one of the dependencies order it before
         other_deps = other.project_class.cached_full_dependencies()
         # print("other deps:", other_deps)
@@ -203,27 +202,14 @@ class Target:
             # print(self, "is in", other, "deps -> is less")
             return True
         # and if it is the other way around we are not less
-        if other in self.project_class.cached_full_dependencies():
+        self_deps = self.project_class.cached_full_dependencies()
+        if other in self_deps:
             # print(other, "is in", self, "deps -> is greater")
             return False
-        if other.name.startswith("run") and not self.name.startswith("run"):
-            return True  # run must be executed last
-        elif self.name.startswith("run"):
-            return False
-        if other.name.startswith("disk-image") and not self.name.startswith("disk-image"):
-            return True  # disk-image should be done just before run
-        elif self.name.startswith("disk-image"):
-            return False
-        # print(self, "is not in", other, "deps -> is not less")
-        # otherwise just keep everything in order
-        return False
-        # This was previously done
-        # ownDeps = self.project_class.all_dependency_names()
-        # if len(ownDeps) < len(other_deps):
-        #     return True
-        # if len(ownDeps) > len(other_deps):
-        #     return False
-        # return self.name < other.name  # not a dep and number of deps is the same -> compare name
+        # Run targets come last, preceded by disk-image targets. Otherwise the order is unspecified
+        self_order = (self.name.startswith("run"), self.name.startswith("disk-image"))
+        other_order = (other.name.startswith("run"), other.name.startswith("disk-image"))
+        return self_order < other_order
 
     def __repr__(self) -> str:
         return "<Target " + self.name + ">"
@@ -492,10 +478,20 @@ class TargetManager:
 
     @staticmethod
     def sort_in_dependency_order(targets: "typing.Iterable[Target]") -> "list[Target]":
-        # pythons sorted() is guaranteed to be stable:
-        sorted_targets = list(sorted(targets))
-        # remove duplicates (insert into an orderdict to keep order
-        return list(OrderedDict((x, True) for x in sorted_targets).keys())
+        # remove duplicates (insert into an orderdict to keep order)
+        result = list(OrderedDict((x, True) for x in targets).keys())
+        n = len(result)
+        if n <= 1:
+            return result
+        for i in range(0, n):
+            tgt_i = result[i]
+            for j in range(i + 1, n):
+                tgt_j = result[j]
+                if tgt_j.should_run_before(tgt_i):
+                    assert not tgt_i.should_run_before(tgt_j), "circular dependency found"
+                    tgt_i = result.pop(j)
+                    result.insert(i, tgt_i)
+        return result
 
     def get_all_targets(self, explicit_targets: "list[Target]", config: CheriConfig) -> "list[Target]":
         chosen_targets: "list[Target]" = []
