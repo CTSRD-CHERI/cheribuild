@@ -144,6 +144,10 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             return self.sysroot_dir
         return super().default_install_dir(install_dir)
 
+    @classmethod
+    def _get_csa_project(cls) -> "type[BuildLLVMInterface]":
+        raise NotImplementedError()
+
     @property
     def c_compiler(self) -> Path:
         return self._compiler_dir / "clang"
@@ -175,6 +179,18 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
     @property
     def strip_tool(self) -> Path:
         return self._compiler_dir / "llvm-strip"
+
+    @property
+    def ccc_analyzer(self) -> Path:
+        return self._get_csa_project().get_native_install_path(self.config) / "libexec/ccc-analyzer"
+
+    @property
+    def cxx_analyzer(self) -> Path:
+        return self._get_csa_project().get_native_install_path(self.config) / "libexec/c++-analyzer"
+
+    @property
+    def scan_build(self) -> Path:
+        return self._get_csa_project().get_native_install_path(self.config) / "bin/scan-build"
 
     @classmethod
     @abstractmethod
@@ -640,6 +656,10 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         return typing.cast(LaunchFreeBSDInterface, result)
 
     @classmethod
+    def _get_csa_project(cls) -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("cheri-csa", None))
+
+    @classmethod
     def is_cheribsd(cls) -> bool:
         return True
 
@@ -725,6 +745,10 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
         version = instance.cheribsd_version()
         result.extend(cheribsd_morello_version_dependent_flags(version, xtarget.is_cheri_purecap()))
         return result
+
+    @classmethod
+    def _get_csa_project(cls) -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("morello-csa", None))
 
 
 # FIXME: This is completely wrong since cherios is not cheribsd, but should work for now:
@@ -1136,6 +1160,14 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
     @property
     def strip_tool(self) -> Path:
         return self.bindir / (self.binary_prefix + "strip")
+
+    @property
+    def ccc_analyzer(self) -> Path:
+        raise NotImplementedError
+
+    @property
+    def cxx_analyzer(self) -> Path:
+        raise NotImplementedError
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, *args, **kwargs) -> "list[str]":

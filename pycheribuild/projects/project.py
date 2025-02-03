@@ -149,6 +149,7 @@ class MakeOptions:
         self.__can_pass_j_flag: "Optional[bool]" = None
         self.__command: "Optional[str]" = None
         self.__command_args: "list[str]" = []
+        self.exclude_from_csa: "bool" = False
 
     def __deepcopy__(self, memo) -> "typing.NoReturn":
         raise RuntimeError("Should not be called!")
@@ -504,6 +505,14 @@ class Project(SimpleProject):
         return self._xtarget is None or not self._xtarget.is_cheri_purecap()
 
     @classproperty
+    def can_build_with_csa(self) -> bool:
+        return False
+
+    @classproperty
+    def extra_scan_build_args(self) -> "list[str]":
+        return []
+
+    @classproperty
     def can_build_with_ccache(self) -> bool:
         return False
 
@@ -660,10 +669,18 @@ class Project(SimpleProject):
             )
         else:
             cls.use_asan = False
+
         if cls.can_build_with_msan:
             cls.use_msan = cls.add_bool_option("use-msan", default=False, help="Build with MemorySanitizer enabled")
         else:
             cls.use_msan = False
+
+        if cls.can_build_with_csa:
+            cls.use_csa = cls.add_bool_option(
+                "use-csa", default=False, help="Build and analyse with Clang Static Analyzer"
+            )
+        else:
+            cls.use_csa = False
 
         if cls.can_build_with_ccache:
             cls.use_ccache = cls.add_bool_option("use-ccache", default=False, help="Build with CCache")
@@ -1211,6 +1228,19 @@ class Project(SimpleProject):
                 )
         self.__dict__[name] = value
 
+    def _get_scan_build_args(self) -> "list[str]":
+        scan_build_args = [
+            commandline_to_str([self.target_info.scan_build]),
+            "--keep-cc",
+            "--use-cc",
+            commandline_to_str([self.CC]),
+            "--use-c++",
+            commandline_to_str([self.CXX]),
+        ]
+        if self.extra_scan_build_args:
+            scan_build_args = scan_build_args + self.extra_scan_build_args
+        return scan_build_args
+
     def _get_make_commandline(
         self,
         make_target: "Optional[Union[str, list[str]]]",
@@ -1253,6 +1283,10 @@ class Project(SimpleProject):
                 continue_on_error=self.config.pass_dash_k_to_make,
             ),
         ]
+
+        if self.use_csa and not options.exclude_from_csa:
+            all_args = self._get_scan_build_args() + all_args
+
         if not self.config.make_without_nice:
             all_args = ["nice", *all_args]
         return all_args
@@ -1419,8 +1453,12 @@ class Project(SimpleProject):
             assert configure_path, "configure_command should not be empty!"
             if not Path(configure_path).exists():
                 self.fatal("Configure command ", configure_path, "does not exist!")
+
+            configure_cmd = [str(configure_path), *self.configure_args]
+            if self.use_csa:
+                configure_cmd = self._get_scan_build_args() + configure_cmd
             self.run_with_logfile(
-                [str(configure_path), *self.configure_args],
+                configure_cmd,
                 logfile_name="configure",
                 cwd=cwd,
                 env=self.configure_environment,
@@ -1578,6 +1616,20 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 
     _check_install_dir_conflict: bool = True
 
+    # noinspection PyPep8Naming
+    def _check_build_settings_for_CSA(self):  # noqa: N802
+        if self.build_type != BuildType.DEBUG:
+            self.warning("It's recommended to analyze a project in its Debug configuration.")
+        if not self.with_clean and len(list(self.build_dir.iterdir())) != 0:
+            self.warning(
+                "In order for CSA to analyze the whole project it needs to intercept all compilations."
+                " Therefore the project must be built from scratch."
+                " Consider running with --clean."
+            )
+            self.ask_for_confirmation("Are you sure you want to continue?")
+        if not self.config.skip_install:
+            self.info("You may want to skip install step when building with CSA.")
+
     def _last_build_kind_path(self) -> Path:
         return Path(self.build_dir, ".cheribuild_last_build_kind")
 
@@ -1668,6 +1720,8 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 self.fatal(
                     "Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!"
                 )
+        if self.use_csa:
+            self._check_build_settings_for_CSA()
         install_dir_kind = self.get_default_install_dir_kind()
         if install_dir_kind != DefaultInstallDir.DO_NOT_INSTALL and self._check_install_dir_conflict:
             xtarget: CrossCompileTarget = self._xtarget
@@ -1922,8 +1976,8 @@ class _CMakeAndMesonSharedLogic(Project):
             ),
             TOOLCHAIN_CXX_FLAGS=cmdline(self.CXXFLAGS),
             TOOLCHAIN_ASM_FLAGS=cmdline(self.ASMFLAGS),
-            TOOLCHAIN_C_COMPILER=self.CC,
-            TOOLCHAIN_CXX_COMPILER=self.CXX,
+            TOOLCHAIN_C_COMPILER=self.cc_wrapper,
+            TOOLCHAIN_CXX_COMPILER=self.cxx_wrapper,
             TOOLCHAIN_AR=self.target_info.ar,
             TOOLCHAIN_RANLIB=self.target_info.ranlib,
             TOOLCHAIN_NM=self.target_info.nm,
@@ -2130,9 +2184,9 @@ class MakefileProject(Project):
         super().setup()
         # Most projects expect that a plain $CC foo.c will work so we include the -target, etc in CC
         essential_flags = self.essential_compiler_and_linker_flags
-        self.set_make_cmd_with_args("CC", self.CC, essential_flags)
+        self.set_make_cmd_with_args("CC", self.cc_wrapper, essential_flags)
         self.set_make_cmd_with_args("CPP", self.CPP, essential_flags)
-        self.set_make_cmd_with_args("CXX", self.CXX, essential_flags)
+        self.set_make_cmd_with_args("CXX", self.cxx_wrapper, essential_flags)
         self.set_make_cmd_with_args("CCLD", self.CC, essential_flags)
         self.set_make_cmd_with_args("CXXLD", self.CXX, essential_flags)
         self.make_args.set_env(AR=self.target_info.ar)

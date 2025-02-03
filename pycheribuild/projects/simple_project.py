@@ -398,6 +398,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     build_dir_suffix: str = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
     use_asan: bool = False
     use_msan: bool = False
+    use_csa: bool = False  # Analyse with Clang Static Analyzer
     add_build_dir_suffix_for_native: bool = False  # Whether to add -native to the native build dir
     build_in_source_dir: bool = False  # For projects that can't build in the source dir
     build_via_symlink_farm: bool = False  # Create source symlink farm to work around lack of out-of-tree build support
@@ -734,10 +735,24 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def CC(self) -> Path:  # noqa: N802
         return self.target_info.c_compiler
 
+    @property
+    def cc_wrapper(self) -> Path:
+        if not self.use_csa:
+            return self.CC
+        else:
+            return self.target_info.ccc_analyzer
+
     # noinspection PyPep8Naming
     @property
     def CXX(self) -> Path:  # noqa: N802
         return self.target_info.cxx_compiler
+
+    @property
+    def cxx_wrapper(self) -> Path:
+        if not self.use_csa:
+            return self.CXX
+        else:
+            return self.target_info.cxx_analyzer
 
     # noinspection PyPep8Naming
     @property
@@ -805,6 +820,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             result += self.build_dir_suffix
         if self.use_asan:
             result += "-asan"
+        if self.use_csa:
+            result += "-csa"
         if self.auto_var_init != AutoVarInit.NONE:
             result += "-init-" + str(self.auto_var_init.value)
         # targets that only support native might not need a suffix
