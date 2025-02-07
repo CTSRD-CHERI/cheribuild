@@ -98,11 +98,10 @@ class ConfigPlatform(Enum):
     FVP = "fvp"
     GFE = "gfe"
     AWS = "aws-f1"
-    MORELLO_FPGA = "morello-fpga"
 
     @classmethod
     def fpga_platforms(cls) -> "set[ConfigPlatform]":
-        return {cls.GFE, cls.AWS, cls.MORELLO_FPGA}
+        return {cls.GFE, cls.AWS}
 
 
 class CheriBSDConfig:
@@ -291,7 +290,6 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {
         ConfigPlatform.QEMU: "GENERIC",
         ConfigPlatform.FVP: "GENERIC",
-        ConfigPlatform.MORELLO_FPGA: "MORELLO-FPGA",
     }
 
     def get_kabi_name(self, kernel_abi) -> Optional[str]:
@@ -308,28 +306,9 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
         abis = super().get_available_kabis()
         return [*abis, KernelABI.PURECAP_BENCHMARK]
 
-    def get_flag_names(
-        self,
-        platforms: "set[ConfigPlatform]",
-        kernel_abi: KernelABI,
-        default=False,
-        nocaprevoke=False,
-        mfsroot=False,
-        debug=False,
-        benchmark=False,
-        fuzzing=False,
-        fett=False,
-    ):
-        if ConfigPlatform.MORELLO_FPGA in platforms:
-            # Suppress mfsroot flag as it is implied for Morello FPGA configurations
-            mfsroot = False
-        return super().get_flag_names(
-            platforms, kernel_abi, mfsroot=mfsroot, fuzzing=fuzzing, benchmark=benchmark, default=default, nocaprevoke=nocaprevoke
-        )
-
     def make_all(self) -> "list[CheriBSDConfig]":
         configs = []
-        # Generate QEMU/FVP/FPGA kernels
+        # Generate QEMU/FVP kernels
         for kernel_abi in self.get_available_kabis():
             configs.append(self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True))
             configs.append(
@@ -337,9 +316,6 @@ class AArch64KernelConfigFactory(KernelConfigFactory):
             )
             configs.append(
                 self.make_config({ConfigPlatform.QEMU, ConfigPlatform.FVP}, kernel_abi, default=True, mfsroot=True)
-            )
-            configs.append(
-                self.make_config({ConfigPlatform.MORELLO_FPGA}, kernel_abi, default=True, mfsroot=True)
             )
         # Caprevoke kernels
         for kernel_abi in self.get_available_kabis():
@@ -1881,11 +1857,7 @@ class BuildCHERIBSD(BuildFreeBSD):
             use_upstream_llvm=False,
             kernel_only_target=kernel_only_target,
         )
-        fpga_targets = (
-            *CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS,
-            CompilationTargets.CHERIBSD_AARCH64,
-            *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS
-        )
+        fpga_targets = CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS
         cls.build_fpga_kernels = cls.add_bool_option(
             "build-fpga-kernels",
             show_help=True,
