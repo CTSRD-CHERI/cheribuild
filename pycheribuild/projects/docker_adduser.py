@@ -50,7 +50,7 @@ class DockerAdduser(SimpleProject):
 
         try:
             user = getpass.getuser()
-        except KeyError:
+        except (KeyError, OSError):
             self.fatal("Could not get current username")
             user = "nobody"
 
