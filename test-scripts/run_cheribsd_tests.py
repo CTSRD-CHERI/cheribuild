@@ -193,7 +193,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.N
                 except boot_cheribsd.CheriBSDCommandFailed as e:
                     boot_cheribsd.failure(f"Failed to copy results out of QEMU {e}\nTrying again...", exit=False)
                     qemu.checked_run(f"cp -v /tmp/results.db {results_db}")
-            qemu.checked_run("fsync " + str(results_db))
+                    qemu.checked_run(f"fsync {results_db}")
             boot_cheribsd.success("Running tests for ", tests_file, " took: ", datetime.datetime.now() - test_start)
 
             # run: kyua report-junit --results-file=test-results.db | vis -os > ${CPU}-${TEST_NAME}-test-results.xml
