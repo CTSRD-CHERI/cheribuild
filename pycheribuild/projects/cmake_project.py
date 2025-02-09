@@ -323,7 +323,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             if self.compiling_for_host():
                 self.run_cmd(
                     shutil.which(os.getenv("CTEST_COMMAND", "ctest")) or "ctest",
-                    "-V",
+                    "-V" if self.config.verbose else "--progress",
                     "--output-on-failure",
                     cwd=self.build_dir,
                     env=self.ctest_environment,
