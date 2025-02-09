@@ -37,6 +37,7 @@ from typing import Any, Dict, Tuple, Union
 
 from .project import AutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from .simple_project import BoolConfigOption, SimpleProject
+from ..config.computed_default_value import ComputedDefaultValue
 from ..processutils import get_program_version
 from ..targets import target_manager
 from ..utils import AnsiColour, OSInfo, ThreadJoiner, coloured
@@ -217,7 +218,13 @@ class ProjectUsingOpam(OpamMixin, Project):
 class BuildSailFromOpam(ProjectUsingOpam):
     target = "sail"
     repository = GitRepository("https://github.com/rems-project/sail", default_branch="sail2")
-    native_install_dir = DefaultInstallDir.CHERI_SDK
+    native_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
+    # We use a custom installation prefix so that projects that depend on sail don't pull in the CHERI SDK bindir as
+    # they would then end up using the compiler/binutils from that directory instead of the host compiler.
+    # Note: we could also install this to the bootstrap tools directory, but this retains backwards compatibility.
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, _: config.cheri_sdk_dir / "sailprefix", as_string="$SDK_ROOT/sailprefix"
+    )
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
     use_git_version = BoolConfigOption(
@@ -241,9 +248,10 @@ class BuildSailFromOpam(ProjectUsingOpam):
         pass
 
     def install(self, **kwargs):
-        destdir_flag = "--destdir=" + str(self.install_dir / "sailprefix")
+        destdir_flag = "--destdir=" + str(self.install_dir)
         # Remove the old sail installation
         self.run_opam_cmd("uninstall", "--verbose", "sail", destdir_flag)
+        self.clean_directory(self.install_dir)  # uninstall may have left some stale data
         self.run_opam_cmd("uninstall", "--verbose", "sail")
         # Remove libsail+other subpackages for sail 0.15+
         self.run_opam_cmd("uninstall", "--verbose", "libsail", destdir_flag)
