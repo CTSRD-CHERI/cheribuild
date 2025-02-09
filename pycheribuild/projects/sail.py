@@ -35,6 +35,7 @@ from pathlib import Path
 from subprocess import CalledProcessError
 from typing import Any, Dict, Tuple, Union
 
+from .cmake_project import CMakeProject
 from .project import AutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from .simple_project import BoolConfigOption, SimpleProject
 from ..config.computed_default_value import ComputedDefaultValue
@@ -313,7 +314,6 @@ class RunSailShell(OpamMixin, SimpleProject):
     target = "sail-env"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-mips")
     dependencies = ("sail",)
-    native_install_dir = DefaultInstallDir.CHERI_SDK
 
     def process(self):
         shell = os.getenv("SHELL", "bash")
@@ -341,35 +341,18 @@ class RunSailShell(OpamMixin, SimpleProject):
             raise
 
 
-class BuildSailRISCV(ProjectUsingOpam):
+class BuildSailRISCV(OpamMixin, CMakeProject):
     target = "sail-riscv"
     repository = GitRepository("https://github.com/rems-project/sail-riscv")
     dependencies = ("sail",)
-    native_install_dir = DefaultInstallDir.CHERI_SDK
-    build_in_source_dir = True  # Cannot build out-of-source
-    make_kind = MakeCommandKind.GnuMake
+    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
         self.check_required_system_header("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
-    def compile(self, **kwargs):
-        for arch in ("RV64", "RV32"):
-            cmd = [
-                self.make_args.command,
-                self.config.make_j_flag,
-                "ARCH=" + arch,
-                "csim",
-                "osim",
-                "rvfi",
-                *self.make_args.all_commandline_args(self.config),
-            ]
-            self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
-
-    def install(self, **kwargs):
-        self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
-        # self.run_make_install()
-        self.info("NO INSTALL TARGET YET")
+    def compile(self, **kwargs) -> None:
+        self.run_make(["all", "riscv_sim_rv32d_rvfi", "riscv_sim_rv64d_rvfi"], cwd=self.build_dir, parallel=True)
 
 
 class BuildSailCheriRISCV(ProjectUsingOpam):
