@@ -325,6 +325,8 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
                     shutil.which(os.getenv("CTEST_COMMAND", "ctest")) or "ctest",
                     "-V" if self.config.verbose else "--progress",
                     "--output-on-failure",
+                    "--parallel",
+                    self.config.make_jobs,
                     cwd=self.build_dir,
                     env=self.ctest_environment,
                 )
