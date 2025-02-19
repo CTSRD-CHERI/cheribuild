@@ -84,11 +84,11 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
 
     def setup(self):
         super().setup()
+        self.add_cmake_options(PLACE_OUTPUT_IN_TOPLEVEL_DIR=False)
         for flag in self.cwe_warning_flags:
             self.cross_warning_flags.append(flag)
 
     def configure(self, **kwargs):
-        self.add_cmake_options(PLACE_OUTPUT_IN_TOPLEVEL_DIR=False)
         self.create_symlink(self.source_dir / "../../CMakeLists.txt", self.source_dir / "CMakeLists.txt")
         super().configure(**kwargs)
 
