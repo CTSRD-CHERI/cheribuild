@@ -507,19 +507,21 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
         self.set_minimum_cmake_version(3, 18)
 
     def process(self):
-        if not self.compiling_for_host() and not (self.host_target.install_dir / "libexec/moc").exists():
+        moc_path = self.host_install_dir() / "libexec/moc"
+        if not self.compiling_for_host() and not moc_path.exists():
             self.fatal(
                 "Missing host build moc tool",
-                self.host_target.install_dir / "libexec/moc",
+                moc_path,
                 " (needed for cross-compiling)",
                 fixit_hint="Run `cheribuild.py " + self.target + "-native`",
             )
         super().process()
 
+    def host_install_dir(self):
+        return self.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
+
     def setup(self):
         super().setup()
-        # noinspection PyAttributeOutsideInit
-        self.host_target = self.get_instance(self, cross_target=CompilationTargets.NATIVE)
         compiler_info = self.get_compiler_info(self.CC)
         if compiler_info.is_clang and not compiler_info.is_apple_clang and compiler_info.version > (10, 0):
             self.add_cmake_options(WARNINGS_ARE_ERRORS=False)  # -Werror,-Wunused-private-field
@@ -529,7 +531,7 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
 
         if not self.compiling_for_host():
             assert self.target_info.is_freebsd(), "No other targets supported yet"
-            self.add_cmake_options(QT_HOST_PATH=self.host_target.install_dir, QT_QMAKE_TARGET_MKSPEC="freebsd-clang")
+            self.add_cmake_options(QT_HOST_PATH=self.host_install_dir(), QT_QMAKE_TARGET_MKSPEC="freebsd-clang")
         if self.compiling_for_cheri():
             # Not ported to CHERI purecap
             self.add_cmake_options(PCRE2_DISABLE_JIT="ON")
