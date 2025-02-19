@@ -1035,10 +1035,12 @@ class Project(SimpleProject):
         for d in deps:
             if d.xtarget is not self.crosscompile_target:
                 continue  # Don't add pkg-config directories for targets with a different architecture
-            project = d.get_or_create_project(None, self.config, caller=self)
-            install_dir = project.install_dir
-            if install_dir is not None:
-                all_install_dirs[install_dir] = 1
+            try:
+                install_dir = d.project_class.get_install_dir(self, self.crosscompile_target)
+                if install_dir is not None:
+                    all_install_dirs[install_dir] = 1
+            except NotImplementedError:
+                continue  # get_install_dir() might not be implemented for this class
         # Don't add the rootfs directory, since e.g. target_info.pkgconfig_candidates(<rootfs>) will not return the
         # correct values. For the root directory we rely on the methods in target_info instead.
         with contextlib.suppress(LookupError):  # If there isn't a rootfs, there is no need to skip that project.
