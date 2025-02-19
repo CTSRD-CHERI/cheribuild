@@ -178,7 +178,6 @@ class AbstractProject(FileSystemUtils):
 
     def __init__(self, config):
         super().__init__(config)
-        self._setup_called = False
         self._init_called = False
 
     def get_compiler_info(self, compiler: Path) -> CompilerInfo:

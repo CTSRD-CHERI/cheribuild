@@ -1112,6 +1112,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         have been built before and therefore querying e.g. the target compiler will work correctly.
         """
         assert not self._setup_called, "Should only be called once"
+        assert not self._setup_late_called, "Should only be called once"
         self._setup_called = True
 
     def setup_late(self) -> None:
