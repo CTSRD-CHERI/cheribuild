@@ -2179,6 +2179,18 @@ else:
 
 
 class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
+    @classmethod
+    def setup_config_options(cls, kernel_only_target=False, install_directory_help=None, **kwargs) -> None:
+        super().setup_config_options(
+            use_upstream_llvm=False,
+            kernel_only_target=kernel_only_target,
+        )
+        cls.build_vm_images = cls.add_bool_option(
+            "build-vm-images",
+            _allow_unknown_targets=True,
+            help="Build vm images with releases.",
+        )
+
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
         self.check_required_system_tool("bsdtar", cheribuild_target="bsdtar", apt="libarchive-tools")
@@ -2243,6 +2255,10 @@ class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
         # TODO: Fix build system to pick these up from PATH rather than override it.
         release_args.set_env(INSTALL="sh " + str(self.source_dir / "tools/install.sh"))
         release_args.set_env(XZ_CMD=str(self.objdir / "tmp/legacy/usr/bin/xz -T 0"))
+
+        if self.build_vm_images:
+            release_args.set_env(WITH_CLOUDWARE="yes")
+            release_args.set_env(WITHOUT_QEMU="yes")
 
         # Need bsdtar for @file support
         release_args.set_env(TAR_CMD="bsdtar")
