@@ -277,9 +277,21 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             result.append("-mabi=" + cls.get_riscv_abi(xtarget, softfloat=softfloat))
             result.append("-mrelax" if _linker_supports_riscv_relaxations(instance.linker, config) else "-mno-relax")
 
+            softfloat = not config.riscv_baremetal_hardfloat
+
             if cls.is_baremetal() or cls.is_rtems():
                 # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
-                result.append("-mcmodel=medany")
+                result.append("-mcmodel=medium")
+
+            # Enable generating CHERI-RISC-V compressed instructions
+            if config.riscv_cheri_rvc:
+                if xtarget.is_cheri_hybrid() or xtarget.is_cheri_purecap():
+                    result.append("-mxcheri-rvc")
+
+            if config.riscv_cheri_gprel:
+                if xtarget.is_cheri_purecap():
+                    result.append("-cheri-cap-table-abi=gprel")
+
         elif xtarget.is_aarch64(include_purecap=True):
             fp_simd_option = AArch64FloatSimdOptions.SOFT if softfloat else config.aarch64_fp_and_simd_options
             march_suffix = fp_simd_option.clang_march_flag()
