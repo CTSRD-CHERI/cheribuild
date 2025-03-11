@@ -83,15 +83,13 @@ class BuildCheriMipsTestQEMU(_BuildCheriMipsTestBase):
         super().setup()
         self.make_args.set(QEMU_CHERI128=self.config.qemu_bindir / "qemu-system-mips64cheri128")
         self.make_args.set(QEMU_MIPS64=self.config.qemu_bindir / "qemu-system-mips64")
+        self.make_args.set(FAIL_MAKE_ON_TEST_ERRORS=1)
 
     def do_cheritest(self):
         if self.single_test:
             self.run_make("pytest/qemu/tests/" + str(self.single_test), parallel=False)
         else:
-            self.run_make("qemu_logs128")
-            self.run_make("pytest_qemu128")
-            self.run_make("qemu_logs_mips")
-            self.run_make("pytest_qemu_mips")
+            self.run_make("pytest_qemu_all")
 
 
 class BuildCheriMipsTestSail(_BuildCheriMipsTestBase):
