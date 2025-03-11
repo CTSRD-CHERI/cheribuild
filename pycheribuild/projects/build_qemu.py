@@ -227,26 +227,38 @@ class BuildQEMUBase(AutotoolsProject):
 
         compiler = self.CC
         ccinfo = self.get_compiler_info(compiler)
-        if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
-            # Turn implicit function declaration into an error -Wimplicit-function-declaration
-            self.CFLAGS.extend(
+        # Turn implicit function declaration into an error and silence some upstream warnings
+        self.common_warning_flags.extend(
+            [
+                "-Werror=implicit-function-declaration",
+                "-Werror=incompatible-pointer-types",
+                "-Werror=format",
+                "-Werror=return-type",
+                "-Wno-sign-compare",
+                "-Wno-unused-parameter",
+                "-Wno-missing-field-initializers",
+            ]
+        )
+        if ccinfo.compiler == "gcc":
+            self.common_warning_flags.extend(
                 [
-                    "-Werror=implicit-function-declaration",
-                    "-Werror=incompatible-pointer-types",
+                    # "-Wno-redundant-decls",  # lots of upstream issues
+                    "-Wno-maybe-uninitialized",  # lots of false positives
+                ]
+            )
+        if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
+            self.common_warning_flags.extend(
+                [
                     # Also make discarding const an error:
                     "-Werror=incompatible-pointer-types-discards-qualifiers",
                     # silence this warning that comes lots of times (it's fine on x86)
                     "-Wno-address-of-packed-member",
-                    "-Wextra",
-                    "-Wno-sign-compare",
-                    "-Wno-unused-parameter",
                     "-Wno-missing-field-initializers",
                 ],
             )
         if ccinfo.compiler == "clang" and ccinfo.version >= (13, 0, 0):
-            self.CFLAGS.append("-Wno-null-pointer-subtraction")
+            self.common_warning_flags.append("-Wno-null-pointer-subtraction")
         # This would have caught some problems in the past
-        self.common_warning_flags.append("-Wno-error=return-type")
         if self.use_smbd:
             self.smbd_path = Path("/usr/sbin/smbd")
             if self.target_info.is_freebsd():
