@@ -180,6 +180,11 @@ class BuildQEMUBase(AutotoolsProject):
         self.configure_args.append("--enable-sanitizers")
         # Ensure that tests crash on UBSan reports
         self.COMMON_FLAGS.append("-fno-sanitize-recover=all")
+        # QEMU does not work with -fsanitize=function (which is the default since Clang 17)
+        # https://gitlab.com/qemu-project/qemu/-/issues/2345
+        compiler = self.get_compiler_info(self.CC)
+        if compiler.is_clang and compiler.version > (17, 0):
+            self.COMMON_FLAGS.append("-fno-sanitize=function")
         if self.use_lto:
             self.info("Disabling LTO for ASAN instrumented builds")
         self.use_lto = False
@@ -205,8 +210,6 @@ class BuildQEMUBase(AutotoolsProject):
         if self.enable_plugins:
             self.configure_args.append("--enable-plugins")
 
-        # QEMU now builds with python3
-        self.configure_args.append("--python=" + sys.executable)
         if self.build_type.is_debug:
             self.configure_args.extend(["--enable-debug", "--enable-debug-tcg"])
         else:
