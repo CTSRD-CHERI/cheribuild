@@ -315,6 +315,9 @@ class BuildQEMUBase(AutotoolsProject):
 
         if self.config.create_compilation_db:
             self.make_args.set(V=1)  # Otherwise bear can't parse the compiler output
+        if self.use_asan:
+            # QEMU is not LeakSan clean, disable those checks.
+            self.make_args.set_env(UBSAN_OPTIONS="print_stacktrace=1,halt_on_error=1", ASAN_OPTIONS="detect_leaks=0")
         ldflags = self.default_ldflags + self.LDFLAGS
         if ldflags:
             self.configure_args.append("--extra-ldflags=" + self.commandline_to_str(ldflags))
