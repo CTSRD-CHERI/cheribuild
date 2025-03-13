@@ -1034,7 +1034,7 @@ class BuildDiskImageBase(SimpleProject):
         # -t type Specifies the type of key to create.  The possible values are "rsa1" for protocol version 1
         #  and "dsa", "ecdsa","ed25519", or "rsa" for protocol version 2.
 
-        for key_type in ("rsa", "dsa", "ecdsa", "ed25519"):
+        for key_type in ("rsa", "ecdsa", "ed25519"):
             # SSH1 protocol uses just /etc/ssh/ssh_host_key without the type
             private_key_name = "ssh_host_key" if key_type == "rsa1" else "ssh_host_" + key_type + "_key"
             private_key = ssh_dir / private_key_name
