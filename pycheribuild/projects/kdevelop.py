@@ -31,6 +31,7 @@ from .cmake_project import CMakeProject
 from .cross.llvm import BuildCheriLLVM
 from .project import BuildType, DefaultInstallDir, GitRepository
 from .simple_project import SimpleProject
+from ..utils import InstallInstructions
 
 
 # doesn't seem to be part of distro packages
@@ -70,9 +71,7 @@ class StartKDevelop(SimpleProject):
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
-        self.check_required_system_tool(
-            "cmake", default="cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake"
-        )
+        self.check_required_system_tool("cmake", instructions=InstallInstructions.cmake())
         self.check_required_system_tool("qtpaths")
 
     def process(self):

@@ -39,7 +39,7 @@ from .simple_project import _default_stdout_filter
 from ..config.chericonfig import BuildType
 from ..processutils import commandline_to_str
 from ..targets import target_manager
-from ..utils import InstallInstructions, OSInfo, include_local_file
+from ..utils import InstallInstructions, include_local_file
 
 __all__ = ["CMakeProject"]
 
@@ -80,16 +80,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
         return "TRUE" if value else "FALSE"
 
     def _configure_tool_install_instructions(self) -> InstallInstructions:
-        return OSInfo.install_instructions(
-            "cmake",
-            False,
-            default="cmake",
-            homebrew="cmake",
-            zypper="cmake",
-            apt="cmake",
-            freebsd="cmake",
-            cheribuild_target="cmake",
-        )
+        return InstallInstructions.cmake()
 
     @property
     def _get_version_args(self) -> dict:

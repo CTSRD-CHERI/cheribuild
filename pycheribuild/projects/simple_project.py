@@ -1168,10 +1168,11 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             )
         if executable in self.__checked_system_tools:
             # If we already checked for this tool, the install instructions should match
-            assert instructions.fixit_hint() == self.__checked_system_tools[executable].fixit_hint(), executable
+            existing = self.__checked_system_tools[executable]
+            assert instructions.cheribuild_target == existing.cheribuild_target
+            assert instructions.alternative == existing.alternative
+            assert instructions.fixit_hint() == existing.fixit_hint(), f"mismatched instructions for {executable}"
             return  # already checked
-        assert instructions.cheribuild_target == cheribuild_target
-        assert instructions.alternative == alternative_instructions
         self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
         if not shutil.which(str(executable)):
             self.dependency_error(
@@ -1212,7 +1213,10 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
             )
         if package in self.__checked_pkg_config:
             # If we already checked for this pkg-config .pc file, the install instructions should match
-            assert instructions.fixit_hint() == self.__checked_pkg_config[package].fixit_hint(), package
+            existing = self.__checked_pkg_config[package]
+            assert instructions.cheribuild_target == existing.cheribuild_target
+            assert instructions.alternative == existing.alternative
+            assert instructions.fixit_hint() == existing.fixit_hint(), f"mismatched instructions for {package}"
             return  # already checked
         self._validate_cheribuild_target_for_system_deps(instructions.cheribuild_target)
         try:

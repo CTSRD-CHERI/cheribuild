@@ -54,7 +54,7 @@ try_run "${srcdir}/cheribuild.py" --dump-config
 try_run sh -c "\"${srcdir}/combine-files.py\" | \"$(command -v python3)\" - --get-config-option output-root"
 try_run "${srcdir}/cheribuild.py" -p __run_everything__ --clean --build --test --benchmark
 # Also check that we can run --pretend mode with all tools missing.
-try_run env PATH=/does/not/exist "$(command -v python3)" "${srcdir}/cheribuild.py" -p __run_everything__ --clean --build --test --benchmark
+try_run env PATH=/does/not/exist "$(command -v python3)" "${srcdir}/cheribuild.py" -p __run_everything__ --clean --build --test --benchmark --source-root=/tmp/does-not-exist
 try_run env WORKSPACE=/tmp "${srcdir}/jenkins-cheri-build.py" --allow-more-than-one-target --build --test --cpu=default -p __run_everything__
 # Check that the CheriBSD test script works
 try_run "${srcdir}/test-scripts/run_cheribsd_tests.py" -p --architecture morello-purecap --ssh-key path/to/test/ssh_key.pub --qemu-cmd /path/to/sdk/bin/qemu-system-morello --disk-image /path/to/output/cheribsd-morello-purecap.img --test-output-dir=/path/to/build/test-results/run-morello-purecap

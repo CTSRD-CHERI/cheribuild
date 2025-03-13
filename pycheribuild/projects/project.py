@@ -238,9 +238,7 @@ class MakeOptions:
             self.__project.check_required_system_tool("ninja", homebrew="ninja", apt="ninja-build")
             return "ninja"
         elif self.kind == MakeCommandKind.CMake:
-            self.__project.check_required_system_tool(
-                "cmake", default="cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake"
-            )
+            self.__project.check_required_system_tool("cmake", instructions=InstallInstructions.cmake())
             assert self.subkind is not None
             return "cmake"
         else:

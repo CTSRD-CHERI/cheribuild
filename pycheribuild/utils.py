@@ -369,6 +369,19 @@ class InstallInstructions:
             result += "\nAlternatively " + self.alternative
         return result
 
+    @classmethod
+    def cmake(cls):
+        return OSInfo.install_instructions(
+            "cmake",
+            False,
+            default="cmake",
+            homebrew="cmake",
+            zypper="cmake",
+            apt="cmake",
+            freebsd="cmake",
+            cheribuild_target="cmake",
+        )
+
 
 class OSInfo:
     IS_LINUX: bool = sys.platform.startswith("linux")
