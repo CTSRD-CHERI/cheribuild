@@ -261,6 +261,7 @@ class BuildQEMUBase(AutotoolsProject):
             )
         if ccinfo.compiler == "clang" and ccinfo.version >= (13, 0, 0):
             self.common_warning_flags.append("-Wno-null-pointer-subtraction")
+            self.common_warning_flags.append("-Wno-bitwise-instead-of-logical")
         # This would have caught some problems in the past
         if self.use_smbd:
             self.smbd_path = Path("/usr/sbin/smbd")
