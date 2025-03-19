@@ -890,16 +890,16 @@ def latest_system_clang_tool(config: ConfigBase, basename: str, fallback_basenam
             if info.version < (4, 0, 0) and not info.is_apple_clang:
                 # print("Ignoring", basename, "candidate", candidate, "since it is too old:", info.version)
                 continue
-            results.append((candidate, info.is_apple_clang, info.version))
+            results.append((candidate, info.is_apple_clang, info.version, candidate_name == basename))
     if not results:
         if fallback_basename is None:
             return None
         fullpath = shutil.which(fallback_basename)
         return Path(fullpath) if fullpath else Path("/could/not/find", fallback_basename)
-    # Find the newest version (and prefer apple-clang to non-apple clang
-    # since it is required on macOS to build any binary
+    # Find the newest version (and prefer apple-clang to non-apple clang since it is required on macOS to build any
+    # binary. Also prefer unsuffixed Clang/GCC binary to one with a version suffix if they both have the same version.
     # print("Candidates for", basename, results)
-    newest = max(results, key=lambda p: (p[1], p[2]))
+    newest = max(results, key=lambda p: (p[1], p[2], p[3], p[0].name))
     return newest[0]
 
 
