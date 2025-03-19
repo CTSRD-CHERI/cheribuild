@@ -86,6 +86,7 @@ class BuildCheriMipsTestQEMU(_BuildCheriMipsTestBase):
         self.make_args.set(FAIL_MAKE_ON_TEST_ERRORS=1)
 
     def do_cheritest(self):
+        self.run_make("max_cycles")  # Avoid race condition that is not worth debugging.
         if self.single_test:
             self.run_make("pytest/qemu/tests/" + str(self.single_test), parallel=False)
         else:
