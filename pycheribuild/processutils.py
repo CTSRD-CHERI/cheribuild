@@ -229,7 +229,7 @@ def keep_terminal_sane(gave_tty_control=False, command: Optional[list] = None):
     finally:
         # Can seemingly get unwanted SIGTTOU's whilst restoring so just ignore
         # them temporarily.
-        with suppress_sigttou():
+        with suppress_sigttou(suppress=gave_tty_control):
             stdin_state.restore()
             stdout_state.restore()
             stderr_state.restore()

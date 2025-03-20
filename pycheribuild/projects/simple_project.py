@@ -169,8 +169,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
             sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
         supported_archs = cls.supported_architectures
         assert supported_archs, "Must not be empty: " + str(supported_archs)
-        print(supported_archs)
-        #assert isinstance(supported_archs, tuple)
+        assert isinstance(supported_archs, tuple)
         assert len(set(supported_archs)) == len(supported_archs), (
             "Duplicates in supported archs for " + cls.__name__ + ": " + str(supported_archs)
         )

@@ -36,7 +36,6 @@ from typing import ClassVar
 from .compiler_rt import BuildCompilerRtBuiltins
 from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
 from ..project import ComputedDefaultValue
-from ..run_qemu import LaunchQEMUBase
 
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
@@ -84,12 +83,16 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.compiler_resource = self.get_compiler_info(self.CC).get_resource_dir()
+        self.xlen = 64
 
         self.default_demo_app = (
             "qemu_virt-"
             + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True)
             + self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
         )
+
+        if "rv32" in self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True):
+            self.xlen = 32
 
         # Galois uses make build sysetm
         if self.demo == "RISC-V_Galois_demo":
@@ -274,7 +277,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                           "--riscv-abi", self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True),
                           "--riscv-platform", self.platform,
                           "--program-path", program_root,
-                          "--sysroot",  str(self.sdk_sysroot) + "/riscv64-unknown-elf",
+                          "--sysroot",  str(self.sdk_sysroot) + "/riscv" + str(self.xlen) + "-unknown-elf",
                           "--mem-start", self.mem_start,
                           "--ipaddr", self.ipaddr,
                           "--gateway", self.gateway

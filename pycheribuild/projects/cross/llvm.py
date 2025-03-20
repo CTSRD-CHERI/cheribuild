@@ -630,8 +630,7 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
 
 
 class BuildCheriLLVM(BuildLLVMMonoRepoBase):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git",
-                               force_branch=True, default_branch="cherifreertos-gprel-dev-rebase")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git")
     default_directory_basename = "llvm-project"
     target = "llvm"
     skip_cheri_symlinks = False

@@ -283,11 +283,6 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
                 # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
                 result.append("-mcmodel=medium")
 
-            # Enable generating CHERI-RISC-V compressed instructions
-            if config.riscv_cheri_rvc:
-                if xtarget.is_cheri_hybrid() or xtarget.is_cheri_purecap():
-                    result.append("-mxcheri-rvc")
-
             if config.riscv_cheri_gprel:
                 if xtarget.is_cheri_purecap():
                     result.append("-cheri-cap-table-abi=gprel")

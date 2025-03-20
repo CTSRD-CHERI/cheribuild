@@ -39,6 +39,7 @@ from typing import Optional
 
 from .build_qemu import BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
+from .cross.freertos import BuildFreeRTOS
 from .cross.gdb import BuildGDB
 from .cross.u_boot import BuildUBoot
 from .disk_image import (
@@ -957,9 +958,11 @@ class LaunchDmQEMU(LaunchCheriBSD):
 
 class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     target = "run-freertos"
-    dependencies = ["freertos"]
-    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
-                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
+    supported_architectures = (
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV32,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV32_PURECAP,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP)
     forward_ssh_port = False
     forward_ftp_port = True
     forward_tftp_port = True
@@ -974,6 +977,7 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     qemu_user_networking = True
     _enable_smbfs_support = False
     _add_virtio_rng = False
+    _uses_disk_image = False
     ftp_forwarding_port = 10021
     tftp_forwarding_port = 10069
     nbns_forwarding_port = 10137
@@ -985,8 +989,8 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     default_demo = "RISC-V-Generic"
     default_demo_app = "main_blinky"
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         if self.use_virtio_blk:
             self._after_disk_options.extend([
                 "-drive", "file=" + str(BuildFreeRTOS.get_install_dir(self)) + "/FreeRTOS/Demo/bin/freertos.img,id=drv,format=raw",
