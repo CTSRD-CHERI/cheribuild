@@ -30,6 +30,7 @@
 
 from enum import Enum
 
+from .cheribsd import BuildFreeBSD
 from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 from ..simple_project import BoolConfigOption
 
@@ -156,6 +157,22 @@ class BuildMorelloWebkit(CrossCompileCMakeProject):
                 )
             else:
                 self.add_cmake_options(ENABLE_JIT_ARM64_EMBED_POINTERS_AS_ALIGNED_LITERALS=self.tier2ptrliterals)
+
+    def install(self, **kwargs):
+        # XXX: Work around MRS breaking continuous arena (uses non-portable
+        # APIs to allocate from the arena, which MRS ignores).
+        if self.crosscompile_target.is_cheri_purecap():
+            if self.compiling_for_host():
+                elfctl_root = "/"
+            else:
+                freebsd_builddir = self.target_info.get_rootfs_project(t=BuildFreeBSD, caller=self).objdir
+                elfctl_root = freebsd_builddir / "tmp"
+            elfctl_cmd = elfctl_root / "usr/bin/elfctl"
+
+        super().install(**kwargs)
+
+        if self.crosscompile_target.is_cheri_purecap():
+            self.run_cmd([elfctl_cmd, "-e", "+nocherirevoke", self.install_dir / "bin/jsc"])
 
     def run_tests(self):
         if self.compiling_for_host():
