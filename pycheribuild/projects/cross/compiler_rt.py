@@ -184,10 +184,14 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if self.target_info.is_rtems():
             self.move_file(self.install_dir / "lib/rtems5" / libname, self.install_dir / "lib" / libname)
         elif self.target_info.is_baremetal():
-            self.move_file(self.install_dir / "lib/baremetal" / libname, self.real_install_root_dir / "lib" / libname)
-            self.create_symlink(
-                self.install_dir / "lib" / libname, self.install_dir / "lib/libgcc.a", print_verbose_only=False
-            )
+            if self.config.riscv_cheri_gprel:
+                gprel_libname = "libclang_rt.builtins-" + self.triple_arch + "-gprel.a"
+                self.move_file(self.install_dir / "lib/baremetal" / libname, self.real_install_root_dir / "lib" / gprel_libname)
+            else:
+                self.move_file(self.install_dir / "lib/baremetal" / libname, self.real_install_root_dir / "lib" / libname)
+                self.create_symlink(
+                    self.install_dir / "lib" / libname, self.install_dir / "lib/libgcc.a", print_verbose_only=False
+                )
 
 
 class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
