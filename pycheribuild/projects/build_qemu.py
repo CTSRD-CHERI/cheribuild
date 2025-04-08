@@ -28,6 +28,8 @@
 # SUCH DAMAGE.
 #
 import os
+import re
+import shutil
 import sys
 import typing
 from contextlib import suppress
@@ -49,6 +51,7 @@ from .project import (
 )
 from .simple_project import BoolConfigOption, SimpleProject, _cached_get_homebrew_prefix
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
+from ..processutils import get_program_version
 from ..utils import OSInfo
 
 
@@ -490,6 +493,26 @@ class BuildQEMU(BuildQEMUBase):
         # Linux/BSD-user is not supported for CHERI (yet)
         self.configure_args.append("--disable-bsd-user")
         self.configure_args.append("--disable-linux-user")
+        python_bin = sys.executable
+        python_search_path = self.config.dollar_path_with_other_tools
+        # Python from a venv cannot be used for QEMU builds, use the base installation instead.
+        if sys.prefix != sys.base_prefix:
+            python_bin = sys.executable.replace(sys.prefix, sys.base_prefix)
+            python_search_path = python_search_path.replace(sys.prefix, sys.base_prefix)
+        py3_version = get_program_version(
+            Path(python_bin),
+            config=self.config,
+            regex=re.compile(b"Python\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?"),
+        )
+        # QEMU tests are not compatible with 3.12 yet, try to use an older version in that case
+        if py3_version >= (3, 12, 0):
+            for minor_version in (11, 10, 9):
+                found = shutil.which(f"python3.{minor_version}", path=python_search_path)
+                if found:
+                    python_bin = found
+                    break
+        self.configure_args.append(f"--python={python_bin}")
+
         # TODO: tests:
         # noinspection PyUnreachableCode
         if False:
