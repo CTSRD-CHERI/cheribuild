@@ -289,15 +289,7 @@ VOLUME /diskimg
                     )
 
                 def disable_uart(param_base):
-                    nonlocal extra_args
-                    extra_args.extend(
-                        [
-                            "-C",
-                            param_base + ".start_telnet=0",
-                            "-C",
-                            param_base + ".quiet=1",
-                        ]
-                    )
+                    extra_args.extend(["-C", f"{param_base}.start_telnet=0", "-C", f"{param_base}.quiet=1"])
 
                 disable_uart("board.terminal_uart0_board")
                 disable_uart("board.terminal_uart1_board")
