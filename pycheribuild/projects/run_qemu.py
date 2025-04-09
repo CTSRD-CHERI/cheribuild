@@ -110,21 +110,17 @@ class ChosenQEMU:
         assert launch.use_qemu == QEMUType.SYSTEM or launch.use_qemu == QEMUType.DEFAULT, (
             "Unexpected use_qemu for lazy binary location: " + str(launch.use_qemu)
         )
-        binary_name = "qemu-system-" + launch.qemu_options.qemu_arch_sufffix
-        if (launch.config.qemu_bindir / binary_name).is_file() and launch.use_qemu != QEMUType.SYSTEM:
+        qemu_binary = launch.qemu_options.get_qemu_binary(search_dirs=[launch.config.qemu_bindir])
+        if qemu_binary is not None and qemu_binary.is_file() and launch.use_qemu != QEMUType.SYSTEM:
             # Only CHERI QEMU supports more than one SMB share
             self._can_provide_src_via_smb = True
-            self._binary = launch.config.qemu_bindir / binary_name
         else:
-            # Only CHERI QEMU supports more than one SMB share; conservatively
-            # guess what kind of QEMU this is
+            # Only CHERI QEMU supports more than one SMB share; conservatively guess what kind of QEMU this is
             self._can_provide_src_via_smb = launch.crosscompile_target.is_hybrid_or_purecap_cheri()
-            launch.check_required_system_tool(binary_name)
-            binary_path = shutil.which(binary_name)
-            if not binary_path:
-                launch.fatal("Could not find system QEMU", binary_name)
-                binary_path = "/could/not/find/qemu"
-            self._binary = Path(binary_path)
+            if qemu_binary is None:
+                launch.fatal("Could not find system QEMU for target:", launch.qemu_options.xtarget)
+                qemu_binary = Path("/could/not/find/qemu")
+        self._binary = qemu_binary
 
 
 class LaunchQEMUBase(SimpleProject):
@@ -243,8 +239,8 @@ class LaunchQEMUBase(SimpleProject):
         cls._cached_chosen_qemu = None
 
     @classmethod
-    def get_chosen_qemu(cls, config: CheriConfig):
-        if cls._cached_chosen_qemu:
+    def get_chosen_qemu(cls, config: CheriConfig) -> ChosenQEMU:
+        if cls._cached_chosen_qemu is not None:
             return cls._cached_chosen_qemu
 
         xtarget = cls.get_crosscompile_target()
@@ -273,8 +269,7 @@ class LaunchQEMUBase(SimpleProject):
             assert False, "Unknown target " + str(xtarget)
 
         if cls.use_qemu == QEMUType.CUSTOM:
-            # Only CHERI QEMU supports more than one SMB share; conservatively
-            # guess what kind of QEMU this is
+            # Only CHERI QEMU supports more than one SMB share; conservatively guess what kind of QEMU this is
             can_provide_src_via_smb = xtarget.is_hybrid_or_purecap_cheri()
             if not cls.custom_qemu_path:
                 fatal_error(
