@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import inspect
 import os
 import re
 import shutil
@@ -51,6 +52,7 @@ from .project import (
 )
 from .simple_project import BoolConfigOption, SimpleProject, _cached_get_homebrew_prefix
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
+from ..config.config_loader_base import ConfigOptionHandle
 from ..processutils import get_program_version
 from ..utils import OSInfo
 
@@ -298,10 +300,8 @@ class BuildQEMUBase(AutotoolsProject):
                     "If you really don't need QEMU host shares you can disable the samba dependency "
                     "by setting --" + self.target + "/no-use-smbd",
                 )
-
         self.configure_args.extend(
             [
-                "--target-list=" + self.qemu_targets,
                 "--disable-xen",
                 "--disable-docs",
                 "--disable-rdma",
@@ -338,6 +338,17 @@ class BuildQEMUBase(AutotoolsProject):
             self.configure_args.append("--enable-slirp")
         else:
             self.configure_args.append("--enable-slirp=git")
+
+        chosen_targets = self.qemu_targets
+        qemu_targets_option = typing.cast(ConfigOptionHandle, inspect.getattr_static(self, "qemu_targets"))
+        if qemu_targets_option.is_default_value:
+            if (self.source_dir / "configs/targets/riscv32cheristd-softmmu.mak").exists():
+                chosen_targets += ",riscv32cheristd-softmmu,riscv64cheristd-softmmu"
+            # Use the new xcheri targets if available:
+            if (self.source_dir / "configs/targets/riscv32xcheri-softmmu.mak").exists():
+                chosen_targets = chosen_targets.replace("riscv32cheri-softmmu", "riscv32xcheri-softmmu")
+                chosen_targets = chosen_targets.replace("riscv64cheri-softmmu", "riscv64xcheri-softmmu")
+        self.configure_args.append("--target-list=" + chosen_targets)
         super().configure(**kwargs)
 
     def run_tests(self):
