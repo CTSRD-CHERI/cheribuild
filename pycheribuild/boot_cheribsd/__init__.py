@@ -1524,7 +1524,7 @@ def _main(
     else:
         args.qemu_cmd = qemu_options.get_qemu_binary()
         if args.qemu_cmd is None:
-            failure("ERROR: Cannot find QEMU binary for target ", qemu_options.qemu_arch_sufffix, exit=True)
+            failure("ERROR: Cannot find QEMU binary for target ", qemu_options.xtarget, exit=True)
 
     global INTERACT_ON_KERNEL_PANIC  # noqa: PLW0603
     if args.interact_on_kernel_panic:

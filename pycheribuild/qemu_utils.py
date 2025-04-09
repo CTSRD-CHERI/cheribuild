@@ -47,7 +47,7 @@ class QemuOptions:
         self.memory_size = "2048"
         self.has_default_nic = False
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-            self.qemu_arch_sufffix = "morello"
+            self._qemu_arch_suffix = "morello"
             self.can_boot_kernel_directly = False  # boot from disk
             # XXX: Use a CHERI-aware firmware. EL3 is disabled by default for
             # virt, so CPTR_EL3 doesn't exist and CheriBSD can enable
@@ -56,19 +56,19 @@ class QemuOptions:
             self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "morello", "-bios", "edk2-aarch64-code.fd"]
         elif xtarget.is_mips(include_purecap=True):
             # Note: we always use the CHERI QEMU
-            self.qemu_arch_sufffix = "mips64cheri128"
+            self._qemu_arch_suffix = "mips64cheri128"
             self.machine_flags = ["-M", "malta"]
             self.virtio_disk = False  # broken for MIPS?
             self.can_boot_kernel_directly = True
             self.has_default_nic = True  # MALTA board has a default pcnet at 0x0b
         elif xtarget.is_riscv(include_purecap=True):
             # Note: we always use the CHERI QEMU
-            self.qemu_arch_sufffix = "riscv32cheri" if xtarget.is_riscv32(include_purecap=True) else "riscv64cheri"
+            self._qemu_arch_suffix = "riscv32cheri" if xtarget.is_riscv32(include_purecap=True) else "riscv64cheri"
             self.machine_flags = ["-M", "virt"]
             self.can_boot_kernel_directly = True
         elif xtarget.is_any_x86():
             # We boot i386 FreeBSD in a x86_64 QEMU. This avoids having to build another version of QEMU.
-            self.qemu_arch_sufffix = "x86_64"
+            self._qemu_arch_suffix = "x86_64"
             self.can_boot_kernel_directly = False  # boot from disk
             # Try to use KVM instead of TCG if possible to speed up emulation
             if not want_debugger:
@@ -83,11 +83,11 @@ class QemuOptions:
             # We have to use the ancient default instead to avoid kernel panics.
             # See https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=253617 for details.
         elif xtarget.is_aarch64(include_purecap=False):
-            self.qemu_arch_sufffix = "aarch64"
+            self._qemu_arch_suffix = "aarch64"
             self.can_boot_kernel_directly = False  # boot from disk
             self.machine_flags = ["-M", "virt,gic-version=3", "-cpu", "cortex-a72", "-bios", "edk2-aarch64-code.fd"]
         elif xtarget.is_arm32(include_purecap=False):
-            self.qemu_arch_sufffix = "arm"
+            self._qemu_arch_suffix = "arm"
             self.can_boot_kernel_directly = False  # boot from disk
             self.machine_flags = ["-M", "virt", "-cpu", "cortex-15"]
         else:
@@ -156,9 +156,15 @@ class QemuOptions:
         network_device_kind = self._qemu_network_config()[0]
         return ["-device", network_device_kind + ",netdev=net0", "-netdev", "user,id=net0" + extra_options]
 
-    def get_qemu_binary(self) -> "Optional[Path]":
-        found_in_path = shutil.which("qemu-system-" + self.qemu_arch_sufffix)
-        return Path(found_in_path) if found_in_path is not None else None
+    def get_qemu_binary(self, search_dirs: "Optional[list[Path]]" = None) -> "Optional[Path]":
+        if search_dirs is None:
+            found_in_path = shutil.which("qemu-system-" + self._qemu_arch_suffix)
+            return Path(found_in_path) if found_in_path is not None else None
+        for d in search_dirs:
+            candidate = d / f"qemu-system-{self._qemu_arch_suffix}"
+            if candidate.exists():
+                return candidate
+        return None
 
     def get_commandline(
         self,
