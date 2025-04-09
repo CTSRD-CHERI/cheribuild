@@ -69,7 +69,7 @@ class BuildBash(CrossCompileAutotoolsProject):
                     for line in old:
                         fields = line.split(":")
                         if len(fields) == 10 and fields[0] == "root":
-                            line = ":".join(fields[0:9] + ["/usr/local/bin/bash"])
+                            line = ":".join([*fields[0:9], "/usr/local/bin/bash"])
                         new.append(line)
                     return new
 
