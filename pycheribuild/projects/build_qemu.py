@@ -466,10 +466,12 @@ class BuildQEMU(BuildQEMUBase):
     @classmethod
     def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
         # Always use the CHERI qemu even for plain riscv:
-        if xtarget.is_riscv64(include_purecap=True):
-            binary_name = "qemu-system-riscv64cheri"
-        elif xtarget.is_riscv32(include_purecap=True):
-            binary_name = "qemu-system-riscv32cheri"
+        if xtarget.is_riscv(include_purecap=True):
+            xlen = 32 if xtarget.is_riscv32(include_purecap=True) else 64
+            binary_name = f"qemu-system-riscv{xlen}cheri"
+            # Prefer the xcheri-suffixed binary (if it exists) to ensure backwards compatibility.
+            if (config.qemu_bindir / f"qemu-system-riscv{xlen}xcheri").exists():
+                binary_name = f"qemu-system-riscv{xlen}xcheri"
         elif xtarget.is_mips(include_purecap=True):
             binary_name = "qemu-system-mips64cheri128"
         elif xtarget.is_aarch64(include_purecap=True):
