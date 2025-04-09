@@ -502,7 +502,7 @@ class BuildQEMU(BuildQEMUBase):
         py3_version = get_program_version(
             Path(python_bin),
             config=self.config,
-            regex=re.compile(b"Python\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?"),
+            regex=re.compile(rb"Python\s+(\d+)\.(\d+)\.?(\d+)?"),
         )
         # QEMU tests are not compatible with 3.12 yet, try to use an older version in that case
         if py3_version >= (3, 12, 0):
