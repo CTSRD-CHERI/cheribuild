@@ -444,9 +444,6 @@ class LaunchQEMUBase(SimpleProject):
                 return
             nonlocal user_network_options
             nonlocal smb_dir_count
-            nonlocal have_9pfs_support
-            nonlocal have_smbfs_support
-            nonlocal qemu_command
             smb_dir_count += 1
             if have_smbfs_support and self._enable_smbfs_support:
                 if smb_dir_count > 1:
