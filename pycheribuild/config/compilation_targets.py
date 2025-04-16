@@ -314,7 +314,9 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         if not softfloat:
             arch_string += "fd"
         arch_string += "c"
-        if xtarget.is_hybrid_or_purecap_cheri():
+        if xtarget.is_standard_cheri_extension():
+            arch_string += "zcherihybrid"
+        elif xtarget.is_hybrid_or_purecap_cheri():
             arch_string += "xcheri"
         return arch_string
 
@@ -1392,6 +1394,21 @@ class CompilationTargets(BasicCompilationTargets):
         BaremetalFreestandingTargetInfo,
         is_cheri_purecap=True,
         hybrid_target=FREESTANDING_RISCV64_HYBRID,
+    )
+    FREESTANDING_RISCV64_ZHYBRID = CrossCompileTarget(
+        "riscv64-zhybrid",
+        CPUArchitecture.RISCV64,
+        BaremetalFreestandingTargetInfo,
+        is_cheri_hybrid=True,
+        is_standard_cheri_extension=True
+    )
+    FREESTANDING_RISCV64_ZPURECAP = CrossCompileTarget(
+        "riscv64-zpurecap",
+        CPUArchitecture.RISCV64,
+        BaremetalFreestandingTargetInfo,
+        is_cheri_purecap=True,
+        is_standard_cheri_extension=True,
+        hybrid_target=FREESTANDING_RISCV64_ZHYBRID,
     )
     ALL_FREESTANDING_TARGETS = (
         FREESTANDING_AARCH64,

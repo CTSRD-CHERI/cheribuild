@@ -778,6 +778,7 @@ class CrossCompileTarget:
         *,
         is_cheri_purecap=False,
         is_cheri_hybrid=False,
+        is_standard_cheri_extension=False,
         extra_target_suffix: str = "",
         check_conflict_with: "Optional[CrossCompileTarget]" = None,
         rootfs_target: "Optional[CrossCompileTarget]" = None,
@@ -807,6 +808,7 @@ class CrossCompileTarget:
         # TODO: self.operating_system = ...
         self._is_cheri_purecap = is_cheri_purecap
         self._is_cheri_hybrid = is_cheri_hybrid
+        self._is_standard_cheri_extension = is_standard_cheri_extension
         assert not (is_cheri_purecap and is_cheri_hybrid), "Can't be both hybrid and purecap"
         self.check_conflict_with = check_conflict_with  # Check that we don't reuse install-dir, etc for this target
         self._rootfs_target = rootfs_target
@@ -871,8 +873,7 @@ class CrossCompileTarget:
                     assert self._rootfs_target._is_cheri_hybrid, (
                         "Only support hybrid separate rootfs for purecap targets"
                     )
-                    assert (
-                        other_target._purecap_for_hybrid_rootfs_target is None
+                    assert (other_target._purecap_for_hybrid_rootfs_target is None
                         or other_target._purecap_for_hybrid_rootfs_target is self
                     ), "Already set?"
                     other_target._purecap_for_hybrid_rootfs_target = self
@@ -986,6 +987,9 @@ class CrossCompileTarget:
 
     def is_any_x86(self, include_purecap: Optional[bool] = None) -> bool:
         return self.is_i386(include_purecap) or self.is_x86_64(include_purecap)
+
+    def is_standard_cheri_extension(self) -> bool:
+        return self._is_standard_cheri_extension
 
     def is_cheri_purecap(self, valid_cpu_archs: "Optional[list[CPUArchitecture]]" = None) -> bool:
         if valid_cpu_archs is None:
