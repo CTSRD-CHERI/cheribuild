@@ -208,3 +208,26 @@ class BuildUpstreamOpenSBI(BuildOpenSBI):
             give_tty_control=True,
             cwd="/",
         )
+
+
+class BuildAllianceOpenSBI(BuildOpenSBI):
+    target = "cheri-alliance-opensbi"
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, p: config.cheri_sdk_dir / "cheri-alliance-opensbi/riscv64",
+        as_string="$SDK_ROOT/cheri-alliance-opensbi/riscv64",
+    )
+    repository = GitRepository("https://github.com/CHERI-Alliance/opensbi", default_branch="codasip-cheri-riscv")
+    supported_architectures = (
+        CompilationTargets.FREESTANDING_RISCV64,
+        CompilationTargets.FREESTANDING_RISCV64_PURECAP,
+    )
+
+    @property
+    def all_platforms(self):
+        return ["generic"]
+
+    def compile(self, **kwargs):
+        for platform in self.all_platforms:
+            args = self.make_args.copy()
+            args.set(PLATFORM=platform)
+            self.run_make(parallel=False, cwd=self.source_dir, options=args)
