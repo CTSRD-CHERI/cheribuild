@@ -214,9 +214,10 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     target = "cheri-alliance-opensbi"
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, p: config.cheri_sdk_dir / "cheri-alliance-opensbi/riscv64",
-        as_string="$SDK_ROOT/cheri-alliance-opensbi/riscv64",
+        as_string="$SDK_ROOT/cheri-alliance-opensbi/riscv64"
     )
-    repository = GitRepository("https://github.com/CHERI-Alliance/opensbi", default_branch="codasip-cheri-riscv")
+    repository = GitRepository("https://github.com/CHERI-Alliance/opensbi",
+                               default_branch="codasip-cheri-riscv")
     supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP,
