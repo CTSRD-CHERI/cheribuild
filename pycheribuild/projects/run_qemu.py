@@ -224,14 +224,18 @@ class LaunchQEMUBase(SimpleProject):
         self.disk_image_format = "raw"
         self._project_specific_options = []
         self.bios_flags = []
-        self.qemu_options = QemuOptions(self.crosscompile_target, want_debugger=self.config.wait_for_debugger)
+        self.qemu_options = QemuOptions(
+            self.crosscompile_target,
+            want_debugger=self.config.wait_for_debugger,
+            riscv_cheri_isa=self.config.riscv_cheri_isa,
+        )
         self.qemu_user_networking = True
         self.rootfs_path: Optional[Path] = None
         self._after_disk_options = []
 
     def get_riscv_bios_args(self) -> "list[str]":
         # Explicit bios args no longer needed now that qemu defaults to a different file name for CHERI
-        return riscv_bios_arguments(self.crosscompile_target, self)
+        return riscv_bios_arguments(self.crosscompile_target, self.config.riscv_cheri_isa)
 
     @classmethod
     def targets_reset(cls):
