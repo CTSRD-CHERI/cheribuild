@@ -76,7 +76,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         super().__init__(*args, **kwargs)
         self.default_demo_app = (
             "qemu_virt-"
-            + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True)
+            + self.target_info.get_riscv_arch_string(self.crosscompile_target, self.config, softfloat=True)
             + self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
         )
 
@@ -145,7 +145,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     def default_demo_bsp(self):
         return (
             "qemu_virt-"
-            + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True)
+            + self.target_info.get_riscv_arch_string(self.crosscompile_target, self.config, softfloat=True)
             + "-"
             + self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
         )
@@ -252,7 +252,7 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     def default_demo_bsp(self):
         return (
             "qemu_virt-"
-            + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True)
+            + self.target_info.get_riscv_arch_string(self.crosscompile_target, self.config, softfloat=True)
             + "-"
             + self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
         )
