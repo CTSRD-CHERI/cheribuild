@@ -123,6 +123,11 @@ class AArch64FloatSimdOptions(Enum):
         return self.value[1]
 
 
+class RiscvCheriISA(Enum):
+    V9 = "v9"
+    STD = "std"
+
+
 class RiscvFloatAbi(Enum):
     SOFT = "soft"
     HARD = "hard"
@@ -319,6 +324,13 @@ class CheriConfig(ConfigBase):
         self.skip_configure: "Optional[bool] " = None
         self.force_configure: "Optional[bool] " = None
         self.force_update: "Optional[bool] " = None
+        self.riscv_cheri_isa = loader.add_option(
+            "riscv-cheri-isa",
+            default=RiscvCheriISA.V9,
+            type=RiscvCheriISA,
+            group=loader.cross_compile_options_group,
+            help="The CHERI ISA to target for RISC-V code",
+        )
         self.mips_float_abi = loader.add_option(
             "mips-float-abi",
             default=MipsFloatAbi.SOFT,
