@@ -40,7 +40,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
-from .chericonfig import CheriConfig
+from .chericonfig import CheriConfig, RiscvCheriISA
 from .config_loader_base import ConfigLoaderBase, ConfigOptionHandle
 from .target_info import (
     AArch64FloatSimdOptions,
@@ -277,7 +277,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
                     result.append("-mcpu=beri")
         elif xtarget.is_riscv(include_purecap=True):
             # Use the insane RISC-V arch string to enable CHERI
-            result.append("-march=" + cls.get_riscv_arch_string(xtarget, softfloat=softfloat))
+            result.append("-march=" + cls.get_riscv_arch_string(xtarget, config, softfloat=softfloat))
             result.append("-mabi=" + cls.get_riscv_abi(xtarget, softfloat=softfloat))
             result.append(
                 "-mrelax" if _linker_supports_riscv_relaxations(instance.linker, config, xtarget) else "-mno-relax"
@@ -313,7 +313,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         return result
 
     @classmethod
-    def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, softfloat: bool) -> str:
+    def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, config: CheriConfig, softfloat: bool) -> str:
         assert xtarget.is_riscv(include_purecap=True)
         # Use the insane RISC-V arch string to enable CHERI
         arch_string = "rv" + str(xtarget.cpu_architecture.word_bits()) + "ima"
@@ -321,7 +321,11 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             arch_string += "fd"
         arch_string += "c"
         if xtarget.is_hybrid_or_purecap_cheri():
-            arch_string += "xcheri"
+            if config.riscv_cheri_isa == RiscvCheriISA.V9:
+                arch_string += "xcheri"
+            else:
+                assert config.riscv_cheri_isa == RiscvCheriISA.STD
+                arch_string += "zcherihybrid"
         return arch_string
 
     @classmethod
@@ -502,7 +506,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         rootfs_xtarget = xtarget.get_rootfs_target()
         from ..qemu_utils import QemuOptions
 
-        qemu_options = QemuOptions(rootfs_xtarget)
+        qemu_options = QemuOptions(rootfs_xtarget, riscv_cheri_isa=self.config.riscv_cheri_isa)
         run_instance: LaunchFreeBSDInterface = self._get_run_project(rootfs_xtarget, self.project)
         if rootfs_xtarget.cpu_architecture not in (
             CPUArchitecture.MIPS64,

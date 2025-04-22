@@ -164,7 +164,7 @@ class BuildLittleKernel(CrossCompileMakefileProject):
         elif self.compiling_for_riscv(include_purecap=True):
             bios_args = ["-bios", "none"]
             if self.use_mmu:
-                bios_args = riscv_bios_arguments(self.crosscompile_target, self)
+                bios_args = riscv_bios_arguments(self.crosscompile_target, self.config.riscv_cheri_isa)
             cmd = [
                 qemu,
                 "-cpu",

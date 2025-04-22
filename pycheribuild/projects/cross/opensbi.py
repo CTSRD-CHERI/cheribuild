@@ -42,6 +42,7 @@ from ..project import (
     Project,
     ReuseOtherProjectRepository,
 )
+from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
 from ...qemu_utils import QemuOptions
 from ...utils import OSInfo, classproperty
@@ -98,7 +99,9 @@ class BuildOpenSBI(Project):
             # FW_JUMP_ADDR= ## cheribsd start addr
             # FW_JUMP_FDT_ADDR= ## cheribsd fdt addr
             PLATFORM_RISCV_ABI=self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True),
-            PLATFORM_RISCV_ISA=self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True),
+            PLATFORM_RISCV_ISA=self.target_info.get_riscv_arch_string(
+                self.crosscompile_target, self.config, softfloat=True
+            ),
             PLATFORM_RISCV_XLEN=64,
         )
         if self.config.verbose:
@@ -107,9 +110,9 @@ class BuildOpenSBI(Project):
     @property
     def all_platforms(self):
         platforms_dir = self.source_dir / "platform"
-        self.info(list(platforms_dir.glob("**/config.mk")))
+        self.info(list(platforms_dir.glob("**/objects.mk")))
         all_platforms = []
-        for c in platforms_dir.glob("**/config.mk"):
+        for c in platforms_dir.glob("**/objects.mk"):
             relpath = str(c.parent.relative_to(platforms_dir))
             if relpath != "template":
                 all_platforms.append(relpath)
@@ -120,6 +123,8 @@ class BuildOpenSBI(Project):
         return ["generic"]
 
     def compile(self, **kwargs):
+        if self.compiling_for_cheri() and self.config.riscv_cheri_isa != RiscvCheriISA.STD:
+            self.fatal("Purecap openSBI is only supported for the staandard ISA for now.")
         for platform in self.all_platforms:
             args = self.make_args.copy()
             args.set(PLATFORM=platform)
@@ -132,17 +137,19 @@ class BuildOpenSBI(Project):
             args.set(PLATFORM=platform)
             self.run_make_install(cwd=self.source_dir, options=args)
         # Only install BuildBBLNoPayload as the QEMU bios and not the GFE version by checking build_dir_suffix
-        if self.crosscompile_target.is_cheri_hybrid() and not self.build_dir_suffix:
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri() and not self.build_dir_suffix:
             # Install into the QEMU firware directory so that `-bios default` works
             qemu_fw_dir = BuildQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "share/qemu/"
+            suffix = "cheristd" if self.crosscompile_target.is_cheri_purecap() else "cheri"
             self.makedirs(qemu_fw_dir)
+            # TODO: looks like newer versions install a .bin that we could just copy instead.
             self.run_cmd(
                 self.sdk_bindir / "llvm-objcopy",
                 "-S",
                 "-O",
                 "binary",
                 self._fw_jump_path(),
-                qemu_fw_dir / "opensbi-riscv64cheri-virt-fw_jump.bin",
+                qemu_fw_dir / f"opensbi-riscv64{suffix}-virt-fw_jump.bin",
                 print_verbose_only=False,
             )
 
@@ -190,7 +197,7 @@ class BuildUpstreamOpenSBI(BuildOpenSBI):
     supported_architectures = (CompilationTargets.FREESTANDING_RISCV64,)
 
     def run_tests(self):
-        options = QemuOptions(self.crosscompile_target)
+        options = QemuOptions(self.crosscompile_target, riscv_cheri_isa=self.config.riscv_cheri_isa)
         self.run_cmd(
             options.get_commandline(
                 qemu_command=BuildQEMU.qemu_binary(self),

@@ -51,6 +51,7 @@ from .project import (
     Project,
 )
 from .simple_project import BoolConfigOption, SimpleProject, _cached_get_homebrew_prefix
+from ..config.chericonfig import RiscvCheriISA
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
 from ..config.config_loader_base import ConfigOptionHandle
 from ..processutils import get_program_version
@@ -486,10 +487,13 @@ class BuildQEMU(BuildQEMUBase):
         # Always use the CHERI qemu even for plain riscv:
         if xtarget.is_riscv(include_purecap=True):
             xlen = 32 if xtarget.is_riscv32(include_purecap=True) else 64
-            binary_name = f"qemu-system-riscv{xlen}cheri"
             # Prefer the xcheri-suffixed binary (if it exists) to ensure backwards compatibility.
-            if (config.qemu_bindir / f"qemu-system-riscv{xlen}xcheri").exists():
+            if config.riscv_cheri_isa == RiscvCheriISA.STD:
+                binary_name = f"qemu-system-riscv{xlen}cheristd"
+            elif (config.qemu_bindir / f"qemu-system-riscv{xlen}xcheri").exists():
                 binary_name = f"qemu-system-riscv{xlen}xcheri"
+            else:
+                binary_name = f"qemu-system-riscv{xlen}cheri"
         elif xtarget.is_mips(include_purecap=True):
             binary_name = "qemu-system-mips64cheri128"
         elif xtarget.is_aarch64(include_purecap=True):

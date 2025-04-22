@@ -33,19 +33,23 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
+from .config.chericonfig import RiscvCheriISA
 from .config.target_info import CPUArchitecture, CrossCompileTarget
 from .processutils import run_command
 from .utils import ConfigBase, OSInfo, warning_message
 
 
 class QemuOptions:
-    def __init__(self, xtarget: CrossCompileTarget, want_debugger=False) -> None:
+    def __init__(
+        self, xtarget: CrossCompileTarget, want_debugger=False, riscv_cheri_isa: Optional[RiscvCheriISA] = None
+    ) -> None:
         self.xtarget = xtarget
         self.virtio_disk = True
         self.force_virtio_blk_device = False
         self.can_boot_kernel_directly = False
         self.memory_size = "2048"
         self.has_default_nic = False
+        self.riscv_cheri_isa = riscv_cheri_isa
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             self._qemu_arch_suffix = "morello"
             self.can_boot_kernel_directly = False  # boot from disk
@@ -63,8 +67,14 @@ class QemuOptions:
             self.has_default_nic = True  # MALTA board has a default pcnet at 0x0b
         elif xtarget.is_riscv(include_purecap=True):
             # Note: we always use the CHERI QEMU
-            self._qemu_arch_suffix = "riscv32cheri" if xtarget.is_riscv32(include_purecap=True) else "riscv64cheri"
+            xlen = 32 if xtarget.is_riscv32(include_purecap=True) else 64
             self.machine_flags = ["-M", "virt"]
+            if riscv_cheri_isa is RiscvCheriISA.STD:
+                self._qemu_arch_suffix = self._qemu_arch_suffix = f"riscv{xlen}cheristd"
+                # cheri_levels=2 enables local/global, cheri_pte enables the UCRG feature
+                self.machine_flags.extend(["-cpu", "codasip-a730,cheri_pte=on,cheri_levels=2"])
+            else:
+                self._qemu_arch_suffix = f"riscv{xlen}cheri"
             self.can_boot_kernel_directly = True
         elif xtarget.is_any_x86():
             # We boot i386 FreeBSD in a x86_64 QEMU. This avoids having to build another version of QEMU.
@@ -232,10 +242,14 @@ def qemu_supports_9pfs(qemu: Path, *, config: ConfigBase) -> bool:
     return b"-virtfs ?: Usage: -virtfs" in prog.stderr
 
 
-def riscv_bios_arguments(xtarget: CrossCompileTarget, _, prefer_bbl=True) -> "list[str]":
+def riscv_bios_arguments(
+    xtarget: CrossCompileTarget, cheri_isa: Optional[RiscvCheriISA], prefer_bbl=True
+) -> "list[str]":
     assert xtarget.is_riscv(include_purecap=True)
     if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-        # noinspection PyUnreachableCode
+        if cheri_isa == RiscvCheriISA.STD:
+            # FIXME: QEMU does not yet default to the correct BIOS image name.
+            return ["-bios", "opensbi-riscv64cheristd-virt-fw_jump.bin"]
         if prefer_bbl:
             # We want a purecap BBL:
             # from .projects.cross.bbl import BuildBBLNoPayload
