@@ -95,6 +95,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         super().setup()
         # ensure that we don't fall back to system headers (but do use stddef.h from clang...)
         self.COMMON_FLAGS.extend(["--sysroot", "/this/path/does/not/exist"])
+        self.COMMON_FLAGS.extend(["-Wno-implicit-function-declaration"])
 
         target_cflags = self.commandline_to_str(self.essential_compiler_and_linker_flags + self.COMMON_FLAGS)
         bindir = self.sdk_bindir
