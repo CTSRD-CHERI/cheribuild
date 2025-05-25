@@ -217,6 +217,10 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
         CompilationTargets.FREESTANDING_RISCV64_ZPURECAP,
     )
 
+    def setup(self):
+        super().setup()
+        self.make_args.set(FW_TEXT_START=0x80000000)
+
     @property
     def all_platforms(self):
         return ["generic"]
