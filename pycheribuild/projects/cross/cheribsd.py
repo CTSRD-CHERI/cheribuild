@@ -55,6 +55,7 @@ from ..project import (
     ReuseOtherProjectRepository,
 )
 from ..simple_project import SimpleProject, TargetAliasWithDependencies, _clear_line_sequence, flush_stdio
+from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ConfigOptionHandle
 from ...config.target_info import AutoVarInit, CompilerType, CrossCompileTarget
@@ -829,7 +830,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 # FIXME: still needed?
                 result["WITH_CHERI"] = True
             else:
-                result["TARGET_CPUTYPE"] = "cheri"
+                if self.config.riscv_cheri_isa == RiscvCheriISA.STD:
+                    result["TARGET_CPUTYPE"] = "cheri"
+                elif self.config.riscv_cheri_isa == RiscvCheriISA.V9:
+                    result["TARGET_CPUTYPE"] = "xcheri"
+                else:
+                    assert False, "Not reached: unsupported RISC-V Cheri ISA"
                 if self.compiling_for_mips(include_purecap=True):
                     result["CHERI"] = self.config.mips_cheri_bits_str
         return result
