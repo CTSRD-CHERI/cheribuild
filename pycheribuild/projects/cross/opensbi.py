@@ -247,3 +247,12 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
             args = self.make_args.copy()
             args.set(PLATFORM=platform)
             self.run_make(parallel=False, cwd=self.source_dir, options=args)
+
+
+class BuildAllianceOpenSBIGFE(BuildAllianceOpenSBI):
+    target = "cheri-alliance-opensbi-gfe"
+    repository = ReuseOtherProjectRepository(BuildAllianceOpenSBI, do_update=True)
+
+    def setup(self):
+        super().setup()
+        self.make_args.set(FW_TEXT_START=0xC0000000)
