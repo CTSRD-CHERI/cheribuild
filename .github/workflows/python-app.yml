@@ -40,7 +40,7 @@ jobs:
                 run: |
                     # Use the system-provided python3 instead of actions/setup-python@v4
                     python3 --version
-		    # Don't upgrade pip.  It currently fails to uninstall.
+                    # Don't upgrade pip.  It currently fails to uninstall.
                     # python3 -m pip install --break-system-packages --upgrade pip
                     python3 -m pip install --break-system-packages --upgrade pre-commit ruff==${{ env.RUFF_VERSION }}
                     python3 -m pip install --break-system-packages -r requirements.txt
