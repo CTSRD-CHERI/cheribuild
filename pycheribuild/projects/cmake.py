@@ -131,6 +131,7 @@ class BuildCrossCompiledCMake(CMakeProject):
         # Prefer static libraries for 3rd-party dependencies
         self.add_cmake_options(BUILD_SHARED_LIBS=False)
         self.add_cmake_options(CMAKE_USE_SYSTEM_LIBRARY_LIBUV=True)
+        self.add_cmake_options(HAVE_SSIZE_T=True)
         if not (BuildLibuv.get_install_dir(self) / self.target_info.default_libdir / "libuv.a").exists():
             # CMake can't find the static libuv due to a different libname which is installed as libuv_a.a
             # for some older versions of libuv.
