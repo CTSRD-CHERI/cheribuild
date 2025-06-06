@@ -149,10 +149,11 @@ class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
 
 # Use git-worktree to handle per-target branches:
 class TargetBranchInfo:
-    def __init__(self, branch: str, directory_name: str, url: "Optional[str]" = None):
+    def __init__(self, branch: str, directory_name: str, url: "Optional[str]" = None, tag: "Optional[str]" = None):
         self.branch = branch
         self.directory_name = directory_name
         self.url = url
+        self.tag = tag
 
 
 _PRETEND_RUN_GIT_COMMANDS = os.getenv("_TEST_SKIP_GIT_COMMANDS") is None
@@ -468,21 +469,15 @@ class GitRepository(SourceRepository):
             if current_project.query_yes_no("Use this remote?"):
                 break
             matching_remote = input("Please enter the correct remote: ")
-        # TODO --track -B?
+        git_worktree_add_cmd = ["git", "-C", base_project_source_dir, "worktree", "add"]
+        if target_override.tag is not None:
+            target_hash = target_override.tag + "^{tag}"
+        else:
+            target_hash = matching_remote + "/" + target_override.branch
+            git_worktree_add_cmd.append("--track")
         try:
             current_project.run_cmd(
-                [
-                    "git",
-                    "-C",
-                    base_project_source_dir,
-                    "worktree",
-                    "add",
-                    "--track",
-                    "-b",
-                    target_override.branch,
-                    src_dir,
-                    matching_remote + "/" + target_override.branch,
-                ],
+                [*git_worktree_add_cmd, "-b", target_override.branch, src_dir, target_hash],
                 print_verbose_only=False,
             )
         except subprocess.CalledProcessError:
@@ -493,18 +488,7 @@ class GitRepository(SourceRepository):
                 sep="",
             )
             current_project.run_cmd(
-                [
-                    "git",
-                    "-C",
-                    base_project_source_dir,
-                    "worktree",
-                    "add",
-                    "--track",
-                    "-b",
-                    "worktree-fallback-" + target_override.branch,
-                    src_dir,
-                    matching_remote + "/" + target_override.branch,
-                ],
+                [*git_worktree_add_cmd, "-b", "worktree-fallback-" + target_override.branch, src_dir, target_hash],
                 print_verbose_only=False,
             )
 
