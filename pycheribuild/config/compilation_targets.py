@@ -1423,6 +1423,7 @@ class CompilationTargets(BasicCompilationTargets):
         FREESTANDING_RISCV64,
         FREESTANDING_RISCV64_HYBRID,
         FREESTANDING_RISCV64_PURECAP,
+        FREESTANDING_RISCV64_ZPURECAP,
     )
     ARM_NONE_EABI = CrossCompileTarget(
         "arm-none-eabi",
