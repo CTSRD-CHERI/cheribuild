@@ -2209,7 +2209,7 @@ class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
 
         # release/Makefile needs to install both world and kernel to create
         # images, so start with the arguments for the combination of the two.
-        kernconfs = self.get_kernel_configs(None)
+        kernconfs = self.kernconf_list()
         release_args = self.installworld_args.copy()
         release_args.update(self.kernel_make_args_for_config(kernconfs, None).copy())
 
