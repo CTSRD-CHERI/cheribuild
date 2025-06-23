@@ -443,6 +443,7 @@ class CheriConfig(ConfigBase):
         self.cheribsd_image_root: Optional[Path] = None
         self.cheri_sdk_dir: Optional[Path] = None
         self.morello_sdk_dir: Optional[Path] = None
+        self.cheri_alliance_sdk_dir: Optional[Path] = None
         self.other_tools_dir: Optional[Path] = None
         self.sysroot_output_root: Optional[Path] = None
         self.docker = loader.add_bool_option(
@@ -726,12 +727,24 @@ class CheriConfig(ConfigBase):
         return "morello-sdk"
 
     @property
+    def default_cheri_alliance_sdk_directory_name(self) -> str:
+        return "cheri-alliance-sdk"
+
+    @property
     def cheri_sdk_bindir(self):
         return self.cheri_sdk_dir / "bin"
 
     @property
     def morello_sdk_bindir(self):
         return self.morello_sdk_dir / "bin"
+
+    @property
+    def cheri_alliance_sdk_bindir(self):
+        return self.cheri_alliance_sdk_dir / "bin"
+
+    @property
+    def cheri_alliance_qemu_bindir(self):
+        return self.cheri_alliance_sdk_bindir
 
     @property
     def qemu_bindir(self):

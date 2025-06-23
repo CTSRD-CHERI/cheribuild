@@ -1045,6 +1045,31 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
         sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
         return sysroot_dir / "baremetal" / self.target.get_rootfs_target().generic_arch_suffix
 
+class BaremetalFreestandingCheriAllianceTargetInfo(BaremetalClangTargetInfo):
+    shortname: str = "Baremetal"
+    os_prefix: str = "baremetal-"
+    uses_cheri_alliance_llvm: bool = True
+
+    @classmethod
+    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("cheri-alliance-llvm", None))
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
+        return []
+
+    @classmethod
+    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", *, include_version: bool) -> str:
+        if target.cpu_architecture.value == CPUArchitecture.RISCV32:
+            return "riscv32-none-elf"
+        if target.is_riscv64(include_purecap=True):
+            return "riscv64-unknown-elf"
+        assert False, "Other baremetal cases have not been tested yet!"
+
+    @property
+    def sysroot_dir(self) -> Path:
+        sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
+        return sysroot_dir / "baremetal" / self.target.get_rootfs_target().generic_arch_suffix
 
 class MorelloBaremetalTargetInfo(BaremetalFreestandingTargetInfo):
     shortname: str = "Morello-Baremetal"
@@ -1398,14 +1423,14 @@ class CompilationTargets(BasicCompilationTargets):
     FREESTANDING_RISCV64_ZHYBRID = CrossCompileTarget(
         "riscv64-zhybrid",
         CPUArchitecture.RISCV64,
-        BaremetalFreestandingTargetInfo,
+        BaremetalFreestandingCheriAllianceTargetInfo,
         is_cheri_hybrid=True,
         is_standard_cheri_extension=True
     )
     FREESTANDING_RISCV64_ZPURECAP = CrossCompileTarget(
         "riscv64-zpurecap",
         CPUArchitecture.RISCV64,
-        BaremetalFreestandingTargetInfo,
+        BaremetalFreestandingCheriAllianceTargetInfo,
         is_cheri_purecap=True,
         is_standard_cheri_extension=True,
         hybrid_target=FREESTANDING_RISCV64_ZHYBRID,

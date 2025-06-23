@@ -110,6 +110,7 @@ class CompilerType(Enum):
     DEFAULT_COMPILER = "default-compiler"  # Default system compiler (i.e. the argument passed to cheribuild)
     CHERI_LLVM = "cheri-llvm"  # Compile with CHERI LLVM built by cheribuild
     MORELLO_LLVM = "morello-llvm"  # Compile with Morello LLVM built by cheribuild
+    CHERI_ALLIANCE_LLVM = "cheri-alliance-llvm"  # Compile with CHERI Alliance LLVM built by cheribuild
     UPSTREAM_LLVM = "upstream-llvm"  # Compile with upstream LLVM built by cheribuild
     SYSTEM_LLVM = "system-llvm"  # Compile with system installation of LLVM/Clang
     BOOTSTRAPPED = "bootstrap"  # Compiler is included with the project
@@ -149,6 +150,7 @@ class DefaultInstallDir(Enum):
     KDE_PREFIX = "The sysroot for this target (<rootfs>/opt/<arch>/kde by default)"
     CHERI_SDK = "The CHERI SDK directory"
     MORELLO_SDK = "The Morello SDK directory"
+    CHERI_ALLIANCE_SDK = "The CHERI Alliance SDK directory"
     BOOTSTRAP_TOOLS = "The bootstap tools directory"
     CUSTOM_INSTALL_DIR = "Custom install directory"
     SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE = "Sysroot for baremetal projects, rootfs otherwise"
@@ -598,6 +600,8 @@ class NativeTargetInfo(TargetInfo):
             return config.cheri_sdk_dir
         elif install_dir == DefaultInstallDir.MORELLO_SDK:
             return config.morello_sdk_dir
+        elif install_dir == DefaultInstallDir.CHERI_ALLIANCE_SDK:
+            return config.cheri_alliance_sdk_dir
         elif install_dir == DefaultInstallDir.BOOTSTRAP_TOOLS:
             return config.other_tools_dir
         return super().default_install_dir(install_dir)
