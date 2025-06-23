@@ -1178,6 +1178,11 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         if self.include_cheribsdtest:
             for test_binary in (self.rootfs_dir / "bin").glob("cheribsdtest-*"):
                 self.add_file_to_image(test_binary, base_directory=self.rootfs_dir)
+            # Libraries needed to run cheribsdtest
+            for test_lib in (self.rootfs_dir / "usr/libexec").glob("malloc_revoke_enabled*"):
+                self.add_file_to_image(test_lib, base_directory=self.rootfs_dir)
+            for test_lib in (self.rootfs_dir / "usr/libexec").glob("malloc_early_constructor*"):
+                self.add_file_to_image(test_lib, base_directory=self.rootfs_dir)
 
         if self.include_pmc:
             self.add_file_to_image(self.rootfs_dir / "sbin/kldload", base_directory=self.rootfs_dir)
