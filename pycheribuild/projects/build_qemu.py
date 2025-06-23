@@ -575,3 +575,51 @@ class BuildQEMU(BuildQEMUBase):
             *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.bmp"),
             *self.config.morello_sdk_dir.rglob("share/icons/**/qemu.svg"),
         )
+
+
+class BuildCheriAllianceQEMU(BuildQEMUBase):
+    target = "cheri-alliance-qemu"
+    repository = GitRepository("https://github.com/CHERI-Alliance/qemu.git", default_branch="codasip-cheri-riscv_v3")
+    native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
+    default_targets = (
+        "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
+    )
+    # Turn on unaligned loads/stores by default
+    unaligned = BoolConfigOption("unaligned", show_help=False, help="Permit un-aligned loads/stores", default=False)
+    statistics = BoolConfigOption(
+        "statistics",
+        show_help=True,
+        help="Collect statistics on out-of-bounds capability creation.",
+    )
+
+    @classmethod
+    def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
+        # Always use the CHERI qemu even for plain riscv:
+        if xtarget.is_riscv64(include_purecap=True):
+            binary_name = "qemu-system-riscv64cheri"
+        elif xtarget.is_riscv32(include_purecap=True):
+            binary_name = "qemu-system-riscv32cheri"
+        else:
+            raise ValueError("Invalid xtarget" + str(xtarget))
+        return config.cheri_alliance_qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
+
+    @classmethod
+    def get_firmware_dir(cls, caller: SimpleProject, cross_target: "Optional[CrossCompileTarget]" = None):
+        return cls.get_install_dir(caller, cross_target=cross_target) / "share/qemu"
+
+    def setup(self):
+        super().setup()
+        if self.unaligned:
+            self.COMMON_FLAGS.append("-DCHERI_UNALIGNED")
+        if self.statistics:
+            self.COMMON_FLAGS.append("-DDO_CHERI_STATISTICS=1")
+        if self.build_type == BuildType.DEBUG:
+            self.COMMON_FLAGS.append("-DENABLE_CHERI_SANITIY_CHECKS=1")
+        # the capstone disassembler doesn't support CHERI instructions:
+        self.configure_args.append("--disable-capstone")
+        # Linux/BSD-user is not supported for CHERI (yet)
+        self.configure_args.append("--disable-bsd-user")
+        self.configure_args.append("--disable-linux-user")
+
+    def install(self, **kwargs):
+        super().install(**kwargs)
