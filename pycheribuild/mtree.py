@@ -40,7 +40,7 @@ from collections import OrderedDict
 from pathlib import Path, PurePath, PurePosixPath
 from typing import Optional, Union
 
-from .utils import status_update, warning_message
+from .utils import fatal_error, status_update, warning_message
 
 
 class MtreePath(PurePosixPath):
@@ -171,6 +171,50 @@ class MtreeSubtree(collections.abc.MutableMapping):
         for c in self.children.values():
             ret += len(c)
         return ret
+
+    def _glob(self, patfrags, prefix, *, case_sensitive=False):
+        if len(patfrags) == 0:
+            if self.entry is not None:
+                yield prefix
+            return
+        patfrag = patfrags[0]
+        patfrags = patfrags[1:]
+        if len(patfrags) == 0 and len(patfrag) == 0:
+            if self.entry is not None and self.entry.attributes["type"] == "dir":
+                yield prefix
+            return
+        for k, v in self.children.items():
+            if fnmatch.fnmatch(k, patfrag):
+                yield from v._glob(patfrags, prefix / k, case_sensitive=case_sensitive)
+
+    def glob(self, pattern, *, case_sensitive=False):
+        if len(pattern) == 0:
+            return
+        head, tail = os.path.split(pattern)
+        patfrags = [tail]
+        while head:
+            head, tail = os.path.split(head)
+            patfrags.insert(0, tail)
+        return self._glob(patfrags, MtreePath(), case_sensitive=case_sensitive)
+
+    def _walk(self, top, prefix):
+        split = self._split_key(top)
+        if split is not None:
+            return self.children[split[0]]._walk(split[1], prefix / split[0])
+        if self.entry is not None and self.entry.attributes["type"] != "dir":
+            return
+        files = []
+        dirs = []
+        for k, v in self.children.items():
+            if v.entry is not None and v.entry.attributes["type"] != "dir":
+                files.append((k, v))
+            else:
+                dirs.append((k, v))
+        yield (prefix, list([k for k, _ in dirs]), list([k for k, _ in files]))
+        return iter([v._walk(MtreePath(), prefix) for _, v in dirs])
+
+    def walk(self, top):
+        return self._walk(top, MtreePath())
 
 
 class MtreeFile:
@@ -350,6 +394,29 @@ class MtreeFile:
             status_update("Adding dir", path, "to mtree as", entry, file=sys.stderr)
         self._mtree[mtree_path] = entry
 
+    def add_from_mtree(self, mtree_file, path, print_status=True):
+        if isinstance(path, PurePath):
+            path = str(path)
+        assert not path.startswith("/")
+        path = path.rstrip("/")  # remove trailing slashes
+        mtree_path = self._ensure_mtree_path_fmt(path)
+        if mtree_path in self._mtree:
+            return
+        if mtree_path not in mtree_file._mtree:
+            fatal_error("Could not find " + str(mtree_path) + " in source mtree", pretend=True)
+            return
+        parent = mtree_path.parent
+        if parent != mtree_path:
+            self.add_from_mtree(mtree_file, parent, print_status=print_status)
+        attribs = mtree_file.get(mtree_path).attributes
+        entry = MtreeEntry(mtree_path, attribs)
+        if print_status:
+            if "link" in attribs:
+                status_update("Adding symlink to", attribs["link"], "to mtree as", entry, file=sys.stderr)
+            else:
+                status_update("Adding", attribs["type"], mtree_path, "to mtree as", entry, file=sys.stderr)
+        self._mtree[mtree_path] = entry
+
     def __contains__(self, item) -> bool:
         mtree_path = self._ensure_mtree_path_fmt(str(item))
         return mtree_path in self._mtree
@@ -403,3 +470,9 @@ class MtreeFile:
     @property
     def root(self):
         return self._mtree
+
+    def glob(self, pattern, *, case_sensitive=False):
+        return self._mtree.glob(pattern, case_sensitive=case_sensitive)
+
+    def walk(self, top):
+        return self._mtree.walk(top)
