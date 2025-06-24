@@ -286,7 +286,7 @@ class BuildDiskImageBase(SimpleProject):
             # Try to shrink the size by stripping all elf binaries
             stripped_path = self.tmpdir / path_in_target
             if self.maybe_strip_elf_file(file, output_path=stripped_path):
-                self.verbose_print("Stripped ELF binary", file)
+                self.verbose_print("Stripped ELF binary", file, "at", stripped_path)
                 file = stripped_path
 
         if not self.config.quiet:
@@ -324,6 +324,30 @@ class BuildDiskImageBase(SimpleProject):
                 )
             self.write_file(target_file, contents, never_print_cmd=True, overwrite=False, mode=mode)
         self.add_file_to_image(target_file, base_directory=base_dir)
+
+    def add_from_mtree(self, mtree_file, mtree_path, strip_binaries: "Optional[bool]" = None, print_status=None):
+        if strip_binaries is None:
+            strip_binaries = self.strip_binaries
+        kwargs = {}
+        if print_status is not None:
+            kwargs["print_status"] = print_status
+        self.mtree.add_from_mtree(mtree_file, mtree_path, **kwargs)
+        if strip_binaries:
+            # Try to shrink the size by stripping all elf binaries
+            entry = self.mtree.get(mtree_path)
+            contents = entry.attributes.get("contents", entry.path)
+            if contents not in self.stripped_contents:
+                stripped_path = self.tmpdir / entry.path
+                file = self.rootfs_dir / contents
+                if not self.maybe_strip_elf_file(file, output_path=stripped_path):
+                    stripped_path = contents
+                self.stripped_contents[contents] = stripped_path
+                self.stripped_contents[stripped_path] = stripped_path
+            else:
+                stripped_path = self.stripped_contents[contents]
+            if stripped_path != contents:
+                entry.attributes["contents"] = str(stripped_path)
+                self.verbose_print("Stripped ELF binary", mtree_path, "at", stripped_path)
 
     def prepare_rootfs(self):
         assert self.tmpdir is not None
@@ -1090,6 +1114,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         # The base input is only cheribsdbox and all the symlinks
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
+        self.ref_mtree = MtreeFile(verbose=self.config.verbose)
+        self.stripped_contents: "dict[str, Path]" = {}
 
     def setup(self):
         super().setup()
@@ -1112,13 +1138,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                 continue
             assert not line.startswith("/")
             # Otherwise find the file in the rootfs
-            file_path: Path = self.rootfs_dir / line
-            if not file_path.exists():
-                self.fatal("Required file", line, "missing from rootfs")
-            if file_path.is_dir():
-                self.mtree.add_dir(line, reference_dir=file_path, print_status=self.config.verbose)
-            else:
-                self.add_file_to_image(file_path, base_directory=self.rootfs_dir)
+            self.add_from_mtree(self.ref_mtree, line)
 
     def add_unlisted_files_to_metalog(self):
         # Now add all the files from *.files to the image:
@@ -1148,49 +1168,50 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
 
         # At least one runtime linker must be present - they will be included in
         # METALOG so we don't need to add manually
-        ld_elf_path = self.rootfs_dir / "libexec/ld-elf.so.1"
-        if ld_elf_path.exists():
-            self.add_file_to_image(ld_elf_path, base_directory=self.rootfs_dir)
+        ld_elf_path = "libexec/ld-elf.so.1"
+        if ld_elf_path in self.ref_mtree:
+            self.add_from_mtree(self.ref_mtree, ld_elf_path)
         else:
-            self.warning("default ABI runtime linker not present in rootfs at", ld_elf_path)
+            self.warning("default ABI runtime linker not present in mtree at", ld_elf_path)
             self.ask_for_confirmation("Are you sure you want to continue?")
-        # Add all compat ABI runtime linkers that we find in the rootfs:
+        # Add all compat ABI runtime linkers that we find in the mtree:
         for rtld_abi in ("elf32", "elf64", "elf64c", "elf64cb", "elf128", "elf128g"):
-            rtld_path = self.rootfs_dir / "libexec" / f"ld-{rtld_abi}.so.1"
-            if rtld_path.exists():
-                self.add_file_to_image(rtld_path, base_directory=self.rootfs_dir)
+            rtld_path = f"libexec/ld-{rtld_abi}.so.1"
+            if rtld_path in self.ref_mtree:
+                self.add_from_mtree(self.ref_mtree, rtld_path)
 
         self.add_required_libraries(["lib", "usr/lib"])
         # Add compat libraries (may not exist if it was built with -DWITHOUT_LIB64, etc.)
         for libcompat_dir in ("lib/c18n", "lib32", "lib64", "lib64c", "lib64cb", "lib64cb/c18n", "lib128", "lib128g"):
-            fullpath = self.rootfs_dir / "usr" / libcompat_dir
-            if fullpath.is_symlink():
+            fullpath = Path("usr") / libcompat_dir
+            if fullpath not in self.ref_mtree:
+                continue
+            entry = self.ref_mtree.get(fullpath)
+            if "link" in entry.attributes:
                 # add the libcompat symlinks to ensure that we can always use lib64/lib64c in test scripts
-                self.mtree.add_symlink(
-                    src_symlink=self.rootfs_dir / "usr" / libcompat_dir, path_in_image="usr/" + libcompat_dir
-                )
-                if (self.rootfs_dir / libcompat_dir).is_symlink():
-                    self.mtree.add_symlink(src_symlink=self.rootfs_dir / libcompat_dir, path_in_image=libcompat_dir)
-            elif (fullpath / "libc.so").exists():
+                self.add_from_mtree(self.ref_mtree, fullpath)
+                if libcompat_dir in self.ref_mtree:
+                    self.add_from_mtree(self.ref_mtree, libcompat_dir)
+            elif (fullpath / "libc.so") in self.ref_mtree:
                 ignore_required = libcompat_dir in ("lib/c18n", "lib64cb/c18n", "lib128", "lib128g")
                 self.add_required_libraries(["usr/" + libcompat_dir], ignore_required=ignore_required)
 
         if self.include_cheribsdtest:
-            for test_binary in (self.rootfs_dir / "bin").glob("cheribsdtest-*"):
-                self.add_file_to_image(test_binary, base_directory=self.rootfs_dir)
+            for test_binary in self.ref_mtree.glob("bin/cheribsdtest-*"):
+                self.add_from_mtree(self.ref_mtree, test_binary)
 
         if self.include_pmc:
-            self.add_file_to_image(self.rootfs_dir / "sbin/kldload", base_directory=self.rootfs_dir)
-            self.add_file_to_image(self.rootfs_dir / "usr/sbin/pmcstat", base_directory=self.rootfs_dir)
+            self.add_from_mtree(self.ref_mtree, "sbin/kldload")
+            self.add_from_mtree(self.ref_mtree, "usr/sbin/pmcstat")
 
         # These dirs seem to be needed
-        self.mtree.add_dir("var/db", print_status=self.config.verbose)
-        self.mtree.add_dir("var/empty", print_status=self.config.verbose)
+        self.add_from_mtree(self.ref_mtree, "var/db", print_status=self.config.verbose)
+        self.add_from_mtree(self.ref_mtree, "var/empty", print_status=self.config.verbose)
 
         if self.include_boot_files and (self.is_x86 or self.compiling_for_aarch64(include_purecap=True)):
             # When booting minimal disk images, we need the files in /boot (kernel+loader), but we omit modules.
             extra_files = []
-            for root, dirnames, filenames in os.walk(str(self.rootfs_dir / "boot")):
+            for root, dirnames, filenames in self.ref_mtree.walk("boot"):
                 for filename in filenames:
                     new_file = Path(root, filename)
                     # Don't add kernel modules
@@ -1204,7 +1225,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                     extra_files.append(new_file)
                     # Stripping kernel modules makes them unloadable:
                     # kldload: /boot/kernel/smbfs.ko: file must have exactly one symbol table
-                    self.add_file_to_image(new_file, base_directory=self.rootfs_dir, strip_binaries=False)
+                    self.add_from_mtree(new_file, strip_binaries=False)
             self.verbose_print("Boot files:\n\t", "\n\t".join(map(str, sorted(extra_files))))
         self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
 
@@ -1278,8 +1299,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             for library_basename in libs:
                 full_lib_path = None
                 for library_dir in libdirs:
-                    guess = self.rootfs_dir / library_dir / library_basename
-                    if guess.exists():
+                    guess = Path(library_dir) / library_basename
+                    if guess in self.ref_mtree:
                         full_lib_path = guess
                 if full_lib_path is None:
                     if len(libdirs) == 1:
@@ -1290,23 +1311,28 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                         self.fatal(
                             "Could not find required library '",
                             prefix + library_basename,
-                            "' in rootfs ",
-                            self.rootfs_dir,
+                            "' in mtree",
                             sep="",
                         )
                     else:
                         self.info(
                             "Could not find optional library '",
                             prefix + library_basename,
-                            "' in rootfs ",
-                            self.rootfs_dir,
+                            "' in mtree",
                             sep="",
                         )
                     continue
-                self.add_file_to_image(full_lib_path, base_directory=self.rootfs_dir)
+                self.add_from_mtree(self.ref_mtree, full_lib_path)
 
     def prepare_rootfs(self):
         super().prepare_rootfs()
+
+        for metalog in [self.rootfs_dir / "METALOG.world", self.rootfs_dir / "METALOG.kernel"]:
+            if metalog.exists() and not os.getenv("_TEST_SKIP_METALOG"):
+                self.ref_mtree.load(metalog, append=True)
+            else:
+                self.fatal("Could not find required reference mtree file", metalog)
+
         # Add the additional sysctl configs
         self.create_file_for_image(
             "/etc/pam.d/system",
