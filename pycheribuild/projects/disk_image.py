@@ -1199,6 +1199,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         if self.include_cheribsdtest:
             for test_binary in self.ref_mtree.glob("bin/cheribsdtest-*"):
                 self.add_from_mtree(self.ref_mtree, test_binary)
+            self.add_from_mtree(self.ref_mtree, "usr/share/examples/cheribsdtest/run-many")
 
         if self.include_pmc:
             self.add_from_mtree(self.ref_mtree, "sbin/kldload")
