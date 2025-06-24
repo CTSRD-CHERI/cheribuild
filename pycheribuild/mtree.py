@@ -227,12 +227,13 @@ class MtreeFile:
             print_status=print_status,
         )
         attribs = OrderedDict([("type", mtree_type), ("uname", uname), ("gname", gname), ("mode", mode), last_attrib])
+        entry = MtreeEntry(mtree_path, attribs)
         if print_status:
             if "link" in attribs:
-                status_update("Adding symlink to", attribs["link"], "to mtree as", mtree_path, file=sys.stderr)
+                status_update("Adding symlink to", attribs["link"], "to mtree as", entry, file=sys.stderr)
             else:
-                status_update("Adding file", file, "to mtree as", mtree_path, file=sys.stderr)
-        self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
+                status_update("Adding file", file, "to mtree as", entry, file=sys.stderr)
+        self._mtree[mtree_path] = entry
 
     def add_symlink(self, *, src_symlink: "Optional[Path]" = None, symlink_dest=None, path_in_image: str, **kwargs):
         if src_symlink is not None:
@@ -272,9 +273,10 @@ class MtreeFile:
                 self.add_dir(parent, mode, uname, gname, print_status=print_status, reference_dir=None)
         # now add the actual entry
         attribs = OrderedDict([("type", "dir"), ("uname", uname), ("gname", gname), ("mode", mode)])
+        entry = MtreeEntry(mtree_path, attribs)
         if print_status:
-            status_update("Adding dir", path, "to mtree", file=sys.stderr)
-        self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
+            status_update("Adding dir", path, "to mtree as", entry, file=sys.stderr)
+        self._mtree[mtree_path] = entry
 
     def __contains__(self, item) -> bool:
         mtree_path = self._ensure_mtree_path_fmt(str(item))
