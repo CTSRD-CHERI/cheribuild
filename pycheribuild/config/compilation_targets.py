@@ -83,7 +83,9 @@ class LaunchFreeBSDInterface:
 
 
 @functools.lru_cache(maxsize=20)
-def _linker_supports_riscv_relaxations(linker: Path, config: CheriConfig) -> bool:
+def _linker_supports_riscv_relaxations(linker: Path, config: CheriConfig, xtarget: "CrossCompileTarget") -> bool:
+    if xtarget.is_hybrid_or_purecap_cheri():
+        return False
     try:
         linker_version = get_version_output(linker, config=config)
     except subprocess.CalledProcessError as e:
@@ -275,7 +277,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             # Use the insane RISC-V arch string to enable CHERI
             result.append("-march=" + cls.get_riscv_arch_string(xtarget, softfloat=softfloat))
             result.append("-mabi=" + cls.get_riscv_abi(xtarget, softfloat=softfloat))
-            result.append("-mrelax" if _linker_supports_riscv_relaxations(instance.linker, config) else "-mno-relax")
+            result.append("-mrelax" if _linker_supports_riscv_relaxations(instance.linker, config, xtarget) else "-mno-relax")
 
             if cls.is_baremetal() or cls.is_rtems():
                 # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
