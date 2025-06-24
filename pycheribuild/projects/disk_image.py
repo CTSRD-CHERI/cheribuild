@@ -1332,7 +1332,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
     def make_rootfs_image(self, rootfs_img: Path):
         # update cheribsdbox link in case we stripped it:
         # noinspection PyProtectedMember
-        cheribsdbox_entry = self.mtree._mtree.get("./bin/cheribsdbox")
+        cheribsdbox_entry = self.mtree.get("./bin/cheribsdbox")
         if not cheribsdbox_entry:
             self.fatal("Could not find cheribsdbox entry in mtree file!")
         else:
@@ -1349,7 +1349,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                     )
             print("Relocating mtree path ./bin/cheribsdbox to use", cheribsdbox_path)
             # noinspection PyProtectedMember
-            for i in self.mtree._mtree.values():
+            for i in self.mtree.root.values():
                 if i.attributes.get("contents", None) == "./bin/cheribsdbox":
                     i.attributes["contents"] = cheribsdbox_path
 
