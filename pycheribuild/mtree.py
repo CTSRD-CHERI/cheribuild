@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 
+import collections
 import fnmatch
 import io
 import os
@@ -36,14 +37,22 @@ import stat
 import sys
 import typing
 from collections import OrderedDict
-from pathlib import Path
+from pathlib import Path, PurePath, PurePosixPath
 from typing import Optional, Union
 
 from .utils import status_update, warning_message
 
 
+class MtreePath(PurePosixPath):
+    def __str__(self):
+        pathstr = super().__str__()
+        if pathstr != ".":
+            pathstr = "./" + pathstr
+        return pathstr
+
+
 class MtreeEntry:
-    def __init__(self, path: str, attributes: "dict[str, str]"):
+    def __init__(self, path: MtreePath, attributes: "dict[str, str]"):
         self.path = path
         self.attributes = attributes
 
@@ -63,6 +72,7 @@ class MtreeEntry:
             assert path[:2] == "./"
             path = path[:2] + os.path.normpath(path[2:])
             # print("After:", path)
+        path = MtreePath(path)
         attr_dict = OrderedDict()  # keep them in insertion order
         for k, v in map(lambda s: s.split(sep="=", maxsplit=1), elements[1:]):
             # ignore some tags that makefs doesn't like
@@ -96,10 +106,71 @@ class MtreeEntry:
             # exist in practise we can just update this code to handle them too.
             return s.replace(" ", "\\s")
 
-        return escape(self.path) + " " + " ".join(k + "=" + shlex.quote(v) for k, v in self.attributes.items())
+        components = [escape(str(self.path))]
+        for k, v in self.attributes.items():
+            components.append(k + "=" + shlex.quote(v))
+        return " ".join(components)
 
     def __repr__(self) -> str:
         return "<MTREE entry: " + str(self) + ">"
+
+
+class MtreeSubtree(collections.abc.MutableMapping):
+    def __init__(self):
+        self.entry: MtreeEntry = None
+        self.children: "dict[str, MtreeSubtree]" = OrderedDict()
+
+    @staticmethod
+    def _split_key(key):
+        if isinstance(key, str):
+            key = MtreePath(key)
+        elif not isinstance(key, MtreePath):
+            if isinstance(key, PurePath):
+                key = MtreePath(key)
+            else:
+                raise TypeError
+        if not key.parts:
+            return None
+        return key.parts[0], MtreePath(*key.parts[1:])
+
+    def __getitem__(self, key):
+        split = self._split_key(key)
+        if split is None:
+            if self.entry is None:
+                raise KeyError
+            return self.entry
+        return self.children[split[0]][split[1]]
+
+    def __setitem__(self, key, value):
+        split = self._split_key(key)
+        if split is None:
+            self.entry = value
+            return
+        if split[0] not in self.children:
+            self.children[split[0]] = MtreeSubtree()
+        self.children[split[0]][split[1]] = value
+
+    def __delitem__(self, key):
+        split = self._split_key(key)
+        if split is None:
+            if self.entry is None:
+                raise KeyError
+            self.entry = None
+            return
+        del self.children[split[0]][split[1]]
+
+    def __iter__(self):
+        if self.entry is not None:
+            yield MtreePath()
+        for k, v in self.children.items():
+            for k2 in v:
+                yield MtreePath(k, k2)
+
+    def __len__(self):
+        ret = int(self.entry is not None)
+        for c in self.children.values():
+            ret += len(c)
+        return ret
 
 
 class MtreeFile:
@@ -111,7 +182,7 @@ class MtreeFile:
         contents_root: "Optional[Path]" = None,
     ):
         self.verbose = verbose
-        self._mtree: "dict[str, MtreeEntry]" = OrderedDict()
+        self._mtree = MtreeSubtree()
         if file:
             self.load(file, contents_root=contents_root, append=False)
 
@@ -131,8 +202,9 @@ class MtreeFile:
                 continue
             try:
                 entry = MtreeEntry.parse(line, contents_root)
-                key = str(entry.path)
-                assert key == "." or os.path.normpath(key[2:]) == key[2:]
+                key = entry.path
+                keystr = str(key)
+                assert keystr == "." or os.path.normpath(keystr[2:]) == keystr[2:]
                 if key in self._mtree:
                     # Currently the FreeBSD build system can produce duplicate directory entries in the mtree file
                     # when installing in parallel. Ignore those duplicates by default since it makes the output
@@ -160,7 +232,7 @@ class MtreeFile:
         if mtree_path != ".":
             # ensure we normalize paths to avoid conflicting duplicates:
             mtree_path = "./" + os.path.normpath(path)
-        return mtree_path
+        return MtreePath(mtree_path)
 
     @staticmethod
     def infer_mode_string(path: Path, should_be_dir) -> str:
@@ -190,7 +262,7 @@ class MtreeFile:
         parent_dir_mode=None,
         symlink_dest: "Optional[str]" = None,
     ):
-        if isinstance(path_in_image, Path):
+        if isinstance(path_in_image, PurePath):
             path_in_image = str(path_in_image)
         assert not path_in_image.startswith("/")
         assert not path_in_image.startswith("./") and not path_in_image.startswith("..")
@@ -201,7 +273,7 @@ class MtreeFile:
                 mode = self.infer_mode_string(file, False)
         mode = self._ensure_mtree_mode_fmt(mode)
         mtree_path = self._ensure_mtree_path_fmt(path_in_image)
-        assert mtree_path != ".", "files should not have name ."
+        assert str(mtree_path) != ".", "files should not have name ."
         if symlink_dest is not None:
             assert file is None
             reference_dir = None
@@ -244,7 +316,7 @@ class MtreeFile:
             self.add_file(None, path_in_image, symlink_dest=str(symlink_dest), **kwargs)
 
     def add_dir(self, path, mode=None, uname="root", gname="wheel", print_status=True, reference_dir=None) -> None:
-        if isinstance(path, Path):
+        if isinstance(path, PurePath):
             path = str(path)
         assert not path.startswith("/")
         path = path.rstrip("/")  # remove trailing slashes
@@ -252,7 +324,7 @@ class MtreeFile:
         if mtree_path in self._mtree:
             return
         if mode is None:
-            if reference_dir is None or mtree_path == ".":
+            if reference_dir is None or str(mtree_path) == ".":
                 mode = "0755"
             else:
                 if print_status:
