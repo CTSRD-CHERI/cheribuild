@@ -1176,13 +1176,14 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                 self.add_required_libraries(["usr/" + libcompat_dir], ignore_required=ignore_required)
 
         if self.include_cheribsdtest:
-            for test_binary in (self.rootfs_dir / "bin").glob("cheribsdtest-*"):
-                self.add_file_to_image(test_binary, base_directory=self.rootfs_dir)
-            # Libraries needed to run cheribsdtest
-            for test_lib in (self.rootfs_dir / "usr/libexec").glob("malloc_revoke_enabled*"):
-                self.add_file_to_image(test_lib, base_directory=self.rootfs_dir)
-            for test_lib in (self.rootfs_dir / "usr/libexec").glob("malloc_early_constructor*"):
-                self.add_file_to_image(test_lib, base_directory=self.rootfs_dir)
+            test_files = list((self.rootfs_dir / "bin").glob("cheribsdtest-*")) + \
+                         list((self.rootfs_dir / "usr/libexec").glob("malloc_revoke_enabled*")) + \
+                         list((self.rootfs_dir / "usr/libexec").glob("malloc_early_constructor*"))
+            for test_file in test_files:
+                if "suid" in test_file.name:
+                    self.add_file_to_image(test_file, base_directory=self.rootfs_dir, mode=0o4555, user="nobody")
+                else:
+                    self.add_file_to_image(test_file, base_directory=self.rootfs_dir)
 
         if self.include_pmc:
             self.add_file_to_image(self.rootfs_dir / "sbin/kldload", base_directory=self.rootfs_dir)
