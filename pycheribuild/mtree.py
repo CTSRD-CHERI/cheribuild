@@ -324,3 +324,10 @@ class MtreeFile:
             output.write(str(self._mtree[path]))
             output.write("\n")
         output.write("# END\n")
+
+    def get(self, key):
+        return self._mtree.get(key)
+
+    @property
+    def root(self):
+        return self._mtree
