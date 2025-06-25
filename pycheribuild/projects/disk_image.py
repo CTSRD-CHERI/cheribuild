@@ -1199,6 +1199,10 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         if self.include_cheribsdtest:
             for test_binary in self.ref_mtree.glob("bin/cheribsdtest-*"):
                 self.add_from_mtree(self.ref_mtree, test_binary)
+            for test_binary in self.ref_mtree.glob("usr/libexec/malloc_revoke_enabled*"):
+                self.add_from_mtree(self.ref_mtree, test_binary)
+            for test_binary in self.ref_mtree.glob("usr/libexec/malloc_early_constructor-*"):
+                self.add_from_mtree(self.ref_mtree, test_binary)
             self.add_from_mtree(self.ref_mtree, "usr/share/examples/cheribsdtest/run-many")
 
         if self.include_pmc:
@@ -1295,6 +1299,10 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
 
         if self.include_pmc:
             required_libs += ["libpmc.so.5"]
+
+        if self.include_cheribsdtest:
+            # Needed for the ABIs where they exist
+            optional_libs += ["libcheri_caprevoke.so.1", "libprivatecheribsdtest_dynamic.so.5"]
 
         for libs, required in [(required_libs, True), (optional_libs, False)]:
             for library_basename in libs:
