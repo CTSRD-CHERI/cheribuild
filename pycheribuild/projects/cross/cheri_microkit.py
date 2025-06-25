@@ -32,6 +32,9 @@
 import os
 import typing
 import subprocess
+import threading
+import time
+
 from typing import ClassVar
 from pathlib import Path
 
@@ -120,7 +123,7 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
                 "example",
                 metavar="EXAMPLE",
                 show_help=True,
-                default="hierarchy",
+                default="hello,hierarchy,passive_server",
                 help="CHERI-Microkit example to build (hello, hierarchy, passive_server, etc).",
             ))
         cls.build_all: str = typing.cast(
@@ -152,28 +155,29 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
         self.run_cmd(cmdline, cwd=self.source_dir)
 
         if self.example:
-            for board in self.boards.split(","):
-                cmdline = [
-                    "./pyenv/bin/python",
-                    "dev_build.py",
-                    "--board",
-                    board,
-                    "--example",
-                    self.example,
-                    "--rebuild",
-                    "--llvm",
-                    ]
-                if self.target_info.target.is_cheri_purecap():
-                    cmdline += ["--cheri"]
-                    cmdline += ["--config", "cheri"]
-                else:
-                    cmdline += ["--config", "debug"]
+            for ex in self.example.split(","):
+                for board in self.boards.split(","):
+                    cmdline = [
+                        "./pyenv/bin/python",
+                        "dev_build.py",
+                        "--board",
+                        board,
+                        "--example",
+                        ex,
+                        "--rebuild",
+                        "--llvm",
+                        ]
+                    if self.target_info.target.is_cheri_purecap():
+                        cmdline += ["--cheri"]
+                        cmdline += ["--config", "cheri"]
+                    else:
+                        cmdline += ["--config", "debug"]
 
-                self.run_cmd(cmdline, cwd=self.source_dir)
+                    self.run_cmd(cmdline, cwd=self.source_dir)
 
-                self.move_file(
-                    self.source_dir / str("tmp_build/loader.img"),
-                    self.real_install_root_dir / str(self.example + "-cheri-sel4-microkit-" + board + ".img"))
+                    self.move_file(
+                        self.source_dir / str("tmp_build/loader.img"),
+                        self.real_install_root_dir / str(ex + "-cheri-sel4-microkit-" + board + ".img"))
 
     def install(self, **kwargs):
         self.clean_directory(self.install_dir / str("microkit-sdk-" + self.release_version))
@@ -183,17 +187,56 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
             force=True)
 
     def run_tests(self):
+        expected_output = {
+            "hierarchy": "hello, world",
+            "hello": "hello, world",
+            "passive_server": "running on client"
+        }
+
         self.opensbi_project = BuildAllianceOpenSBI.get_instance(self)
         options = QemuOptions(self.crosscompile_target)
-        options.machine_flags=["-M", "virt", "-cpu", "codasip-a730", "-smp", "1"]
-        options.memory_size="3G"
-        self.run_cmd(
-            options.get_commandline(
+        options.machine_flags = ["-M", "virt", "-cpu", "codasip-a730", "-smp", "1"]
+        options.memory_size = "3G"
+
+        for ex in self.example.split(","):
+            cmd = options.get_commandline(
                 qemu_command=BuildCheriAllianceQEMU.qemu_binary(self),
                 add_network_device=False,
                 bios_args=["-bios", self.opensbi_project.install_dir / "share/opensbi/l64pc128/generic/firmware//fw_jump.elf"],
-                kernel_file=self.install_dir / str(self.example + "-cheri-sel4-microkit-" + self.boards + ".img"),
-            ))
+                kernel_file=self.install_dir / str(ex + "-cheri-sel4-microkit-" + self.boards + ".img"),
+            )
+
+            # Start QEMU as subprocess
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+            found = False
+            start_time = time.time()
+
+            def monitor_output():
+                nonlocal found
+                for line in proc.stdout:
+                    print(line, end="")  # Optionally display QEMU output live
+                    if expected_output[ex] in line:
+                        found = True
+                        proc.terminate()
+                        break
+
+            monitor_thread = threading.Thread(target=monitor_output)
+            monitor_thread.start()
+
+            monitor_thread.join(timeout=5)
+
+            if monitor_thread.is_alive():
+                proc.terminate()
+                monitor_thread.join()
+
+            proc.wait(timeout=2)  # Ensure it's really dead
+
+            if found:
+                print("✅ CHERI-Microkit's " + ex + " example succeeded.")
+            else:
+                raise RuntimeError("❌ CHERI-Microkit's" + ex + " example failed.")
+                self.fatal("Exiting on a test failure")
 
     def clean(self):
         self.clean_directory(self.source_dir / "release")
