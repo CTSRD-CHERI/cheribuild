@@ -224,7 +224,7 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
             monitor_thread = threading.Thread(target=monitor_output)
             monitor_thread.start()
 
-            monitor_thread.join(timeout=5)
+            monitor_thread.join(timeout=30)
 
             if monitor_thread.is_alive():
                 proc.terminate()
