@@ -30,7 +30,7 @@
 
 from pathlib import Path
 
-from ..build_qemu import BuildQEMU
+from ..build_qemu import (BuildQEMU, BuildCheriAllianceQEMU)
 from ..project import (
     BuildType,
     CheriConfig,
@@ -83,6 +83,8 @@ class BuildOpenSBI(Project):
         super().setup()
         compflags = " " + self.commandline_to_str(self.essential_compiler_and_linker_flags)
         compflags += " -Qunused-arguments"  # -mstrict-align -no-pie
+        if self.config.riscv_cheri_isa == RiscvCheriISA.STD:
+            compflags += " -mno-relax"
         if OSInfo.IS_MAC:
             self.make_args.set(READLINK="greadlink")
         self.make_args.set(
@@ -139,7 +141,7 @@ class BuildOpenSBI(Project):
         # Only install BuildBBLNoPayload as the QEMU bios and not the GFE version by checking build_dir_suffix
         if self.crosscompile_target.is_hybrid_or_purecap_cheri() and not self.build_dir_suffix:
             # Install into the QEMU firware directory so that `-bios default` works
-            qemu_fw_dir = BuildQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "share/qemu/"
+            qemu_fw_dir = self._qemu_install_dir() / "share/qemu/"
             suffix = "cheristd" if self.crosscompile_target.is_cheri_purecap() else "cheri"
             self.makedirs(qemu_fw_dir)
             # TODO: looks like newer versions install a .bin that we could just copy instead.
@@ -157,6 +159,9 @@ class BuildOpenSBI(Project):
         # share/opensbi/lp64/generic/firmware//fw_payload.bin
         abi = self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
         return self.install_dir / f"share/opensbi/{abi}/generic/firmware/fw_jump.elf"
+
+    def _qemu_install_dir(self) -> Path:
+        return BuildQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
 
     @classmethod
     def get_nocap_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":
@@ -213,7 +218,7 @@ class BuildUpstreamOpenSBI(BuildOpenSBI):
 class BuildAllianceOpenSBI(BuildOpenSBI):
     target = "cheri-alliance-opensbi"
     _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, p: config.cheri_sdk_dir / "cheri-alliance-opensbi/riscv64",
+        function=lambda config, p: config.cheri_alliance_sdk_dir / "cheri-alliance-opensbi/riscv64",
         as_string="$SDK_ROOT/cheri-alliance-opensbi/riscv64"
     )
     repository = GitRepository("https://github.com/CHERI-Alliance/opensbi",
@@ -222,6 +227,9 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP,
     )
+
+    def _qemu_install_dir(self) -> Path:
+        BuildCheriAllianceQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
 
     def setup(self):
         super().setup()
