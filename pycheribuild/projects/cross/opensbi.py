@@ -233,6 +233,25 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
         super().setup()
         self.make_args.set(FW_TEXT_START=0x80000000)
 
+    def install(self, **kwargs):
+        self.makedirs(self.install_dir)
+        for platform in self.all_platforms:
+            args = self.make_args.copy()
+            args.set(PLATFORM=platform)
+            self.run_make_install(cwd=self.source_dir, options=args)
+        # Install into the QEMU firmware directory so that `-bios default` works
+        qemu_fw_dir = BuildCheriAllianceQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "share/qemu/"
+        self.makedirs(qemu_fw_dir)
+        self.run_cmd(
+            self.sdk_bindir / "llvm-objcopy",
+            "-S",
+            "-O",
+            "binary",
+            self._fw_jump_path(),
+            qemu_fw_dir / "opensbi-riscv64cheri-virt-fw_jump.bin",
+            print_verbose_only=False,
+        )
+
     @property
     def all_platforms(self):
         return ["generic"]
