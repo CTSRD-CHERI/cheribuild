@@ -294,6 +294,19 @@ class BuildGDB(BuildGDBBase):
     )
 
 
+class BuildCheriAllianceGDB(BuildGDBBase):
+    target = "cheri-alliance-gdb"
+    native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
+    repository = GitRepository(
+        "https://github.com/CHERI-Alliance/gdb.git",
+        default_branch="codasip-cheri-riscv",
+    )
+
+    supported_architectures = (
+        CompilationTargets.NATIVE_NON_PURECAP,
+    )
+
+
 class BuildKGDB(BuildGDB):
     default_branch = "cheri-14-kgdb"
     repository = GitRepository(
