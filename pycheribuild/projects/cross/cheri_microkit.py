@@ -78,7 +78,7 @@ class BuildCheriMicrokit(CrossCompileAutotoolsProject):
     )
     target = "cheri-microkit"
     release_version = "2.0.1-dev"
-    dependencies = ("cheri-alliance-opensbi", "cheri-sel4", "cheri-alliance-qemu")
+    dependencies = ("cheri-alliance-qemu", "cheri-alliance-opensbi", "cheri-alliance-gdb", "cheri-sel4")
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot
