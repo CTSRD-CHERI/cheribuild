@@ -33,10 +33,11 @@ import os
 import shutil
 import sys
 import tempfile
+import typing
 from enum import Enum
 from functools import cached_property
-from pathlib import Path
-from typing import Optional
+from pathlib import Path, PurePath
+from typing import Optional, Union
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDWithDefaultOptions
 from .cross.gdb import BuildGDB, BuildKGDB
@@ -144,7 +145,7 @@ class BuildDiskImageBase(SimpleProject):
 
     @classproperty
     def default_architecture(self) -> CrossCompileTarget:
-        return self._source_class.default_architecture
+        return typing.cast(CrossCompileTarget, self._source_class.default_architecture)
 
     @classproperty
     def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
@@ -241,6 +242,7 @@ class BuildDiskImageBase(SimpleProject):
         self.hostname = os.path.expandvars(self.hostname)  # Expand env vars in hostname to allow $CHERI_BITS
         # MIPS needs big-endian disk images
         self.big_endian = self.compiling_for_mips(include_purecap=True)
+        self.stripped_contents: "dict[Union[str,Path], Path]" = {}
 
     @cached_property
     def source_project(self) -> BuildFreeBSD:
@@ -324,7 +326,13 @@ class BuildDiskImageBase(SimpleProject):
             self.write_file(target_file, contents, never_print_cmd=True, overwrite=False, mode=mode)
         self.add_file_to_image(target_file, base_directory=base_dir)
 
-    def add_from_mtree(self, mtree_file, mtree_path, strip_binaries: "Optional[bool]" = None, print_status=None):
+    def add_from_mtree(
+        self,
+        mtree_file: MtreeFile,
+        mtree_path: "Union[str, PurePath]",
+        strip_binaries: "Optional[bool]" = None,
+        print_status=None,
+    ):
         if strip_binaries is None:
             strip_binaries = self.strip_binaries
         kwargs = {}
@@ -1114,7 +1122,6 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
         self.ref_mtree = MtreeFile(verbose=self.config.verbose)
-        self.stripped_contents: "dict[str, Path]" = {}
 
     def setup(self):
         super().setup()
@@ -1229,7 +1236,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                     extra_files.append(new_file)
                     # Stripping kernel modules makes them unloadable:
                     # kldload: /boot/kernel/smbfs.ko: file must have exactly one symbol table
-                    self.add_from_mtree(new_file, strip_binaries=False)
+                    self.add_from_mtree(self.ref_mtree, new_file, strip_binaries=False)
             self.verbose_print("Boot files:\n\t", "\n\t".join(map(str, sorted(extra_files))))
         self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
 

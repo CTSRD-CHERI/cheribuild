@@ -38,7 +38,7 @@ import sys
 import typing
 from collections import OrderedDict
 from pathlib import Path, PurePath, PurePosixPath
-from typing import Optional, Union
+from typing import Iterator, Optional, Union
 
 from .utils import fatal_error, status_update, warning_message
 
@@ -117,7 +117,7 @@ class MtreeEntry:
 
 class MtreeSubtree(collections.abc.MutableMapping):
     def __init__(self):
-        self.entry: MtreeEntry = None
+        self.entry: "Optional[MtreeEntry]" = None
         self.children: "dict[str, MtreeSubtree]" = OrderedDict()
 
     @staticmethod
@@ -172,7 +172,7 @@ class MtreeSubtree(collections.abc.MutableMapping):
             ret += len(c)
         return ret
 
-    def _glob(self, patfrags, prefix, *, case_sensitive=False):
+    def _glob(self, patfrags: "list[str]", prefix: MtreePath, *, case_sensitive=False) -> Iterator[MtreePath]:
         if len(patfrags) == 0:
             if self.entry is not None:
                 yield prefix
@@ -185,11 +185,12 @@ class MtreeSubtree(collections.abc.MutableMapping):
             return
         for k, v in self.children.items():
             if fnmatch.fnmatch(k, patfrag):
+                # noinspection PyProtectedMember
                 yield from v._glob(patfrags, prefix / k, case_sensitive=case_sensitive)
 
-    def glob(self, pattern, *, case_sensitive=False):
+    def glob(self, pattern: str, *, case_sensitive=False) -> Iterator[MtreePath]:
         if len(pattern) == 0:
-            return
+            raise StopIteration()  # pytype does not like plain "return"
         head, tail = os.path.split(pattern)
         patfrags = [tail]
         while head:
@@ -202,7 +203,7 @@ class MtreeSubtree(collections.abc.MutableMapping):
         if split is not None:
             return self.children[split[0]]._walk(split[1], prefix / split[0])
         if self.entry is not None and self.entry.attributes["type"] != "dir":
-            return
+            raise StopIteration()  # pytype does not like plain "return"
         files = []
         dirs = []
         for k, v in self.children.items():
@@ -268,7 +269,7 @@ class MtreeFile:
         return mode
 
     @staticmethod
-    def _ensure_mtree_path_fmt(path: str) -> str:
+    def _ensure_mtree_path_fmt(path: str) -> MtreePath:
         # The path in mtree always starts with ./
         assert not path.endswith("/")
         assert path, "PATH WAS EMPTY?"
@@ -394,7 +395,7 @@ class MtreeFile:
             status_update("Adding dir", path, "to mtree as", entry, file=sys.stderr)
         self._mtree[mtree_path] = entry
 
-    def add_from_mtree(self, mtree_file, path, print_status=True):
+    def add_from_mtree(self, mtree_file: "MtreeFile", path: "Union[PurePath, str]", print_status=True):
         if isinstance(path, PurePath):
             path = str(path)
         assert not path.startswith("/")
@@ -471,7 +472,7 @@ class MtreeFile:
     def root(self):
         return self._mtree
 
-    def glob(self, pattern, *, case_sensitive=False):
+    def glob(self, pattern: str, *, case_sensitive=False) -> Iterator[MtreePath]:
         return self._mtree.glob(pattern, case_sensitive=case_sensitive)
 
     def walk(self, top):
