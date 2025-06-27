@@ -724,7 +724,6 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase, LaunchFreeBSDInterface):
     def setup(self) -> None:
         super().setup()
         if self.freebsd_class is None and self.disk_image_class is not None:
-            # noinspection PyProtectedMember
             disk_image_instance = self.disk_image_class.get_instance(self)
             self.disk_image_project = disk_image_instance
             self.kernel_project = disk_image_instance.source_project

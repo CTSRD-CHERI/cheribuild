@@ -380,7 +380,6 @@ class MakeOptions:
         return self.kind != MakeCommandKind.CustomMakeTool
 
 
-# noinspection PyProtectedMember
 def _default_install_dir_handler(_: CheriConfig, project: "Project") -> Path:
     return project.target_info.default_install_dir(project.get_default_install_dir_kind())
 
