@@ -668,7 +668,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
                 )
             executor_lit_args = ["-Dexecutor=" + self.commandline_to_str(self.get_localhost_test_executor_command())]
         elif self.can_run_binaries_on_remote_morello_board():
-            executor = [self.source_dir / "utils/ssh.py", "--host", self.config.remote_morello_board]
+            executor = [self.source_dir / "../libcxx/utils/ssh.py", "--host", self.config.remote_morello_board]
             executor_lit_args = ["-Dexecutor=" + self.commandline_to_str(executor)]
             # The Morello board has 4 CPUs, so run 4 tests in parallel.
             test_jobs = 4
