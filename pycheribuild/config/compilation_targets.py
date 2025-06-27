@@ -118,15 +118,15 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         return self._sdk_root_dir
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         raise NotImplementedError()
 
     def _get_sdk_root_dir_lazy(self) -> Path:
-        return self._get_compiler_project().get_native_install_path(self.config)
+        return self._get_compiler_project(self.config).get_native_install_path(self.config)
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
-        return [cls._get_compiler_project().get_class_for_target(BasicCompilationTargets.NATIVE_NON_PURECAP).target]
+        return [cls._get_compiler_project(config).get_class_for_target(BasicCompilationTargets.NATIVE_NON_PURECAP).target]
 
     def _rootfs_path(self) -> Path:
         xtarget = self.target.get_rootfs_target()
@@ -370,7 +370,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             # If we couldn't find a working system compiler, default to cheribuild-compiled upstream LLVM.
             assert fbsd.build_toolchain == CompilerType.DEFAULT_COMPILER
             # noinspection PyUnresolvedReferences
-            return self._get_compiler_project().get_native_install_path(self.config)
+            return self._get_compiler_project(self.config).get_native_install_path(self.config)
         return configured_path
 
     @property
@@ -468,7 +468,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return Path("usr/local")
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("upstream-llvm", None))
 
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
@@ -639,8 +639,12 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     FREEBSD_VERSION: int = 13
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
+        if config.riscv_cheri_isa == RiscvCheriISA.STD:
+            llvm_target = SimpleProject.get_class_for_target_name("cheri-alliance-llvm", None)
+        else:
+            llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
+        return typing.cast("type[BuildLLVMInterface]", llvm_target)
 
     def _get_run_project(self, xtarget: "CrossCompileTarget", caller: SimpleProject) -> LaunchFreeBSDInterface:
         result = SimpleProject.get_instance_for_target_name("run", xtarget, caller.config, caller)
@@ -707,7 +711,7 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     uses_morello_llvm: bool = True
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("morello-llvm", None))
 
     @classmethod
@@ -743,10 +747,10 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
         raise LookupError("Should not be called")
 
     def _get_sdk_root_dir_lazy(self) -> Path:
-        return self._get_compiler_project().get_native_install_path(self.config)
+        return self._get_compiler_project(self.config).get_native_install_path(self.config)
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("cherios-llvm", None))
 
     @property
@@ -813,7 +817,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
         return Path(self.target_triple)
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
     @property
@@ -865,7 +869,7 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
         return sysroot_dir / "baremetal" / suffix
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
     @classmethod
@@ -951,7 +955,7 @@ set(CMAKE_DL_LIBS "")
         return result
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
     @property
@@ -1025,7 +1029,7 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
     os_prefix: str = "baremetal-"
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
     @classmethod
@@ -1050,7 +1054,7 @@ class BaremetalFreestandingCheriAllianceTargetInfo(BaremetalClangTargetInfo):
     uses_cheri_alliance_llvm: bool = True
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]",
                            SimpleProject.get_class_for_target_name("cheri-alliance-llvm", None))
 
@@ -1078,7 +1082,7 @@ class MorelloBaremetalTargetInfo(BaremetalFreestandingTargetInfo):
     uses_morello_llvm: bool = True
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("morello-llvm", None))
 
     @property
