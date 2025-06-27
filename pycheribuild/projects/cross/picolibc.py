@@ -125,7 +125,7 @@ default_ram_size   = '{hex(layout.dram_size)}'
             result += ["-L" + str(self.build_dir / "local-libgcc"), "-nostdlib"]
         return result
 
-    def compile(self, **kwargs):
+    def configure(self, **kwargs):
         if not self.compiling_for_host():
             # Symlink libgcc.a to the build dir to allow linking against it without adding all of <sysroot>/lib.
             self.makedirs(self.build_dir / "local-libgcc")
@@ -134,7 +134,7 @@ default_ram_size   = '{hex(layout.dram_size)}'
                 self.build_dir / "local-libgcc/libgcc.a",
                 print_verbose_only=False,
             )
-        super().compile(**kwargs)
+        super().configure(**kwargs)
 
     def install(self, **kwargs):
         super().install(**kwargs)
