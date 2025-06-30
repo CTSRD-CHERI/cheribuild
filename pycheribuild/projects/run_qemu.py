@@ -37,7 +37,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from .build_qemu import BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
+from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.gdb import BuildGDB
 from .cross.u_boot import BuildUBoot
@@ -50,6 +50,7 @@ from .disk_image import (
 )
 from .project import CheriConfig, ComputedDefaultValue, CPUArchitecture, Project
 from .simple_project import BoolConfigOption, SimpleProject, TargetAliasWithDependencies
+from ..config.chericonfig import RiscvCheriISA
 from ..config.compilation_targets import CompilationTargets, LaunchFreeBSDInterface
 from ..config.target_info import CrossCompileTarget
 from ..qemu_utils import QemuOptions, qemu_supports_9pfs, riscv_bios_arguments
@@ -252,9 +253,12 @@ class LaunchQEMUBase(SimpleProject):
         supported_qemu_classes = []
         if xtarget.is_mips(include_purecap=True) or xtarget.is_riscv(include_purecap=True):
             can_provide_src_via_smb = True
-            supported_qemu_classes += [BuildQEMU]
-            if not xtarget.is_hybrid_or_purecap_cheri():
-                supported_qemu_classes += [BuildUpstreamQEMU, None]
+            if xtarget.is_riscv(include_purecap=True) and config.riscv_cheri_isa == RiscvCheriISA.STD:
+                supported_qemu_classes += [BuildCheriAllianceQEMU]
+            else:
+                supported_qemu_classes += [BuildQEMU]
+                if not xtarget.is_hybrid_or_purecap_cheri():
+                    supported_qemu_classes += [BuildUpstreamQEMU, None]
         elif xtarget.is_aarch64(include_purecap=True):
             can_provide_src_via_smb = True
             # Prefer CHERI QEMU for AArch64 like other architectures.
