@@ -39,6 +39,7 @@ from typing import Optional
 
 from .build_qemu import BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
+from .cross.freertos import BuildFreeRTOS
 from .cross.gdb import BuildGDB
 from .cross.u_boot import BuildUBoot
 from .disk_image import (
@@ -126,6 +127,13 @@ class ChosenQEMU:
 class LaunchQEMUBase(SimpleProject):
     do_not_add_to_targets = True
     forward_ssh_port = True
+    forward_ftp_port = False
+    forward_tftp_port = False
+    forward_http_port = False
+    forward_cli_port = False
+    forward_can_port = False
+    forward_nbns_port = False
+    forward_print_port = False
     _can_provide_src_via_smb = False
     ssh_forwarding_port: Optional[int] = None
     custom_qemu_smb_mount = None
@@ -520,6 +528,48 @@ class LaunchQEMUBase(SimpleProject):
         if self.ephemeral:
             self._after_disk_options += ["-snapshot"]
 
+        if self.forward_ftp_port:
+            user_network_options += ",hostfwd=tcp::" + str(self.ftp_forwarding_port) + "-:21"
+            # bind the qemu ftp port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for FTP connections on localhost:", self.ftp_forwarding_port,
+                           sep=""))
+
+        if self.forward_tftp_port:
+            user_network_options += ",hostfwd=udp::" + str(self.tftp_forwarding_port) + "-:69"
+            # bind the qemu tftp port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for TFTP connections on localhost:", self.tftp_forwarding_port,
+                           sep=""))
+
+        if self.forward_nbns_port:
+            user_network_options += ",hostfwd=udp::" + str(self.nbns_forwarding_port) + "-:137"
+            # bind the qemu nbns port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for NBNS connections on localhost:", self.nbns_forwarding_port,
+                           sep=""))
+
+        if self.forward_can_port:
+            user_network_options += ",hostfwd=udp::" + str(self.can_forwarding_port) + "-:5002"
+            # bind the qemu CAN port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for CAN connections on localhost:", self.can_forwarding_port,
+                           sep=""))
+
+        if self.forward_cli_port:
+            user_network_options += ",hostfwd=tcp::" + str(self.cli_forwarding_port) + "-:23"
+            # bind the qemu CLI port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for CLI connections on localhost:", self.cli_forwarding_port,
+                           sep=""))
+
+        if self.forward_print_port:
+            user_network_options += ",hostfwd=udp::" + str(self.print_forwarding_port) + "-:45000"
+            # bind the qemu CLI port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for UDP/printf connections on localhost:", self.print_forwarding_port,
+                           sep=""))
+
+        if self.forward_http_port:
+            user_network_options += ",hostfwd=tcp::" + str(self.http_forwarding_port) + "-:80"
+            # bind the qemu http port to the hosts port
+            print(coloured(AnsiColour.green, "\nListening for HTTP connections on localhost:", self.http_forwarding_port,
+                           sep=""))
+
         # input("Press enter to continue")
         qemu_command = self.qemu_options.get_commandline(
             qemu_command=self.chosen_qemu.binary,
@@ -895,6 +945,84 @@ class LaunchDmQEMU(LaunchCheriBSD):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.qemu_user_networking = False
+
+
+class LaunchFreeRTOSQEMU(LaunchQEMUBase):
+    target = "run-freertos"
+    supported_architectures = (
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV32,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV32_PURECAP,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP)
+    forward_ssh_port = False
+    forward_ftp_port = True
+    forward_tftp_port = True
+    forward_nbns_port = True
+    forward_can_port = True
+    forward_http_port = True
+    forward_cli_port = True
+    forward_print_port = True
+
+    default_ssh_port = 0
+
+    qemu_user_networking = True
+    _enable_smbfs_support = False
+    _add_virtio_rng = False
+    _uses_disk_image = False
+    ftp_forwarding_port = 10021
+    tftp_forwarding_port = 10069
+    nbns_forwarding_port = 10137
+    cli_forwarding_port = 10023
+    can_forwarding_port = 5002
+    print_forwarding_port = 45000
+    http_forwarding_port = 8080
+
+    default_demo = "RISC-V-Generic"
+    default_demo_app = "main_blinky"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.use_virtio_blk:
+            self._after_disk_options.extend([
+                "-drive", "file=" + str(BuildFreeRTOS.get_install_dir(self)) + "/FreeRTOS/Demo/bin/freertos.img,id=drv,format=raw",
+                "-device", "virtio-blk-device,drive=drv"
+                ])
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(defaultSshPort=None, **kwargs)
+
+        cls.demo = cls.add_config_option(
+            "demo", metavar="DEMO", show_help=True,
+            default=cls.default_demo,
+            help="The FreeRTOS Demo to run.")  # type: str
+
+        cls.demo_app = cls.add_config_option(
+            "prog", metavar="PROG", show_help=True,
+            default=cls.default_demo_app,
+            help="The FreeRTOS program to run.")  # type: str
+
+        cls.demo_bsp = cls.add_config_option(
+            "bsp", metavar="BSP", show_help=True,
+            default=ComputedDefaultValue(function=lambda _, p: p.default_demo_bsp(),
+                                         as_string="target-dependent default"),
+            help="The FreeRTOS BSP to run. This is only valid for the "
+                 "paramterized RISC-V-Generic. The BSP option chooses "
+                 "platform, RISC-V arch and RISC-V abi in the "
+                 "$platform-$arch-$abi format. See RISC-V-Generic/README for more details")
+
+        cls.use_virtio_blk = cls.add_bool_option("use_virtio_blk", show_help=True,
+            default=False,
+            help="Use VirtIO Block as a disk for FreeRTOS")
+
+    def default_demo_bsp(self):
+        return "qemu_virt-" + self.target_info.get_riscv_arch_string(self.crosscompile_target, softfloat=True) + "-" + \
+               self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
+
+    def get_riscv_bios_args(self) -> typing.List[str]:
+        # Run a FreeRTOS demo application (run in machine mode using the -bios QEMU argument)
+        return ["-bios", str(BuildFreeRTOS.get_install_dir(self)) + "/FreeRTOS/Demo/bin/" +
+                self.demo + "_" + self.demo_app + ".elf"]
 
     def process(self):
         super().process()
