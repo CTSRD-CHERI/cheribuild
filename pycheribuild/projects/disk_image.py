@@ -1209,7 +1209,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                 self.add_from_mtree(self.ref_mtree, test_binary)
             for test_binary in self.ref_mtree.glob("usr/libexec/malloc_early_constructor-*"):
                 self.add_from_mtree(self.ref_mtree, test_binary)
-            self.add_from_mtree(self.ref_mtree, "usr/share/examples/cheribsdtest/run-many")
+            for test_script in self.ref_mtree.glob("usr/share/examples/cheribsdtest/*"):
+                self.add_from_mtree(self.ref_mtree, test_script)
 
         if self.include_pmc:
             self.add_from_mtree(self.ref_mtree, "sbin/kldload")
