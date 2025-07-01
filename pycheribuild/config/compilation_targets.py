@@ -1034,7 +1034,11 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
 
     @classmethod
     def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
+        if config.riscv_cheri_isa == RiscvCheriISA.STD:
+            llvm_target = SimpleProject.get_class_for_target_name("cheri-alliance-llvm", None)
+        else:
+            llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
+        return typing.cast("type[BuildLLVMInterface]", llvm_target)
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
