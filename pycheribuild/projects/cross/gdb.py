@@ -303,6 +303,7 @@ class BuildCheriAllianceGDB(BuildGDBBase):
     )
 
     supported_architectures = (
+        CompilationTargets.CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS,
         CompilationTargets.NATIVE_NON_PURECAP,
     )
 
