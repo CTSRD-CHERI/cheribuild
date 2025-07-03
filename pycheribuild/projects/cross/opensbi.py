@@ -83,8 +83,6 @@ class BuildOpenSBI(Project):
         super().setup()
         compflags = " " + self.commandline_to_str(self.essential_compiler_and_linker_flags)
         compflags += " -Qunused-arguments"  # -mstrict-align -no-pie
-        if self.config.riscv_cheri_isa == RiscvCheriISA.STD:
-            compflags += " -mno-relax"
         if OSInfo.IS_MAC:
             self.make_args.set(READLINK="greadlink")
         self.make_args.set(
