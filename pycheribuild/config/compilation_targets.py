@@ -938,7 +938,10 @@ set(CMAKE_DL_LIBS "")
     @property
     def sysroot_dir(self) -> Path:
         sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
-        return sysroot_dir / "picolibc" / self.target.get_rootfs_target().generic_arch_suffix
+        result = sysroot_dir / "picolibc" / self.target.get_rootfs_target().generic_arch_suffix
+        if self.target.is_riscv(include_purecap=True):
+            result /= self.get_riscv_abi(self.target, softfloat=self.project.uses_softfloat_by_default())
+        return result
 
     @classmethod
     def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":

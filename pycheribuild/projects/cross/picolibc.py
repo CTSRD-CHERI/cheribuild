@@ -140,8 +140,13 @@ default_ram_size   = '{hex(layout.dram_size)}'
         super().install(**kwargs)
         if self.crosscompile_target.is_riscv64(include_purecap=True):
             # The clang baremetal driver expect the following directory to exist:
-            self.makedirs(self.install_dir / "rv64imafdc")
-            self.create_symlink(self.install_dir, self.install_dir / "rv64imafdc/lp64d", print_verbose_only=False)
+            softfloat = self.uses_softfloat_by_default()
+            rv_abi = self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=softfloat)
+            rv_arch = self.target_info.get_riscv_arch_string(
+                self.crosscompile_target.get_non_cheri_target(), softfloat=softfloat
+            )
+            self.makedirs(self.install_dir / rv_arch)
+            self.create_symlink(self.install_dir, self.install_dir / rv_arch / rv_abi, print_verbose_only=False)
         if not (self.install_dir / "lib/libdl.a").exists():
             # The libunwind test suite expects -ldl to exists since CMAKE_DL_LIBS is always non-empty for baremetal...
             # Work around this for now by creating an empty file

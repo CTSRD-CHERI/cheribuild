@@ -37,7 +37,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import ClassVar, Optional
 
-from .chericonfig import AArch64FloatSimdOptions, CheriConfig, MipsFloatAbi
+from .chericonfig import AArch64FloatSimdOptions, CheriConfig, MipsFloatAbi, RiscvFloatAbi
 from ..filesystemutils import FileSystemUtils
 from ..processutils import CompilerInfo, get_compiler_info
 from ..utils import OSInfo, fatal_error, final, status_update, warning_message
@@ -935,6 +935,8 @@ class CrossCompileTarget:
                     result += "-subobject-nodebug"
         if self.is_mips(include_purecap=True) and config.mips_float_abi == MipsFloatAbi.HARD:
             result += "-hardfloat"
+        if self.is_riscv(include_purecap=True) and config.riscv_float_abi == RiscvFloatAbi.SOFT:
+            result += "-softfloat"
         if self.is_aarch64(include_purecap=True):
             if config.aarch64_fp_and_simd_options != AArch64FloatSimdOptions.DEFAULT:
                 result += config.aarch64_fp_and_simd_options.config_suffix()

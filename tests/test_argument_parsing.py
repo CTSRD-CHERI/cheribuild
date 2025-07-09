@@ -1439,7 +1439,7 @@ class InstallDirSplit(Enum):
         ),
         pytest.param(
             "picolibc-riscv64-purecap",
-            Path("/default/prefix/output/sdk/picolibc/picolibc-riscv64-purecap"),
+            Path("/default/prefix/output/sdk/picolibc/picolibc-riscv64-purecap/l64pc128d"),
             InstallDirSplit.FULL_PATH_IN_DESTDIR,
             id="picolib",
         ),
