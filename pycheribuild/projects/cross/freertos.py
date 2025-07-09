@@ -53,6 +53,9 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     )
     default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
+    def uses_softfloat_by_default(self) -> bool:
+        return True  # FreeRTOS currently only supports soft-float
+
     # FreeRTOS Demos to build
     supported_freertos_demos = [
         # Generic/simple (CHERI-)RISC-V Demo that runs main_blinky on simulators

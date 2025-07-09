@@ -123,6 +123,11 @@ class AArch64FloatSimdOptions(Enum):
         return self.value[1]
 
 
+class RiscvFloatAbi(Enum):
+    SOFT = "soft"
+    HARD = "hard"
+
+
 def _default_arm_none_eabi_prefix(c: "CheriConfig", _):
     # see if the local install exists:
     default_path = c.output_root / c.local_arm_none_eabi_toolchain_relpath
@@ -319,7 +324,14 @@ class CheriConfig(ConfigBase):
             default=MipsFloatAbi.SOFT,
             type=MipsFloatAbi,
             group=loader.cross_compile_options_group,
-            help="The floating point ABI to use for building MIPS+CHERI programs",
+            help="Whether to use soft or hard float ABIs when targeting MIPS",
+        )
+        self.riscv_float_abi = loader.add_option(
+            "riscv-float-abi",
+            default=RiscvFloatAbi.HARD,
+            type=RiscvFloatAbi,
+            group=loader.cross_compile_options_group,
+            help="Whether to use soft or hard float ABIs when targeting RISC-V",
         )
         self.aarch64_fp_and_simd_options = loader.add_option(
             "aarch64-fp-and-simd-options",

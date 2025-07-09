@@ -180,6 +180,8 @@ class AbstractProject(FileSystemUtils):
         super().__init__(config)
         self._init_called = False
 
+    def uses_softfloat_by_default(self) -> bool: ...
+
     def get_compiler_info(self, compiler: Path) -> CompilerInfo:
         return get_compiler_info(compiler, config=self.config)
 

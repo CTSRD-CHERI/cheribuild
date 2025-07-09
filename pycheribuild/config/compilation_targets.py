@@ -203,10 +203,10 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         default_flags_only=False,
     ):
         assert xtarget is not None
-        if softfloat is None:
-            softfloat = cls.uses_softfloat_by_default(xtarget)
         config = instance.config
         project = instance.project
+        if softfloat is None:
+            softfloat = project.uses_softfloat_by_default()
         # noinspection PyProtectedMember
         if perform_sanity_checks and not project._setup_called:
             project.fatal(
@@ -241,19 +241,18 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             result.append("-integrated-as")
             result.append("-G0")  # no small objects in GOT optimization
             # Floating point ABI:
+            float_abi = MipsFloatAbi.SOFT if softfloat else MipsFloatAbi.HARD
+            result.append(float_abi.clang_float_flag())
             if cls.is_baremetal() or cls.is_rtems():
-                # The baremetal driver doesn't add -fPIC for CHERI
                 if xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
+                    assert float_abi == MipsFloatAbi.SOFT  # For now use soft-float to avoid compiler crashes
+                    # The baremetal driver doesn't add -fPIC for CHERI
                     result.append("-fPIC")
-                    # For now use soft-float to avoid compiler crashes
-                    result.append(MipsFloatAbi.SOFT.clang_float_flag())
                 else:
                     # We don't have a softfloat library baremetal so always compile hard-float
-                    result.append(MipsFloatAbi.HARD.clang_float_flag())
+                    assert float_abi == MipsFloatAbi.HARD  # For now use soft-float to avoid compiler crashes
                     result.append("-fno-pic")
                     result.append("-mno-abicalls")
-            else:
-                result.append(config.mips_float_abi.clang_float_flag())
 
             # CPU flags (currently always BERI):
             if cls.is_cheribsd():
@@ -339,10 +338,6 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         if not softfloat:
             abi += "d"
         return abi
-
-    @classmethod
-    def uses_softfloat_by_default(cls, xtarget: "CrossCompileTarget"):
-        return False
 
 
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
@@ -843,11 +838,6 @@ class BaremetalClangTargetInfo(_ClangBasedTargetInfo, ABC):
     def is_baremetal(cls):
         return True
 
-    @classmethod
-    def uses_softfloat_by_default(cls, xtarget: "CrossCompileTarget"):
-        # Note: RISC-V Baremetal/FreeRTOS currently only supports softfloat
-        return xtarget.is_riscv(include_purecap=True)
-
 
 class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
     shortname = "Newlib"
@@ -927,10 +917,6 @@ class PicolibcBaremetalTargetInfo(BaremetalClangTargetInfo):
 # See Modules/CMakeSystemSpecificInformation.cmake which is included for each language.
 set(CMAKE_DL_LIBS "")
 """
-
-    @classmethod
-    def uses_softfloat_by_default(cls, xtarget: "CrossCompileTarget"):
-        return False
 
     @classmethod
     def essential_compiler_and_linker_flags_impl(cls, *args, xtarget: "CrossCompileTarget", **kwargs) -> "list[str]":

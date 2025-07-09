@@ -43,7 +43,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Callable, Optional, Union
 
-from ..config.chericonfig import CheriConfig, ComputedDefaultValue
+from ..config.chericonfig import CheriConfig, ComputedDefaultValue, MipsFloatAbi, RiscvFloatAbi
 from ..config.config_loader_base import ConfigLoaderBase, ConfigOptionHandle, DefaultValueOnlyConfigOption
 from ..config.target_info import (
     AbstractProject,
@@ -728,6 +728,17 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def get_host_triple(self) -> str:
         compiler = self.get_compiler_info(self.host_CC)
         return compiler.default_target
+
+    def uses_softfloat_by_default(self) -> bool:
+        xtarget = self.crosscompile_target
+        if xtarget.is_riscv(include_purecap=True):
+            return self.config.riscv_float_abi == RiscvFloatAbi.SOFT
+        elif xtarget.is_mips(include_purecap=True):
+            # Baremetal targets require hardfloat unless they are purecap.
+            if self.target_info.is_baremetal():
+                return xtarget.is_cheri_purecap()
+            return self.config.mips_float_abi == MipsFloatAbi.SOFT
+        return False
 
     # noinspection PyPep8Naming
     @property

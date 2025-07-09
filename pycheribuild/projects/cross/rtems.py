@@ -45,6 +45,9 @@ class BuildRtems(CrossCompileProject):
     supported_architectures = CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
     default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
+    def uses_softfloat_by_default(self) -> bool:
+        return True  # RTEMS currently only supports soft-float
+
     # RTEMS BSPs to build
     rtems_bsps = []
 
