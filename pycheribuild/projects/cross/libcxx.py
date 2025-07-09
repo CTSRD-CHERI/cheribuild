@@ -376,31 +376,25 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
     def repository(self):
         return ReuseOtherProjectDefaultTargetRepository(self.llvm_project, subdirectory="runtimes", do_update=True)
 
+    def _llvm_project_install_dir(self):
+        return self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP)
+
     @property
     def custom_c_preprocessor(self):
-        if self.compiling_for_host():
-            return (
-                self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP)
-                / "bin/clang-cpp"
-            )
+        if not self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            return self._llvm_project_install_dir() / "bin/clang-cpp"
         return None
 
     @property
     def custom_c_compiler(self):
-        if self.compiling_for_host():
-            return (
-                self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP)
-                / "bin/clang"
-            )
+        if not self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            return self._llvm_project_install_dir() / "bin/clang"
         return None
 
     @property
     def custom_cxx_compiler(self):
-        if self.compiling_for_host():
-            return (
-                self.llvm_project.get_install_dir(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP)
-                / "bin/clang++"
-            )
+        if not self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            return self._llvm_project_install_dir() / "bin/clang++"
         return None
 
     @property
@@ -551,6 +545,13 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             # pretend that we are a UNIX platform to prevent CMake errors in HandleLLVMOptions.cmake
             self.add_cmake_options(UNIX=1)
             self.COMMON_FLAGS.append("-D_GNU_SOURCE=1")  # strtoll_l is guarded by __GNU_VISIBLE
+        if self.target_info.must_link_statically:
+            # Avoid conflicting targets for lib{unwind,c++,c++abi}.a if the target force static linking
+            self.add_cmake_options(
+                LIBUNWIND_SHARED_OUTPUT_NAME="libunwind-shared",
+                LIBCXXABI_SHARED_OUTPUT_NAME="libc++abi-shared",
+                LIBCXX_SHARED_OUTPUT_NAME="libc++-shared",
+            )
 
         test_executor: "list[str]" = []
         if not self.compiling_for_host():

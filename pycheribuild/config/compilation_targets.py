@@ -149,15 +149,18 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
 
     @property
     def c_compiler(self) -> Path:
-        return self._compiler_dir / "clang"
+        override = self.project.custom_c_compiler
+        return self._compiler_dir / "clang" if override is None else override
 
     @property
     def cxx_compiler(self) -> Path:
-        return self._compiler_dir / "clang++"
+        override = self.project.custom_cxx_compiler
+        return self._compiler_dir / "clang++" if override is None else override
 
     @property
     def c_preprocessor(self) -> Path:
-        return self._compiler_dir / "clang-cpp"
+        override = self.project.custom_c_preprocessor
+        return self._compiler_dir / "clang-cpp" if override is None else override
 
     @property
     def linker(self) -> Path:

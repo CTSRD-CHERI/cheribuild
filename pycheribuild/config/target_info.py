@@ -605,21 +605,18 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def c_compiler(self) -> Path:
-        if self.project.custom_c_compiler is not None:
-            return self.project.custom_c_compiler
-        return self.host_c_compiler(self.config)
+        override = self.project.custom_c_compiler
+        return self.host_c_compiler(self.config) if override is None else override
 
     @property
     def cxx_compiler(self) -> Path:
-        if self.project.custom_cxx_compiler is not None:
-            return self.project.custom_cxx_compiler
-        return self.host_cxx_compiler(self.config)
+        override = self.project.custom_cxx_compiler
+        return self.host_cxx_compiler(self.config) if override is None else override
 
     @property
     def c_preprocessor(self) -> Path:
-        if self.project.custom_c_preprocessor is not None:
-            return self.project.custom_c_preprocessor
-        return self.host_c_preprocessor(self.config)
+        override = self.project.custom_c_preprocessor
+        return self.host_c_preprocessor(self.config) if override is None else override
 
     @property
     def linker(self) -> Path:
