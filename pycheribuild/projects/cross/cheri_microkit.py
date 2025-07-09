@@ -48,7 +48,7 @@ from .opensbi import BuildAllianceOpenSBI
 
 class BuildCheriseL4(CrossCompileAutotoolsProject):
     target = "cheri-sel4"
-    repository = GitRepository("git@github.com:CTSRD-CHERI/seL4.git",
+    repository = GitRepository("https://github.com/CTSRD-CHERI/seL4.git",
         default_branch="std-cheri-riscv-microkit", force_branch=True)
     supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64_ZPURECAP,
@@ -74,7 +74,7 @@ class BuildCheriseL4(CrossCompileAutotoolsProject):
 
 class BuildCheriMicrokit(CrossCompileAutotoolsProject):
     repository = GitRepository(
-        "git@github.com:CTSRD-CHERI/CHERI-Microkit.git", force_branch=True, default_branch="std-cheri-riscv"
+        "https://github.com/CTSRD-CHERI/CHERI-Microkit.git", force_branch=True, default_branch="std-cheri-riscv"
     )
     target = "cheri-microkit"
     release_version = "2.0.1-dev"
