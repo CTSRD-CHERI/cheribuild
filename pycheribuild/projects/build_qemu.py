@@ -241,7 +241,6 @@ class BuildQEMUBase(AutotoolsProject):
                 "-Werror=implicit-function-declaration",
                 "-Werror=incompatible-pointer-types",
                 "-Werror=format",
-                "-Werror=return-type",
                 "-Wno-sign-compare",
                 "-Wno-unused-parameter",
                 "-Wno-missing-field-initializers",
