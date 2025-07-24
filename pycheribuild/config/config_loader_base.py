@@ -65,8 +65,8 @@ class ConfigLoaderBase(ABC):
     # will be set later...
     _cheri_config: ConfigBase
 
-    option_handles: "typing.ClassVar[dict[str, ConfigOptionHandle]]" = {}
-    _json: "typing.ClassVar[dict[str, _LoadedConfigValue]]" = {}
+    option_handles: "dict[str, ConfigOptionHandle]" = {}
+    _json: "dict[str, _LoadedConfigValue]" = {}
     is_completing_arguments: bool = "_ARGCOMPLETE" in os.environ
     is_generating_readme: bool = "_GENERATING_README" in os.environ
     is_running_unit_tests: bool = False
