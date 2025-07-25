@@ -63,11 +63,7 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
     @classproperty
     def llvm_project(self) -> "type[BuildLLVMBase]":
         target_info = self.get_crosscompile_target().target_info_cls
-        if issubclass(target_info, FreeBSDTargetInfo):
-            # noinspection PyProtectedMember
-            return target_info._get_compiler_project()
-        else:
-            return BuildCheriLLVM
+        return BuildCheriLLVM
 
     def __find_in_sdk_or_llvm_build_dir(self, name) -> Path:
         llvm_project = self.llvm_project.get_instance(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP)
