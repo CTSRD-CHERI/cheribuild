@@ -151,6 +151,7 @@ add_filtered_file(script_dir / "projects/cross/cheribsd.py")
 add_filtered_file(script_dir / "projects/cross/crosscompileproject.py")
 add_filtered_file(script_dir / "projects/cross/benchmark_mixin.py")
 add_filtered_file(script_dir / "projects/cross/llvm_test_suite.py")
+add_filtered_file(script_dir / "projects/cross/opensbi.py")
 # disk-image, sdk and run_qemu must come after cheribsd as they use CheriBSD.rootfs_dir
 add_filtered_file(script_dir / "projects/disk_image.py")
 add_filtered_file(script_dir / "projects/run_qemu.py")

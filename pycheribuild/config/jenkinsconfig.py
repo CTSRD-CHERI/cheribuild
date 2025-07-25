@@ -179,6 +179,12 @@ class JenkinsConfig(CheriConfig):
             type=Path,
             help="Override the path to the CHERI SDK (default is $WORKSPACE/cherisdk)",
         )
+        self._cheri_alliance_sdk_dir_override = loader.add_commandline_only_option(
+            "cheri-alliance-sdk-path",
+            default=None,
+            type=Path,
+            help="Override the path to the CHERI Alliance SDK (default is $WORKSPACE/cheri-alliance-sdk)",
+        )
         self._morello_sdk_dir_override = loader.add_commandline_only_option(
             "morello-sdk-path",
             default=None,
@@ -292,6 +298,13 @@ class JenkinsConfig(CheriConfig):
             self.cheri_sdk_dir = Path("/cheri-sdk")
         else:
             self.cheri_sdk_dir = self.workspace / self.default_cheri_sdk_directory_name
+
+        if self._cheri_alliance_sdk_dir_override is not None:
+            self.cheri_alliance_sdk_dir = self._cheri_alliance_sdk_dir_override
+        elif Path("/cheri-alliance-sdk/bin/clang").exists():  # check for docker image
+            self.cheri_alliance_sdk_dir = Path("/cheri-alliance-sdk")
+        else:
+            self.cheri_alliance_sdk_dir = self.workspace / self.default_cheri_alliance_sdk_directory_name
 
         if self._morello_sdk_dir_override is not None:
             self.morello_sdk_dir = self._morello_sdk_dir_override
