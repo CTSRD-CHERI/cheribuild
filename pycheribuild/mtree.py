@@ -216,6 +216,8 @@ class MtreeSubtree(collections.abc.MutableMapping):
             yield from v._walk(MtreePath(), prefix)
 
     def walk(self, top) -> "Iterator[tuple[MtreePath, list[str], list[str]]]":
+        if top not in self.children:
+            return iter([])
         return self._walk(top, MtreePath())
 
 
