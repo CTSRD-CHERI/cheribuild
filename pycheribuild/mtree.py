@@ -202,6 +202,7 @@ class MtreeSubtree(collections.abc.MutableMapping):
         split = self._split_key(top)
         if split is not None:
             yield from self.children[split[0]]._walk(split[1], prefix / split[0])
+            return
         if self.entry is not None and self.entry.attributes["type"] != "dir":
             return
         files: "list[tuple[str, MtreeSubtree]]" = []
