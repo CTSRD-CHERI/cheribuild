@@ -406,15 +406,16 @@ class MtreeFile:
         assert not path.startswith("/")
         path = path.rstrip("/")  # remove trailing slashes
         mtree_path = self._ensure_mtree_path_fmt(path)
-        if mtree_path in self._mtree:
+        if self.get(mtree_path) is not None:
             return
-        if mtree_path not in mtree_file._mtree:
+        subtree = mtree_file.get(mtree_path)
+        if subtree is None:
             fatal_error("Could not find " + str(mtree_path) + " in source mtree", pretend=True)
             return
         parent = mtree_path.parent
         if parent != mtree_path:
             self.add_from_mtree(mtree_file, parent, print_status=print_status)
-        attribs = mtree_file._mtree[mtree_path].attributes
+        attribs = subtree.attributes
         entry = MtreeEntry(mtree_path, attribs)
         if print_status:
             if "link" in attribs:
