@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 
-import collections
+import collections.abc
 import fnmatch
 import io
 import os
@@ -190,7 +190,7 @@ class MtreeSubtree(collections.abc.MutableMapping):
 
     def glob(self, pattern: str, *, case_sensitive=False) -> Iterator[MtreePath]:
         if len(pattern) == 0:
-            raise StopIteration()  # pytype does not like plain "return"
+            return iter([])
         head, tail = os.path.split(pattern)
         patfrags = [tail]
         while head:
@@ -198,23 +198,24 @@ class MtreeSubtree(collections.abc.MutableMapping):
             patfrags.insert(0, tail)
         return self._glob(patfrags, MtreePath(), case_sensitive=case_sensitive)
 
-    def _walk(self, top, prefix):
+    def _walk(self, top, prefix) -> "Iterator[tuple[MtreePath, list[str], list[str]]]":
         split = self._split_key(top)
         if split is not None:
-            return self.children[split[0]]._walk(split[1], prefix / split[0])
+            yield from self.children[split[0]]._walk(split[1], prefix / split[0])
         if self.entry is not None and self.entry.attributes["type"] != "dir":
-            raise StopIteration()  # pytype does not like plain "return"
-        files = []
-        dirs = []
+            return
+        files: "list[tuple[str, MtreeSubtree]]" = []
+        dirs: "list[tuple[str, MtreeSubtree]]" = []
         for k, v in self.children.items():
             if v.entry is not None and v.entry.attributes["type"] != "dir":
                 files.append((k, v))
             else:
                 dirs.append((k, v))
-        yield (prefix, list([k for k, _ in dirs]), list([k for k, _ in files]))
-        return iter([v._walk(MtreePath(), prefix) for _, v in dirs])
+        yield prefix, list([k for k, _ in dirs]), list([k for k, _ in files])
+        for _, v in dirs:
+            yield from v._walk(MtreePath(), prefix)
 
-    def walk(self, top):
+    def walk(self, top) -> "Iterator[tuple[MtreePath, list[str], list[str]]]":
         return self._walk(top, MtreePath())
 
 
@@ -315,6 +316,7 @@ class MtreeFile:
             if symlink_dest is not None:
                 mode = "0755"
             else:
+                assert file is not None
                 mode = self.infer_mode_string(file, False)
         mode = self._ensure_mtree_mode_fmt(mode)
         mtree_path = self._ensure_mtree_path_fmt(path_in_image)
@@ -409,7 +411,7 @@ class MtreeFile:
         parent = mtree_path.parent
         if parent != mtree_path:
             self.add_from_mtree(mtree_file, parent, print_status=print_status)
-        attribs = mtree_file.get(mtree_path).attributes
+        attribs = mtree_file._mtree[mtree_path].attributes
         entry = MtreeEntry(mtree_path, attribs)
         if print_status:
             if "link" in attribs:
@@ -465,15 +467,15 @@ class MtreeFile:
             output.write("\n")
         output.write("# END\n")
 
-    def get(self, key):
+    def get(self, key) -> Optional[MtreeEntry]:
         return self._mtree.get(key)
 
     @property
-    def root(self):
+    def root(self) -> MtreeSubtree:
         return self._mtree
 
     def glob(self, pattern: str, *, case_sensitive=False) -> Iterator[MtreePath]:
         return self._mtree.glob(pattern, case_sensitive=case_sensitive)
 
-    def walk(self, top):
+    def walk(self, top) -> "Iterator[tuple[MtreePath, list[str], list[str]]]":
         return self._mtree.walk(top)
