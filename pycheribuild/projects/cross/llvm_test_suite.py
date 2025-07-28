@@ -43,7 +43,7 @@ from .llvm import BuildCheriLLVM, BuildLLVMBase, BuildUpstreamLLVM
 from ..project import ReuseOtherProjectRepository
 from ..simple_project import BoolConfigOption
 from ...config.compilation_targets import FreeBSDTargetInfo
-from ...utils import classproperty, is_jenkins_build
+from ...utils import is_jenkins_build
 
 
 class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
@@ -57,17 +57,20 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
-        return (cls.llvm_project.get_class_for_target(CompilationTargets.NATIVE_NON_PURECAP).target,)
+        return (cls.get_llvm_project(config).get_class_for_target(CompilationTargets.NATIVE_NON_PURECAP).target,)
 
-    # noinspection PyMethodParameters
-    @classproperty
-    def llvm_project(self) -> "type[BuildLLVMBase]":
-        target_info = self.get_crosscompile_target().target_info_cls
+    @classmethod
+    def get_llvm_project(cls, config) -> "type[BuildLLVMBase]":
+        target_info = cls.get_crosscompile_target().target_info_cls
         if issubclass(target_info, FreeBSDTargetInfo):
             # noinspection PyProtectedMember
-            return target_info._get_compiler_project()
+            return target_info._get_compiler_project(config)
         else:
             return BuildCheriLLVM
+
+    @property
+    def llvm_project(self):
+        return self.get_llvm_project(self.config)
 
     def __find_in_sdk_or_llvm_build_dir(self, name) -> Path:
         llvm_project = self.llvm_project.get_instance(self, cross_target=CompilationTargets.NATIVE_NON_PURECAP)
