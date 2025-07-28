@@ -201,7 +201,8 @@ class MtreeSubtree(collections.abc.MutableMapping):
     def _walk(self, top, prefix) -> "Iterator[tuple[MtreePath, list[str], list[str]]]":
         split = self._split_key(top)
         if split is not None:
-            yield from self.children[split[0]]._walk(split[1], prefix / split[0])
+            if split[0] in self.children:
+                yield from self.children[split[0]]._walk(split[1], prefix / split[0])
             return
         if self.entry is not None and self.entry.attributes["type"] != "dir":
             return
@@ -217,8 +218,6 @@ class MtreeSubtree(collections.abc.MutableMapping):
             yield from v._walk(MtreePath(), prefix)
 
     def walk(self, top) -> "Iterator[tuple[MtreePath, list[str], list[str]]]":
-        if top not in self.children:
-            return iter([])
         return self._walk(top, MtreePath())
 
 
