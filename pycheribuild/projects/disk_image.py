@@ -54,7 +54,7 @@ from .project import (
 )
 from .simple_project import SimpleProject
 from ..config.compilation_targets import CompilationTargets
-from ..mtree import MtreeFile
+from ..mtree import MtreeFile, MtreePath
 from ..utils import AnsiColour, classproperty, coloured, include_local_file
 
 # Notes:
@@ -242,7 +242,7 @@ class BuildDiskImageBase(SimpleProject):
         self.hostname = os.path.expandvars(self.hostname)  # Expand env vars in hostname to allow $CHERI_BITS
         # MIPS needs big-endian disk images
         self.big_endian = self.compiling_for_mips(include_purecap=True)
-        self.stripped_contents: "dict[Union[str,Path], Path]" = {}
+        self.stripped_contents: "dict[Union[str,PurePath], PurePath]" = {}
 
     @cached_property
     def source_project(self) -> BuildFreeBSD:
@@ -342,7 +342,7 @@ class BuildDiskImageBase(SimpleProject):
         if strip_binaries:
             # Try to shrink the size by stripping all elf binaries
             entry = self.mtree.get(mtree_path)
-            contents = entry.attributes.get("contents", entry.path)
+            contents = MtreePath(entry.attributes.get("contents", entry.path))
             if contents not in self.stripped_contents:
                 stripped_path = self.tmpdir / entry.path
                 file = self.rootfs_dir / contents
