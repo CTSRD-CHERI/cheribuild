@@ -140,7 +140,11 @@ class BuildOpenSBI(Project):
         if self.crosscompile_target.is_hybrid_or_purecap_cheri() and not self.build_dir_suffix:
             # Install into the QEMU firware directory so that `-bios default` works
             qemu_fw_dir = self._qemu_install_dir() / "share/qemu/"
-            suffix = "cheristd" if self.crosscompile_target.is_cheri_purecap() else "cheri"
+            suffix = ""
+            if self.crosscompile_target.is_cheri_purecap():
+                suffix = "cheri"
+                if self.config.riscv_cheri_isa == RiscvCheriISA.STD:
+                    suffix += "std"
             self.makedirs(qemu_fw_dir)
             # TODO: looks like newer versions install a .bin that we could just copy instead.
             self.run_cmd(
@@ -232,25 +236,6 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     def setup(self):
         super().setup()
         self.make_args.set(FW_TEXT_START=0x80000000)
-
-    def install(self, **kwargs):
-        self.makedirs(self.install_dir)
-        for platform in self.all_platforms:
-            args = self.make_args.copy()
-            args.set(PLATFORM=platform)
-            self.run_make_install(cwd=self.source_dir, options=args)
-        # Install into the QEMU firmware directory so that `-bios default` works
-        qemu_fw_dir = BuildCheriAllianceQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "share/qemu/"
-        self.makedirs(qemu_fw_dir)
-        self.run_cmd(
-            self.sdk_bindir / "llvm-objcopy",
-            "-S",
-            "-O",
-            "binary",
-            self._fw_jump_path(),
-            qemu_fw_dir / "opensbi-riscv64cheri-virt-fw_jump.bin",
-            print_verbose_only=False,
-        )
 
     @property
     def all_platforms(self):
