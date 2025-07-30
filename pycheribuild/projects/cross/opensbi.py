@@ -216,7 +216,7 @@ class BuildUpstreamOpenSBI(BuildOpenSBI):
 class BuildAllianceOpenSBI(BuildOpenSBI):
     target = "cheri-alliance-opensbi"
     _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, p: config.cheri_alliance_sdk_dir / "cheri-alliance-opensbi/riscv64",
+        function=lambda config, p: config.cheri_alliance_sdk_dir / "opensbi/riscv64",
         as_string="$SDK_ROOT/cheri-alliance-opensbi/riscv64"
     )
     repository = GitRepository("https://github.com/CHERI-Alliance/opensbi",
@@ -227,7 +227,7 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     )
 
     def _qemu_install_dir(self) -> Path:
-        BuildCheriAllianceQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
+        return BuildCheriAllianceQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
 
     def setup(self):
         super().setup()
