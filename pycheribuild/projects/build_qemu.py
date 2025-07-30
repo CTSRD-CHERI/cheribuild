@@ -585,8 +585,6 @@ class BuildCheriAllianceQEMU(BuildQEMUBase):
     default_targets = (
         "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
     )
-    # Turn on unaligned loads/stores by default
-    unaligned = BoolConfigOption("unaligned", show_help=False, help="Permit un-aligned loads/stores", default=False)
     statistics = BoolConfigOption(
         "statistics",
         show_help=True,
@@ -610,8 +608,6 @@ class BuildCheriAllianceQEMU(BuildQEMUBase):
 
     def setup(self):
         super().setup()
-        if self.unaligned:
-            self.COMMON_FLAGS.append("-DCHERI_UNALIGNED")
         if self.statistics:
             self.COMMON_FLAGS.append("-DDO_CHERI_STATISTICS=1")
         if self.build_type == BuildType.DEBUG:
