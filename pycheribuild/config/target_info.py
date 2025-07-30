@@ -669,6 +669,8 @@ class NativeTargetInfo(TargetInfo):
             # Ubuntu and Debian default to installing to lib/<triple> directories
             if self.target.is_x86_64():
                 return "lib/x86_64-linux-gnu"
+            elif self.target.is_aarch64():
+                return "lib/aarch64-linux-gnu"
             else:
                 self.project.warning("Don't know default libdir for", self.target.cpu_architecture)
         if OSInfo.is_suse() and self.pointer_size > 4:
