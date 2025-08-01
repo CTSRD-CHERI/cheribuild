@@ -43,6 +43,7 @@ from ..project import (
     Project,
 )
 from ...config.compilation_targets import CompilationTargets
+from ...config.target_info import CPUArchitecture
 
 
 def uboot_install_dir(config: CheriConfig, project: "BuildUBoot") -> Path:
@@ -106,7 +107,7 @@ class BuildUBoot(Project):
 
     @property
     def platform(self) -> str:
-        if self.crosscompile_target.is_riscv():
+        if self.crosscompile_target.is_riscv(include_purecap=True):
             return "qemu-riscv64_smode"
         assert False, "unhandled target"
 
@@ -160,3 +161,31 @@ class BuildUBoot(Project):
             assert kwargs["cwd"] == self.build_dir
             del kwargs["cwd"]
         super().run_make(*args, **kwargs, cwd=self.source_dir)
+
+
+class BuildCheriAllianceUBoot(BuildUBoot):
+    target = "cheri-alliance-u-boot"
+    repository = GitRepository("https://github.com/CHERI-Alliance/u-boot.git", default_branch="codasip-cheri-riscv")
+    default_build_type = BuildType.RELWITHDEBINFO
+    supported_architectures = (
+        CompilationTargets.FREESTANDING_RISCV64,
+        CompilationTargets.FREESTANDING_RISCV64_PURECAP,
+    )
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.secure_boot = cls.add_bool_option("secure-boot", default=False, help="Enable secure boot image")
+
+    @property
+    def platform(self) -> str:
+        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.RISCV64]):
+            if self.secure_boot:
+                return "codasip-a730-hobgoblin_secure-boot_cheri_purecap_smode"
+            return "codasip-a730-hobgoblin_cheri_purecap_smode"
+        elif self.crosscompile_target.is_riscv():
+            if self.secure_boot:
+                return "codasip-a730-hobgoblin_secure-boot_smode"
+            return "codasip-a730-hobgoblin_smode"
+
+        assert False, "unhandled target"
