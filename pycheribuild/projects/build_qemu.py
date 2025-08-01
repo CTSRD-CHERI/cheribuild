@@ -579,7 +579,7 @@ class BuildQEMU(BuildQEMUBase):
 class BuildCheriAllianceQEMU(BuildQEMUBase):
     target = "cheri-alliance-qemu"
     repository = GitRepository(
-        "https://github.com/CHERI-Alliance/qemu.git", default_branch="codasip-cheri-riscv_v3", force_branch=True
+        "https://github.com/CHERI-Alliance/qemu.git", default_branch="codasip-cheri-riscv.25-03-31", force_branch=True
     )
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
     default_targets = "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
