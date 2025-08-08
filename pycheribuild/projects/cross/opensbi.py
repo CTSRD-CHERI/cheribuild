@@ -232,6 +232,9 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     def _qemu_install_dir(self) -> Path:
         return BuildCheriAllianceQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE)
 
+    def setup(self):
+        super().setup()
+        self.make_args.set(FW_TEXT_START=0x80000000)
 
     @property
     def all_platforms(self):
