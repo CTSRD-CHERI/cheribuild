@@ -176,6 +176,7 @@ class GitRepository(SourceRepository):
         force_branch: bool = False,
         temporary_url_override: "Optional[str]" = None,
         url_override_reason: "typing.Any" = None,
+        temporary_branch_override: "Optional[str]" = None,
         per_target_branches: "Optional[dict[CrossCompileTarget, TargetBranchInfo]]" = None,
         old_branches: "Optional[dict[str, str]]" = None,
     ):
@@ -189,7 +190,10 @@ class GitRepository(SourceRepository):
                 self.old_urls.append(url.encode("utf-8"))
         else:
             self.url = url
-        self._default_branch = default_branch
+        if temporary_branch_override is not None:
+            self._default_branch = temporary_branch_override
+        else:
+            self._default_branch = default_branch
         self.force_branch = force_branch
         if per_target_branches is None:
             per_target_branches = dict()
