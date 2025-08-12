@@ -112,6 +112,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             NM_FOR_TARGET=self.target_info.nm,
             # Set all the flags:
             CFLAGS_FOR_TARGET=target_cflags,
+            CPPFLAGS_FOR_TARGET=target_cflags,
             CCASFLAGS_FOR_TARGET=target_cflags,
             FLAGS_FOR_TARGET=target_cflags,
             # Some build tools are needed:
