@@ -244,6 +244,7 @@ class BuildQEMUBase(AutotoolsProject):
                 "-Wno-sign-compare",
                 "-Wno-unused-parameter",
                 "-Wno-missing-field-initializers",
+                "-Wno-int-conversion",
             ]
         )
         if ccinfo.compiler == "gcc":
