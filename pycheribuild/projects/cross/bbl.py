@@ -91,7 +91,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         tinfo = cast(self.target_info, BaremetalClangTargetInfo)
         # Assume hardfloat architecture and softfloat ABI
         self.configure_args.append(
-            "--with-arch=" + tinfo.get_riscv_arch_string(self.crosscompile_target, softfloat=False),
+            "--with-arch=" + tinfo.get_riscv_arch_string(self.crosscompile_target, self.config, softfloat=False),
         )
         self.configure_args.append("--with-abi=" + tinfo.get_riscv_abi(self.crosscompile_target, softfloat=True))
         self.configure_args.append("--with-mem-start=" + self.mem_start)
@@ -160,7 +160,7 @@ class BuildBBLTestPayload(BuildBBLBase):
         self.configure_args.append("--enable-print-device-tree")
 
     def run_tests(self) -> None:
-        options = QemuOptions(self.crosscompile_target)
+        options = QemuOptions(self.crosscompile_target, riscv_cheri_isa=self.config.riscv_cheri_isa)
         self.run_cmd(
             options.get_commandline(
                 qemu_command=BuildQEMU.qemu_binary(self),
