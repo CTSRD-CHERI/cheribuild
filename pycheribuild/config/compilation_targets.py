@@ -85,7 +85,7 @@ class LaunchFreeBSDInterface:
 @functools.lru_cache(maxsize=20)
 def _linker_supports_riscv_relaxations(linker: Path, config: CheriConfig, xtarget: "CrossCompileTarget") -> bool:
     # XXX-AM: Hack: codasip lld does not seem to play nice with -mrelax and cheri
-    if config.riscv_cheri_isa == RiscvCheriISA.STD:
+    if xtarget.is_riscv(include_purecap=True) and config.riscv_cheri_isa == RiscvCheriISA.STD:
         return False
     elif xtarget.is_hybrid_or_purecap_cheri():
         return False
