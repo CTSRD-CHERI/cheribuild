@@ -77,8 +77,9 @@ class BuildGrpc(CrossCompileCMakeProject):
 
         if not self.compiling_for_host():
             self.add_cmake_options(gRPC_BUILD_TESTS="ON")
-            self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
-            self.cross_warning_flags.append("-Wno-error=format")
+        self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
+        self.cross_warning_flags.append("-Wno-error=format")
+        self.host_warning_flags.append("-Wno-error=missing-template-arg-list-after-template-kw")
 
     def install(self, **kwargs):
         super().install(**kwargs)
