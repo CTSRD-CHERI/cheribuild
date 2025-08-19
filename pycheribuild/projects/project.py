@@ -1673,7 +1673,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             self.update()
         if not self._system_deps_checked:
             self.check_system_dependencies()
-        assert self._system_deps_checked, "self._system_deps_checked must be set by now!"
+            assert self._system_deps_checked, "self._system_deps_checked must be set by now!"
 
         last_build_file = self._last_build_kind_path()
         if self.build_in_source_dir and not self.with_clean:

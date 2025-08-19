@@ -340,8 +340,12 @@ def real_main() -> None:
                 print("    Needed by:", needed_by[target.name])
                 print("    Direct dependencies:", direct_deps[target.name])
         return
+    # Check system dependencies before building any targets to get an error message earlier.
+    for target in chosen_targets:
+        target.check_system_deps(cheri_config)
     if CheribuildAction.BUILD in cheri_config.action:
-        target_manager.run(cheri_config, chosen_targets)
+        for target in chosen_targets:
+            target.execute(cheri_config)
     if CheribuildAction.TEST in cheri_config.action:
         for target in chosen_targets:
             target.run_tests(cheri_config)

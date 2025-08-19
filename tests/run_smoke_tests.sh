@@ -53,6 +53,10 @@ try_run "${srcdir}/cheribuild.py" --dump-config
 # Check that the concatenated script still works:
 try_run sh -c "\"${srcdir}/combine-files.py\" | \"$(command -v python3)\" - --get-config-option output-root"
 try_run "${srcdir}/cheribuild.py" -p __run_everything__ --clean --build --test --benchmark
+# Check that just --build/--test/--benchmark also works
+try_run "${srcdir}/cheribuild.py" -p __run_everything__ --clean --build
+try_run "${srcdir}/cheribuild.py" -p __run_everything__ --clean --test
+try_run "${srcdir}/cheribuild.py" -p __run_everything__ --clean --benchmark
 # Also check that we can run --pretend mode with all tools missing.
 try_run env PATH=/does/not/exist "$(command -v python3)" "${srcdir}/cheribuild.py" -p __run_everything__ --clean --build --test --benchmark --source-root=/tmp/does-not-exist
 try_run env WORKSPACE=/tmp "${srcdir}/jenkins-cheri-build.py" --allow-more-than-one-target --build --test --cpu=default -p __run_everything__

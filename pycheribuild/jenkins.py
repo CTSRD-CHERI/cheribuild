@@ -284,6 +284,9 @@ def _jenkins_main() -> None:
     jenkins_override_install_dirs_hack(cheri_config, cheri_config.installation_prefix)
 
     if JenkinsAction.BUILD in cheri_config.action or JenkinsAction.TEST in cheri_config.action:
+        # Check system dependencies before building any targets to get an error message earlier.
+        for target in cheri_config.targets:
+            target_manager.get_target_raw(target).check_system_deps(cheri_config)
         for tgt in cheri_config.targets:
             build_target(cheri_config, target_manager.get_target_raw(tgt))
 
@@ -292,7 +295,6 @@ def _jenkins_main() -> None:
 
 
 def build_target(cheri_config, target: Target) -> None:
-    target.check_system_deps(cheri_config)
     project = target.get_or_create_project(None, cheri_config, caller=None)
     assert project
     _ = project.all_dependency_names(cheri_config)  # Ensure dependencies are cached.

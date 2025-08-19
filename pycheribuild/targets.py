@@ -103,15 +103,15 @@ class Target:
         self, cross_target: Optional[CrossCompileTarget], config, caller: "Optional[SimpleProject]"
     ) -> "SimpleProject":
         if caller is not None:
-            # noinspection PyProtectedMember
             assert caller._init_called, "Cannot call this inside __init__()"
         project = self._get_or_create_project_no_setup(cross_target, config, caller)
+        self._check_system_deps(config, project)
         if not project._setup_called:
             project.setup()
+            assert project._setup_called, f"{self._project_class}: forgot to call super().setup()?"
         if not project._setup_late_called:
             project.setup_late()
-        assert project._setup_called, str(self._project_class) + ": forgot to call super().setup()?"
-        assert project._setup_late_called, str(self._project_class) + ": forgot to call super().setup_late()?"
+            assert project._setup_late_called, f"{self._project_class}: forgot to call super().setup_late()?"
         return project
 
     def get_dependencies(self, config: CheriConfig) -> "list[Target]":
@@ -122,14 +122,19 @@ class Target:
     def cache_dependencies(self, config: CheriConfig) -> None:
         self.project_class._cache_full_dependencies(config, allow_already_cached=True)
 
-    def check_system_deps(self, config: CheriConfig) -> None:
-        if self._completed:
+    def _check_system_deps(self, config: CheriConfig, project: "SimpleProject"):
+        if project._system_deps_checked:
             return
-        # check_system_deps should be called before setup()
-        project = self._get_or_create_project_no_setup(None, config, None)
         with set_env(PATH=config.dollar_path_with_other_tools, config=config):
             # make sure all system dependencies exist first
             project.check_system_dependencies()
+            assert project._system_deps_checked, (
+                f"{self._project_class}: forgot to call super().check_system_dependencies()?"
+            )
+
+    def check_system_deps(self, config: CheriConfig) -> None:
+        # check_system_deps should be called before setup()
+        self._check_system_deps(config, self._get_or_create_project_no_setup(None, config, None))
 
     @final
     def create_project(self, config: CheriConfig) -> "SimpleProject":
@@ -146,6 +151,9 @@ class Target:
 
     # noinspection PyProtectedMember
     def _do_run(self, config, msg: str, func: "Callable[[SimpleProject], typing.Any]"):
+        assert self.__project is not None, "Should have been initialized in check_system_deps()"
+        # noinspection PyProtectedMember
+        self.cache_dependencies(config)
         # instantiate the project and run it
         starttime = time.time()
         with add_error_context(coloured(AnsiColour.yellow, "(in target ", self.name, ")", sep="")):
@@ -162,9 +170,6 @@ class Target:
             # TODO: make this an error once I have a clean solution for the pseudo targets
             warning_message(self.name, "has already been executed!")
             return
-        assert self.__project is not None, "Should have been initialized in check_system_deps()"
-        # noinspection PyProtectedMember
-        self.cache_dependencies(config)
         self._do_run(config, msg="Built", func=lambda project: project.process())
         self._completed = True
 
@@ -173,7 +178,6 @@ class Target:
             # TODO: make this an error once I have a clean solution for the pseudo targets
             warning_message(self.name, "has already been tested!")
             return
-        self.check_system_deps(config)
         self._do_run(config, msg="Ran tests", func=lambda project: project.run_tests())
         self._tests_have_run = True
 
@@ -526,20 +530,6 @@ class TargetManager:
             if not sort:
                 raise ValueError("selected target list is empty after --start-after/--start-with filtering")
         return sort
-
-    def run(self, config: CheriConfig, chosen_targets=None) -> None:
-        if chosen_targets is None:
-            chosen_targets = self.get_all_chosen_targets(config)
-        with set_env(
-            PATH=config.dollar_path_with_other_tools,
-            CLANG_FORCE_COLOR_DIAGNOSTICS="always" if config.clang_colour_diags else None,
-            config=config,
-        ):
-            for target in chosen_targets:
-                target.check_system_deps(config)
-            # all dependencies exist -> run the targets
-            for target in chosen_targets:
-                target.execute(config)
 
     def get_chosen_target(self, config, target_name) -> Target:
         if target_name not in self._all_targets:
