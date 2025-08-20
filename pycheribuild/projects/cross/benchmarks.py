@@ -473,6 +473,11 @@ class BuildSpec2017(_BuildLLVMTestSuiteSubdir):
         )
         if self.target_info.is_freebsd():
             self.add_cmake_options(TEST_SUITE_USE_PMCSTAT=True)
+        if self.compiling_for_cheri():
+            # Lots of code that generates errors and often is incompatible.
+            self.cross_warning_flags.append("-Wno-error=cheri-prototypes")
+            self.cross_warning_flags.append("-Wno-error=cheri-provenance")
+            self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
         self.cross_warning_flags.append("-Werror=writable-strings")
         self.cross_warning_flags.append("-Wno-builtin-macro-redefined")  # perl
         self.cross_warning_flags.append("-Wno-constant-logical-operand")  # perl
