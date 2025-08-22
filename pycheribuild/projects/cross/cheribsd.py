@@ -1525,6 +1525,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # We have to provide the default X* values so that Makefile.inc1 does not disable MK_CLANG_BOOTSTRAP and
             # doesn't try to use the host toolchain for cross-building
             self.make_args.set_env(XCC="cc", XCXX="c++", XCPP="cpp", XSTRIPBIN="strip")
+            # We also have to set X_COMPILER_TYPE since the build system is broken and determines it before it's built
+            # the bootstrap toolchain, so will fall back on the inferred value for COMPILER_TYPE, which is likely gcc
+            # on Linux.
+            self.make_args.set_env(X_COMPILER_TYPE="clang")
         # won't work on a case-insensitive file system and is also really slow (and missing tools on linux)
         self.make_args.set_with_options(MAN=False)
         # links from /usr/bin/mail to /usr/bin/Mail won't work on case-insensitve fs
