@@ -143,7 +143,7 @@ default_ram_size   = '{hex(layout.dram_size)}'
             softfloat = self.uses_softfloat_by_default()
             rv_abi = self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=softfloat)
             rv_arch = self.target_info.get_riscv_arch_string(
-                self.crosscompile_target.get_non_cheri_target(), softfloat=softfloat
+                self.crosscompile_target.get_non_cheri_target(), self.config, softfloat=softfloat
             )
             self.makedirs(self.install_dir / rv_arch)
             self.create_symlink(self.install_dir, self.install_dir / rv_arch / rv_abi, print_verbose_only=False)

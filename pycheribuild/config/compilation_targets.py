@@ -40,7 +40,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
-from .chericonfig import CheriConfig
+from .chericonfig import CheriConfig, RiscvCheriISA
 from .config_loader_base import ConfigLoaderBase, ConfigOptionHandle
 from .target_info import (
     AArch64FloatSimdOptions,
@@ -84,8 +84,12 @@ class LaunchFreeBSDInterface:
 
 @functools.lru_cache(maxsize=20)
 def _linker_supports_riscv_relaxations(linker: Path, config: CheriConfig, xtarget: "CrossCompileTarget") -> bool:
-    if xtarget.is_hybrid_or_purecap_cheri():
+    # XXX-AM: Hack: codasip lld does not seem to play nice with -mrelax and cheri
+    if xtarget.is_riscv(include_purecap=True) and config.riscv_cheri_isa == RiscvCheriISA.STD:
         return False
+    elif xtarget.is_hybrid_or_purecap_cheri():
+        return False
+
     try:
         linker_version = get_version_output(linker, config=config)
     except subprocess.CalledProcessError as e:
@@ -118,15 +122,17 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         return self._sdk_root_dir
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         raise NotImplementedError()
 
     def _get_sdk_root_dir_lazy(self) -> Path:
-        return self._get_compiler_project().get_native_install_path(self.config)
+        return self._get_compiler_project(self.config).get_native_install_path(self.config)
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
-        return [cls._get_compiler_project().get_class_for_target(BasicCompilationTargets.NATIVE_NON_PURECAP).target]
+        return [
+            cls._get_compiler_project(config).get_class_for_target(BasicCompilationTargets.NATIVE_NON_PURECAP).target
+        ]
 
     def _rootfs_path(self) -> Path:
         xtarget = self.target.get_rootfs_target()
@@ -277,10 +283,27 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
                     result.append("-mcpu=beri")
         elif xtarget.is_riscv(include_purecap=True):
             # Use the insane RISC-V arch string to enable CHERI
-            result.append("-march=" + cls.get_riscv_arch_string(xtarget, softfloat=softfloat))
+            result.append("-march=" + cls.get_riscv_arch_string(xtarget, config, softfloat=softfloat))
             result.append("-mabi=" + cls.get_riscv_abi(xtarget, softfloat=softfloat))
             result.append(
                 "-mrelax" if _linker_supports_riscv_relaxations(instance.linker, config, xtarget) else "-mno-relax"
+            )
+            # Necessary for library compartmentalisation ABI
+            result.extend(
+                [
+                    "-Xclang",
+                    "-target-feature",
+                    "-Xclang",
+                    "+cheri-bounded-vararg",
+                    "-Xclang",
+                    "-target-feature",
+                    "-Xclang",
+                    "+cheri-bounded-memarg-caller",
+                    "-Xclang",
+                    "-target-feature",
+                    "-Xclang",
+                    "+cheri-bounded-memarg-callee",
+                ]
             )
 
             if cls.is_baremetal() or cls.is_rtems():
@@ -313,7 +336,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         return result
 
     @classmethod
-    def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, softfloat: bool) -> str:
+    def get_riscv_arch_string(cls, xtarget: CrossCompileTarget, config: CheriConfig, softfloat: bool) -> str:
         assert xtarget.is_riscv(include_purecap=True)
         # Use the insane RISC-V arch string to enable CHERI
         arch_string = "rv" + str(xtarget.cpu_architecture.word_bits()) + "ima"
@@ -321,7 +344,11 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             arch_string += "fd"
         arch_string += "c"
         if xtarget.is_hybrid_or_purecap_cheri():
-            arch_string += "xcheri"
+            if config.riscv_cheri_isa == RiscvCheriISA.V9:
+                arch_string += "xcheri"
+            else:
+                assert config.riscv_cheri_isa == RiscvCheriISA.STD
+                arch_string += "zcherihybrid"
         return arch_string
 
     @classmethod
@@ -366,7 +393,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
             # If we couldn't find a working system compiler, default to cheribuild-compiled upstream LLVM.
             assert fbsd.build_toolchain == CompilerType.DEFAULT_COMPILER
             # noinspection PyUnresolvedReferences
-            return self._get_compiler_project().get_native_install_path(self.config)
+            return self._get_compiler_project(self.config).get_native_install_path(self.config)
         return configured_path
 
     @property
@@ -464,7 +491,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return Path("usr/local")
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("upstream-llvm", None))
 
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
@@ -502,7 +529,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         rootfs_xtarget = xtarget.get_rootfs_target()
         from ..qemu_utils import QemuOptions
 
-        qemu_options = QemuOptions(rootfs_xtarget)
+        qemu_options = QemuOptions(rootfs_xtarget, riscv_cheri_isa=self.config.riscv_cheri_isa)
         run_instance: LaunchFreeBSDInterface = self._get_run_project(rootfs_xtarget, self.project)
         if rootfs_xtarget.cpu_architecture not in (
             CPUArchitecture.MIPS64,
@@ -635,8 +662,12 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     FREEBSD_VERSION: int = 13
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
+        if config.riscv_cheri_isa == RiscvCheriISA.STD:
+            llvm_target = SimpleProject.get_class_for_target_name("cheri-alliance-llvm", None)
+        else:
+            llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
+        return typing.cast("type[BuildLLVMInterface]", llvm_target)
 
     def _get_run_project(self, xtarget: "CrossCompileTarget", caller: SimpleProject) -> LaunchFreeBSDInterface:
         result = SimpleProject.get_instance_for_target_name("run", xtarget, caller.config, caller)
@@ -703,7 +734,7 @@ class CheriBSDMorelloTargetInfo(CheriBSDTargetInfo):
     uses_morello_llvm: bool = True
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("morello-llvm", None))
 
     @classmethod
@@ -739,10 +770,10 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
         raise LookupError("Should not be called")
 
     def _get_sdk_root_dir_lazy(self) -> Path:
-        return self._get_compiler_project().get_native_install_path(self.config)
+        return self._get_compiler_project(self.config).get_native_install_path(self.config)
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("cherios-llvm", None))
 
     @property
@@ -809,7 +840,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
         return Path(self.target_triple)
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
     @property
@@ -861,7 +892,7 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
         return sysroot_dir / "baremetal" / suffix
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
     @classmethod
@@ -947,7 +978,7 @@ set(CMAKE_DL_LIBS "")
         return result
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
 
     @property
@@ -1021,8 +1052,12 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
     os_prefix: str = "baremetal-"
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("llvm", None))
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
+        if config.riscv_cheri_isa == RiscvCheriISA.STD:
+            llvm_target = SimpleProject.get_class_for_target_name("cheri-alliance-llvm", None)
+        else:
+            llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
+        return typing.cast("type[BuildLLVMInterface]", llvm_target)
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
@@ -1036,7 +1071,10 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
 
     @property
     def sysroot_dir(self) -> Path:
-        sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
+        if self.config.riscv_cheri_isa == RiscvCheriISA.STD:
+            sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
+        else:
+            sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
         return sysroot_dir / "baremetal" / self.target.get_rootfs_target().generic_arch_suffix
 
 
@@ -1046,7 +1084,7 @@ class MorelloBaremetalTargetInfo(BaremetalFreestandingTargetInfo):
     uses_morello_llvm: bool = True
 
     @classmethod
-    def _get_compiler_project(cls) -> "type[BuildLLVMInterface]":
+    def _get_compiler_project(cls, config: CheriConfig) -> "type[BuildLLVMInterface]":
         return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("morello-llvm", None))
 
     @property
