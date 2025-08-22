@@ -182,8 +182,8 @@ class QemuOptions:
         write_disk_image_changes=True,
         gui_options: "Optional[list[str]]" = None,
     ) -> "list[str]":
-        if kernel_file is None and disk_image is None:
-            raise ValueError("Must pass kernel and/or disk image path when launching QEMU")
+        #if bios_args is None and kernel_file is None and disk_image is None:
+        #    raise ValueError("Must pass kernel and/or disk image path when launching QEMU")
         if qemu_command is None:
             qemu_command = self.get_qemu_binary()
         result = [str(qemu_command)]

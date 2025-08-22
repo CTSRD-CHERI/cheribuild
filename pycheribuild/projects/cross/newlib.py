@@ -182,9 +182,16 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         if self.compiling_for_cheri():
             # create some symlinks to make the current CMakeProject infrastructure happy
             root_dir = self.install_dir / self.target_info.target_triple
-            self.makedirs(root_dir / "usr")
-            self.create_symlink(root_dir / "lib", root_dir / "usr/libcheri")
-            self.create_symlink(root_dir / "lib", root_dir / "libcheri")
+
+            if self.target_info.is_baremetal():
+                if self.config.riscv_cheri_gprel:
+                    self.move_file(root_dir / "lib/libc.a", root_dir / "lib/libc-gprel.a")
+                    self.move_file(root_dir / "lib/libm.a", root_dir / "lib/libm-gprel.a")
+                    self.move_file(root_dir / "lib/libg.a", root_dir / "lib/libg-gprel.a")
+            else:
+                self.makedirs(root_dir / "usr")
+                self.create_symlink(root_dir / "lib", root_dir / "usr/libcheri")
+                self.create_symlink(root_dir / "lib", root_dir / "libcheri")
 
     def run_tests(self):
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
