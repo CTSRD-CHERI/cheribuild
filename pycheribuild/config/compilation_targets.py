@@ -288,23 +288,24 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             result.append(
                 "-mrelax" if _linker_supports_riscv_relaxations(instance.linker, config, xtarget) else "-mno-relax"
             )
-            # Necessary for library compartmentalisation ABI
-            result.extend(
-                [
-                    "-Xclang",
-                    "-target-feature",
-                    "-Xclang",
-                    "+cheri-bounded-vararg",
-                    "-Xclang",
-                    "-target-feature",
-                    "-Xclang",
-                    "+cheri-bounded-memarg-caller",
-                    "-Xclang",
-                    "-target-feature",
-                    "-Xclang",
-                    "+cheri-bounded-memarg-callee",
-                ]
-            )
+            if xtarget.is_cheri_purecap():
+                # Necessary for library compartmentalisation ABI
+                result.extend(
+                    [
+                        "-Xclang",
+                        "-target-feature",
+                        "-Xclang",
+                        "+cheri-bounded-vararg",
+                        "-Xclang",
+                        "-target-feature",
+                        "-Xclang",
+                        "+cheri-bounded-memarg-caller",
+                        "-Xclang",
+                        "-target-feature",
+                        "-Xclang",
+                        "+cheri-bounded-memarg-callee",
+                    ]
+                )
 
             if cls.is_baremetal() or cls.is_rtems():
                 # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
