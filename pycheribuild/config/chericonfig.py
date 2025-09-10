@@ -340,6 +340,14 @@ class CheriConfig(ConfigBase):
             group=loader.cross_compile_options_group,
             help="The floating point/SIMD mode to use for building AArch64 programs",
         )
+
+        self.riscv_baremetal_hardfloat = loader.add_bool_option("riscv-baremetal-hardfloat", default=False,
+            group=loader.cross_compile_options_group,
+            help="Use hard floating point ABI for building CHERI-RISC-V programs")
+        self.riscv_cheri_gprel = loader.add_bool_option("riscv-cheri-gprel", default=False,
+            group=loader.cross_compile_options_group,
+            help="Build CHERI-RISC-V libs with gprel ABI for CheriFreeRTOS compartmentalization")
+
         self.crosscompile_linkage = loader.add_option(
             "cross-compile-linkage",
             default=Linkage.DEFAULT,
