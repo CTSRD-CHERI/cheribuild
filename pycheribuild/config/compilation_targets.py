@@ -1051,9 +1051,8 @@ class MorelloBaremetalTargetInfo(BaremetalFreestandingTargetInfo):
 
     @property
     def sysroot_dir(self) -> Path:
-        suffix = self.target.get_rootfs_target().generic_arch_suffix
         sysroot_dir = self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name
-        return sysroot_dir / "baremetal" / suffix / self.target_triple
+        return sysroot_dir / "baremetal" / self.target.get_rootfs_target().generic_arch_suffix
 
     @classmethod
     def triple_for_target(cls, target, config, include_version: bool) -> str:
