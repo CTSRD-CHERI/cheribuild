@@ -1,0 +1,235 @@
+#
+# Copyright (c) 2025 Hesham Almatary
+#
+# This software was developed by SRI International and the University of
+# Cambridge Computer Laboratory (Department of Computer Science and
+# Technology) under DARPA contract HR0011-18-C-0016 ("ECATS"), as part of the
+# DARPA SSITH research programme.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+
+from pathlib import Path
+
+from .crosscompileproject import CrossCompileAutotoolsProject
+from ..project import (
+    CheriConfig,
+    DefaultInstallDir,
+    GitRepository,
+    MakeCommandKind,
+)
+from ..run_qemu import LaunchQEMUBase
+from ...config.compilation_targets import CompilationTargets
+from ...config.target_info import CPUArchitecture
+from ...utils import classproperty
+
+
+class BuildLinux(CrossCompileAutotoolsProject):
+    target = "kernel"
+    repository = GitRepository("https://github.com/torvalds/linux.git")
+    needs_sysroot = False
+    is_sdk_target = False
+    supported_architectures = (
+        CompilationTargets.LINUX_RISCV64,
+        CompilationTargets.LINUX_AARCH64,
+    )
+    _always_add_suffixed_targets = True
+    make_kind = MakeCommandKind.GnuMake
+
+    @classproperty
+    def default_install_dir(self):
+        return DefaultInstallDir.ROOTFS_LOCALBASE
+
+    def check_system_dependencies(self) -> None:
+        super().check_system_dependencies()
+        self.check_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
+
+    def _enable_config(self, option):
+        with open(self.source_dir / ".config") as f:
+            lines = f.readlines()
+        for i, line in enumerate(lines):
+            if line.startswith(option + "=") or line.startswith("# " + option):
+                lines[i] = f"{option}=y\n"
+                break
+        else:
+            lines.append(f"{option}=y\n")
+        with open(self.source_dir / ".config", "w") as f:
+            f.writelines(lines)
+
+    def setup(self) -> None:
+        super().setup()
+        if self.crosscompile_target.is_riscv(include_purecap=True):
+            self.linux_arch = "riscv"
+            self.make_args.set(CROSS_COMPILE="riscv64-unknown-elf-")
+        elif self.crosscompile_target.is_aarch64(include_purecap=True):
+            self.linux_arch = "arm64"
+            self.make_args.set(CROSS_COMPILE="aarch64-unknown-elf-")
+
+        self.make_args.set(ARCH=self.linux_arch)
+
+        # We only support building the kernel with LLVM/Clang
+        self.make_args.set(CC="clang")
+        self.make_args.set(LLVM="1")
+        # Install kernel headers at rootfs (and sysroot)'s path
+        self.make_args.set(INSTALL_HDR_PATH=self.install_dir / "usr")
+
+        if self.config.verbose:
+            self.make_args.set(V=True)
+
+    @property
+    def defconfig(self) -> str:
+        return "defconfig"
+
+    def compile(self, **kwargs):
+        self.run_make(cwd=self.source_dir)
+
+    def configure(self, **kwargs):
+        self.run_make(self.defconfig, cwd=self.source_dir)
+
+    def clean(self):
+        self.run_make("distclean", cwd=self.source_dir)
+        self.run_make("clean", cwd=self.source_dir)
+        # Optional -- deletes locally modified files and local git patches
+        self.run_make("mrproper", cwd=self.source_dir)
+
+    def install(self, **kwargs):
+        self.install_file(self.source_dir / "vmlinux", self.install_dir / "boot/vmlinux")
+        self.install_file(self.source_dir / "System.map", self.install_dir / "boot/System.map")
+        self.install_file(self.source_dir / f"arch/{self.linux_arch}/boot/Image", self.install_dir / "boot/Image")
+        self.install_file(self.source_dir / f"arch/{self.linux_arch}/boot/Image.gz", self.install_dir / "boot/Image.gz")
+        self.run_make("headers_install", cwd=self.source_dir)
+
+
+class BuildCheriAllianceLinux(BuildLinux):
+    target = "cheri-std093-kernel"
+    repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="codasip-cheri-riscv")
+    supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP,)
+
+    @property
+    def defconfig(self) -> str:
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            return "cheri_full_defconfig"
+        else:
+            return "defconfig"
+
+        assert False, "unhandled target"
+
+
+class BuildMorelloLinux(BuildLinux):
+    target = "morello-kernel"
+    repository = GitRepository(
+        "https://git.morello-project.org/morello/kernel/linux.git", default_branch="morello/master"
+    )
+    # Morello Linux is actually built hybrid (at the moment), but in the future it will be purecap.
+    # To avoid workarounds and long target names, mark it as LINUX_MORELLO_PURECAP here but it will
+    # still be built as a hybrid kernel.
+    supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+
+    @property
+    def defconfig(self) -> str:
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            return "morello_transitional_pcuabi_defconfig"
+        else:
+            return "defconfig"
+
+        assert False, "unhandled target"
+
+    def configure(self) -> None:
+        super().configure()
+        # Default config only has VIRTIO_NET, not PCI_NET. This is to make
+        # it work out of the box with cheribuild's QEMU with networking that
+        # uses PCI.
+        self._enable_config("CONFIG_VIRTIO_PCI")
+        self._enable_config("CONFIG_VIRTIO_PCI_LEGACY")
+
+
+class LaunchCheriLinux(LaunchQEMUBase):
+    target = "run"
+    supported_architectures = (
+        CompilationTargets.LINUX_MORELLO_PURECAP,
+        CompilationTargets.LINUX_RISCV64_PURECAP,
+    )
+    forward_ssh_port = False
+    qemu_user_networking = True
+    _uses_disk_image = False
+    _enable_smbfs_support = False
+    _add_virtio_rng = True
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        result = tuple()
+        if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            result += ("cheri-std093-kernel",)
+            result += ("cheri-std093-llvm",)
+            result += ("cheri-std093-gdb-native",)
+            result += ("cheri-std093-qemu",)
+            result += ("cheri-std093-opensbi-baremetal-riscv64-purecap",)
+            # TODO: Add more projects (eg busybox and muslc once released and is public)
+        elif cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            result += ("morello-llvm-native",)
+            result += ("gdb-native",)
+            result += ("qemu",)
+            result += ("morello-kernel",)
+            result += ("morello-muslc",)
+            result += ("morello-compiler-rt-builtins",)
+            result += ("morello-busybox",)
+        else:
+            result += ("kernel",)
+            result += ("upstream-llvm",)
+            result += ("gdb-native",)
+            result += ("qemu",)
+            result += ("muslc",)
+            result += ("compiler-rt-builtins",)
+            result += ("busybox",)
+
+        return result
+
+    def setup(self):
+        super().setup()
+
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            linux_project = BuildMorelloLinux.get_instance(self, self.config)
+        elif self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            linux_project = BuildCheriAllianceLinux.get_instance(self, self.config)
+        else:
+            linux_project = BuildLinux.get_instance(self, self.config)
+
+        kernel = f"{linux_project.install_dir}/boot/Image"
+        initramfs = f"{linux_project.install_dir}/boot/initramfs.cpio.gz"
+
+        if self.crosscompile_target.is_aarch64(include_purecap=True):
+            self.qemu_options.machine_flags = [
+                "-M",
+                "virt",
+                "-cpu",
+                "morello",
+                "-smp",
+                1,
+                "-kernel",
+                kernel,
+                "-initrd",
+                initramfs,
+                "-append",
+                "init=/init",
+            ]
+
+        self.current_kernel = Path(kernel)
