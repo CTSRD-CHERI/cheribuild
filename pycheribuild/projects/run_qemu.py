@@ -885,7 +885,8 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         # RISCV needs OpenSBI/BBL to run:
         # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            result += ("bbl-baremetal-riscv64-purecap",)
+            bios_target = "cheri-alliance-opensbi" if config.riscv_cheri_isa == RiscvCheriISA.STD else "bbl"
+            result += (f"{bios_target}-baremetal-riscv64-purecap",)
         return result
 
     def get_qemu_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
