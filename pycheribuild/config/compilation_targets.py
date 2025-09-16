@@ -662,7 +662,10 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     @classmethod
     def _get_compiler_project(cls, config: CheriConfig, xtarget: "CrossCompileTarget") -> "type[BuildLLVMInterface]":
-        if config.riscv_cheri_isa == RiscvCheriISA.STD:
+        # Use the CHERI Alliance compiler when building for RISCV CHERI
+        if config.riscv_cheri_isa == RiscvCheriISA.STD and xtarget.is_hybrid_or_purecap_cheri(
+            [CPUArchitecture.RISCV32, CPUArchitecture.RISCV64]
+        ):
             llvm_target = SimpleProject.get_class_for_target_name("cheri-alliance-llvm", None)
         else:
             llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
@@ -1052,7 +1055,10 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
 
     @classmethod
     def _get_compiler_project(cls, config: CheriConfig, xtarget: "CrossCompileTarget") -> "type[BuildLLVMInterface]":
-        if config.riscv_cheri_isa == RiscvCheriISA.STD:
+        # Use the CHERI Alliance compiler when building for RISCV CHERI
+        if config.riscv_cheri_isa == RiscvCheriISA.STD and xtarget.is_hybrid_or_purecap_cheri(
+            [CPUArchitecture.RISCV32, CPUArchitecture.RISCV64]
+        ):
             llvm_target = SimpleProject.get_class_for_target_name("cheri-alliance-llvm", None)
         else:
             llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
