@@ -43,7 +43,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Callable, Optional, Union
 
-from ..config.chericonfig import CheriConfig, ComputedDefaultValue, MipsFloatAbi, RiscvFloatAbi
+from ..config.chericonfig import CheriConfig, ComputedDefaultValue, MipsFloatAbi, RiscvCheriISA, RiscvFloatAbi
 from ..config.config_loader_base import ConfigLoaderBase, ConfigOptionHandle, DefaultValueOnlyConfigOption
 from ..config.target_info import (
     AbstractProject,
@@ -821,6 +821,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         # targets that only support native might not need a suffix
         if not target.is_native() or self.add_build_dir_suffix_for_native:
             result += target.build_suffix(config, include_os=self.include_os_in_target_suffix)
+        if target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]) and config.riscv_cheri_isa == RiscvCheriISA.STD:
+            result += "-std093"  # The current CHERI-Alliance repositories implement the 0.9.3 standard draft.
         return result
 
     @property
