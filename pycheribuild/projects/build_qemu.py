@@ -465,17 +465,8 @@ class BuildUpstreamQEMU(BuildQEMUBase):
         return config.output_root / "upstream-qemu/bin" / binary_name
 
 
-class BuildQEMU(BuildQEMUBase):
-    target = "qemu"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri")
-    default_targets = (
-        "arm-softmmu,aarch64-softmmu,morello-softmmu,"
-        "mips64-softmmu,mips64cheri128-softmmu,"
-        "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
-        "x86_64-softmmu"
-    )
-    # Turn on unaligned loads/stores by default
-    unaligned = BoolConfigOption("unaligned", show_help=False, help="Permit un-aligned loads/stores", default=False)
+class BuildCheriQEMUBase(BuildQEMUBase):
+    do_not_add_to_targets = True
     statistics = BoolConfigOption(
         "statistics",
         show_help=True,
@@ -483,42 +474,11 @@ class BuildQEMU(BuildQEMUBase):
     )
 
     @classmethod
-    def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
-        # Always use the CHERI qemu even for plain riscv:
-        if xtarget.is_riscv(include_purecap=True):
-            xlen = 32 if xtarget.is_riscv32(include_purecap=True) else 64
-            # Prefer the xcheri-suffixed binary (if it exists) to ensure backwards compatibility.
-            if config.riscv_cheri_isa == RiscvCheriISA.STD:
-                binary_name = f"qemu-system-riscv{xlen}cheristd"
-            elif (config.qemu_bindir / f"qemu-system-riscv{xlen}xcheri").exists():
-                binary_name = f"qemu-system-riscv{xlen}xcheri"
-            else:
-                binary_name = f"qemu-system-riscv{xlen}cheri"
-        elif xtarget.is_mips(include_purecap=True):
-            binary_name = "qemu-system-mips64cheri128"
-        elif xtarget.is_aarch64(include_purecap=True):
-            # Only use CHERI QEMU for Morello for now, not AArch64 too, until
-            # we can rely on builds being up-to-date
-            if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-                binary_name = "qemu-system-morello"
-            else:
-                binary_name = "qemu-system-aarch64"
-        elif xtarget.is_any_x86():
-            binary_name = "qemu-system-x86_64"
-        elif xtarget.cpu_architecture == CPUArchitecture.ARM32:
-            binary_name = "qemu-system-arm"
-        else:
-            raise ValueError("Invalid xtarget" + str(xtarget))
-        return config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
-
-    @classmethod
     def get_firmware_dir(cls, caller: SimpleProject, cross_target: "Optional[CrossCompileTarget]" = None):
         return cls.get_install_dir(caller, cross_target=cross_target) / "share/qemu"
 
     def setup(self):
         super().setup()
-        if self.unaligned:
-            self.COMMON_FLAGS.append("-DCHERI_UNALIGNED")
         if self.statistics:
             self.COMMON_FLAGS.append("-DDO_CHERI_STATISTICS=1")
         if self.build_type == BuildType.DEBUG:
@@ -559,6 +519,53 @@ class BuildQEMU(BuildQEMUBase):
                 ],
             )
 
+
+class BuildQEMU(BuildCheriQEMUBase):
+    target = "qemu"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri")
+    default_targets = (
+        "arm-softmmu,aarch64-softmmu,morello-softmmu,"
+        "mips64-softmmu,mips64cheri128-softmmu,"
+        "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
+        "x86_64-softmmu"
+    )
+    # Turn on unaligned loads/stores by default
+    unaligned = BoolConfigOption("unaligned", show_help=False, help="Permit un-aligned loads/stores", default=False)
+
+    @classmethod
+    def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
+        # Always use the CHERI qemu even for plain riscv:
+        if xtarget.is_riscv(include_purecap=True):
+            xlen = 32 if xtarget.is_riscv32(include_purecap=True) else 64
+            # Prefer the xcheri-suffixed binary (if it exists) to ensure backwards compatibility.
+            if config.riscv_cheri_isa == RiscvCheriISA.STD:
+                binary_name = f"qemu-system-riscv{xlen}cheristd"
+            elif (config.qemu_bindir / f"qemu-system-riscv{xlen}xcheri").exists():
+                binary_name = f"qemu-system-riscv{xlen}xcheri"
+            else:
+                binary_name = f"qemu-system-riscv{xlen}cheri"
+        elif xtarget.is_mips(include_purecap=True):
+            binary_name = "qemu-system-mips64cheri128"
+        elif xtarget.is_aarch64(include_purecap=True):
+            # Only use CHERI QEMU for Morello for now, not AArch64 too, until
+            # we can rely on builds being up-to-date
+            if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+                binary_name = "qemu-system-morello"
+            else:
+                binary_name = "qemu-system-aarch64"
+        elif xtarget.is_any_x86():
+            binary_name = "qemu-system-x86_64"
+        elif xtarget.cpu_architecture == CPUArchitecture.ARM32:
+            binary_name = "qemu-system-arm"
+        else:
+            raise ValueError("Invalid xtarget" + str(xtarget))
+        return config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
+
+    def setup(self):
+        super().setup()
+        if self.unaligned:
+            self.COMMON_FLAGS.append("-DCHERI_UNALIGNED")
+
     def install(self, **kwargs):
         super().install(**kwargs)
         # Delete the old Morello-QEMU files
@@ -576,7 +583,7 @@ class BuildQEMU(BuildQEMUBase):
         )
 
 
-class BuildCheriAllianceQEMU(BuildQEMUBase):
+class BuildCheriAllianceQEMU(BuildCheriQEMUBase):
     target = "cheri-alliance-qemu"
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/qemu.git", default_branch="codasip-cheri-riscv.25-03-31", force_branch=True
@@ -584,14 +591,9 @@ class BuildCheriAllianceQEMU(BuildQEMUBase):
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
     default_targets = "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
 
-    statistics = BoolConfigOption(
-        "statistics",
-        show_help=True,
-        help="Collect statistics on out-of-bounds capability creation.",
-    )
-
     @classmethod
     def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
+        assert config.riscv_cheri_isa == RiscvCheriISA.STD, "Should not be called otherwise"
         # Always use the CHERI qemu even for plain riscv:
         if xtarget.is_riscv64(include_purecap=True):
             binary_name = "qemu-system-riscv64cheri"
@@ -599,23 +601,4 @@ class BuildCheriAllianceQEMU(BuildQEMUBase):
             binary_name = "qemu-system-riscv32cheri"
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
-        return config.cheri_alliance_qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
-
-    @classmethod
-    def get_firmware_dir(cls, caller: SimpleProject, cross_target: "Optional[CrossCompileTarget]" = None):
-        return cls.get_install_dir(caller, cross_target=cross_target) / "share/qemu"
-
-    def setup(self):
-        super().setup()
-        if self.statistics:
-            self.COMMON_FLAGS.append("-DDO_CHERI_STATISTICS=1")
-        if self.build_type == BuildType.DEBUG:
-            self.COMMON_FLAGS.append("-DENABLE_CHERI_SANITIY_CHECKS=1")
-        # the capstone disassembler doesn't support CHERI instructions:
-        self.configure_args.append("--disable-capstone")
-        # Linux/BSD-user is not supported for CHERI (yet)
-        self.configure_args.append("--disable-bsd-user")
-        self.configure_args.append("--disable-linux-user")
-
-    def install(self, **kwargs):
-        super().install(**kwargs)
+        return config.cheri_alliance_qemu_bindir / binary_name
