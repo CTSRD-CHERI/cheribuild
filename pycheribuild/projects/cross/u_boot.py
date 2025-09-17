@@ -169,6 +169,7 @@ class BuildCheriAllianceUBoot(BuildUBoot):
     default_build_type = BuildType.RELWITHDEBINFO
     supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
+        CompilationTargets.FREESTANDING_RISCV64_HYBRID,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP,
     )
 
@@ -183,6 +184,10 @@ class BuildCheriAllianceUBoot(BuildUBoot):
             if self.secure_boot:
                 return "codasip-a730-hobgoblin_secure-boot_cheri_purecap_smode"
             return "codasip-a730-hobgoblin_cheri_purecap_smode"
+        if self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.RISCV64]):
+            if self.secure_boot:
+                return "codasip-a730-hobgoblin_secure-boot_cheri_hybrid_smode"
+            return "codasip-a730-hobgoblin_cheri_hybrid_smode"
         elif self.crosscompile_target.is_riscv():
             if self.secure_boot:
                 return "codasip-a730-hobgoblin_secure-boot_smode"
