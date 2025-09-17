@@ -764,10 +764,6 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
 
     def install(self, **kwargs):
         super().install(**kwargs)
-        # FIXME: this appears to break the cheribsd build, so let's remove it for now...
-        # Seems like this is fixed in CHERI LLVM so it might be caused by Morello LLVM being based on an older version
-        if OSInfo.IS_MAC and (self.install_dir / "include/c++/v1").is_symlink():
-            self.delete_file(self.install_dir / "include/c++/v1")
         if self.compiling_for_host():
             for tgt in CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS:
                 self.add_compilers_with_config_files("cheribsd", tgt)
@@ -815,8 +811,6 @@ class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
 
     def install(self, **kwargs):
         super().install(**kwargs)
-        if OSInfo.IS_MAC and (self.install_dir / "include/c++/v1").is_symlink():
-            self.delete_file(self.install_dir / "include/c++/v1")
         if self.compiling_for_host():
             for tgt in CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS:
                 self.add_compilers_with_config_files("cheribsd", tgt)
