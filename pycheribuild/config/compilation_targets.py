@@ -666,7 +666,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 and xtarget.is_hybrid_or_purecap_cheri(
             [CPUArchitecture.RISCV32, CPUArchitecture.RISCV64]
         ):
-            llvm_target = SimpleProject.get_class_for_target_name("cheri-alliance-llvm", None)
+            llvm_target = SimpleProject.get_class_for_target_name("cheri-std093-llvm", None)
         else:
             llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
         return typing.cast("type[BuildLLVMInterface]", llvm_target)
@@ -1059,7 +1059,7 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
         if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 and xtarget.is_hybrid_or_purecap_cheri(
             [CPUArchitecture.RISCV32, CPUArchitecture.RISCV64]
         ):
-            llvm_target = SimpleProject.get_class_for_target_name("cheri-alliance-llvm", None)
+            llvm_target = SimpleProject.get_class_for_target_name("cheri-std093-llvm", None)
         else:
             llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
         return typing.cast("type[BuildLLVMInterface]", llvm_target)

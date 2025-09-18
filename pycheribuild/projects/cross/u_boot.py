@@ -166,7 +166,7 @@ class BuildUBoot(Project):
 
 
 class BuildCheriAllianceUBoot(BuildUBoot):
-    target = "cheri-alliance-u-boot"
+    target = "cheri-std093-u-boot"
     repository = GitRepository("https://github.com/CHERI-Alliance/u-boot.git", default_branch="codasip-cheri-riscv")
     default_build_type = BuildType.RELWITHDEBINFO
     supported_architectures = (

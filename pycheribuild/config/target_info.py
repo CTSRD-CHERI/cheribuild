@@ -110,7 +110,7 @@ class CompilerType(Enum):
     DEFAULT_COMPILER = "default-compiler"  # Default system compiler (i.e. the argument passed to cheribuild)
     CHERI_LLVM = "cheri-llvm"  # Compile with CHERI LLVM built by cheribuild
     MORELLO_LLVM = "morello-llvm"  # Compile with Morello LLVM built by cheribuild
-    CHERI_ALLIANCE_LLVM = "cheri-alliance-llvm"  # Compile with CHERI Alliance LLVM built by cheribuild
+    CHERI_ALLIANCE_LLVM = "cheri-std093-llvm"  # Compile with CHERI Alliance LLVM built by cheribuild
     UPSTREAM_LLVM = "upstream-llvm"  # Compile with upstream LLVM built by cheribuild
     SYSTEM_LLVM = "system-llvm"  # Compile with system installation of LLVM/Clang
     BOOTSTRAPPED = "bootstrap"  # Compiler is included with the project

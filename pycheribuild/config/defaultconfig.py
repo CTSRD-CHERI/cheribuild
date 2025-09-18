@@ -236,10 +236,10 @@ class DefaultCheriConfig(CheriConfig):
         )
         default_cheri_alliance_sdk = ComputedDefaultValue(
             function=lambda p, cls: (p.tools_root / p.default_cheri_alliance_sdk_directory_name),
-            as_string="'<TOOLS_ROOT>/cheri-alliance-sdk'",
+            as_string="'<TOOLS_ROOT>/cheri-std093-sdk'",
         )
         self.cheri_alliance_sdk_dir = loader.add_path_option(
-            "cheri-alliance-sdk-root",
+            "cheri-std093-sdk-root",
             default=default_cheri_alliance_sdk,
             group=loader.path_group,
             help="The directory to find/install the CHERI Alliance SDK",

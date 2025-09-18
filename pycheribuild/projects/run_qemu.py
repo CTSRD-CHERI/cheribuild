@@ -886,7 +886,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             bios_target = (
-                "cheri-alliance-opensbi" if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 else "bbl"
+                "cheri-std093-opensbi" if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 else "bbl"
             )
             result += (f"{bios_target}-baremetal-riscv64-purecap",)
         return result

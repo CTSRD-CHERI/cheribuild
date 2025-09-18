@@ -584,7 +584,7 @@ class BuildQEMU(BuildCheriQEMUBase):
 
 
 class BuildCheriAllianceQEMU(BuildCheriQEMUBase):
-    target = "cheri-alliance-qemu"
+    target = "cheri-std093-qemu"
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/qemu.git", default_branch="codasip-cheri-riscv.25-03-31", force_branch=True
     )

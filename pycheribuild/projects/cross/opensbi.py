@@ -219,7 +219,7 @@ class BuildUpstreamOpenSBI(BuildOpenSBI):
 
 
 class BuildAllianceOpenSBI(BuildOpenSBI):
-    target = "cheri-alliance-opensbi"
+    target = "cheri-std093-opensbi"
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, p: config.cheri_alliance_sdk_dir / "opensbi/riscv64",
         as_string="$SDK_ROOT/opensbi/riscv64",
@@ -250,7 +250,7 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
 
 
 class BuildAllianceOpenSBIGFE(BuildAllianceOpenSBI):
-    target = "cheri-alliance-opensbi-gfe"
+    target = "cheri-std093-opensbi-gfe"
     repository = ReuseOtherProjectRepository(BuildAllianceOpenSBI, do_update=True)
 
     def setup(self):
