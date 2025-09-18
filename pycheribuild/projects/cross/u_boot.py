@@ -42,6 +42,7 @@ from ..project import (
     MakeCommandKind,
     Project,
 )
+from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import CPUArchitecture
 
@@ -62,6 +63,7 @@ class BuildUBoot(Project):
         CompilationTargets.FREESTANDING_RISCV64,
         # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_PURECAP
     )
+    supported_riscv_cheri_standard = RiscvCheriISA.V9  # Assembly code does not support standard draft
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
     _default_install_dir_fn: ComputedDefaultValue[Path] = ComputedDefaultValue(
@@ -171,6 +173,7 @@ class BuildCheriAllianceUBoot(BuildUBoot):
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP,
     )
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -189,3 +192,8 @@ class BuildCheriAllianceUBoot(BuildUBoot):
             return "codasip-a730-hobgoblin_smode"
 
         assert False, "unhandled target"
+
+    def process(self) -> None:
+        if self.config.riscv_cheri_isa != RiscvCheriISA.EXPERIMENTAL_STD093:
+            self.fatal("This target is only compatible with the experimental standard draft version 0.9.3")
+        super().process()
