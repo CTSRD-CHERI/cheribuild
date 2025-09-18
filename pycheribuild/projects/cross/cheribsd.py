@@ -832,7 +832,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             else:
                 if self.config.riscv_cheri_isa == RiscvCheriISA.V9:
                     result["TARGET_CPUTYPE"] = "cheri"
-                elif self.config.riscv_cheri_isa == RiscvCheriISA.STD:
+                elif self.config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093:
                     result["TARGET_CPUTYPE"] = "zcheri093"
                 else:
                     assert False, "Not reached: unsupported RISC-V Cheri ISA"

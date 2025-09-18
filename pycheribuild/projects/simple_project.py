@@ -821,7 +821,9 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         # targets that only support native might not need a suffix
         if not target.is_native() or self.add_build_dir_suffix_for_native:
             result += target.build_suffix(config, include_os=self.include_os_in_target_suffix)
-        if target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]) and config.riscv_cheri_isa == RiscvCheriISA.STD:
+        if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 and target.is_hybrid_or_purecap_cheri(
+            [CPUArchitecture.RISCV32, CPUArchitecture.RISCV64]
+        ):
             result += "-std093"  # The current CHERI-Alliance repositories implement the 0.9.3 standard draft.
         return result
 

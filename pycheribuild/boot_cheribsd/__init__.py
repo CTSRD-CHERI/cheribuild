@@ -1521,7 +1521,7 @@ def _main(
     # Slightly ugly hack to avoid having to pass yet another argument for something
     # that is a temporary workaround until ISAv9 is gone.
     if args.qemu_cmd is not None and str(args.qemu_cmd).endswith("cheristd"):
-        riscv_cheri_isa = RiscvCheriISA.STD
+        riscv_cheri_isa = RiscvCheriISA.EXPERIMENTAL_STD093
     qemu_options = QemuOptions(xtarget, riscv_cheri_isa=riscv_cheri_isa)
     if args.qemu_cmd is not None:
         if not Path(args.qemu_cmd).exists():
