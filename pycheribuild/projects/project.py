@@ -55,7 +55,14 @@ from .repository import (
     TargetBranchInfo,
 )
 from .simple_project import ReuseOtherProjectBuildDir, SimpleProject, _default_stdout_filter
-from ..config.chericonfig import BuildType, CheriConfig, ComputedDefaultValue, Linkage, supported_build_type_strings
+from ..config.chericonfig import (
+    BuildType,
+    CheriConfig,
+    ComputedDefaultValue,
+    Linkage,
+    RiscvCheriISA,
+    supported_build_type_strings,
+)
 from ..config.config_loader_base import ConfigOptionHandle
 from ..config.target_info import (
     AbstractProject,
@@ -438,6 +445,7 @@ class Project(SimpleProject):
     show_optional_tests_in_help: bool = True  # whether to show the --foo/build-tests in --help
     add_gdb_index = True  # whether to build with -Wl,--gdb-index if the linker supports it
     _initial_source_dir: Optional[Path]
+    supported_riscv_cheri_standard: Optional[RiscvCheriISA] = None
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
@@ -1637,6 +1645,16 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 " install=",
                 self.install_dir,
                 sep="",
+            )
+
+        if (
+            self.supported_riscv_cheri_standard is not None
+            and self.get_crosscompile_target().is_riscv(include_purecap=True)
+            and self.config.riscv_cheri_isa != self.supported_riscv_cheri_standard
+        ):
+            self.fatal(
+                f"Project {self.target} is not compatible with the {self.supported_riscv_cheri_standard.value} "
+                f"RISC-V-CHERI variant"
             )
 
         install_dir_kind = self.get_default_install_dir_kind()
