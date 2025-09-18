@@ -752,7 +752,7 @@ class CheriConfig(ConfigBase):
 
     @property
     def default_cheri_alliance_sdk_directory_name(self) -> str:
-        return "cheri-alliance-sdk"
+        return "cheri-std093-sdk"
 
     @property
     def cheri_sdk_bindir(self):
