@@ -77,6 +77,7 @@ from ..utils import (
 __all__ = [
     "BoolConfigOption",
     "IntConfigOption",
+    "ReuseOtherProjectBuildDir",
     "SimpleProject",
     "TargetAlias",
     "TargetAliasWithDependencies",
