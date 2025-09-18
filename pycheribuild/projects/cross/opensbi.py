@@ -123,7 +123,7 @@ class BuildOpenSBI(Project):
         return ["generic"]
 
     def compile(self, **kwargs):
-        if self.compiling_for_cheri() and self.config.riscv_cheri_isa != RiscvCheriISA.STD:
+        if self.compiling_for_cheri() and self.config.riscv_cheri_isa != RiscvCheriISA.EXPERIMENTAL_STD093:
             self.fatal("Purecap openSBI is only supported for the standard ISA for now.")
         for platform in self.all_platforms:
             args = self.make_args.copy()
@@ -143,7 +143,7 @@ class BuildOpenSBI(Project):
             suffix = ""
             if self.crosscompile_target.is_cheri_purecap():
                 suffix = "cheri"
-                if self.config.riscv_cheri_isa == RiscvCheriISA.STD:
+                if self.config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093:
                     suffix += "std"
             self.makedirs(qemu_fw_dir)
             # TODO: looks like newer versions install a .bin that we could just copy instead.

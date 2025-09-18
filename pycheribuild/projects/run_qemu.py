@@ -258,7 +258,7 @@ class LaunchQEMUBase(SimpleProject):
                 supported_qemu_classes += [BuildUpstreamQEMU, None]
         elif xtarget.is_riscv(include_purecap=True):
             can_provide_src_via_smb = True
-            if config.riscv_cheri_isa == RiscvCheriISA.STD and xtarget.is_hybrid_or_purecap_cheri():
+            if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 and xtarget.is_hybrid_or_purecap_cheri():
                 supported_qemu_classes += [BuildCheriAllianceQEMU]
             else:
                 supported_qemu_classes += [BuildQEMU]
@@ -885,7 +885,9 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         # RISCV needs OpenSBI/BBL to run:
         # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            bios_target = "cheri-alliance-opensbi" if config.riscv_cheri_isa == RiscvCheriISA.STD else "bbl"
+            bios_target = (
+                "cheri-alliance-opensbi" if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 else "bbl"
+            )
             result += (f"{bios_target}-baremetal-riscv64-purecap",)
         return result
 

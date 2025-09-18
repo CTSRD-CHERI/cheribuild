@@ -346,7 +346,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             if config.riscv_cheri_isa == RiscvCheriISA.V9:
                 arch_string += "xcheri"
             else:
-                assert config.riscv_cheri_isa == RiscvCheriISA.STD
+                assert config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093
                 arch_string += "zcherihybrid"
         return arch_string
 
@@ -663,7 +663,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     @classmethod
     def _get_compiler_project(cls, config: CheriConfig, xtarget: "CrossCompileTarget") -> "type[BuildLLVMInterface]":
         # Use the CHERI Alliance compiler when building for RISCV CHERI
-        if config.riscv_cheri_isa == RiscvCheriISA.STD and xtarget.is_hybrid_or_purecap_cheri(
+        if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 and xtarget.is_hybrid_or_purecap_cheri(
             [CPUArchitecture.RISCV32, CPUArchitecture.RISCV64]
         ):
             llvm_target = SimpleProject.get_class_for_target_name("cheri-alliance-llvm", None)
@@ -1056,7 +1056,7 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
     @classmethod
     def _get_compiler_project(cls, config: CheriConfig, xtarget: "CrossCompileTarget") -> "type[BuildLLVMInterface]":
         # Use the CHERI Alliance compiler when building for RISCV CHERI
-        if config.riscv_cheri_isa == RiscvCheriISA.STD and xtarget.is_hybrid_or_purecap_cheri(
+        if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 and xtarget.is_hybrid_or_purecap_cheri(
             [CPUArchitecture.RISCV32, CPUArchitecture.RISCV64]
         ):
             llvm_target = SimpleProject.get_class_for_target_name("cheri-alliance-llvm", None)
@@ -1076,7 +1076,7 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
 
     @property
     def sysroot_dir(self) -> Path:
-        if self.config.riscv_cheri_isa == RiscvCheriISA.STD:
+        if self.config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093:
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
         else:
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name

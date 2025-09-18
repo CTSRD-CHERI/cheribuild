@@ -69,7 +69,7 @@ class QemuOptions:
             # Note: we always use the CHERI QEMU
             xlen = 32 if xtarget.is_riscv32(include_purecap=True) else 64
             self.machine_flags = ["-M", "virt"]
-            if riscv_cheri_isa is RiscvCheriISA.STD:
+            if riscv_cheri_isa is RiscvCheriISA.EXPERIMENTAL_STD093:
                 self._qemu_arch_suffix = self._qemu_arch_suffix = f"riscv{xlen}cheristd"
                 # cheri_levels=2 enables local/global, cheri_pte enables the UCRG feature
                 self.machine_flags.extend(["-cpu", "codasip-a730,cheri_pte=on,cheri_levels=2"])
@@ -247,7 +247,7 @@ def riscv_bios_arguments(
 ) -> "list[str]":
     assert xtarget.is_riscv(include_purecap=True)
     if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-        if cheri_isa == RiscvCheriISA.STD:
+        if cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093:
             # FIXME: QEMU does not yet default to the correct BIOS image name.
             return ["-bios", "opensbi-riscv64cheristd-virt-fw_jump.bin"]
         if prefer_bbl:
