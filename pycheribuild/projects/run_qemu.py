@@ -50,7 +50,6 @@ from .disk_image import (
 )
 from .project import CheriConfig, ComputedDefaultValue, CPUArchitecture, Project
 from .simple_project import BoolConfigOption, SimpleProject, TargetAliasWithDependencies
-from ..config.chericonfig import RiscvCheriISA
 from ..config.compilation_targets import CompilationTargets, LaunchFreeBSDInterface
 from ..config.target_info import CrossCompileTarget
 from ..qemu_utils import QemuOptions, qemu_supports_9pfs, riscv_bios_arguments
@@ -258,7 +257,7 @@ class LaunchQEMUBase(SimpleProject):
                 supported_qemu_classes += [BuildUpstreamQEMU, None]
         elif xtarget.is_riscv(include_purecap=True):
             can_provide_src_via_smb = True
-            if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 and xtarget.is_hybrid_or_purecap_cheri():
+            if xtarget.is_experimental_cheri093_std(config):
                 supported_qemu_classes += [BuildCheriAllianceQEMU]
             else:
                 supported_qemu_classes += [BuildQEMU]
@@ -884,10 +883,9 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         result = super().dependencies(config)
         # RISCV needs OpenSBI/BBL to run:
         # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):
-        if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            bios_target = (
-                "cheri-std093-opensbi" if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 else "bbl"
-            )
+        xtarget = cls.get_crosscompile_target()
+        if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            bios_target = "cheri-std093-opensbi" if xtarget.is_experimental_cheri093_std(config) else "bbl"
             result += (f"{bios_target}-baremetal-riscv64-purecap",)
         return result
 

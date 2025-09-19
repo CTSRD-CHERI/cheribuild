@@ -37,7 +37,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import ClassVar, Optional
 
-from .chericonfig import AArch64FloatSimdOptions, CheriConfig, MipsFloatAbi, RiscvFloatAbi
+from .chericonfig import AArch64FloatSimdOptions, CheriConfig, MipsFloatAbi, RiscvCheriISA, RiscvFloatAbi
 from ..filesystemutils import FileSystemUtils
 from ..processutils import CompilerInfo, get_compiler_info
 from ..utils import OSInfo, fatal_error, final, status_update, warning_message
@@ -977,6 +977,11 @@ class CrossCompileTarget:
 
     def is_riscv(self, include_purecap: Optional[bool] = None) -> bool:
         return self.is_riscv32(include_purecap) or self.is_riscv64(include_purecap)
+
+    def is_experimental_cheri093_std(self, config: "CheriConfig") -> bool:
+        return config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 and self.is_hybrid_or_purecap_cheri(
+            [CPUArchitecture.RISCV32, CPUArchitecture.RISCV64]
+        )
 
     def is_arm32(self, include_purecap: Optional[bool] = None) -> bool:
         return self._check_arch(CPUArchitecture.ARM32, include_purecap)
