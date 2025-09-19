@@ -663,9 +663,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     @classmethod
     def _get_compiler_project(cls, config: CheriConfig, xtarget: "CrossCompileTarget") -> "type[BuildLLVMInterface]":
         # Use the CHERI Alliance compiler when building for RISCV CHERI
-        if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 and xtarget.is_hybrid_or_purecap_cheri(
-            [CPUArchitecture.RISCV32, CPUArchitecture.RISCV64]
-        ):
+        if xtarget.is_experimental_cheri093_std(config):
             llvm_target = SimpleProject.get_class_for_target_name("cheri-std093-llvm", None)
         else:
             llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
@@ -1056,9 +1054,7 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
     @classmethod
     def _get_compiler_project(cls, config: CheriConfig, xtarget: "CrossCompileTarget") -> "type[BuildLLVMInterface]":
         # Use the CHERI Alliance compiler when building for RISCV CHERI
-        if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 and xtarget.is_hybrid_or_purecap_cheri(
-            [CPUArchitecture.RISCV32, CPUArchitecture.RISCV64]
-        ):
+        if xtarget.is_experimental_cheri093_std(config):
             llvm_target = SimpleProject.get_class_for_target_name("cheri-std093-llvm", None)
         else:
             llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
@@ -1076,7 +1072,7 @@ class BaremetalFreestandingTargetInfo(BaremetalClangTargetInfo):
 
     @property
     def sysroot_dir(self) -> Path:
-        if self.config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093:
+        if self.target.is_experimental_cheri093_std(self.config):
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
         else:
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
