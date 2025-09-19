@@ -29,6 +29,7 @@
 #
 import os
 import shutil
+from pathlib import Path
 
 from .crosscompileproject import (
     BuildType,
@@ -44,6 +45,7 @@ from .crosscompileproject import (
 from .gmp import BuildGmp
 from .mpfr import BuildMpfr
 from ..project import ComputedDefaultValue
+from ...config.target_info import AbstractProject
 from ...utils import OSInfo
 
 
@@ -320,3 +322,12 @@ class BuildKGDB(BuildGDB):
         },
         old_urls=[b"https://github.com/bsdjhb/gdb.git"],
     )
+
+
+def get_build_gdb_class(target: CrossCompileTarget, config: CheriConfig) -> "type[BuildGDBBase]":
+    return BuildCheriAllianceGDB if target.is_experimental_cheri093_std(config) else BuildGDB
+
+
+def get_native_gdb_binary_to_debug_target(target: CrossCompileTarget, caller: AbstractProject) -> Path:
+    real_cls = get_build_gdb_class(target, caller.config)
+    return real_cls.get_install_dir(caller, CompilationTargets.NATIVE_NON_PURECAP) / "bin/gdb"

@@ -40,7 +40,7 @@ from pathlib import Path, PurePath
 from typing import Optional, Union
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDWithDefaultOptions
-from .cross.gdb import BuildGDB, BuildKGDB
+from .cross.gdb import BuildKGDB, get_build_gdb_class
 from .project import (
     AutotoolsProject,
     CheriConfig,
@@ -570,13 +570,14 @@ class BuildDiskImageBase(SimpleProject):
         cross_target = self.source_project.crosscompile_target
         if cross_target.is_cheri_purecap():
             cross_target = cross_target.get_cheri_hybrid_for_purecap_rootfs_target()
-        if cross_target not in BuildGDB.supported_architectures:
+        gdb_cls = get_build_gdb_class(cross_target, self.config)
+        if cross_target not in gdb_cls.supported_architectures:
             self.warning("GDB cannot be built for architecture ", cross_target, " -> not addding it")
             return
         if self.include_kgdb:
             gdb_instance = BuildKGDB.get_instance_for_cross_target(cross_target, self.config)
         else:
-            gdb_instance = BuildGDB.get_instance_for_cross_target(cross_target, self.config)
+            gdb_instance = gdb_cls.get_instance_for_cross_target(cross_target, self.config)
         # If we already added GDB in /usr/local/bin (for full disk images), create a symlink to usr/bin/gdb instead of
         # adding another copy.
         if "usr/local/bin/gdb" in self.mtree:
@@ -1433,7 +1434,9 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
         # GDB is not strictly a dependency, but having it in the disk image makes life a lot easier
         xtarget = cls.get_crosscompile_target()
         gdb_xtarget = xtarget.get_cheri_hybrid_for_purecap_rootfs_target() if xtarget.is_cheri_purecap() else xtarget
-        result += (BuildGDB.get_class_for_target(gdb_xtarget).target,)
+        gdb_cls = get_build_gdb_class(gdb_xtarget, config)
+        if gdb_xtarget in gdb_cls.supported_architectures:
+            result += (gdb_cls.get_class_for_target(gdb_xtarget).target,)
         return result
 
     @classmethod

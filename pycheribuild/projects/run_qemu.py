@@ -39,7 +39,7 @@ from typing import Optional
 
 from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
-from .cross.gdb import BuildGDB
+from .cross.gdb import get_native_gdb_binary_to_debug_target
 from .cross.u_boot import BuildUBoot
 from .disk_image import (
     BuildCheriBSDDiskImage,
@@ -562,7 +562,7 @@ class LaunchQEMUBase(SimpleProject):
             )
 
             def gdb_command(main_binary, bp=None, extra_binary=None) -> str:
-                gdb_cmd = BuildGDB.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"
+                gdb_cmd = get_native_gdb_binary_to_debug_target(self.crosscompile_target, self)
                 result = [gdb_cmd, main_binary]
                 if self.target_info.is_freebsd():
                     # Set the sysroot to ensure that the .debug file is loaded from <ROOTFS>/usr/lib/debug/boot/kernel
