@@ -222,7 +222,14 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
         function=lambda config, p: config.cheri_alliance_sdk_dir / "opensbi/riscv64",
         as_string="$SDK_ROOT/opensbi/riscv64",
     )
-    repository = GitRepository("https://github.com/CHERI-Alliance/opensbi", default_branch="codasip-cheri-riscv")
+    repository = GitRepository(
+        "https://github.com/CHERI-Alliance/opensbi",
+        temporary_url_override="https://github.com/qwattash/cheri-alliance-opensbi",
+        url_override_reason="https://github.com/CHERI-Alliance/opensbi/pull/3",
+        default_branch="toooba-fixes",
+        force_branch=True,
+        # TODO: restore default branch: default_branch="codasip-cheri-riscv",
+    )
     supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP,
