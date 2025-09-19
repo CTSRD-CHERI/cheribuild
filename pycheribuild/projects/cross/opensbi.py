@@ -124,8 +124,6 @@ class BuildOpenSBI(Project):
         return ["generic"]
 
     def compile(self, **kwargs):
-        if self.compiling_for_cheri() and self.config.riscv_cheri_isa != RiscvCheriISA.EXPERIMENTAL_STD093:
-            self.fatal("Purecap openSBI is only supported for the standard ISA for now.")
         for platform in self.all_platforms:
             args = self.make_args.copy()
             args.set(PLATFORM=platform)
