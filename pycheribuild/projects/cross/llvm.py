@@ -42,6 +42,7 @@ from ...config.compilation_targets import (
     CheriBSDTargetInfo,
     CompilationTargets,
     FreeBSDTargetInfo,
+    LinuxMorelloTargetInfo,
 )
 from ...config.target_info import CompilerType, CrossCompileTarget
 from ...processutils import CompilerInfo
@@ -744,6 +745,11 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
         triples = [
             CheriBSDMorelloTargetInfo.triple_for_target(
                 CompilationTargets.CHERIBSD_MORELLO_PURECAP,
+                self.config,
+                include_version=False,
+            ),
+            LinuxMorelloTargetInfo.triple_for_target(
+                CompilationTargets.LINUX_MORELLO_PURECAP,
                 self.config,
                 include_version=False,
             ),
