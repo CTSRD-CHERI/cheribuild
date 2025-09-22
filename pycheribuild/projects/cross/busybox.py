@@ -1,0 +1,189 @@
+#
+# Copyright (c) 2025 Hesham Almatary
+#
+# This software was developed by SRI International and the University of
+# Cambridge Computer Laboratory (Department of Computer Science and
+# Technology) under DARPA contract HR0011-18-C-0016 ("ECATS"), as part of the
+# DARPA SSITH research programme.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+
+import os
+import pathlib
+import subprocess
+
+from .crosscompileproject import CrossCompileAutotoolsProject
+from ..project import (
+    DefaultInstallDir,
+    GitRepository,
+    MakeCommandKind,
+)
+from ...config.compilation_targets import CompilationTargets
+from ...utils import classproperty
+
+
+def make_initramfs(srcdir: pathlib.Path, out_file: pathlib.Path):
+    find = subprocess.Popen(["find", "."], cwd=srcdir, stdout=subprocess.PIPE)
+    with open(out_file, "wb") as out:
+        cpio = subprocess.Popen(["cpio", "-o", "--format=newc"], cwd=srcdir, stdin=find.stdout, stdout=subprocess.PIPE)
+        gzip = subprocess.Popen(["gzip"], stdin=cpio.stdout, stdout=out)
+        gzip.communicate()
+    print("Wrote", out_file)
+
+
+class BuildBusyBox(CrossCompileAutotoolsProject):
+    target = "busybox"
+    repository = GitRepository("https://git.busybox.net/busybox/")
+    needs_sysroot = False
+    is_sdk_target = False
+    supported_architectures = (
+        CompilationTargets.LINUX_RISCV64,
+        CompilationTargets.LINUX_AARCH64,
+    )
+    make_kind = MakeCommandKind.GnuMake
+    _always_add_suffixed_targets = True
+
+    @classproperty
+    def default_install_dir(self):
+        return DefaultInstallDir.ROOTFS_LOCALBASE
+
+    def setup(self) -> None:
+        if self.config.verbose:
+            self.make_args.set(V=True)
+        super().setup()
+
+        if self.crosscompile_target.is_riscv(include_purecap=True):
+            self.busybox_arch = "riscv"
+        elif self.crosscompile_target.is_aarch64(include_purecap=True):
+            self.busybox_arch = "arm64"
+
+        self.make_args.set(ARCH=self.busybox_arch)
+
+        compflags = " " + self.commandline_to_str(self.essential_compiler_and_linker_flags)
+        compflags += " --sysroot=" + str(self.install_dir)
+
+        self.make_args.set(
+            CC=str(self.sdk_bindir / "clang ") + compflags,
+            HOSTCC="clang",
+            # Force busybox's Makefile not to use the triple for finding the toolchain
+            CROSS_COMPILE="",
+            LD=self.target_info.linker,
+            AR=self.sdk_bindir / "llvm-ar",
+            NM=self.sdk_bindir / "llvm-nm",
+            STRIP=self.sdk_bindir / "llvm-strip",
+            OBJCOPY=self.sdk_bindir / "llvm-objcopy",
+            OBJDUMP=self.sdk_bindir / "llvm-objdump",
+        )
+
+    def compile(self) -> None:
+        self.run_make(cwd=self.source_dir)
+
+    def configure(self) -> None:
+        self.run_make("defconfig", cwd=self.source_dir)
+
+    def install(self) -> None:
+        self.run_make("install", cwd=self.source_dir)
+        root = self.install_dir / "rootfs"
+        make_initramfs(root, self.install_dir / "boot/initramfs.cpio.gz")
+
+    def clean(self) -> None:
+        self.run_make("distclean", cwd=self.source_dir)
+        self.run_make("clean", cwd=self.source_dir)
+
+
+class BuildMorelloBusyBox(BuildBusyBox):
+    target = "morello-busybox"
+    repository = GitRepository("https://git.morello-project.org/morello/morello-busybox.git")
+    supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+
+    def setup(self) -> None:
+        # Morello Buxybox has its own modified Makefile to work with LLVM/Clang and Morello
+        # compiler flags. Skip the parent's setup and just setup Morello's Makefile args.
+        CrossCompileAutotoolsProject.setup(self)
+        self.make_args.set(CONFIG_PREFIX=self.install_dir / "rootfs")
+        self.make_args.set(MUSL_HOME=self.install_dir)
+        self.make_args.set(KHEADERS=str(self.install_dir) + "/usr/include/")
+        self.make_args.set(CLANG_RESOURCE_DIR=str(self.install_dir) + "/include/lib")
+        self.add_configure_vars(CC="clang")
+
+    def configure(self) -> None:
+        self.run_make("morello_busybox_defconfig", cwd=self.source_dir)
+
+    def write_busybox_init(self, path="init"):
+        """
+        Write a BusyBox-compatible /init script to the given path.
+        This is derived (and modified) from an init C version located here:
+        https://git.morello-project.org/morello/morello-sdk/-/blob/latest/morello/projects/init/init.c
+        """
+
+        script = """#!/bin/sh
+# Minimal init script to replace the C init
+
+    PATH=/usr/sbin:/bin:/sbin
+    export PATH
+
+# Ensure required mount points exist
+    mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc
+    ln -sf /proc/mounts /etc/mtab
+
+# Mount essential filesystems
+    mount -t proc none /proc
+    mount -t devpts none /dev/pts
+    mount -t mqueue none /dev/mqueue
+    mount -t tmpfs none /dev/shm
+    mount -t sysfs none /sys
+    mount -t cgroup none /sys/fs/cgroup
+
+# Set hostname
+    hostname morello
+
+    echo
+    echo "Welcome to Morello PCuABI environment (busybox)!"
+    echo "Have a lot of fun!"
+    echo
+
+# Install udhcpc DHCP helper script
+ifconfig eth0 up
+udhcpc -i eth0
+ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up
+route add default gw 10.0.2.2
+echo "nameserver 8.8.8.8" > /etc/resolv.conf
+
+# Loop shell forever
+    while true; do
+        echo "[MORELLO]: Starting /bin/sh..."
+        /bin/sh
+        sleep 1
+    done
+    """
+
+        with open(path, "w") as f:
+            f.write(script)
+
+        # Make the script executable
+        os.chmod(path, 0o755)
+
+    def install(self, **kwargs):
+        self.makedirs(self.install_dir / "rootfs")
+        self.write_busybox_init(self.install_dir / "rootfs/init")
+        super().install(**kwargs)
