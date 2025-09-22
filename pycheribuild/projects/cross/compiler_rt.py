@@ -31,7 +31,7 @@
 from pathlib import Path
 
 from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
-from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
+from .llvm import BuildCheriAllianceLLVM, BuildCheriLLVM, BuildMorelloLLVM, BuildUpstreamLLVM
 from ..project import Linkage, ReuseOtherProjectDefaultTargetRepository
 from ...config.target_info import CPUArchitecture
 from ...utils import classproperty, is_jenkins_build
@@ -130,6 +130,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = (
         CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS
+        + CompilationTargets.ALL_SUPPORTED_LINUX_TARGETS
         + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
         + CompilationTargets.ALL_FREESTANDING_TARGETS
         + CompilationTargets.ALL_NATIVE
@@ -156,7 +157,12 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
 
     def setup(self):
         super().setup()
-        assert self.target_info.is_baremetal() or self.target_info.is_rtems() or self.target_info.is_native()
+        assert (
+            self.target_info.is_baremetal()
+            or self.target_info.is_rtems()
+            or self.target_info.is_native()
+            or self.target_info.is_linux()
+        )
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
         if self.compiling_for_mips(include_purecap=False):
@@ -175,6 +181,8 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ONLY=True, TARGET_TRIPLE=self.target_info.target_triple)
         if self.target_info.is_baremetal():
             self.add_cmake_options(COMPILER_RT_OS_DIR="baremetal")
+        if self.target_info.is_linux():
+            self.add_cmake_options(CMAKE_SYSROOT=self.target_info.sysroot_dir / self.target_info.target_triple)
         if self.should_include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
 
@@ -188,9 +196,57 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             self.create_symlink(
                 self.install_dir / "lib" / libname, self.install_dir / "lib/libgcc.a", print_verbose_only=False
             )
+        elif self.target_info.is_linux():
+            self.move_file(
+                self.install_dir / "lib/linux" / libname,
+                self.target_info.sysroot_dir / self.target_info.target_triple / "lib" / libname,
+            )
+
+            # Linux Clang driver expects/embeds the following crt files in the linking flags
+            self.move_file(
+                self.install_dir / "lib/linux" / f"clang_rt.crtbegin-{self.triple_arch}.o",
+                self.target_info.sysroot_dir / self.target_info.target_triple / "lib" / "crtbeginT.o",
+            )
+            self.move_file(
+                self.install_dir / "lib/linux" / f"clang_rt.crtend-{self.triple_arch}.o",
+                self.target_info.sysroot_dir / self.target_info.target_triple / "lib" / "crtend.o",
+            )
+            self.create_symlink(
+                self.target_info.sysroot_dir / self.target_info.target_triple / "lib" / libname,
+                self.target_info.sysroot_dir / self.target_info.target_triple / "lib/libgcc.a",
+                print_verbose_only=False,
+            )
+
+            # Linux Clang driver expects/embeds the compiler-rt in the linking flags
+            # inside the compiler's resource directory
+            if self.target_info.uses_morello_llvm:
+                cc = BuildMorelloLLVM.get_native_install_path(self.config) / "bin/clang"
+            elif self.target_info.uses_alliance_llvm:
+                cc = BuildCheriAllianceLLVM.get_native_install_path(self.config) / "bin/clang"
+            else:
+                cc = BuildCheriLLVM.get_native_install_path(self.config) / "bin/clang"
+            # XXX Add UpstreamLLVM?
+
+            self.makedirs(self.get_compiler_info(cc).get_resource_dir() / "lib" / "linux")
+            self.create_symlink(
+                self.target_info.sysroot_dir / self.target_info.target_triple / "lib" / libname,
+                self.get_compiler_info(cc).get_resource_dir() / "lib" / "linux" / libname,
+            )
 
 
 class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "upstream-compiler-rt-builtins"
     llvm_project = BuildUpstreamLLVM
+    repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
+
+
+class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
+    target = "alliance-compiler-rt-builtins"
+    llvm_project = BuildCheriAllianceLLVM
+    repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
+
+
+class BuildMorelloCompilerRtBuiltins(BuildCompilerRtBuiltins):
+    target = "morello-compiler-rt-builtins"
+    llvm_project = BuildMorelloLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
