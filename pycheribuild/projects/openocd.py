@@ -41,6 +41,7 @@ class BuildOpenOCDBase(AutotoolsProject):
                 "--enable-remote-bitbang",
                 "--enable-jtag_vpi",
                 "--enable-ftdi",
+                "--enable-internal-jimtcl",
             ]
         )
 
