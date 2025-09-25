@@ -56,3 +56,7 @@ class BuildOpenOCD(BuildOpenOCDBase):
 # noinspection PyPep8Naming
 class BuildRISCV_OpenOCD(BuildOpenOCDBase):  # noqa: N801
     repository = GitRepository("https://github.com/riscv-collab/riscv-openocd.git")
+
+
+class BuildAlliance_RISCV_OpenOCD(BuildOpenOCDBase):
+    repository = GitRepository("https://github.com/CHERI-Alliance/openocd.git")
