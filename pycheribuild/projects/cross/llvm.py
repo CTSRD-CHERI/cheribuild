@@ -839,7 +839,7 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository(
         "https://github.com/CTSRD-CHERI/llvm-project.git",
         force_branch=True,
-        default_branch="pcap",
+        default_branch="NWZ",
     )
     default_directory_basename = "cherios-llvm-project"
     target = "cherios-llvm"

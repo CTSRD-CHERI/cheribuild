@@ -1837,7 +1837,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     target: str = "cheribsd"
     can_build_with_system_clang: bool = False  # We need CHERI LLVM for most architectures
     repository: GitRepository = GitRepository(
-        "https://github.com/CTSRD-CHERI/cheribsd.git", old_branches={"master": "pcap"}
+        "https://github.com/CTSRD-CHERI/cheribsd.git", old_branches={"master": "NWZ"}
     )
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("rootfs")
     supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
