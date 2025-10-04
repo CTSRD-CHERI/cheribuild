@@ -31,10 +31,12 @@ import collections
 import getpass
 import grp
 import inspect
+import itertools
 import os
 import re
 import shutil
 import typing
+from abc import ABCMeta
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
@@ -160,14 +162,40 @@ class CheribuildActionEnum(Enum):
     actions: "list[typing.Any]"  # actually list[CheribuildActionEnum] but pytype errors on that
 
 
-class CheriConfig(ConfigBase):
-    def __init__(self, loader, action_class: "type[CheribuildActionEnum]") -> None:
+class CheriConfig(ConfigBase, metaclass=ABCMeta):
+    # These properties need to be set in the derived class
+    output_root: Path
+    source_root: Path
+    output_root: Path
+    build_root: Path
+    # Path to kernel/disk images (this is the same as output_root by default but different in Jenkins)
+    cheribsd_image_root: Path
+    cheri_sdk_dir: Path
+    morello_sdk_dir: Path
+    cheri_alliance_sdk_dir: Path
+    other_tools_dir: Path
+    sysroot_output_root: Path
+    clean: bool
+    write_logfile: bool
+    skip_update: bool
+    skip_clone: bool
+    confirm_clone: bool
+    skip_configure: bool
+    force_configure: bool
+    force_update: bool
+    make_without_nice: bool
+    make_jobs: int
+    # These are optional and do not exist for Jenkins
+    start_with: Optional[str] = None
+    start_after: Optional[str] = None
+    default_action: Optional[CheribuildActionEnum] = None
+
+    def __init__(self, loader: ConfigLoaderBase, action_class: "type[CheribuildActionEnum]") -> None:
         super().__init__(
             pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt(), force=DoNotUseInIfStmt()
         )
         self._cached_deps = collections.defaultdict(dict)
 
-        assert isinstance(loader, ConfigLoaderBase)
         loader._cheri_config = self
         self.loader = loader
         self.pretend = loader.add_commandline_only_bool_option(
@@ -185,7 +213,6 @@ class CheriConfig(ConfigBase):
             help="The action to perform by cheribuild",
             group=loader.action_group,
         )
-        self.default_action: Optional[CheribuildActionEnum] = None
         # Add aliases (e.g. --test = --action=test):
         for action in action_class:
             if action.altname:
@@ -310,20 +337,9 @@ class CheriConfig(ConfigBase):
             help="Allow running cheribuild as root (not recommended!)",
         )
         # Attributes for code completion:
-        self.verbose: Optional[bool] = None
         self.debug_output = loader.add_commandline_only_bool_option(
             "debug-output", "vv", help="Extremely verbose output"
         )
-        self.quiet: "Optional[bool] " = None
-        self.clean: "Optional[bool] " = None
-        self.force: "Optional[bool] " = None
-        self.write_logfile: "Optional[bool] " = None
-        self.skip_update: "Optional[bool] " = None
-        self.skip_clone: "Optional[bool] " = None
-        self.confirm_clone: "Optional[bool] " = None
-        self.skip_configure: "Optional[bool] " = None
-        self.force_configure: "Optional[bool] " = None
-        self.force_update: "Optional[bool] " = None
         self.riscv_cheri_isa = loader.add_option(
             "riscv-cheri-isa",
             default=RiscvCheriISA.V9,
@@ -453,23 +469,8 @@ class CheriConfig(ConfigBase):
         self.only_dependencies = loader.add_bool_option(
             "only-dependencies", help="Only build dependencies of targets, not the targets themselves"
         )
-        self.start_with: Optional[str] = None
-        self.start_after: Optional[str] = None
-        self.make_without_nice: Optional[bool] = None
 
         self.mips_cheri_bits = 128  # Backwards compat
-        self.make_jobs: Optional[int] = None
-
-        self.source_root: Optional[Path] = None
-        self.output_root: Optional[Path] = None
-        self.build_root: Optional[Path] = None
-        # Path to kernel/disk images (this is the same as output_root by default but different in Jenkins)
-        self.cheribsd_image_root: Optional[Path] = None
-        self.cheri_sdk_dir: Optional[Path] = None
-        self.morello_sdk_dir: Optional[Path] = None
-        self.cheri_alliance_sdk_dir: Optional[Path] = None
-        self.other_tools_dir: Optional[Path] = None
-        self.sysroot_output_root: Optional[Path] = None
         self.docker = loader.add_bool_option(
             "docker", help="Run the build inside a docker container", group=loader.docker_group
         )
@@ -798,12 +799,15 @@ class CheriConfig(ConfigBase):
         return default_test_ssh_key_path
 
     def _ensure_required_properties_set(self) -> bool:
-        for key in self.__dict__.keys():
-            if key in self.__optional_properties:
-                continue
-            # don't do the descriptor stuff:
-            value = inspect.getattr_static(self, key)
-            if value is None:
+        for key in itertools.chain(self.__dict__.keys(), self.__annotations__.keys()):
+            try:
+                # don't do the descriptor stuff:
+                value = inspect.getattr_static(self, key)
+                if key in self.__optional_properties:
+                    continue
+                if value is None:
+                    raise RuntimeError("Required property " + key + " is not set!")
+            except AttributeError:
                 raise RuntimeError("Required property " + key + " is not set!")
         assert self.cheri_sdk_dir.is_absolute(), self.cheri_sdk_dir
         assert self.other_tools_dir.is_absolute(), self.other_tools_dir
