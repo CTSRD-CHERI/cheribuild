@@ -40,7 +40,7 @@ from typing import ClassVar, Optional
 from .chericonfig import AArch64FloatSimdOptions, CheriConfig, MipsFloatAbi, RiscvCheriISA, RiscvFloatAbi
 from ..filesystemutils import FileSystemUtils
 from ..processutils import CompilerInfo, get_compiler_info
-from ..utils import OSInfo, fatal_error, final, status_update, warning_message
+from ..utils import OSInfo, Type_T, fatal_error, final, status_update, warning_message
 
 __all__ = [
     "AArch64FloatSimdOptions",
@@ -169,7 +169,7 @@ class AbstractProject(FileSystemUtils):
     is_rootfs_target: typing.ClassVar[bool] = False  # Whether this project installation directory is a rootfs dir
 
     auto_var_init: AutoVarInit  # Needed for essential_compiler_flags
-    config: CheriConfig
+    config: CheriConfig  # pyrefly: ignore[bad-override]
     crosscompile_target: "CrossCompileTarget"
     target: str
 
@@ -213,11 +213,11 @@ class AbstractProject(FileSystemUtils):
 
     @classmethod
     def get_instance(
-        cls: "type[_AnyProject]",
+        cls: "type[Type_T]",
         caller: "Optional[AbstractProject]",
         config: "Optional[CheriConfig]" = None,
         cross_target: "Optional[CrossCompileTarget]" = None,
-    ) -> "_AnyProject":
+    ) -> "Type_T":
         raise NotImplementedError()
 
     @classmethod
@@ -379,7 +379,8 @@ class TargetInfo(ABC):
             return _DO_NOT_INSTALL_PATH
         elif install_dir == DefaultInstallDir.IN_BUILD_DIRECTORY:
             # noinspection PyUnresolvedReferences
-            return self.project.build_dir / "test-install-prefix"  # pytype: disable=attribute-error
+            build_dir = self.project.build_dir  # pyrefly: ignore[missing-attribute] pytype: disable=attribute-error
+            return build_dir / "test-install-prefix"
         elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
             return _INVALID_INSTALL_DIR
         raise NotImplementedError(f"Unsupported {install_dir} for {self}")
@@ -438,7 +439,7 @@ class TargetInfo(ABC):
         """E.g. for baremetal target infos we have to link statically (and add the -static linker flag)"""
         return False
 
-    @final
+    @final  # pyrefly: ignore[bad-argument-type]
     def get_rootfs_project(
         self, *, t: "type[_AnyProject]", caller: AbstractProject, xtarget: "Optional[CrossCompileTarget]" = None
     ) -> _AnyProject:
@@ -558,7 +559,7 @@ class TargetInfo(ABC):
 
 class NativeTargetInfo(TargetInfo):
     shortname: str = "native"
-    os_prefix: str = ""  # Don't add an extra -native to target names
+    os_prefix: Optional[str] = ""  # Don't add an extra -native to target names
 
     @property
     def sdk_root_dir(self) -> Path:

@@ -546,7 +546,8 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                     kernel_path = run_instance.current_kernel
             if disk_image_path is None and not has_test_extra_arg_override("--disk-image"):
                 disk_image_path = run_instance.disk_image
-                if not disk_image_path.exists():
+                if disk_image_path is None or not disk_image_path.exists():
+                    assert run_instance.disk_image_project is not None
                     self.project.dependency_error(
                         "Missing disk image",
                         cheribuild_target=run_instance.disk_image_project.target,
@@ -1181,6 +1182,7 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
     def is_baremetal(cls) -> bool:
         return True
 
+    @property
     def must_link_statically(self) -> bool:
         return True
 
