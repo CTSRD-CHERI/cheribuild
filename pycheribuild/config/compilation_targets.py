@@ -850,9 +850,6 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
 
 class LinuxTargetInfo(_ClangBasedTargetInfo):
     shortname: str = "Linux"
-    uses_alliance_llvm: bool = False
-    uses_morello_llvm: bool = False
-    uses_upstream_llvm: bool = True
 
     @classmethod
     def is_linux(cls) -> bool:
@@ -865,16 +862,21 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
     @classmethod
     def triple_for_target(cls, target, config, *, include_version: bool) -> str:
         if target.is_aarch64(include_purecap=True):
-            result = "aarch64-linux-gnu"
+            result = "aarch64-linux-musl"
         elif target.is_riscv(include_purecap=True):
-            result = "riscv64-linux-gnu"
+            result = "riscv64-linux-musl"
         else:
             assert False, "No support for building Linux for this architecture"
         return result
 
     @classmethod
     def _get_compiler_project(cls, config: CheriConfig, xtarget: "CrossCompileTarget") -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("upstream-llvm", None))
+        # Use upstream LLVM for non-CHERI targets since that is better supported than LLVM 17.
+        if not cls.uses_morello_llvm and not xtarget.is_hybrid_or_purecap_cheri():
+            return typing.cast(
+                "type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("upstream-llvm", None)
+            )
+        return super()._get_compiler_project(config, xtarget)
 
     def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
         return SimpleProject.get_class_for_target_name("linux", xtarget)
@@ -885,36 +887,9 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def sysroot_dir(self) -> Path:
-        return (
-            self.config.sysroot_output_root / "upstream-linux-sdk" / self.target.get_rootfs_target().generic_arch_suffix
-        )
-
-    @property
-    def must_link_statically(self):
-        return True  # only static linking tested for now.
-
-    @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
-        return ["kernel", "muslc", "compiler-rt-builtins", "busybox"]
-
-
-class LinuxAllianceTargetInfo(LinuxTargetInfo):
-    shortname: str = "CHERI-Alliance-Linux"
-    uses_alliance_llvm: bool = True
-    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
-
-    @classmethod
-    def _get_compiler_project(cls, config: CheriConfig, xtarget: "CrossCompileTarget") -> "type[BuildLLVMInterface]":
-        # Use the CHERI Alliance compiler when building for RISCV CHERI
-        if xtarget.is_experimental_cheri093_std(config):
-            llvm_target = SimpleProject.get_class_for_target_name("cheri-std093-llvm", None)
-        else:
-            llvm_target = SimpleProject.get_class_for_target_name("llvm", None)
-        return typing.cast("type[BuildLLVMInterface]", llvm_target)
-
-    @property
-    def sysroot_dir(self) -> Path:
-        if self.config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093:
+        if self.uses_morello_llvm:
+            sysroot_dir = self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name
+        elif self.target.is_experimental_cheri093_std(self.config):
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name
         else:
             sysroot_dir = self.config.sysroot_output_root / self.config.default_cheri_sdk_directory_name
@@ -925,7 +900,15 @@ class LinuxAllianceTargetInfo(LinuxTargetInfo):
             dirname = "sysroot"
         else:
             dirname = "sysroot" + self.target.get_rootfs_target().build_suffix(self.config, include_os=True)
-        return Path(self.config.sysroot_output_root / self.config.default_cheri_alliance_sdk_directory_name, dirname)
+        return self.sysroot_dir.parent.parent / dirname
+
+    @property
+    def must_link_statically(self):
+        return True  # only static linking tested for now.
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
+        return ["kernel", "muslc", "compiler-rt-builtins", "busybox"]
 
 
 class LinuxMorelloTargetInfo(LinuxTargetInfo):
@@ -933,29 +916,13 @@ class LinuxMorelloTargetInfo(LinuxTargetInfo):
     uses_morello_llvm: bool = True
 
     @classmethod
-    def _get_compiler_project(cls, config: CheriConfig, xtarget: "CrossCompileTarget") -> "type[BuildLLVMInterface]":
-        return typing.cast("type[BuildLLVMInterface]", SimpleProject.get_class_for_target_name("morello-llvm", None))
-
-    @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config, *, include_version):
         if target.is_hybrid_or_purecap_cheri():
             assert target.is_aarch64(
                 include_purecap=True,
             ), "AArch64 is the only CHERI target supported with the Morello toolchain"
-            return "aarch64-linux-musl_purecap"
+            return "aarch64-linux-musl_purecap"  # FIXME: this seems wrong for hybrid?
         return super().triple_for_target(target, config, include_version=include_version)
-
-    @property
-    def sysroot_dir(self) -> Path:
-        sysroot_dir = self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name
-        return sysroot_dir / "linux" / self.target.get_rootfs_target().generic_arch_suffix
-
-    def get_non_rootfs_sysroot_dir(self) -> Path:
-        if is_jenkins_build():
-            dirname = "sysroot"
-        else:
-            dirname = "sysroot" + self.target.get_rootfs_target().build_suffix(self.config, include_os=True)
-        return Path(self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name, dirname)
 
 
 class BaremetalClangTargetInfo(_ClangBasedTargetInfo, ABC):
@@ -1573,12 +1540,10 @@ class CompilationTargets(BasicCompilationTargets):
     LINUX_RISCV64_PURECAP = CrossCompileTarget(
         "riscv64-purecap",
         CPUArchitecture.RISCV64,
-        LinuxAllianceTargetInfo,
+        LinuxTargetInfo,
         is_cheri_purecap=True,
     )
-
     LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, LinuxTargetInfo)
-
     LINUX_MORELLO_NO_CHERI = CrossCompileTarget(
         "morello-aarch64",
         CPUArchitecture.AARCH64,
