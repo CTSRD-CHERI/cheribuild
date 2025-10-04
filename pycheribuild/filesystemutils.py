@@ -229,6 +229,11 @@ class FileSystemUtils:
         if mode:
             file.chmod(mode)
 
+    @staticmethod
+    def relative_path(src: Path, base: Path) -> Path:
+        # pathlib.Path does not allow paths starting with ../ so we have to use os.path.relpath instead
+        return Path(os.path.relpath(str(src), str(base)))
+
     # NB: Deliberately not implemented in terms of create_symlinks since that
     # would require create_symlinks to inherit some of ln's heuristics about
     # whether to create a new file called src.basename() inside dest, whether
@@ -241,7 +246,7 @@ class FileSystemUtils:
             cwd = dest.parent
         if relative:
             if src.is_absolute():
-                src = os.path.relpath(str(src), str(dest.parent if dest.is_absolute() else cwd))
+                src = self.relative_path(src, dest.parent if dest.is_absolute() else cwd)
             if cwd is not None and cwd.is_dir():
                 dest = dest.relative_to(cwd)
             run_command("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only, config=self.config)
@@ -261,8 +266,8 @@ class FileSystemUtils:
         if not cwd:
             cwd = destdir
         if relative:
-            relstart = str(destdir if destdir.is_absolute() else cwd)
-            srcs = map(lambda src: os.path.relpath(str(src), relstart) if src.is_absolute() else src, srcs)
+            relstart = destdir if destdir.is_absolute() else cwd
+            srcs = map(lambda src: self.relative_path(src, relstart) if src.is_absolute() else src, srcs)
             if cwd is not None and cwd.is_dir():
                 destdir = destdir.relative_to(cwd)
         srcs = list(srcs)
@@ -347,7 +352,7 @@ class FileSystemUtils:
         tool_path: Path,
         tool_name: "Optional[str]" = None,
         create_unprefixed_link: bool = False,
-        cwd: "Optional[str]" = None,
+        cwd: "Optional[Path]" = None,
     ) -> None:
         """
         Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
