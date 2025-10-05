@@ -44,7 +44,7 @@ from ...utils import classproperty
 
 
 class BuildLinux(CrossCompileAutotoolsProject):
-    target = "kernel"
+    target = "linux-kernel"
     repository = GitRepository("https://github.com/torvalds/linux.git")
     needs_sysroot = False
     is_sdk_target = False
@@ -53,6 +53,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
         CompilationTargets.LINUX_AARCH64,
     )
     _always_add_suffixed_targets = True
+    include_os_in_target_suffix = False  # Avoid adding -linux- as we are building linux-kernel here
     make_kind = MakeCommandKind.GnuMake
 
     @classproperty
@@ -64,7 +65,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
         self.check_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
 
     def _enable_config(self, option):
-        with open(self.source_dir / ".config") as f:
+        with open(self.build_dir / ".config") as f:
             lines = f.readlines()
         for i, line in enumerate(lines):
             if line.startswith(option + "=") or line.startswith("# " + option):
@@ -72,23 +73,23 @@ class BuildLinux(CrossCompileAutotoolsProject):
                 break
         else:
             lines.append(f"{option}=y\n")
-        with open(self.source_dir / ".config", "w") as f:
+        with open(self.build_dir / ".config", "w") as f:
             f.writelines(lines)
 
     def setup(self) -> None:
         super().setup()
+        self.make_args.set(CROSS_COMPILE=str(self.CC.parent) + "/", LLVM=str(self.CC.parent) + "/")
         if self.crosscompile_target.is_riscv(include_purecap=True):
             self.linux_arch = "riscv"
-            self.make_args.set(CROSS_COMPILE="riscv64-unknown-elf-")
         elif self.crosscompile_target.is_aarch64(include_purecap=True):
             self.linux_arch = "arm64"
-            self.make_args.set(CROSS_COMPILE="aarch64-unknown-elf-")
 
         self.make_args.set(ARCH=self.linux_arch)
+        self.make_args.set(O=self.build_dir)
 
         # We only support building the kernel with LLVM/Clang
-        self.make_args.set(CC="clang")
-        self.make_args.set(LLVM="1")
+        self.make_args.set(HOSTCC=self.host_CC)
+        self.make_args.set(HOSTCXX=self.host_CXX)
         # Install kernel headers at rootfs (and sysroot)'s path
         self.make_args.set(INSTALL_HDR_PATH=self.install_dir / "usr")
 
@@ -103,24 +104,25 @@ class BuildLinux(CrossCompileAutotoolsProject):
         self.run_make(cwd=self.source_dir)
 
     def configure(self, **kwargs):
-        self.run_make(self.defconfig, cwd=self.source_dir)
+        self.run_make(self.defconfig, cwd=self.source_dir, parallel=False)
 
     def clean(self):
         self.run_make("distclean", cwd=self.source_dir)
         self.run_make("clean", cwd=self.source_dir)
         # Optional -- deletes locally modified files and local git patches
         self.run_make("mrproper", cwd=self.source_dir)
+        return super().clean()
 
     def install(self, **kwargs):
-        self.install_file(self.source_dir / "vmlinux", self.install_dir / "boot/vmlinux")
-        self.install_file(self.source_dir / "System.map", self.install_dir / "boot/System.map")
-        self.install_file(self.source_dir / f"arch/{self.linux_arch}/boot/Image", self.install_dir / "boot/Image")
-        self.install_file(self.source_dir / f"arch/{self.linux_arch}/boot/Image.gz", self.install_dir / "boot/Image.gz")
+        self.install_file(self.build_dir / "vmlinux", self.install_dir / "boot/vmlinux")
+        self.install_file(self.build_dir / "System.map", self.install_dir / "boot/System.map")
+        self.install_file(self.build_dir / f"arch/{self.linux_arch}/boot/Image", self.install_dir / "boot/Image")
+        self.install_file(self.build_dir / f"arch/{self.linux_arch}/boot/Image.gz", self.install_dir / "boot/Image.gz")
         self.run_make("headers_install", cwd=self.source_dir)
 
 
 class BuildCheriAllianceLinux(BuildLinux):
-    target = "cheri-std093-kernel"
+    target = "cheri-std093-linux-kernel"
     repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="codasip-cheri-riscv")
     supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP,)
 
@@ -131,11 +133,9 @@ class BuildCheriAllianceLinux(BuildLinux):
         else:
             return "defconfig"
 
-        assert False, "unhandled target"
-
 
 class BuildMorelloLinux(BuildLinux):
-    target = "morello-kernel"
+    target = "morello-linux-kernel"
     repository = GitRepository(
         "https://git.morello-project.org/morello/kernel/linux.git", default_branch="morello/master"
     )
@@ -151,9 +151,7 @@ class BuildMorelloLinux(BuildLinux):
         else:
             return "defconfig"
 
-        assert False, "unhandled target"
-
-    def configure(self) -> None:
+    def configure(self, **kwargs) -> None:
         super().configure()
         # Default config only has VIRTIO_NET, not PCI_NET. This is to make
         # it work out of the box with cheribuild's QEMU with networking that
@@ -178,7 +176,7 @@ class LaunchCheriLinux(LaunchQEMUBase):
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         result = tuple()
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            result += ("cheri-std093-kernel",)
+            result += ("cheri-std093-linux-kernel",)
             result += ("cheri-std093-llvm",)
             result += ("cheri-std093-gdb-native",)
             result += ("cheri-std093-qemu",)
@@ -193,7 +191,7 @@ class LaunchCheriLinux(LaunchQEMUBase):
             result += ("morello-compiler-rt-builtins",)
             result += ("morello-busybox",)
         else:
-            result += ("kernel",)
+            result += ("linux-kernel",)
             result += ("upstream-llvm",)
             result += ("gdb-native",)
             result += ("qemu",)
