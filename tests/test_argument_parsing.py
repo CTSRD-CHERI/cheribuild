@@ -15,7 +15,7 @@ import pytest
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
 from pycheribuild.config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
-from pycheribuild.config.defaultconfig import DefaultCheriConfig
+from pycheribuild.config.defaultconfig import CheribuildAction, DefaultCheriConfig
 from pycheribuild.config.loader import ConfigLoaderBase, ConfigOptionHandle, JsonAndCommandLineConfigOption
 from pycheribuild.jenkins_utils import jenkins_override_install_dirs_hack
 
@@ -1548,3 +1548,37 @@ def test_host_prefixes_and_install_dir():
         Path("/output/local"),
         Path("/output/bootstrap"),
     ]
+
+
+def test_list_arguments_default_value():
+    # Check that the default values for list-type options are empty unless specified otherwise:
+    config = _parse_arguments([])
+    cheribsd_riscv = _get_cheribsd_instance("cheribsd-riscv64", config)
+    assert cheribsd_riscv.extra_make_args == []
+    assert config.test_extra_args == []
+    assert config.action == [CheribuildAction.BUILD]
+
+
+def test_list_arguments_split_strings():
+    # Check that command line-type arguments are split using shlex.split:
+    config = _parse_arguments(["--test-extra-args=foo bar", "--cheribsd/build-options", "-DWITHOUT_FOO -DWITH_BAR"])
+    cheribsd_riscv = _get_cheribsd_instance("cheribsd-riscv64", config)
+    assert cheribsd_riscv.extra_make_args == ["-DWITHOUT_FOO", "-DWITH_BAR"]
+    assert config.test_extra_args == ["foo", "bar"]
+
+
+def test_list_arguments_append_action():
+    # Test append type option (currently only --action):
+    config = _parse_arguments(
+        [
+            "--action=build",
+            "--action=test",
+            # Check that we don't split this regex (not that it really matters since we don't allow spaces in targets)
+            "--skip-dependency-filter=foo-.+ and some spaces",
+            "--skip-dependency-filter=bar.*",
+        ]
+    )
+    assert config.action == [CheribuildAction.BUILD, CheribuildAction.TEST]
+    assert config.skip_dependency_filters == [re.compile(r"foo-.+ and some spaces"), re.compile(r"bar.*")]
+    config = _parse_arguments(["--dump-config"])
+    assert config.action == [CheribuildAction.DUMP_CONFIGURATION]

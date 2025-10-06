@@ -27,7 +27,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import collections.abc
 import os
 import shlex
 import sys
@@ -111,13 +110,20 @@ class ConfigLoaderBase(ABC):
             **kwargs,
         )
 
-    def add_commandline_only_list_option(self, *args, default: "Optional[list[str]]" = None, **kwargs) -> "list[str]":
+    def add_commandline_only_list_option(
+        self,
+        *args,
+        default: "Optional[list[T]]" = None,
+        element_type: "Union[type[T], Callable[[str], T]]",
+        **kwargs,
+    ) -> "list[T]":
         return typing.cast(
-            typing.List[str],
+            typing.List[T],
             self.add_commandline_only_option(
                 *args,
                 default=[] if default is None else default,
-                type=list,
+                type=element_type,
+                is_list=True,
                 **kwargs,
             ),
         )
@@ -269,6 +275,7 @@ class ConfigOptionBase(AbstractConfigOption[T]):
         _fallback_names: "Optional[list[str]]" = None,
         _legacy_alias_names: "Optional[list[str]]" = None,
         is_fallback: bool = False,
+        is_list: "Optional[bool]" = None,
     ):
         self.name = name
         self.shortname = shortname
@@ -286,6 +293,11 @@ class ConfigOptionBase(AbstractConfigOption[T]):
         self.alias_names = _legacy_alias_names  # for targets such as gdb-mips, etc
         self._is_default_value = False
         self.is_fallback_only = is_fallback
+        if is_list is None:
+            if isinstance(value_type, type):
+                assert value_type is not list
+            is_list = False
+        self.is_list = is_list
 
     def load_option(
         self, config: "ConfigBase", instance: "Optional[object]", _: type, return_none_if_default=False
@@ -378,20 +390,20 @@ class ConfigOptionBase(AbstractConfigOption[T]):
         result = loaded_result.value
         # self.debug_msg("Converting", result, "to", self.value_type)
         # if the requested type is list, tuple, etc. use shlex.split() to convert strings to lists
-        if self.value_type is not str and isinstance(result, str):
-            if isinstance(self.value_type, type) and issubclass(self.value_type, collections.abc.Sequence):
-                string_value = result
-                result = shlex.split(string_value)
-                warning_message(
-                    "Config option ",
-                    self.full_option_name,
-                    " (",
-                    string_value,
-                    ") should be a list, ",
-                    "got a string instead -> assuming the correct value is ",
-                    result,
-                    sep="",
-                )
+        # TODO: Should handle this explicitly in the callers, we don't want it if there is a custom converter func.
+        if self.is_list and isinstance(result, str) and isinstance(self.value_type, type):
+            string_value = result
+            result = shlex.split(string_value)
+            warning_message(
+                "Config option ",
+                self.full_option_name,
+                " (",
+                string_value,
+                ") should be a list, ",
+                "got a string instead -> assuming the correct value is ",
+                result,
+                sep="",
+            )
         if isinstance(self.value_type, type) and issubclass(self.value_type, Path):
             expanded = os.path.expanduser(os.path.expandvars(str(result)))
             while expanded.startswith("//"):
@@ -407,7 +419,11 @@ class ConfigOptionBase(AbstractConfigOption[T]):
             assert result.is_absolute(), result
             assert not str(result).startswith("//"), result
         else:
-            result = self.value_type(result)  # make sure it has the right type (e.g. Path, int, bool, str)
+            if self.is_list:
+                assert isinstance(result, list), "Should have converted to a list already"
+                result = [self.value_type(x) for x in result]
+            else:
+                result = self.value_type(result)  # make sure it has the right type (e.g. Path, int, bool, str)
         return result
 
     def __repr__(self) -> str:
@@ -416,8 +432,8 @@ class ConfigOptionBase(AbstractConfigOption[T]):
 
 class DefaultValueOnlyConfigOption(ConfigOptionBase[T]):
     # noinspection PyUnusedLocal
-    def __init__(self, *args, _loader, **kwargs) -> None:
-        super().__init__(*args, _loader=_loader)
+    def __init__(self, *args, _loader, is_list: Optional[bool] = None, **kwargs) -> None:
+        super().__init__(*args, _loader=_loader, is_list=is_list)
 
     def _load_option_impl(self, config: "ConfigBase", target_option_name):
         return None  # always use the default value

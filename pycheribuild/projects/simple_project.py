@@ -1053,10 +1053,19 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         )
 
     @classmethod
-    def add_list_option(cls, name: str, *, default=None, **kwargs) -> "list[str]":
+    def add_list_option(
+        cls,
+        name: str,
+        *,
+        element_type: "Union[type[T], Callable[[str], T]]" = str,
+        default: "Union[Optional[list[T]], ComputedDefaultValue[list[T]]]" = None,
+        **kwargs,
+    ) -> "list[T]":
         return typing.cast(
-            typing.List[str],
-            cls.add_config_option(name, kind=list, default=[] if default is None else default, **kwargs),
+            typing.List[T],
+            cls.add_config_option(
+                name, kind=element_type, is_list=True, default=[] if default is None else default, **kwargs
+            ),
         )
 
     @classmethod

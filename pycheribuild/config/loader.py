@@ -261,6 +261,7 @@ class CommandLineConfigOption(ConfigOptionBase[T]):
         _fallback_names: "Optional[list[str]]" = None,
         _legacy_alias_names: "Optional[list[str]]" = None,
         is_fallback: bool = False,
+        is_list: Optional[bool] = None,
         **kwargs,
     ):
         super().__init__(
@@ -273,6 +274,7 @@ class CommandLineConfigOption(ConfigOptionBase[T]):
             _fallback_names=_fallback_names,
             _legacy_alias_names=_legacy_alias_names,
             is_fallback=is_fallback,
+            is_list=is_list,
         )
         # hide obscure options unless --help-hidden/--help/all is passed
         if help_hidden and not self._loader.show_all_help:
@@ -289,14 +291,18 @@ class CommandLineConfigOption(ConfigOptionBase[T]):
         elif default is not None:
             if isinstance(default, Enum) or isinstance(value_type, _EnumArgparseType):
                 # allow append
-                if isinstance(default, list) and not default:
+                if is_list and not default:
                     self.default_str = "[]"
                 else:
                     assert isinstance(value_type, _EnumArgparseType), "default is enum but value type isn't: " + str(
                         value_type
                     )
-                    assert isinstance(default, Enum), "Should use enum constant for default and not " + str(default)
-                    self.default_str = default.name.lower()
+                    if is_list:
+                        assert isinstance(default, list) and isinstance(default[0], Enum)
+                        self.default_str = str([d.name.lower() for d in default])
+                    else:
+                        assert isinstance(default, Enum), "Should use enum constant for default and not " + str(default)
+                        self.default_str = default.name.lower()
             else:
                 self.default_str = str(default)
         # _legacy_alias_names are ignored for command line options (since they only exist for backwards compat)

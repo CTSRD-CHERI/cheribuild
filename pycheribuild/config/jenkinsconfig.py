@@ -131,10 +131,12 @@ class JenkinsConfig(CheriConfig):
         )
         self.sysroot_extra_archive_names = loader.add_commandline_only_list_option(
             "sysroot-extra-archives",
+            element_type=str,
             help="Addition archives to extract within the sysroot",
         )
         self.sysroot_install_dir_targets = loader.add_commandline_only_list_option(
             "sysroot-install-dir-targets",
+            element_type=str,
             help="Targets for which to use the sysroot/rootfs rather than the output path",
         )
         self.keep_install_dir = loader.add_commandline_only_bool_option(
