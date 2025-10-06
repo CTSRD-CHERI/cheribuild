@@ -64,8 +64,9 @@ class BuildMuslc(CrossCompileAutotoolsProject):
             self.make_args.set(V=True)
 
         self.make_args.set(
-            CC="clang",
-            HOSTCC="clang",
+            CC=self.CC,
+            CXX=self.CXX,
+            HOSTCC=self.host_CC,
             # Force muslc's Makefile not to use the triple for finding the toolchain
             CROSS_COMPILE="",
             LD=self.target_info.linker,
