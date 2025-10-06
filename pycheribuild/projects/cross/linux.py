@@ -38,6 +38,7 @@ from ..project import (
     MakeCommandKind,
 )
 from ..run_qemu import LaunchQEMUBase
+from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import CPUArchitecture
 from ...utils import classproperty
@@ -125,6 +126,7 @@ class BuildCheriAllianceLinux(BuildLinux):
     target = "cheri-std093-linux-kernel"
     repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="codasip-cheri-riscv")
     supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP,)
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
     @property
     def defconfig(self) -> str:
@@ -132,6 +134,12 @@ class BuildCheriAllianceLinux(BuildLinux):
             return "cheri_full_defconfig"
         else:
             return "defconfig"
+
+    def configure(self, **kwargs):
+        super().configure(**kwargs)
+        config = self.read_file(self.build_dir / ".config")
+        if "RISCV_CHERI=y\n" not in config:
+            self.fatal("Invalid configuration selected? CHERI support not enabled!")
 
 
 class BuildMorelloLinux(BuildLinux):
