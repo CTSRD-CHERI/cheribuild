@@ -495,6 +495,7 @@ class TargetManager:
 
         for node in targets:
             for dep in node.project_class.cached_full_dependencies():
+                dep = typing.cast(Target, dep)  # Silence type-checker due to cyclic imports
                 if dep in adj:
                     adj[dep].append(node)
                     in_degree[node] += 1
