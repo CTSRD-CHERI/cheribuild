@@ -173,6 +173,8 @@ class LaunchCheriLinux(LaunchQEMUBase):
     supported_architectures = (
         CompilationTargets.LINUX_MORELLO_PURECAP,
         CompilationTargets.LINUX_RISCV64_PURECAP,
+        CompilationTargets.LINUX_RISCV64,
+        CompilationTargets.LINUX_AARCH64,
     )
     forward_ssh_port = False
     qemu_user_networking = True
