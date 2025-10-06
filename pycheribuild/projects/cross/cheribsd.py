@@ -752,6 +752,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             metavar="SUBDIRS",
             show_help=True,
             default=subdir_default,
+            element_type=str,
             help="Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding individual"
             " programs/libraries. If more than one dir is passed, they will be processed in order. Note: This"
             " will break if not all dependencies have been built.",

@@ -99,8 +99,7 @@ class DefaultCheribuildConfigLoader(JsonAndCommandLineConfigLoader):
 
 class DefaultCheriConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, available_targets: "list[str]") -> None:
-        super().__init__(loader, action_class=CheribuildAction)
-        self.default_action = CheribuildAction.BUILD
+        super().__init__(loader, action_class=CheribuildAction, default_action=CheribuildAction.BUILD)
         # The run mode:
         self.get_config_option = loader.add_option(
             "get-config-option",

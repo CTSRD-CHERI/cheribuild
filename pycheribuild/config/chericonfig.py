@@ -49,7 +49,6 @@ from ..processutils import latest_system_clang_tool, run_command
 from ..utils import (
     ConfigBase,
     DoNotUseInIfStmt,
-    fatal_error,
     have_working_internet_connection,
     status_update,
     warning_message,
@@ -151,15 +150,10 @@ def _default_arm_none_eabi_prefix(c: "CheriConfig", _):
         return str(default_path / "bin/arm-none-eabi-")
 
 
-def _skip_dependency_filter_arg(values: "list[str]") -> "list[re.Pattern]":
-    result = [re.compile(item) for item in values]
-    return result
-
-
 class CheribuildActionEnum(Enum):
     option_name: str
     help_message: str
-    altname: str
+    altname: Optional[str]
     actions: "list[typing.Any]"  # actually list[CheribuildActionEnum] but pytype errors on that
 
 
@@ -173,6 +167,11 @@ class AppendConstListAction(argparse.Action):
         items = [] if items is None else items[:]  # Make a copy
         items.extend(self.const)
         setattr(namespace, self.dest, items)
+
+
+def _latest_system_clang_tool_or_invalid(config: ConfigBase, basename: str, fallback_basename: str) -> Path:
+    result = latest_system_clang_tool(config, basename, fallback_basename)
+    return result if result is not None else Path("/could/not/find/valid", basename)
 
 
 class CheriConfig(ConfigBase, metaclass=ABCMeta):
@@ -201,9 +200,13 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
     # These are optional and do not exist for Jenkins
     start_with: Optional[str] = None
     start_after: Optional[str] = None
-    default_action: Optional[CheribuildActionEnum] = None
 
-    def __init__(self, loader: ConfigLoaderBase, action_class: "type[CheribuildActionEnum]") -> None:
+    def __init__(
+        self,
+        loader: ConfigLoaderBase,
+        action_class: "type[CheribuildActionEnum]",
+        default_action: Optional[CheribuildActionEnum] = None,
+    ) -> None:
         super().__init__(
             pretend=DoNotUseInIfStmt(), verbose=DoNotUseInIfStmt(), quiet=DoNotUseInIfStmt(), force=DoNotUseInIfStmt()
         )
@@ -217,34 +220,35 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
 
         # add the actions:
         self._action_class = action_class
-        self.action = loader.add_option(
+        self.action = loader.add_commandline_only_list_option(
             "action",
-            default=[],
+            element_type=action_class,
             action="append",
-            type=action_class,
+            default=[default_action] if default_action is not None else [],
             help_hidden=True,
             help="The action to perform by cheribuild",
             group=loader.action_group,
         )
         # Add aliases (e.g. --test = --action=test):
-        for action in action_class:
-            if action.altname:
-                loader.action_group.add_argument(
-                    action.option_name,
-                    action.altname,
-                    help=action.help_message,
-                    dest="action",
-                    action=AppendConstListAction,
-                    const=action.actions,
-                )
-            else:
-                loader.action_group.add_argument(
-                    action.option_name,
-                    help=action.help_message,
-                    dest="action",
-                    action=AppendConstListAction,
-                    const=action.actions,
-                )
+        if loader.action_group is not None:
+            for action in action_class:
+                if action.altname:
+                    loader.action_group.add_argument(
+                        action.option_name,
+                        action.altname,
+                        help=action.help_message,
+                        dest="action",
+                        action=AppendConstListAction,
+                        const=action.actions,
+                    )
+                else:
+                    loader.action_group.add_argument(
+                        action.option_name,
+                        help=action.help_message,
+                        dest="action",
+                        action=AppendConstListAction,
+                        const=action.actions,
+                    )
         self.print_targets_only = loader.add_commandline_only_bool_option(
             "print-targets-only",
             help_hidden=False,
@@ -255,21 +259,21 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         self.clang_path = loader.add_path_option(
             "clang-path",
             shortname="-cc-path",
-            default=lambda c, _: latest_system_clang_tool(c, "clang", "cc"),
+            default=lambda c, _: _latest_system_clang_tool_or_invalid(c, "clang", "cc"),
             group=loader.path_group,
             help="The C compiler to use for host binaries (must be compatible with Clang >= 3.7)",
         )
         self.clang_plusplus_path = loader.add_path_option(
             "clang++-path",
             shortname="-c++-path",
-            default=lambda c, _: latest_system_clang_tool(c, "clang++", "c++"),
+            default=lambda c, _: _latest_system_clang_tool_or_invalid(c, "clang++", "c++"),
             group=loader.path_group,
             help="The C++ compiler to use for host binaries (must be compatible with Clang >= 3.7)",
         )
         self.clang_cpp_path = loader.add_path_option(
             "clang-cpp-path",
             shortname="-cpp-path",
-            default=lambda c, _: latest_system_clang_tool(c, "clang-cpp", "cpp"),
+            default=lambda c, _: _latest_system_clang_tool_or_invalid(c, "clang-cpp", "cpp"),
             group=loader.path_group,
             help="The C preprocessor to use for host binaries (must be compatible with Clang >= 3.7)",
         )
@@ -301,11 +305,11 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             help_hidden=True,
             help="Override the default FreeBSD/CheriBSD kernel config.",
         )
-        self.freebsd_subdir = loader.add_commandline_only_option(
+        self.freebsd_subdir = loader.add_commandline_only_list_option(
             "freebsd-subdir",
             "-subdir",
             group=loader.freebsd_group,
-            type=list,
+            element_type=str,
             metavar="SUBDIRS",
             help="Only build subdirs SUBDIRS of FreeBSD/CheriBSD instead of the full tree. Useful for quickly "
             "rebuilding individual programs/libraries. If more than one dir is passed they will be processed in "
@@ -448,12 +452,11 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             "when building libc++, etc. with dependencies but the sdk is already up-to-date. "
             "This is like --no-include-toolchain-depedencies but also skips the target that builds the sysroot.",
         )
-        self.skip_dependency_filters: "list[re.Pattern]" = loader.add_option(
+        self.skip_dependency_filters: "list[re.Pattern]" = loader.add_commandline_only_list_option(
             "skip-dependency-filter",
             group=loader.dependencies_group,
+            element_type=lambda s: re.compile(s),
             action="append",
-            default=[],
-            type=_skip_dependency_filter_arg,
             metavar="REGEX",
             help="A regular expression to match against to target names that should be skipped when using"
             "--include-dependency. Can be passed multiple times to add more patterns.",
@@ -554,10 +557,10 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             default=False,
         )
 
-        self.test_extra_args = loader.add_commandline_only_option(
+        self.test_extra_args = loader.add_commandline_only_list_option(
             "test-extra-args",
             group=loader.tests_group,
-            type=list,
+            element_type=str,
             metavar="ARGS",
             help="Additional flags to pass to the test script in --test",
         )
@@ -575,10 +578,10 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             "test-ld-preload", group=loader.tests_group, help="Preload the given library before running tests"
         )
 
-        self.benchmark_fpga_extra_args = loader.add_commandline_only_option(
+        self.benchmark_fpga_extra_args = loader.add_commandline_only_list_option(
             "benchmark-fpga-extra-args",
             group=loader.benchmark_group,
-            type=list,
+            element_type=str,
             metavar="ARGS",
             help="Extra options for the FPGA management script",
         )
@@ -589,10 +592,10 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             "running benchmarks. "
             "If not set, assume the FPGA is running.",
         )
-        self.benchmark_extra_args = loader.add_commandline_only_option(
+        self.benchmark_extra_args = loader.add_commandline_only_list_option(
             "benchmark-extra-args",
             group=loader.benchmark_group,
-            type=list,
+            element_type=str,
             metavar="ARGS",
             help="Additional flags to pass to the program executed in --benchmark",
         )
@@ -677,7 +680,6 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
             "internet_connection_last_checked_at",
             "start_after",
             "start_with",
-            "default_action",
         ]
 
     def load(self) -> None:
@@ -695,32 +697,9 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         if not self.clang_cpp_path.exists():
             self.clang_cpp_path = Path("/cpp/is/missing")
 
-        if self.test_extra_args is None:
-            self.test_extra_args = []
-
         # if we are creating a compilation db in the source that implies creating one in the first place:
         if self.copy_compilation_db_to_source_dir:
             self.create_compilation_db = True
-
-        # flatten the potentially nested list
-        if not self.action:
-            if self.default_action is None:
-                fatal_error(
-                    "Missing action, please pass one of",
-                    ", ".join([str(action.option_name) for action in self._action_class]),
-                    pretend=False,
-                )
-            self.action = [self.default_action]
-        else:
-            assert isinstance(self.action, list)
-            # there doesn't seem to be a flatten() function (and itertools.chain() doesn't work properly)
-            real_action = []
-            for i in self.action:
-                if isinstance(i, list):
-                    real_action.extend(i)
-                else:
-                    real_action.append(i)
-            self.action = real_action
 
         # turn on skip-update if we don't have a working internet connection to avoid errors in git pull
         if not self.skip_update and not have_working_internet_connection(self):
@@ -734,7 +713,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
 
         # Check that the skip_dependency_filters arguments are all valid regular expressions. We do it now since
         # otherwise the validation is delayed until the first time the object is used.
-        assert isinstance(self.skip_dependency_filters, list)
+        assert self.skip_dependency_filters is not None
 
     @cached_property
     def _other_tools_path_prefix(self) -> str:

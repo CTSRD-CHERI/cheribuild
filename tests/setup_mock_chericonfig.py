@@ -1,7 +1,6 @@
-from enum import Enum
 from pathlib import Path
 
-from pycheribuild.config.chericonfig import CheriConfig
+from pycheribuild.config.chericonfig import CheribuildActionEnum, CheriConfig
 from pycheribuild.config.loader import ConfigLoaderBase, DefaultValueOnlyConfigLoader
 from pycheribuild.projects.simple_project import SimpleProject
 from pycheribuild.targets import Target
@@ -12,17 +11,21 @@ class MockArgs:
     targets = []
 
 
-class MockActions(Enum):
-    pass
+class MockActions(CheribuildActionEnum):
+    PLACEHOLDER = ()
+
+    def __init__(self):
+        self.option_name = "--placeholder"
+        self.help_message = "placeholder"
+        self.altname = None
+        self.action = []
 
 
 class MockConfig(CheriConfig):
     def __init__(self, source_root: Path, pretend=True):  # allow overriding pretend for the async_delete test
         self.fake_loader = DefaultValueOnlyConfigLoader()
         self.fake_loader._parsed_args = MockArgs()
-        super().__init__(self.fake_loader, action_class=MockActions)
-        self.default_action = ""
-        self.action = None
+        super().__init__(self.fake_loader, action_class=MockActions, default_action=MockActions.PLACEHOLDER)
         self.source_root = source_root
         self.build_root = source_root / "build"
         self.output_root = source_root / "output"
