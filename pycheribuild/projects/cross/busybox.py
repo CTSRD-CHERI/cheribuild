@@ -27,10 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-
-import os
-import pathlib
-import subprocess
+from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject
 from ..project import (
@@ -42,24 +39,12 @@ from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
 
 
-def make_initramfs(installdir: pathlib.Path, out_file: pathlib.Path):
-    installdir.mkdir(parents=True, exist_ok=True)  # ensure path exists
-    out_file.parent.mkdir(parents=True, exist_ok=True)  # <-- ensure boot/ exists
-    with open(out_file, "wb") as out:
-        find = subprocess.Popen(["find", "."], cwd=installdir, stdout=subprocess.PIPE)
-        cpio = subprocess.Popen(
-            ["cpio", "-o", "--format=newc"], cwd=installdir, stdin=find.stdout, stdout=subprocess.PIPE
-        )
-        gzip = subprocess.Popen(["gzip"], stdin=cpio.stdout, stdout=out)
-        gzip.wait()
-    print("Wrote", out_file)
-
-
 class BuildBusyBox(CrossCompileAutotoolsProject):
     target = "busybox"
     repository = GitRepository("https://git.busybox.net/busybox/")
     needs_sysroot = False
     is_sdk_target = False
+    build_in_source_dir = True  # out-of-source build not tested yet
     supported_architectures = (
         CompilationTargets.LINUX_RISCV64,
         CompilationTargets.LINUX_AARCH64,
@@ -99,18 +84,25 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
             OBJDUMP=self.sdk_bindir / "llvm-objdump",
         )
 
-    def compile(self) -> None:
-        self.run_make(cwd=self.source_dir)
+    def compile(self, **kwargs) -> None:
+        self.run_make()
 
-    def configure(self) -> None:
+    def configure(self, **kwargs) -> None:
         self.run_make("defconfig", cwd=self.source_dir)
 
-    def install(self) -> None:
+    def make_initramfs(self, installdir: Path, out_file: Path):
+        self.makedirs(installdir)  # ensure path exists
+        self.makedirs(out_file.parent)  # <-- ensure boot/ exists
+        with (Path("/dev/null") if self.config.pretend else out_file).open("wb") as out:
+            self.run_cmd(["find . | cpio -o --format=newc | gzip"], shell=True, cwd=installdir, stdout=out)
+        self.info("Wrote", out_file)
+
+    def install(self, **kwargs) -> None:
         self.run_make("install", cwd=self.source_dir)
         root = self.install_dir / "rootfs"
-        make_initramfs(root, self.install_dir / "boot/initramfs.cpio.gz")
+        self.make_initramfs(root, self.install_dir / "boot/initramfs.cpio.gz")
 
-    def clean(self) -> None:
+    def clean(self, **kwargs) -> None:
         self.run_make("distclean", cwd=self.source_dir)
         self.run_make("clean", cwd=self.source_dir)
 
@@ -126,21 +118,21 @@ class BuildMorelloBusyBox(BuildBusyBox):
         CrossCompileAutotoolsProject.setup(self)
         self.make_args.set(CONFIG_PREFIX=self.install_dir / "rootfs")
         self.make_args.set(MUSL_HOME=self.install_dir)
-        self.make_args.set(KHEADERS=str(self.install_dir) + "/usr/include/")
-        self.make_args.set(CLANG_RESOURCE_DIR=str(self.install_dir) + "/include/lib")
-        self.add_configure_vars(CC="clang")
+        self.make_args.set(KHEADERS=self.install_dir / "usr/include/")
+        self.make_args.set(CLANG_RESOURCE_DIR=self.install_dir / "include/lib")
+        self.add_configure_vars(CC=self.CC)
 
     def configure(self) -> None:
         self.run_make("morello_busybox_defconfig", cwd=self.source_dir)
 
-    def write_busybox_init(self, path="init"):
+    def write_busybox_init(self, init_path: Path):
         """
         Write a BusyBox-compatible /init script to the given path.
         This is derived (and modified) from an init C version located here:
         https://git.morello-project.org/morello/morello-sdk/-/blob/latest/morello/projects/init/init.c
         """
 
-        path.parent.mkdir(parents=True, exist_ok=True)  # ensure rootfs/ exists
+        self.makedirs(init_path.parent)  # ensure rootfs/ exists
 
         script = """#!/bin/sh
 # Minimal init script to replace the C init
@@ -182,12 +174,8 @@ echo "nameserver 8.8.8.8" > /etc/resolv.conf
         sleep 1
     done
     """
-
-        with open(path, "w") as f:
-            f.write(script)
-
         # Make the script executable
-        os.chmod(path, 0o755)
+        self.write_file(init_path, contents=script, overwrite=True, mode=0o755)
 
     def install(self, **kwargs):
         self.write_busybox_init(self.install_dir / "rootfs/init")
