@@ -33,6 +33,7 @@ from pathlib import Path
 from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
 from .llvm import BuildCheriAllianceLLVM, BuildCheriLLVM, BuildMorelloLLVM, BuildUpstreamLLVM
 from ..project import Linkage, ReuseOtherProjectDefaultTargetRepository
+from ...config.chericonfig import RiscvCheriISA
 from ...config.target_info import CPUArchitecture
 from ...utils import classproperty, is_jenkins_build
 
@@ -122,6 +123,7 @@ class BuildUpstreamCompilerRt(BuildCompilerRt):
 class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     llvm_project = BuildCheriLLVM
+    supported_riscv_cheri_standard = RiscvCheriISA.V9
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
     target = "compiler-rt-builtins"
     _check_install_dir_conflict = False
@@ -139,10 +141,14 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # Note: needs to be @classproperty since it is called before __init__
     @classproperty
     def default_install_dir(self):
+        # Building for Linux currently requires installing to the resource directory
+        target_info = self.get_crosscompile_target().target_info_cls
+        if target_info.is_linux() and not target_info.is_native():
+            return DefaultInstallDir.ROOTFS_LOCALBASE
         # Install compiler-rt to the sysroot to handle purecap and non-CHERI RTEMS
         if self._xtarget is CompilationTargets.RTEMS_RISCV64_PURECAP:
             return DefaultInstallDir.ROOTFS_LOCALBASE
-        elif self._xtarget is not None and self._xtarget.target_info_cls.is_baremetal():
+        elif self._xtarget is not None and target_info.is_baremetal():
             # Conflicting file names for RISC-V non-CHERI,hybrid, and purecap -> install to prefixed directory
             # instead of the compiler resource directory
             return DefaultInstallDir.ROOTFS_LOCALBASE
@@ -180,7 +186,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if not self.compiling_for_host():
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ONLY=True, TARGET_TRIPLE=self.target_info.target_triple)
             if self.target_info.is_linux():
-                self.add_cmake_options(CMAKE_SYSROOT=self.target_info.sysroot_dir / self.target_info.target_triple)
+                self.add_cmake_options(CMAKE_SYSROOT=self.target_info.sysroot_dir)
         if self.target_info.is_baremetal():
             self.add_cmake_options(COMPILER_RT_OS_DIR="baremetal")
         if self.should_include_debug_info:
@@ -197,40 +203,24 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
                 self.install_dir / "lib" / libname, self.install_dir / "lib/libgcc.a", print_verbose_only=False
             )
         elif self.target_info.is_linux() and not self.compiling_for_host():
-            self.move_file(
-                self.install_dir / "lib/linux" / libname,
-                self.target_info.sysroot_dir / self.target_info.target_triple / "lib" / libname,
-            )
-
-            # Linux Clang driver expects/embeds the following crt files in the linking flags
-            self.move_file(
-                self.install_dir / "lib/linux" / f"clang_rt.crtbegin-{self.triple_arch}.o",
-                self.target_info.sysroot_dir / self.target_info.target_triple / "lib" / "crtbeginT.o",
-            )
-            self.move_file(
-                self.install_dir / "lib/linux" / f"clang_rt.crtend-{self.triple_arch}.o",
-                self.target_info.sysroot_dir / self.target_info.target_triple / "lib" / "crtend.o",
+            self.create_symlink(
+                self.install_dir / "lib/linux" / libname, self.install_dir / "lib" / libname, print_verbose_only=False
             )
             self.create_symlink(
-                self.target_info.sysroot_dir / self.target_info.target_triple / "lib" / libname,
-                self.target_info.sysroot_dir / self.target_info.target_triple / "lib/libgcc.a",
+                self.install_dir / "lib/linux" / libname,
+                self.install_dir / "lib/libgcc.a",
                 print_verbose_only=False,
             )
-
-            # Linux Clang driver expects/embeds the compiler-rt in the linking flags
-            # inside the compiler's resource directory
-            if self.target_info.uses_morello_llvm:
-                cc = BuildMorelloLLVM.get_native_install_path(self.config) / "bin/clang"
-            elif self.target_info.uses_alliance_llvm:
-                cc = BuildCheriAllianceLLVM.get_native_install_path(self.config) / "bin/clang"
-            else:
-                cc = BuildCheriLLVM.get_native_install_path(self.config) / "bin/clang"
-            # XXX Add UpstreamLLVM?
-
-            self.makedirs(self.get_compiler_info(cc).get_resource_dir() / "lib" / "linux")
+            # Linux Clang driver expects/embeds the following crt files in the linking flags
             self.create_symlink(
-                self.target_info.sysroot_dir / self.target_info.target_triple / "lib" / libname,
-                self.get_compiler_info(cc).get_resource_dir() / "lib" / "linux" / libname,
+                self.install_dir / "lib/linux" / f"clang_rt.crtbegin-{self.triple_arch}.o",
+                self.target_info.sysroot_dir / "lib" / "crtbeginT.o",
+                print_verbose_only=False,
+            )
+            self.create_symlink(
+                self.install_dir / "lib/linux" / f"clang_rt.crtend-{self.triple_arch}.o",
+                self.target_info.sysroot_dir / "lib" / "crtend.o",
+                print_verbose_only=False,
             )
 
 
@@ -241,7 +231,8 @@ class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
 
 
 class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
-    target = "alliance-compiler-rt-builtins"
+    target = "cheri-std093-compiler-rt-builtins"
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
     llvm_project = BuildCheriAllianceLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
 
