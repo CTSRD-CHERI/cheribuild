@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import argparse
 import collections
 import getpass
 import grp
@@ -162,6 +163,18 @@ class CheribuildActionEnum(Enum):
     actions: "list[typing.Any]"  # actually list[CheribuildActionEnum] but pytype errors on that
 
 
+class AppendConstListAction(argparse.Action):
+    def __init__(self, option_strings, dest: str, *, const: list, **kwargs):
+        super().__init__(option_strings, dest, nargs=0, **kwargs)
+        self.const = const
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        items = getattr(namespace, self.dest, None)
+        items = [] if items is None else items[:]  # Make a copy
+        items.extend(self.const)
+        setattr(namespace, self.dest, items)
+
+
 class CheriConfig(ConfigBase, metaclass=ABCMeta):
     # These properties need to be set in the derived class
     output_root: Path
@@ -221,7 +234,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
                     action.altname,
                     help=action.help_message,
                     dest="action",
-                    action="append_const",
+                    action=AppendConstListAction,
                     const=action.actions,
                 )
             else:
@@ -229,7 +242,7 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
                     action.option_name,
                     help=action.help_message,
                     dest="action",
-                    action="append_const",
+                    action=AppendConstListAction,
                     const=action.actions,
                 )
         self.print_targets_only = loader.add_commandline_only_bool_option(
