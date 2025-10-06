@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import abc
 import heapq
 import os
 import sys
@@ -87,7 +88,7 @@ class Target:
         return self.__project
 
     def _get_or_create_project_no_setup(
-        self, _: Optional[CrossCompileTarget], config, caller: "Optional[AbstractProject]"
+        self, cross_target: Optional[CrossCompileTarget], config, caller: "Optional[AbstractProject]"
     ) -> "SimpleProject":
         # Note: MultiArchTarget uses cross_target to select the right project (e.g. libcxxrt-native needs
         # libunwind-native path)
@@ -116,7 +117,7 @@ class Target:
 
     def get_dependencies(self, config: CheriConfig) -> "list[Target]":
         # Due to cyclic imports + forward declarations we need to silence a bad-return-type error here
-        return self.project_class.recursive_dependencies(config)  # pytype: disable=bad-return-type
+        return typing.cast(typing.List[Target], self.project_class.recursive_dependencies(config))
 
     # noinspection PyProtectedMember
     def cache_dependencies(self, config: CheriConfig) -> None:
@@ -258,15 +259,15 @@ class MultiArchTarget(Target):
         return "<Cross target (" + self.target_arch.name + ") " + self.name + ">"
 
 
-class _TargetAliasBase(Target):
+class _TargetAliasBase(Target, metaclass=abc.ABCMeta):
     @property
     def project_class(self) -> "type[SimpleProject]":
         assert self._project_class is not None
         return self._project_class
 
     @property
-    def xtarget(self):
-        raise NotImplementedError()
+    @abc.abstractmethod
+    def xtarget(self) -> CrossCompileTarget: ...
 
     def _create_project(self, config: CheriConfig) -> "SimpleProject":
         raise ValueError("Should not be called!")
@@ -313,7 +314,7 @@ class MultiArchTargetAlias(_TargetAliasBase):
         return "<Cross target alias " + self.name + ">"
 
     @property
-    def xtarget(self):
+    def xtarget(self) -> CrossCompileTarget:
         cross_target = self.project_class.default_architecture
         if cross_target is None:
             raise ValueError("ERROR:", self.name, "does not have a default_architecture value!")
@@ -324,10 +325,7 @@ class MultiArchTargetAlias(_TargetAliasBase):
     ) -> Target:
         assert self.derived_targets, "derived targets must not be empty"
         if cross_target is None:
-            # Use the default target:
-            cross_target = self.project_class.default_architecture
-        if cross_target is None:
-            raise LookupError("ERROR:", self.name, "does not have a default_architecture value!")
+            cross_target = self.xtarget  # Use the default target
         # find the correct derived project:
         for tgt in self.derived_targets:
             if tgt.target_arch is cross_target:
@@ -471,7 +469,7 @@ class TargetManager:
         required_arch: Optional[CrossCompileTarget] = None,
         arch_for_unqualified_targets: Optional[CrossCompileTarget] = None,
         config: CheriConfig,
-        caller: "Union[AbstractProject, str]",
+        caller: "Union[SimpleProject, str]",
     ) -> Target:
         target = self.get_target_raw(name)
         # print("get_target", name, arch, end="")
@@ -541,9 +539,9 @@ class TargetManager:
             # Initialize the full dependency cache so that sort() works (otherwise we'd have to pass config to __lt__).
             t.cache_dependencies(config)
         sort = self.sort_in_dependency_order(chosen_targets)
-        if config.start_with is not None or config.start_after is not None:
+        to_find = config.start_with if config.start_with is not None else config.start_after
+        if to_find is not None:
             assert config.start_with is None or config.start_after is None, "Can't have both set"
-            to_find = config.start_with if config.start_with is not None else config.start_after
             found_index = None
             for i, tgt in enumerate(sort):
                 if tgt.name == to_find:
