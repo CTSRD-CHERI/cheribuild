@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import heapq
 import os
 import sys
 import time
@@ -197,7 +198,6 @@ class Target:
         self._creating_project = False
         self._project_class.targets_reset()
 
-    # noinspection PyProtectedMember
     def should_run_before(self, other: "Target"):
         # if this target is one of the dependencies order it before
         other_deps = other.project_class.cached_full_dependencies()
@@ -210,10 +210,18 @@ class Target:
         if other in self_deps:
             # print(other, "is in", self, "deps -> is greater")
             return False
-        # Run targets come last, preceded by disk-image targets. Otherwise the order is unspecified
-        self_order = (self.name.startswith("run"), self.name.startswith("disk-image"))
-        other_order = (other.name.startswith("run"), other.name.startswith("disk-image"))
+        # Run targets come last, preceded by disk-image targets. Otherwise the order is unspecified, but total since
+        # we include name in the sorting decision. However, the order is not transitive, so most sorts won't work!
+        self_order = (self.name.startswith("run"), self.name.startswith("disk-image"), self.name)
+        other_order = (other.name.startswith("run"), other.name.startswith("disk-image"), other.name)
         return self_order < other_order
+
+    def name_sort_order(self) -> "tuple[bool, bool, str]":
+        """Return the order used for sorting when there are no depedencies"""
+        return self.name.startswith("run"), self.name.startswith("disk-image"), self.name
+
+    def __lt__(self, other: "Target") -> bool:
+        return self.should_run_before(other)
 
     def __repr__(self) -> str:
         return "<Target " + self.name + ">"
@@ -483,18 +491,39 @@ class TargetManager:
     @staticmethod
     def sort_in_dependency_order(targets: "typing.Iterable[Target]") -> "list[Target]":
         # remove duplicates (insert into an orderdict to keep order)
-        result = list(OrderedDict((x, True) for x in targets).keys())
-        n = len(result)
-        if n <= 1:
-            return result
-        for i in range(0, n):
-            tgt_i = result[i]
-            for j in range(i + 1, n):
-                tgt_j = result[j]
-                if tgt_j.should_run_before(tgt_i):
-                    assert not tgt_i.should_run_before(tgt_j), "circular dependency found"
-                    tgt_i = result.pop(j)
-                    result.insert(i, tgt_i)
+        targets = list(OrderedDict((x, True) for x in targets).keys())
+        # Perform a topological sort using Kahn's algorithm
+        in_degree = {node: 0 for node in targets}
+        adj: "dict[Target, list[Target]]" = {node: [] for node in targets}
+
+        for node in targets:
+            for dep in node.project_class.cached_full_dependencies():
+                if dep in adj:
+                    adj[dep].append(node)
+                    in_degree[node] += 1
+        # Place the starting nodes (those with no dependencies) in the queue and work from there.
+        # Find starting nodes (those with no dependencies) and add them to a priority queue.
+        # The priority queue will always return the node with the smallest name.
+        priority_queue = []
+        for node in targets:
+            if in_degree[node] == 0:
+                heapq.heappush(priority_queue, (node.name_sort_order(), node))
+
+        result: "list[Target]" = []
+        while priority_queue:
+            # Get the node with the alphabetically smallest name sorting order (run-* first, then alphabetical)
+            _, current_node = heapq.heappop(priority_queue)
+            result.append(current_node)
+            # For each neighbour, decrease its in-degree and add to priority queue if ready
+            for neighbour in adj[current_node]:
+                in_degree[neighbour] -= 1
+                if in_degree[neighbour] == 0:
+                    heapq.heappush(priority_queue, (neighbour.name_sort_order(), neighbour))
+
+        if len(result) != len(targets):
+            raise ValueError("A cycle was detected in the dependency graph.")
+        # Ensure that we got a valid result by running a stable sort and comparing.
+        assert result == list(sorted(result))
         return result
 
     def get_all_targets(self, explicit_targets: "list[Target]", config: CheriConfig) -> "list[Target]":

@@ -1,5 +1,6 @@
 import copy
 import inspect
+import itertools
 
 # noinspection PyUnresolvedReferences
 from pathlib import Path
@@ -67,8 +68,15 @@ def _sort_targets(
     return result
 
 
-freestanding_deps = ["llvm-native", "qemu", "gdb-native", "freestanding-cheri-sdk"]
-cheribsd_sdk_deps = [*freestanding_deps, "cheribsd-riscv64-hybrid", "cheribsd-sdk-riscv64-hybrid"]
+freestanding_deps = ["gdb-native", "llvm-native", "qemu", "freestanding-cheri-sdk"]
+cheribsd_sdk_deps = [
+    "gdb-native",
+    "llvm-native",
+    "cheribsd-riscv64-hybrid",
+    "qemu",
+    "freestanding-cheri-sdk",
+    "cheribsd-sdk-riscv64-hybrid",
+]
 
 
 @pytest.mark.parametrize(
@@ -82,9 +90,9 @@ cheribsd_sdk_deps = [*freestanding_deps, "cheribsd-riscv64-hybrid", "cheribsd-sd
             "sdk-morello-purecap",
             [
                 "morello-llvm-native",
+                "cheribsd-morello-purecap",
                 "qemu",
                 "freestanding-morello-sdk",
-                "cheribsd-morello-purecap",
                 "cheribsd-sdk-morello-purecap",
                 "sdk-morello-purecap",
             ],
@@ -94,6 +102,36 @@ cheribsd_sdk_deps = [*freestanding_deps, "cheribsd-riscv64-hybrid", "cheribsd-sd
 )
 def test_sdk(target_name: str, expected_list: "list[str]"):
     assert _sort_targets([target_name]) == expected_list
+
+
+def test_cheribsd_sorted_after_llvm():
+    assert _sort_targets(["cheribsd-riscv64-hybrid"], add_dependencies=True) == [
+        "llvm-native",
+        "cheribsd-riscv64-hybrid",
+    ]
+    cheribsd_target = target_manager.get_target_raw("cheribsd-riscv64-hybrid")
+    llvm_target = target_manager.get_target_raw("llvm-native")
+    assert llvm_target.should_run_before(cheribsd_target)
+    assert not cheribsd_target.should_run_before(llvm_target)
+
+
+def test_targets_without_deps_alpabetical():
+    # When there are no dependencies between targets we should sort alphabetically, and keep the run-* targets last:
+    targets = [
+        "run-riscv64",
+        "qemu",
+        "xorgproto-riscv64",
+        "llvm-native",
+        "icu4c-native",
+    ]
+    for target_oder in itertools.permutations(targets):
+        assert _sort_targets(list(target_oder), add_dependencies=False) == [
+            "icu4c-native",
+            "llvm-native",
+            "qemu",
+            "xorgproto-riscv64",
+            "run-riscv64",
+        ]
 
 
 @pytest.mark.parametrize(
@@ -184,12 +222,12 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
             "run-morello-hybrid",
             True,
             [
-                "qemu",
                 "morello-llvm-native",
                 "cheribsd-morello-hybrid",
                 "gmp-morello-hybrid",
                 "mpfr-morello-hybrid",
                 "gdb-morello-hybrid",
+                "qemu",
                 "disk-image-morello-hybrid",
             ],
         ),
@@ -197,12 +235,12 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
             "run-morello-purecap",
             True,
             [
-                "qemu",
                 "morello-llvm-native",
                 "cheribsd-morello-purecap",
                 "gmp-morello-hybrid-for-purecap-rootfs",
                 "mpfr-morello-hybrid-for-purecap-rootfs",
                 "gdb-morello-hybrid-for-purecap-rootfs",
+                "qemu",
                 "disk-image-morello-purecap",
             ],
         ),
@@ -210,12 +248,12 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
             "run-riscv64",
             True,
             [
-                "qemu",
                 "llvm-native",
                 "cheribsd-riscv64",
                 "gmp-riscv64",
                 "mpfr-riscv64",
                 "gdb-riscv64",
+                "qemu",
                 "disk-image-riscv64",
             ],
         ),
@@ -223,13 +261,13 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
             "run-riscv64-hybrid",
             True,
             [
-                "qemu",
                 "llvm-native",
+                "bbl-baremetal-riscv64-purecap",
                 "cheribsd-riscv64-hybrid",
                 "gmp-riscv64-hybrid",
                 "mpfr-riscv64-hybrid",
                 "gdb-riscv64-hybrid",
-                "bbl-baremetal-riscv64-purecap",
+                "qemu",
                 "disk-image-riscv64-hybrid",
             ],
         ),
@@ -237,13 +275,13 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
             "run-riscv64-purecap",
             True,
             [
-                "qemu",
                 "llvm-native",
+                "bbl-baremetal-riscv64-purecap",
                 "cheribsd-riscv64-purecap",
                 "gmp-riscv64-hybrid-for-purecap-rootfs",
                 "mpfr-riscv64-hybrid-for-purecap-rootfs",
                 "gdb-riscv64-hybrid-for-purecap-rootfs",
-                "bbl-baremetal-riscv64-purecap",
+                "qemu",
                 "disk-image-riscv64-purecap",
             ],
         ),
@@ -251,12 +289,12 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
             "run-aarch64",
             True,
             [
-                "qemu",
                 "llvm-native",
                 "cheribsd-aarch64",
                 "gmp-aarch64",
                 "mpfr-aarch64",
                 "gdb-aarch64",
+                "qemu",
                 "disk-image-aarch64",
             ],
         ),
@@ -264,12 +302,12 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
             "run-amd64",
             True,
             [
-                "qemu",
                 "llvm-native",
                 "cheribsd-amd64",
                 "gmp-amd64",
                 "mpfr-amd64",
                 "gdb-amd64",
+                "qemu",
                 "disk-image-amd64",
             ],
         ),
@@ -279,12 +317,12 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
             True,
             [
                 "install-morello-fvp",
+                "morello-firmware",
                 "morello-llvm-native",
                 "cheribsd-morello-hybrid",
                 "gmp-morello-hybrid",
                 "mpfr-morello-hybrid",
                 "gdb-morello-hybrid",
-                "morello-firmware",
                 "disk-image-morello-hybrid",
             ],
         ),
@@ -293,12 +331,12 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
             True,
             [
                 "install-morello-fvp",
+                "morello-firmware",
                 "morello-llvm-native",
                 "cheribsd-morello-purecap",
                 "gmp-morello-hybrid-for-purecap-rootfs",
                 "mpfr-morello-hybrid-for-purecap-rootfs",
                 "gdb-morello-hybrid-for-purecap-rootfs",
-                "morello-firmware",
                 "disk-image-morello-purecap",
             ],
         ),
@@ -328,10 +366,10 @@ def test_run_disk_image():
         ["run-riscv64-hybrid", "disk-image-riscv64-hybrid", "run-freebsd-riscv64", "llvm", "disk-image-freebsd-amd64"],
     ) == [
         "llvm-native",
-        "disk-image-riscv64-hybrid",
         "disk-image-freebsd-amd64",
-        "run-riscv64-hybrid",
+        "disk-image-riscv64-hybrid",
         "run-freebsd-riscv64",
+        "run-riscv64-hybrid",
     ]
 
 
@@ -378,54 +416,59 @@ def _check_deps_cached(classes):
         assert len(c.cached_full_dependencies()) > 0
 
 
-def _qtbase_x11_deps(suffix):
+def _qtbase_x11_deps(suffix, for_qtwebkit=False):
     result = [
         x + suffix
         for x in (
+            "dejavu-fonts-",
+            "epoll-shim-",
+            "libevdev-",
+            "libexpat-",
+            "dbus-",
+            "libjpeg-turbo-",
+            "libpciaccess-",
+            "libpng-",
+            "freetype2-",
+            "fontconfig-",
+            "linux-input-h-",
+            "libudev-devd-",
+            "mtdev-",
+            "libinput-",
             "shared-mime-info-",
             "sqlite-",
             "xorg-macros-",
-            "xorgproto-",
-            "xcbproto-",
-            "libxau-",
-            "xorg-pthread-stubs-",
-            "libxcb-",
             "libxtrans-",
+            "xcbproto-",
+            "xorg-pthread-stubs-",
+            "libdrm-",
+            "xorgproto-",
+            "libxau-",
+            "libxcb-keysyms-",
+            "libxcb-",
             "libx11-",
-            "xkeyboard-config-",
-            "libxkbcommon-",
+            "libice-",
+            "libsm-",
             "libxcb-render-util-",
             "libxcb-util-",
             "libxcb-image-",
             "libxcb-cursor-",
-            "libice-",
-            "libsm-",
+            "libxcb-wm-",
             "libxext-",
+            "libglvnd-",
             "libxfixes-",
             "libxi-",
             "libxtst-",
-            "libxcb-wm-",
-            "libxcb-keysyms-",
-            "libpng-",
-            "libjpeg-turbo-",
-            "dejavu-fonts-",
-            "libexpat-",
-            "dbus-",
-            "freetype2-",
-            "fontconfig-",
-            "linux-input-h-",
-            "mtdev-",
-            "libevdev-",
-            "libudev-devd-",
-            "epoll-shim-",
-            "libinput-",
-            "libglvnd-",
-            "libpciaccess-",
-            "libdrm-",
+            "xkeyboard-config-",
+            "libxkbcommon-",
         )
     ]
     if suffix != "native":
         result.insert(result.index("shared-mime-info-" + suffix), "shared-mime-info-native")
+    if for_qtwebkit:
+        result.insert(result.index("libevdev-" + suffix), "icu4c-" + suffix)
+        if suffix != "native":
+            result.insert(result.index("icu4c-" + suffix), "icu4c-native")
+        result.insert(result.index("linux-input-h-" + suffix), "libxml2-" + suffix)
     return result
 
 
@@ -509,41 +552,63 @@ def test_webkit_cached_deps():
     assert inspect.getattr_static(webkit_riscv, "dependencies") == ("qtbase", "icu4c", "libxml2", "sqlite")
 
 
+def test_gdb_cached_deps():
+    target_names = _sort_targets(["gdb-morello-hybrid-for-purecap-rootfs"], add_dependencies=True, skip_sdk=True)
+    assert target_names == [
+        "gmp-morello-hybrid-for-purecap-rootfs",
+        "mpfr-morello-hybrid-for-purecap-rootfs",
+        "gdb-morello-hybrid-for-purecap-rootfs",
+    ]
+    gdb_morello_hybrid = target_manager.get_target_raw("gdb-morello-hybrid-for-purecap-rootfs").project_class
+    # LLVM and CheriBSD is not included in the list above since we did not request them, but full deps should include
+    all_names = list(sorted([x.name for x in gdb_morello_hybrid.cached_full_dependencies()]))
+    assert all_names == [
+        "cheribsd-morello-purecap",
+        "gmp-morello-hybrid-for-purecap-rootfs",
+        "morello-llvm-native",
+        "mpfr-morello-hybrid-for-purecap-rootfs",
+    ]
+    sorted_by_order = _sort_targets(
+        [*all_names, "gdb-morello-hybrid-for-purecap-rootfs"], add_dependencies=False, skip_sdk=True
+    )
+    assert sorted_by_order == [
+        "morello-llvm-native",
+        "cheribsd-morello-purecap",
+        "gmp-morello-hybrid-for-purecap-rootfs",
+        "mpfr-morello-hybrid-for-purecap-rootfs",
+        "gdb-morello-hybrid-for-purecap-rootfs",
+    ]
+
+
 def test_webkit_deps_2():
     _avoid_native_qtbase_x11_deps()
 
     # SDK should not add new targets
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=False) == [
+        "icu4c-native",
+        "libxml2-native",
         "shared-mime-info-native",
         "sqlite-native",
         "qtbase-native",
-        "icu4c-native",
-        "libxml2-native",
         "qtwebkit-native",
     ]
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=True) == [
+        "icu4c-native",
+        "libxml2-native",
         "shared-mime-info-native",
         "sqlite-native",
         "qtbase-native",
-        "icu4c-native",
-        "libxml2-native",
         "qtwebkit-native",
     ]
 
     assert _sort_targets(["qtwebkit-riscv64"], add_dependencies=True, skip_sdk=True) == [
-        *_qtbase_x11_deps("riscv64"),
+        *_qtbase_x11_deps("riscv64", for_qtwebkit=True),
         "qtbase-riscv64",
-        "icu4c-native",
-        "icu4c-riscv64",
-        "libxml2-riscv64",
         "qtwebkit-riscv64",
     ]
     assert _sort_targets(["qtwebkit-riscv64-purecap"], add_dependencies=True, skip_sdk=True) == [
-        *_qtbase_x11_deps("riscv64-purecap"),
+        *_qtbase_x11_deps("riscv64-purecap", for_qtwebkit=True),
         "qtbase-riscv64-purecap",
-        "icu4c-native",
-        "icu4c-riscv64-purecap",
-        "libxml2-riscv64-purecap",
         "qtwebkit-riscv64-purecap",
     ]
 
@@ -568,12 +633,12 @@ def test_riscv():
         "disk-image-riscv64",
     ]
     assert _sort_targets(["run-riscv64"], add_dependencies=True, skip_sdk=False) == [
-        "qemu",
         "llvm-native",
         "cheribsd-riscv64",
         "gmp-riscv64",
         "mpfr-riscv64",
         "gdb-riscv64",
+        "qemu",
         "disk-image-riscv64",
         "run-riscv64",
     ]
