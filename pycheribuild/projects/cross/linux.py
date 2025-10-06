@@ -182,27 +182,18 @@ class LaunchCheriLinux(LaunchQEMUBase):
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
-        result = tuple()
+        result = super().dependencies(config)
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             result += ("cheri-std093-linux-kernel",)
-            result += ("cheri-std093-llvm",)
-            result += ("cheri-std093-gdb-native",)
-            result += ("cheri-std093-qemu",)
             result += ("cheri-std093-opensbi-baremetal-riscv64-purecap",)
             # TODO: Add more projects (eg busybox and muslc once released and is public)
         elif cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-            result += ("morello-llvm-native",)
-            result += ("gdb-native",)
-            result += ("qemu",)
-            result += ("morello-kernel",)
+            result += ("morello-linux-kernel",)
             result += ("morello-muslc",)
             result += ("morello-compiler-rt-builtins",)
             result += ("morello-busybox",)
         else:
             result += ("linux-kernel",)
-            result += ("upstream-llvm",)
-            result += ("gdb-native",)
-            result += ("qemu",)
             result += ("muslc",)
             result += ("compiler-rt-builtins",)
             result += ("busybox",)
