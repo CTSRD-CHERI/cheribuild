@@ -66,16 +66,15 @@ class BuildLinux(CrossCompileAutotoolsProject):
         self.check_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
 
     def _enable_config(self, option):
-        with open(self.build_dir / ".config") as f:
-            lines = f.readlines()
+        config_contents = self.read_file(self.build_dir / ".config")
+        lines = config_contents.splitlines()
         for i, line in enumerate(lines):
             if line.startswith(option + "=") or line.startswith("# " + option):
                 lines[i] = f"{option}=y\n"
                 break
         else:
             lines.append(f"{option}=y\n")
-        with open(self.build_dir / ".config", "w") as f:
-            f.writelines(lines)
+        self.write_file(self.build_dir / ".config", "\n".join(lines), overwrite=True)
 
     def setup(self) -> None:
         super().setup()
