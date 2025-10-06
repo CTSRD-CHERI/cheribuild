@@ -912,7 +912,7 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
 
 
 class LinuxMorelloTargetInfo(LinuxTargetInfo):
-    shortname: str = "Morello-Linux"
+    shortname: str = "Linux"
     uses_morello_llvm: bool = True
 
     @classmethod
