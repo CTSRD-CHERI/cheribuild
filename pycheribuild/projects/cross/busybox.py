@@ -52,6 +52,10 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
 
+    @classmethod
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        return ("muslc",)
+
     @classproperty
     def default_install_dir(self):
         return DefaultInstallDir.ROOTFS_LOCALBASE
@@ -85,7 +89,7 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
         )
 
     def compile(self, **kwargs) -> None:
-        self.run_make()
+        self.run_make("busybox")
 
     def configure(self, **kwargs) -> None:
         self.run_make("defconfig", cwd=self.source_dir)
@@ -111,6 +115,10 @@ class BuildMorelloBusyBox(BuildBusyBox):
     target = "morello-busybox"
     repository = GitRepository("https://git.morello-project.org/morello/morello-busybox.git")
     supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+
+    @classmethod
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        return ("morello-muslc",)
 
     def setup(self) -> None:
         # Morello Buxybox has its own modified Makefile to work with LLVM/Clang and Morello
