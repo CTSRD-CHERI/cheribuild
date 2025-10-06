@@ -33,7 +33,7 @@ import sys
 import time
 import typing
 from collections import OrderedDict
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Union, final
 
 from .config.chericonfig import CheriConfig
 from .config.target_info import AbstractProject, CrossCompileTarget
@@ -43,7 +43,6 @@ from .utils import (
     add_error_context,
     coloured,
     fatal_error,
-    final,
     query_yes_no,
     status_update,
     warning_message,

@@ -60,7 +60,6 @@ __all__ = [
     "default_make_jobs_count",
     "error_message",
     "fatal_error",
-    "final",
     "find_free_port",
     "get_global_config",
     "have_working_internet_connection",
@@ -82,13 +81,6 @@ if sys.version_info < (3, 8, 0):  # noqa: UP036
     sys.exit("This script requires at least Python 3.8.0")
 
 Type_T = typing.TypeVar("Type_T")
-
-try:
-    from typing import final
-except ImportError:
-
-    def final(f: Type_T) -> Type_T:
-        return f
 
 
 # noinspection PyPep8Naming
