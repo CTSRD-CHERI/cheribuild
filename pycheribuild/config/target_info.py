@@ -35,12 +35,12 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from typing import ClassVar, Optional
+from typing import ClassVar, Optional, final
 
 from .chericonfig import AArch64FloatSimdOptions, CheriConfig, MipsFloatAbi, RiscvCheriISA, RiscvFloatAbi
 from ..filesystemutils import FileSystemUtils
 from ..processutils import CompilerInfo, get_compiler_info
-from ..utils import OSInfo, Type_T, fatal_error, final, status_update, warning_message
+from ..utils import OSInfo, Type_T, fatal_error, status_update, warning_message
 
 __all__ = [
     "AArch64FloatSimdOptions",
@@ -439,7 +439,7 @@ class TargetInfo(ABC):
         """E.g. for baremetal target infos we have to link statically (and add the -static linker flag)"""
         return False
 
-    @final  # pyrefly: ignore[bad-argument-type]
+    @final
     def get_rootfs_project(
         self, *, t: "type[_AnyProject]", caller: AbstractProject, xtarget: "Optional[CrossCompileTarget]" = None
     ) -> _AnyProject:
