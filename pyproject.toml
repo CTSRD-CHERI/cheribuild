@@ -38,3 +38,37 @@ target-version = ['py38']
 extend-exclude = '''3rdparty|\.pytype|pycheribuild'''
 preview = true
 required-version = '23'
+
+[tool.pyrefly]
+project-includes = [
+    "pycheribuild", "test",
+]
+search-path = [
+    ".",
+    "3rdparty/junitparser",
+    "3rdparty/pexpect",
+    "3rdparty/ptyprocess",
+]
+python-version = "3.8.0"
+python-platform = "linux"
+
+[tool.pyrefly.errors]
+# bad-override would cause lots of churn
+bad-override = false
+# TODO: enable all of these one-by-one
+unsupported-operation = false
+missing-attribute = false
+no-access = false
+bad-assignment = false
+bad-argument-type = false
+not-callable = false
+no-matching-overload = false
+bad-argument-count = false
+bad-return = false
+bad-function-definition = false
+not-iterable = false
+bad-param-name-override = false
+invalid-inheritance = false
+read-only = false
+redundant-condition = false
+redundant-cast = false
