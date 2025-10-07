@@ -31,7 +31,7 @@ import functools
 import platform
 import re
 import typing
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
@@ -160,7 +160,7 @@ _INVALID_INSTALL_DIR: Path = Path("/this/dir/should/be/overwritten/and/not/used/
 _DO_NOT_INSTALL_PATH: Path = Path("/this/project/should/not/be/installed!!!!")
 
 
-class AbstractProject(FileSystemUtils):
+class AbstractProject(FileSystemUtils, metaclass=ABCMeta):
     """A base class for (Simple)Project that exposes only the fields/methods needed in target_info."""
 
     _xtarget: "ClassVar[Optional[CrossCompileTarget]]" = None
@@ -171,16 +171,27 @@ class AbstractProject(FileSystemUtils):
     auto_var_init: AutoVarInit  # Needed for essential_compiler_flags
     config: CheriConfig  # pyrefly: ignore[bad-override]
     crosscompile_target: "CrossCompileTarget"
+    target_info: "TargetInfo"
     target: str
+
+    _setup_called: bool
+    _setup_late_called: bool
+    _system_deps_checked: bool
+    # Old names in the config file (per-architecture) for backwards compat
+    _config_file_aliases: "tuple[str, ...]" = tuple()
 
     # Allow overrides for libc++/llvm-test-suite
     custom_c_preprocessor: Optional[Path] = None
     custom_c_compiler: Optional[Path] = None
     custom_cxx_compiler: Optional[Path] = None
 
-    def __init__(self, config):
+    def __init__(self, config: CheriConfig, *, crosscompile_target: "CrossCompileTarget") -> None:
         super().__init__(config)
+        self.crosscompile_target = crosscompile_target
+        assert self._xtarget == crosscompile_target, "Failed to update all callers?"
         self._init_called = False
+        self._setup_called = False
+        self._setup_late_called = False
 
     def uses_softfloat_by_default(self) -> bool: ...
 
@@ -211,18 +222,74 @@ class AbstractProject(FileSystemUtils):
         assert target is not None
         return target
 
+    def setup(self) -> None:
+        """
+        Class setup that is run just before process()/run_tests/run_benchmarks. This ensures that all dependent targets
+        have been built before and therefore querying e.g. the target compiler will work correctly.
+        """
+        assert not self._setup_called, "Should only be called once"
+        assert not self._setup_late_called, "Should only be called once"
+        self._setup_called = True
+
+    def setup_late(self) -> None:
+        """
+        Like setup(), but called after setup() has been executed for all child classes.
+        This can be used for example when adding configure arguments that depend on state modifications in setup().
+        """
+        assert not self._setup_late_called, "Should only be called once"
+        self._setup_late_called = True
+
     @classmethod
+    @abstractmethod
     def get_instance(
         cls: "type[Type_T]",
         caller: "Optional[AbstractProject]",
         config: "Optional[CheriConfig]" = None,
         cross_target: "Optional[CrossCompileTarget]" = None,
-    ) -> "Type_T":
-        raise NotImplementedError()
+    ) -> "Type_T": ...
 
     @classmethod
     def get_install_dir(cls, caller: "AbstractProject", cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
         raise NotImplementedError()
+
+    @classmethod
+    @abstractmethod
+    def recursive_dependencies(cls, config: CheriConfig) -> list: ...
+
+    @classmethod
+    @abstractmethod
+    def cached_full_dependencies(cls) -> list: ...
+
+    @classmethod
+    @abstractmethod
+    def targets_reset(cls) -> "list[str]": ...
+
+    @classmethod
+    @abstractmethod
+    def all_dependency_names(cls, config: CheriConfig) -> "list[str]": ...
+
+    @classmethod
+    @abstractmethod
+    def _cache_full_dependencies(cls, config, *, allow_already_cached=False) -> None: ...
+
+    # The main API that needs to be implemented:
+    @classmethod
+    @abstractmethod
+    def setup_config_options(cls, **kwargs) -> None: ...
+
+    @abstractmethod
+    def check_system_dependencies(self) -> None: ...
+
+    @abstractmethod
+    def process(self) -> None: ...
+
+    def run_tests(self) -> None:
+        # For the --test option
+        status_update("No tests defined for target", self.target)
+
+    def run_benchmarks(self) -> None:
+        # For the --benchmark option
+        status_update("No benchmarks defined for target", self.target)
 
 
 _AnyProject = typing.TypeVar("_AnyProject", bound=AbstractProject)

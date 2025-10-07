@@ -88,7 +88,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         self.common_warning_flags.append("-Werror=return-type")
         self.common_warning_flags.append("-Wall")
 
-        tinfo = cast(self.target_info, BaremetalClangTargetInfo)
+        tinfo = cast(BaremetalClangTargetInfo, self.target_info)
         # Assume hardfloat architecture and softfloat ABI
         self.configure_args.append(
             "--with-arch=" + tinfo.get_riscv_arch_string(self.crosscompile_target, self.config, softfloat=False),

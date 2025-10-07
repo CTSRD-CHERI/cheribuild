@@ -34,7 +34,7 @@ from typing import ClassVar, Iterable, Optional
 
 from ..cmake_project import CMakeProject
 from ..project import BuildType, ComputedDefaultValue, DefaultInstallDir, GitRepository
-from ..simple_project import SimpleProject
+from ..simple_project import SimpleProject, SimpleProjectWithoutDefinitionHook
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import (
     BuildLLVMInterface,
@@ -43,7 +43,7 @@ from ...config.compilation_targets import (
     CompilationTargets,
     FreeBSDTargetInfo,
 )
-from ...config.target_info import AbstractProject, CompilerType, CrossCompileTarget
+from ...config.target_info import CompilerType, CrossCompileTarget
 from ...processutils import CompilerInfo
 from ...utils import InstallInstructions, OSInfo, ThreadJoiner, is_jenkins_build, remove_tuple_duplicates
 
@@ -575,11 +575,14 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
 
     def add_compiler_with_config_file(self, prefix: str, target: CrossCompileTarget):
         # Create a fake project class that has the required properties needed for essential_compiler_and_linker_flags
-        class MockProject(AbstractProject):
+        class MockProject(SimpleProjectWithoutDefinitionHook):
             def __init__(self, config, _target: CrossCompileTarget):
-                super().__init__(config)
-                self.crosscompile_target = _target
+                self._xtarget = _target
+                super().__init__(config, crosscompile_target=_target)
                 self.needs_sysroot = True
+
+            def process(self):
+                raise NotImplementedError()
 
         prefix += target.build_suffix(self.config, include_os=False)
         # Instantiate the target_info using the mock project:

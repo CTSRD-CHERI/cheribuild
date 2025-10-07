@@ -33,7 +33,7 @@ from typing import Optional
 
 from .config.jenkinsconfig import CheriConfig, JenkinsConfig
 from .config.loader import CommandLineConfigOption
-from .config.target_info import AbstractProject, CrossCompileTarget
+from .config.target_info import CrossCompileTarget
 from .projects.project import Project
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
 from .utils import fatal_error, status_update
@@ -67,11 +67,8 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
     def expected_install_root(tgt: Target) -> Path:
         if tgt in sysroot_targets:
             # noinspection PyProtectedMember
-            proj = tgt._try_get_project()
-            if proj is None:
-                target_info = tgt.xtarget.create_target_info(AbstractProject(cheri_config))
-            else:
-                target_info = proj.target_info
+            proj = tgt._get_or_create_project_no_setup(cross_target=None, config=cheri_config, caller=None)
+            target_info = proj.target_info
             sysroot_dir = target_info.sysroot_dir
             return sysroot_dir
         else:

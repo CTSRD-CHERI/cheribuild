@@ -38,7 +38,7 @@ import sys
 import threading
 import time
 import typing
-from abc import ABCMeta, abstractmethod
+from abc import ABC, ABCMeta
 from pathlib import Path
 from types import MappingProxyType
 from typing import Callable, Optional, Union
@@ -79,6 +79,7 @@ __all__ = [
     "IntConfigOption",
     "ReuseOtherProjectBuildDir",
     "SimpleProject",
+    "SimpleProjectWithoutDefinitionHook",
     "TargetAlias",
     "TargetAliasWithDependencies",
     "_cached_get_homebrew_prefix",
@@ -107,136 +108,6 @@ def _default_stdout_filter(_: bytes) -> "typing.NoReturn":
     raise NotImplementedError("Should never be called, this is a dummy")
 
 
-# noinspection PyProtectedMember
-class ProjectSubclassDefinitionHook(ABCMeta):
-    def __new__(cls, name, bases, dct):
-        # We have to set _local_config_options to a new dict here, as this is the first hook that runs before
-        # the __set_name__ function on class members is called (__init_subclass__ is too late).
-        for base in bases:
-            old = getattr(base, "_local_config_options", None)
-            if old is not None:
-                # Create a copy of the dictionary so that modifying it does not change the value in the base class.
-                dct = dict(dct)
-                dct["_local_config_options"] = dict(old)
-        return super().__new__(cls, name, bases, dct)
-
-    def __init__(cls, name: str, bases, clsdict) -> None:
-        super().__init__(name, bases, clsdict)
-        if typing.TYPE_CHECKING:
-            assert issubclass(cls, SimpleProject)
-        if clsdict.get("do_not_add_to_targets") is not None:
-            if clsdict.get("do_not_add_to_targets") is True:
-                return  # if do_not_add_to_targets is defined within the class we skip it
-        elif name.endswith("Base"):
-            fatal_error(
-                "Found class name ending in Base (",
-                name,
-                ") but do_not_add_to_targets was not defined",
-                sep="",
-                pretend=False,
-            )
-
-        def die(msg):
-            sys.exit(inspect.getfile(cls) + ":" + str(inspect.findsource(cls)[1] + 1) + ": error: " + msg)
-
-        # load "target" field first then use that to infer the default source/build/install dir names
-        target_name = None
-        if "target" in clsdict:
-            target_name = clsdict["target"]
-        elif name.startswith("Build"):
-            target_name = name[len("Build") :].replace("_", "-").lower()
-            cls.target = target_name
-        if not target_name:
-            die(
-                "target name is not set and cannot infer from class "
-                + name
-                + " -- set target= or do_not_add_to_targets=True"
-            )
-        # Make the local config options dictionary read-only
-        cls._local_config_options = MappingProxyType(cls._local_config_options)
-
-        # The default source/build/install directory name defaults to the target unless explicitly overwritten.
-        if "default_directory_basename" not in clsdict and not cls.inherit_default_directory_basename:
-            cls.default_directory_basename = target_name
-
-        if "project_name" in clsdict:
-            die(
-                "project_name should no longer be used, change the definition of class "
-                + name
-                + " to include target and/or default_directory_basename"
-            )
-
-        if cls.__dict__.get("dependencies_must_be_built") and not cls.dependencies:
-            sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
-        supported_archs = cls.supported_architectures
-        assert supported_archs, "Must not be empty: " + str(supported_archs)
-        assert isinstance(supported_archs, tuple)
-        assert len(set(supported_archs)) == len(supported_archs), (
-            "Duplicates in supported archs for " + cls.__name__ + ": " + str(supported_archs)
-        )
-        # TODO: if len(cls.supported_architectures) > 1:
-        if cls._always_add_suffixed_targets or len(supported_archs) > 1:
-            # Add a the target for the default architecture
-            base_target = MultiArchTargetAlias(target_name, cls)
-            # Add aliases for targets that support multiple architectures and have a clear default value.
-            # E.g. llvm -> llvm-native, but not cheribsd since it's not clear which variant should be built there.
-            if cls.default_architecture is not None:
-                target_manager.add_target(base_target)
-            else:
-                target_manager.add_target_for_config_options_only(base_target)
-
-            assert cls._xtarget is None, "Should not be set!"
-            # assert cls._should_not_be_instantiated, "multiarch base classes should not be instantiated"
-            for arch in supported_archs:
-                assert isinstance(arch, CrossCompileTarget)
-                # create a new class to ensure different build dirs and config name strings
-                if cls.custom_target_name is not None:
-                    custom_target_cb = cls.custom_target_name
-                    new_name = custom_target_cb(target_name, arch)
-                else:
-                    if cls.include_os_in_target_suffix:
-                        new_name = target_name + "-" + arch.generic_target_suffix
-                    else:
-                        # Don't add the OS name to the target suffixed when building the OS: we want the target
-                        # to be called freebsd-amd64 and not freebsd-freebsd-amd64.
-                        new_name = target_name + "-" + arch.base_target_suffix
-                new_dict = cls.__dict__.copy()
-                new_dict["_xtarget"] = arch
-                new_dict["_should_not_be_instantiated"] = False  # unlike the subclass we can instantiate these
-                new_dict["do_not_add_to_targets"] = True  # We are already adding it here
-                new_dict["target"] = new_name
-                new_dict["synthetic_base"] = cls  # We are already adding it here
-                # noinspection PyTypeChecker
-                new_cls = type(cls.__name__ + "_" + arch.name, (cls, *cls.__bases__), new_dict)
-                assert issubclass(new_cls, SimpleProject)
-                target_manager.add_target(MultiArchTarget(new_name, new_cls, arch, base_target))
-                # Handle old names for FreeBSD/CheriBSD targets in the config file:
-                if arch.target_info_cls.is_freebsd() and not arch.target_info_cls.is_native():
-                    if arch.target_info_cls.is_cheribsd():
-                        if arch.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
-                            new_cls._config_file_aliases += (replace_one(new_name, "-mips64-", "-mips-"),)
-                        elif arch.is_mips(include_purecap=False):
-                            new_cls._config_file_aliases += (replace_one(new_name, "-mips64", "-mips-nocheri"),)
-                    else:
-                        # FreeBSD target suffixes have also changed over time
-                        if arch.is_mips(include_purecap=False):
-                            new_cls._config_file_aliases += (replace_one(new_name, "-mips64", "-mips"),)
-                        elif arch.is_x86_64(include_purecap=False):
-                            new_cls._config_file_aliases += (
-                                replace_one(new_name, "-amd64", "-x86"),
-                                replace_one(new_name, "-amd64", "-x86_64"),
-                            )
-                if len(set(new_cls._config_file_aliases)) != len(new_cls._config_file_aliases):
-                    raise ValueError(f"Duplicate aliases for {new_name}: {new_cls._config_file_aliases}")
-        else:
-            assert len(supported_archs) == 1
-            # Only one target is supported:
-            cls._xtarget = supported_archs[0]
-            cls._should_not_be_instantiated = False  # can be instantiated
-            target_manager.add_target(Target(target_name, cls))
-        # print("Adding target", target_name, "with deps:", cls.dependencies)
-
-
 class PerProjectConfigOption:
     def __init__(self, name: str, help: str, default: "typing.Any", **kwargs):
         self._name = name
@@ -249,7 +120,8 @@ class PerProjectConfigOption:
 
     # noinspection PyProtectedMember
     def __set_name__(self, owner: "type[SimpleProject]", name: str):
-        owner._local_config_options[name] = self
+        # we know that _local_config_options is still a dict and not a MappingProxy when called here.
+        typing.cast(typing.MutableMapping[str, PerProjectConfigOption], owner._local_config_options)[name] = self
 
     def __get__(self, instance: "SimpleProject", owner: "type[SimpleProject]"):
         return ValueError("Should have been replaced!")
@@ -369,18 +241,16 @@ def _cached_get_homebrew_prefix(package: "Optional[str]", config: CheriConfig):
 _clear_line_sequence: bytes = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
 
 
-class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING else ProjectSubclassDefinitionHook):
+class SimpleProjectWithoutDefinitionHook(AbstractProject, ABC):
     _commandline_option_group: typing.Any = None
-    _config_loader: ConfigLoaderBase = None
+    _config_loader: ConfigLoaderBase
 
     # The source dir/build dir names will be inferred from the target name unless default_directory_basename is set.
     # Note that this is not inherited by default unless you set inherit_default_directory_basename (which itself is
     # inherited as normal, so can be set in a base class).
     default_directory_basename: Optional[str] = None
     inherit_default_directory_basename: bool = False
-    _local_config_options: "typing.ClassVar[dict[str, PerProjectConfigOption]]" = dict()
-    # Old names in the config file (per-architecture) for backwards compat
-    _config_file_aliases: "tuple[str, ...]" = tuple()
+    _local_config_options: "typing.ClassVar[typing.Mapping[str, PerProjectConfigOption]]" = dict()
     dependencies: "tuple[str, ...]" = tuple()
     dependencies_must_be_built: bool = False
     direct_dependencies_only: bool = False
@@ -407,16 +277,10 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     auto_var_init: AutoVarInit = AutoVarInit.NONE
     # Whether to hide the options from the default --help output (only add to --help-hidden)
     hide_options_from_help: bool = False
-    # Project subclasses will automatically have a target based on their name generated unless they add this:
-    do_not_add_to_targets: bool = True
     # Default to NATIVE only
     supported_architectures: "typing.ClassVar[tuple[CrossCompileTarget, ...]]" = (BasicCompilationTargets.NATIVE,)
     # The architecture to build for the unsuffixed target name (defaults to supported_architectures[0] if no match)
     _default_architecture: "Optional[CrossCompileTarget]" = None
-
-    # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
-    # To check that we don't create an crosscompile targets without a fixed target
-    _should_not_be_instantiated: bool = True
     # To prevent non-suffixed targets in case the only target is not NATIVE
     _always_add_suffixed_targets: bool = False  # add a suffixed target only if more than one variant is supported
 
@@ -569,7 +433,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         result is filtered based on various parameters such as config.include_dependencies.
         """
         # look only in __dict__ to avoid parent class lookup
-        result: "Optional[list[Target]]" = cls.__dict__.get("_cached_filtered_deps", None)
+        result = typing.cast(Optional[typing.List[Target]], cls.__dict__.get("_cached_filtered_deps", None))
         if result is None:
             with_toolchain_deps = config.include_toolchain_dependencies and not cls.skip_toolchain_dependencies
             with_sdk_deps = not config.skip_sdk
@@ -641,7 +505,7 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     @classmethod
     def cached_full_dependencies(cls) -> "list[Target]":
         # look only in __dict__ to avoid parent class lookup
-        cached: "Optional[list[Target]]" = cls.__dict__.get("_cached_full_deps", None)
+        cached = typing.cast(Optional[typing.List[Target]], cls.__dict__.get("_cached_full_deps", None))
         if cached is None:
             raise ValueError("cached_full_dependencies called before value was cached")
         return cached
@@ -867,20 +731,20 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         if isinstance(target, MultiArchTarget):
             # check for exact match
             if target.target_arch is arch:
-                return target.project_class
+                return typing.cast(typing.Type[T], target.project_class)
             # Otherwise fall back to the target alias and find the matching one
             target = target.base_target
         if isinstance(target, MultiArchTargetAlias):
             if arch is None:
-                return target.project_class
+                return typing.cast(typing.Type[T], target.project_class)
             for t in target.derived_targets:
                 if t.target_arch is arch:
-                    return t.project_class
+                    return typing.cast(typing.Type[T], t.project_class)
         elif isinstance(target, Target):
             # single architecture target
             result = target.project_class
             if arch is None or result._xtarget is arch:
-                return result
+                return typing.cast(typing.Type[T], result)
         raise LookupError(f"Invalid arch {arch} for target {name}")
 
     @property
@@ -1082,7 +946,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     ) -> Path:
         return typing.cast(Path, cls.add_config_option(name, kind=Path, default=default, **kwargs))
 
-    __config_options_set: "dict[type[SimpleProject], bool]" = dict()
     with_clean = BoolConfigOption(
         "clean",
         default=ComputedDefaultValue(lambda config, proj: config.clean, "the value of the global --clean option"),
@@ -1091,8 +954,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
-        # assert cls not in cls.__config_options_set, "Setup called twice?"
-        cls.__config_options_set[cls] = True
         for k, v in cls._local_config_options.items():
             # If the option has been overwritten to be a constant in a subclass we should not register it - check the
             # type of the ClassVar to determine if this is actually needed.
@@ -1103,16 +964,8 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     def __init__(self, config: CheriConfig, *, crosscompile_target: CrossCompileTarget) -> None:
         assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
         self.target_info = self._xtarget.create_target_info(self)
-        super().__init__(config)
-        self.crosscompile_target = crosscompile_target
-        assert self._xtarget == crosscompile_target, "Failed to update all callers?"
-        assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
-        assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
-            self.__class__
-        )
+        super().__init__(config, crosscompile_target=crosscompile_target)
         self._system_deps_checked = False
-        self._setup_called = False
-        self._setup_late_called = False
         self._last_stdout_line_can_be_overwritten = False
         assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
         if self._build_dir is not None:
@@ -1128,23 +981,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
     @property
     def build_dir(self) -> Path:
         return self._initial_build_dir
-
-    def setup(self) -> None:
-        """
-        Class setup that is run just before process()/run_tests/run_benchmarks. This ensures that all dependent targets
-        have been built before and therefore querying e.g. the target compiler will work correctly.
-        """
-        assert not self._setup_called, "Should only be called once"
-        assert not self._setup_late_called, "Should only be called once"
-        self._setup_called = True
-
-    def setup_late(self) -> None:
-        """
-        Like setup(), but called after setup() has been executed for all child classes.
-        This can be used for example when adding configure arguments that depend on state modifications in setup().
-        """
-        assert not self._setup_late_called, "Should only be called once"
-        self._setup_late_called = True
 
     def _validate_cheribuild_target_for_system_deps(self, cheribuild_target: "Optional[str]"):
         if not cheribuild_target:
@@ -1655,17 +1491,6 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
                 self.dependency_error("Could not find homebrew")
         return prefix
 
-    @abstractmethod
-    def process(self) -> None: ...
-
-    def run_tests(self) -> None:
-        # for the --test option
-        status_update("No tests defined for target", self.target)
-
-    def run_benchmarks(self) -> None:
-        # for the --benchmark option
-        status_update("No benchmarks defined for target", self.target)
-
     @staticmethod
     def get_test_script_path(script_name: str) -> Path:
         # noinspection PyUnusedLocal
@@ -1741,6 +1566,158 @@ class SimpleProject(AbstractProject, metaclass=ABCMeta if typing.TYPE_CHECKING e
         # For unit tests to get a fresh instance
         cls._cached_full_deps = None
         cls._cached_filtered_deps = None
+
+
+# noinspection PyProtectedMember
+class ProjectSubclassDefinitionHook(ABCMeta):
+    def __new__(cls, name, bases, dct):
+        # We have to set _local_config_options to a new dict here, as this is the first hook that runs before
+        # the __set_name__ function on class members is called (__init_subclass__ is too late).
+        for base in bases:
+            old = getattr(base, "_local_config_options", None)
+            if old is not None:
+                # Create a copy of the dictionary so that modifying it does not change the value in the base class.
+                dct = dict(dct)
+                dct["_local_config_options"] = dict(old)
+        return super().__new__(cls, name, bases, dct)
+
+    def __init__(cls, name: str, bases, clsdict) -> None:
+        super().__init__(name, bases, clsdict)
+        assert issubclass(cls, SimpleProjectWithoutDefinitionHook)
+        if clsdict.get("do_not_add_to_targets") is not None:
+            if clsdict.get("do_not_add_to_targets") is True:
+                return  # if do_not_add_to_targets is defined within the class we skip it
+        elif name.endswith("Base"):
+            fatal_error(
+                "Found class name ending in Base (",
+                name,
+                ") but do_not_add_to_targets was not defined",
+                sep="",
+                pretend=False,
+            )
+
+        def die(msg):
+            sys.exit(inspect.getfile(cls) + ":" + str(inspect.findsource(cls)[1] + 1) + ": error: " + msg)
+
+        # load "target" field first then use that to infer the default source/build/install dir names
+        target_name = None
+        if "target" in clsdict:
+            target_name = clsdict["target"]
+        elif name.startswith("Build"):
+            target_name = name[len("Build") :].replace("_", "-").lower()
+            cls.target = target_name
+        if not target_name:
+            die(
+                "target name is not set and cannot infer from class "
+                + name
+                + " -- set target= or do_not_add_to_targets=True"
+            )
+        # Make the local config options dictionary read-only
+        cls._local_config_options = MappingProxyType(cls._local_config_options)
+
+        # The default source/build/install directory name defaults to the target unless explicitly overwritten.
+        if "default_directory_basename" not in clsdict and not cls.inherit_default_directory_basename:
+            cls.default_directory_basename = target_name
+
+        if "project_name" in clsdict:
+            die(
+                "project_name should no longer be used, change the definition of class "
+                + name
+                + " to include target and/or default_directory_basename"
+            )
+
+        if cls.__dict__.get("dependencies_must_be_built") and not cls.dependencies:
+            sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
+        supported_archs = cls.supported_architectures
+        assert supported_archs, "Must not be empty: " + str(supported_archs)
+        assert isinstance(supported_archs, tuple)
+        assert len(set(supported_archs)) == len(supported_archs), (
+            "Duplicates in supported archs for " + cls.__name__ + ": " + str(supported_archs)
+        )
+        # TODO: if len(cls.supported_architectures) > 1:
+        if cls._always_add_suffixed_targets or len(supported_archs) > 1:
+            # Add a the target for the default architecture
+            base_target = MultiArchTargetAlias(target_name, cls)
+            # Add aliases for targets that support multiple architectures and have a clear default value.
+            # E.g. llvm -> llvm-native, but not cheribsd since it's not clear which variant should be built there.
+            if cls.default_architecture is not None:
+                target_manager.add_target(base_target)
+            else:
+                target_manager.add_target_for_config_options_only(base_target)
+
+            assert cls._xtarget is None, "Should not be set!"
+            # assert cls._should_not_be_instantiated, "multiarch base classes should not be instantiated"
+            for arch in supported_archs:
+                assert isinstance(arch, CrossCompileTarget)
+                # create a new class to ensure different build dirs and config name strings
+                if cls.custom_target_name is not None:
+                    custom_target_cb = cls.custom_target_name
+                    new_name = custom_target_cb(target_name, arch)
+                else:
+                    if cls.include_os_in_target_suffix:
+                        new_name = target_name + "-" + arch.generic_target_suffix
+                    else:
+                        # Don't add the OS name to the target suffixed when building the OS: we want the target
+                        # to be called freebsd-amd64 and not freebsd-freebsd-amd64.
+                        new_name = target_name + "-" + arch.base_target_suffix
+                new_dict = cls.__dict__.copy()
+                new_dict["_xtarget"] = arch
+                new_dict["_should_not_be_instantiated"] = False  # unlike the subclass we can instantiate these
+                new_dict["do_not_add_to_targets"] = True  # We are already adding it here
+                new_dict["target"] = new_name
+                new_dict["synthetic_base"] = cls  # We are already adding it here
+                # noinspection PyTypeChecker
+                new_cls = type(cls.__name__ + "_" + arch.name, (cls, *cls.__bases__), new_dict)
+                assert issubclass(new_cls, SimpleProjectWithoutDefinitionHook)
+                target_manager.add_target(MultiArchTarget(new_name, new_cls, arch, base_target))
+                # Handle old names for FreeBSD/CheriBSD targets in the config file:
+                if arch.target_info_cls.is_freebsd() and not arch.target_info_cls.is_native():
+                    if arch.target_info_cls.is_cheribsd():
+                        if arch.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
+                            new_cls._config_file_aliases += (replace_one(new_name, "-mips64-", "-mips-"),)
+                        elif arch.is_mips(include_purecap=False):
+                            new_cls._config_file_aliases += (replace_one(new_name, "-mips64", "-mips-nocheri"),)
+                    else:
+                        # FreeBSD target suffixes have also changed over time
+                        if arch.is_mips(include_purecap=False):
+                            new_cls._config_file_aliases += (replace_one(new_name, "-mips64", "-mips"),)
+                        elif arch.is_x86_64(include_purecap=False):
+                            new_cls._config_file_aliases += (
+                                replace_one(new_name, "-amd64", "-x86"),
+                                replace_one(new_name, "-amd64", "-x86_64"),
+                            )
+                if len(set(new_cls._config_file_aliases)) != len(new_cls._config_file_aliases):
+                    raise ValueError(f"Duplicate aliases for {new_name}: {new_cls._config_file_aliases}")
+        else:
+            assert len(supported_archs) == 1
+            # Only one target is supported:
+            cls._xtarget = supported_archs[0]
+            cls._should_not_be_instantiated = False  # can be instantiated
+            target_manager.add_target(Target(target_name, cls))
+        # print("Adding target", target_name, "with deps:", cls.dependencies)
+
+
+# This class exists to allow deriving from SimpleProject without the metaclass
+class SimpleProject(SimpleProjectWithoutDefinitionHook, metaclass=ProjectSubclassDefinitionHook):
+    # Subclasses will automatically have a target based on their name generated unless they add this:
+    do_not_add_to_targets: bool = True
+    # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
+    # To check that we don't create an crosscompile targets without a fixed target
+    _should_not_be_instantiated: bool = True
+    __config_options_set: "dict[type[SimpleProject], bool]" = dict()
+
+    @classmethod
+    def setup_config_options(cls, **kwargs) -> None:
+        # assert cls not in cls.__config_options_set, "Setup called twice?"
+        cls.__config_options_set[cls] = True
+        super().setup_config_options(**kwargs)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
+        assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
+            self.__class__
+        )
 
 
 # A target that is just an alias for at least one other targets but does not force building of dependencies
