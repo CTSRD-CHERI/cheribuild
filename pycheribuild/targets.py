@@ -49,24 +49,21 @@ from .utils import (
     warning_message,
 )
 
-if typing.TYPE_CHECKING:  # no-combine
-    from .projects.simple_project import SimpleProject  # no-combine
-
 
 class Target:
     instantiating_targets_should_warn: bool = True
 
-    def __init__(self, name, _project_class: "type[SimpleProject]"):
+    def __init__(self, name, _project_class: "type[AbstractProject]"):
         self.name = name
         self._project_class = _project_class
-        self.__project: Optional[SimpleProject] = None
+        self.__project: Optional[AbstractProject] = None
         self._completed = False
         self._tests_have_run = False
         self._benchmarks_have_run = False
         self._creating_project = False  # avoid cycles
 
     @property
-    def project_class(self) -> "type[SimpleProject]":
+    def project_class(self) -> "type[AbstractProject]":
         result = self._project_class
         # noinspection PyProtectedMember
         assert result._xtarget is not None
@@ -80,16 +77,13 @@ class Target:
         return result._xtarget
 
     def get_real_target(
-        self, cross_target: Optional[CrossCompileTarget], config, caller: "Union[SimpleProject, str]" = "<unknown>"
+        self, cross_target: Optional[CrossCompileTarget], config, caller: "Union[AbstractProject, str]" = "<unknown>"
     ) -> "Target":
         return self
 
-    def _try_get_project(self) -> "Optional[SimpleProject]":
-        return self.__project
-
     def _get_or_create_project_no_setup(
         self, cross_target: Optional[CrossCompileTarget], config, caller: "Optional[AbstractProject]"
-    ) -> "SimpleProject":
+    ) -> "AbstractProject":
         # Note: MultiArchTarget uses cross_target to select the right project (e.g. libcxxrt-native needs
         # libunwind-native path)
         if self.__project is None:
@@ -101,8 +95,8 @@ class Target:
     # noinspection PyProtectedMember
     @final
     def get_or_create_project(
-        self, cross_target: Optional[CrossCompileTarget], config, caller: "Optional[SimpleProject]"
-    ) -> "SimpleProject":
+        self, cross_target: Optional[CrossCompileTarget], config, caller: "Optional[AbstractProject]"
+    ) -> "AbstractProject":
         if caller is not None:
             assert caller._init_called, "Cannot call this inside __init__()"
         project = self._get_or_create_project_no_setup(cross_target, config, caller)
@@ -117,13 +111,13 @@ class Target:
 
     def get_dependencies(self, config: CheriConfig) -> "list[Target]":
         # Due to cyclic imports + forward declarations we need to silence a bad-return-type error here
-        return typing.cast(typing.List[Target], self.project_class.recursive_dependencies(config))
+        return self.project_class.recursive_dependencies(config)
 
     # noinspection PyProtectedMember
     def cache_dependencies(self, config: CheriConfig) -> None:
         self.project_class._cache_full_dependencies(config, allow_already_cached=True)
 
-    def _check_system_deps(self, config: CheriConfig, project: "SimpleProject"):
+    def _check_system_deps(self, config: CheriConfig, project: "AbstractProject"):
         if project._system_deps_checked:
             return
         with set_env(PATH=config.dollar_path_with_other_tools, config=config):
@@ -138,7 +132,7 @@ class Target:
         self._check_system_deps(config, self._get_or_create_project_no_setup(None, config, None))
 
     @final
-    def create_project(self, config: CheriConfig) -> "SimpleProject":
+    def create_project(self, config: CheriConfig) -> "AbstractProject":
         assert not self._creating_project
         if self.instantiating_targets_should_warn:
             raise RuntimeError(coloured(AnsiColour.magenta, "Instantiating target", self.name, "before run()!"))
@@ -147,11 +141,11 @@ class Target:
         result._init_called = True
         return result
 
-    def _create_project(self, config: CheriConfig) -> "SimpleProject":
+    def _create_project(self, config: CheriConfig) -> "AbstractProject":
         return self.project_class(config, crosscompile_target=self.xtarget)
 
     # noinspection PyProtectedMember
-    def _do_run(self, config, msg: str, func: "Callable[[SimpleProject], typing.Any]"):
+    def _do_run(self, config, msg: str, func: "Callable[[AbstractProject], typing.Any]"):
         assert self.__project is not None, "Should have been initialized in check_system_deps()"
         # noinspection PyProtectedMember
         self.cache_dependencies(config)
@@ -232,7 +226,7 @@ class MultiArchTarget(Target):
     def __init__(
         self,
         name,
-        project_class: "type[SimpleProject]",
+        project_class: "type[AbstractProject]",
         target_arch: "CrossCompileTarget",
         base_target: "MultiArchTargetAlias",
     ):
@@ -243,7 +237,7 @@ class MultiArchTarget(Target):
         base_target.derived_targets.append(self)
 
     @property
-    def project_class(self) -> "type[SimpleProject]":
+    def project_class(self) -> "type[AbstractProject]":
         assert self.target_arch is not None
         return self._project_class
 
@@ -252,7 +246,7 @@ class MultiArchTarget(Target):
         assert self.target_arch is not None
         return self.target_arch
 
-    def _create_project(self, config: CheriConfig) -> "SimpleProject":
+    def _create_project(self, config: CheriConfig) -> "AbstractProject":
         return self.project_class(config, crosscompile_target=self.xtarget)
 
     def __repr__(self) -> str:
@@ -261,7 +255,7 @@ class MultiArchTarget(Target):
 
 class _TargetAliasBase(Target, metaclass=abc.ABCMeta):
     @property
-    def project_class(self) -> "type[SimpleProject]":
+    def project_class(self) -> "type[AbstractProject]":
         assert self._project_class is not None
         return self._project_class
 
@@ -269,17 +263,17 @@ class _TargetAliasBase(Target, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def xtarget(self) -> CrossCompileTarget: ...
 
-    def _create_project(self, config: CheriConfig) -> "SimpleProject":
+    def _create_project(self, config: CheriConfig) -> "AbstractProject":
         raise ValueError("Should not be called!")
 
     def get_real_target(
-        self, cross_target: Optional[CrossCompileTarget], config, caller: "Union[SimpleProject, str]" = "<unknown>"
+        self, cross_target: Optional[CrossCompileTarget], config, caller: "Union[AbstractProject, str]" = "<unknown>"
     ) -> Target:
         raise NotImplementedError()
 
     def _get_or_create_project_no_setup(
         self, cross_target: Optional[CrossCompileTarget], config, caller: "Optional[AbstractProject]"
-    ) -> "SimpleProject":
+    ) -> "AbstractProject":
         if caller is not None:
             # noinspection PyProtectedMember
             assert caller._init_called, "Cannot call this inside __init__()"
@@ -321,7 +315,7 @@ class MultiArchTargetAlias(_TargetAliasBase):
         return cross_target
 
     def get_real_target(
-        self, cross_target: "Optional[CrossCompileTarget]", config, caller: "Union[SimpleProject, str]" = "<unknown>"
+        self, cross_target: "Optional[CrossCompileTarget]", config, caller: "Union[AbstractProject, str]" = "<unknown>"
     ) -> Target:
         assert self.derived_targets, "derived targets must not be empty"
         if cross_target is None:
@@ -358,7 +352,7 @@ class SimpleTargetAlias(_TargetAliasBase):
         return self._real_target.xtarget
 
     def get_real_target(
-        self, cross_target: Optional[CrossCompileTarget], config, caller: "Union[SimpleProject, str]" = "<unknown>"
+        self, cross_target: Optional[CrossCompileTarget], config, caller: "Union[AbstractProject, str]" = "<unknown>"
     ) -> Target:
         return self._real_target
 
@@ -371,7 +365,7 @@ class DeprecatedTargetAlias(SimpleTargetAlias):
         self,
         cross_target: Optional[CrossCompileTarget],
         config: "CheriConfig",
-        caller: "Union[SimpleProject, str]" = "<unknown>",
+        caller: "Union[AbstractProject, str]" = "<unknown>",
     ) -> Target:
         warning_message(
             "Using deprecated target ",
@@ -469,7 +463,7 @@ class TargetManager:
         required_arch: Optional[CrossCompileTarget] = None,
         arch_for_unqualified_targets: Optional[CrossCompileTarget] = None,
         config: CheriConfig,
-        caller: "Union[SimpleProject, str]",
+        caller: "Union[AbstractProject, str]",
     ) -> Target:
         target = self.get_target_raw(name)
         # print("get_target", name, arch, end="")
@@ -495,7 +489,6 @@ class TargetManager:
 
         for node in targets:
             for dep in node.project_class.cached_full_dependencies():
-                dep = typing.cast(Target, dep)  # Silence type-checker due to cyclic imports
                 if dep in adj:
                     adj[dep].append(node)
                     in_degree[node] += 1

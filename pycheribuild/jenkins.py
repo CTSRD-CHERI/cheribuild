@@ -354,6 +354,7 @@ def create_tarball(cheri_config) -> None:
         target = target_manager.get_target_raw(cheri_config.targets[0])
         Target.instantiating_targets_should_warn = False
         project = target.get_or_create_project(None, cheri_config, caller=None)
+        assert isinstance(project, SimpleProject)
         project.prepare_install_dir_for_archiving()
         strip_binaries(cheri_config, project, cheri_config.output_root)
     run_command(
