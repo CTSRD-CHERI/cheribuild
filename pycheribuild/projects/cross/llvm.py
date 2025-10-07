@@ -362,6 +362,7 @@ class BuildLLVMBase(CMakeProject):
             self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
         else:
             self.add_cmake_options(LLVM_ENABLE_LTO=True)
+        return True
 
     def clean(self) -> ThreadJoiner:
         # TODO: probably fine if LLVM is the only target to be built
