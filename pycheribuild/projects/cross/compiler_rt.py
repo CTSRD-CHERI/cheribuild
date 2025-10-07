@@ -154,6 +154,13 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             return DefaultInstallDir.ROOTFS_LOCALBASE
         return DefaultInstallDir.IN_BUILD_DIRECTORY
 
+    @classmethod
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        result = super().dependencies(config)
+        if cls.get_crosscompile_target().target_info_cls.is_linux():
+            result += ("muslc",)
+        return result
+
     def linkage(self):
         # The default value of STATIC (for baremetal targets) would add additional flags that are not be needed
         # since the CMake files already ensure that we link statically.
@@ -241,3 +248,9 @@ class BuildMorelloCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "morello-compiler-rt-builtins"
     llvm_project = BuildMorelloLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
+
+    @classmethod
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        if cls.get_crosscompile_target().target_info_cls.is_linux():
+            return ("morello-muslc",)
+        return ()
