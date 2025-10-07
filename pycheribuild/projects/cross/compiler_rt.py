@@ -154,6 +154,17 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             return DefaultInstallDir.ROOTFS_LOCALBASE
         return DefaultInstallDir.IN_BUILD_DIRECTORY
 
+    @classmethod
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        result = super().dependencies(config)
+        xtarget = cls.get_crosscompile_target()
+        if xtarget.target_info_cls.is_linux() and not xtarget.is_native():
+            # The builtins for Linux need C library headers available.
+            sysroot_targets = xtarget.target_info_cls.base_sysroot_targets(xtarget, config)
+            # Remove compiler-rt from the sysroot targets since we are building it here.
+            return tuple(target for target in sysroot_targets if "compiler-rt" not in target)
+        return result
+
     def linkage(self):
         # The default value of STATIC (for baremetal targets) would add additional flags that are not be needed
         # since the CMake files already ensure that we link statically.

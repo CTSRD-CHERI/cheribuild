@@ -909,10 +909,13 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         if cls.uses_morello_llvm:
-            return ["morello-linux-kernel", "morello-muslc"]
+            return ["morello-linux-kernel", "morello-muslc", "morello-compiler-rt-builtins"]
         elif target.is_experimental_cheri093_std(config):
-            return ["cheri-std093-linux-kernel", "muslc"]
-        return ["linux-kernel", "muslc"]
+            # TODO: need to add "muslc" CHERI port
+            return ["cheri-std093-linux-kernel", "compiler-rt-builtins"]
+        # Note: even when targetting non-CHERI Linux, we use the CHERI targets since the latest upstream
+        # LLVM does not build compiler-rt correctly for RISC-V with the current build setup.
+        return ["linux-kernel", "muslc", "compiler-rt-builtins"]
 
 
 class LinuxMorelloTargetInfo(LinuxTargetInfo):
