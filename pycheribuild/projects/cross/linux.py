@@ -157,7 +157,7 @@ class BuildCheriAllianceLinux(BuildLinux):
 class BuildMorelloLinux(BuildLinux):
     target = "morello-linux-kernel"
     repository = GitRepository(
-        "https://git.morello-project.org/morello/kernel/linux.git", default_branch="morello/master"
+        "https://git.morello-project.org/morello/kernel/linux.git", default_branch="morello/next"
     )
     # Morello Linux is actually built hybrid (at the moment), but in the future it will be purecap.
     # To avoid workarounds and long target names, mark it as LINUX_MORELLO_PURECAP here but it will
