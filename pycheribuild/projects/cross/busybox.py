@@ -65,6 +65,8 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
         elif self.crosscompile_target.is_aarch64(include_purecap=True):
             self.busybox_arch = "arm64"
 
+        # Avoid dependency on libgcc_eh
+        self.COMMON_LDFLAGS.append("--unwindlib=none")
         self.make_args.set(ARCH=self.busybox_arch, O=self.build_dir)
         self.make_args.set(
             CC=self.commandline_to_str([self.CC, *self.essential_compiler_and_linker_flags]),
