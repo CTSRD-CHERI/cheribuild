@@ -60,34 +60,13 @@ class BuildMuslc(CrossCompileAutotoolsProject):
         return self.target_info.target_triple
 
     def setup(self) -> None:
-        if self.config.verbose:
-            self.make_args.set(V=True)
-
+        super().setup()
         self.make_args.set(
-            CC=self.CC,
-            CXX=self.CXX,
-            HOSTCC=self.host_CC,
             # Force muslc's Makefile not to use the triple for finding the toolchain
             CROSS_COMPILE="",
-            LD=self.target_info.linker,
-            AR=self.sdk_bindir / "llvm-ar",
-            NM=self.sdk_bindir / "llvm-nm",
-            STRIP=self.sdk_bindir / "llvm-strip",
-            OBJCOPY=self.sdk_bindir / "llvm-objcopy",
-            OBJDUMP=self.sdk_bindir / "llvm-objdump",
         )
-
-        self.configure_args.extend(
-            [
-                "--target=" + self.muslc_target,
-            ]
-        )
-        super().setup()
-
-    def clean(self) -> None:
-        self.run_make("distclean", cwd=self.source_dir)
-        self.run_make("clean", cwd=self.source_dir)
-        super().clean()
+        self.COMMON_FLAGS.append("--sysroot=/some/invalid/directory")  # Avoid using the host system headers
+        self.configure_args.extend(["--target=" + self.muslc_target])
 
 
 class BuildMorelloLinuxMuslc(BuildMuslc):
