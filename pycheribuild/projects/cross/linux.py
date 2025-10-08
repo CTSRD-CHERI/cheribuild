@@ -67,6 +67,12 @@ class BuildLinux(CrossCompileAutotoolsProject):
 
     def _set_config(self, option, value: str = "y"):
         self.run_cmd(self.source_dir / "scripts/config", "--set-val", option, value, cwd=self.build_dir)
+        # Also handle auto-detected config value which would overwrite our manual setting above
+        # This happens e.g. with CONFIG_CC_HAS_ASM_GOTO_OUTPUT.
+        auto_config_args = (self.source_dir / "scripts/config", "--file", self.build_dir / "include/config/auto.conf")
+        auto_value = self.run_cmd(*auto_config_args, "--state", option, capture_output=True)
+        if auto_value.stdout != b"undef":
+            self.run_cmd(*auto_config_args, "--set-val", option, value)
 
     def setup(self) -> None:
         super().setup()
@@ -96,7 +102,26 @@ class BuildLinux(CrossCompileAutotoolsProject):
         return "defconfig"
 
     def compile(self, **kwargs):
-        self.run_make(cwd=self.source_dir)
+        if self.compiling_for_riscv(include_purecap=True):
+            # Work around https://github.com/ClangBuiltLinux/linux/issues/2092
+            ccinfo = self.get_compiler_info(self.CC)
+            # FIXME: apparently this value is always overwritten by the build system with the default value no
+            # matter what I do, just print a warning for now
+            if ccinfo.is_clang and False:
+                self.info("Working around https://github.com/ClangBuiltLinux/linux/issues/2092")
+                self._set_config("CONFIG_CC_HAS_ASM_GOTO_OUTPUT", "n")
+                # self.run_make("savedefconfig", parallel=False)
+                # self.run_make("oldconfig", parallel=False)
+                self.run_cmd(
+                    self.source_dir / "scripts/config", "--state", "CONFIG_CC_HAS_ASM_GOTO_OUTPUT", cwd=self.build_dir
+                )
+            else:
+                self.warning("Need to working around https://github.com/ClangBuiltLinux/linux/issues/2092")
+                self.warning(
+                    "See patch in https://lore.kernel.org/all/20250811-riscv-wa-llvm-asm-goto-outputs-"
+                    "assertion-failure-v1-1-7bb8c9cbb92b@kernel.org/"
+                )
+        self.run_make()
 
     def configure(self, **kwargs):
         self.run_make(self.defconfig, cwd=self.source_dir, parallel=False)
