@@ -144,7 +144,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         # Building for Linux currently requires installing to the resource directory
         target_info = self.get_crosscompile_target().target_info_cls
         if target_info.is_linux() and not target_info.is_native():
-            return DefaultInstallDir.CUSTOM_INSTALL_DIR
+            return DefaultInstallDir.ROOTFS_LOCALBASE
         # Install compiler-rt to the sysroot to handle purecap and non-CHERI RTEMS
         if self._xtarget is CompilationTargets.RTEMS_RISCV64_PURECAP:
             return DefaultInstallDir.ROOTFS_LOCALBASE
@@ -162,10 +162,6 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         return Linkage.DEFAULT
 
     def setup(self):
-        # For the Linux targets we have to install to the resource directory of the compiler
-        if self.target_info.is_linux() and not self.compiling_for_host():
-            self._install_dir = self.get_compiler_info(self.CC).get_resource_dir()
-            self._install_prefix = self._install_dir
         super().setup()
         assert (
             self.target_info.is_baremetal()
@@ -190,7 +186,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if not self.compiling_for_host():
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ONLY=True, TARGET_TRIPLE=self.target_info.target_triple)
             if self.target_info.is_linux():
-                self.add_cmake_options(CMAKE_SYSROOT=self.target_info.sysroot_dir / self.target_info.target_triple)
+                self.add_cmake_options(CMAKE_SYSROOT=self.target_info.sysroot_dir)
         if self.target_info.is_baremetal():
             self.add_cmake_options(COMPILER_RT_OS_DIR="baremetal")
         if self.should_include_debug_info:
@@ -205,6 +201,26 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             self.move_file(self.install_dir / "lib/baremetal" / libname, self.real_install_root_dir / "lib" / libname)
             self.create_symlink(
                 self.install_dir / "lib" / libname, self.install_dir / "lib/libgcc.a", print_verbose_only=False
+            )
+        elif self.target_info.is_linux() and not self.compiling_for_host():
+            self.create_symlink(
+                self.install_dir / "lib/linux" / libname, self.install_dir / "lib" / libname, print_verbose_only=False
+            )
+            self.create_symlink(
+                self.install_dir / "lib/linux" / libname,
+                self.install_dir / "lib/libgcc.a",
+                print_verbose_only=False,
+            )
+            # Linux Clang driver expects/embeds the following crt files in the linking flags
+            self.create_symlink(
+                self.install_dir / "lib/linux" / f"clang_rt.crtbegin-{self.triple_arch}.o",
+                self.target_info.sysroot_dir / "lib" / "crtbeginT.o",
+                print_verbose_only=False,
+            )
+            self.create_symlink(
+                self.install_dir / "lib/linux" / f"clang_rt.crtend-{self.triple_arch}.o",
+                self.target_info.sysroot_dir / "lib" / "crtend.o",
+                print_verbose_only=False,
             )
 
 
