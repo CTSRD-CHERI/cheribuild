@@ -65,16 +65,8 @@ class BuildLinux(CrossCompileAutotoolsProject):
         super().check_system_dependencies()
         self.check_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
 
-    def _enable_config(self, option):
-        config_contents = self.read_file(self.build_dir / ".config")
-        lines = config_contents.splitlines()
-        for i, line in enumerate(lines):
-            if line.startswith(option + "=") or line.startswith("# " + option):
-                lines[i] = f"{option}=y\n"
-                break
-        else:
-            lines.append(f"{option}=y\n")
-        self.write_file(self.build_dir / ".config", "\n".join(lines), overwrite=True)
+    def _set_config(self, option, value: str = "y"):
+        self.run_cmd(self.source_dir / "scripts/config", "--set-val", option, value, cwd=self.build_dir)
 
     def setup(self) -> None:
         super().setup()
@@ -92,6 +84,9 @@ class BuildLinux(CrossCompileAutotoolsProject):
         self.make_args.set(HOSTCXX=self.host_CXX)
         # Install kernel headers at rootfs (and sysroot)'s path
         self.make_args.set(INSTALL_HDR_PATH=self.install_dir / "usr")
+
+        # Don't overwrite our manually edited .config file with default values
+        self.make_args.set_env(KCONFIG_NOSILENTUPDATE=1)
 
         if self.config.verbose:
             self.make_args.set(V=True)
@@ -156,8 +151,8 @@ class BuildMorelloLinux(BuildLinux):
         # Default config only has VIRTIO_NET, not PCI_NET. This is to make
         # it work out of the box with cheribuild's QEMU with networking that
         # uses PCI.
-        self._enable_config("CONFIG_VIRTIO_PCI")
-        self._enable_config("CONFIG_VIRTIO_PCI_LEGACY")
+        self._set_config("CONFIG_VIRTIO_PCI")
+        self._set_config("CONFIG_VIRTIO_PCI_LEGACY")
 
 
 class LaunchCheriLinux(LaunchQEMUBase):
