@@ -42,9 +42,8 @@ from ...utils import classproperty
 class BuildBusyBox(CrossCompileAutotoolsProject):
     target = "busybox"
     repository = GitRepository("https://git.busybox.net/busybox/")
-    needs_sysroot = False
+    needs_sysroot = True
     is_sdk_target = False
-    build_in_source_dir = True  # out-of-source build not tested yet
     supported_architectures = (
         CompilationTargets.LINUX_RISCV64,
         CompilationTargets.LINUX_AARCH64,
@@ -70,7 +69,7 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
         elif self.crosscompile_target.is_aarch64(include_purecap=True):
             self.busybox_arch = "arm64"
 
-        self.make_args.set(ARCH=self.busybox_arch)
+        self.make_args.set(ARCH=self.busybox_arch, O=self.build_dir)
 
         compflags = " " + self.commandline_to_str(self.essential_compiler_and_linker_flags)
         compflags += " --sysroot=" + str(self.install_dir)
@@ -102,13 +101,9 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
         self.info("Wrote", out_file)
 
     def install(self, **kwargs) -> None:
-        self.run_make("install", cwd=self.source_dir)
+        self.run_make_install()
         root = self.install_dir / "rootfs"
         self.make_initramfs(root, self.install_dir / "boot/initramfs.cpio.gz")
-
-    def clean(self, **kwargs) -> None:
-        self.run_make("distclean", cwd=self.source_dir)
-        self.run_make("clean", cwd=self.source_dir)
 
 
 class BuildMorelloBusyBox(BuildBusyBox):
