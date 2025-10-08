@@ -70,16 +70,14 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
             self.busybox_arch = "arm64"
 
         self.make_args.set(ARCH=self.busybox_arch, O=self.build_dir)
-
-        compflags = " " + self.commandline_to_str(self.essential_compiler_and_linker_flags)
-        compflags += " --sysroot=" + str(self.install_dir)
-
         self.make_args.set(
-            CC=str(self.sdk_bindir / "clang ") + compflags,
-            HOSTCC="clang",
+            CC=self.commandline_to_str([self.CC, *self.essential_compiler_and_linker_flags]),
+            HOSTCC=self.host_CC,
             # Force busybox's Makefile not to use the triple for finding the toolchain
             CROSS_COMPILE="",
             LD=self.target_info.linker,
+            # LDFLAGS are passed directly to ld.lld, we need to set CFLAGS_busybox
+            CFLAGS_busybox=self.commandline_to_str(self.default_ldflags),
             AR=self.sdk_bindir / "llvm-ar",
             NM=self.sdk_bindir / "llvm-nm",
             STRIP=self.sdk_bindir / "llvm-strip",
@@ -88,6 +86,8 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
         )
 
     def compile(self, **kwargs) -> None:
+        # Avoid compilation errors in tc.c
+        self.replace_in_file(self.build_dir / ".config", {"CONFIG_TC=y": "CONFIG_TC=n"})
         self.run_make("busybox")
 
     def configure(self, **kwargs) -> None:
