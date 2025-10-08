@@ -106,13 +106,6 @@ class BuildLinux(CrossCompileAutotoolsProject):
     def configure(self, **kwargs):
         self.run_make(self.defconfig, cwd=self.source_dir, parallel=False)
 
-    def clean(self):
-        self.run_make("distclean", cwd=self.source_dir)
-        self.run_make("clean", cwd=self.source_dir)
-        # Optional -- deletes locally modified files and local git patches
-        self.run_make("mrproper", cwd=self.source_dir)
-        return super().clean()
-
     def install(self, **kwargs):
         self.install_file(self.build_dir / "vmlinux", self.install_dir / "boot/vmlinux")
         self.install_file(self.build_dir / "System.map", self.install_dir / "boot/System.map")
