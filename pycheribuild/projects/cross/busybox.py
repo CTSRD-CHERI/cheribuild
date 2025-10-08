@@ -83,6 +83,61 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
             OBJDUMP=self.sdk_bindir / "llvm-objdump",
         )
 
+    def write_busybox_init(self, init_path: Path):
+        """
+        Write a BusyBox-compatible /init script to the given path.
+        """
+
+        self.makedirs(init_path.parent)  # ensure rootfs/ exists
+
+        script = """#!/bin/sh
+# Minimal init script to replace the C init
+set -x
+echo ">>> /init: starting OK"
+exec /bin/sh
+
+    PATH=/usr/sbin:/bin:/sbin
+    export PATH
+
+    echo "Hello from BusyBox"
+
+# Ensure required mount points exist
+    mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc
+    ln -sf /proc/mounts /etc/mtab
+
+# Mount essential filesystems
+    mount -t proc none /proc
+    mount -t devpts none /dev/pts
+    mount -t mqueue none /dev/mqueue
+    mount -t tmpfs none /dev/shm
+    mount -t sysfs none /sys
+    mount -t cgroup none /sys/fs/cgroup
+
+# Set hostname
+    hostname cheribuild-linux
+
+    echo
+    echo "Welcome to Linux (busybox)!"
+    echo "Have a lot of fun!"
+    echo
+
+# Install udhcpc DHCP helper script
+ifconfig eth0 up
+udhcpc -i eth0
+fconfig eth0 10.0.2.15 netmask 255.255.255.0 up
++route add default gw 10.0.2.2
+echo "nameserver 8.8.8.8" > /etc/resolv.conf
+
+# Loop shell forever
+    while true; do
+        echo "[Linux]: Starting /bin/sh..."
+        /bin/sh
+        sleep 1
+    done
+    """
+        # Make the script executable
+        self.write_file(init_path, contents=script, overwrite=True, mode=0o755)
+
     def compile(self, **kwargs) -> None:
         # Avoid compilation errors in tc.c
         self.replace_in_file(self.build_dir / ".config", {"CONFIG_TC=y": "CONFIG_TC=n"})
@@ -101,6 +156,7 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
     def install(self, **kwargs) -> None:
         self.run_make_install()
         root = self.install_dir / "rootfs"
+        self.write_busybox_init(self.install_dir / "rootfs/init")
         self.make_initramfs(root, self.install_dir / "boot/initramfs.cpio.gz")
 
 
