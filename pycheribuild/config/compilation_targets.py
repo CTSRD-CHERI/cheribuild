@@ -883,7 +883,7 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def sysroot_install_prefix_relative(self) -> Path:
-        return Path(self.target_triple)
+        return Path()
 
     @property
     def sysroot_dir(self) -> Path:
