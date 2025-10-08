@@ -229,6 +229,21 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
                 self.target_info.sysroot_dir / "lib" / "crtend.o",
                 print_verbose_only=False,
             )
+        elif self.target_info.is_linux():
+            # Linux Clang driver expects/embeds the following crt files in the linking flags
+            self.create_symlink(
+                self.install_dir / "lib/linux" / f"clang_rt.crtbegin-{self.triple_arch}.o",
+                self.target_info.sysroot_dir / self.target_info.target_triple / "lib" / "crtbeginT.o",
+            )
+            self.create_symlink(
+                self.install_dir / "lib/linux" / f"clang_rt.crtend-{self.triple_arch}.o",
+                self.target_info.sysroot_dir / self.target_info.target_triple / "lib" / "crtend.o",
+            )
+            self.create_symlink(
+                self.install_dir / "lib/linux" / libname,
+                self.target_info.sysroot_dir / self.target_info.target_triple / "lib/libgcc.a",
+                print_verbose_only=False,
+            )
 
 
 class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
