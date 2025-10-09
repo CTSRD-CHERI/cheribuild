@@ -51,7 +51,6 @@ from .project import (
     Project,
 )
 from .simple_project import BoolConfigOption, SimpleProject, _cached_get_homebrew_prefix
-from ..config.chericonfig import RiscvCheriISA
 from ..config.compilation_targets import BaremetalFreestandingTargetInfo, CompilationTargets
 from ..config.config_loader_base import ConfigOptionHandle
 from ..processutils import get_program_version
@@ -540,7 +539,7 @@ class BuildQEMU(BuildCheriQEMUBase):
         if xtarget.is_riscv(include_purecap=True):
             xlen = 32 if xtarget.is_riscv32(include_purecap=True) else 64
             # Prefer the xcheri-suffixed binary (if it exists) to ensure backwards compatibility.
-            if config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093:
+            if xtarget.is_experimental_cheri093_std(config):
                 binary_name = f"qemu-system-riscv{xlen}cheristd"
             elif (config.qemu_bindir / f"qemu-system-riscv{xlen}xcheri").exists():
                 binary_name = f"qemu-system-riscv{xlen}xcheri"
@@ -595,7 +594,7 @@ class BuildCheriAllianceQEMU(BuildCheriQEMUBase):
 
     @classmethod
     def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
-        assert config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093, "Should not be called otherwise"
+        assert xtarget.is_experimental_cheri093_std(config), "Should not be called otherwise"
         # Always use the CHERI qemu even for plain riscv:
         if xtarget.is_riscv64(include_purecap=True):
             binary_name = "qemu-system-riscv64cheri"

@@ -192,8 +192,3 @@ class BuildCheriAllianceUBoot(BuildUBoot):
             return "codasip-a730-hobgoblin_smode"
 
         assert False, "unhandled target"
-
-    def process(self) -> None:
-        if self.config.riscv_cheri_isa != RiscvCheriISA.EXPERIMENTAL_STD093:
-            self.fatal("This target is only compatible with the experimental standard draft version 0.9.3")
-        super().process()
