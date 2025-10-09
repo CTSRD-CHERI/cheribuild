@@ -868,6 +868,7 @@ class CrossCompileTarget(typing.Generic[TargetInfoSubclass]):
         non_cheri_for_purecap_rootfs_target: "Optional[CrossCompileTarget]" = None,
         hybrid_for_purecap_rootfs_target: "Optional[CrossCompileTarget]" = None,
         purecap_for_hybrid_rootfs_target: "Optional[CrossCompileTarget]" = None,
+        _cheri_isa: Optional[RiscvCheriISA] = None,
     ) -> None:
         assert not arch_suffix.startswith("-"), arch_suffix
         assert not extra_target_suffix or extra_target_suffix.startswith("-"), extra_target_suffix
@@ -887,6 +888,7 @@ class CrossCompileTarget(typing.Generic[TargetInfoSubclass]):
         # TODO: self.operating_system = ...
         self._is_cheri_purecap = is_cheri_purecap
         self._is_cheri_hybrid = is_cheri_hybrid
+        self._cheri_isa = _cheri_isa
         assert not (is_cheri_purecap and is_cheri_hybrid), "Can't be both hybrid and purecap"
         self.check_conflict_with = check_conflict_with  # Check that we don't reuse install-dir, etc for this target
         self._rootfs_target = rootfs_target
@@ -1055,7 +1057,8 @@ class CrossCompileTarget(typing.Generic[TargetInfoSubclass]):
         return self.is_riscv32(include_purecap) or self.is_riscv64(include_purecap)
 
     def is_experimental_cheri093_std(self, config: "CheriConfig") -> bool:
-        return config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 and self.is_hybrid_or_purecap_cheri(
+        riscv_cheri_isa = self._cheri_isa if self._cheri_isa else config.riscv_cheri_isa
+        return riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093 and self.is_hybrid_or_purecap_cheri(
             [CPUArchitecture.RISCV32, CPUArchitecture.RISCV64]
         )
 
