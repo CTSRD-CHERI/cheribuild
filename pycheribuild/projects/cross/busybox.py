@@ -139,7 +139,10 @@ done
         self.write_file(init_path, contents=script, overwrite=True, mode=0o755)
 
     def compile(self, **kwargs) -> None:
-        # Avoid compilation errors in tc.c
+        # Disable traffic control since it got removed from >= 6.8 Linux kernel
+        # and Busybox hasn't fixed that yet
+        # https://bugs.busybox.net/show_bug.cgi?id=15931
+        # https://lists.busybox.net/pipermail/busybox-cvs/2024-January/041752.html
         self.replace_in_file(self.build_dir / ".config", {"CONFIG_TC=y": "CONFIG_TC=n"})
         self.run_make("busybox")
 
