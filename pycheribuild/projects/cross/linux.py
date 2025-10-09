@@ -137,7 +137,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
 class BuildCheriAllianceLinux(BuildLinux):
     target = "cheri-std093-linux-kernel"
     repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="codasip-cheri-riscv")
-    supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP,)
+    supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
     @property
@@ -184,7 +184,7 @@ class LaunchCheriLinux(LaunchQEMUBase):
     target = "run-minimal"
     supported_architectures = (
         CompilationTargets.LINUX_MORELLO_PURECAP,
-        CompilationTargets.LINUX_RISCV64_PURECAP,
+        CompilationTargets.LINUX_RISCV64_PURECAP_093,
         CompilationTargets.LINUX_RISCV64,
         CompilationTargets.LINUX_AARCH64,
     )

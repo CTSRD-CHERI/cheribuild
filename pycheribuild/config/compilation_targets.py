@@ -40,7 +40,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
-from .chericonfig import CheriConfig
+from .chericonfig import CheriConfig, RiscvCheriISA
 from .config_loader_base import ConfigLoaderBase, ConfigOptionHandle
 from .target_info import (
     AArch64FloatSimdOptions,
@@ -912,6 +912,7 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
         elif target.is_experimental_cheri093_std(config):
             # TODO: need to add "muslc" CHERI port
             return ["cheri-std093-linux-kernel", "compiler-rt-builtins"]
+        assert not target.is_cheri_purecap(), "Only RVY 0.9.3 and Morello are supported for purecap"
         # Note: even when targetting non-CHERI Linux, we use the CHERI targets since the latest upstream
         # LLVM does not build compiler-rt correctly for RISC-V with the current build setup.
         return ["linux-kernel", "muslc", "compiler-rt-builtins"]
@@ -1543,11 +1544,12 @@ class CompilationTargets(BasicCompilationTargets):
 
     # Linux targets
     LINUX_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, LinuxTargetInfo)
-    LINUX_RISCV64_PURECAP = CrossCompileTarget(
+    LINUX_RISCV64_PURECAP_093 = CrossCompileTarget(
         "riscv64-purecap",
         CPUArchitecture.RISCV64,
         LinuxTargetInfo,
         is_cheri_purecap=True,
+        _cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
     )
     LINUX_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, LinuxTargetInfo)
     LINUX_MORELLO_NO_CHERI = CrossCompileTarget(
@@ -1605,7 +1607,7 @@ class CompilationTargets(BasicCompilationTargets):
 
     ALL_LINUX_RISCV_TARGETS = (
         LINUX_RISCV64,
-        LINUX_RISCV64_PURECAP,
+        LINUX_RISCV64_PURECAP_093,
     )
     ALL_SUPPORTED_LINUX_TARGETS = ALL_LINUX_AARCH64_TARGETS + ALL_LINUX_RISCV_TARGETS
 
