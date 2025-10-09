@@ -142,7 +142,7 @@ class BuildOpenSBI(Project):
             suffix = ""
             if self.crosscompile_target.is_cheri_purecap():
                 suffix = "cheri"
-                if self.config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093:
+                if self.crosscompile_target.is_experimental_cheri093_std(self.config):
                     suffix += "std"
             self.makedirs(qemu_fw_dir)
             # TODO: looks like newer versions install a .bin that we could just copy instead.

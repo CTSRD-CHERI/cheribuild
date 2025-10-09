@@ -40,7 +40,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
-from .chericonfig import CheriConfig, RiscvCheriISA
+from .chericonfig import CheriConfig
 from .config_loader_base import ConfigLoaderBase, ConfigOptionHandle
 from .target_info import (
     AArch64FloatSimdOptions,
@@ -354,11 +354,10 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
             arch_string += "fd"
         arch_string += "c"
         if xtarget.is_hybrid_or_purecap_cheri():
-            if config.riscv_cheri_isa == RiscvCheriISA.V9:
-                arch_string += "xcheri"
-            else:
-                assert config.riscv_cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093
+            if xtarget.is_experimental_cheri093_std(config):
                 arch_string += "zcherihybrid"
+            else:
+                arch_string += "xcheri"
         return arch_string
 
     @classmethod
