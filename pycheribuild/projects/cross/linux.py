@@ -216,7 +216,6 @@ class LaunchCheriLinux(LaunchQEMUBase):
 
     def setup(self):
         super().setup()
-
         if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             linux_project = BuildMorelloLinux.get_instance(self, self.config)
         elif self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
@@ -226,25 +225,5 @@ class LaunchCheriLinux(LaunchQEMUBase):
 
         kernel = f"{linux_project.install_dir}/boot/Image"
         initramfs = f"{linux_project.install_dir}/boot/initramfs.cpio.gz"
-
-        if self.crosscompile_target.is_aarch64(include_purecap=True):
-            if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-                cpu = "morello"
-            else:
-                cpu = "cortex-a53"
-            self.qemu_options.machine_flags = [
-                "-M",
-                "virt",
-                "-cpu",
-                cpu,
-                "-smp",
-                1,
-                "-kernel",
-                kernel,
-                "-initrd",
-                initramfs,
-                "-append",
-                "init=/init",
-            ]
-
+        self._project_specific_options += ["-append", "init=/init", "-initrd", initramfs]
         self.current_kernel = Path(kernel)
