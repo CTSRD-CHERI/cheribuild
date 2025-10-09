@@ -81,6 +81,8 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
             STRIP=self.sdk_bindir / "llvm-strip",
             OBJCOPY=self.sdk_bindir / "llvm-objcopy",
             OBJDUMP=self.sdk_bindir / "llvm-objdump",
+            # CONFIG_PREFIX is used to define the installation directory
+            CONFIG_PREFIX=self.install_dir / "rootfs",
         )
 
     def write_busybox_init(self, init_path: Path, hostname: str, prompt: str, welcome_message: str):
@@ -153,7 +155,7 @@ done
         self.makedirs(installdir)  # ensure path exists
         self.makedirs(out_file.parent)  # <-- ensure boot/ exists
         with (Path("/dev/null") if self.config.pretend else out_file).open("wb") as out:
-            self.run_cmd(["find . | cpio -o --format=newc | gzip"], shell=True, cwd=installdir, stdout=out)
+            self.run_cmd(["find . | cpio --verbose -o --format=newc | gzip"], shell=True, cwd=installdir, stdout=out)
         self.info("Wrote", out_file)
 
     def install(self, **kwargs) -> None:
