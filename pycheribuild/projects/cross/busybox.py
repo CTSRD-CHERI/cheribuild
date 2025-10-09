@@ -83,58 +83,58 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
             OBJDUMP=self.sdk_bindir / "llvm-objdump",
         )
 
-    def write_busybox_init(self, init_path: Path):
+    def write_busybox_init(self, init_path: Path, hostname: str, prompt: str, welcome_message: str):
         """
         Write a BusyBox-compatible /init script to the given path.
+        This is derived (and modified) from an init C version located here:
+        https://git.morello-project.org/morello/morello-sdk/-/blob/latest/morello/projects/init/init.c
         """
-
         self.makedirs(init_path.parent)  # ensure rootfs/ exists
 
-        script = """#!/bin/sh
+        script = f"""#!/bin/sh
 # Minimal init script to replace the C init
 set -x
 echo ">>> /init: starting OK"
-exec /bin/sh
 
-    PATH=/usr/sbin:/bin:/sbin
-    export PATH
+PATH=/usr/sbin:/bin:/sbin
+export PATH
 
-    echo "Hello from BusyBox"
+echo "Hello from BusyBox"
 
 # Ensure required mount points exist
-    mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc
-    ln -sf /proc/mounts /etc/mtab
+mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc
+ln -sf /proc/mounts /etc/mtab
 
 # Mount essential filesystems
-    mount -t proc none /proc
-    mount -t devpts none /dev/pts
-    mount -t mqueue none /dev/mqueue
-    mount -t tmpfs none /dev/shm
-    mount -t sysfs none /sys
-    mount -t cgroup none /sys/fs/cgroup
+mount -t proc none /proc
+mount -t devpts none /dev/pts
+mount -t mqueue none /dev/mqueue
+mount -t tmpfs none /dev/shm
+mount -t sysfs none /sys
+mount -t cgroup none /sys/fs/cgroup
 
 # Set hostname
-    hostname cheribuild-linux
+hostname {hostname}
 
-    echo
-    echo "Welcome to Linux (busybox)!"
-    echo "Have a lot of fun!"
-    echo
+echo
+echo "{welcome_message}"
+echo "Have a lot of fun!"
+echo
 
 # Install udhcpc DHCP helper script
 ifconfig eth0 up
 udhcpc -i eth0
-fconfig eth0 10.0.2.15 netmask 255.255.255.0 up
-+route add default gw 10.0.2.2
+ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up
+route add default gw 10.0.2.2
 echo "nameserver 8.8.8.8" > /etc/resolv.conf
 
 # Loop shell forever
-    while true; do
-        echo "[Linux]: Starting /bin/sh..."
-        /bin/sh
-        sleep 1
-    done
-    """
+while true; do
+    echo "[{prompt}]: Starting /bin/sh..."
+    /bin/sh
+    sleep 1
+done
+"""
         # Make the script executable
         self.write_file(init_path, contents=script, overwrite=True, mode=0o755)
 
@@ -156,7 +156,12 @@ echo "nameserver 8.8.8.8" > /etc/resolv.conf
     def install(self, **kwargs) -> None:
         self.run_make_install()
         root = self.install_dir / "rootfs"
-        self.write_busybox_init(self.install_dir / "rootfs/init")
+        self.write_busybox_init(
+            self.install_dir / "rootfs/init",
+            hostname="cheribuild-linux",
+            welcome_message="Welcome to Linux (busybox)!",
+            prompt="Linux",
+        )
         self.make_initramfs(root, self.install_dir / "boot/initramfs.cpio.gz")
 
 
@@ -180,58 +185,11 @@ class BuildMorelloBusyBox(BuildBusyBox):
     def configure(self) -> None:
         self.run_make("morello_busybox_defconfig", cwd=self.source_dir)
 
-    def write_busybox_init(self, init_path: Path):
-        """
-        Write a BusyBox-compatible /init script to the given path.
-        This is derived (and modified) from an init C version located here:
-        https://git.morello-project.org/morello/morello-sdk/-/blob/latest/morello/projects/init/init.c
-        """
-
-        self.makedirs(init_path.parent)  # ensure rootfs/ exists
-
-        script = """#!/bin/sh
-# Minimal init script to replace the C init
-
-    PATH=/usr/sbin:/bin:/sbin
-    export PATH
-
-# Ensure required mount points exist
-    mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc
-    ln -sf /proc/mounts /etc/mtab
-
-# Mount essential filesystems
-    mount -t proc none /proc
-    mount -t devpts none /dev/pts
-    mount -t mqueue none /dev/mqueue
-    mount -t tmpfs none /dev/shm
-    mount -t sysfs none /sys
-    mount -t cgroup none /sys/fs/cgroup
-
-# Set hostname
-    hostname morello
-
-    echo
-    echo "Welcome to Morello PCuABI environment (busybox)!"
-    echo "Have a lot of fun!"
-    echo
-
-# Install udhcpc DHCP helper script
-ifconfig eth0 up
-udhcpc -i eth0
-ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up
-route add default gw 10.0.2.2
-echo "nameserver 8.8.8.8" > /etc/resolv.conf
-
-# Loop shell forever
-    while true; do
-        echo "[MORELLO]: Starting /bin/sh..."
-        /bin/sh
-        sleep 1
-    done
-    """
-        # Make the script executable
-        self.write_file(init_path, contents=script, overwrite=True, mode=0o755)
-
     def install(self, **kwargs):
-        self.write_busybox_init(self.install_dir / "rootfs/init")
+        self.write_busybox_init(
+            self.install_dir / "rootfs/init",
+            hostname="morello",
+            welcome_message="Welcome to Morello PCuABI environment (busybox)!",
+            prompt="MORELLO",
+        )
         super().install(**kwargs)
