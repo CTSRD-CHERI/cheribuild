@@ -1236,6 +1236,10 @@ class Project(SimpleProject):
         assert options is not None
         assert make_command is not None
         options = options.copy()
+        if compilation_db_name is not None and make_target in ("clean", "distclean", "mrproper"):
+            # self.info(f"Ignoring request to create a compilation DB for '{make_target}' target")
+            compilation_db_name = None
+
         if compilation_db_name is not None and self.config.create_compilation_db and self.compile_db_requires_bear:
             assert self._compiledb_tool is not None
             compdb_extra_args = []
