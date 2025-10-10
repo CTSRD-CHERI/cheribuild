@@ -123,12 +123,12 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
 
     @property
     def build_mode(self):
-        return "debug" if self.build_type.is_debug else "release"
+        return "debug" if self.build_type.is_debug() else "release"
 
     def setup(self):
         super().setup()
         # FIXME: DEBUG seems to result in an infinite loop on startup (assertion failure?), so override
-        if self.build_type.is_debug:
+        if self.build_type.is_debug():
             self.make_args.set(LOG_LEVEL="TRACE")
         self.make_args.set(PRODUCT="morello", MODE=self.build_mode, V="y")
         # Build system tries to use macos tool which won't work
@@ -198,7 +198,7 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
             ENABLE_MORELLO_CAP=1,
             PLAT="morello",
             ARCH="aarch64",
-            DEBUG=1 if self.build_type.is_debug else 0,
+            DEBUG=1 if self.build_type.is_debug() else 0,
             CSS_USE_SCMI_SDS_DRIVER=1,
             E=0,  # disable -Werror since there are some unused functions
             V=1,  # verbose
@@ -227,7 +227,7 @@ class BuildMorelloTrustedFirmware(MorelloFirmwareBase):
         self.run_make(make_target="all", cwd=self.source_dir / "tools/fiptool", options=fip_make)
 
     def install(self, **kwargs):
-        output_dir = self.build_dir / "build/morello" / ("debug" if self.build_type.is_debug else "release")
+        output_dir = self.build_dir / "build/morello" / ("debug" if self.build_type.is_debug() else "release")
         self.install_file(output_dir / "bl31.bin", self.install_dir / "tf-bl31.bin", print_verbose_only=False)
         self.install_file(
             output_dir / "fdts/morello-fvp.dtb", self.install_dir / "morello-fvp.dtb", print_verbose_only=False
@@ -298,7 +298,7 @@ class BuildMorelloUEFI(MorelloFirmwareBase):
 
     @property
     def build_mode(self):
-        return "DEBUG" if self.build_type.is_debug else "RELEASE"
+        return "DEBUG" if self.build_type.is_debug() else "RELEASE"
 
     def compile(self, **kwargs):
         # We need to use ld.bfd

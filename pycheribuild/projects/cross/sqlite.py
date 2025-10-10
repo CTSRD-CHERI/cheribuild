@@ -56,9 +56,9 @@ class BuildSQLite(CrossCompileAutotoolsProject):
             # not sure if needed:
             self.configure_args.append("--disable-readline")
 
-        if self.build_type.should_include_debug_info:
+        if self.build_type.should_include_debug_info():
             self.COMMON_FLAGS.append("-g")
-        if self.build_type.is_debug:
+        if self.build_type.is_debug():
             self.configure_args.append("--enable-debug")
 
         # Enables the sqlite3_column_table_name16 API (needed by QtBase)

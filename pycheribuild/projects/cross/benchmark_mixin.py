@@ -56,7 +56,7 @@ class BenchmarkMixin(_BenchmarkMixinBase):
 
     @property
     def optimization_flags(self):
-        if self.build_type.is_release:
+        if self.build_type.is_release():
             return ["-O3"]
         return super().optimization_flags
 

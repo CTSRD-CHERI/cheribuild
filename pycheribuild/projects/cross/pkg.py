@@ -55,7 +55,7 @@ class BuildPkg(CrossCompileAutotoolsProject):
             self.COMMON_LDFLAGS.append("-L" + str(libarchive_prefix) + "/lib")
             self.COMMON_FLAGS.append("-I" + str(libarchive_prefix) + "/include")
 
-        if self.build_type.should_include_debug_info:
+        if self.build_type.should_include_debug_info():
             self.COMMON_FLAGS.append("-g")
         self.make_args.set_env(
             CPPFLAGS=self.commandline_to_str(

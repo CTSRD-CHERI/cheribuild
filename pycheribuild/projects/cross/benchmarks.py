@@ -569,7 +569,7 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
 
             self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(self.default_compiler_flags))
             self.make_args.set(ADDITIONAL_LDFLAGS=self.commandline_to_str(self.default_ldflags))
-            if self.build_type.is_debug:
+            if self.build_type.is_debug():
                 self.run_make("debug", cwd=self.source_dir / "src")
             else:
                 self.run_make("build")
@@ -663,7 +663,7 @@ class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
             if self.fixed_iterations:
                 cflags += ["-DUNIXBENCH_FIXED_ITER"]
             self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(cflags))
-            if self.build_type.is_debug:
+            if self.build_type.is_debug():
                 self.run_make(cwd=self.source_dir / "UnixBench")
             else:
                 self.run_make(cwd=self.source_dir / "UnixBench")

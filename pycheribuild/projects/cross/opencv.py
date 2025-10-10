@@ -57,7 +57,7 @@ class BuildOpenCV(CrossCompileCMakeProject):
 
     @property
     def optimization_flags(self):
-        if self.build_type.is_release and self.compiling_for_aarch64(include_purecap=True):
+        if self.build_type.is_release() and self.compiling_for_aarch64(include_purecap=True):
             # Work around https://git.morello-project.org/morello/llvm-project/-/issues/47
             return ["-O3", "-fno-vectorize"]
         return super().optimization_flags

@@ -64,15 +64,12 @@ class BuildType(Enum):
     MINSIZEREL = "MinSizeRel"
     MINSIZERELWITHDEBINFO = "MinSizeRelWithDebInfo"
 
-    @property
     def should_include_debug_info(self):
         return self in (BuildType.DEBUG, BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO)
 
-    @property
     def is_release(self):
         return self in (BuildType.RELEASE, BuildType.RELWITHDEBINFO)
 
-    @property
     def is_debug(self):
         return self is BuildType.DEBUG
 

@@ -225,7 +225,7 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             # CMAKE_<LANG>_FLAGS_<CONFIG>_INIT and  CMAKE_<LANG>_FLAGS variables will be appended and override the
             # optimization flags that we passed as part of CMAKE_<LANG>_FLAGS_INIT.
             flags = " " + commandline_to_str(self.optimization_flags)
-            if self.build_type.is_release:
+            if self.build_type.is_release():
                 flags += " -DNDEBUG"
             self.add_cmake_options(
                 **{

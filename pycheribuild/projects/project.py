@@ -794,7 +794,7 @@ class Project(SimpleProject):
     def should_include_debug_info(self) -> bool:
         if self._force_debug_info is not None:
             return self._force_debug_info
-        return self.build_type.should_include_debug_info
+        return self.build_type.should_include_debug_info()
 
     def should_use_extra_c_compat_flags(self) -> bool:
         # TODO: add a command-line option and default to true for

@@ -456,7 +456,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
             self.add_cmake_options(
                 COMPILER_RT_INCLUDE_TESTS=True,
                 # Currently causes lots of test failures if true.
-                # TODO: COMPILER_RT_DEBUG=self.build_type.is_debug,
+                # TODO: COMPILER_RT_DEBUG=self.build_type.is_debug(),
                 COMPILER_RT_DEBUG=False,
                 COMPILER_RT_TEST_COMPILER_CFLAGS=self.commandline_to_str(self.essential_compiler_and_linker_flags),
                 CMAKE_LINKER=self.target_info.linker,  # set to ld.lld to ensure compiler-rt tests run
