@@ -341,6 +341,13 @@ class LaunchQEMUBase(SimpleProject):
     def chosen_qemu(self):
         return self.get_chosen_qemu(self.config)
 
+    @classmethod
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
+        chosen_qemu = cls.get_chosen_qemu(config)
+        if chosen_qemu.cls:
+            return (chosen_qemu.cls.target,)
+        return tuple()
+
     def setup(self):
         super().setup()
         if self.crosscompile_target.is_riscv(include_purecap=True):
@@ -824,10 +831,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     @classmethod
     def dependencies(cls: "type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "tuple[str, ...]":
         xtarget = cls.get_crosscompile_target()
-        result = tuple()
-        chosen_qemu = cls.get_chosen_qemu(config)
-        if chosen_qemu.cls:
-            result += (chosen_qemu.cls.target,)
+        result = super().dependencies(config)
         if cls._freebsd_class is not None:
             result += (cls._freebsd_class.get_class_for_target(xtarget).target,)
         if cls._disk_image_class is not None:

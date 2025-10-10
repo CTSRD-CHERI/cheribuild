@@ -31,8 +31,9 @@
 from pathlib import Path
 
 from .crosscompileproject import CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
-from .llvm import BuildCheriLLVM, BuildUpstreamLLVM
+from .llvm import BuildCheriAllianceLLVM, BuildCheriLLVM, BuildMorelloLLVM, BuildUpstreamLLVM
 from ..project import Linkage, ReuseOtherProjectDefaultTargetRepository
+from ...config.chericonfig import RiscvCheriISA
 from ...config.target_info import CPUArchitecture
 from ...utils import classproperty, is_jenkins_build
 
@@ -122,6 +123,7 @@ class BuildUpstreamCompilerRt(BuildCompilerRt):
 class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     llvm_project = BuildCheriLLVM
+    supported_riscv_cheri_standard = RiscvCheriISA.V9
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
     target = "compiler-rt-builtins"
     _check_install_dir_conflict = False
@@ -130,6 +132,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = (
         CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS
+        + CompilationTargets.ALL_SUPPORTED_LINUX_TARGETS
         + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
         + CompilationTargets.ALL_FREESTANDING_TARGETS
         + CompilationTargets.ALL_NATIVE
@@ -138,14 +141,29 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # Note: needs to be @classproperty since it is called before __init__
     @classproperty
     def default_install_dir(self):
+        # Building for Linux currently requires installing to the resource directory
+        target_info = self.get_crosscompile_target().target_info_cls
+        if target_info.is_linux() and not target_info.is_native():
+            return DefaultInstallDir.ROOTFS_LOCALBASE
         # Install compiler-rt to the sysroot to handle purecap and non-CHERI RTEMS
         if self._xtarget is CompilationTargets.RTEMS_RISCV64_PURECAP:
             return DefaultInstallDir.ROOTFS_LOCALBASE
-        elif self._xtarget is not None and self._xtarget.target_info_cls.is_baremetal():
+        elif self._xtarget is not None and target_info.is_baremetal():
             # Conflicting file names for RISC-V non-CHERI,hybrid, and purecap -> install to prefixed directory
             # instead of the compiler resource directory
             return DefaultInstallDir.ROOTFS_LOCALBASE
         return DefaultInstallDir.IN_BUILD_DIRECTORY
+
+    @classmethod
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        result = super().dependencies(config)
+        xtarget = cls.get_crosscompile_target()
+        if xtarget.target_info_cls.is_linux() and not xtarget.is_native():
+            # The builtins for Linux need C library headers available.
+            sysroot_targets = xtarget.target_info_cls.base_sysroot_targets(xtarget, config)
+            # Remove compiler-rt from the sysroot targets since we are building it here.
+            return tuple(target for target in sysroot_targets if "compiler-rt" not in target)
+        return result
 
     def linkage(self):
         # The default value of STATIC (for baremetal targets) would add additional flags that are not be needed
@@ -156,7 +174,12 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
 
     def setup(self):
         super().setup()
-        assert self.target_info.is_baremetal() or self.target_info.is_rtems() or self.target_info.is_native()
+        assert (
+            self.target_info.is_baremetal()
+            or self.target_info.is_rtems()
+            or self.target_info.is_native()
+            or self.target_info.is_linux()
+        )
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
         if self.compiling_for_mips(include_purecap=False):
@@ -173,6 +196,8 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         )
         if not self.compiling_for_host():
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ONLY=True, TARGET_TRIPLE=self.target_info.target_triple)
+            if self.target_info.is_linux():
+                self.add_cmake_options(CMAKE_SYSROOT=self.target_info.sysroot_dir)
         if self.target_info.is_baremetal():
             self.add_cmake_options(COMPILER_RT_OS_DIR="baremetal")
         if self.should_include_debug_info:
@@ -188,9 +213,42 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             self.create_symlink(
                 self.install_dir / "lib" / libname, self.install_dir / "lib/libgcc.a", print_verbose_only=False
             )
+        elif self.target_info.is_linux() and not self.compiling_for_host():
+            self.create_symlink(
+                self.install_dir / "lib/linux" / libname, self.install_dir / "lib" / libname, print_verbose_only=False
+            )
+            self.create_symlink(
+                self.install_dir / "lib/linux" / libname,
+                self.install_dir / "lib/libgcc.a",
+                print_verbose_only=False,
+            )
+            # Linux Clang driver expects/embeds the following crt files in the linking flags
+            self.create_symlink(
+                self.install_dir / "lib/linux" / f"clang_rt.crtbegin-{self.triple_arch}.o",
+                self.target_info.sysroot_dir / "lib" / "crtbeginT.o",
+                print_verbose_only=False,
+            )
+            self.create_symlink(
+                self.install_dir / "lib/linux" / f"clang_rt.crtend-{self.triple_arch}.o",
+                self.target_info.sysroot_dir / "lib" / "crtend.o",
+                print_verbose_only=False,
+            )
 
 
 class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "upstream-compiler-rt-builtins"
     llvm_project = BuildUpstreamLLVM
+    repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
+
+
+class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
+    target = "cheri-std093-compiler-rt-builtins"
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    llvm_project = BuildCheriAllianceLLVM
+    repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
+
+
+class BuildMorelloCompilerRtBuiltins(BuildCompilerRtBuiltins):
+    target = "morello-compiler-rt-builtins"
+    llvm_project = BuildMorelloLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
