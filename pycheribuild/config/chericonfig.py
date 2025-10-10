@@ -36,6 +36,7 @@ import itertools
 import os
 import re
 import shutil
+import sys
 import typing
 from abc import ABCMeta
 from enum import Enum
@@ -791,7 +792,14 @@ class CheriConfig(ConfigBase, metaclass=ABCMeta):
         return default_test_ssh_key_path
 
     def _ensure_required_properties_set(self) -> bool:
-        for key in itertools.chain(self.__dict__.keys(), self.__annotations__.keys()):
+        if sys.version_info >= (3, 10):
+            # inspect.get_annotations() is the modern way to get annotations and handles inheritance.
+            # It was added in Python 3.10.
+            all_annotations = inspect.get_annotations(type(self))
+        else:
+            # For older Python versions, just use the class's annotations. Note: this field was removed in 3.14
+            all_annotations = type(self).__annotations__
+        for key in itertools.chain(self.__dict__.keys(), all_annotations.keys()):
             try:
                 # don't do the descriptor stuff:
                 value = inspect.getattr_static(self, key)
