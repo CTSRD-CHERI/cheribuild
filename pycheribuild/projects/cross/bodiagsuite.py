@@ -37,6 +37,7 @@ from .crosscompileproject import (
     GitRepository,
 )
 from ..effectivesan import BuildEffectiveSan
+from ..simple_project import BoolConfigOption
 from ..softboundcets import BuildSoftBoundCETS
 from ...utils import OSInfo
 
@@ -67,30 +68,27 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             result += "-softboundcets"
         return result
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.use_valgrind = cls.add_bool_option(
-            "use-valgrind",
-            help="Run tests using valgrind (native only)",
-            only_add_for_targets=(CompilationTargets.NATIVE,),
-        )
-        cls.use_stack_protector = cls.add_bool_option(
-            "use-stack-protector", help="Compile tests with stack-protector (non-CHERI only)"
-        )
-        cls.use_fortify_source = cls.add_bool_option(
-            "use-fortify-source", help="Compile tests with _DFORTIFY_SOURCE=2 (no effect on FreeBSD)"
-        )
-        cls.use_softboundcets = cls.add_bool_option(
-            "use-softboundcets",
-            help="Compile tests with SoftBoundCETS (native only)",
-            only_add_for_targets=(CompilationTargets.NATIVE,),
-        )
-        cls.use_effectivesan = cls.add_bool_option(
-            "use-effectivesan",
-            help="Compile tests with EffectiveSan (native only)",
-            only_add_for_targets=(CompilationTargets.NATIVE,),
-        )
+    use_valgrind = BoolConfigOption(
+        "use-valgrind",
+        help="Run tests using valgrind (native only)",
+        only_add_for_targets=(CompilationTargets.NATIVE,),
+    )
+    use_stack_protector = BoolConfigOption(
+        "use-stack-protector", help="Compile tests with stack-protector (non-CHERI only)"
+    )
+    use_fortify_source = BoolConfigOption(
+        "use-fortify-source", help="Compile tests with _DFORTIFY_SOURCE=2 (no effect on FreeBSD)"
+    )
+    use_softboundcets = BoolConfigOption(
+        "use-softboundcets",
+        help="Compile tests with SoftBoundCETS (native only)",
+        only_add_for_targets=(CompilationTargets.NATIVE,),
+    )
+    use_effectivesan = BoolConfigOption(
+        "use-effectivesan",
+        help="Compile tests with EffectiveSan (native only)",
+        only_add_for_targets=(CompilationTargets.NATIVE,),
+    )
 
     @property
     def CC(self):  # noqa: N802
