@@ -388,7 +388,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configure_args.append("-force-asserts")
             # configure only accepts this for gcc: self.configure_args.append("-gdb-index")
 
-        if self.build_type.should_include_debug_info and False:
+        if self.build_type.should_include_debug_info() and False:
             # separate debug info reduces the size of the shared libraries, but GDB doesn't seem to pick it up
             # automatically (probably not installed to the right directory?) so disable it for now.
             self.configure_args.append("-separate-debug-info")
@@ -579,7 +579,7 @@ class BuildQtBaseDev(CrossCompileCMakeProject):
             self.add_cmake_options(CMAKE_PREFIX_PATH="/usr/local")  # Find homebrew libraries
         if self.build_tests:
             self.add_cmake_options(FEATURE_developer_build="ON")
-            if self.target_info.is_macos() and self.build_type.is_debug:
+            if self.target_info.is_macos() and self.build_type.is_debug():
                 # Otherwise we get "ERROR: debug-only framework builds are not supported. Configure with -no-framework
                 # if you want a pure debug build."
                 self.add_cmake_options(FEATURE_framework="OFF")

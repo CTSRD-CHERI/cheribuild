@@ -106,7 +106,7 @@ class BuildQEMUBase(AutotoolsProject):
 
     @property
     def _build_type_basic_compiler_flags(self):
-        if self.build_type.is_release:
+        if self.build_type.is_release():
             return ["-O3"]  # Build with -O3 instead of -O2, we want QEMU to be as fast as possible
         return super()._build_type_basic_compiler_flags
 
@@ -216,13 +216,13 @@ class BuildQEMUBase(AutotoolsProject):
         if self.enable_plugins:
             self.configure_args.append("--enable-plugins")
 
-        if self.build_type.is_debug:
+        if self.build_type.is_debug():
             self.configure_args.extend(["--enable-debug", "--enable-debug-tcg"])
         else:
             # Try to optimize as much as possible:
             self.configure_args.append("--disable-stack-protector")
 
-        if self.build_type.should_include_debug_info:
+        if self.build_type.should_include_debug_info():
             self.configure_args.append("--enable-debug-info")
 
         # Having symbol information is useful for debugging and profiling

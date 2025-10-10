@@ -896,7 +896,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Don't build manpages by default
             self.make_args.set_with_options(MAN=self.with_manpages)
             # Enable MALLOC_PRODUCTION by default unless --<tgt>/build-type=Debug is passed.
-            self.make_args.set_with_options(MALLOC_PRODUCTION=self.build_type.is_release)
+            self.make_args.set_with_options(MALLOC_PRODUCTION=self.build_type.is_release())
 
         self._setup_make_args_called = True
 

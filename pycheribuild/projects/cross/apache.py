@@ -69,7 +69,7 @@ class BuildApr(CrossCompileAutotoolsProject):
                 "--with-expat=" + str(BuildExpat.get_install_dir(self)),
             ]
         )
-        if self.build_type.is_debug:
+        if self.build_type.is_debug():
             self.configure_args.append("--enable-debug")
 
         # configure is too broken to add the -L path needed
@@ -115,7 +115,7 @@ class BuildApache(CrossCompileAutotoolsProject):
                 "--with-apr=" + str(BuildApr.get_install_dir(self)),
             ]
         )
-        if self.build_type.is_debug:
+        if self.build_type.is_debug():
             self.configure_args.append("--enable-debugger-mode")
 
         # The cross-compile always assumes this is true (so one
