@@ -205,14 +205,14 @@ class TtyState:
 
 @contextlib.contextmanager
 def suppress_sigttou(suppress=True):
+    sighandler = None
     if suppress:
-        hdlr = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
+        sighandler = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
     try:
         yield
     finally:
-        if suppress:
-            # noinspection PyUnboundLocalVariable
-            signal.signal(signal.SIGTTOU, hdlr)
+        if sighandler is not None:
+            signal.signal(signal.SIGTTOU, sighandler)
 
 
 @contextlib.contextmanager
