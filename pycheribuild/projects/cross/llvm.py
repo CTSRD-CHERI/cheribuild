@@ -587,7 +587,7 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
 
         prefix += target.build_suffix(self.config, include_os=False)
         # Instantiate the target_info using the mock project:
-        tgt_info = target.target_info_cls(target, MockProject(self.config, target))  # pytype: disable=not-instantiable
+        tgt_info = target.target_info_cls(target, MockProject(self.config, target))
         assert isinstance(tgt_info, FreeBSDTargetInfo)
         # We only want the compiler flags, don't check whether required files exist
         flags = tgt_info.get_essential_compiler_and_linker_flags(perform_sanity_checks=False, default_flags_only=True)
