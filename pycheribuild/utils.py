@@ -294,7 +294,6 @@ def have_working_internet_connection(config: ConfigBase) -> bool:
     port = 53
     timeout = 3
     x = None
-    result = False
     try:
         x = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         x.settimeout(timeout)
@@ -308,9 +307,9 @@ def have_working_internet_connection(config: ConfigBase) -> bool:
     finally:
         if x:
             x.close()
-        config.internet_connection_last_check_result = result
-        config.internet_connection_last_checked_at = current_check_time
-        return result
+    config.internet_connection_last_check_result = result
+    config.internet_connection_last_checked_at = current_check_time
+    return result
 
 
 def is_case_sensitive_dir(d: Path) -> bool:
