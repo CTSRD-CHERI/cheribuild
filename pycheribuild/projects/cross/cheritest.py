@@ -29,6 +29,7 @@
 #
 from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..sail import BuildSailCheriMips
+from ..simple_project import BoolConfigOption
 
 
 class _BuildCheriMipsTestBase(Project):
@@ -39,16 +40,17 @@ class _BuildCheriMipsTestBase(Project):
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
 
+    run_tests_with_build = BoolConfigOption(
+        "run-tests-with-build",
+        help="Run tests as part of the --build step (option is useful for jenkins)",
+        show_help=False,
+        default=True,
+    )
+
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.single_test = cls.add_config_option("single-test", help="Run a single test instead of all of them")
-        cls.run_tests_with_build = cls.add_bool_option(
-            "run-tests-with-build",
-            help="Run tests as part of the --build step (option is useful for jenkins)",
-            show_help=False,
-            default=True,
-        )
 
     def setup(self):
         super().setup()
