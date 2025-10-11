@@ -77,6 +77,7 @@ from ..utils import (
 __all__ = [
     "BoolConfigOption",
     "IntConfigOption",
+    "ListConfigOption",
     "PathConfigOption",
     "ReuseOtherProjectBuildDir",
     "SimpleProject",
@@ -184,6 +185,15 @@ if typing.TYPE_CHECKING:
         **kwargs,
     ) -> "Optional[Path]":
         return typing.cast(Optional[Path], default)
+
+    # noinspection PyPep8Naming
+    def ListConfigOption(  # noqa: N802
+        name: str,
+        help: str,
+        default: "typing.Union[Optional[list[T]], ComputedDefaultValue[list[T]]]" = None,
+        **kwargs,
+    ) -> "list[T]":
+        return typing.cast(list[T], default)
 else:
 
     class BoolConfigOption(PerProjectConfigOption):
@@ -238,6 +248,22 @@ else:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_config_option(self._name, default=self._default, help=self._help, kind=Path, **self._kwargs),
+            )
+
+    class ListConfigOption(PerProjectConfigOption):
+        def __init__(
+            self,
+            name: str,
+            help: str,
+            default: "typing.Union[Optional[list[T]], ComputedDefaultValue[list[T]]]" = None,
+            **kwargs,
+        ):
+            super().__init__(name, help, default, **kwargs)
+
+        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
+            return typing.cast(
+                ConfigOptionHandle,
+                owner.add_list_option(self._name, default=self._default, help=self._help, **self._kwargs),
             )
 
 
