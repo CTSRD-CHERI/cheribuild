@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Sequence, Union
 
 from .project import MakeCommandKind, _CMakeAndMesonSharedLogic
+from .simple_project import ListConfigOption
 from ..config.chericonfig import BuildType
 from ..config.target_info import BasicCompilationTargets, NativeTargetInfo
 from ..utils import InstallInstructions, OSInfo, include_local_file, remove_duplicates
@@ -54,7 +55,9 @@ class MesonProject(_CMakeAndMesonSharedLogic):
     meson_test_script_extra_args: "Sequence[str]" = tuple()  # additional arguments to pass to run_meson_tests.py
     _meson_extra_binaries = ""  # Needed for picolibc
     _meson_extra_properties = ""  # Needed for picolibc
-    meson_options: "list[str]"
+    meson_options = ListConfigOption(
+        "meson-options", metavar="OPTIONS", help="Additional command line options to pass to Meson"
+    )
 
     def set_minimum_meson_version(self, major: int, minor: int, patch: int = 0) -> None:
         new_version = (major, minor, patch)
@@ -71,13 +74,6 @@ class MesonProject(_CMakeAndMesonSharedLogic):
             freebsd="meson",
             apt="meson",
             alternative="run `pip3 install --upgrade --user meson` to install the latest version",
-        )
-
-    @classmethod
-    def setup_config_options(cls, **kwargs) -> None:
-        super().setup_config_options(**kwargs)
-        cls.meson_options = cls.add_list_option(
-            "meson-options", metavar="OPTIONS", help="Additional command line options to pass to Meson"
         )
 
     def __init__(self, *args, **kwargs) -> None:
