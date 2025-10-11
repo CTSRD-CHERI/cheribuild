@@ -52,7 +52,7 @@ from .project import (
     MakeCommandKind,
     Project,
 )
-from .simple_project import SimpleProject
+from .simple_project import BoolConfigOption, SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile, MtreePath
 from ..utils import AnsiColour, classproperty, coloured, include_local_file
@@ -143,6 +143,13 @@ class BuildDiskImageBase(SimpleProject):
         as_string=lambda cls: "$OUTPUT_ROOT/" + cls.disk_image_prefix + "-<TARGET>-disk.img depending on architecture",
     )
 
+    force_overwrite = BoolConfigOption(
+        "force-overwrite", default=True, help="Overwrite an existing disk image without prompting"
+    )
+    no_autoboot = BoolConfigOption(
+        "no-autoboot", default=False, help="Disable autoboot and boot menu for targets that use loader(8)"
+    )
+
     @classproperty
     def default_architecture(self) -> CrossCompileTarget:
         return typing.cast(CrossCompileTarget, self._source_class.default_architecture)
@@ -211,12 +218,6 @@ class BuildDiskImageBase(SimpleProject):
             metavar="IMGPATH",
             help="The output path for the disk image",
             show_help=True,
-        )
-        cls.force_overwrite = cls.add_bool_option(
-            "force-overwrite", default=True, help="Overwrite an existing disk image without prompting"
-        )
-        cls.no_autoboot = cls.add_bool_option(
-            "no-autoboot", default=False, help="Disable autoboot and boot menu for targets that use loader(8)"
         )
 
     def check_system_dependencies(self) -> None:
