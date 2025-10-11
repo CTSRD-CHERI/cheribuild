@@ -30,6 +30,7 @@
 #
 
 import json
+from pathlib import Path
 
 from .build_qemu import BuildQEMU
 from .cross.cheribsd import BuildCHERIBSD, CheriBSDConfigTable, ConfigPlatform
@@ -37,7 +38,7 @@ from .cross.crosscompileproject import CompilationTargets, CrossCompileProject
 from .disk_image import BuildCheriBSDDiskImage
 from .go import BuildGo
 from .project import DefaultInstallDir, GitRepository, MakeCommandKind
-from .simple_project import BoolConfigOption, SimpleProject
+from .simple_project import BoolConfigOption, PathConfigOption, SimpleProject
 from ..config.computed_default_value import ComputedDefaultValue
 from ..config.target_info import CPUArchitecture
 from ..processutils import commandline_to_str
@@ -159,33 +160,31 @@ class RunSyzkaller(SimpleProject):
     target = "run-syzkaller"
     supported_architectures = BuildSyzkaller.supported_architectures
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.syz_config = cls.add_optional_path_option(
-            "syz-config", help="Path to the syzkaller configuration file to use.", show_help=True
-        )
-        cls.syz_ssh_key = cls.add_path_option(
-            "ssh-privkey",
-            show_help=True,
-            default=lambda config, project: (config.source_root / "extra-files" / "syzkaller_id_rsa"),
-            help=(
-                "A directory with additional files that will be added to the image "
-                "(default: '$SOURCE_ROOT/extra-files/syzkaller_id_rsa')"
-            ),
-            metavar="syzkaller_id_rsa",
-        )
-        cls.syz_workdir = cls.add_path_option(
-            "workdir",
-            show_help=True,
-            default=lambda config, project: (config.output_root / "syzkaller-workdir"),
-            help="Working directory for syzkaller output.",
-            metavar="DIR",
-        )
-        cls.syz_debug = cls.add_bool_option(
-            "debug",
-            help="Run syz-manager in debug mode, requires manual startup of the VM.",
-        )
+    syz_config = PathConfigOption("syz-config", help="Path to the syzkaller configuration file to use.", show_help=True)
+    syz_ssh_key = PathConfigOption(
+        "ssh-privkey",
+        show_help=True,
+        default=ComputedDefaultValue[Path](
+            function=lambda config, project: (config.source_root / "extra-files" / "syzkaller_id_rsa"),
+            as_string="$SOURCE_ROOT/extra-files/syzkaller_id_rsa",
+        ),
+        help="A directory with additional files that will be added to the image",
+        metavar="syzkaller_id_rsa",
+    )
+    syz_workdir = PathConfigOption(
+        "workdir",
+        show_help=True,
+        default=ComputedDefaultValue[Path](
+            function=lambda config, project: (config.output_root / "syzkaller-workdir"),
+            as_string="$OUTPUT_ROOT/syzkaller-workdir",
+        ),
+        help="Working directory for syzkaller output.",
+        metavar="DIR",
+    )
+    syz_debug = BoolConfigOption(
+        "debug",
+        help="Run syz-manager in debug mode, requires manual startup of the VM.",
+    )
 
     def syzkaller_config(self, syzkaller: BuildSyzkaller):
         """Get path of syzkaller configuration file to use."""
