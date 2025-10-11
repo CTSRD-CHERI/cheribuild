@@ -39,7 +39,7 @@ from typing import Optional
 
 from .disk_image import BuildCheriBSDDiskImage, BuildDiskImageBase, BuildFreeBSDImage
 from .fvp_firmware import BuildMorelloFlashImages, BuildMorelloScpFirmware, BuildMorelloUEFI
-from .simple_project import BoolConfigOption, IntConfigOption, SimpleProject
+from .simple_project import BoolConfigOption, IntConfigOption, PathConfigOption, SimpleProject
 from ..config.chericonfig import CheriConfig, ComputedDefaultValue
 from ..config.compilation_targets import CompilationTargets
 from ..config.target_info import CrossCompileTarget
@@ -70,21 +70,12 @@ class InstallMorelloFVP(SimpleProject):
         "use-docker-container", default=OSInfo.IS_MAC, help="Run the FVP inside a docker container"
     )
     i_agree_to_the_contained_eula = BoolConfigOption("agree-to-the-contained-eula", help="Accept the EULA")
+    installer_path = PathConfigOption("installer-path", help="Path to the FVP installer.sh or installer.tgz")
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
         if self.use_docker_container:
             self.check_required_system_tool("docker", homebrew="homebrew/cask/docker")
-            self.check_required_system_tool("socat", homebrew="socat")
-            if OSInfo.IS_MAC:
-                self.check_required_system_tool("Xquartz", homebrew="homebrew/cask/xquartz")
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.installer_path = cls.add_optional_path_option(
-            "installer-path", help="Path to the FVP installer.sh or installer.tgz"
-        )
 
     @property
     def install_dir(self):
