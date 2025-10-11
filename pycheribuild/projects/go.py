@@ -30,6 +30,7 @@
 from pathlib import Path
 
 from .project import CrossCompileTarget, DefaultInstallDir, GitRepository, Project
+from .simple_project import PathConfigOption
 from ..utils import ThreadJoiner
 
 
@@ -44,12 +45,9 @@ class BuildGo(Project):
     skip_cheri_symlinks = True
     native_install_dir = DefaultInstallDir.CHERI_SDK
 
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-        cls.go_bootstrap = cls.add_optional_path_option(
-            "bootstrap-toolchain", show_help=False, help="Path to alternate go bootstrap toolchain."
-        )
+    go_bootstrap = PathConfigOption(
+        "bootstrap-toolchain", show_help=False, help="Path to alternate go bootstrap toolchain."
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
