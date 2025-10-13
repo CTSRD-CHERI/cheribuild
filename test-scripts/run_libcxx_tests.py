@@ -249,11 +249,11 @@ def run_parallel(args: argparse.Namespace):
 
 def wait_or_terminate_all_shards(processes, max_time, timed_out):
     assert max_time > 0 or timed_out
-    max_end_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=max_time)
+    max_end_time = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=max_time)
     for i, p in enumerate(processes):
         # don't wait for completion if we've already timed out
         if not timed_out:
-            remaining_time = max_end_time - datetime.datetime.utcnow()
+            remaining_time = max_end_time - datetime.datetime.now(datetime.timezone.utc)
             # wait for completion
             try:
                 p.join(timeout=remaining_time.total_seconds())
@@ -310,7 +310,7 @@ def run_parallel_impl(
 
     # wait for the success/failure message from the process:
     # if the shard takes longer than 4 hours to run something went wrong
-    start_time = datetime.datetime.utcnow()
+    start_time = datetime.datetime.now(datetime.timezone.utc)
     max_test_duration = datetime.timedelta(seconds=4 * 60 * 60)
     test_end_time = start_time + max_test_duration
     # If any shard has not yet booted CheriBSD after 10 minutes something went horribly wrong
@@ -326,7 +326,7 @@ def run_parallel_impl(
             for p in remaining_processes:
                 p.stage = run_remote_lit_test.MultiprocessStages.TIMED_OUT
             break
-        loop_start_time = datetime.datetime.utcnow()
+        loop_start_time = datetime.datetime.now(datetime.timezone.utc)
         num_shards_not_booted = len(not_booted_processes)
         if num_shards_not_booted > 0:
             mp_debug(args, "Still waiting for ", num_shards_not_booted, " shards to boot")

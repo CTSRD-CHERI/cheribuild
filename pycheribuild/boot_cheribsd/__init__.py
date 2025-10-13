@@ -432,11 +432,11 @@ class QemuCheriBSDInstance(CheriBSDInstance):
         return subprocess.run(ssh_command, stdout=stdout, stderr=stderr, check=check, **kwargs)
 
     def check_ssh_connection(self, prefix="SSH connection:"):
-        connection_test_start = datetime.datetime.utcnow()
+        connection_test_start = datetime.datetime.now(datetime.timezone.utc)
         result = self.run_command_via_ssh(
             ["echo", "connection successful"], check=True, stdout=subprocess.PIPE, verbose=True
         )
-        connection_time = (datetime.datetime.utcnow() - connection_test_start).total_seconds()
+        connection_time = (datetime.datetime.now(datetime.timezone.utc) - connection_test_start).total_seconds()
         info(prefix, result.stdout)
         if result.stdout != b"connection successful\n":
             failure(prefix, " unexepected output ", result.stdout, " after ", connection_time, " seconds", exit=False)
