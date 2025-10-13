@@ -117,22 +117,22 @@ class PerProjectConfigOption(typing.Generic[T]):
         self._help = help
         self._kwargs = kwargs
 
-    def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle[T]:
+    def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle[T]:
         raise NotImplementedError()
 
     # noinspection PyProtectedMember
-    def __set_name__(self, owner: "type[SimpleProject]", name: str):
+    def __set_name__(self, owner: "type[SimpleProjectBase]", name: str):
         # we know that _local_config_options is still a dict and not a MappingProxy when called here.
         typing.cast(typing.MutableMapping[str, PerProjectConfigOption], owner._local_config_options)[name] = self
 
-    def __get__(self, instance: "SimpleProject", owner: "type[SimpleProject]") -> T:
+    def __get__(self, instance: "SimpleProjectBase", owner: "type[SimpleProjectBase]") -> T:
         raise ValueError("Should have been replaced!")
 
 
 class ReuseOtherProjectBuildDir:
     def __init__(
         self,
-        build_project: "type[SimpleProject]",
+        build_project: "type[SimpleProjectBase]",
         *,
         subdirectory=".",
         dir_for_target: "Optional[CrossCompileTarget]" = None,
@@ -202,7 +202,7 @@ else:
         ):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_bool_option(self._name, default=self._default, help=self._help, **self._kwargs),
@@ -212,7 +212,7 @@ else:
         def __init__(self, name: str, help: str, default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_config_option(self._name, default=self._default, help=self._help, kind=int, **self._kwargs),
@@ -228,7 +228,7 @@ else:
         ):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_config_option(self._name, default=self._default, help=self._help, kind=int, **self._kwargs),
@@ -244,7 +244,7 @@ else:
         ):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_config_option(self._name, default=self._default, help=self._help, kind=Path, **self._kwargs),
@@ -260,7 +260,7 @@ else:
         ):
             super().__init__(name, help, default, **kwargs)
 
-        def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
+        def register_config_option(self, owner: "type[SimpleProjectBase]") -> ConfigOptionHandle:
             return typing.cast(
                 ConfigOptionHandle,
                 owner.add_list_option(self._name, default=self._default, help=self._help, **self._kwargs),
@@ -1650,7 +1650,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
             sys.exit(inspect.getfile(cls) + ":" + str(inspect.findsource(cls)[1] + 1) + ": error: " + msg)
 
         # load "target" field first then use that to infer the default source/build/install dir names
-        target_name = None
+        target_name: "Optional[str]" = None
         if "target" in clsdict:
             target_name = clsdict["target"]
         elif name.startswith("Build"):
@@ -1662,6 +1662,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                 + name
                 + " -- set target= or do_not_add_to_targets=True"
             )
+        assert target_name is not None
         # Make the local config options dictionary read-only
         cls._local_config_options = MappingProxyType(cls._local_config_options)
 
