@@ -10,7 +10,7 @@ on:
         branches: [ main ]
 
 env:
-    RUFF_VERSION: 0.4.1
+    RUFF_VERSION: 0.14.0
 
 jobs:
     build-docker:
