@@ -34,7 +34,7 @@ from typing import ClassVar, Iterable, Optional
 
 from ..cmake_project import CMakeProject
 from ..project import BuildType, ComputedDefaultValue, DefaultInstallDir, GitRepository
-from ..simple_project import SimpleProject, SimpleProjectWithoutDefinitionHook
+from ..simple_project import SimpleProject, SimpleProjectBase
 from ...config.chericonfig import CheriConfig
 from ...config.compilation_targets import (
     BuildLLVMInterface,
@@ -576,7 +576,7 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase, BuildLLVMInterface):
 
     def add_compiler_with_config_file(self, prefix: str, target: CrossCompileTarget):
         # Create a fake project class that has the required properties needed for essential_compiler_and_linker_flags
-        class MockProject(SimpleProjectWithoutDefinitionHook):
+        class MockProject(SimpleProjectBase):
             def __init__(self, config, _target: CrossCompileTarget):
                 self._xtarget = _target
                 super().__init__(config, crosscompile_target=_target)

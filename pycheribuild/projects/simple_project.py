@@ -81,7 +81,7 @@ __all__ = [
     "PathConfigOption",
     "ReuseOtherProjectBuildDir",
     "SimpleProject",
-    "SimpleProjectWithoutDefinitionHook",
+    "SimpleProjectBase",
     "TargetAlias",
     "TargetAliasWithDependencies",
     "_cached_get_homebrew_prefix",
@@ -143,7 +143,7 @@ class ReuseOtherProjectBuildDir:
         self.dir_for_target = dir_for_target
         self.do_update = do_update
 
-    def get_real_build_dir(self, caller: "SimpleProject", base_project_build_dir: Optional[Path]) -> Path:
+    def get_real_build_dir(self, caller: "SimpleProjectBase", base_project_build_dir: Optional[Path]) -> Path:
         if base_project_build_dir is not None:
             return base_project_build_dir
         return self.build_project.get_build_dir(caller, cross_target=self.dir_for_target) / self.subdirectory
@@ -293,7 +293,7 @@ def _cached_get_homebrew_prefix(package: "Optional[str]", config: CheriConfig):
 _clear_line_sequence: bytes = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
 
 
-class SimpleProjectWithoutDefinitionHook(AbstractProject, ABC):
+class SimpleProjectBase(AbstractProject, ABC):
     _commandline_option_group: typing.Any = None
     _config_loader: ConfigLoaderBase
 
@@ -1635,7 +1635,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
 
     def __init__(cls, name: str, bases, clsdict) -> None:
         super().__init__(name, bases, clsdict)
-        assert issubclass(cls, SimpleProjectWithoutDefinitionHook)
+        assert issubclass(cls, SimpleProjectBase)
         if clsdict.get("do_not_add_to_targets") is not None:
             if clsdict.get("do_not_add_to_targets") is True:
                 return  # if do_not_add_to_targets is defined within the class we skip it
@@ -1720,7 +1720,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                 new_dict["synthetic_base"] = cls  # We are already adding it here
                 # noinspection PyTypeChecker
                 new_cls = type(cls.__name__ + "_" + arch.name, (cls, *cls.__bases__), new_dict)
-                assert issubclass(new_cls, SimpleProjectWithoutDefinitionHook)
+                assert issubclass(new_cls, SimpleProjectBase)
                 target_manager.add_target(MultiArchTarget(new_name, new_cls, arch, base_target))
                 # Handle old names for FreeBSD/CheriBSD targets in the config file:
                 if arch.target_info_cls.is_freebsd() and not arch.target_info_cls.is_native():
@@ -1750,7 +1750,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
 
 
 # This class exists to allow deriving from SimpleProject without the metaclass
-class SimpleProject(SimpleProjectWithoutDefinitionHook, metaclass=ProjectSubclassDefinitionHook):
+class SimpleProject(SimpleProjectBase, metaclass=ProjectSubclassDefinitionHook):
     # Subclasses will automatically have a target based on their name generated unless they add this:
     do_not_add_to_targets: bool = True
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
