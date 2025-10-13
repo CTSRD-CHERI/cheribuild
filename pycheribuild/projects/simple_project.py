@@ -1627,7 +1627,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                 dct["_local_config_options"] = dict(old)
         return super().__new__(cls, name, bases, dct)
 
-    def __init__(cls, name: str, bases, clsdict) -> None:
+    def __init__(cls: "type[SimpleProjectBase]", name: str, bases, clsdict) -> None:
         super().__init__(name, bases, clsdict)
         assert issubclass(cls, SimpleProjectBase)
         if clsdict.get("do_not_add_to_targets") is not None:
@@ -1642,7 +1642,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                 pretend=False,
             )
 
-        def die(msg):
+        def die(msg) -> typing.NoReturn:
             sys.exit(inspect.getfile(cls) + ":" + str(inspect.findsource(cls)[1] + 1) + ": error: " + msg)
 
         # load "target" field first then use that to infer the default source/build/install dir names
