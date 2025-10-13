@@ -110,14 +110,14 @@ def _default_stdout_filter(_: bytes) -> "typing.NoReturn":
     raise NotImplementedError("Should never be called, this is a dummy")
 
 
-class PerProjectConfigOption:
-    def __init__(self, name: str, help: str, default: "typing.Any", **kwargs):
+class PerProjectConfigOption(typing.Generic[T]):
+    def __init__(self, name: str, help: str, default: "typing.Any", **kwargs) -> None:
         self._name = name
         self._default = default
         self._help = help
         self._kwargs = kwargs
 
-    def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle:
+    def register_config_option(self, owner: "type[SimpleProject]") -> ConfigOptionHandle[T]:
         raise NotImplementedError()
 
     # noinspection PyProtectedMember
@@ -125,8 +125,8 @@ class PerProjectConfigOption:
         # we know that _local_config_options is still a dict and not a MappingProxy when called here.
         typing.cast(typing.MutableMapping[str, PerProjectConfigOption], owner._local_config_options)[name] = self
 
-    def __get__(self, instance: "SimpleProject", owner: "type[SimpleProject]"):
-        return ValueError("Should have been replaced!")
+    def __get__(self, instance: "SimpleProject", owner: "type[SimpleProject]") -> T:
+        raise ValueError("Should have been replaced!")
 
 
 class ReuseOtherProjectBuildDir:
@@ -196,7 +196,7 @@ if typing.TYPE_CHECKING:
         return typing.cast(list[T], default)
 else:
 
-    class BoolConfigOption(PerProjectConfigOption):
+    class BoolConfigOption(PerProjectConfigOption[bool]):
         def __init__(
             self, name: str, help: str, default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs
         ):
@@ -208,7 +208,7 @@ else:
                 owner.add_bool_option(self._name, default=self._default, help=self._help, **self._kwargs),
             )
 
-    class IntConfigOption(PerProjectConfigOption):
+    class IntConfigOption(PerProjectConfigOption[int]):
         def __init__(self, name: str, help: str, default: "typing.Union[int, ComputedDefaultValue[int]]", **kwargs):
             super().__init__(name, help, default, **kwargs)
 
@@ -218,7 +218,7 @@ else:
                 owner.add_config_option(self._name, default=self._default, help=self._help, kind=int, **self._kwargs),
             )
 
-    class OptionalIntConfigOption(PerProjectConfigOption):
+    class OptionalIntConfigOption(PerProjectConfigOption[Optional[int]]):
         def __init__(
             self,
             name: str,
@@ -234,7 +234,7 @@ else:
                 owner.add_config_option(self._name, default=self._default, help=self._help, kind=int, **self._kwargs),
             )
 
-    class PathConfigOption(PerProjectConfigOption):
+    class PathConfigOption(PerProjectConfigOption[Path]):
         def __init__(
             self,
             name: str,
@@ -250,7 +250,7 @@ else:
                 owner.add_config_option(self._name, default=self._default, help=self._help, kind=Path, **self._kwargs),
             )
 
-    class ListConfigOption(PerProjectConfigOption):
+    class ListConfigOption(PerProjectConfigOption[typing.List[str]]):
         def __init__(
             self,
             name: str,
