@@ -445,6 +445,7 @@ class Project(SimpleProject):
     show_optional_tests_in_help: bool = True  # whether to show the --foo/build-tests in --help
     add_gdb_index = True  # whether to build with -Wl,--gdb-index if the linker supports it
     _initial_source_dir: Optional[Path]
+    source_dir: Path
     supported_riscv_cheri_standard: Optional[RiscvCheriISA] = None
 
     @classmethod
