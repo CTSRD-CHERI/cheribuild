@@ -78,8 +78,9 @@ jobs:
     typecheck:
         strategy:
             matrix:
-                # Python versions > 3.12 are not yet supported and 3.12 appears to be buggy for now.
-                version: [ 3.8, 3.11 ]
+                # Python versions > 3.13 are not yet supported and 3.12 appears to be buggy for now.
+                # TODO: stop using pytype since it is EOL.
+                version: [ 3.11 ]
         runs-on: ubuntu-latest
         steps:
             -   uses: actions/checkout@v3
