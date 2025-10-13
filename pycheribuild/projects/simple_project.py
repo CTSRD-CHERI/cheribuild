@@ -766,7 +766,7 @@ class SimpleProjectBase(AbstractProject, ABC):
 
     @classmethod
     def get_class_for_target(cls, arch: CrossCompileTarget) -> "type[typing.Self]":
-        base_class: "type[typing.Self]" = getattr(cls, "synthetic_base", cls)
+        base_class: "type[typing.Self]" = getattr(cls, "synthetic_base", cls)  # pytype: disable=invalid-annotation
         result = cls.get_class_for_target_name(base_class.target, arch)
         assert issubclass(result, base_class)
         return result
@@ -790,7 +790,7 @@ class SimpleProjectBase(AbstractProject, ABC):
             # single architecture target
             result = target.project_class
             if arch is None or result._xtarget is arch:
-                return typing.cast("type[typing.Self]", result)
+                return typing.cast("type[typing.Self]", result)  # pytype: disable=invalid-annotation
         raise LookupError(f"Invalid arch {arch} for target {name}")
 
     @property
@@ -1717,8 +1717,10 @@ class ProjectSubclassDefinitionHook(ABCMeta):
                 new_dict["do_not_add_to_targets"] = True  # We are already adding it here
                 new_dict["target"] = new_name
                 new_dict["synthetic_base"] = cls  # We are already adding it here
-                # noinspection PyTypeChecker
-                new_cls = type(cls.__name__ + "_" + arch.name, (cls, *cls.__bases__), new_dict)
+                new_cls = typing.cast(
+                    typing.Type[SimpleProjectBase],
+                    type(cls.__name__ + "_" + arch.name, (cls, *cls.__bases__), new_dict),
+                )
                 assert issubclass(new_cls, SimpleProjectBase)
                 target_manager.add_target(MultiArchTarget(new_name, new_cls, arch, base_target))
                 # Handle old names for FreeBSD/CheriBSD targets in the config file:
