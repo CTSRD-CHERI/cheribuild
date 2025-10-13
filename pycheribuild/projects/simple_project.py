@@ -1616,19 +1616,23 @@ class SimpleProjectBase(AbstractProject, ABC):
 
 # noinspection PyProtectedMember
 class ProjectSubclassDefinitionHook(ABCMeta):
-    def __new__(cls, name, bases, dct):
+    def __new__(cls, name: str, bases: "tuple[type, ...]", namespace: "dict[str, typing.Any]", **kwargs):
         # We have to set _local_config_options to a new dict here, as this is the first hook that runs before
         # the __set_name__ function on class members is called (__init_subclass__ is too late).
         for base in bases:
             old = getattr(base, "_local_config_options", None)
             if old is not None:
                 # Create a copy of the dictionary so that modifying it does not change the value in the base class.
-                dct = dict(dct)
-                dct["_local_config_options"] = dict(old)
-        return super().__new__(cls, name, bases, dct)
+                namespace = dict(namespace)
+                namespace["_local_config_options"] = dict(old)
+        return super().__new__(cls, name, bases, namespace, **kwargs)
 
-    def __init__(cls: "type[SimpleProjectBase]", name: str, bases, clsdict) -> None:
-        super().__init__(name, bases, clsdict)
+    # pytype: disable=invalid-annotation
+    def __init__(
+        cls: "type[SimpleProjectBase]", name: str, bases: "tuple[type, ...]", clsdict: "dict[str, typing.Any]", **kwargs
+    ) -> None:
+        super().__init__(name, bases, clsdict, **kwargs)
+        # pytype: enable=invalid-annotation
         assert issubclass(cls, SimpleProjectBase)
         if clsdict.get("do_not_add_to_targets") is not None:
             if clsdict.get("do_not_add_to_targets") is True:
