@@ -40,7 +40,7 @@ from typing import ClassVar, Optional, final
 from .chericonfig import AArch64FloatSimdOptions, CheriConfig, MipsFloatAbi, RiscvCheriISA, RiscvFloatAbi
 from ..filesystemutils import FileSystemUtils
 from ..processutils import CompilerInfo, get_compiler_info
-from ..utils import OSInfo, Type_T, fatal_error, status_update, warning_message
+from ..utils import OSInfo, fatal_error, status_update, warning_message
 
 __all__ = [
     "AArch64FloatSimdOptions",
@@ -247,11 +247,11 @@ class AbstractProject(FileSystemUtils, metaclass=ABCMeta):
     @classmethod
     @abstractmethod
     def get_instance(
-        cls: "type[Type_T]",
+        cls,
         caller: "Optional[AbstractProject]",
         config: "Optional[CheriConfig]" = None,
         cross_target: "Optional[CrossCompileTarget]" = None,
-    ) -> "Type_T": ...
+    ) -> "typing.Self": ...
 
     @classmethod
     def get_install_dir(cls, caller: "AbstractProject", cross_target: "Optional[CrossCompileTarget]" = None) -> Path:

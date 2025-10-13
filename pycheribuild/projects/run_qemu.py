@@ -804,6 +804,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
         if self._freebsd_class is not None:
             return self._freebsd_class.supported_architectures
+        assert self._disk_image_class is not None
         return self._disk_image_class.supported_architectures
 
     @classmethod
@@ -823,7 +824,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         return cls._disk_image_class.default_architecture()
 
     @classmethod
-    def dependencies(cls: "type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "tuple[str, ...]":
+    def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         xtarget = cls.get_crosscompile_target()
         result = tuple()
         chosen_qemu = cls.get_chosen_qemu(config)

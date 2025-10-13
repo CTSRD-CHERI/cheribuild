@@ -569,11 +569,11 @@ class SimpleProjectBase(AbstractProject, ABC):
 
     @classmethod
     def get_instance(
-        cls: "type[T]",
+        cls,
         caller: "Optional[AbstractProject]",
         config: "Optional[CheriConfig]" = None,
         cross_target: Optional[CrossCompileTarget] = None,
-    ) -> T:
+    ) -> "typing.Self":
         # TODO: assert that target manager has been initialized
         if caller is not None:
             if config is None:
@@ -588,8 +588,8 @@ class SimpleProjectBase(AbstractProject, ABC):
 
     @classmethod
     def _get_instance_no_setup(
-        cls: "type[T]", caller: AbstractProject, cross_target: Optional[CrossCompileTarget] = None
-    ) -> T:
+        cls, caller: AbstractProject, cross_target: Optional[CrossCompileTarget] = None
+    ) -> "typing.Self":
         if cross_target is None:
             cross_target = caller.crosscompile_target
         target_name = cls.target
@@ -625,11 +625,11 @@ class SimpleProjectBase(AbstractProject, ABC):
 
     @classmethod
     def get_instance_for_cross_target(
-        cls: "type[T]",
+        cls,
         cross_target: CrossCompileTarget,
         config: CheriConfig,
         caller: "Optional[AbstractProject]" = None,
-    ) -> T:
+    ) -> "typing.Self":
         # Also need to handle calling self.get_instance_for_cross_target() on a target-specific instance
         # In that case cls.target returns e.g. foo-mips, etc. and target_manager will always return the MIPS version
         # which is not what we want if there is an explicit cross_target
@@ -765,32 +765,32 @@ class SimpleProjectBase(AbstractProject, ABC):
         )
 
     @classmethod
-    def get_class_for_target(cls: "type[T]", arch: CrossCompileTarget) -> "type[T]":
-        base_class: "type[T]" = getattr(cls, "synthetic_base", cls)
+    def get_class_for_target(cls, arch: CrossCompileTarget) -> "type[typing.Self]":
+        base_class: "type[typing.Self]" = getattr(cls, "synthetic_base", cls)
         result = cls.get_class_for_target_name(base_class.target, arch)
         assert issubclass(result, base_class)
         return result
 
     @classmethod
-    def get_class_for_target_name(cls: "type[T]", name: str, arch: Optional[CrossCompileTarget]) -> "type[T]":
+    def get_class_for_target_name(cls, name: str, arch: Optional[CrossCompileTarget]) -> "type[typing.Self]":
         target = target_manager.get_target_raw(name)
         if isinstance(target, MultiArchTarget):
             # check for exact match
             if target.target_arch is arch:
-                return typing.cast(typing.Type[T], target.project_class)
+                return typing.cast("type[typing.Self]", target.project_class)
             # Otherwise fall back to the target alias and find the matching one
             target = target.base_target
         if isinstance(target, MultiArchTargetAlias):
             if arch is None:
-                return typing.cast(typing.Type[T], target.project_class)
+                return typing.cast("type[typing.Self]", target.project_class)
             for t in target.derived_targets:
                 if t.target_arch is arch:
-                    return typing.cast(typing.Type[T], t.project_class)
+                    return typing.cast("type[typing.Self]", t.project_class)
         elif isinstance(target, Target):
             # single architecture target
             result = target.project_class
             if arch is None or result._xtarget is arch:
-                return typing.cast(typing.Type[T], result)
+                return typing.cast("type[typing.Self]", result)
         raise LookupError(f"Invalid arch {arch} for target {name}")
 
     @property
