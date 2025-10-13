@@ -235,7 +235,7 @@ class ConfigLoaderBase(ABC):
 class AbstractConfigOption(typing.Generic[T], metaclass=ABCMeta):
     @abstractmethod
     def load_option(
-        self, config: "ConfigBase", instance: "Optional[object]", _: type, return_none_if_default=False
+        self, config: "ConfigBase", instance: "Optional[object]", _: type, raise_err_if_default=False
     ) -> T: ...
 
     @abstractmethod
@@ -299,9 +299,7 @@ class ConfigOptionBase(AbstractConfigOption[T]):
             is_list = False
         self.is_list = is_list
 
-    def load_option(
-        self, config: "ConfigBase", instance: "Optional[object]", _: type, return_none_if_default=False
-    ) -> T:
+    def load_option(self, config: "ConfigBase", instance: "Optional[object]", _: type, raise_err_if_default=False) -> T:
         result = self._load_option_impl(config, self.full_option_name)
         # fall back from --qtbase-mips/foo to --qtbase/foo
         # Try aliases first:
@@ -323,8 +321,9 @@ class ConfigOptionBase(AbstractConfigOption[T]):
                     break
 
         if result is None:  # If no option is set fall back to the default
-            if return_none_if_default:
-                return None  # Used in jenkins to avoid updating install directory for explicit options on commandline
+            if raise_err_if_default:
+                # Used in jenkins to avoid updating install directory for explicit options on commandline
+                raise ValueError("Default")
             result = self._get_default_value(config, instance)
             if result is not None:
                 result = _LoadedConfigValue(result, None)
@@ -424,7 +423,7 @@ class ConfigOptionBase(AbstractConfigOption[T]):
                 result = [self.value_type(x) for x in result]
             else:
                 result = self.value_type(result)  # make sure it has the right type (e.g. Path, int, bool, str)
-        return result
+        return typing.cast(T, result)
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}({self.name}) type={self.value_type} cached={self._cached}>"
@@ -462,10 +461,8 @@ class ConfigOptionHandle(AbstractConfigOption[T]):
     def replaceable(self) -> bool:
         return self.__replaceable
 
-    def load_option(
-        self, config: "ConfigBase", instance: "Optional[object]", _: type, return_none_if_default=False
-    ) -> T:
-        return self._get_option().load_option(config, instance, _, return_none_if_default)
+    def load_option(self, config: "ConfigBase", instance: "Optional[object]", _: type, raise_err_if_default=False) -> T:
+        return self._get_option().load_option(config, instance, _, raise_err_if_default)
 
     def _load_option_impl(self, config: "ConfigBase", target_option_name) -> "Optional[_LoadedConfigValue]":
         return self._get_option()._load_option_impl(config, target_option_name)
