@@ -707,7 +707,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
 
 class _HostCompilerMixin(_BuildLlvmRuntimes if typing.TYPE_CHECKING else object):
     supported_architectures = CompilationTargets.ALL_NATIVE
-    default_architecture = CompilationTargets.NATIVE
+    _default_architecture = CompilationTargets.NATIVE
 
     @property
     def custom_c_preprocessor(self):
@@ -749,7 +749,7 @@ class BuildLibunwind(_BuildLlvmRuntimes):
         CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
         + CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
     )
-    default_architecture = CompilationTargets.NATIVE
+    _default_architecture = CompilationTargets.NATIVE
     default_build_type = BuildType.DEBUG
     _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("libunwind",)
 
@@ -770,7 +770,7 @@ class BuildCompilerRtRuntimesBuild(_BuildLlvmRuntimes):
     target = "compiler-rt-runtimes-build"
     llvm_project = BuildCheriLLVM
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
-    default_architecture = CompilationTargets.NATIVE
+    _default_architecture = CompilationTargets.NATIVE
     default_build_type = BuildType.DEBUG
     _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("compiler-rt",)
 
@@ -795,7 +795,7 @@ class BuildLlvmLibs(_BuildLlvmRuntimes):
         *CompilationTargets.ALL_PICOLIBC_TARGETS,
         *CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS,
     )
-    default_architecture = CompilationTargets.NATIVE
+    _default_architecture = CompilationTargets.NATIVE
     default_build_type = BuildType.DEBUG
 
     @classproperty
@@ -812,7 +812,7 @@ class BuildLlvmLibsWithHostCompiler(_HostCompilerMixin, BuildLlvmLibs):
 
 class BuildUpstreamLlvmLibs(_UpstreamLLVMMixin, _BuildLlvmRuntimes):
     target = "upstream-llvm-libs"
-    default_architecture = CompilationTargets.NATIVE
+    _default_architecture = CompilationTargets.NATIVE
     default_build_type = BuildType.DEBUG
 
 

@@ -33,7 +33,6 @@ import os
 import shutil
 import sys
 import tempfile
-import typing
 from enum import Enum
 from functools import cached_property
 from pathlib import Path, PurePath
@@ -150,9 +149,10 @@ class BuildDiskImageBase(SimpleProject):
         "no-autoboot", default=False, help="Disable autoboot and boot menu for targets that use loader(8)"
     )
 
-    @classproperty
-    def default_architecture(self) -> CrossCompileTarget:
-        return typing.cast(CrossCompileTarget, self._source_class.default_architecture)
+    @classmethod
+    def default_architecture(cls) -> Optional[CrossCompileTarget]:
+        assert cls._source_class is not None
+        return cls._source_class.default_architecture()
 
     @classproperty
     def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":

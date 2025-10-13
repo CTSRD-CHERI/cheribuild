@@ -164,7 +164,8 @@ class AbstractProject(FileSystemUtils, metaclass=ABCMeta):
     """A base class for (Simple)Project that exposes only the fields/methods needed in target_info."""
 
     _xtarget: "ClassVar[Optional[CrossCompileTarget]]" = None
-    default_architecture: "ClassVar[Optional[CrossCompileTarget]]"
+    # The architecture to build for the unsuffixed target name (defaults to supported_architectures[0] if no match)
+    _default_architecture: "Optional[CrossCompileTarget]" = None
     needs_sysroot: "ClassVar[bool]"
     is_rootfs_target: typing.ClassVar[bool] = False  # Whether this project installation directory is a rootfs dir
 
@@ -202,6 +203,10 @@ class AbstractProject(FileSystemUtils, metaclass=ABCMeta):
         # TODO: move all those methods here
         if not self.config.quiet:
             status_update(*args, **kwargs)
+
+    @classmethod
+    def default_architecture(cls) -> "Optional[CrossCompileTarget]":
+        return cls._default_architecture
 
     @staticmethod
     def warning(*args, **kwargs) -> None:

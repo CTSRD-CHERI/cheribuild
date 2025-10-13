@@ -473,7 +473,7 @@ class BuildCheriQEMUBase(BuildQEMUBase):
         help="Collect statistics on out-of-bounds capability creation.",
     )
     supported_architectures = (CompilationTargets.NATIVE_NON_PURECAP,)
-    default_architecture = CompilationTargets.NATIVE_NON_PURECAP
+    _default_architecture = CompilationTargets.NATIVE_NON_PURECAP
 
     @classmethod
     def get_firmware_dir(cls, caller: SimpleProject, cross_target: "Optional[CrossCompileTarget]" = None):
