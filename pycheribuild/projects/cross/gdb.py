@@ -63,7 +63,7 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
         *CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS,
         CompilationTargets.NATIVE_NON_PURECAP,
     )
-    default_architecture = CompilationTargets.NATIVE_NON_PURECAP
+    _default_architecture = CompilationTargets.NATIVE_NON_PURECAP
     prefer_full_lto_over_thin_lto = True
 
     @staticmethod

@@ -644,7 +644,7 @@ class Project(SimpleProject):
             )
         # --<target>-<suffix>/build-directory is not inherited from the unsuffixed target (unless there is only one
         # supported target).
-        default_xtarget = cls.default_architecture
+        default_xtarget = cls.default_architecture()
         if cls._xtarget is not None or default_xtarget is not None:
             cls._initial_build_dir = cls.add_path_option(
                 "build-directory",

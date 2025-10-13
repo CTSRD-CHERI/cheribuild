@@ -82,7 +82,7 @@ class BuildLLVMBase(CMakeProject):
     default_build_type = BuildType.RELEASE
     # LLVM does not yet compile for purecap.
     supported_architectures = (CompilationTargets.NATIVE_NON_PURECAP,)
-    default_architecture = CompilationTargets.NATIVE_NON_PURECAP
+    _default_architecture = CompilationTargets.NATIVE_NON_PURECAP
 
     included_projects: "ClassVar[list[str]]"
     add_default_sysroot: "ClassVar[bool]"

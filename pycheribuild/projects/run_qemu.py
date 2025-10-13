@@ -815,11 +815,12 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         assert xtarget is None
         return -1  # return -1 for NONE
 
-    @classproperty
-    def default_architecture(self):
-        if self._freebsd_class is not None:
-            return self._freebsd_class.default_architecture
-        return self._disk_image_class.default_architecture
+    @classmethod
+    def default_architecture(cls) -> Optional[CrossCompileTarget]:
+        if cls._freebsd_class is not None:
+            return cls._freebsd_class.default_architecture()
+        assert cls._disk_image_class is not None
+        return cls._disk_image_class.default_architecture()
 
     @classmethod
     def dependencies(cls: "type[_RunMultiArchFreeBSDImage]", config: CheriConfig) -> "tuple[str, ...]":

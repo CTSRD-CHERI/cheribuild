@@ -35,7 +35,7 @@ from .simple_project import BoolConfigOption
 
 class BuildCheriTrace(CMakeProject):
     dependencies = ("llvm",)
-    supported_architectures = (BuildCheriLLVM.default_architecture,)
+    supported_architectures = (BuildCheriLLVM.default_architecture(),)
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheritrace.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
     include_python_bindings = BoolConfigOption("python-bindings", help="Also build the python bindings")

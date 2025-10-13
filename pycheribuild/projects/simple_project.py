@@ -331,8 +331,6 @@ class SimpleProjectBase(AbstractProject, ABC):
     hide_options_from_help: bool = False
     # Default to NATIVE only
     supported_architectures: "typing.ClassVar[tuple[CrossCompileTarget, ...]]" = (BasicCompilationTargets.NATIVE,)
-    # The architecture to build for the unsuffixed target name (defaults to supported_architectures[0] if no match)
-    _default_architecture: "Optional[CrossCompileTarget]" = None
     # To prevent non-suffixed targets in case the only target is not NATIVE
     _always_add_suffixed_targets: bool = False  # add a suffixed target only if more than one variant is supported
 
@@ -637,10 +635,6 @@ class SimpleProjectBase(AbstractProject, ABC):
         # which is not what we want if there is an explicit cross_target
         root_class = getattr(cls, "synthetic_base", cls)
         return cls.get_instance_for_target_name(root_class.target, cross_target, config, caller)
-
-    @classproperty
-    def default_architecture(self) -> "Optional[CrossCompileTarget]":
-        return self._default_architecture
 
     def get_host_triple(self) -> str:
         compiler = self.get_compiler_info(self.host_CC)
@@ -1692,7 +1686,7 @@ class ProjectSubclassDefinitionHook(ABCMeta):
             base_target = MultiArchTargetAlias(target_name, cls)
             # Add aliases for targets that support multiple architectures and have a clear default value.
             # E.g. llvm -> llvm-native, but not cheribsd since it's not clear which variant should be built there.
-            if cls.default_architecture is not None:
+            if cls.default_architecture() is not None:
                 target_manager.add_target(base_target)
             else:
                 target_manager.add_target_for_config_options_only(base_target)

@@ -309,7 +309,7 @@ class MultiArchTargetAlias(_TargetAliasBase):
 
     @property
     def xtarget(self) -> CrossCompileTarget:
-        cross_target = self.project_class.default_architecture
+        cross_target = self.project_class.default_architecture()
         if cross_target is None:
             raise ValueError("ERROR:", self.name, "does not have a default_architecture value!")
         return cross_target
