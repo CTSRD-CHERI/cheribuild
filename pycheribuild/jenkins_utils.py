@@ -104,7 +104,10 @@ def jenkins_override_install_dirs_hack(cheri_config: CheriConfig, install_prefix
         # inheritance: i.e. setting --cheribsd/install-dir will also affect cheribsd-cheri/cheribsd-mips
         # noinspection PyTypeChecker
         cls = target.project_class
-        from_cmdline = i.load_option(cheri_config, cls, cls, return_none_if_default=True)
+        try:
+            from_cmdline: Optional[Path] = i.load_option(cheri_config, cls, cls, raise_err_if_default=True)
+        except ValueError:
+            from_cmdline = None
         if from_cmdline is not None:
             status_update("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
             project._install_dir = from_cmdline
