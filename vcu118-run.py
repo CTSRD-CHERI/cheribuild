@@ -335,7 +335,7 @@ def load_and_start_kernel(
     if bios_image is None or not bios_image.exists():
         failure("Missing bios image: ", bios_image, exit=True)
     # First start openocd
-    gdb_start_time = datetime.datetime.utcnow()
+    gdb_start_time = datetime.datetime.now(datetime.timezone.utc)
     openocd, openocd_gdb_port = start_openocd(openocd_cmd, num_cores)
     # openocd is running, now start GDB
     # NB: Cannot set the actual file since GDB will then expect OpenOCD's
@@ -409,22 +409,22 @@ def load_and_start_kernel(
         success("Done executing bootrom on all other cores")
     if kernel_image is not None:
         gdb.expect_exact(["Loading section .text"])
-        load_start_time = datetime.datetime.utcnow()
+        load_start_time = datetime.datetime.now(datetime.timezone.utc)
         success("Started loading kernel image (this may take a long time)")
         gdb.expect_exact(["Transfer rate:"], timeout=120 * 60)  # XXX: is 2 hours a sensible timeout?
-        load_end_time = datetime.datetime.utcnow()
+        load_end_time = datetime.datetime.now(datetime.timezone.utc)
         success("Finished loading kernel image in ", load_end_time - load_start_time)
     # Now load the bootloader
     gdb.expect_exact(["Loading section .text"])
-    load_start_time = datetime.datetime.utcnow()
+    load_start_time = datetime.datetime.now(datetime.timezone.utc)
     success("Started loading bootloader image")
     gdb.expect_exact(["Transfer rate:"], timeout=10 * 60)  # XXX: is 10 minutes a sensible timeout?
-    load_end_time = datetime.datetime.utcnow()
+    load_end_time = datetime.datetime.now(datetime.timezone.utc)
     success("Finished loading bootloader image in ", load_end_time - load_start_time)
     gdb_finish_time = load_end_time
     gdb.expect_exact(["ready to continue"])
     gdb.sendline("continue")
-    success("Starting CheriBSD after ", datetime.datetime.utcnow() - gdb_start_time)
+    success("Starting CheriBSD after ", datetime.datetime.now(datetime.timezone.utc) - gdb_start_time)
     i = serial_conn.cheribsd.expect_exact(["bbl loader", "---<<BOOT>>---", pexpect.TIMEOUT], timeout=30)
     if i == 0:
         success("bbl loader started")

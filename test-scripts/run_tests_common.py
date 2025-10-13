@@ -71,7 +71,7 @@ __all__ = [
 
 def get_default_junit_xml_name(from_cmdline: "Optional[str]", default_output_dir: Path):
     if from_cmdline is None:
-        time_suffix = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        time_suffix = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d-%H%M%S")
         result = Path(default_output_dir, ("test-results-" + time_suffix + ".xml"))
     else:
         result = Path(from_cmdline)
@@ -91,7 +91,7 @@ def finish_and_write_junit_xml_report(
     :param xml: the xml file
     :return: True if no tests failed, False otherwise
     """
-    xml.time = (datetime.datetime.utcnow() - all_tests_starttime).total_seconds()
+    xml.time = (datetime.datetime.now(datetime.timezone.utc) - all_tests_starttime).total_seconds()
     xml.update_statistics()
     failed_test_suites = []
     num_testsuites = 0
@@ -104,7 +104,7 @@ def finish_and_write_junit_xml_report(
     boot_cheribsd.info(
         "Ran " + str(num_testsuites),
         " test suites in ",
-        (datetime.datetime.utcnow() - all_tests_starttime),
+        (datetime.datetime.now(datetime.timezone.utc) - all_tests_starttime),
     )
     if failed_test_suites:
 
@@ -137,7 +137,7 @@ def finish_and_write_junit_xml_report(
             " tests (",
             num_testsuites,
             " test suites) passed after ",
-            (datetime.datetime.utcnow() - all_tests_starttime),
+            (datetime.datetime.now(datetime.timezone.utc) - all_tests_starttime),
         )
     # Finally, write the Junit XML file:
     if not get_global_config().pretend:

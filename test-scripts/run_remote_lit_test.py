@@ -232,14 +232,14 @@ def run_remote_lit_tests_impl(
     # Check that the config file works:
 
     def check_ssh_connection(prefix):
-        connection_test_start = datetime.datetime.utcnow()
+        connection_test_start = datetime.datetime.now(datetime.timezone.utc)
         if ssh_host_accessible_uncached(
             "cheribsd-test-instance",
             ssh_args=("-F", str(Path(tempdir, "config"))),
             config=get_global_config(),
             run_in_pretend_mode=False,
         ):
-            connection_time = (datetime.datetime.utcnow() - connection_test_start).total_seconds()
+            connection_time = (datetime.datetime.now(datetime.timezone.utc) - connection_test_start).total_seconds()
             boot_cheribsd.success(prefix, " successful after ", connection_time, " seconds")
         else:
             boot_cheribsd.failure("Failed to connect via SSH", exit=True)

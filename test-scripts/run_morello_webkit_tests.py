@@ -75,11 +75,11 @@ def run_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
         "string-fasta.js",
     ]
     xml = junitparser.JUnitXml()
-    all_tests_starttime = datetime.datetime.utcnow()
+    all_tests_starttime = datetime.datetime.now(datetime.timezone.utc)
     for test in sunspider_tests:
         suite = junitparser.TestSuite(name=test)
         t = junitparser.TestCase(name=test)
-        starttime = datetime.datetime.utcnow()
+        starttime = datetime.datetime.now(datetime.timezone.utc)
         try:
             qemu.checked_run(
                 f"/opt/{qemu.xtarget.generic_arch_suffix}/webkit/bin/jsc"
@@ -96,7 +96,7 @@ def run_webkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
                 qemu.expect_prompt(timeout=5 * 60)
             else:
                 t.result = junitparser.Failure(message="Command failed")
-        t.time = (datetime.datetime.utcnow() - starttime).total_seconds()
+        t.time = (datetime.datetime.now(datetime.timezone.utc) - starttime).total_seconds()
         suite.add_testcase(t)
         xml.add_testsuite(suite)
     return finish_and_write_junit_xml_report(all_tests_starttime, xml, args.junit_xml)

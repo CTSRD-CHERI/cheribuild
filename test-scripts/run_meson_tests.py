@@ -56,14 +56,14 @@ def do_setup(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
 
 def run_meson_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     xml = junitparser.JUnitXml()
-    all_tests_starttime = datetime.datetime.utcnow()
+    all_tests_starttime = datetime.datetime.now(datetime.timezone.utc)
     for ti in args.test_info:
         assert isinstance(ti, MesonTestInfo)
         suite = junitparser.TestSuite(name=ti.name)
         commandline = commandline_to_str(ti.command)
         suite.add_property("test_command", str(commandline))
         t = junitparser.TestCase(name=ti.name)
-        starttime = datetime.datetime.utcnow()
+        starttime = datetime.datetime.now(datetime.timezone.utc)
         try:
             env_cmd = ""
             if ti.env_vars:
@@ -83,7 +83,7 @@ def run_meson_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
                 qemu.expect_prompt(timeout=5 * 60)
             else:
                 t.result = junitparser.Failure(message="Command failed")
-        t.time = (datetime.datetime.utcnow() - starttime).total_seconds()
+        t.time = (datetime.datetime.now(datetime.timezone.utc) - starttime).total_seconds()
         suite.add_testcase(t)
         xml.add_testsuite(suite)
     return finish_and_write_junit_xml_report(all_tests_starttime, xml, args.junit_xml)

@@ -45,7 +45,7 @@ from run_tests_common import (
 
 def setup_qtbase_tests(qemu: boot_cheribsd.QemuCheriBSDInstance, args: argparse.Namespace):
     if args.junit_xml is None:
-        time_suffix = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        time_suffix = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d-%H%M%S")
         args.junit_xml = Path(args.build_dir, ("test-results-" + time_suffix + ".xml"))
     else:
         args.junit_xml = Path(args.junit_xml)
@@ -116,7 +116,7 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
     # Ensure that we run the tests in a reproducible order
     for f in sorted(tests):
         test_xml = f.parent / (f.name + ".xml")
-        starttime = datetime.datetime.utcnow()
+        starttime = datetime.datetime.now(datetime.timezone.utc)
         try:
             # Output textual results to stdout and write JUnit XML to /build/test.xml
             # Many of the test cases expect that the CWD == test binary dir
@@ -132,7 +132,7 @@ def run_subdir(qemu: boot_cheribsd.CheriBSDInstance, subdir: Path, xml: junitpar
             qemu.sendintr()
             qemu.expect_prompt(timeout=5 * 60)
         try:
-            endtime = datetime.datetime.utcnow()
+            endtime = datetime.datetime.now(datetime.timezone.utc)
             qt_test = junitparser.JUnitXml.fromfile(str(test_xml))
             boot_cheribsd.info("Results for ", f.name, ": ", qt_test)
             if not isinstance(qt_test, junitparser.TestSuite):
@@ -157,7 +157,7 @@ def add_junit_failure(
 ):
     t = junitparser.TestCase(name=test.name)
     t.result = junitparser.Failure(message=str(message))
-    t.time = (datetime.datetime.utcnow() - starttime).total_seconds()
+    t.time = (datetime.datetime.now(datetime.timezone.utc) - starttime).total_seconds()
     if input_xml.exists():
         t.system_err = input_xml.read_text("utf-8")
     suite = junitparser.TestSuite(name=test.name)
@@ -171,7 +171,7 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     # TODO: also run the non-corelib tests
     xml = junitparser.JUnitXml()
     build_dir = Path(args.build_dir)
-    all_tests_starttime = datetime.datetime.utcnow()
+    all_tests_starttime = datetime.datetime.now(datetime.timezone.utc)
     tests_root = Path(build_dir, "tests/auto")
     # Start with a basic smoketests:
     qemu.checked_run('echo "Checking for MIME database" && stat /usr/local/share/mime/mime.cache')
