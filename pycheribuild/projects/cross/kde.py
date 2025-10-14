@@ -1259,6 +1259,11 @@ class BuildLibPng(CrossCompileCMakeProject):
     # The tests take a really long time to run (~2.5 hours on purecap RISC-V)
     ctest_script_extra_args = ("--test-timeout", 5 * 60 * 60)
 
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.c18n_policy = cls.add_config_option("c18n-policy", default=None, help="Enable sub-library c18n policy")
+
     def setup(self):
         super().setup()
         if not self.compiling_for_host():
@@ -1268,6 +1273,9 @@ class BuildLibPng(CrossCompileCMakeProject):
             # work around:  undefined reference to png_do_expand_palette_rgb8_neon [--no-allow-shlib-undefined]
             self.COMMON_FLAGS.append("-DPNG_ARM_NEON_OPT=0")
             self.add_cmake_options(PNG_ARM_NEON="off")
+        if self.c18n_policy:
+            self.add_cmake_options(COMPARTMENT_POLICY=self.source_dir / self.c18n_policy)
+            self.add_cmake_options(COMPARTMENT_POLICY_FN=1)
 
 
 class BuildLCMS2(CrossCompileAutotoolsProject):
