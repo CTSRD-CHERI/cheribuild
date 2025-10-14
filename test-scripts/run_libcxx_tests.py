@@ -60,7 +60,17 @@ def add_cmdline_args(parser: argparse.ArgumentParser):
     )
 
 
-def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, disk_image, build_dir, pretend):
+def run_shard(
+    q: Queue,
+    barrier: Barrier,  # pyrefly: ignore[not-a-type]
+    num,
+    total,
+    ssh_port_queue,
+    kernel,
+    disk_image,
+    build_dir,
+    pretend,
+):
     sys.argv.append("--internal-num-shards=" + str(total))
     sys.argv.append("--internal-shard=" + str(num))
     if kernel is not None:
@@ -86,7 +96,7 @@ def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, di
 
 
 def libcxx_main(
-    barrier: "Optional[Barrier]" = None,
+    barrier: "Optional[Barrier]" = None,  # pyrefly: ignore[not-a-type]
     mp_queue: "Optional[Queue]" = None,
     ssh_port_queue: "Optional[Queue]" = None,
     shard_num: "Optional[int]" = None,
@@ -287,7 +297,7 @@ def run_parallel_impl(
     args: argparse.Namespace,
     processes: "list[LitShardProcess]",
     mp_q: Queue,
-    mp_barrier: Barrier,
+    mp_barrier: Barrier,  # pyrefly: ignore[not-a-type]
     ssh_port_queue: Queue,
 ):
     timed_out = False

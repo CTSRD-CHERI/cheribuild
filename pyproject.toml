@@ -41,13 +41,14 @@ required-version = '23'
 
 [tool.pyrefly]
 project-includes = [
-    "pycheribuild", "test",
+    "pycheribuild", "test", "test-scripts"
 ]
 search-path = [
     ".",
     "3rdparty/junitparser",
     "3rdparty/pexpect",
     "3rdparty/ptyprocess",
+    "test-scripts"
 ]
 python-version = "3.8.0"
 python-platform = "linux"
