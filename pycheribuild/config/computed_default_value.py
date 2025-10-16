@@ -28,21 +28,23 @@
 # SUCH DAMAGE.
 #
 import typing
-from typing import Any, Callable, Union
+from typing import Callable, Union
 
 T = typing.TypeVar("T")
 if typing.TYPE_CHECKING:  # no-combine
+    from ..config.target_info import AbstractProject
     from ..utils import ConfigBase  # no-combine
 
     ConfigTy = typing.TypeVar("ConfigTy", bound=ConfigBase)  # no-combine
+    ProjectTy = typing.TypeVar("ProjectTy", bound=AbstractProject)  # no-combine
 
 
 class ComputedDefaultValue(typing.Generic[T]):
     def __init__(
         self,
-        function: "Callable[[ConfigTy, Any], T]",
-        as_string: "Union[str, Callable[[Any], str]]",
-        as_readme_string: "Union[str, Callable[[Any], str], None]" = None,
+        function: "Callable[[ConfigTy, ProjectTy], T]",
+        as_string: "Union[str, Callable[[type[ProjectTy]], str]]",
+        as_readme_string: "Union[str, Callable[[type[ProjectTy]], str], None]" = None,
         inherit: "typing.Optional[ComputedDefaultValue[T]]" = None,
     ):
         if inherit is not None:
