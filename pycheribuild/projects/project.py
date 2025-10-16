@@ -390,10 +390,10 @@ def _default_install_dir_handler(_: CheriConfig, project: "Project") -> Path:
     return project.target_info.default_install_dir(project.get_default_install_dir_kind())
 
 
-def _default_install_dir_str(project: "Project") -> str:
+def _default_install_dir_str(project: "type[Project]") -> str:
     install_dir = project.get_default_install_dir_kind()
+    assert install_dir is not None
     return str(install_dir.value)
-    # fatal_error("Unknown install dir for", project.target)
 
 
 def _default_source_dir(config: CheriConfig, project: "Project", subdir: Path = Path()) -> "Optional[Path]":
@@ -516,22 +516,18 @@ class Project(SimpleProject):
         return False
 
     @classmethod
-    def get_default_install_dir_kind(cls) -> DefaultInstallDir:
+    def get_default_install_dir_kind(cls) -> Optional[DefaultInstallDir]:
+        xtarget = cls.get_crosscompile_target()
         if cls.default_install_dir is not None:
             install_dir = cls.default_install_dir
         else:
-            if cls._xtarget is not None and cls._xtarget.is_native():
-                install_dir = cls.native_install_dir
-            else:
-                install_dir = cls.cross_install_dir
+            install_dir = cls.native_install_dir if xtarget.is_native() else cls.cross_install_dir
         if install_dir is None and cls._default_install_dir_fn is Project._default_install_dir_fn:
             raise RuntimeError(
                 "native_install_dir/cross_install_dir/_default_install_dir_fn not specified for " + cls.target
             )
         if install_dir == DefaultInstallDir.SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE:
-            if cls._xtarget is not None and (
-                cls._xtarget.target_info_cls.is_baremetal() or cls._xtarget.target_info_cls.is_rtems()
-            ):
+            if xtarget.target_info_cls.is_baremetal() or xtarget.target_info_cls.is_rtems():
                 install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
             else:
                 install_dir = DefaultInstallDir.ROOTFS_OPTBASE
