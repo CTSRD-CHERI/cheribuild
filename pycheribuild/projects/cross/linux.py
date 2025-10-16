@@ -116,7 +116,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
             self.info("Working around https://github.com/ClangBuiltLinux/linux/issues/2092")
             self._apply_patch_from_url(
                 self.build_dir / "asm-goto.patch",
-                "https://lore.kernel.org/all/"
+                "https://lore.kernel.org/linux-riscv/"
                 "20250811-riscv-wa-llvm-asm-goto-outputs-assertion-failure-v1-1-7bb8c9cbb92b@kernel.org/raw",
             )
         self.run_make()
