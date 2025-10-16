@@ -238,7 +238,7 @@ class LaunchQEMUBase(SimpleProject):
         return riscv_bios_arguments(self.crosscompile_target, self.config.riscv_cheri_isa)
 
     @classmethod
-    def targets_reset(cls):
+    def targets_reset(cls) -> None:
         super().targets_reset()
         cls._cached_chosen_qemu = None
 

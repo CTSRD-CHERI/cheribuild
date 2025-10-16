@@ -106,7 +106,7 @@ def flush_stdio(stream) -> None:
                 time.sleep(0.1)
 
 
-def _default_stdout_filter(_: bytes) -> "typing.NoReturn":
+def _default_stdout_filter(_: bytes) -> None:
     raise NotImplementedError("Should never be called, this is a dummy")
 
 
@@ -1248,7 +1248,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         args: "typing.Sequence[str]",
         logfile_name: str,
         *,
-        stdout_filter=None,
+        stdout_filter: "Optional[Callable[[bytes], None]]" = None,
         cwd: "Optional[Path]" = None,
         env: "Optional[dict[str, Optional[str]]]" = None,
         append_to_logfile=False,
@@ -1319,7 +1319,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         self,
         proc: subprocess.Popen,
         logfile: "Optional[typing.IO]",
-        stdout_filter: "Callable[[bytes], None]",
+        stdout_filter: "Optional[Callable[[bytes], None]]",
         args: "list[str]",
     ):
         logfile_lock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up

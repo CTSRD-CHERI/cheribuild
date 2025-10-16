@@ -267,7 +267,7 @@ class AbstractProject(FileSystemUtils, metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def targets_reset(cls) -> "list[str]": ...
+    def targets_reset(cls) -> None: ...
 
     @classmethod
     @abstractmethod
@@ -1170,7 +1170,7 @@ class CrossCompileTarget(typing.Generic[TargetInfoSubclass]):
         raise ValueError("Don't know CHERI purecap for hybrid rootfs version of " + repr(self))
 
     def __repr__(self) -> str:
-        result = self.target_info_cls.__name__ + "(" + self.cpu_architecture.name
+        result: str = self.target_info_cls.__name__ + "(" + self.cpu_architecture.name
         if self._is_cheri_purecap:
             result += " purecap"
         if self._is_cheri_hybrid:
