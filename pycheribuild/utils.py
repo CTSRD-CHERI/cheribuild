@@ -162,6 +162,7 @@ def find_free_port(preferred_port: "Optional[int]" = None) -> SocketAndPort:
 
 def default_make_jobs_count() -> Optional[int]:
     make_jobs = os.cpu_count()
+    assert make_jobs is not None
     if make_jobs > 24:
         # don't use up all the resources on shared build systems
         # (you can still override this with the -j command line option)
@@ -261,7 +262,7 @@ def query_yes_no(
         # in force mode we always return the forced result without prompting the user
         print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="", flush=True)
         return force_result
-    if not sys.__stdin__.isatty():
+    if not sys.__stdin__.isatty():  # pyrefly: ignore
         return default_result  # can't get any input -> return the default
     result = input(message + yes_no_str)
     if default_result:
@@ -470,7 +471,8 @@ class OSInfo:
                 if not is_lib and shutil.which("command-not-found"):
                     # for programs we can use the command-not-found tool to get detailed install instructions
                     def command_not_found():
-                        hint = subprocess.getoutput(shutil.which("command-not-found") + " " + name)
+                        command = shutil.which("command-not-found") or "command-not-found"
+                        hint = subprocess.getoutput(command + " " + name)
                         print(hint)
                         if hint and name + ": command not found" not in hint:
                             msg_start = hint.find("The program")
