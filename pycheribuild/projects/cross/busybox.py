@@ -42,7 +42,6 @@ from ...utils import classproperty
 class BuildBusyBox(CrossCompileAutotoolsProject):
     target = "busybox"
     repository = GitRepository("https://git.busybox.net/busybox/")
-    needs_sysroot = True
     is_sdk_target = False
     supported_architectures = (
         CompilationTargets.LINUX_RISCV64,

@@ -47,7 +47,7 @@ from ...utils import classproperty
 class BuildLinux(CrossCompileAutotoolsProject):
     target = "linux-kernel"
     repository = GitRepository("https://github.com/torvalds/linux.git")
-    needs_sysroot = False
+    _needs_sysroot = False
     is_sdk_target = False
     supported_architectures = (
         CompilationTargets.LINUX_RISCV64,

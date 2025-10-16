@@ -496,7 +496,7 @@ class BuildCheriQEMUBase(BuildQEMUBase):
             # Get all the required compilation flags for the TCG tests
             fake_project = SimpleNamespace()
             fake_project.config = self.config
-            fake_project.needs_sysroot = False
+            fake_project._needs_sysroot = False
             fake_project.warning = self.warning
             fake_project.target = "qemu-tcg-tests"
             # noinspection PyTypeChecker

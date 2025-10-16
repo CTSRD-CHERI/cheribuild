@@ -45,7 +45,7 @@ from ..project import (
 from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
 from ...qemu_utils import QemuOptions
-from ...utils import OSInfo, classproperty
+from ...utils import OSInfo
 
 
 def opensbi_install_dir(config: CheriConfig, project: "Project") -> Path:
@@ -64,15 +64,12 @@ class BuildOpenSBI(Project):
         # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_PURECAP
     )
     make_kind = MakeCommandKind.GnuMake
+    _needs_sysroot = False  # BIOS -> can build without a sysroot present
     _always_add_suffixed_targets = True
     _default_install_dir_fn = ComputedDefaultValue(
         function=opensbi_install_dir, as_string="$SDK_ROOT/opensbi/riscv{32,64}{-hybrid,-purecap,}"
     )
     supported_riscv_cheri_standard = RiscvCheriISA.V9  # Assembly code does not support standard draft
-
-    @classproperty
-    def needs_sysroot(self):
-        return False  # we can build without a sysroot
 
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()

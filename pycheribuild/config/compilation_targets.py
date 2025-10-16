@@ -234,7 +234,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         # When cross compiling we need at least -target=
         result = ["-target", cls.triple_for_target(xtarget, project.config, include_version=True)]
         # And usually also --sysroot
-        if project.needs_sysroot:
+        if project.needs_sysroot():
             result.append("--sysroot=" + str(instance.sysroot_dir))
             if perform_sanity_checks and project.is_nonexistent_or_empty_dir(instance.sysroot_dir):
                 project.fatal(
@@ -464,7 +464,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def pkgconfig_dirs(self) -> "list[str]":
-        assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
+        assert self.project.needs_sysroot(), "Should not call this for projects that build without a sysroot"
         # FreeBSD uses /usr/libdata/pkgconfig for the native ABI.
         return [
             str(self.sysroot_dir / "usr/libdata/pkgconfig"),
@@ -707,7 +707,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     @property
     def pkgconfig_dirs(self) -> "list[str]":
-        assert self.project.needs_sysroot, "Should not call this for projects that build without a sysroot"
+        assert self.project.needs_sysroot(), "Should not call this for projects that build without a sysroot"
         # For CheriBSD we install most packages to /usr/local/<arch>/, but some packages installed by pkg
         # need to be in the default search path under /usr/local or /usr/local64.
         # NB: FreeBSD uses /usr/libdata/pkgconfig for the native ABI.
@@ -1108,7 +1108,7 @@ set(CMAKE_DL_LIBS "")
 
     @property
     def additional_executable_link_flags(self) -> "list[str]":
-        if self.project.needs_sysroot:
+        if self.project.needs_sysroot():
             return super().additional_executable_link_flags + self.semihosting_ldflags()
         return []
 

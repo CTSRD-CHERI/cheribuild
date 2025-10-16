@@ -45,7 +45,7 @@ class BuildCheriOS(CMakeProject):
         / ("cherios" + p.crosscompile_target.build_suffix(config, include_os=False)),
         as_string="$OUTPUT_ROOT/cherios-{mips64,riscv64}",
     )
-    needs_sysroot = False
+    _needs_sysroot = False
     supported_architectures = (CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP)
 
     smp_cores = IntConfigOption("smp-cores", default=1, help="Number of cores to use")
