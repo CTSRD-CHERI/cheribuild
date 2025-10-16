@@ -66,6 +66,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
         self.check_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
 
     def _set_config(self, option, value: str = "y"):
+        """Update config values in .config. You must call make oldconfig afterwards"""
         self.run_cmd(self.source_dir / "scripts/config", "--set-val", option, value, cwd=self.build_dir)
         # Also handle auto-detected config value which would overwrite our manual setting above
         # This happens e.g. with CONFIG_CC_HAS_ASM_GOTO_OUTPUT.
@@ -190,6 +191,7 @@ class BuildMorelloLinux(BuildLinux):
         # uses PCI.
         self._set_config("CONFIG_VIRTIO_PCI")
         self._set_config("CONFIG_VIRTIO_PCI_LEGACY")
+        self.run_make("oldconfig")  # regen dependencies
 
 
 class LaunchCheriLinux(LaunchQEMUBase):
