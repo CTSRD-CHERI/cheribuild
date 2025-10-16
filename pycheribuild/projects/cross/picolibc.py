@@ -35,7 +35,7 @@ from ...config.target_info import CPUArchitecture
 class BuildPicoLibc(CrossCompileMesonProject):
     target = "picolibc"
     repository = GitRepository("https://github.com/picolibc/picolibc.git")
-    supported_architectures = CompilationTargets.ALL_NATIVE + CompilationTargets.ALL_PICOLIBC_TARGETS
+    _supported_architectures = CompilationTargets.ALL_NATIVE + CompilationTargets.ALL_PICOLIBC_TARGETS
     # Installing the native headers and libraries to <output>/local breaks other native project builds.
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     _needs_sysroot = False

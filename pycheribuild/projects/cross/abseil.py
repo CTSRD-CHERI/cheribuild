@@ -40,7 +40,7 @@ class BuildAbseil(CrossCompileCMakeProject):
     is_large_source_repository = True
     default_build_type = BuildType.DEBUG
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    supported_architectures = (*CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS, *CompilationTargets.ALL_NATIVE)
+    _supported_architectures = (*CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS, *CompilationTargets.ALL_NATIVE)
 
     def setup(self):
         super().setup()

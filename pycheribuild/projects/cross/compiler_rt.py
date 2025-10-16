@@ -46,7 +46,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     native_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     cross_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     _check_install_dir_conflict = False
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+    _supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
 
     def setup(self):
         # For the NATIVE variant we want to install to the compiler resource dir:
@@ -117,7 +117,7 @@ class BuildUpstreamCompilerRt(BuildCompilerRt):
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
     target = "upstream-compiler-rt"
     default_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    supported_architectures = (CompilationTargets.NATIVE,)
+    _supported_architectures = (CompilationTargets.NATIVE,)
 
 
 class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
@@ -130,7 +130,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     is_sdk_target = True
     root_cmakelists_subdirectory = Path("lib/builtins")
     _needs_sysroot = False  # We don't need a complete sysroot
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS
         + CompilationTargets.ALL_SUPPORTED_LINUX_TARGETS
         + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS

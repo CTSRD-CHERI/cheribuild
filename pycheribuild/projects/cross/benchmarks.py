@@ -62,7 +62,7 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     # The makefiles here can't support any other tagets:
-    supported_architectures = (CompilationTargets.NATIVE,)
+    _supported_architectures = (CompilationTargets.NATIVE,)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -240,7 +240,7 @@ class BuildOlden(BenchmarkMixin, CrossCompileProject):
     # and we have to build in the source directory
     build_in_source_dir = True
     # The makefiles here can't support any other tagets:
-    supported_architectures = (CompilationTargets.NATIVE,)
+    _supported_architectures = (CompilationTargets.NATIVE,)
 
     def compile(self, **kwargs):
         new_env = dict()
@@ -440,7 +440,7 @@ class BuildSpec2006New(_BuildLLVMTestSuiteSubdir):
         super().configure(**kwargs)
 
 
-for _arch in BuildSpec2006New.supported_architectures:
+for _arch in BuildSpec2006New.supported_architectures():
     _tgt = BuildSpec2006New.get_class_for_target(_arch).target
     target_manager.add_target_alias(replace_one(_tgt, "spec2006-", "spec2006-new-"), _tgt, deprecated=True)
 
@@ -530,7 +530,7 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     # The makefiles here can't support any other tagets:
-    supported_architectures = (CompilationTargets.NATIVE,)
+    _supported_architectures = (CompilationTargets.NATIVE,)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -612,7 +612,7 @@ class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     # The makefiles here can't support any other tagets:
-    supported_architectures = (CompilationTargets.NATIVE,)
+    _supported_architectures = (CompilationTargets.NATIVE,)
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -688,7 +688,7 @@ class NetPerfBench(BenchmarkMixin, CrossCompileAutotoolsProject):
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     # The makefiles here can't support any other tagets:
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
         CompilationTargets.CHERIBSD_RISCV_HYBRID,
         CompilationTargets.CHERIBSD_RISCV_PURECAP,

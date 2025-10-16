@@ -108,7 +108,7 @@ class BuildCrossCompiledCMake(CMakeProject):
     default_directory_basename = "cmake"
     default_build_type = BuildType.RELEASE  # Don't include debug info by default
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS
+    _supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS
 
     def linkage(self):
         # We always want to build the CheriBSD CTest binary static so that we can use in QEMU without needing libuv.

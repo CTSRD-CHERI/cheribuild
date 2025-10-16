@@ -49,7 +49,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/torvalds/linux.git")
     _needs_sysroot = False
     is_sdk_target = False
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.LINUX_RISCV64,
         CompilationTargets.LINUX_AARCH64,
     )
@@ -147,7 +147,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
 class BuildCheriAllianceLinux(BuildLinux):
     target = "cheri-std093-linux-kernel"
     repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="codasip-cheri-riscv")
-    supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
+    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
     @property
@@ -172,7 +172,7 @@ class BuildMorelloLinux(BuildLinux):
     # Morello Linux is actually built hybrid (at the moment), but in the future it will be purecap.
     # To avoid workarounds and long target names, mark it as LINUX_MORELLO_PURECAP here but it will
     # still be built as a hybrid kernel.
-    supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
 
     @property
     def defconfig(self) -> str:
@@ -193,7 +193,7 @@ class BuildMorelloLinux(BuildLinux):
 
 class LaunchCheriLinux(LaunchQEMUBase):
     target = "run-minimal"
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.LINUX_MORELLO_PURECAP,
         CompilationTargets.LINUX_RISCV64_PURECAP_093,
         CompilationTargets.LINUX_RISCV64,

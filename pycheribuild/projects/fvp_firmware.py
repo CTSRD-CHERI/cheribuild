@@ -100,7 +100,7 @@ class ArmNoneEabiToolchain(SimpleProject):
 
 class MorelloFirmwareBase(CrossCompileMakefileProject):
     do_not_add_to_targets = True
-    supported_architectures = (CompilationTargets.FREESTANDING_MORELLO_HYBRID,)
+    _supported_architectures = (CompilationTargets.FREESTANDING_MORELLO_HYBRID,)
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR  # TODO: install it
     _needs_sysroot = False  # We don't need a complete sysroot
     default_build_type = BuildType.RELEASE
@@ -118,7 +118,7 @@ class BuildMorelloScpFirmware(MorelloFirmwareBase):
     target = "morello-scp-firmware"
     default_directory_basename = "morello-scp-firmware"
     dependencies = ("arm-none-eabi-toolchain",)
-    supported_architectures = (CompilationTargets.ARM_NONE_EABI,)
+    _supported_architectures = (CompilationTargets.ARM_NONE_EABI,)
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
 
     @property

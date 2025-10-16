@@ -64,7 +64,7 @@ class _CxxRuntimeCMakeProject(CrossCompileCMakeProject):
 
 class BuildLibCXXRT(_CxxRuntimeCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/libcxxrt.git")
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
+    _supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
@@ -131,7 +131,7 @@ def _default_ssh_port(c, p: CMakeProject):
 class BuildLibCXX(_CxxRuntimeCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libcxx")
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
+    _supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
     dependencies = ("libcxxrt",)
 
     @classmethod
@@ -706,7 +706,7 @@ class _BuildLlvmRuntimes(CrossCompileCMakeProject):
 
 
 class _HostCompilerMixin(_BuildLlvmRuntimes if typing.TYPE_CHECKING else object):
-    supported_architectures = CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_NATIVE
     _default_architecture = CompilationTargets.NATIVE
 
     @property
@@ -733,7 +733,7 @@ class _HostCompilerMixin(_BuildLlvmRuntimes if typing.TYPE_CHECKING else object)
 
 class _UpstreamLLVMMixin(_BuildLlvmRuntimes if typing.TYPE_CHECKING else object):
     llvm_project: "typing.ClassVar[type[BuildLLVMMonoRepoBase]]" = BuildUpstreamLLVM
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.ALL_NATIVE
         + CompilationTargets.ALL_PICOLIBC_TARGETS
         + CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
@@ -745,7 +745,7 @@ class _UpstreamLLVMMixin(_BuildLlvmRuntimes if typing.TYPE_CHECKING else object)
 class BuildLibunwind(_BuildLlvmRuntimes):
     target = "libunwind"
     llvm_project = BuildCheriLLVM
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
         + CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS
     )
@@ -769,7 +769,7 @@ class BuildUpstreamLibunwindWithHostCompiler(_HostCompilerMixin, BuildUpstreamLi
 class BuildCompilerRtRuntimesBuild(_BuildLlvmRuntimes):
     target = "compiler-rt-runtimes-build"
     llvm_project = BuildCheriLLVM
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
+    _supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
     _default_architecture = CompilationTargets.NATIVE
     default_build_type = BuildType.DEBUG
     _enabled_runtimes: "typing.ClassVar[tuple[str, ...]]" = ("compiler-rt",)
@@ -790,7 +790,7 @@ class BuildUpstreamCompilerRtRuntimesBuildWithHostCompiler(_HostCompilerMixin, B
 class BuildLlvmLibs(_BuildLlvmRuntimes):
     target = "llvm-libs"
     llvm_project = BuildCheriLLVM
-    supported_architectures = (
+    _supported_architectures = (
         *CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS,
         *CompilationTargets.ALL_PICOLIBC_TARGETS,
         *CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS,

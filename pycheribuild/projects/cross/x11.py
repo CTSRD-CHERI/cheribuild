@@ -44,7 +44,7 @@ class X11Mixin:
     default_build_type = BuildType.RELWITHDEBINFO
     # Don't override the native installation, only use it when paths are explicitly added
     native_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         # noinspection PyUnresolvedReferences

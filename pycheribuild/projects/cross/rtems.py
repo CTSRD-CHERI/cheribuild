@@ -42,7 +42,7 @@ class BuildRtems(CrossCompileProject):
     dependencies = ("newlib", "compiler-rt-builtins")
     is_sdk_target = True
     _needs_sysroot = False  # We don't need a complete sysroot
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
+    _supported_architectures = CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
     default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 
     def uses_softfloat_by_default(self) -> bool:
@@ -92,7 +92,7 @@ class BuildRtems(CrossCompileProject):
 class LaunchRtemsQEMU(LaunchQEMUBase):
     target = "run-rtems"
     dependencies = ("rtems",)
-    supported_architectures = (CompilationTargets.RTEMS_RISCV64_PURECAP,)
+    _supported_architectures = (CompilationTargets.RTEMS_RISCV64_PURECAP,)
     forward_ssh_port = False
     qemu_user_networking = False
     _enable_smbfs_support = False

@@ -53,7 +53,7 @@ from ...utils import InstallInstructions
 
 class InstallDejaVuFonts(SimpleProject):
     target = "dejavu-fonts"
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS
 
     @property
     def fonts_dir(self):
@@ -1022,7 +1022,7 @@ class BuildLibXml2(CrossCompileCMakeProject):
         "https://gitlab.gnome.org/GNOME/libxml2.git", old_urls=[b"https://github.com/CTSRD-CHERI/libxml2"]
     )
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()
@@ -1040,7 +1040,7 @@ class BuildLibXslt(CrossCompileCMakeProject):
     repository = GitRepository("https://gitlab.gnome.org/GNOME/libxslt.git")
     dependencies = ("libxml2",)
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()

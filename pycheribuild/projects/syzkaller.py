@@ -57,7 +57,7 @@ class BuildSyzkaller(CrossCompileProject):
     make_kind = MakeCommandKind.GnuMake
 
     # is_sdk_target = True
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.CHERIBSD_MORELLO_HYBRID_FOR_PURECAP_ROOTFS,
         CompilationTargets.CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS,
     )
@@ -158,8 +158,6 @@ class BuildSyzkaller(CrossCompileProject):
 
 class RunSyzkaller(SimpleProject):
     target = "run-syzkaller"
-    supported_architectures = BuildSyzkaller.supported_architectures
-
     syz_config = PathConfigOption("syz-config", help="Path to the syzkaller configuration file to use.", show_help=True)
     syz_ssh_key = PathConfigOption(
         "ssh-privkey",
@@ -185,6 +183,10 @@ class RunSyzkaller(SimpleProject):
         "debug",
         help="Run syz-manager in debug mode, requires manual startup of the VM.",
     )
+
+    @classmethod
+    def supported_architectures(cls):
+        return BuildSyzkaller.supported_architectures()
 
     def syzkaller_config(self, syzkaller: BuildSyzkaller):
         """Get path of syzkaller configuration file to use."""

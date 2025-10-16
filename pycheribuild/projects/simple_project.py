@@ -329,7 +329,7 @@ class SimpleProjectBase(AbstractProject, ABC):
     # Whether to hide the options from the default --help output (only add to --help-hidden)
     hide_options_from_help: bool = False
     # Default to NATIVE only
-    supported_architectures: "typing.ClassVar[tuple[CrossCompileTarget, ...]]" = (BasicCompilationTargets.NATIVE,)
+    _supported_architectures: "typing.ClassVar[tuple[CrossCompileTarget, ...]]" = (BasicCompilationTargets.NATIVE,)
     # To prevent non-suffixed targets in case the only target is not NATIVE
     _always_add_suffixed_targets: bool = False  # add a suffixed target only if more than one variant is supported
 
@@ -341,6 +341,10 @@ class SimpleProjectBase(AbstractProject, ABC):
     custom_target_name: "Optional[typing.Callable[[str, CrossCompileTarget], str]]" = None
     _build_dir: Optional[Path] = None
     _initial_build_dir: Optional[Path] = None
+
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        return cls._supported_architectures
 
     @classmethod
     def get_build_dir(cls, caller: AbstractProject, cross_target: "Optional[CrossCompileTarget]" = None) -> Path:
@@ -894,12 +898,12 @@ class SimpleProjectBase(AbstractProject, ABC):
             # If we are adding to the base class or the target is not in the list, emit a warning
             if not _allow_unknown_targets:
                 for t in only_add_for_targets:
-                    assert t in cls.supported_architectures, (
+                    assert t in cls.supported_architectures(), (
                         cls.__name__
                         + ": some of "
                         + str(only_add_for_targets)
                         + " not in "
-                        + str(cls.supported_architectures)
+                        + str(cls.supported_architectures())
                     )
             if target is not None and target not in only_add_for_targets and not typing.TYPE_CHECKING:
                 kwargs["option_cls"] = DefaultValueOnlyConfigOption
@@ -1674,13 +1678,20 @@ class ProjectSubclassDefinitionHook(ABCMeta):
 
         if cls.__dict__.get("dependencies_must_be_built") and not cls.dependencies:
             sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + target_name)
-        supported_archs = cls.supported_architectures
+
+        supported_archs_override = cls.__dict__.get("_supported_architectures")
+        supported_archs = cls.supported_architectures()
+        if supported_archs_override is not None and supported_archs_override != supported_archs:
+            # We have to use the default supported_architectures @classmethod otherwise the return value is wrong.
+            die(
+                f"{cls.target} overrides _supported_architectures inconsistently: "
+                f"expected {supported_archs_override} but got {supported_archs}"
+            )
         assert supported_archs, "Must not be empty: " + str(supported_archs)
         assert isinstance(supported_archs, tuple)
         assert len(set(supported_archs)) == len(supported_archs), (
             "Duplicates in supported archs for " + cls.__name__ + ": " + str(supported_archs)
         )
-        # TODO: if len(cls.supported_architectures) > 1:
         if cls._always_add_suffixed_targets or len(supported_archs) > 1:
             # Add a the target for the default architecture
             base_target = MultiArchTargetAlias(target_name, cls)

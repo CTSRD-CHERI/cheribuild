@@ -58,7 +58,7 @@ class BuildUBoot(Project):
     _needs_sysroot = False  # We don't need a complete sysroot
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELWITHDEBINFO
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64_HYBRID,
         CompilationTargets.FREESTANDING_RISCV64,
         # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_PURECAP
@@ -169,7 +169,7 @@ class BuildCheriAllianceUBoot(BuildUBoot):
     target = "cheri-std093-u-boot"
     repository = GitRepository("https://github.com/CHERI-Alliance/u-boot.git", default_branch="codasip-cheri-riscv")
     default_build_type = BuildType.RELWITHDEBINFO
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP,
     )

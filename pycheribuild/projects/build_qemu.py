@@ -474,7 +474,7 @@ class BuildCheriQEMUBase(BuildQEMUBase):
         show_help=True,
         help="Collect statistics on out-of-bounds capability creation.",
     )
-    supported_architectures = (CompilationTargets.NATIVE_NON_PURECAP,)
+    _supported_architectures = (CompilationTargets.NATIVE_NON_PURECAP,)
     _default_architecture = CompilationTargets.NATIVE_NON_PURECAP
 
     @classmethod

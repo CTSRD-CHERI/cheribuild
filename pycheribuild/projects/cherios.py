@@ -46,7 +46,7 @@ class BuildCheriOS(CMakeProject):
         as_string="$OUTPUT_ROOT/cherios-{mips64,riscv64}",
     )
     _needs_sysroot = False
-    supported_architectures = (CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP)
+    _supported_architectures = (CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP)
 
     smp_cores = IntConfigOption("smp-cores", default=1, help="Number of cores to use")
     build_net = BoolConfigOption("build-net", default=False, help="Include networking support")
@@ -68,7 +68,7 @@ class BuildCheriOS(CMakeProject):
 class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
     dependencies = ("qemu", "cherios")
-    supported_architectures = (CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP)
+    _supported_architectures = (CompilationTargets.CHERIOS_MIPS_PURECAP, CompilationTargets.CHERIOS_RISCV_PURECAP)
     forward_ssh_port = False
     qemu_user_networking = False
     hide_options_from_help = True

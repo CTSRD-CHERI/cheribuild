@@ -11,7 +11,7 @@ from ...config.compilation_targets import CompilationTargets
 class BuildDrmKMod(CrossCompileProject):
     target: str = "drm-kmod"
     repository = GitRepository("https://github.com/freebsd/drm-kmod", default_branch="master", force_branch=True)
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS
     build_in_source_dir: bool = False
     use_buildenv: bool = False  # doesn't quite work yet (MAKEOBJDIRPREFIX isn't set)
     freebsd_project: BuildFreeBSD

@@ -40,7 +40,7 @@ class BuildGoogleBenchmark(CrossCompileCMakeProject):
     dependencies = ("googletest",)
     default_build_type = BuildType.RELWITHDEBINFO
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    supported_architectures = (*CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS, *CompilationTargets.ALL_NATIVE)
+    _supported_architectures = (*CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS, *CompilationTargets.ALL_NATIVE)
 
     def setup(self):
         super().setup()
@@ -52,4 +52,4 @@ class BuildGoogleTest(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/google/googletest", default_branch="v1.13.0")
     default_build_type = BuildType.RELWITHDEBINFO
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    supported_architectures = (*CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS, *CompilationTargets.ALL_NATIVE)
+    _supported_architectures = (*CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS, *CompilationTargets.ALL_NATIVE)

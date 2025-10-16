@@ -48,7 +48,6 @@ from ..utils import (
     AnsiColour,
     OSInfo,
     SocketAndPort,
-    classproperty,
     coloured,
     find_free_port,
     is_jenkins_build,
@@ -511,9 +510,9 @@ class LaunchFVPBase(SimpleProject):
     def dependencies(cls, _: CheriConfig) -> "tuple[str, ...]":
         return "install-morello-fvp", cls._source_class.target, "morello-firmware"
 
-    @classproperty
-    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
-        return self._source_class.supported_architectures
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        return tuple(x for x in cls._source_class.supported_architectures() if x.is_aarch64(include_purecap=True))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -833,10 +832,8 @@ class LaunchFVPBase(SimpleProject):
 class LaunchFVPCheriBSD(LaunchFVPBase):
     target = "run-fvp"
     _source_class = BuildCheriBSDDiskImage
-    supported_architectures = (CompilationTargets.CHERIBSD_MORELLO_HYBRID, CompilationTargets.CHERIBSD_MORELLO_PURECAP)
 
 
 class LaunchFVPFreeBsd(LaunchFVPBase):
     target = "run-fvp-freebsd"
     _source_class = BuildFreeBSDImage
-    supported_architectures = (CompilationTargets.FREEBSD_AARCH64,)

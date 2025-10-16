@@ -53,7 +53,7 @@ from .simple_project import BoolConfigOption, SimpleProject, TargetAliasWithDepe
 from ..config.compilation_targets import CompilationTargets, LaunchFreeBSDInterface
 from ..config.target_info import CrossCompileTarget
 from ..qemu_utils import QemuOptions, qemu_supports_9pfs, riscv_bios_arguments
-from ..utils import AnsiColour, OSInfo, classproperty, coloured, fatal_error, find_free_port, is_jenkins_build
+from ..utils import AnsiColour, OSInfo, coloured, fatal_error, find_free_port, is_jenkins_build
 
 
 def get_default_ssh_forwarding_port(addend: int):
@@ -807,17 +807,17 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     _disk_image_class: Optional[BuildDiskImageBase] = None
     kyua_test_files = ("/usr/tests/Kyuafile",)
 
-    @classproperty
-    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
-        if self._freebsd_class is not None:
-            return self._freebsd_class.supported_architectures
-        assert self._disk_image_class is not None
-        return self._disk_image_class.supported_architectures
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        if cls._freebsd_class is not None:
+            return cls._freebsd_class.supported_architectures()
+        assert cls._disk_image_class is not None
+        return cls._disk_image_class.supported_architectures()
 
     @classmethod
     def get_cross_target_index(cls, **kwargs):
         xtarget = kwargs.get("xtarget", cls._xtarget)
-        for idx, value in enumerate(cls.supported_architectures):
+        for idx, value in enumerate(cls.supported_architectures()):
             if xtarget is value:
                 return idx
         assert xtarget is None
@@ -897,7 +897,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
 
     def get_qemu_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
         xtarget = self.crosscompile_target.get_rootfs_target()
-        if xtarget not in BuildCheriBsdMfsKernel.supported_architectures:
+        if xtarget not in BuildCheriBsdMfsKernel.supported_architectures():
             self.fatal("No MFS kernel for target", xtarget)
             raise ValueError()
         mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(xtarget, self.config, caller=self)
@@ -962,11 +962,11 @@ class LaunchCheriBsdMfsRoot(LaunchMinimalCheriBSD):
     _disk_image_class = None
     _uses_disk_image = False
 
-    # XXX: Existing code isn't reqdy to run these but we want to support building them
-    @classproperty
-    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
+    # XXX: Existing code isn't ready to run these but we want to support building them
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
         return tuple(
-            set(super().supported_architectures)
+            set(super().supported_architectures())
             - {CompilationTargets.CHERIBSD_AARCH64, *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS}
         )
 
@@ -986,9 +986,9 @@ class BuildAndRunCheriBSD(TargetAliasWithDependencies):
     dependencies = ("cheribsd", "disk-image", "run")
     direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
 
-    @classproperty
-    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
-        return LaunchCheriBSD.supported_architectures
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        return LaunchCheriBSD.supported_architectures()
 
 
 class BuildAndRunFreeBSD(TargetAliasWithDependencies):
@@ -997,15 +997,15 @@ class BuildAndRunFreeBSD(TargetAliasWithDependencies):
     dependencies = ("freebsd", "disk-image-freebsd", "run-freebsd")
     direct_dependencies_only = True  # only rebuild toolchain, bbl or GDB if --include-dependencies is passed
 
-    @classproperty
-    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
-        return LaunchFreeBSD.supported_architectures
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        return LaunchFreeBSD.supported_architectures()
 
 
 class BuildAll(TargetAliasWithDependencies):
     target = "all"
     dependencies = ("qemu", "sdk", "disk-image", "run")
 
-    @classproperty
-    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
-        return LaunchCheriBSD.supported_architectures
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        return LaunchCheriBSD.supported_architectures()

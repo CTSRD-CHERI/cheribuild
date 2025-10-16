@@ -85,7 +85,7 @@ else:
 # noinspection PyAbstractClass
 class CrossCompileMixin(_CrossCompileMixinBase):
     do_not_add_to_targets = True
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+    _supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     add_build_dir_suffix_for_native = True  # Add the suffix for the native build
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     _should_not_be_instantiated = True
