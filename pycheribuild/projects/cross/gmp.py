@@ -31,7 +31,7 @@ from ...config.compilation_targets import CompilationTargets
 class BuildGmp(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/gmp-mirror/gmp")
     default_directory_basename = "libgmp"
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
         + CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS
         + CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS

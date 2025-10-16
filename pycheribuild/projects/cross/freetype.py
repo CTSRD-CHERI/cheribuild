@@ -32,7 +32,7 @@ from .crosscompileproject import CompilationTargets, CrossCompileMesonProject, G
 # Prefer the CMake build over autotools since autotools does not work out-of-the-box
 class BuildFreeType2(CrossCompileMesonProject):
     target = "freetype2"
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
     repository = GitRepository(
         "https://gitlab.freedesktop.org/freetype/freetype", old_urls=[b"https://github.com/freetype/freetype2.git"]
     )
@@ -49,7 +49,7 @@ class BuildFreeType2(CrossCompileMesonProject):
 
 class BuildFontConfig(CrossCompileMesonProject):
     target = "fontconfig"
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
     dependencies = ("freetype2", "libexpat")
     repository = GitRepository(
         "https://gitlab.freedesktop.org/fontconfig/fontconfig",

@@ -136,8 +136,8 @@ class ReuseOtherProjectRepository(SourceRepository):
 class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
     def __init__(self, source_project: "type[Project]", *, subdirectory=".", do_update=False):
         xtarget = source_project.default_architecture()
-        if xtarget is None and len(source_project.supported_architectures) == 1:
-            xtarget = source_project.supported_architectures[0]
+        if xtarget is None and len(source_project.supported_architectures()) == 1:
+            xtarget = source_project.supported_architectures()[0]
         assert xtarget is not None
         super().__init__(
             source_project,

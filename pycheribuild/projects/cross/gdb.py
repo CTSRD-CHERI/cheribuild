@@ -56,7 +56,7 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
     do_not_add_to_targets = True
     is_sdk_target = True
     default_build_type = BuildType.RELEASE
-    supported_architectures = (
+    _supported_architectures = (
         *CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS,
         *CompilationTargets.ALL_CHERIBSD_HYBRID_TARGETS,
         *CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS,
@@ -304,7 +304,7 @@ class BuildCheriAllianceGDB(BuildGDBBase):
         default_branch="codasip-cheri-riscv",
     )
 
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.CHERIBSD_RISCV_HYBRID_FOR_PURECAP_ROOTFS,
         CompilationTargets.NATIVE_NON_PURECAP,
     )

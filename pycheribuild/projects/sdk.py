@@ -36,7 +36,7 @@ from .cross.cheribsd import BuildCHERIBSD
 from .project import CheriConfig, CPUArchitecture, DefaultInstallDir, GitRepository
 from .simple_project import SimpleProject, TargetAliasWithDependencies
 from ..config.target_info import CrossCompileTarget
-from ..utils import classproperty, include_local_file
+from ..utils import include_local_file
 
 
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
@@ -51,9 +51,9 @@ class BuildCheriBSDSdk(TargetAliasWithDependencies):
             deps = ("freestanding-cheri-sdk",)
         return (*deps, "cheribsd")
 
-    @classproperty
-    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
-        return BuildCHERIBSD.supported_architectures
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        return BuildCHERIBSD.supported_architectures()
 
 
 class BuildSdk(TargetAliasWithDependencies):
@@ -61,9 +61,9 @@ class BuildSdk(TargetAliasWithDependencies):
     dependencies = ("cheribsd-sdk",)
     is_sdk_target = True
 
-    @classproperty
-    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
-        return BuildCheriBSDSdk.supported_architectures
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        return BuildCheriBSDSdk.supported_architectures()
 
 
 class BuildCheriCompressedCaps(CMakeProject):

@@ -54,7 +54,7 @@ from .project import (
 from .simple_project import BoolConfigOption, SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile, MtreePath
-from ..utils import AnsiColour, classproperty, coloured, include_local_file
+from ..utils import AnsiColour, coloured, include_local_file
 
 # Notes:
 # Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo
@@ -154,9 +154,9 @@ class BuildDiskImageBase(SimpleProject):
         assert cls._source_class is not None
         return cls._source_class.default_architecture()
 
-    @classproperty
-    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
-        return self._source_class.supported_architectures
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        return cls._source_class.supported_architectures()
 
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
@@ -416,7 +416,7 @@ class BuildDiskImageBase(SimpleProject):
         purecap_cheri_dirname = "purecap-cheri-rootfs-not-found"
 
         def path_relative_to_outputroot(xtarget) -> Path:
-            if xtarget not in self.supported_architectures:
+            if xtarget not in self.supported_architectures():
                 return Path("/target/not/supported")
             install_dir = self._source_class.get_install_dir(self, cross_target=xtarget)
             try:
@@ -572,7 +572,7 @@ class BuildDiskImageBase(SimpleProject):
         if cross_target.is_cheri_purecap():
             cross_target = cross_target.get_cheri_hybrid_for_purecap_rootfs_target()
         gdb_cls = get_build_gdb_class(cross_target, self.config)
-        if cross_target not in gdb_cls.supported_architectures:
+        if cross_target not in gdb_cls.supported_architectures():
             self.warning("GDB cannot be built for architecture ", cross_target, " -> not addding it")
             return
         if self.include_kgdb:
@@ -1436,7 +1436,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
         xtarget = cls.get_crosscompile_target()
         gdb_xtarget = xtarget.get_cheri_hybrid_for_purecap_rootfs_target() if xtarget.is_cheri_purecap() else xtarget
         gdb_cls = get_build_gdb_class(gdb_xtarget, config)
-        if gdb_xtarget in gdb_cls.supported_architectures:
+        if gdb_xtarget in gdb_cls.supported_architectures():
             result += (gdb_cls.get_class_for_target(gdb_xtarget).target,)
         return result
 

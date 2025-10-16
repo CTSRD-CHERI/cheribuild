@@ -81,7 +81,7 @@ class BuildLLVMBase(CMakeProject):
     # Linking all the debug info takes forever
     default_build_type = BuildType.RELEASE
     # LLVM does not yet compile for purecap.
-    supported_architectures = (CompilationTargets.NATIVE_NON_PURECAP,)
+    _supported_architectures = (CompilationTargets.NATIVE_NON_PURECAP,)
     _default_architecture = CompilationTargets.NATIVE_NON_PURECAP
 
     included_projects: "ClassVar[list[str]]"
@@ -649,7 +649,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     # NB: remove_duplicates is needed for --enable-hybrid-for-purecap-rootfs targets.
-    supported_architectures = remove_tuple_duplicates(
+    _supported_architectures = remove_tuple_duplicates(
         (
             *CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS,
             *CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS,
@@ -736,7 +736,7 @@ class BuildMorelloLLVM(BuildLLVMMonoRepoBase):
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
     # NB: remove_duplicates is needed for --enable-hybrid-for-purecap-rootfs targets.
-    supported_architectures = remove_tuple_duplicates(
+    _supported_architectures = remove_tuple_duplicates(
         (
             *CompilationTargets.ALL_SUPPORTED_CHERIBSD_TARGETS,
             *CompilationTargets.ALL_CHERIBSD_HYBRID_FOR_PURECAP_ROOTFS_TARGETS,
@@ -803,7 +803,7 @@ class BuildCheriAllianceLLVM(BuildLLVMMonoRepoBase):
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
 
-    supported_architectures = (CompilationTargets.NATIVE_NON_PURECAP,)
+    _supported_architectures = (CompilationTargets.NATIVE_NON_PURECAP,)
 
     @property
     def triple_prefixes_for_binaries(self) -> "Iterable[str]":

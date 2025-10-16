@@ -64,7 +64,7 @@ class KDECMakeProject(CrossCompileCMakeProject):
     do_not_add_to_targets = True
     default_install_dir = DefaultInstallDir.KDE_PREFIX
     default_build_type = BuildType.RELWITHDEBINFO
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+    _supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     # Group all the frameworks source directories together
     default_source_dir = default_source_dir_in_subdir(Path("kde-frameworks"))
 
@@ -628,7 +628,7 @@ class BuildKCMUtilsTools(KDECMakeProject):
     target = "kcmutils-tools"
     _always_add_suffixed_targets = True
     dependencies = ("kitemviews", "kconfigwidgets", "kservice", "kxmlgui", "kdeclarative", "kauth")
-    supported_architectures = CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_NATIVE
     repository = ReuseOtherProjectRepository(source_project=BuildKCMUtils, do_update=True)
 
     def setup(self):
@@ -1248,7 +1248,7 @@ class BuildDoplhin(KDECMakeProject):
 
 
 class BuildLibPng(CrossCompileCMakeProject):
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
     repository = GitRepository(
         "https://github.com/glennrp/libpng",
         old_urls=[b"https://github.com/CTSRD-CHERI/libpng"],
@@ -1530,7 +1530,7 @@ class BuildKate(KDECMakeProject):
 
 class BuildKDEX11Desktop(TargetAliasWithDependencies):
     target = "kde-x11-desktop"
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
+    _supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     # TODO: "systemsettings" - now needs a newer plasma-workspace
     dependencies = (
         "plasma-desktop",

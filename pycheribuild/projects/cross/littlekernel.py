@@ -33,13 +33,12 @@ from ..run_qemu import LaunchQEMUBase
 from ..simple_project import BoolConfigOption
 from ...config.target_info import CrossCompileTarget
 from ...qemu_utils import riscv_bios_arguments
-from ...utils import classproperty
 
 
 class BuildLittleKernel(CrossCompileMakefileProject):
     target = "littlekernel"
     default_directory_basename = "lk"
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.FREESTANDING_ARM32,
         CompilationTargets.FREESTANDING_AARCH64,
         CompilationTargets.FREESTANDING_MORELLO_NO_CHERI,
@@ -224,9 +223,9 @@ class LaunchLittlekernelQEMU(LaunchQEMUBase):
     _add_virtio_rng = False
     _uses_disk_image = False
 
-    @classproperty
-    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
-        return BuildLittleKernel.supported_architectures
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        return BuildLittleKernel.supported_architectures()
 
     def setup(self):
         super().setup()

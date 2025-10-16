@@ -43,7 +43,7 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
     target = "busybox"
     repository = GitRepository("https://git.busybox.net/busybox/")
     is_sdk_target = False
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.LINUX_RISCV64,
         CompilationTargets.LINUX_AARCH64,
     )
@@ -172,7 +172,7 @@ done
 class BuildMorelloBusyBox(BuildBusyBox):
     target = "morello-busybox"
     repository = GitRepository("https://git.morello-project.org/morello/morello-busybox.git")
-    supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
 
     def setup(self) -> None:
         # Morello Buxybox has its own modified Makefile to work with LLVM/Clang and Morello

@@ -49,7 +49,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
     _configure_supports_variables_on_cmdline = True
     # CC,CFLAGS, etc. are the compilers for the build host not the target -> don't set automatically
     _autotools_add_default_compiler_args = False
-    supported_architectures = (*CompilationTargets.ALL_NEWLIB_TARGETS, *CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS)
+    _supported_architectures = (*CompilationTargets.ALL_NEWLIB_TARGETS, *CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS)
     locale_support = BoolConfigOption("locale-support", show_help=False, help="Build with locale support")
     # build_in_source_dir = True  # we have to build in the source directory
 

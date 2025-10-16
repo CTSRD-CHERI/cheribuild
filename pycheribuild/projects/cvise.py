@@ -35,5 +35,5 @@ class BuildCVise(CMakeProject):
     target = "cvise"
     repository = GitRepository("https://github.com/marxin/cvise")
     dependencies = ("llvm",)
-    supported_architectures = (BuildCheriLLVM.default_architecture(),)
+    _supported_architectures = (BuildCheriLLVM.default_architecture(),)
     default_install_dir = DefaultInstallDir.CHERI_SDK

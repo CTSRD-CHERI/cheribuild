@@ -58,7 +58,7 @@ class BuildOpenSBI(Project):
     repository = GitRepository("https://github.com/CTSRD-CHERI/opensbi")
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELWITHDEBINFO
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64_HYBRID,
         CompilationTargets.FREESTANDING_RISCV64,
         # Won't compile yet: CompilationTargets.FREESTANDING_RISCV64_PURECAP
@@ -197,7 +197,7 @@ class BuildUpstreamOpenSBI(BuildOpenSBI):
         as_string="$SDK_ROOT/upstream-opensbi/riscv64",
     )
     repository = GitRepository("https://github.com/riscv-software-src/opensbi.git")
-    supported_architectures = (CompilationTargets.FREESTANDING_RISCV64,)
+    _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64,)
 
     def run_tests(self):
         options = QemuOptions(self.crosscompile_target, riscv_cheri_isa=self.config.riscv_cheri_isa)
@@ -227,7 +227,7 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
         force_branch=True,
         # TODO: restore default branch: default_branch="codasip-cheri-riscv",
     )
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP,
     )

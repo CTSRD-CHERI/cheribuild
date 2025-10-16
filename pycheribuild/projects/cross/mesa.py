@@ -40,7 +40,7 @@ class BuildLibDrm(CrossCompileMesonProject):
         temporary_url_override="https://gitlab.freedesktop.org/arichardson/drm.git",
         url_override_reason="Lots of uinptr_t != u64 fun",
     )
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()
@@ -61,7 +61,7 @@ class BuildLibGlvnd(CrossCompileMesonProject):
         "https://gitlab.freedesktop.org/glvnd/libglvnd.git",
         old_urls=[b"https://gitlab.freedesktop.org/arichardson/libglvnd.git"],
     )
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()
@@ -85,7 +85,7 @@ class BuildMesa(CrossCompileMesonProject):
         force_branch=True,
         default_branch="mesa-22.3.7-cheriabi",
     )
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
     include_x11 = True
     include_wayland = True
 
@@ -151,7 +151,7 @@ class BuildLibEpoxy(CrossCompileMesonProject):
     repository = GitRepository(
         "https://github.com/anholt/libepoxy", old_urls=[b"https://github.com/arichardson/libepoxy"]
     )
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()
@@ -163,7 +163,7 @@ class BuildVirglRenderer(CrossCompileMesonProject):
     target = "virglrenderer"
     dependencies = ("libepoxy", "libx11")
     repository = GitRepository("https://gitlab.freedesktop.org/virgl/virglrenderer")
-    supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_FREEBSD_AND_CHERIBSD_TARGETS + CompilationTargets.ALL_NATIVE
 
     def setup(self):
         super().setup()

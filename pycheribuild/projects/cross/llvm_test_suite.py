@@ -52,7 +52,7 @@ class BuildLLVMTestSuiteBase(BenchmarkMixin, CrossCompileCMakeProject):
     default_build_type = BuildType.RELEASE
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     collect_stats = BoolConfigOption("collect-stats", help="Collect statistics from the compiler")
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + CompilationTargets.ALL_PICOLIBC_TARGETS
     )
 
@@ -158,7 +158,7 @@ class BuildLLVMTestSuiteCheriBSDUpstreamLLVM(BuildLLVMTestSuite):
     target = "llvm-test-suite-cheribsd-upstream-llvm"
     repository = ReuseOtherProjectRepository(BuildLLVMTestSuite, do_update=True)
     llvm_project = BuildUpstreamLLVM
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS + CompilationTargets.ALL_NATIVE
+    _supported_architectures = CompilationTargets.ALL_CHERIBSD_NON_CHERI_TARGETS + CompilationTargets.ALL_NATIVE
 
     @property
     def custom_c_preprocessor(self):

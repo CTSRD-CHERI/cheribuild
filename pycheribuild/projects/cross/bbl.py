@@ -65,7 +65,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     enable_zero_bss = False
     custom_payload: Optional[str] = None
     mem_start = "0x80000000"
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64_PURECAP,
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV32_PURECAP,

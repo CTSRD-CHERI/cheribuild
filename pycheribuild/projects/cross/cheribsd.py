@@ -59,7 +59,7 @@ from ...config.compilation_targets import CompilationTargets, FreeBSDTargetInfo
 from ...config.loader import ConfigOptionHandle
 from ...config.target_info import AutoVarInit, CompilerType, CrossCompileTarget
 from ...processutils import latest_system_clang_tool, print_command
-from ...utils import OSInfo, ThreadJoiner, classproperty, is_jenkins_build
+from ...utils import OSInfo, ThreadJoiner, is_jenkins_build
 
 
 def _arch_suffixed_custom_install_dir(prefix: str) -> "ComputedDefaultValue[Path]":
@@ -635,10 +635,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     is_rootfs_target: typing.ClassVar[bool] = True  # All derived classes are also rootfs targets
     # We still allow building FreeBSD for MIPS64. While the main branch no longer has support, this allows building
     # the stable/13 branch using cheribuild. However, MIPS is no longer included in ALL_SUPPORTED_FREEBSD_TARGETS.
-    supported_architectures: "typing.ClassVar[tuple[CrossCompileTarget, ...]]" = (
-        *CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS,
-        CompilationTargets.FREEBSD_MIPS64,
-    )
+    _supported_architectures = (*CompilationTargets.ALL_SUPPORTED_FREEBSD_TARGETS, CompilationTargets.FREEBSD_MIPS64)
 
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("freebsd")
     add_custom_make_options: bool = True
@@ -1838,7 +1835,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         "https://github.com/CTSRD-CHERI/cheribsd.git", old_branches={"master": "main"}
     )
     _default_install_dir_fn: ComputedDefaultValue[Path] = _arch_suffixed_custom_install_dir("rootfs")
-    supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
+    _supported_architectures = CompilationTargets.ALL_CHERIBSD_TARGETS_WITH_HYBRID
     is_sdk_target: bool = True
     hide_options_from_help: bool = False  # FreeBSD options are hidden, but this one should be visible
     use_llvm_binutils: bool = True
@@ -2066,7 +2063,7 @@ class BuildCheriBsdMfsKernel(BuildCHERIBSD):
     target: str = "cheribsd-mfs-root-kernel"
     dependencies: "tuple[str, ...]" = ("disk-image-mfs-root",)
     repository: ReuseOtherProjectRepository = ReuseOtherProjectRepository(source_project=BuildCHERIBSD, do_update=True)
-    supported_architectures: "typing.ClassVar[tuple[CrossCompileTarget, ...]]" = (
+    _supported_architectures: "typing.ClassVar[tuple[CrossCompileTarget, ...]]" = (
         CompilationTargets.CHERIBSD_AARCH64,
         *CompilationTargets.ALL_CHERIBSD_MORELLO_TARGETS,
         *CompilationTargets.ALL_CHERIBSD_RISCV_TARGETS,
@@ -2175,9 +2172,9 @@ class BuildCheriBsdMfsImageAndKernels(TargetAliasWithDependencies):
     dependencies: "tuple[str, ...]" = ("disk-image-mfs-root", "cheribsd-mfs-root-kernel")
     direct_dependencies_only: bool = True
 
-    @classproperty
-    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
-        return BuildCheriBsdMfsKernel.supported_architectures
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        return BuildCheriBsdMfsKernel.supported_architectures()
 
 
 if typing.TYPE_CHECKING:
@@ -2323,9 +2320,9 @@ class BuildCheriBsdSysrootArchive(SimpleProject):
     remote_path: "ClassVar[Optional[str]]"
     install_dir_override: "ClassVar[Optional[Path]]"
 
-    @classproperty
-    def supported_architectures(self) -> "tuple[CrossCompileTarget, ...]":
-        return self.rootfs_source_class.supported_architectures
+    @classmethod
+    def supported_architectures(cls) -> "tuple[CrossCompileTarget, ...]":
+        return cls.rootfs_source_class.supported_architectures()
 
     @classmethod
     def dependencies(cls, _: CheriConfig) -> "tuple[str, ...]":

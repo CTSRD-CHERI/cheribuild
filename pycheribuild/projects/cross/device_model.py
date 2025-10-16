@@ -39,7 +39,7 @@ class BuildDeviceModel(CrossCompileAutotoolsProject):
     target = "device-model"
     is_sdk_target = True
     _needs_sysroot = False  # We don't need a complete sysroot
-    supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_PURECAP,)
+    _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64_PURECAP,)
     default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
     build_in_source_dir = True  # Cannot build out-of-source
 

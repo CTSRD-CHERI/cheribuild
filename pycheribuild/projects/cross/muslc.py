@@ -44,7 +44,7 @@ class BuildMuslc(CrossCompileAutotoolsProject):
     repository = GitRepository("https://git.musl-libc.org/git/musl")
     _needs_sysroot = False
     is_sdk_target = False
-    supported_architectures = (
+    _supported_architectures = (
         CompilationTargets.LINUX_AARCH64,
         CompilationTargets.LINUX_RISCV64,
     )
@@ -72,7 +72,7 @@ class BuildMuslc(CrossCompileAutotoolsProject):
 class BuildMorelloLinuxMuslc(BuildMuslc):
     target = "morello-muslc"
     repository = GitRepository("https://git.morello-project.org/morello/musl-libc.git")
-    supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
 
     def setup(self) -> None:
         self.configure_args.extend(["--enable-morello"])
