@@ -100,9 +100,6 @@ class BuildLinux(CrossCompileAutotoolsProject):
         # Don't overwrite our manually edited .config file with default values
         self.make_args.set_env(KCONFIG_NOSILENTUPDATE=1)
 
-        if self.config.verbose:
-            self.make_args.set(V=2)
-
     @property
     def defconfig(self) -> str:
         return "defconfig"
