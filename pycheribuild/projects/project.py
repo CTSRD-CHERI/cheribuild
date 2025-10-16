@@ -85,7 +85,6 @@ from ..utils import (
     InstallInstructions,
     OSInfo,
     ThreadJoiner,
-    classproperty,
     coloured,
     remove_duplicates,
     status_update,
@@ -512,8 +511,8 @@ class Project(SimpleProject):
         assert cls._xtarget is not None
         return not cls._xtarget.is_cheri_purecap()
 
-    @classproperty
-    def can_build_with_ccache(self) -> bool:
+    @classmethod
+    def can_build_with_ccache(cls) -> bool:
         return False
 
     @classmethod
@@ -674,7 +673,7 @@ class Project(SimpleProject):
         else:
             cls.use_msan = False
 
-        if cls.can_build_with_ccache:
+        if cls.can_build_with_ccache():
             cls.use_ccache = cls.add_bool_option("use-ccache", default=False, help="Build with CCache")
         else:
             cls.use_ccache = False
