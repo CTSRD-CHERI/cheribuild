@@ -76,7 +76,12 @@ class BuildLinux(CrossCompileAutotoolsProject):
 
     def setup(self) -> None:
         super().setup()
-        self.make_args.set(CROSS_COMPILE=str(self.CC.parent) + "/", LLVM=str(self.CC.parent) + "/")
+        self.make_args.add_flags("-f", self.source_dir / "Makefile")
+        self.make_args.set(
+            CROSS_COMPILE=str(self.CC.parent) + "/",
+            LLVM=str(self.CC.parent) + "/",
+            KBUILD_ABS_SRCTREE=self.source_dir.absolute(),
+        )
         if self.crosscompile_target.is_riscv(include_purecap=True):
             self.linux_arch = "riscv"
         elif self.crosscompile_target.is_aarch64(include_purecap=True):
@@ -95,7 +100,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
         self.make_args.set_env(KCONFIG_NOSILENTUPDATE=1)
 
         if self.config.verbose:
-            self.make_args.set(V=True)
+            self.make_args.set(V=2)
 
     @property
     def defconfig(self) -> str:
@@ -104,24 +109,31 @@ class BuildLinux(CrossCompileAutotoolsProject):
     def compile(self, **kwargs):
         if self.compiling_for_riscv(include_purecap=True):
             # Work around https://github.com/ClangBuiltLinux/linux/issues/2092
-            ccinfo = self.get_compiler_info(self.CC)
             # FIXME: apparently this value is always overwritten by the build system with the default value no
-            # matter what I do, just print a warning for now
-            if ccinfo.is_clang and False:
-                self.info("Working around https://github.com/ClangBuiltLinux/linux/issues/2092")
-                self._set_config("CONFIG_CC_HAS_ASM_GOTO_OUTPUT", "n")
-                # self.run_make("savedefconfig", parallel=False)
-                # self.run_make("oldconfig", parallel=False)
-                self.run_cmd(
-                    self.source_dir / "scripts/config", "--state", "CONFIG_CC_HAS_ASM_GOTO_OUTPUT", cwd=self.build_dir
-                )
-            else:
-                self.warning("Need to working around https://github.com/ClangBuiltLinux/linux/issues/2092")
-                self.warning(
-                    "See patch in https://lore.kernel.org/all/20250811-riscv-wa-llvm-asm-goto-outputs-"
-                    "assertion-failure-v1-1-7bb8c9cbb92b@kernel.org/"
-                )
+            # matter what I do, apply the patch instead for now
+            # self._set_config("CONFIG_CC_HAS_ASM_GOTO_OUTPUT", "n")
+            self.info("Working around https://github.com/ClangBuiltLinux/linux/issues/2092")
+            self._apply_patch_from_url(
+                self.build_dir / "asm-goto.patch",
+                "https://lore.kernel.org/all/"
+                "20250811-riscv-wa-llvm-asm-goto-outputs-assertion-failure-v1-1-7bb8c9cbb92b@kernel.org/raw",
+            )
         self.run_make()
+
+    def _apply_patch_from_url(self, patch_output_path: Path, patch_url: str):
+        self.download_file(patch_output_path, patch_url)
+        # Check if the patch can be applied in reverse. If this command fails, the patch is not yet applied.
+        already_applied = self.run_cmd(
+            ["git", "apply", "--check", "--reverse", patch_output_path],
+            cwd=self.source_dir,
+            allow_unexpected_returncode=True,
+            print_verbose_only=True,
+        )
+        if already_applied.returncode != 0:
+            self.info(f"Applying patch from {patch_url}")
+            self.run_cmd("git", "apply", patch_output_path, cwd=self.source_dir)
+        else:
+            self.info(f"Patch from {patch_url} already applied, skipping.")
 
     def configure(self, **kwargs):
         self.run_make(self.defconfig, cwd=self.source_dir, parallel=False)
