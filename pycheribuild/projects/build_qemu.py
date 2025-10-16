@@ -65,7 +65,6 @@ class BuildQEMUBase(AutotoolsProject):
     do_not_add_to_targets = True
     is_sdk_target = True
     skip_git_submodules = True  # we don't need these
-    can_build_with_asan = True
     default_targets: str = "some-invalid-target"
     default_build_type = BuildType.RELEASE
     lto_by_default = True
@@ -101,6 +100,10 @@ class BuildQEMUBase(AutotoolsProject):
 
     @classmethod
     def is_toolchain_target(cls):
+        return True
+
+    @classmethod
+    def can_build_with_asan(cls) -> bool:
         return True
 
     @property

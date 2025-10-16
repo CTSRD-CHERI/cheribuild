@@ -77,7 +77,6 @@ class BuildLLVMBase(CMakeProject):
     no_default_sysroot = None
     skip_cheri_symlinks = True
     do_not_add_to_targets = True
-    can_build_with_asan = True
     is_large_source_repository = True
     # Linking all the debug info takes forever
     default_build_type = BuildType.RELEASE
@@ -110,6 +109,10 @@ class BuildLLVMBase(CMakeProject):
 
     @classmethod
     def can_build_with_ccache(cls):
+        return True
+
+    @classmethod
+    def can_build_with_asan(cls) -> bool:
         return True
 
     @classmethod

@@ -496,18 +496,21 @@ class Project(SimpleProject):
 
     default_use_asan: bool = False
 
-    @classproperty
-    def can_build_with_asan(self) -> bool:
-        return self._xtarget is None or not self._xtarget.is_cheri_purecap()
+    @classmethod
+    def can_build_with_asan(cls) -> bool:
+        assert cls._xtarget is not None
+        return not cls._xtarget.is_cheri_purecap()
 
-    @classproperty
-    def can_build_with_msan(self) -> bool:
+    @classmethod
+    def can_build_with_msan(cls) -> bool:
         # For now limit MSan to native builds
-        return self._xtarget is None or self._xtarget.is_native()
+        assert cls._xtarget is not None
+        return cls._xtarget.is_native()
 
-    @classproperty
-    def can_build_with_cfi(self) -> bool:
-        return self._xtarget is None or not self._xtarget.is_cheri_purecap()
+    @classmethod
+    def can_build_with_cfi(cls) -> bool:
+        assert cls._xtarget is not None
+        return not cls._xtarget.is_cheri_purecap()
 
     @classproperty
     def can_build_with_ccache(self) -> bool:
@@ -654,7 +657,7 @@ class Project(SimpleProject):
                 help="Override default source directory for " + cls.target,
                 use_default_fallback_config_names=cls._xtarget == default_xtarget,
             )
-        if cls.can_build_with_asan:
+        if cls.can_build_with_asan():
             asan_default = ComputedDefaultValue(
                 function=lambda config, proj: (
                     False if proj.crosscompile_target.is_cheri_purecap() else proj.default_use_asan
@@ -666,7 +669,7 @@ class Project(SimpleProject):
             )
         else:
             cls.use_asan = False
-        if cls.can_build_with_msan:
+        if cls.can_build_with_msan():
             cls.use_msan = cls.add_bool_option("use-msan", default=False, help="Build with MemorySanitizer enabled")
         else:
             cls.use_msan = False
@@ -740,7 +743,7 @@ class Project(SimpleProject):
         cls.use_lto = cls.add_bool_option(
             "use-lto", help="Build with link-time optimization (LTO)", default=cls.lto_by_default
         )
-        if cls.can_build_with_cfi:
+        if cls.can_build_with_cfi():
             cls.use_cfi = cls.add_bool_option("use-cfi", help="Build with LLVM CFI (requires LTO)", default=False)
         else:
             cls.use_cfi = False
