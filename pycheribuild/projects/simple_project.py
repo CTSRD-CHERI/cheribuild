@@ -66,7 +66,6 @@ from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_mana
 from ..utils import (
     InstallInstructions,
     OSInfo,
-    classproperty,
     fatal_error,
     is_jenkins_build,
     query_yes_no,
@@ -393,7 +392,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         if not explicit_dependencies_only:
             if include_toolchain_dependencies:
                 dependencies.extend(cls._xtarget.target_info_cls.toolchain_targets(cls._xtarget, config))
-            if include_sdk_dependencies and cls.needs_sysroot:
+            if include_sdk_dependencies and cls.needs_sysroot():
                 # For A-for-B-rootfs targets the sysroot should use B targets,
                 # not A-for-B-rootfs.
                 for dep_name in cls._xtarget.target_info_cls.base_sysroot_targets(cls._xtarget, config):
@@ -685,10 +684,6 @@ class SimpleProjectBase(AbstractProject, ABC):
     def essential_compiler_and_linker_flags(self):
         # This property exists so that gdb can override the target flags to build the -purecap targets as hybrid.
         return self.target_info.get_essential_compiler_and_linker_flags()
-
-    @classproperty
-    def needs_sysroot(self) -> bool:
-        return not self._xtarget.is_native()  # Most projects need a sysroot (but not native)
 
     def compiling_for_mips(self, include_purecap: bool) -> bool:
         return self.crosscompile_target.is_mips(include_purecap=include_purecap)

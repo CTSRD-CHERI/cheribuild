@@ -58,7 +58,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
     is_sdk_target = False
-    needs_sysroot = False  # Should be buildable without a sysroot
+    _needs_sysroot = False  # Should be buildable without a sysroot
     kernel_class = None
     cross_install_dir = DefaultInstallDir.ROOTFS_OPTBASE
     without_payload = False

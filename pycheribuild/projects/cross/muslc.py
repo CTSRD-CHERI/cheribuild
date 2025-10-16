@@ -42,7 +42,7 @@ from ...utils import classproperty
 class BuildMuslc(CrossCompileAutotoolsProject):
     target = "muslc"
     repository = GitRepository("https://git.musl-libc.org/git/musl")
-    needs_sysroot = False
+    _needs_sysroot = False
     is_sdk_target = False
     supported_architectures = (
         CompilationTargets.LINUX_AARCH64,

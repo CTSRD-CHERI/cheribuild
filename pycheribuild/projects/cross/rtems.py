@@ -41,7 +41,7 @@ class BuildRtems(CrossCompileProject):
     include_os_in_target_suffix = False
     dependencies = ("newlib", "compiler-rt-builtins")
     is_sdk_target = True
-    needs_sysroot = False  # We don't need a complete sysroot
+    _needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
     default_install_dir = DefaultInstallDir.ROOTFS_LOCALBASE
 

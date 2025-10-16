@@ -55,7 +55,7 @@ class BuildLittleKernel(CrossCompileMakefileProject):
     )
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     set_pkg_config_path = False
-    needs_sysroot = False
+    _needs_sysroot = False
     build_in_source_dir = False
     # We have to override CC, etc. on the command line rather than in the environment:
     set_commands_on_cmdline = True

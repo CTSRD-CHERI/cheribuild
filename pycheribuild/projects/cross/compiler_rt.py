@@ -129,7 +129,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     _check_install_dir_conflict = False
     is_sdk_target = True
     root_cmakelists_subdirectory = Path("lib/builtins")
-    needs_sysroot = False  # We don't need a complete sysroot
+    _needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = (
         CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS
         + CompilationTargets.ALL_SUPPORTED_LINUX_TARGETS

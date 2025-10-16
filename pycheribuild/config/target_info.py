@@ -166,7 +166,7 @@ class AbstractProject(FileSystemUtils, metaclass=ABCMeta):
     _xtarget: "ClassVar[Optional[CrossCompileTarget]]" = None
     # The architecture to build for the unsuffixed target name (defaults to supported_architectures[0] if no match)
     _default_architecture: "Optional[CrossCompileTarget]" = None
-    needs_sysroot: "ClassVar[bool]"
+    _needs_sysroot: "ClassVar[Optional[bool]]" = None
     is_rootfs_target: typing.ClassVar[bool] = False  # Whether this project installation directory is a rootfs dir
 
     auto_var_init: AutoVarInit  # Needed for essential_compiler_flags
@@ -203,6 +203,13 @@ class AbstractProject(FileSystemUtils, metaclass=ABCMeta):
         # TODO: move all those methods here
         if not self.config.quiet:
             status_update(*args, **kwargs)
+
+    @classmethod
+    def needs_sysroot(cls) -> "bool":
+        # All cross-compiled projects need a sysroot (but generally not native ones)
+        if cls._needs_sysroot is not None:
+            return cls._needs_sysroot
+        return not cls.get_crosscompile_target().is_native()
 
     @classmethod
     def default_architecture(cls) -> "Optional[CrossCompileTarget]":

@@ -102,7 +102,7 @@ class MorelloFirmwareBase(CrossCompileMakefileProject):
     do_not_add_to_targets = True
     supported_architectures = (CompilationTargets.FREESTANDING_MORELLO_HYBRID,)
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR  # TODO: install it
-    needs_sysroot = False  # We don't need a complete sysroot
+    _needs_sysroot = False  # We don't need a complete sysroot
     default_build_type = BuildType.RELEASE
     _default_install_dir_fn = ComputedDefaultValue(
         function=_morello_firmware_build_outputs_dir, as_string="$MORELLO_SDK_ROOT/firmware/morello-fvp"

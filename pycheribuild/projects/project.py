@@ -1098,7 +1098,7 @@ class Project(SimpleProject):
                 )
                 if self.target_info.pkg_config_libdir_override is not None:
                     pkg_config_args["PKG_CONFIG_LIBDIR"] = self.target_info.pkg_config_libdir_override
-            elif self.needs_sysroot:
+            elif self.needs_sysroot():
                 # We need to set the PKG_CONFIG variables both when configuring and when running make since some
                 # projects (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set
                 # them*, these configure steps will find the libraries on the host instead and cause the build to fail.
@@ -1923,7 +1923,7 @@ class _CMakeAndMesonSharedLogic(Project):
             TOOLCHAIN_RANLIB=self.target_info.ranlib,
             TOOLCHAIN_NM=self.target_info.nm,
             TOOLCHAIN_STRIP=self.target_info.strip_tool,
-            TOOLCHAIN_SYSROOT=self.sdk_sysroot if self.needs_sysroot else "",
+            TOOLCHAIN_SYSROOT=self.sdk_sysroot if self.needs_sysroot() else "",
             TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
             TOOLCHAIN_SYSTEM_NAME=system_name,
             TOOLCHAIN_SYSTEM_VERSION=self.target_info.toolchain_system_version or "",

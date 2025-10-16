@@ -46,7 +46,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     target = "freertos"
     dependencies = ("newlib", "compiler-rt-builtins")
     is_sdk_target = True
-    needs_sysroot = False  # We don't need a complete sysroot
+    _needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = (
         CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
         CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
