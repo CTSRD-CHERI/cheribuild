@@ -30,8 +30,9 @@ class BuildFfmpeg(CrossCompileAutotoolsProject):
     target = "ffmpeg"
     repository = GitRepository(
         "https://github.com/FFmpeg/FFmpeg.git",
-        temporary_url_override="https://github.com/arichardson/FFmpeg.git",
-        url_override_reason="Needs --disable-neon workarounds",
+        temporary_url_override="https://github.com/CTSRD-CHERI/FFmpeg.git",
+        url_override_reason="Needs disabling NEON support and components implemented in assembly",
+        default_branch="n6.0-cheribsd"
     )
     ctest_script_extra_args = ["--test-timeout", str(180 * 60)]  # Tests take a long time to run
     add_host_target_build_config_options = False  # doesn't understand --host
