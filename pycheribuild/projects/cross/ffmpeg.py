@@ -177,6 +177,13 @@ class BuildFfmpeg(CrossCompileAutotoolsProject):
                     # components implemented in assembly (e.g., pixblockdsp).
                     "--disable-encoders",
                     "--disable-decoders",
+                    # Enable helper encoders and decoders."
+                    "--enable-encoder=wrapped_avframe",
+                    "--enable-decoder=wrapped_avframe",
+                    "--enable-encoder=anull",
+                    "--enable-encoder=vnull",
+                    "--enable-decoder=anull",
+                    "--enable-decoder=vnull",
                     # We would like to enable the following dependencies, once
                     # they are added to cheribuild for riscv64c.
                     # "--enable-fontconfig",
