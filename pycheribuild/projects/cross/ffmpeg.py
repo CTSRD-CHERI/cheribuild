@@ -34,6 +34,7 @@ class BuildFfmpeg(CrossCompileAutotoolsProject):
         url_override_reason="Needs disabling NEON support and components implemented in assembly",
         default_branch="n6.0-cheribsd"
     )
+    dependencies = ("dav1d",)
     ctest_script_extra_args = ["--test-timeout", str(180 * 60)]  # Tests take a long time to run
     add_host_target_build_config_options = False  # doesn't understand --host
     _configure_supports_variables_on_cmdline = False  # not really an autotools project
@@ -177,6 +178,9 @@ class BuildFfmpeg(CrossCompileAutotoolsProject):
                     # components implemented in assembly (e.g., pixblockdsp).
                     "--disable-encoders",
                     "--disable-decoders",
+                    # Enable the dav1d decoder.",
+                    "--enable-libdav1d",
+                    "--enable-decoder=libdav1d",
                     # Enable helper encoders and decoders."
                     "--enable-encoder=wrapped_avframe",
                     "--enable-decoder=wrapped_avframe",
