@@ -104,9 +104,9 @@ class BuildLinux(CrossCompileAutotoolsProject):
     def defconfig(self) -> str:
         return "defconfig"
 
-    def compile(self, **kwargs):
+    def _apply_build_patches(self):
+        # Work around https://github.com/ClangBuiltLinux/linux/issues/2092
         if self.compiling_for_riscv(include_purecap=False):
-            # Work around https://github.com/ClangBuiltLinux/linux/issues/2092
             # FIXME: apparently this value is always overwritten by the build system with the default value no
             # matter what I do, apply the patch instead for now
             # self._set_config("CONFIG_CC_HAS_ASM_GOTO_OUTPUT", "n")
@@ -116,6 +116,9 @@ class BuildLinux(CrossCompileAutotoolsProject):
                 "https://lore.kernel.org/linux-riscv/"
                 "20250811-riscv-wa-llvm-asm-goto-outputs-assertion-failure-v1-1-7bb8c9cbb92b@kernel.org/raw",
             )
+
+    def compile(self, **kwargs):
+        self._apply_build_patches()
         self.run_make()
 
     def _apply_patch_from_url(self, patch_output_path: Path, patch_url: str):
@@ -156,6 +159,11 @@ class BuildCheriAllianceLinux(BuildLinux):
             return "qemu_riscv64cheripc_defconfig"
         else:
             return "defconfig"
+
+    def _apply_build_patches(self):
+        # No patches needed, worked around https://github.com/ClangBuiltLinux/linux/issues/2092
+        # by marking ASM GOTO support as broken.
+        return
 
     def configure(self, **kwargs):
         super().configure(**kwargs)
