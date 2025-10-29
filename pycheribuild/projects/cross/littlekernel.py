@@ -163,7 +163,7 @@ class BuildLittleKernel(CrossCompileMakefileProject):
             bios_args = ["-bios", "none"]
             if self.use_mmu:
                 # We need an M-mode firmware if we are running in S-mode with MMU.
-                bios_args = LaunchQEMUBase.riscv_bios_arguments(self.crosscompile_target, self.config)
+                bios_args = LaunchQEMUBase.riscv_bios_arguments(self.crosscompile_target, self)
             cmd = [
                 qemu,
                 "-cpu",

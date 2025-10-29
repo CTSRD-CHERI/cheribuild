@@ -40,6 +40,7 @@ from typing import Optional
 from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.gdb import get_native_gdb_binary_to_debug_target
+from .cross.opensbi import BuildAllianceOpenSBI, BuildOpenSBI
 from .cross.u_boot import BuildUBoot
 from .disk_image import (
     BuildCheriBSDDiskImage,
@@ -234,13 +235,13 @@ class LaunchQEMUBase(SimpleProject):
         self._after_disk_options = []
 
     @staticmethod
-    def riscv_bios_arguments(xtarget: CrossCompileTarget, config: CheriConfig, prefer_bbl=True) -> "list[str]":
+    def riscv_bios_arguments(xtarget: CrossCompileTarget, caller: SimpleProject, prefer_bbl=True) -> "list[str]":
         assert xtarget.is_riscv(include_purecap=True)
         xlen = 32 if xtarget.is_riscv32() else 64
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            if xtarget.is_experimental_cheri093_std(config):
+            if xtarget.is_experimental_cheri093_std(caller.config):
                 # FIXME: QEMU does not yet default to the correct BIOS image name.
-                return ["-bios", f"opensbi-riscv{xlen}cheristd-virt-fw_jump.bin"]
+                return ["-bios", str(BuildAllianceOpenSBI.get_cheri_bios(caller, xtarget))]
             if prefer_bbl:
                 # We want a purecap BBL:
                 # from .projects.cross.bbl import BuildBBLNoPayload
@@ -249,19 +250,17 @@ class LaunchQEMUBase(SimpleProject):
                 # Explicitly specify the file name while QEMU may still be too old:
                 return ["-bios", f"bbl-riscv{xlen}cheri-virt-fw_jump.bin"]
             else:
-                # from .projects.cross.opensbi import BuildOpenSBI
-                # return ["-bios", str(BuildOpenSBI.get_cheri_bios(caller))]
-                return ["-bios", f"opensbi-riscv{xlen}cheri-virt-fw_jump.bin"]
+                return ["-bios", str(BuildOpenSBI.get_cheri_bios(caller, xtarget))]
         if xtarget.target_info_cls.is_linux():
             # For Linux non-CHERI targets, use the bundled openSBI firmware
-            # even when launching CHERI QEMU since bbl does not work anymore
+            # even when launching CHERI QEMU since bbl does not work with Linux
             return ["-bios", f"opensbi-riscv{xlen}-generic-fw_dynamic.bin"]
         # For non-CHERI we prefer the OpenSBI bios that is bundled with QEMU
         # return BuildOpenSBI.get_nocap_bios(caller)
         return ["-bios", "default"]
 
     def get_riscv_bios_args(self) -> "list[str]":
-        return self.riscv_bios_arguments(self.crosscompile_target, self.config)
+        return self.riscv_bios_arguments(self.crosscompile_target, self)
 
     @classmethod
     def targets_reset(cls) -> None:
