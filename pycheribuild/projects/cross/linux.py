@@ -153,7 +153,7 @@ class BuildCheriAllianceLinux(BuildLinux):
     @property
     def defconfig(self) -> str:
         if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            return "cheri_full_defconfig"
+            return "qemu_riscv64cheripc_defconfig"
         else:
             return "defconfig"
 
