@@ -244,5 +244,8 @@ class LaunchCheriLinux(LaunchQEMUBase):
 
         kernel = f"{linux_project.install_dir}/boot/Image"
         initramfs = f"{linux_project.install_dir}/boot/initramfs.cpio.gz"
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            # No initramfs available yet
+            initramfs = "/dev/null"
         self._project_specific_options += ["-append", "init=/init", "-initrd", initramfs]
         self.current_kernel = Path(kernel)
