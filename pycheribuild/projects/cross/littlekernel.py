@@ -32,7 +32,6 @@ from ..project import DefaultInstallDir
 from ..run_qemu import LaunchQEMUBase
 from ..simple_project import BoolConfigOption
 from ...config.target_info import CrossCompileTarget
-from ...qemu_utils import riscv_bios_arguments
 
 
 class BuildLittleKernel(CrossCompileMakefileProject):
@@ -163,7 +162,8 @@ class BuildLittleKernel(CrossCompileMakefileProject):
         elif self.compiling_for_riscv(include_purecap=True):
             bios_args = ["-bios", "none"]
             if self.use_mmu:
-                bios_args = riscv_bios_arguments(self.crosscompile_target, self.config.riscv_cheri_isa)
+                # We need an M-mode firmware if we are running in S-mode with MMU.
+                bios_args = LaunchQEMUBase.riscv_bios_arguments(self.crosscompile_target, self.config)
             cmd = [
                 qemu,
                 "-cpu",
