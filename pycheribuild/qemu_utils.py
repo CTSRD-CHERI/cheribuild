@@ -248,7 +248,7 @@ def riscv_bios_arguments(
     assert xtarget.is_riscv(include_purecap=True)
     xlen = 32 if xtarget.is_riscv32() else 64
     if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-        if cheri_isa == RiscvCheriISA.EXPERIMENTAL_STD093:
+        if xtarget.is_experimental_cheri093_std_impl(cheri_isa):
             # FIXME: QEMU does not yet default to the correct BIOS image name.
             return ["-bios", f"opensbi-riscv{xlen}cheristd-virt-fw_jump.bin"]
         if prefer_bbl:

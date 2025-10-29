@@ -81,6 +81,9 @@ class LaunchFreeBSDInterface:
     def get_qemu_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
         raise NotImplementedError()
 
+    def get_riscv_bios_args(self) -> "list[str]":
+        raise NotImplementedError()
+
 
 @functools.lru_cache(maxsize=20)
 def _linker_supports_riscv_relaxations(linker: Path, config: CheriConfig, xtarget: "CrossCompileTarget") -> bool:
@@ -623,6 +626,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
                 chosen_qemu = copy.deepcopy(chosen_qemu)  # avoid modifying the object referenced by run_instance
                 chosen_qemu.setup(run_instance)
             cmd.extend(["--qemu-cmd", chosen_qemu.binary])
+            if xtarget.is_riscv() and not has_test_extra_arg_override("--bios"):
+                bios_args = run_instance.get_riscv_bios_args()
+                assert len(bios_args) == 2 and bios_args[0] == "-bios"
+                cmd.extend(["--bios", bios_args[0]])
         if mount_builddir and self.project.build_dir and not has_test_extra_arg_override("--build-dir"):
             cmd.extend(["--build-dir", self.project.build_dir])
         if mount_sourcedir and self.project.source_dir and not has_test_extra_arg_override("--source-dir"):

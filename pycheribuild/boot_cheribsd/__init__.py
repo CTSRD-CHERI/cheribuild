@@ -53,10 +53,9 @@ from pathlib import Path
 from typing import Callable, Optional, Union
 
 from ..colour import AnsiColour, coloured
-from ..config.chericonfig import RiscvCheriISA
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..processutils import commandline_to_str, keep_terminal_sane, run_and_kill_children_on_exit
-from ..qemu_utils import QemuOptions, riscv_bios_arguments
+from ..qemu_utils import QemuOptions
 from ..utils import ConfigBase, find_free_port, get_global_config, init_global_config
 
 _cheribuild_root = Path(__file__).parent.parent.parent
@@ -916,8 +915,6 @@ def boot_cheribsd(
             failure("Cannot boot kernel directly and no disk image passed!", exit=True)
     if bios_path is not None:
         bios_args = ["-bios", str(bios_path)]
-    elif qemu_options.xtarget.is_riscv(include_purecap=True):
-        bios_args = riscv_bios_arguments(qemu_options.xtarget, qemu_options.riscv_cheri_isa)
     else:
         bios_args = []
     qemu_args = qemu_options.get_commandline(
@@ -1516,13 +1513,7 @@ def _main(
     args.xtarget = xtarget
     if argparse_adjust_args_callback:
         argparse_adjust_args_callback(args)
-
-    riscv_cheri_isa = None
-    # Slightly ugly hack to avoid having to pass yet another argument for something
-    # that is a temporary workaround until ISAv9 is gone.
-    if args.qemu_cmd is not None and str(args.qemu_cmd).endswith("cheristd"):
-        riscv_cheri_isa = RiscvCheriISA.EXPERIMENTAL_STD093
-    qemu_options = QemuOptions(xtarget, riscv_cheri_isa=riscv_cheri_isa)
+    qemu_options = QemuOptions(xtarget)
     if args.qemu_cmd is not None:
         if not Path(args.qemu_cmd).exists():
             failure("ERROR: Cannot find QEMU binary ", args.qemu_cmd, " doesn't exist", exit=True)
