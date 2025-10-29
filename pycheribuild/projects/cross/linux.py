@@ -105,7 +105,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
         return "defconfig"
 
     def compile(self, **kwargs):
-        if self.compiling_for_riscv(include_purecap=True):
+        if self.compiling_for_riscv(include_purecap=False):
             # Work around https://github.com/ClangBuiltLinux/linux/issues/2092
             # FIXME: apparently this value is always overwritten by the build system with the default value no
             # matter what I do, apply the patch instead for now
