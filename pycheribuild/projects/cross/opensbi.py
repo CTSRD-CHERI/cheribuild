@@ -72,6 +72,12 @@ class BuildOpenSBI(Project):
     )
     supported_riscv_cheri_standard = RiscvCheriISA.V9  # Assembly code does not support standard draft
 
+    @classmethod
+    def setup_config_options(cls, **kwargs) -> None:
+        super().setup_config_options(**kwargs)
+        cls.fw_jump_addr = cls.add_config_option("fw-jump-addr", kind=str, help="OpenSBI FW_JUMP_ADDR")
+        cls.fw_jump_fdt_addr = cls.add_config_option("fw-jump-fdt-addr", kind=str, help="OpenSBI FW_JUMP_FDT_ADDR")
+
     def check_system_dependencies(self) -> None:
         super().check_system_dependencies()
         self.check_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
@@ -103,6 +109,10 @@ class BuildOpenSBI(Project):
             ),
             PLATFORM_RISCV_XLEN=64,
         )
+        if self.fw_jump_addr:
+            self.make_args.set(FW_JUMP_ADDR=self.fw_jump_addr)
+        if self.fw_jump_fdt_addr:
+            self.make_args.set(FW_JUMP_FDT_ADDR=self.fw_jump_fdt_addr)
         if self.config.verbose:
             self.make_args.set(V=True)
 
