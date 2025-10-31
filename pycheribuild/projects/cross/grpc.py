@@ -100,27 +100,8 @@ class BuildGrpc(CrossCompileCMakeProject):
         )
 
         # Install the QPS benchmark components
-        self.install_file(self.build_dir / "qps_worker", self.install_dir / "grpc_qps_worker")
-        self.install_file(self.build_dir / "qps_json_driver", self.install_dir / "grpc_qps_json_driver")
-
-        qps_utils_dir = self.install_dir / "qps_utils"
-        self.makedirs(qps_utils_dir)
-        self.makedirs(qps_utils_dir / "python_utils")
-        self.install_file(
-            self.source_dir / "tools" / "run_tests" / "start_port_server.py", qps_utils_dir / "start_port_server.py"
-        )
-        self.install_file(
-            self.source_dir / "tools" / "run_tests" / "python_utils" / "port_server.py",
-            qps_utils_dir / "python_utils" / "port_server.py",
-        )
-        self.install_file(
-            self.source_dir / "tools" / "run_tests" / "python_utils" / "start_port_server.py",
-            qps_utils_dir / "python_utils" / "start_port_server.py",
-        )
-        self.install_file(
-            self.source_dir / "tools" / "run_tests" / "python_utils" / "jobset.py",
-            qps_utils_dir / "python_utils" / "jobset.py",
-        )
+        self.install_file(self.build_dir / "qps_worker", self.install_dir / "bin" / "grpc_qps_worker")
+        self.install_file(self.build_dir / "qps_json_driver", self.install_dir / "bin" / "grpc_qps_json_driver")
 
         for sofile in self.build_dir.glob("libgrpc++_test_config.so*"):
             self.install_file(self.build_dir / sofile, self.install_dir / "lib" / sofile.name)
