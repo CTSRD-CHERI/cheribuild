@@ -1259,6 +1259,9 @@ def cheribsd_morello_version_dependent_flags(cheribsd_version: "Optional[int]", 
     if is_purecap and cheribsd_version is not None and cheribsd_version < 20220511:
         # Use emulated TLS on older purecap
         result.append("-femulated-tls")
+    if cheribsd_version is None or cheribsd_version >= 20250127:
+        result.append("-Wl,--local-caprelocs=elf")
+        result.append("-cheri-codeptr-relocs")
     return result
 
 
