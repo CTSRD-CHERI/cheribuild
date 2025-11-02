@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Optional
 
 from .build_qemu import BuildCheriAllianceQEMU, BuildQEMU, BuildQEMUBase, BuildUpstreamQEMU
+from .cross.bbl import BuildBBLNoPayload
 from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD, ConfigPlatform, KernelABI
 from .cross.gdb import get_native_gdb_binary_to_debug_target
 from .cross.opensbi import BuildAllianceOpenSBI, BuildOpenSBI
@@ -239,16 +240,12 @@ class LaunchQEMUBase(SimpleProject):
         assert xtarget.is_riscv(include_purecap=True)
         xlen = 32 if xtarget.is_riscv32() else 64
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            # FIXME: QEMU does not yet default to the correct BIOS image name.
             if xtarget.is_experimental_cheri093_std(caller.config):
-                # FIXME: QEMU does not yet default to the correct BIOS image name.
                 return ["-bios", str(BuildAllianceOpenSBI.get_cheri_bios(caller, xtarget))]
             if prefer_bbl:
-                # We want a purecap BBL:
-                # from .projects.cross.bbl import BuildBBLNoPayload
-                # return ["-bios", str(BuildBBLNoPayload.get_installed_kernel_path(caller,
-                #         cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP))]
-                # Explicitly specify the file name while QEMU may still be too old:
-                return ["-bios", f"bbl-riscv{xlen}cheri-virt-fw_jump.bin"]
+                # Always use a purecap bbl
+                return ["-bios", str(BuildBBLNoPayload.get_cheri_bios(caller, xtarget))]
             else:
                 return ["-bios", str(BuildOpenSBI.get_cheri_bios(caller, xtarget))]
         if xtarget.target_info_cls.is_linux():
