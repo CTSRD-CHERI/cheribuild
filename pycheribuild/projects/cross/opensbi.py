@@ -163,7 +163,7 @@ class BuildOpenSBI(Project):
             suffix = "cheri"
             if self.crosscompile_target.is_experimental_cheri093_std(self.config):
                 suffix += "std"
-        return qemu_fw_dir / f"opensbi-riscv64{suffix}-virt-fw_jump.bin"
+        return qemu_fw_dir / f"opensbi-riscv64{suffix}-generic-fw_jump.bin"
 
     def _fw_jump_path(self) -> Path:
         return self._qemu_fw_install_path()
