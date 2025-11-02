@@ -27,7 +27,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-
 from pathlib import Path
 
 from ..build_qemu import BuildCheriAllianceQEMU, BuildQEMU
@@ -43,7 +42,7 @@ from ..project import (
     ReuseOtherProjectRepository,
 )
 from ...config.chericonfig import RiscvCheriISA
-from ...config.compilation_targets import CompilationTargets
+from ...config.compilation_targets import BaremetalClangTargetInfo, CompilationTargets
 from ...config.target_info import CrossCompileTarget
 from ...qemu_utils import QemuOptions
 from ...utils import OSInfo
@@ -71,6 +70,7 @@ class BuildOpenSBI(Project):
         function=opensbi_install_dir, as_string="$SDK_ROOT/opensbi/riscv{32,64}{-hybrid,-purecap,}"
     )
     supported_riscv_cheri_standard = RiscvCheriISA.V9  # Assembly code does not support standard draft
+    target_info: BaremetalClangTargetInfo  # Specify the type of self.target_info to fix type checker warnings
 
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
@@ -101,8 +101,6 @@ class BuildOpenSBI(Project):
             OBJCOPY=self.sdk_bindir / "llvm-objcopy",
             FW_PIC="n",  # does not appear to work correctly
             FW_OPTIONS="0x2",  # Debug output enabled for now
-            # FW_JUMP_ADDR= ## cheribsd start addr
-            # FW_JUMP_FDT_ADDR= ## cheribsd fdt addr
             PLATFORM_RISCV_ABI=self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True),
             PLATFORM_RISCV_ISA=self.target_info.get_riscv_arch_string(
                 self.crosscompile_target, self.config, softfloat=True
@@ -266,7 +264,9 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     def get_cheri_bios(cls, caller, xtarget: CrossCompileTarget):
         assert xtarget.is_riscv64(include_purecap=True), "RV32 not supported yet"
         # This version of OpenSBI requires a purecap build to support CHERI
-        return cls.get_instance(caller, cross_target=CompilationTargets.FREESTANDING_RISCV64_PURECAP)._fw_jump_path()
+        proj = cls.get_instance(caller, cross_target=CompilationTargets.FREESTANDING_RISCV64_PURECAP)
+        assert isinstance(proj, BuildOpenSBI)
+        return proj._fw_jump_path()
 
 
 class BuildAllianceOpenSBIGFE(BuildAllianceOpenSBI):
