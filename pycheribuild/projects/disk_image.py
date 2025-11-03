@@ -1293,6 +1293,16 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             # Needed for backtrace() (required by CTest)
             "libexecinfo.so.1",  # depends on libelf.so
         ]
+        # casper is needed as of CheriBSD b25a90dd5f4ec60ec9256db3014299059e8013aa
+        optional_libs += [
+            "libcasper.so.1",
+            "libcap_dns.so.2",
+            "libcap_grp.so.1",
+            "libcap_net.so.1",
+            "libcap_netdb.so.1",
+            "libcap_pwd.so.1",
+            "libcap_sysctl.so.2",
+        ]
         # Add the required PAM libraries for su(1)/login(1)
         for i in ("permit", "rootok", "self", "unix", "nologin", "securetty", "lastlog", "login_access"):
             required_libs += ["pam_" + i + ".so", "pam_" + i + ".so.6"]
