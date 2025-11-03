@@ -1304,6 +1304,7 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             "libcap_netdb.so.1",
             "libcap_pwd.so.1",
             "libcap_sysctl.so.2",
+            "libnv.so.1",  # used by libcasper in the service interface
         ]
         # Add the required PAM libraries for su(1)/login(1)
         for i in ("permit", "rootok", "self", "unix", "nologin", "securetty", "lastlog", "login_access"):
