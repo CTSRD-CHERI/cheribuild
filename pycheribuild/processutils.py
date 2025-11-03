@@ -61,6 +61,7 @@ __all__ = [
     "get_compiler_info",
     "get_program_version",
     "get_version_output",
+    "is_debugger_attached",
     "keep_terminal_sane",
     "latest_system_clang_tool",
     "popen",
@@ -903,6 +904,19 @@ def latest_system_clang_tool(config: ConfigBase, basename: str, fallback_basenam
     return newest[0]
 
 
+def is_debugger_attached() -> bool:
+    # For pre-3.12 we can detect attached debugger with sys.gettrace() != None
+    if getattr(sys, "gettrace", lambda: None)() is not None:
+        return True
+    # Version 3.12 adds sys.monitoring.get_tool
+    try:
+        if sys.monitoring.get_tool(sys.monitoring.DEBUGGER_ID) is not None:
+            return True
+    except AttributeError:
+        pass
+    return False
+
+
 def run_and_kill_children_on_exit(fn: "Callable[[], typing.Any]"):
     error = False
     try:
@@ -926,8 +940,7 @@ def run_and_kill_children_on_exit(fn: "Callable[[], typing.Any]"):
             extra_msg += ("\nStandard error was:\n", err.stderr.decode("utf-8"))
         # If we are currently debugging, raise the exception to allow e.g. PyCharm's
         # "break on exception that terminates execution" feature works.
-        debugger_attached = getattr(sys, "gettrace", lambda: None)() is not None
-        if debugger_attached:
+        if is_debugger_attached():
             raise err
         else:
             fatal_error(

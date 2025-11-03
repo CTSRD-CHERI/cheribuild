@@ -45,7 +45,13 @@ from .config.defaultconfig import CheribuildAction, DefaultCheribuildConfigLoade
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
 from .config.loader import ConfigOptionHandle, MyJsonEncoder
-from .processutils import get_program_version, print_command, run_and_kill_children_on_exit, run_command
+from .processutils import (
+    get_program_version,
+    is_debugger_attached,
+    print_command,
+    run_and_kill_children_on_exit,
+    run_command,
+)
 
 # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
@@ -360,8 +366,7 @@ def main() -> None:
     except Exception as e:
         # If we are currently debugging, raise the exception to allow e.g. PyCharm's
         # "break on exception that terminates execution" feature works.
-        debugger_attached = getattr(sys, "gettrace", lambda: None)() is not None
-        if debugger_attached:
+        if is_debugger_attached():
             raise e
         else:
             traceback.print_exc()
