@@ -142,7 +142,7 @@ class CheriBSDConfig:
 
 class KernelConfigFactory:
     kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict(
-        [(k, None) for k in ("kabi_name", "nocaprevoke", "platform_name", "flags")]
+        kabi_name=None, nocaprevoke=None, platform_name=None, flags=None
     )
     separator: str = "_"
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {}
@@ -209,7 +209,7 @@ class KernelConfigFactory:
 
 class RISCVKernelConfigFactory(KernelConfigFactory):
     kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict(
-        [(k, None) for k in ("kabi_name", "nocaprevoke", "platform_name", "flags")]
+        kabi_name=None, nocaprevoke=None, platform_name=None, flags=None
     )
     separator: str = "-"
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {
@@ -284,7 +284,7 @@ class RISCVKernelConfigFactory(KernelConfigFactory):
 
 class AArch64KernelConfigFactory(KernelConfigFactory):
     kernconf_components: "typing.OrderedDict[str, Optional[str]]" = OrderedDict(
-        [(k, None) for k in ("platform_name", "kabi_name", "nocaprevoke", "flags")]
+        platform_name=None, kabi_name=None, nocaprevoke=None, flags=None
     )
     separator: str = "-"
     platform_name_map: "dict[ConfigPlatform, Optional[str]]" = {
