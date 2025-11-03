@@ -257,7 +257,7 @@ VOLUME /diskimg
             pre_cmd += [self.container_name]
         if interactive:
             kwargs["give_tty_control"] = True
-        bg_processes = []
+        bg_processes: "list[tuple[subprocess.Popen, bool]]" = []
         if self.use_docker_container and x11 and OSInfo.IS_MAC:
             # To use X11 via docker on macos we need to run socat on port 6000
             socat_cmd = ["socat", "TCP-LISTEN:6000,reuseaddr,fork", 'UNIX-CLIENT:"' + display + '"']
@@ -653,6 +653,7 @@ class LaunchFVPBase(SimpleProject):
                 fvp_args = [x for param in model_params for x in ("-C", param)]
                 self.run_cmd([sim_binary, "--plugin", plugin, "--print-port-number", *fvp_args])
         else:
+            assert self.fvp_project is not None
             if self.fvp_project.fvp_revision < self.required_fvp_version:
                 self.dependency_error(
                     "FVP is too old, please update to the latest version",
