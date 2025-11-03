@@ -49,7 +49,7 @@ class BuildCheriseL4Excercises(CrossCompileProject):
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
 
     _supported_architectures = (
-        CompilationTargets.FREESTANDING_RISCV64_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
         CompilationTargets.FREESTANDING_MORELLO_PURECAP,
     )
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093

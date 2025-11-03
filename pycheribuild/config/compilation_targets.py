@@ -1476,6 +1476,13 @@ class CompilationTargets(BasicCompilationTargets):
         is_cheri_purecap=True,
         hybrid_target=FREESTANDING_RISCV32_HYBRID,
     )
+    FREESTANDING_RISCV32_PURECAP_093 = CrossCompileTarget(
+        "riscv32-purecap",
+        CPUArchitecture.RISCV32,
+        BaremetalFreestandingTargetInfo,
+        is_cheri_purecap=True,
+        _cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
+    )
     FREESTANDING_RISCV64 = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, BaremetalFreestandingTargetInfo)
     FREESTANDING_RISCV64_HYBRID = CrossCompileTarget(
         "riscv64-hybrid",
@@ -1490,6 +1497,13 @@ class CompilationTargets(BasicCompilationTargets):
         BaremetalFreestandingTargetInfo,
         is_cheri_purecap=True,
         hybrid_target=FREESTANDING_RISCV64_HYBRID,
+    )
+    FREESTANDING_RISCV64_PURECAP_093 = CrossCompileTarget(
+        "riscv64-purecap",
+        CPUArchitecture.RISCV64,
+        BaremetalFreestandingTargetInfo,
+        is_cheri_purecap=True,
+        _cheri_isa=RiscvCheriISA.EXPERIMENTAL_STD093,
     )
     ALL_FREESTANDING_TARGETS = (
         FREESTANDING_AARCH64,

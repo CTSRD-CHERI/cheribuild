@@ -244,6 +244,15 @@ class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
 class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "cheri-std093-compiler-rt-builtins"
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    # Only use this target for the 0.9.3 RISC-V targets.
+    _supported_architectures = (
+        CompilationTargets.FREESTANDING_RISCV64,
+        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
+        CompilationTargets.FREESTANDING_RISCV32,
+        CompilationTargets.FREESTANDING_RISCV32_PURECAP_093,
+        CompilationTargets.NATIVE,
+        *CompilationTargets.ALL_SUPPORTED_LINUX_TARGETS,
+    )
     llvm_project = BuildCheriAllianceLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
 

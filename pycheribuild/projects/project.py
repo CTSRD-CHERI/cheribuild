@@ -1652,12 +1652,12 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 
         if (
             self.supported_riscv_cheri_standard is not None
-            and self.get_crosscompile_target().is_riscv(include_purecap=True)
-            and self.config.riscv_cheri_isa != self.supported_riscv_cheri_standard
+            and self.crosscompile_target.is_riscv(include_purecap=True)
+            and self.crosscompile_target.riscv_cheri_isa(self.config) != self.supported_riscv_cheri_standard
         ):
             self.fatal(
-                f"Project {self.target} is not compatible with the {self.config.riscv_cheri_isa.value} "
-                f"RISC-V-CHERI variant. "
+                f"Project {self.target} is not compatible with the "
+                f"{self.crosscompile_target.riscv_cheri_isa(self.config)} RISC-V-CHERI variant. "
                 f"Try building with --riscv-cheri-isa={self.supported_riscv_cheri_standard.name.lower()}"
             )
 

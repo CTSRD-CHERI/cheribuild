@@ -168,10 +168,11 @@ class BuildUBoot(Project):
 class BuildCheriAllianceUBoot(BuildUBoot):
     target = "cheri-std093-u-boot"
     repository = GitRepository("https://github.com/CHERI-Alliance/u-boot.git", default_branch="codasip-cheri-riscv")
+    dependencies = ("cheri-std093-compiler-rt-builtins",)
     default_build_type = BuildType.RELWITHDEBINFO
     _supported_architectures = (
         CompilationTargets.FREESTANDING_RISCV64,
-        CompilationTargets.FREESTANDING_RISCV64_PURECAP,
+        CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
     )
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
