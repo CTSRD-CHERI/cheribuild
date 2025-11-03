@@ -451,10 +451,10 @@ class TargetManager:
 
     def get_target_raw(self, name: str) -> Target:
         # return the actual target without resolving MultiArchTargetAlias
-        try:
-            return self._all_targets[name]
-        except KeyError:
-            return self._targets_for_command_line_options_only[name]
+        result = self._all_targets.get(name)
+        if result is None:
+            result = self._targets_for_command_line_options_only[name]
+        return result
 
     def get_target(
         self,
