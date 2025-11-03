@@ -93,7 +93,7 @@ def finish_and_write_junit_xml_report(
     """
     xml.time = (datetime.datetime.now(datetime.timezone.utc) - all_tests_starttime).total_seconds()
     xml.update_statistics()
-    failed_test_suites = []
+    failed_test_suites: "list[junitparser.TestSuite]" = []
     num_testsuites = 0
     for suite in xml:
         assert isinstance(suite, junitparser.TestSuite)
@@ -109,7 +109,7 @@ def finish_and_write_junit_xml_report(
     if failed_test_suites:
 
         def failed_test_info(ts: junitparser.TestSuite):
-            result = ts.name
+            result: str = ts.name
 
             if ts.failures:
                 result += " " + str(ts.failures) + " failures"

@@ -47,7 +47,7 @@ import termios
 import typing
 from pathlib import Path
 from subprocess import CompletedProcess
-from typing import Callable, Optional, Union
+from typing import Callable, Iterable, Optional, Union
 
 from .colour import AnsiColour, coloured
 from .utils import ConfigBase, OSInfo, Type_T, fatal_error, status_update, warning_message
@@ -241,8 +241,8 @@ def print_command(
     *remaining_args,
     output_file=None,
     colour=AnsiColour.yellow,
-    cwd=None,
-    env=None,
+    cwd: Optional[Path] = None,
+    env: "Optional[dict[str, str]]" = None,
     sep=" ",
     print_verbose_only=False,
     config: ConfigBase,
@@ -543,8 +543,8 @@ class CompilerInfo:
         self.config = config
         self._resource_dir: "Optional[Path]" = None
         self._supported_warning_flags: "dict[str, bool]" = {}
-        self._supported_sanitizer_flags: "dict[tuple[str, tuple[str]], bool]" = {}
-        self._include_dirs: "dict[tuple[str], list[Path]]" = {}
+        self._supported_sanitizer_flags: "dict[tuple[str, tuple[str, ...]], bool]" = {}
+        self._include_dirs: "dict[tuple[str, ...], list[Path]]" = {}
         assert compiler in ("unknown compiler", "clang", "apple-clang", "gcc"), "unknown type: " + compiler
 
     def get_resource_dir(self) -> Path:
@@ -808,13 +808,13 @@ def get_compiler_info(compiler: "Union[str, Path]", *, config: ConfigBase) -> Co
 
 # Cache the versions
 @functools.lru_cache(maxsize=20)
-def get_version_output(program: Path, command_args: Optional[tuple] = None, *, config: ConfigBase) -> "bytes":
+def get_version_output(program: Path, command_args: "Optional[Iterable[str]]" = None, *, config: ConfigBase) -> "bytes":
     if command_args is None:
         command_args = ["--version"]
     if program == Path():
         raise ValueError("Empty path?")
     prog = run_command(
-        [str(program), *list(command_args)],
+        [str(program), *command_args],
         config=config,
         stdin=subprocess.DEVNULL,
         stderr=subprocess.STDOUT,
@@ -828,7 +828,7 @@ def get_version_output(program: Path, command_args: Optional[tuple] = None, *, c
 @functools.lru_cache(maxsize=20)
 def get_program_version(
     program: Path,
-    command_args: Optional[tuple] = None,
+    command_args: "Optional[Iterable[str]]" = None,
     component_kind: "type[Type_T]" = int,
     regex=None,
     program_name: Optional[bytes] = None,

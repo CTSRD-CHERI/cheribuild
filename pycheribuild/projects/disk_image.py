@@ -196,6 +196,7 @@ class BuildDiskImageBase(SimpleProject):
         cls.remote_path = cls.add_config_option(
             "remote-path",
             show_help=False,
+            kind=str,
             metavar="PATH",
             help="When set rsync will be used to update the image from "
             "the remote server instead of building it locally.",
@@ -933,6 +934,7 @@ class BuildDiskImageBase(SimpleProject):
 
     def copy_from_remote_host(self):
         self.info("Copying disk image instead of building it.")
+        assert self.remote_path is not None
         rsync_path = os.path.expandvars(self.remote_path)
         self.info("Will copy the disk-image from ", rsync_path, sep="")
         if not self.query_yes_no("Continue?"):

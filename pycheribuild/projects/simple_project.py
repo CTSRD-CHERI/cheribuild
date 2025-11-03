@@ -1249,7 +1249,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         *,
         stdout_filter: "Optional[Callable[[bytes], None]]" = None,
         cwd: "Optional[Path]" = None,
-        env: "Optional[dict[str, Optional[str]]]" = None,
+        env: "Optional[dict[str, str]]" = None,
         append_to_logfile=False,
         stdin=subprocess.DEVNULL,
     ) -> None:

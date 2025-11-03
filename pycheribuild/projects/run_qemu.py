@@ -732,6 +732,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase, LaunchFreeBSDInterface):
         super().setup_config_options(**kwargs)
         cls.remote_kernel_path = cls.add_config_option(
             "remote-kernel-path",
+            kind=str,
             show_help=True,
             help="When set rsync will be used to update the kernel image from a remote host before launching QEMU. "
             "Useful when building and running on separate machines.",
@@ -808,6 +809,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase, LaunchFreeBSDInterface):
                 self.info(conf, path)
 
     def _copy_kernel_image_from_remote_host(self):
+        assert self.remote_kernel_path is not None
         scp_path = os.path.expandvars(self.remote_kernel_path)
         self.info("Copying kernel image from build machine:", scp_path)
         self.makedirs(self.current_kernel.parent)

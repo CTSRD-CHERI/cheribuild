@@ -63,7 +63,6 @@ no-access = false
 bad-assignment = false
 bad-argument-type = false
 not-callable = false
-no-matching-overload = false
 bad-argument-count = false
 bad-return = false
 bad-function-definition = false

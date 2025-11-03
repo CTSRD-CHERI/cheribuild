@@ -223,7 +223,7 @@ class BuildGettext(CrossCompileAutotoolsProject):
                 [
                     str(self.get_homebrew_prefix("gnu-sed") / "libexec/gnubin"),
                     str(self.get_homebrew_prefix("bison") / "bin"),
-                    os.getenv("PATH"),
+                    os.getenv("PATH", ""),
                 ]
             )
         with self.set_env(**new_env):
