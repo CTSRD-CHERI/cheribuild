@@ -197,7 +197,7 @@ class BuildOpenSBIGFE(BuildOpenSBI):
 
     def setup(self):
         super().setup()
-        self.make_args.set(FW_TEXT_START=0xC0000000)
+        self.make_args.set(FW_TEXT_START="0xC0000000")
 
 
 class BuildUpstreamOpenSBI(BuildOpenSBI):
@@ -248,7 +248,7 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
 
     def setup(self):
         super().setup()
-        self.make_args.set(FW_TEXT_START=0x80000000)
+        self.make_args.set(FW_TEXT_START="0x80000000")
 
     @property
     def all_platforms(self):
@@ -275,4 +275,4 @@ class BuildAllianceOpenSBIGFE(BuildAllianceOpenSBI):
 
     def setup(self):
         super().setup()
-        self.make_args.set(FW_TEXT_START=0xC0000000)
+        self.make_args.set(FW_TEXT_START="0xC0000000")
