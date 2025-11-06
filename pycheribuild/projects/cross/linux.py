@@ -248,4 +248,6 @@ class LaunchCheriLinux(LaunchQEMUBase):
             # No initramfs available yet
             initramfs = "/dev/null"
         self._project_specific_options += ["-append", "init=/init", "-initrd", initramfs]
+        # This is not enabled by default for AArch64
+        self.qemu_options.can_boot_kernel_directly = True
         self.current_kernel = Path(kernel)
