@@ -184,6 +184,9 @@ class BuildMorelloBusyBox(BuildBusyBox):
         self.make_args.set(CLANG_RESOURCE_DIR=self.install_dir / "lib")
         self.add_configure_vars(CC=self.CC)
 
+        # Out-of-source build
+        self.make_args.set(O=self.build_dir)
+
     def configure(self) -> None:
         self.run_make("morello_busybox_defconfig", cwd=self.source_dir)
 
