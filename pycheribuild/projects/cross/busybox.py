@@ -182,8 +182,6 @@ class BuildMorelloBusyBox(BuildBusyBox):
         self.make_args.set(MUSL_HOME=self.install_dir)
         self.make_args.set(KHEADERS=self.install_dir / "usr/include/")
         self.make_args.set(CLANG_RESOURCE_DIR=self.install_dir / "include/lib")
-        # https://git.morello-project.org/morello/morello-busybox/-/merge_requests/1
-        self.make_args.set(CFLAGS="-Wno-error=int-conversion")  # for editors/vi
         self.add_configure_vars(CC=self.CC)
 
     def configure(self) -> None:
