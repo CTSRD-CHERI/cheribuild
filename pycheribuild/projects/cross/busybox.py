@@ -184,8 +184,13 @@ class BuildMorelloBusyBox(BuildBusyBox):
         self.make_args.set(CLANG_RESOURCE_DIR=self.install_dir / "lib")
         self.add_configure_vars(CC=self.CC)
 
-        # Out-of-source build
-        self.make_args.set(O=self.build_dir)
+        # Override Morello's busybox custom Makefile; it uses its own flags assuming compiler-rt
+        # is in the compiler resource directory (which we don't do in cheribuild). Also
+        # the Makefile doesn't pick up COMMON_LDFLAGS used in super().setup, so add it part of
+        # the linker command
+        self.make_args.set(
+            LD=self.commandline_to_str([self.CC, *self.essential_compiler_and_linker_flags, "--unwindlib=none"])
+        )
 
     def configure(self) -> None:
         self.run_make("morello_busybox_defconfig", cwd=self.source_dir)
