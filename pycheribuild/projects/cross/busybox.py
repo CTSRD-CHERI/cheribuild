@@ -175,15 +175,7 @@ class BuildMorelloBusyBox(BuildBusyBox):
     _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
 
     def setup(self) -> None:
-        # Morello Buxybox has its own modified Makefile to work with LLVM/Clang and Morello
-        # compiler flags. Skip the parent's setup and just setup Morello's Makefile args.
-        CrossCompileAutotoolsProject.setup(self)
-        self.make_args.set(CONFIG_PREFIX=self.install_dir / "rootfs")
-        self.make_args.set(MUSL_HOME=self.install_dir)
-        self.make_args.set(KHEADERS=self.install_dir / "usr/include/")
-        self.make_args.set(CLANG_RESOURCE_DIR=self.install_dir / "lib")
-        self.add_configure_vars(CC=self.CC)
-
+        super().setup()
         # Override Morello's busybox custom Makefile; it uses its own flags assuming compiler-rt
         # is in the compiler resource directory (which we don't do in cheribuild). Also
         # the Makefile doesn't pick up COMMON_LDFLAGS used in super().setup, so add it part of
