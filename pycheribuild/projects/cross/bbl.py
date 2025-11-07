@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+from pathlib import Path
 from typing import Optional, cast
 
 from .cheribsd import ConfigPlatform
@@ -42,6 +43,7 @@ from ..project import (
     MakeCommandKind,
     Project,
 )
+from ..simple_project import SimpleProject
 from ...config.compilation_targets import BaremetalClangTargetInfo
 from ...qemu_utils import QemuOptions
 
@@ -189,16 +191,29 @@ class BuildBBLNoPayload(BuildBBLBase):
         # Only install BuildBBLNoPayload as the QEMU bios and not the GFE version by checking build_dir_suffix
         if self.crosscompile_target.is_cheri_purecap() and not self.build_dir_suffix:
             # Install into the QEMU firware directory so that `-bios default` works
-            qemu_fw_dir = BuildQEMU.get_firmware_dir(self, cross_target=CompilationTargets.NATIVE)
-            self.makedirs(qemu_fw_dir)
+            install_path = self._qemu_fw_install_path()
+            self.makedirs(install_path.parent)
             self.run_cmd(
                 self.sdk_bindir / "llvm-objcopy",
                 "-S",
                 "-O",
                 "binary",
                 self.get_installed_kernel_path(self),
-                qemu_fw_dir / "bbl-riscv64cheri-virt-fw_jump.bin",
+                install_path,
             )
+
+    @classmethod
+    def get_cheri_bios(cls, caller: SimpleProject, xtarget: CrossCompileTarget):
+        if xtarget.is_riscv32():
+            bios_xtarget = CompilationTargets.FREESTANDING_RISCV32_PURECAP
+        else:
+            bios_xtarget = CompilationTargets.FREESTANDING_RISCV64_PURECAP
+        return cls.get_instance(caller, cross_target=bios_xtarget)._qemu_fw_install_path()
+
+    def _qemu_fw_install_path(self) -> Path:
+        xlen = 32 if self.crosscompile_target.is_riscv32(include_purecap=True) else 64
+        bios_name = f"bbl-riscv{xlen}cheri-virt-fw_jump.bin"
+        return BuildQEMU.get_firmware_dir(self, cross_target=CompilationTargets.NATIVE) / bios_name
 
 
 class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
