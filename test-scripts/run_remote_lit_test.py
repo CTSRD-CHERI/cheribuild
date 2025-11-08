@@ -389,7 +389,6 @@ def run_remote_lit_tests_impl(
         t.join(timeout=30)
         if t.is_alive():
             boot_cheribsd.failure("Failed to kill flush thread. Interacting with CheriBSD will not work!", exit=True)
-            return False
         if not qemu.isalive():
             boot_cheribsd.failure("QEMU died while running tests! ", qemu, exit=True)
     return True
