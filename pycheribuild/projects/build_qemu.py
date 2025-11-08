@@ -600,9 +600,9 @@ class BuildCheriAllianceQEMU(BuildCheriQEMUBase):
         assert xtarget.is_experimental_cheri093_std(config), "Should not be called otherwise"
         # Always use the CHERI qemu even for plain riscv:
         if xtarget.is_riscv64(include_purecap=True):
-            binary_name = "qemu-system-riscv64cheri"
+            binary_name = "qemu-system-riscv64cheristd"
         elif xtarget.is_riscv32(include_purecap=True):
-            binary_name = "qemu-system-riscv32cheri"
+            binary_name = "qemu-system-riscv32cheristd"
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
         return config.cheri_alliance_qemu_bindir / binary_name
