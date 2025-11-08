@@ -72,6 +72,10 @@ class BuildOpenSBI(Project):
     supported_riscv_cheri_standard = RiscvCheriISA.V9  # Assembly code does not support standard draft
     target_info: BaremetalClangTargetInfo  # Specify the type of self.target_info to fix type checker warnings
 
+    @property
+    def xlen(self) -> int:
+        return 32 if self.crosscompile_target.is_riscv32(include_purecap=True) else 64
+
     @classmethod
     def setup_config_options(cls, **kwargs) -> None:
         super().setup_config_options(**kwargs)
@@ -105,7 +109,7 @@ class BuildOpenSBI(Project):
             PLATFORM_RISCV_ISA=self.target_info.get_riscv_arch_string(
                 self.crosscompile_target, self.config, softfloat=True
             ),
-            PLATFORM_RISCV_XLEN=64,
+            PLATFORM_RISCV_XLEN=self.xlen,
         )
         if self.fw_jump_addr:
             self.make_args.set(FW_JUMP_ADDR=self.fw_jump_addr)
@@ -133,7 +137,7 @@ class BuildOpenSBI(Project):
         for platform in self.all_platforms:
             args = self.make_args.copy()
             args.set(PLATFORM=platform)
-            self.run_make(parallel=False, cwd=self.source_dir, options=args)
+            self.run_make(cwd=self.source_dir, options=args)
 
     def install(self, **kwargs):
         self.makedirs(self.install_dir)
@@ -141,7 +145,7 @@ class BuildOpenSBI(Project):
             args = self.make_args.copy()
             args.set(PLATFORM=platform)
             self.run_make_install(cwd=self.source_dir, options=args)
-        # Only install BuildBBLNoPayload as the QEMU bios and not the GFE version by checking build_dir_suffix
+        # Only install BuildOpenSBI as the QEMU bios and not the GFE version by checking build_dir_suffix
         if self.crosscompile_target.is_hybrid_or_purecap_cheri() and not self.build_dir_suffix:
             # Install into the QEMU firware directory so that `-bios default` works
             qemu_fw_install_bin = self._qemu_fw_install_path()
@@ -190,6 +194,22 @@ class BuildOpenSBI(Project):
         # We currently use a hybrid build for ISAv9
         return cls.get_hybrid_instance(caller)._fw_jump_path()
 
+    def run_tests(self):
+        options = QemuOptions(
+            self.crosscompile_target, riscv_cheri_isa=self.crosscompile_target.riscv_cheri_isa(self.config)
+        )
+        abi = self.target_info.get_riscv_abi(self.crosscompile_target, softfloat=True)
+        self.run_cmd(
+            options.get_commandline(
+                qemu_command=BuildQEMU.qemu_binary(self),
+                add_network_device=False,
+                bios_args=["-bios", "none"],
+                kernel_file=self.install_dir / f"share/opensbi/{abi}/generic/firmware//fw_payload.elf",
+            ),
+            give_tty_control=True,
+            cwd="/",
+        )
+
 
 class BuildOpenSBIGFE(BuildOpenSBI):
     target = "opensbi-gfe"
@@ -207,28 +227,23 @@ class BuildUpstreamOpenSBI(BuildOpenSBI):
         as_string="$SDK_ROOT/upstream-opensbi/riscv64",
     )
     repository = GitRepository("https://github.com/riscv-software-src/opensbi.git")
-    _supported_architectures = (CompilationTargets.FREESTANDING_RISCV64,)
+    _supported_architectures = (
+        CompilationTargets.FREESTANDING_RISCV32,
+        CompilationTargets.FREESTANDING_RISCV64,
+    )
 
-    def run_tests(self):
-        options = QemuOptions(self.crosscompile_target, riscv_cheri_isa=self.config.riscv_cheri_isa)
-        self.run_cmd(
-            options.get_commandline(
-                qemu_command=BuildQEMU.qemu_binary(self),
-                add_network_device=False,
-                bios_args=["-bios", "none"],
-                kernel_file=self.install_dir / "share/opensbi/lp64/generic/firmware//fw_payload.elf",
-            ),
-            give_tty_control=True,
-            cwd="/",
-        )
+
+def cheri_093_opensbi_install_dir(config: CheriConfig, project: "Project") -> Path:
+    dir_name = project.crosscompile_target.generic_arch_suffix.replace("baremetal-", "")
+    return config.cheri_alliance_sdk_dir / ("opensbi" + project.build_dir_suffix) / dir_name
 
 
 class BuildAllianceOpenSBI(BuildOpenSBI):
     target = "cheri-std093-opensbi"
     _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, p: config.cheri_alliance_sdk_dir / "opensbi/riscv64",
-        as_string="$SDK_ROOT/opensbi/riscv64",
+        function=cheri_093_opensbi_install_dir, as_string="$CHERI093_SDK_ROOT/opensbi/riscv{32,64}{-purecap,}"
     )
+
     repository = GitRepository(
         "https://github.com/CHERI-Alliance/opensbi",
         temporary_url_override="https://github.com/qwattash/cheri-alliance-opensbi",
@@ -238,6 +253,8 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
         # TODO: restore default branch: default_branch="codasip-cheri-riscv",
     )
     _supported_architectures = (
+        CompilationTargets.FREESTANDING_RISCV32,
+        CompilationTargets.FREESTANDING_RISCV32_PURECAP_093,
         CompilationTargets.FREESTANDING_RISCV64,
         CompilationTargets.FREESTANDING_RISCV64_PURECAP_093,
     )
@@ -254,17 +271,15 @@ class BuildAllianceOpenSBI(BuildOpenSBI):
     def all_platforms(self):
         return ["generic"]
 
-    def compile(self, **kwargs):
-        for platform in self.all_platforms:
-            args = self.make_args.copy()
-            args.set(PLATFORM=platform)
-            self.run_make(parallel=False, cwd=self.source_dir, options=args)
-
     @classmethod
     def get_cheri_bios(cls, caller, xtarget: CrossCompileTarget):
-        assert xtarget.is_riscv64(include_purecap=True), "RV32 not supported yet"
+        assert xtarget.is_riscv(include_purecap=True), "Should only call this for RISC-V"
+        if xtarget.is_riscv32(include_purecap=True):
+            bios_xtarget = CompilationTargets.FREESTANDING_RISCV32_PURECAP_093
+        else:
+            bios_xtarget = CompilationTargets.FREESTANDING_RISCV64_PURECAP_093
         # This version of OpenSBI requires a purecap build to support CHERI
-        proj = cls.get_instance(caller, cross_target=CompilationTargets.FREESTANDING_RISCV64_PURECAP_093)
+        proj = cls.get_instance(caller, cross_target=bios_xtarget)
         assert isinstance(proj, BuildOpenSBI)
         return proj._fw_jump_path()
 
