@@ -1652,7 +1652,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 
         if (
             self.supported_riscv_cheri_standard is not None
-            and self.crosscompile_target.is_riscv(include_purecap=True)
+            and self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64, CPUArchitecture.RISCV32])
             and self.crosscompile_target.riscv_cheri_isa(self.config) != self.supported_riscv_cheri_standard
         ):
             self.fatal(
