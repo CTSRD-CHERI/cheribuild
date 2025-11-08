@@ -243,7 +243,7 @@ class LaunchQEMUBase(SimpleProject):
             # FIXME: QEMU does not yet default to the correct BIOS image name.
             if xtarget.is_experimental_cheri093_std(caller.config):
                 bios_file = BuildAllianceOpenSBI.get_cheri_bios(caller, xtarget)
-            if prefer_bbl:
+            elif prefer_bbl:
                 # Always use a purecap bbl
                 bios_file = BuildBBLNoPayload.get_cheri_bios(caller, xtarget)
             else:
