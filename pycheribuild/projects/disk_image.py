@@ -1389,9 +1389,10 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
     def make_rootfs_image(self, rootfs_img: Path):
         # update cheribsdbox link in case we stripped it:
         cheribsdbox_entry = self.mtree.get("./bin/cheribsdbox")
+        # When binaries are not stripped cheribsdbox will not have a contents= key
         if not cheribsdbox_entry:
             self.fatal("Could not find cheribsdbox entry in mtree file!")
-        else:
+        elif self.strip_binaries:
             cheribsdbox_path = cheribsdbox_entry.attributes["contents"]
             # create at least one hardlink to cheribsdbox so that mtree can detect that the files are all the same
             dummy_hardlink = Path(cheribsdbox_path).with_suffix(".dummy_hardlink")
