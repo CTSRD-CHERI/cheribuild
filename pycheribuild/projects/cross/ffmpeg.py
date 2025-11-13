@@ -40,7 +40,8 @@ class BuildFfmpeg(CrossCompileAutotoolsProject):
 
     def setup(self):
         super().setup()
-        cflags = self.default_compiler_flags
+        cflags = self.default_compiler_flags()
+        cxxflags = self.default_compiler_flags("c++")
         self.configure_args.extend(
             [
                 f"--ar={self.target_info.ar}",
@@ -52,7 +53,7 @@ class BuildFfmpeg(CrossCompileAutotoolsProject):
                 f"--ranlib={self.target_info.ranlib}",
                 f"--strip={self.target_info.strip_tool}",
                 f"--extra-cflags={self.commandline_to_str(cflags + self.CFLAGS)}",
-                f"--extra-cxxflags={self.commandline_to_str(cflags + self.CXXFLAGS)}",
+                f"--extra-cxxflags={self.commandline_to_str(cxxflags + self.CXXFLAGS)}",
                 f"--extra-ldflags={self.commandline_to_str(self.default_ldflags + self.LDFLAGS)}",
                 "--enable-pic",
                 "--disable-doc",

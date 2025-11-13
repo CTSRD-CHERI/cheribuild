@@ -30,6 +30,7 @@
 import re
 
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind
+from ...processutils import commandline_to_str
 
 
 class BuildNginx(CrossCompileAutotoolsProject):
@@ -99,13 +100,13 @@ class BuildNginx(CrossCompileAutotoolsProject):
             self.configure_args.extend(
                 [
                     "--crossbuild=FreeBSD:12.0-CURRENT:mips",
-                    "--with-cc-opt=" + self.commandline_to_str(self.default_compiler_flags),
-                    "--with-ld-opt=" + self.commandline_to_str(self.default_ldflags),
+                    "--with-cc-opt=" + commandline_to_str(self.default_compiler_flags()),
+                    "--with-ld-opt=" + commandline_to_str(self.default_ldflags),
                     "--sysroot=" + str(self.sdk_sysroot),
                 ]
             )
-            self.configure_environment["CC_TEST_FLAGS"] = self.commandline_to_str(self.default_compiler_flags)
-            self.configure_environment["NGX_TEST_LD_OPT"] = self.commandline_to_str(self.default_ldflags)
+            self.configure_environment["CC_TEST_FLAGS"] = commandline_to_str(self.default_compiler_flags())
+            self.configure_environment["NGX_TEST_LD_OPT"] = commandline_to_str(self.default_ldflags)
             self.configure_environment["NGX_SIZEOF_int"] = "4"
             self.configure_environment["NGX_SIZEOF_sig_atomic_t"] = "4"  # on mips it is an int
             self.configure_environment["NGX_SIZEOF_long"] = "8"

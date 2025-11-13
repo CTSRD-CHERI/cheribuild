@@ -27,7 +27,7 @@ import os
 
 from .crosscompileproject import CrossCompileMesonProject, GitRepository
 from ..build_qemu import BuildQEMU
-from ..project import DefaultInstallDir
+from ..project import CompilerLanguage, DefaultInstallDir
 from ...config.compilation_targets import CompilationTargets, PicolibcBaremetalTargetInfo
 from ...config.target_info import CPUArchitecture
 
@@ -106,15 +106,14 @@ default_ram_size   = '{hex(layout.dram_size)}'
         else:
             self.add_meson_options(**{"picocrt": True})
 
-    @property
-    def default_compiler_flags(self):
+    def default_compiler_flags(self, lang: CompilerLanguage = "c"):
         if self.crosscompile_target.is_riscv64(include_purecap=True):
             # We have to resolve undef weak symbols to 0, but ld.lld doesn't do the rewriting of instructions and
             # codegen isn't referencing the GOT, so until https://reviews.llvm.org/D107280 lands, we have to use -fpie
             # See also https://github.com/ClangBuiltLinux/linux/issues/1409 and
             # https://github.com/riscv-non-isa/riscv-elf-psabi-doc/pull/201
-            return [*super().default_compiler_flags, "-fpie"]
-        return super().default_compiler_flags
+            return [*super().default_compiler_flags(lang), "-fpie"]
+        return super().default_compiler_flags(lang)
 
     @property
     def default_ldflags(self):

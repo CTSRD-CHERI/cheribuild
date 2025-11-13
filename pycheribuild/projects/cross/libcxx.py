@@ -241,7 +241,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             self.common_warning_flags.append("-Werror=cheri")
 
         # We need to build with -G0 otherwise we get R_MIPS_GPREL16 out of range linker errors
-        test_compile_flags = self.commandline_to_str(self.default_compiler_flags)
+        test_compile_flags = self.commandline_to_str(self.default_compiler_flags())
         test_linker_flags = self.commandline_to_str(self.default_ldflags)
 
         if self.target_info.is_baremetal():

@@ -310,7 +310,7 @@ class BuildQEMUBase(AutotoolsProject):
                 # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
                 # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
                 "--disable-werror",
-                "--extra-cflags=" + self.commandline_to_str(self.default_compiler_flags + self.CFLAGS),
+                "--extra-cflags=" + self.commandline_to_str(self.default_compiler_flags() + self.CFLAGS),
                 "--cxx=" + str(self.CXX),
                 "--cc=" + str(self.CC),
                 # Using /usr/bin/make on macOS breaks compilation DB creation with bear since SIP prevents it from
@@ -346,7 +346,7 @@ class BuildQEMUBase(AutotoolsProject):
         ldflags = self.default_ldflags + self.LDFLAGS
         if ldflags:
             self.configure_args.append("--extra-ldflags=" + self.commandline_to_str(ldflags))
-        cxxflags = self.default_compiler_flags + self.CXXFLAGS
+        cxxflags = self.default_compiler_flags("c++") + self.CXXFLAGS
         if cxxflags:
             self.configure_args.append("--extra-cxxflags=" + self.commandline_to_str(cxxflags))
 

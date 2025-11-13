@@ -42,7 +42,7 @@ from collections import OrderedDict
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from typing import Callable, Optional, Sequence, Union
+from typing import Callable, Literal, Optional, Sequence, Union
 
 from .repository import (
     ExternallyManagedSourceRepository,
@@ -96,6 +96,7 @@ __all__ = [
     "BuildType",
     "CPUArchitecture",
     "CheriConfig",
+    "CompilerLanguage",
     "ComputedDefaultValue",
     "CrossCompileTarget",
     "DefaultInstallDir",
@@ -116,6 +117,8 @@ __all__ = [
     "commandline_to_str",
     "default_source_dir_in_subdir",
 ]
+
+CompilerLanguage = Literal["c", "c++", "asm"]
 
 
 def install_dir_not_specified(_: CheriConfig, project: "Project"):
@@ -833,8 +836,7 @@ class Project(SimpleProject):
         else:
             return self.common_warning_flags + self.cross_warning_flags
 
-    @property
-    def default_compiler_flags(self) -> "list[str]":
+    def default_compiler_flags(self, lang: CompilerLanguage = "c") -> "list[str]":
         assert self._setup_called
         result = []
         if self.use_lto:
@@ -1184,7 +1186,7 @@ class Project(SimpleProject):
             # Hybrid flags are not inferred from the input files, so we have to explicitly pass -mattr= to ld.lld.
             self._lto_linker_flags.extend(["-Wl,-mllvm,-mattr=+morello"])
         # propagate all -mllvm flags:
-        cflags = self.default_compiler_flags
+        cflags = self.default_compiler_flags()
         for i, flag in enumerate(cflags):
             if flag == "-mllvm" and i < len(cflags) - 1:
                 self._lto_linker_flags.append("-Wl,-mllvm," + cflags[i + 1])
@@ -1908,7 +1910,7 @@ class _CMakeAndMesonSharedLogic(Project):
             TOOLCHAIN_SDK_BINDIR=sdk_bindir,
             TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
             TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
-            TOOLCHAIN_COMMON_FLAGS=cmdline(self.default_compiler_flags),
+            TOOLCHAIN_COMMON_FLAGS=cmdline(self.default_compiler_flags()),
             TOOLCHAIN_C_FLAGS=cmdline(self.CFLAGS),
             TOOLCHAIN_EXE_LINKER_FLAGS=cmdline(
                 self.default_ldflags + self.LDFLAGS + self.target_info.additional_executable_link_flags,
@@ -2138,11 +2140,12 @@ class MakefileProject(Project):
             self.make_args.set_env(LD=self.target_info.linker)
 
         # Set values in the environment so that projects can override them
-        cppflags = self.default_compiler_flags
+        cflags = self.default_compiler_flags()
+        cxxflags = self.default_compiler_flags("c++")
         self.make_args.set_env(
-            CFLAGS=commandline_to_str(cppflags + self.CFLAGS),
-            CXXFLAGS=commandline_to_str(cppflags + self.CXXFLAGS),
-            CPPFLAGS=commandline_to_str(cppflags + self.CFLAGS),
+            CFLAGS=commandline_to_str(cflags + self.CFLAGS),
+            CXXFLAGS=commandline_to_str(cxxflags + self.CXXFLAGS),
+            CPPFLAGS=commandline_to_str(cflags + self.CFLAGS),
             LDFLAGS=commandline_to_str(self.default_ldflags + self.LDFLAGS),
         )
 

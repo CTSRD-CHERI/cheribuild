@@ -159,7 +159,8 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
 
     def configure(self, **kwargs):
         if self._autotools_add_default_compiler_args:
-            cppflags = self.default_compiler_flags
+            cflags = self.default_compiler_flags()
+            cxxflags = self.default_compiler_flags("c++")
             for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
                 assert key not in self.configure_environment, key
             # We have to include -target xxx-unknown-freebsd as part of CC for some build systems since they fail
@@ -167,13 +168,13 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.set_configure_prog_with_args("CC", self.CC, self.essential_compiler_and_linker_flags)
             self.set_configure_prog_with_args("CXX", self.CXX, self.essential_compiler_and_linker_flags)
             # self.add_configure_env_arg("CPPFLAGS", self.commandline_to_str(CPPFLAGS))
-            self.add_configure_env_arg("CFLAGS", self.commandline_to_str(cppflags + self.CFLAGS))
-            self.add_configure_env_arg("CXXFLAGS", self.commandline_to_str(cppflags + self.CXXFLAGS))
+            self.add_configure_env_arg("CFLAGS", self.commandline_to_str(cflags + self.CFLAGS))
+            self.add_configure_env_arg("CXXFLAGS", self.commandline_to_str(cxxflags + self.CXXFLAGS))
             # this one seems to work:
             self.add_configure_env_arg("LDFLAGS", self.commandline_to_str(self.LDFLAGS + self.default_ldflags))
 
             if not self.compiling_for_host():
-                self.set_configure_prog_with_args("CPP", self.CPP, cppflags)
+                self.set_configure_prog_with_args("CPP", self.CPP, cflags)
                 if self._define_ld:
                     self.add_configure_env_arg("LD", self.target_info.linker)
 

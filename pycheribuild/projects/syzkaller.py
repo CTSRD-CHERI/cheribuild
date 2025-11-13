@@ -106,9 +106,9 @@ class BuildSyzkaller(CrossCompileProject):
             GOROOT=goroot,
             CC=self.commandline_to_str([self.CC, *self.essential_compiler_and_linker_flags]),
             CXX=self.commandline_to_str([self.CXX, *self.essential_compiler_and_linker_flags]),
-            ADDCFLAGS=self.commandline_to_str(self.default_compiler_flags + self.default_ldflags),
+            ADDCFLAGS=self.commandline_to_str(self.default_compiler_flags() + self.default_ldflags),
         )
-        cflags = self.default_compiler_flags + self.default_ldflags
+        cflags = self.default_compiler_flags() + self.default_ldflags
         self.make_args.set_env(CFLAGS=" ".join(cflags))
         self.make_args.set_env(PATH=f"{goroot / 'bin'}:{self.config.dollar_path_with_other_tools}")
 

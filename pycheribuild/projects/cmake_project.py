@@ -206,9 +206,9 @@ class CMakeProject(_CMakeAndMesonSharedLogic):
             # Add compiler/linker flags (for cross-compilation these are defined in the toolchain file).
             # Note: All of these should be commandlines not CMake lists.
             self.add_cmake_options(
-                CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CFLAGS),
-                CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CXXFLAGS),
-                CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.ASMFLAGS),
+                CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags() + self.CFLAGS),
+                CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags("c++") + self.CXXFLAGS),
+                CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags("asm") + self.ASMFLAGS),
                 CMAKE_EXE_LINKER_FLAGS_INIT=commandline_to_str(
                     custom_ldflags + self.target_info.additional_executable_link_flags,
                 ),
@@ -409,11 +409,12 @@ class MakefileProject(Project):
             self.make_args.set_env(LD=self.target_info.linker)
 
         # Set values in the environment so that projects can override them
-        cppflags = self.default_compiler_flags
+        cflags = self.default_compiler_flags()
+        cxxflags = self.default_compiler_flags("c++")
         self.make_args.set_env(
-            CFLAGS=commandline_to_str(cppflags + self.CFLAGS),
-            CXXFLAGS=commandline_to_str(cppflags + self.CXXFLAGS),
-            CPPFLAGS=commandline_to_str(cppflags + self.CFLAGS),
+            CFLAGS=commandline_to_str(cflags + self.CFLAGS),
+            CXXFLAGS=commandline_to_str(cxxflags + self.CXXFLAGS),
+            CPPFLAGS=commandline_to_str(cflags + self.CFLAGS),
             LDFLAGS=commandline_to_str(self.default_ldflags + self.LDFLAGS),
         )
 

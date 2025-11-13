@@ -227,7 +227,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         super().setup()
         self.configure_command = self.source_dir / "configure"
         if self.compiling_for_mips(include_purecap=False) and self.force_static_linkage:
-            assert "-mxgot" in self.default_compiler_flags
+            assert "-mxgot" in self.default_compiler_flags()
         if self.config.verbose:
             self.configure_args.append("-verbose")
         # Work around https://bugreports.qt.io/browse/QTBUG-111514
@@ -293,7 +293,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 self.configure_args.append("QMAKE_APPLE_DEVICE_ARCHS=" + apple_arch)
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
-            compiler_flags = self.default_compiler_flags
+            compiler_flags = self.default_compiler_flags()
             linker_flags = [*self.default_ldflags, "-target", self.target_info.target_triple]
 
             # The build system already passes these:

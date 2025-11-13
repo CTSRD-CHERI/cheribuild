@@ -111,7 +111,7 @@ class BuildMibench(BenchmarkMixin, CrossCompileProject):
                     MIPS_SYSROOT=self.sdk_sysroot, CHERI128_SYSROOT=self.sdk_sysroot, CHERI256_SYSROOT=self.sdk_sysroot
                 )
 
-            self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(self.default_compiler_flags))
+            self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(self.default_compiler_flags()))
             self.make_args.set(ADDITIONAL_LDFLAGS=self.commandline_to_str(self.default_ldflags))
             self.make_args.set(VERSION=self.benchmark_version)
             self.makedirs(self.build_dir / "bundle")
@@ -255,7 +255,7 @@ class BuildOlden(BenchmarkMixin, CrossCompileProject):
             if not self.compiling_for_host():
                 self.make_args.set(SYSROOT_DIRNAME=self.cross_sysroot_path.name)
             self.make_args.add_flags("-f", "Makefile.jenkins")
-            self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(self.default_compiler_flags))
+            self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(self.default_compiler_flags()))
             self.make_args.set(ADDITIONAL_LDFLAGS=self.commandline_to_str(self.default_ldflags))
             if self.compiling_for_host():
                 self.run_make("x86")
@@ -567,7 +567,7 @@ class BuildLMBench(BenchmarkMixin, CrossCompileProject):
                 self.make_args.set(AR=str(self.sdk_bindir / "llvm-ar"))
                 self.make_args.set(OS="mips64c128-unknown-freebsd")
 
-            self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(self.default_compiler_flags))
+            self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(self.default_compiler_flags()))
             self.make_args.set(ADDITIONAL_LDFLAGS=self.commandline_to_str(self.default_ldflags))
             if self.build_type.is_debug():
                 self.run_make("debug", cwd=self.source_dir / "src")
@@ -659,7 +659,7 @@ class BuildUnixBench(BenchmarkMixin, CrossCompileProject):
                     self.make_args.set(ARCHNAME="mips64")
 
             # link with libstatcounters
-            cflags = [*self.default_compiler_flags, "-lstatcounters"]
+            cflags = [*self.default_compiler_flags(), "-lstatcounters"]
             if self.fixed_iterations:
                 cflags += ["-DUNIXBENCH_FIXED_ITER"]
             self.make_args.set(ADDITIONAL_CFLAGS=self.commandline_to_str(cflags))

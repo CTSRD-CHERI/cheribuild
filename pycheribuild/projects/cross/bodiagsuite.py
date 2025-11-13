@@ -139,7 +139,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
 
     def process(self):
         if self.compiling_for_host() and self.use_softboundcets:
-            assert "-fsoftboundcets" in self.default_compiler_flags
+            assert "-fsoftboundcets" in self.default_compiler_flags()
             assert "-lsoftboundcets_rt" in self.default_ldflags
         # FIXME: add option to disable FORTIFY_SOURCE
         if self.build_type != BuildType.DEBUG:
