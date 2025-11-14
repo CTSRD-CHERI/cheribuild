@@ -241,8 +241,6 @@ class BuildQEMUBase(AutotoolsProject):
         # Turn implicit function declaration into an error and silence some upstream warnings
         self.common_warning_flags.extend(
             [
-                "-Werror=implicit-function-declaration",
-                "-Werror=incompatible-pointer-types",
                 "-Werror=format",
                 "-Wno-sign-compare",
                 "-Wno-unused-parameter",
@@ -307,10 +305,8 @@ class BuildQEMUBase(AutotoolsProject):
                 "--disable-xen",
                 "--disable-docs",
                 "--disable-rdma",
-                # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
-                # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
+                # Avoid failing build because of new compilers triggering new warnings that haven't been fixed yet.
                 "--disable-werror",
-                "--extra-cflags=" + self.commandline_to_str(self.default_compiler_flags() + self.CFLAGS),
                 "--cxx=" + str(self.CXX),
                 "--cc=" + str(self.CC),
                 # Using /usr/bin/make on macOS breaks compilation DB creation with bear since SIP prevents it from
@@ -343,9 +339,13 @@ class BuildQEMUBase(AutotoolsProject):
         if self.use_asan:
             # QEMU is not LeakSan clean, disable those checks.
             self.make_args.set_env(UBSAN_OPTIONS="print_stacktrace=1,halt_on_error=1", ASAN_OPTIONS="detect_leaks=0")
+        cflags = self.default_compiler_flags("c") + self.CFLAGS
+        cflags += ["-Werror=implicit-function-declaration", "-Werror=incompatible-pointer-types"]
+        self.configure_args.append("--extra-cflags=" + self.commandline_to_str(cflags))
         ldflags = self.default_ldflags + self.LDFLAGS
         if ldflags:
             self.configure_args.append("--extra-ldflags=" + self.commandline_to_str(ldflags))
+        cflags += ["-Werror=implicit-function-declaration", "-Werror=incompatible-pointer-types"]
         cxxflags = self.default_compiler_flags("c++") + self.CXXFLAGS
         if cxxflags:
             self.configure_args.append("--extra-cxxflags=" + self.commandline_to_str(cxxflags))
