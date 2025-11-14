@@ -247,13 +247,6 @@ class BuildQEMUBase(AutotoolsProject):
                 "-Wno-missing-field-initializers",
             ]
         )
-        if ccinfo.compiler == "gcc":
-            self.common_warning_flags.extend(
-                [
-                    # "-Wno-redundant-decls",  # lots of upstream issues
-                    "-Wno-maybe-uninitialized",  # lots of false positives
-                ]
-            )
         if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
             self.common_warning_flags.extend(
                 [
@@ -340,13 +333,17 @@ class BuildQEMUBase(AutotoolsProject):
             # QEMU is not LeakSan clean, disable those checks.
             self.make_args.set_env(UBSAN_OPTIONS="print_stacktrace=1,halt_on_error=1", ASAN_OPTIONS="detect_leaks=0")
         cflags = self.default_compiler_flags("c") + self.CFLAGS
-        cflags += ["-Werror=implicit-function-declaration", "-Werror=incompatible-pointer-types"]
+        if ccinfo.compiler != "gcc":
+            # QEMU's configure script adds --extra-cflags to CXXFLAGS and these flags are rejected by g++
+            cflags += ["-Werror=implicit-function-declaration", "-Werror=incompatible-pointer-types"]
         self.configure_args.append("--extra-cflags=" + self.commandline_to_str(cflags))
         ldflags = self.default_ldflags + self.LDFLAGS
         if ldflags:
             self.configure_args.append("--extra-ldflags=" + self.commandline_to_str(ldflags))
         cflags += ["-Werror=implicit-function-declaration", "-Werror=incompatible-pointer-types"]
         cxxflags = self.default_compiler_flags("c++") + self.CXXFLAGS
+        # QEMU's configure script adds --extra-cflags to CXXFLAGS so remove duplicates
+        cxxflags = [flag for flag in cxxflags if flag not in cflags]
         if cxxflags:
             self.configure_args.append("--extra-cxxflags=" + self.commandline_to_str(cxxflags))
 
