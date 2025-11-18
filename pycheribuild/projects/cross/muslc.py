@@ -87,8 +87,7 @@ class BuildMorelloLinuxMuslc(BuildMuslc):
 
 class BuildAllianceLinuxMuslc(BuildMuslc):
     target = "cheri-std093-muslc"
-    # FIXME: This is currently private, change when it is public
-    repository = GitRepository("https://gitlab-public.codasip.com/cheri-risc-v/musl.git")
+    repository = GitRepository("https://github.com/CHERI-Alliance/musl.git")
     _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
