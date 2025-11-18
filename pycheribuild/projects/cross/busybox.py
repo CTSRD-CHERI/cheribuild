@@ -35,6 +35,7 @@ from ..project import (
     GitRepository,
     MakeCommandKind,
 )
+from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
 
@@ -195,3 +196,10 @@ class BuildMorelloBusyBox(BuildBusyBox):
             prompt="MORELLO",
         )
         super().install(**kwargs)
+
+
+class BuildAllianceBusyBox(BuildBusyBox):
+    target = "cheri-std093-busybox"
+    repository = GitRepository("https://github.com/CHERI-Alliance/busybox.git")
+    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
