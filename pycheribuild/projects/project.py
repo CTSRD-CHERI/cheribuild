@@ -2016,6 +2016,7 @@ class AutotoolsProject(Project):
     do_not_add_to_targets: bool = True
     _configure_supports_prefix: bool = True
     _can_use_autogen_sh = True  # Whether autogen.sh can be used to create ./configure
+    _verbose_make_uses_v_eq_1 = True  # verbose build output can be enabled using V=1
     make_kind: MakeCommandKind = MakeCommandKind.GnuMake
     add_host_target_build_config_options: bool = True
 
@@ -2052,9 +2053,9 @@ class AutotoolsProject(Project):
                 # When compiling natively on CheriBSD, most autotools projects don't like the inferred config.guess
                 # value of aarch64c-unknown-freebsd14.0. Override it to make this work in most cases.
                 self.configure_args.extend(["--build=" + buildhost])
-        if self.config.verbose:
-            # Most autotools-base projects enable verbose output by setting V=1
-            self.make_args.set_env(V=1)
+        # Most autotools-base projects enable verbose output by setting V=1.
+        if self.config.verbose and self._verbose_make_uses_v_eq_1:
+            self.make_args.set(V=1)
 
     def configure(self, **kwargs) -> None:
         if self._configure_supports_prefix:

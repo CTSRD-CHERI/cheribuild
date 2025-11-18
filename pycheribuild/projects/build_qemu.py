@@ -233,9 +233,6 @@ class BuildQEMUBase(AutotoolsProject):
         if not self.target_info.is_linux():
             self.configure_args.extend(["--disable-linux-aio", "--disable-kvm"])
 
-        if self.config.verbose:
-            self.make_args.set(V=1)
-
         compiler = self.CC
         ccinfo = self.get_compiler_info(compiler)
         # Turn implicit function declaration into an error and silence some upstream warnings

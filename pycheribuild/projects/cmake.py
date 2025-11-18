@@ -68,6 +68,7 @@ class BuildCMake(AutotoolsProject):
     _default_architecture = CompilationTargets.NATIVE
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     make_kind = MakeCommandKind.Ninja
+    _verbose_make_uses_v_eq_1 = False  # Not using GNU make, can't pass V=1 on the command line
     add_host_target_build_config_options = False
 
     @classmethod
