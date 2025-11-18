@@ -246,6 +246,9 @@ class LaunchCheriLinux(LaunchQEMUBase):
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             result += ("cheri-std093-linux-kernel",)
             result += ("cheri-std093-opensbi-baremetal-riscv64-purecap",)
+            result += ("cheri-std093-compiler-rt-builtins",)
+            result += ("cheri-std093-busybox",)
+            result += ("cheri-std093-muslc",)
             # TODO: Add more projects (eg busybox and muslc once released and is public)
         elif cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             result += ("morello-linux-kernel",)
