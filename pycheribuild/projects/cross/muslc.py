@@ -35,6 +35,7 @@ from ..project import (
     GitRepository,
     MakeCommandKind,
 )
+from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
 
@@ -81,4 +82,22 @@ class BuildMorelloLinuxMuslc(BuildMuslc):
         # and fails building. This should be fixed in Morello Busybox codebase manually
         # or when they update to recent revisions/releases
         self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")
+        super().setup()
+
+
+class BuildAllianceLinuxMuslc(BuildMuslc):
+    target = "cheri-std093-muslc"
+    # FIXME: This is currently private, change when it is public
+    repository = GitRepository("https://gitlab-public.codasip.com/cheri-risc-v/musl.git")
+    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+
+    def setup(self) -> None:
+        self.configure_args.extend(["--enable-bakewell --enable-debug"])
+        # FIXME Need to add the compiler resource directory as Codasip's muslc includes
+        # cheri_init_globals_bw.h while building with -nostdinc
+        resource_dir = self.get_compiler_info(self.CC).get_resource_dir()
+        self.COMMON_FLAGS.append(f"-I{resource_dir}/include")
+        self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")
+        self.cross_warning_flags.append("-Wno-error=-Wunused-command-line-argument")
         super().setup()
