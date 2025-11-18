@@ -874,6 +874,10 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
             result = "riscv64-linux-musl"
         else:
             assert False, "No support for building Linux for this architecture"
+
+        if target.is_cheri_purecap():
+            result += "_purecap"
+
         return result
 
     @classmethod
@@ -925,15 +929,6 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
 class LinuxMorelloTargetInfo(LinuxTargetInfo):
     shortname: str = "Linux"
     uses_morello_llvm: bool = True
-
-    @classmethod
-    def triple_for_target(cls, target: "CrossCompileTarget", config, *, include_version):
-        if target.is_hybrid_or_purecap_cheri():
-            assert target.is_aarch64(
-                include_purecap=True,
-            ), "AArch64 is the only CHERI target supported with the Morello toolchain"
-            return "aarch64-linux-musl_purecap"  # FIXME: this seems wrong for hybrid?
-        return super().triple_for_target(target, config, include_version=include_version)
 
 
 class BaremetalClangTargetInfo(_ClangBasedTargetInfo, ABC):
