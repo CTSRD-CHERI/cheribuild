@@ -915,11 +915,11 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
+        # TODO unify the following codebases without the morello/cheri-std093 prefixes
         if cls.uses_morello_llvm:
             return ["morello-linux-kernel", "morello-muslc", "morello-compiler-rt-builtins"]
         elif target.is_experimental_cheri093_std(config):
-            # TODO: need to add "muslc" CHERI port
-            return ["cheri-std093-linux-kernel", "compiler-rt-builtins"]
+            return ["cheri-std093-linux-kernel", "cheri-std093-muslc", "cheri-std093-compiler-rt-builtins"]
         assert not target.is_cheri_purecap(), "Only RVY 0.9.3 and Morello are supported for purecap"
         # Note: even when targetting non-CHERI Linux, we use the CHERI targets since the latest upstream
         # LLVM does not build compiler-rt correctly for RISC-V with the current build setup.
