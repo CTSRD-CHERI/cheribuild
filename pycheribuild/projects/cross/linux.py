@@ -109,6 +109,10 @@ class BuildLinux(CrossCompileAutotoolsProject):
         # Install kernel headers at rootfs (and sysroot)'s path
         self.make_args.set(INSTALL_HDR_PATH=self.install_dir / "usr")
 
+        # Build verbose if passed -v
+        if self.config.verbose:
+            self.make_args.set(V=True)
+
         # Don't overwrite our manually edited .config file with default values
         self.make_args.set_env(KCONFIG_NOSILENTUPDATE=1)
 
