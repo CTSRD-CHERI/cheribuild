@@ -606,7 +606,7 @@ class Project(SimpleProject):
             not self.compiling_for_host() or (ccinfo.version >= (4, 0, 0) and self.can_use_lld(ccinfo.path))
         ):
             return True
-        return self.compiling_for_host() and ccinfo.compiler == "gcc"
+        return self.compiling_for_host() and ccinfo.is_gcc()
 
     def can_use_thinlto(self, ccinfo: CompilerInfo) -> bool:
         # ThinLTO requires Clang+LLD or Apple Clang+Apple ld.
@@ -821,7 +821,7 @@ class Project(SimpleProject):
             return []
         elif cbt == BuildType.DEBUG:
             # TODO: once clang's -Og is useful: if self.get_compiler_info(self.CC).supports_Og_flag:
-            if self.get_compiler_info(self.CC).compiler == "gcc" or self.use_asan:
+            if self.get_compiler_info(self.CC).is_gcc() or self.use_asan:
                 return ["-Og"]
             return ["-O0"]
         elif cbt in (BuildType.RELEASE, BuildType.RELWITHDEBINFO):

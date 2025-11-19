@@ -87,7 +87,7 @@ class BuildGnuBinutils(AutotoolsProject):
         # newer compilers will default to -std=c99 which will break binutils:
         cflags = "-std=gnu89 -O2"
         info = self.get_compiler_info(self.CC)
-        if info.compiler == "clang" or (info.compiler == "gcc" and info.version >= (4, 6, 0)):
+        if info.compiler == "clang" or (info.is_gcc() and info.version >= (4, 6, 0)):
             cflags += " -Wno-unused"
         self.configure_environment["CFLAGS"] = cflags
 

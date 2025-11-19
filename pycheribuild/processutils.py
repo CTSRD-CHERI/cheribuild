@@ -661,7 +661,7 @@ class CompilerInfo:
 
     # noinspection PyPep8Naming
     def supports_Og_flag(self) -> bool:  # noqa: N802
-        if self.compiler == "gcc" and self.version > (4, 8, 0):
+        if self.is_gcc() and self.version > (4, 8, 0):
             return True
         if self.compiler == "clang" and self.version > (4, 0, 0):
             return True
@@ -720,6 +720,9 @@ class CompilerInfo:
     @property
     def is_apple_clang(self):
         return self.compiler == "apple-clang"
+
+    def is_gcc(self):
+        return self.compiler == "gcc"
 
     def __repr__(self) -> str:
         return "{} ({} {})".format(self.path, self.compiler, ".".join(map(str, self.version)))

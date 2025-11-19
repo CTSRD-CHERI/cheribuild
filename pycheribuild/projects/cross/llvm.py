@@ -402,7 +402,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
             self.info(
                 f"Compiler is apple clang {version_str} -- assuming it matches required version {major}.{minor}",
             )
-        elif info.compiler == "gcc":
+        elif info.is_gcc():
             if info.version < (5, 0, 0):
                 self.warning("GCC older than 5.0.0 will probably not work for compiling clang!")
         elif info.compiler != "clang" or info.version < (major, minor, patch):
