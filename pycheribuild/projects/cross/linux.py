@@ -39,8 +39,9 @@ from ..project import (
 )
 from ..run_qemu import LaunchQEMUBase
 from ...config.chericonfig import RiscvCheriISA
-from ...config.compilation_targets import CompilationTargets
+from ...config.compilation_targets import CompilationTargets, LinuxGccTargetInfo
 from ...config.target_info import CPUArchitecture
+from ...processutils import get_compiler_info
 from ...utils import classproperty
 
 
@@ -52,6 +53,8 @@ class BuildLinux(CrossCompileAutotoolsProject):
     _supported_architectures = (
         CompilationTargets.LINUX_RISCV64,
         CompilationTargets.LINUX_AARCH64,
+        CompilationTargets.LINUX_RISCV64_GCC,
+        CompilationTargets.LINUX_AARCH64_GCC,
     )
     _always_add_suffixed_targets = True
     include_os_in_target_suffix = False  # Avoid adding -linux- as we are building linux-kernel here
@@ -78,11 +81,23 @@ class BuildLinux(CrossCompileAutotoolsProject):
     def setup(self) -> None:
         super().setup()
         self.make_args.add_flags("-f", self.source_dir / "Makefile")
-        self.make_args.set(
-            CROSS_COMPILE=str(self.CC.parent) + "/",
-            LLVM=str(self.CC.parent) + "/",
-            KBUILD_ABS_SRCTREE=self.source_dir.absolute(),
-        )
+
+        compiler_info = get_compiler_info(self.CC, config=self.config)
+
+        if compiler_info.is_gcc():
+            assert isinstance(self.target_info, LinuxGccTargetInfo)
+            self.make_args.set(CROSS_COMPILE=self.target_info._cross_compile_prefix)
+        else:
+            self.make_args.set(
+                CROSS_COMPILE=str(self.CC.parent) + "/",
+                LLVM=str(self.CC.parent) + "/",
+            )
+            # We only support building the kernel with LLVM/Clang
+            self.make_args.set(HOSTCC=self.host_CC)
+            self.make_args.set(HOSTCXX=self.host_CXX)
+
+        self.make_args.set(KBUILD_ABS_SRCTREE=self.source_dir.absolute())
+
         if self.crosscompile_target.is_riscv(include_purecap=True):
             self.linux_arch = "riscv"
         elif self.crosscompile_target.is_aarch64(include_purecap=True):
@@ -91,9 +106,6 @@ class BuildLinux(CrossCompileAutotoolsProject):
         self.make_args.set(ARCH=self.linux_arch)
         self.make_args.set(O=self.build_dir)
 
-        # We only support building the kernel with LLVM/Clang
-        self.make_args.set(HOSTCC=self.host_CC)
-        self.make_args.set(HOSTCXX=self.host_CXX)
         # Install kernel headers at rootfs (and sysroot)'s path
         self.make_args.set(INSTALL_HDR_PATH=self.install_dir / "usr")
 
@@ -155,6 +167,8 @@ class BuildCheriAllianceLinux(BuildLinux):
         CompilationTargets.LINUX_RISCV64_PURECAP_093,
         CompilationTargets.LINUX_AARCH64,
         CompilationTargets.LINUX_MORELLO_PURECAP,
+        CompilationTargets.LINUX_RISCV64_GCC,
+        CompilationTargets.LINUX_AARCH64_GCC,
     )
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 

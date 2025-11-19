@@ -32,6 +32,7 @@ import functools
 import inspect
 import os
 import re
+import shutil
 import subprocess
 import sys
 import typing
@@ -888,10 +889,6 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
         return SimpleProject.get_class_for_target_name("linux", xtarget)
 
     @property
-    def sysroot_install_prefix_relative(self) -> Path:
-        return Path()
-
-    @property
     def sysroot_dir(self) -> Path:
         if self.uses_morello_llvm:
             sysroot_dir = self.config.sysroot_output_root / self.config.default_morello_sdk_directory_name
@@ -1011,7 +1008,7 @@ class NewlibBaremetalTargetInfo(BaremetalClangTargetInfo):
     def is_newlib(cls) -> bool:
         return True
 
-    def _get_rootfs_class(self, xtarget: CrossCompileTarget) -> "type[SimpleProject]":
+    def _get_rootfs_class(self, xtarget: "CrossCompileTarget") -> "type[SimpleProject]":
         return SimpleProject.get_class_for_target_name("newlib", xtarget)
 
 
@@ -1242,6 +1239,89 @@ class ArmNoneEabiGccTargetInfo(TargetInfo):
 
     @classmethod
     def is_baremetal(cls) -> bool:
+        return True
+
+
+class LinuxGccTargetInfo(TargetInfo):
+    shortname = "Linux-GCC"
+    os_prefix = "linux-"
+
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
+        return []
+
+    def default_install_dir(self, install_dir: DefaultInstallDir) -> Path:
+        if install_dir == DefaultInstallDir.ROOTFS_LOCALBASE:
+            return self.sysroot_dir
+        return super().default_install_dir(install_dir)
+
+    @property
+    def cmake_system_name(self) -> str:
+        return "Linux"
+
+    @property
+    def sdk_root_dir(self) -> Path:
+        return Path("/usr")
+
+    @property
+    def _cross_compile_prefix(self) -> str:
+        if self.target.is_riscv64():
+            return "riscv64-linux-gnu-"
+        elif self.target.is_aarch64():
+            return "aarch64-linux-gnu-"
+        else:
+            raise ValueError(f"Unsupported GCC target: {self.target}")
+
+    def _get_tool_path_for_arch(self, tool_name: str) -> Path:
+        prefix = self._cross_compile_prefix
+        # Fallback to invalid path to tool name if not found (since we need to return an absolute path here).
+        return Path(shutil.which(prefix + tool_name) or f"/cannot/find/{prefix}{tool_name}")
+
+    def get_target_triple(self, *, include_version: bool) -> str:
+        return self._cross_compile_prefix.rstrip("-")
+
+    @property
+    def sysroot_dir(self) -> Path:
+        return self.config.output_root / ("rootfs-" + self.target.generic_target_suffix)
+
+    @property
+    def c_compiler(self) -> Path:
+        return self._get_tool_path_for_arch("gcc")
+
+    @property
+    def cxx_compiler(self) -> Path:
+        return self._get_tool_path_for_arch("g++")
+
+    @property
+    def c_preprocessor(self) -> Path:
+        return self._get_tool_path_for_arch("cpp")
+
+    @property
+    def linker(self) -> Path:
+        return self._get_tool_path_for_arch("ld")
+
+    @property
+    def ar(self) -> Path:
+        return self._get_tool_path_for_arch("ar")
+
+    @property
+    def ranlib(self) -> Path:
+        return self._get_tool_path_for_arch("ranlib")
+
+    @property
+    def nm(self) -> Path:
+        return self._get_tool_path_for_arch("nm")
+
+    @property
+    def strip_tool(self) -> Path:
+        return self._get_tool_path_for_arch("strip")
+
+    @classmethod
+    def essential_compiler_and_linker_flags_impl(cls, *args, **kwargs) -> "list[str]":
+        return []
+
+    @classmethod
+    def is_linux(cls) -> bool:
         return True
 
     @property
@@ -1621,14 +1701,20 @@ class CompilationTargets(BasicCompilationTargets):
         rootfs_target=LINUX_MORELLO_PURECAP,
     )
 
+    # GCC-based Linux targets
+    LINUX_RISCV64_GCC = CrossCompileTarget("riscv64-gcc", CPUArchitecture.RISCV64, LinuxGccTargetInfo)
+    LINUX_AARCH64_GCC = CrossCompileTarget("aarch64-gcc", CPUArchitecture.AARCH64, LinuxGccTargetInfo)
+
     ALL_LINUX_AARCH64_TARGETS = (
         LINUX_AARCH64,
         LINUX_MORELLO_PURECAP,
+        LINUX_AARCH64_GCC,
     )
 
     ALL_LINUX_RISCV_TARGETS = (
         LINUX_RISCV64,
         LINUX_RISCV64_PURECAP_093,
+        LINUX_RISCV64_GCC,
     )
     ALL_SUPPORTED_LINUX_TARGETS = ALL_LINUX_AARCH64_TARGETS + ALL_LINUX_RISCV_TARGETS
 
