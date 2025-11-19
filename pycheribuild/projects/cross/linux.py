@@ -150,13 +150,20 @@ class BuildLinux(CrossCompileAutotoolsProject):
 class BuildCheriAllianceLinux(BuildLinux):
     target = "cheri-std093-linux-kernel"
     repository = GitRepository("https://github.com/CHERI-Alliance/linux.git", default_branch="codasip-cheri-riscv")
-    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
+    _supported_architectures = (
+        CompilationTargets.LINUX_RISCV64,
+        CompilationTargets.LINUX_RISCV64_PURECAP_093,
+        CompilationTargets.LINUX_AARCH64,
+        CompilationTargets.LINUX_MORELLO_PURECAP,
+    )
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
     @property
     def defconfig(self) -> str:
         if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             return "qemu_riscv64cheripc_defconfig"
+        elif self.crosscompile_target.is_cheri_purecap([CPUArchitecture.AARCH64]):
+            return "morello_pcuabi_defconfig"
         else:
             return "defconfig"
 
@@ -168,8 +175,14 @@ class BuildCheriAllianceLinux(BuildLinux):
     def configure(self, **kwargs):
         super().configure(**kwargs)
         config = self.read_file(self.build_dir / ".config")
-        if "RISCV_CHERI=y\n" not in config:
-            self.fatal("Invalid configuration selected? CHERI support not enabled!")
+        if self.compiling_for_cheri():
+            valid_config = False
+            if self.compiling_for_riscv(include_purecap=True):
+                valid_config = "RISCV_CHERI=y\n" in config
+            elif self.compiling_for_aarch64(include_purecap=True):
+                valid_config = "CONFIG_CHERI_PURECAP_UABI=y\n" in config
+            if not valid_config:
+                self.fatal("Invalid configuration selected? CHERI support not enabled!")
 
 
 class BuildMorelloLinux(BuildLinux):
