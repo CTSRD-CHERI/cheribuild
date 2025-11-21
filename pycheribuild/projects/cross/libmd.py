@@ -75,7 +75,7 @@ class BuildLibmd(CrossCompileAutotoolsProject):
         super().configure(**kwargs)
 
     def compile(self, **kwargs):
-        self.make_args.set(DESTDIR=self.install_dir / "rootfs")
+        self.make_args.set(DESTDIR=self.install_dir)
         self.run_make()
         super().compile(**kwargs)
 
