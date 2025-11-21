@@ -58,16 +58,8 @@ class BuildLibmd(CrossCompileAutotoolsProject):
     
     def setup(self) -> None:
         super().setup()
+        # Remove dependency on libgcc_eh
         self.COMMON_LDFLAGS.append("--unwindlib=none")
-        self.make_args.set(ARCH="arm64", O=self.build_dir)
-        self.make_args.set(
-            CC=self.commandline_to_str([self.CC, *self.essential_compiler_and_linker_flags]),
-            HOSTCC=self.host_CC,
-            # Force busybox's Makefile not to use the triple for finding the toolchain
-            CROSS_COMPILE="",
-            LD=self.target_info.linker,
-        )
-        self.configure_args.extend(["--target=" + self.muslc_target])
     
     def configure(self, **kwargs):
         if not self.configure_command.exists():
@@ -75,7 +67,7 @@ class BuildLibmd(CrossCompileAutotoolsProject):
         super().configure(**kwargs)
 
     def compile(self, **kwargs):
-        self.make_args.set(DESTDIR=self.install_dir)
+        #self.make_args.set(DESTDIR=self.install_dir)
         self.run_make()
         super().compile(**kwargs)
 
