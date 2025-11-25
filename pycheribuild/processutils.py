@@ -669,24 +669,32 @@ class CompilerInfo:
             return True  # assume version is new enough to be based on clang 4
         return False
 
-    def linker_override_flags(self, linker: Path, linker_type: "Optional[str]" = None) -> "list[str]":
+    def linker_override_flags(self, linker: Path, linker_type: "Optional[str]" = None, for_cflags=False) -> "list[str]":
         if not self.is_clang:
             # GCC only allows you to set the linker type, and doesn't allow absolute paths.
             warning_message("Cannot set absolute path to linker", linker, "when compiling with", self.path)
             return []
         # Clang 12.0 uses --ld-path for absolute paths instead of -fuse-ld (which determines the linker type)
         if self.version < (12, 0, 0):
-            return ["-fuse-ld=" + str(linker)]
-        result = []
-        if linker_type:
-            result.append("-fuse-ld=" + linker_type)
-        if linker.suffix.startswith(".lld"):
-            result.append("-fuse-ld=lld")
-        elif linker.suffix.startswith(".bfd"):
-            result.append("-fuse-ld=bfd")
-        elif linker.suffix.startswith(".gold"):
-            result.append("-fuse-ld=gold")
-        result.append("--ld-path=" + str(linker))
+            result = ["-fuse-ld=" + str(linker)]
+        else:
+            result = []
+            if linker_type:
+                result.append("-fuse-ld=" + linker_type)
+            if linker.suffix.startswith(".lld"):
+                result.append("-fuse-ld=lld")
+            elif linker.suffix.startswith(".bfd"):
+                result.append("-fuse-ld=bfd")
+            elif linker.suffix.startswith(".gold"):
+                result.append("-fuse-ld=gold")
+            result.append("--ld-path=" + str(linker))
+        # Make sure these don't affect -Werror nor configure scripts probing warnings
+        if for_cflags:
+            # Clang 14 introduced --start/end-no-unused-arguments to scope the suppression
+            if self.version < (14, 0, 0):
+                result.append("-Qunused-arguments")
+            else:
+                result = ["--start-no-unused-arguments", *result, "--end-no-unused-arguments"]
         return result
 
     def get_matching_binutil(self, binutil) -> Optional[Path]:

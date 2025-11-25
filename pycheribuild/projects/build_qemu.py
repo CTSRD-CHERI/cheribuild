@@ -68,6 +68,9 @@ class BuildQEMUBase(AutotoolsProject):
     default_targets: str = "some-invalid-target"
     default_build_type = BuildType.RELEASE
     lto_by_default = True
+    # Work around https://github.com/mesonbuild/meson/issues/6377 in vendored
+    # meson (fixed in meson 0.64.0)
+    lto_compiler_flags_need_linker_flags = True
     smbd_path: Optional[Path]
     qemu_targets: "str"
 

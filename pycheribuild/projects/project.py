@@ -628,6 +628,7 @@ class Project(SimpleProject):
         super().check_system_dependencies()
 
     lto_by_default: bool = False  # Don't default to LTO
+    lto_compiler_flags_need_linker_flags: bool = False  # Include LTO-specific LDFLAGS in CFLAGS
     prefer_full_lto_over_thin_lto: bool = False  # If LTO is enabled, use LLVM's ThinLTO by default
     lto_set_ld: bool = True
     default_build_type: BuildType = BuildType.DEFAULT
@@ -1162,6 +1163,8 @@ class Project(SimpleProject):
             lld = ccinfo.get_matching_binutil("ld.lld")
             # Find lld with the correct version (it must match the version of clang otherwise it breaks!)
             self._lto_linker_flags.extend(ccinfo.linker_override_flags(lld, linker_type="lld"))
+            if self.lto_compiler_flags_need_linker_flags:
+                self._lto_compiler_flags.extend(ccinfo.linker_override_flags(lld, linker_type="lld", for_cflags=True))
             if not llvm_ar or not llvm_ranlib or not llvm_nm:
                 self.warning(
                     "Could not find llvm-{ar,ranlib,nm}" + version_suffix,
