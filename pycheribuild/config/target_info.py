@@ -1264,7 +1264,11 @@ def cheribsd_morello_version_dependent_flags(cheribsd_version: "Optional[int]", 
         # Use emulated TLS on older purecap
         result.append("-femulated-tls")
     if cheribsd_version is None or cheribsd_version >= 20250127:
-        result.append("-Wl,--local-caprelocs=elf")
+        # NB: get_essential_compiler_and_linker_flags conflates CFLAGS and
+        # LDFLAGS so this will end up in CFLAGS, but we don't want it to
+        # disrupt configure scripts by warning about the unused argument when
+        # not linking.
+        result.extend(["--start-no-unused-arguments", "-Wl,--local-caprelocs=elf", "--end-no-unused-arguments"])
         result.append("-cheri-codeptr-relocs")
     return result
 
