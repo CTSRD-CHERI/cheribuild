@@ -109,6 +109,10 @@ class BuildLinux(CrossCompileAutotoolsProject):
         # Install kernel headers at rootfs (and sysroot)'s path
         self.make_args.set(INSTALL_HDR_PATH=self.install_dir / "usr")
 
+        # Build verbose if passed -v
+        if self.config.verbose:
+            self.make_args.set(V=True)
+
         # Don't overwrite our manually edited .config file with default values
         self.make_args.set_env(KCONFIG_NOSILENTUPDATE=1)
 
@@ -246,6 +250,9 @@ class LaunchCheriLinux(LaunchQEMUBase):
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             result += ("cheri-std093-linux-kernel",)
             result += ("cheri-std093-opensbi-baremetal-riscv64-purecap",)
+            result += ("cheri-std093-compiler-rt-builtins",)
+            result += ("cheri-std093-busybox",)
+            result += ("cheri-std093-muslc",)
             # TODO: Add more projects (eg busybox and muslc once released and is public)
         elif cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             result += ("morello-linux-kernel",)
@@ -271,9 +278,6 @@ class LaunchCheriLinux(LaunchQEMUBase):
 
         kernel = f"{linux_project.install_dir}/boot/Image"
         initramfs = f"{linux_project.install_dir}/boot/initramfs.cpio.gz"
-        if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            # No initramfs available yet
-            initramfs = "/dev/null"
         self._project_specific_options += ["-append", "init=/init", "-initrd", initramfs]
         # This is not enabled by default for AArch64
         self.qemu_options.can_boot_kernel_directly = True
