@@ -86,6 +86,10 @@ class BuildCheriTestSuite(CrossCompileMakefileProject):
         self.destdir = self.destdir / "rootfs" / "root"
         self.makedirs(self.destdir)
 
+        # Copy arm64-specific headers to the machine include directory because
+        # we are building for Morello
+        self.copy_directory(self.source_dir / "compat_headers" / "arm64", self.source_dir / "compat_headers" / "machine")
+
         self.make_args.set_env(
             C_INCLUDE_PATH="$C_INCLUDE_PATH:" + str(self.source_dir / "compat_headers"),
             CFLAGS=" ".join(self.default_compiler_flags() + 
@@ -102,6 +106,7 @@ class BuildCheriTestSuite(CrossCompileMakefileProject):
             MACHINE_CPUARCH="aarch64c",
             MACHINE_ABI="purecap",
             MACHINE_ARCH="aarch64c",
+            # This is not supported by Morello LLVM
             MK_CHERI_CODEPTR_RELOCS="no", # Would WITHOUT_CHERI_CODEPTR_RELOCS be better?
             MAKESYSPATH=str(self.source_dir / "mk"),
             MAKEOBJDIRPREFIX=str(self.source_dir),
