@@ -586,11 +586,13 @@ class BuildQEMU(BuildCheriQEMUBase):
 
 class BuildCheriAllianceQEMU(BuildCheriQEMUBase):
     target = "cheri-std093-qemu"
-    repository = GitRepository(
-        "https://github.com/CHERI-Alliance/qemu.git", default_branch="codasip-cheri-riscv.25-03-31", force_branch=True
-    )
+    repository = GitRepository("https://github.com/CHERI-Alliance/qemu.git", default_branch="main")
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
-    default_targets = "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
+    default_targets = (
+        "arm-softmmu,aarch64-softmmu,morello-softmmu,"
+        "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
+        "x86_64-softmmu"
+    )
 
     @classmethod
     def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
