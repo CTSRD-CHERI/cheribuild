@@ -44,7 +44,6 @@ class BuildLibxo(CrossCompileAutotoolsProject):
     _can_use_autogen_sh = True
     dependencies = ("libbsd", "libmd",  "morello-compiler-rt-builtins", "morello-muslc")
     make_kind = MakeCommandKind.GnuMake
-    is_sdk_target = False
     repository = GitRepository("https://github.com/Juniper/libxo.git")
     target = "libxo"
 
@@ -95,7 +94,6 @@ class BuildLibxo(CrossCompileAutotoolsProject):
         super().configure(**kwargs)
 
     def compile(self, **kwargs):
-        self.make_args.set()
         self.run_make()
         super().compile(**kwargs)
 
