@@ -39,6 +39,7 @@ from ..project import (
 from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty
 
+import shutil
 import os
 
 class BuildCheriTestSuite(CrossCompileMakefileProject):
@@ -88,7 +89,9 @@ class BuildCheriTestSuite(CrossCompileMakefileProject):
 
         # Copy arm64-specific headers to the machine include directory because
         # we are building for Morello
-        self.copy_directory(self.source_dir / "compat_headers" / "arm64", self.source_dir / "compat_headers" / "machine")
+        shutil.copytree(self.source_dir / "compat_headers" / "arm64", 
+                    self.source_dir / "compat_headers" / "machine",
+                    dirs_exist_ok=True)
 
         self.make_args.set_env(
             C_INCLUDE_PATH="$C_INCLUDE_PATH:" + str(self.source_dir / "compat_headers"),
