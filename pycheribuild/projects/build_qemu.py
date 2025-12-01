@@ -361,7 +361,10 @@ class BuildQEMUBase(AutotoolsProject):
         qemu_targets_option = typing.cast(ConfigOptionHandle, inspect.getattr_static(self, "qemu_targets"))
         if qemu_targets_option.is_default_value:
             if (self.source_dir / "configs/targets/riscv32cheristd-softmmu.mak").exists():
-                chosen_targets += ",riscv32cheristd-softmmu,riscv64cheristd-softmmu"
+                if "riscv32cheristd-softmmu" not in chosen_targets:
+                    chosen_targets += ",riscv32cheristd-softmmu"
+                if "riscv64cheristd-softmmu" not in chosen_targets:
+                    chosen_targets += ",riscv64cheristd-softmmu"
             # Use the new xcheri targets if available:
             if (self.source_dir / "configs/targets/riscv32xcheri-softmmu.mak").exists():
                 chosen_targets = chosen_targets.replace("riscv32cheri-softmmu", "riscv32xcheri-softmmu")
@@ -534,6 +537,10 @@ class BuildQEMU(BuildCheriQEMUBase):
     unaligned = BoolConfigOption("unaligned", show_help=False, help="Permit un-aligned loads/stores", default=False)
 
     @classmethod
+    def qemu_bindir_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
+        return config.qemu_bindir
+
+    @classmethod
     def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
         # Always use the CHERI qemu even for plain riscv:
         if xtarget.is_riscv(include_purecap=True):
@@ -560,7 +567,9 @@ class BuildQEMU(BuildCheriQEMUBase):
             binary_name = "qemu-system-arm"
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
-        return config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
+
+        qemu_bindir = cls.qemu_bindir_for_target(xtarget, config)
+        return qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
 
     def setup(self):
         super().setup()
@@ -584,24 +593,17 @@ class BuildQEMU(BuildCheriQEMUBase):
         )
 
 
-class BuildCheriAllianceQEMU(BuildCheriQEMUBase):
+class BuildCheriAllianceQEMU(BuildQEMU):
     target = "cheri-std093-qemu"
     repository = GitRepository("https://github.com/CHERI-Alliance/qemu.git", default_branch="main")
     native_install_dir = DefaultInstallDir.CHERI_ALLIANCE_SDK
     default_targets = (
         "arm-softmmu,aarch64-softmmu,morello-softmmu,"
-        "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu,riscv32cheri-softmmu,"
+        "riscv64-softmmu,riscv64xcheri-softmmu,riscv64cheristd-softmmu,"
+        "riscv32-softmmu,riscv32xcheri-softmmu,riscv32cheristd-softmmu,"
         "x86_64-softmmu"
     )
 
     @classmethod
-    def qemu_binary_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
-        assert xtarget.is_experimental_cheri093_std(config), "Should not be called otherwise"
-        # Always use the CHERI qemu even for plain riscv:
-        if xtarget.is_riscv64(include_purecap=True):
-            binary_name = "qemu-system-riscv64cheri"
-        elif xtarget.is_riscv32(include_purecap=True):
-            binary_name = "qemu-system-riscv32cheri"
-        else:
-            raise ValueError("Invalid xtarget" + str(xtarget))
-        return config.cheri_alliance_qemu_bindir / binary_name
+    def qemu_bindir_for_target(cls, xtarget: CrossCompileTarget, config: CheriConfig):
+        return config.cheri_alliance_qemu_bindir
