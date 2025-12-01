@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 import inspect
-import os
 import re
 import shutil
 import sys
@@ -568,8 +567,7 @@ class BuildQEMU(BuildCheriQEMUBase):
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
 
-        qemu_bindir = cls.qemu_bindir_for_target(xtarget, config)
-        return qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
+        return cls.qemu_bindir_for_target(xtarget, config) / binary_name
 
     def setup(self):
         super().setup()
