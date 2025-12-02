@@ -66,7 +66,15 @@ class BuildCheriTestSuite(CrossCompileMakefileProject):
         
         # Musl libc's alltypes.h doesn't have a header guard by design and redefinition
         # errors caused by this are false positives.
-        self.cross_warning_flags.append('-Wno-error=typedef-redefinition')
+        self.cross_warning_flags.append('-Wno-error=-typedef-redefinition')
+
+        # We are including cheriintrin.h for some of the definitions
+        # that are on CheriBSD in other header files. However, cheric.h
+        # and cheriintrin.h define cheri_is_subset() but a comment in
+        # cheric.h indicates that the intrinsic is still unstable. Therefore,
+        # we use the one in cheric.h and override the definition in
+        # cheriintrin.h if necessary.
+        self.cross_warning_flags.append('-Wno-error=-macro-redefined')
 
         # Musl libc's endian.h causes these warnings
         self.cross_warning_flags.append('-Wno-error=shift-op-parentheses')
