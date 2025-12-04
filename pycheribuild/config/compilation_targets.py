@@ -890,10 +890,6 @@ class LinuxTargetInfoBase(_ClangBasedTargetInfo, ABC):
             dirname = "sysroot" + self.target.get_rootfs_target().build_suffix(self.config, include_os=True)
         return self.sysroot_dir.parent.parent / dirname
 
-    @property
-    def must_link_statically(self):
-        return True  # only static linking tested for now.
-
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         return [cls.kernel_target, cls.musl_target, cls.compiler_rt_target]
