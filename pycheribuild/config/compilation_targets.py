@@ -359,7 +359,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         arch_string += "c"
         if xtarget.is_hybrid_or_purecap_cheri():
             if xtarget.is_experimental_cheri093_std(config):
-                arch_string += "zcherihybrid"
+                arch_string += "zcherihybrid_zcherilevels"
             else:
                 arch_string += "xcheri"
         return arch_string
