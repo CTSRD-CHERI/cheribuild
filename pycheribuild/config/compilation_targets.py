@@ -909,10 +909,6 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
             dirname = "sysroot" + self.target.get_rootfs_target().build_suffix(self.config, include_os=True)
         return self.sysroot_dir.parent.parent / dirname
 
-    @property
-    def must_link_statically(self):
-        return True  # only static linking tested for now.
-
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
         # TODO unify the following codebases without the morello/cheri-std093 prefixes
