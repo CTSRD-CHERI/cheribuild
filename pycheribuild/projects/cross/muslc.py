@@ -65,6 +65,7 @@ class BuildMuslc(CrossCompileAutotoolsProject):
         self.make_args.set(
             # Force muslc's Makefile not to use the triple for finding the toolchain
             CROSS_COMPILE="",
+            DESTDIR=self.install_dir,
         )
         self.COMMON_FLAGS.append("--sysroot=/some/invalid/directory")  # Avoid using the host system headers
         self.configure_args.extend(["--target=" + self.muslc_target])
@@ -87,8 +88,7 @@ class BuildMorelloLinuxMuslc(BuildMuslc):
 
 class BuildAllianceLinuxMuslc(BuildMuslc):
     target = "cheri-std093-muslc"
-    # FIXME: This is currently private, change when it is public
-    repository = GitRepository("https://gitlab-public.codasip.com/cheri-risc-v/musl.git")
+    repository = GitRepository("https://github.com/CHERI-Alliance/musl.git")
     _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
@@ -101,3 +101,35 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
         self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")
         self.cross_warning_flags.append("-Wno-error=-Wunused-command-line-argument")
         super().setup()
+
+
+class InstallCHeaders(BuildMuslc):
+    target = "muslc-headers"
+
+    def compile(self):
+        pass
+
+    def install(self):
+        self.run_make("install-headers")
+
+
+class InstallAllianceCHeaders(BuildAllianceLinuxMuslc):
+    target = "cheri-std093-muslc-headers"
+    dependencies = ()
+
+    def compile(self):
+        pass
+
+    def install(self):
+        self.run_make("install-headers")
+
+
+class InstallMorelloCHeaders(BuildMorelloLinuxMuslc):
+    target = "morello-muslc-headers"
+    dependencies = ()
+
+    def compile(self):
+        pass
+
+    def install(self):
+        self.run_make("install-headers")
