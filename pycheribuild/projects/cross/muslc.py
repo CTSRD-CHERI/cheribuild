@@ -63,6 +63,7 @@ class BuildMuslc(CrossCompileAutotoolsProject):
         self.make_args.set(
             # Force muslc's Makefile not to use the triple for finding the toolchain
             CROSS_COMPILE="",
+            DESTDIR=self.install_dir,
         )
         self.COMMON_FLAGS.append("--sysroot=/some/invalid/directory")  # Avoid using the host system headers
         self.configure_args.extend(["--target=" + self.muslc_target])
@@ -98,3 +99,36 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
         self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")
         self.cross_warning_flags.append("-Wno-error=-Wunused-command-line-argument")
         super().setup()
+
+
+class InstallMuslcHeaders(BuildMuslc):
+    target = "muslc-headers"
+    dependencies = ()
+
+    def compile(self):
+        pass
+
+    def install(self):
+        self.run_make("install-headers")
+
+
+class InstallAllianceMuslcHeaders(BuildAllianceLinuxMuslc):
+    target = "cheri-std093-muslc-headers"
+    dependencies = ()
+
+    def compile(self):
+        pass
+
+    def install(self):
+        self.run_make("install-headers")
+
+
+class InstallMorelloMuslcHeaders(BuildMorelloLinuxMuslc):
+    target = "morello-muslc-headers"
+    dependencies = ()
+
+    def compile(self):
+        pass
+
+    def install(self):
+        self.run_make("install-headers")
