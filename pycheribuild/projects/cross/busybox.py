@@ -158,6 +158,12 @@ done
     def install(self, **kwargs) -> None:
         self.run_make_install()
         root = self.install_dir / "rootfs"
+
+        # If busybox is dynamically linked, we need to install the libc.so in Busybox' rootfs
+        libc_so = self.install_dir / "lib/libc.so"
+        if libc_so.exists():
+            self.install_file(libc_so, self.install_dir / f"rootfs/lib/ld-musl-{self.triple_arch}.so.1")
+
         self.write_busybox_init(
             self.install_dir / "rootfs/init",
             hostname="cheribuild-linux",
