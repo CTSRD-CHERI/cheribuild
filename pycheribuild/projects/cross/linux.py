@@ -36,6 +36,7 @@ from ..project import (
     DefaultInstallDir,
     GitRepository,
     MakeCommandKind,
+    ReuseOtherProjectDefaultTargetRepository,
 )
 from ..run_qemu import LaunchQEMUBase
 from ...config.chericonfig import RiscvCheriISA
@@ -133,9 +134,14 @@ class BuildLinux(CrossCompileAutotoolsProject):
                 "20250811-riscv-wa-llvm-asm-goto-outputs-assertion-failure-v1-1-7bb8c9cbb92b@kernel.org/raw",
             )
 
+    @property
+    def _only_install_headers(self):
+        return False
+
     def compile(self, **kwargs):
         self._apply_build_patches()
-        self.run_make()
+        if not self._only_install_headers:
+            self.run_make()
 
     def _apply_patch_from_url(self, patch_output_path: Path, patch_url: str):
         self.download_file(patch_output_path, patch_url)
@@ -156,10 +162,13 @@ class BuildLinux(CrossCompileAutotoolsProject):
         self.run_make(self.defconfig, cwd=self.source_dir, parallel=False)
 
     def install(self, **kwargs):
-        self.install_file(self.build_dir / "vmlinux", self.install_dir / "boot/vmlinux")
-        self.install_file(self.build_dir / "System.map", self.install_dir / "boot/System.map")
-        self.install_file(self.build_dir / f"arch/{self.linux_arch}/boot/Image", self.install_dir / "boot/Image")
-        self.install_file(self.build_dir / f"arch/{self.linux_arch}/boot/Image.gz", self.install_dir / "boot/Image.gz")
+        if not self._only_install_headers:
+            self.install_file(self.build_dir / "vmlinux", self.install_dir / "boot/vmlinux")
+            self.install_file(self.build_dir / "System.map", self.install_dir / "boot/System.map")
+            self.install_file(self.build_dir / f"arch/{self.linux_arch}/boot/Image", self.install_dir / "boot/Image")
+            self.install_file(
+                self.build_dir / f"arch/{self.linux_arch}/boot/Image.gz", self.install_dir / "boot/Image.gz"
+            )
         self.run_make("headers_install", cwd=self.source_dir)
 
 
@@ -228,6 +237,27 @@ class BuildMorelloLinux(BuildLinux):
         self._set_config("CONFIG_VIRTIO_PCI")
         self._set_config("CONFIG_VIRTIO_PCI_LEGACY")
         self.run_make("oldconfig")  # regen dependencies
+
+
+class InstallLinuxHeaders(BuildLinux):
+    target = "linux-kernel-headers"
+    _supported_architectures = (
+        CompilationTargets.LINUX_MORELLO_PURECAP,
+        CompilationTargets.LINUX_RISCV64_PURECAP_093,
+        CompilationTargets.LINUX_RISCV64,
+        CompilationTargets.LINUX_AARCH64,
+    )
+
+    @classproperty
+    def repository(self):
+        if self.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            return ReuseOtherProjectDefaultTargetRepository(BuildCheriAllianceLinux)
+        elif self.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            return ReuseOtherProjectDefaultTargetRepository(BuildMorelloLinux)
+
+    @property
+    def _only_install_headers(self):
+        return True
 
 
 class LaunchCheriLinux(LaunchQEMUBase):
