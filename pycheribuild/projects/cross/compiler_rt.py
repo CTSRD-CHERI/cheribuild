@@ -162,10 +162,13 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         result = super().dependencies(config)
         xtarget = cls.get_crosscompile_target()
         if xtarget.target_info_cls.is_linux() and not xtarget.is_native():
-            # The builtins for Linux need C library headers available.
-            sysroot_targets = xtarget.target_info_cls.base_sysroot_targets(xtarget, config)
-            # Remove compiler-rt from the sysroot targets since we are building it here.
-            return tuple(target for target in sysroot_targets if "compiler-rt" not in target)
+            # The builtins for Linux need C library and kernel headers available.
+            sysroot_targets: list[str] = xtarget.target_info_cls.base_sysroot_targets(xtarget, config)
+            kernel_target = sysroot_targets[0]
+            assert "linux-kernel" in kernel_target
+            musl_target = sysroot_targets[1]
+            assert musl_target.endswith("muslc")
+            result += (kernel_target, musl_target + "-headers")
         return result
 
     def linkage(self):
@@ -237,6 +240,17 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
                 print_verbose_only=False,
             )
 
+            self.create_symlink(
+                self.install_dir / "lib/linux" / f"clang_rt.crtbegin-{self.triple_arch}.o",
+                self.target_info.sysroot_dir / "lib" / "crtbeginS.o",
+                print_verbose_only=False,
+            )
+            self.create_symlink(
+                self.install_dir / "lib/linux" / f"clang_rt.crtend-{self.triple_arch}.o",
+                self.target_info.sysroot_dir / "lib" / "crtendS.o",
+                print_verbose_only=False,
+            )
+
 
 class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "upstream-compiler-rt-builtins"
@@ -247,6 +261,15 @@ class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
         CompilationTargets.UPSTREAM_LINUX_AARCH64,
         CompilationTargets.UPSTREAM_LINUX_RISCV64,
     )
+
+    @classmethod
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        result = super().dependencies(config)
+        xtarget = cls.get_crosscompile_target()
+        if xtarget.target_info_cls.is_linux() and not xtarget.is_native():
+            # The builtins for Linux need C library and kernel headers available.
+            result += ("muslc-headers",)
+        return result
 
 
 class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
@@ -266,6 +289,15 @@ class BuildAllianceCompilerRtBuiltins(BuildCompilerRtBuiltins):
     llvm_project = BuildCheriAllianceLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
 
+    @classmethod
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        result = super().dependencies(config)
+        xtarget = cls.get_crosscompile_target()
+        if xtarget.target_info_cls.is_linux() and not xtarget.is_native():
+            # The builtins for Linux need C library and kernel headers available.
+            result += ("cheri-std093-muslc-headers",)
+        return result
+
 
 class BuildMorelloCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "morello-compiler-rt-builtins"
@@ -276,3 +308,12 @@ class BuildMorelloCompilerRtBuiltins(BuildCompilerRtBuiltins):
         CompilationTargets.MORELLO_LINUX_AARCH64,
         CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP,
     )
+
+    @classmethod
+    def dependencies(cls, config) -> "tuple[str, ...]":
+        result = super().dependencies(config)
+        xtarget = cls.get_crosscompile_target()
+        if xtarget.target_info_cls.is_linux() and not xtarget.is_native():
+            # The builtins for Linux need C library and kernel headers available.
+            result += ("morello-muslc-headers",)
+        return result
