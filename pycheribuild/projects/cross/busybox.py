@@ -50,6 +50,7 @@ class BuildBusyBox(CrossCompileAutotoolsProject):
     )
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
+    dependencies = ("muslc", "linux-kernel-headers")
 
     @classproperty
     def default_install_dir(self):
@@ -174,6 +175,7 @@ class BuildMorelloBusyBox(BuildBusyBox):
     target = "morello-busybox"
     repository = GitRepository("https://git.morello-project.org/morello/morello-busybox.git")
     _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    dependencies = ("morello-muslc", "linux-kernel-headers")
 
     def setup(self) -> None:
         super().setup()
@@ -203,3 +205,4 @@ class BuildAllianceBusyBox(BuildBusyBox):
     repository = GitRepository("https://github.com/CHERI-Alliance/busybox.git")
     _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    dependencies = ("cheri-std093-muslc", "linux-kernel-headers")
