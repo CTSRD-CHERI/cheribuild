@@ -45,6 +45,7 @@ from ...utils import classproperty
 class BuildMuslc(CrossCompileAutotoolsProject):
     target = "muslc"
     repository = GitRepository("https://git.musl-libc.org/git/musl")
+    dependencies = ("upstream-compiler-rt-builtins", "linux-kernel")
     _needs_sysroot = False
     is_sdk_target = False
     _supported_architectures = CompilationTargets.ALL_UPSTREAM_LINUX_TARGETS
@@ -75,6 +76,7 @@ class BuildMorelloLinuxMuslc(BuildMuslc):
     target = "morello-muslc"
     repository = GitRepository("https://git.morello-project.org/morello/musl-libc.git")
     _supported_architectures = CompilationTargets.ALL_MORELLO_LINUX_TARGETS
+    dependencies = ("morello-compiler-rt-builtins", "morello-linux-kernel")
 
     def setup(self) -> None:
         self.configure_args.extend(["--enable-morello"])
@@ -91,6 +93,7 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
     repository = GitRepository("https://github.com/CHERI-Alliance/musl.git")
     _supported_architectures = CompilationTargets.ALL_CHERI_LINUX_TARGETS
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    dependencies = ("cheri-std093-compiler-rt-builtins", "cheri-std093-linux-kernel")
 
     def setup(self) -> None:
         self.configure_args.extend(["--enable-bakewell --enable-debug"])
