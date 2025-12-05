@@ -33,6 +33,7 @@ from .crosscompileproject import CrossCompileAutotoolsProject
 from ..project import (
     DefaultInstallDir,
     GitRepository,
+    Linkage,
     MakeCommandKind,
 )
 from ...config.chericonfig import RiscvCheriISA
@@ -68,7 +69,10 @@ class BuildMuslc(CrossCompileAutotoolsProject):
             CROSS_COMPILE="",
             DESTDIR=self.install_dir,
         )
-        self.COMMON_FLAGS.append("--sysroot=/some/invalid/directory")  # Avoid using the host system headers
+        self.COMMON_FLAGS.append(f"--sysroot={self.install_dir}")
+        if self.config.crosscompile_linkage != Linkage.STATIC:
+            self.configure_args.extend(["--enable-shared"])
+            self.COMMON_LDFLAGS.append(f"-lclang_rt.builtins-{self.triple_arch}")
         self.configure_args.extend(["--target=" + self.muslc_target])
 
 
