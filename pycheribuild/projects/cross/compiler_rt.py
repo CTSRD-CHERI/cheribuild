@@ -159,10 +159,8 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         result = super().dependencies(config)
         xtarget = cls.get_crosscompile_target()
         if xtarget.target_info_cls.is_linux() and not xtarget.is_native():
-            # The builtins for Linux need C library headers available.
-            sysroot_targets = xtarget.target_info_cls.base_sysroot_targets(xtarget, config)
-            # Remove compiler-rt from the sysroot targets since we are building it here.
-            return tuple(target for target in sysroot_targets if "compiler-rt" not in target)
+            # The builtins for Linux need C library and kernel headers available.
+            result += ("linux-kernel-headers", "muslc-headers")
         return result
 
     def linkage(self):
