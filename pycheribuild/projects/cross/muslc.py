@@ -45,6 +45,7 @@ from ...utils import classproperty
 class BuildMuslc(CrossCompileAutotoolsProject):
     target = "muslc"
     repository = GitRepository("https://git.musl-libc.org/git/musl")
+    dependencies = ("compiler-rt-builtins", "linux-kernel-headers")
     _needs_sysroot = False
     is_sdk_target = False
     _supported_architectures = (
@@ -77,6 +78,7 @@ class BuildMorelloLinuxMuslc(BuildMuslc):
     target = "morello-muslc"
     repository = GitRepository("https://git.morello-project.org/morello/musl-libc.git")
     _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    dependencies = ("morello-compiler-rt-builtins", "linux-kernel-headers")
 
     def setup(self) -> None:
         self.configure_args.extend(["--enable-morello"])
@@ -94,6 +96,7 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
     repository = GitRepository("https://gitlab-public.codasip.com/cheri-risc-v/musl.git")
     _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    dependencies = ("cheri-std093-compiler-rt-builtins", "linux-kernel-headers")
 
     def setup(self) -> None:
         self.configure_args.extend(["--enable-bakewell --enable-debug"])
@@ -108,6 +111,7 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
 
 class InstallCHeaders(BuildMuslc):
     target = "muslc-headers"
+    dependencies = ()
     _supported_architectures = (
         CompilationTargets.LINUX_MORELLO_PURECAP,
         CompilationTargets.LINUX_RISCV64_PURECAP_093,
