@@ -33,6 +33,7 @@ from .crosscompileproject import CrossCompileAutotoolsProject
 from ..project import (
     DefaultInstallDir,
     GitRepository,
+    Linkage,
     MakeCommandKind,
 )
 from ...config.chericonfig import RiscvCheriISA
@@ -162,6 +163,13 @@ done
     def install(self, **kwargs) -> None:
         self.run_make_install()
         root = self.install_dir / "rootfs"
+
+        # If busybox is dynamically linked, we need to install the libc.so in Busybox' rootfs
+        if self.config.crosscompile_linkage != Linkage.STATIC:
+            self.install_file(
+                self.install_dir / "lib/libc.so", self.install_dir / f"rootfs/lib/ld-musl-{self.triple_arch}.so.1"
+            )
+
         self.write_busybox_init(
             self.install_dir / "rootfs/init",
             hostname="cheribuild-linux",
