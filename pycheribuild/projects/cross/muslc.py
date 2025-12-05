@@ -34,9 +34,11 @@ from ..project import (
     DefaultInstallDir,
     GitRepository,
     MakeCommandKind,
+    ReuseOtherProjectDefaultTargetRepository,
 )
 from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
+from ...config.target_info import CPUArchitecture
 from ...utils import classproperty
 
 
@@ -65,6 +67,7 @@ class BuildMuslc(CrossCompileAutotoolsProject):
         self.make_args.set(
             # Force muslc's Makefile not to use the triple for finding the toolchain
             CROSS_COMPILE="",
+            DESTDIR=self.install_dir,
         )
         self.COMMON_FLAGS.append("--sysroot=/some/invalid/directory")  # Avoid using the host system headers
         self.configure_args.extend(["--target=" + self.muslc_target])
@@ -101,3 +104,26 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
         self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")
         self.cross_warning_flags.append("-Wno-error=-Wunused-command-line-argument")
         super().setup()
+
+
+class InstallCHeaders(BuildMuslc):
+    target = "muslc-headers"
+    _supported_architectures = (
+        CompilationTargets.LINUX_MORELLO_PURECAP,
+        CompilationTargets.LINUX_RISCV64_PURECAP_093,
+        CompilationTargets.LINUX_RISCV64,
+        CompilationTargets.LINUX_AARCH64,
+    )
+
+    @classproperty
+    def repository(self):
+        if self.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            return ReuseOtherProjectDefaultTargetRepository(BuildAllianceLinuxMuslc)
+        elif self.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            return ReuseOtherProjectDefaultTargetRepository(BuildMorelloLinuxMuslc)
+
+    def compile(self):
+        pass
+
+    def install(self):
+        self.run_make("install-headers")
