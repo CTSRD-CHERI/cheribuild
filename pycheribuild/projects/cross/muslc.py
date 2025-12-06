@@ -53,6 +53,7 @@ class BuildMuslc(CrossCompileAutotoolsProject):
         CompilationTargets.LINUX_AARCH64,
         CompilationTargets.LINUX_RISCV64,
     )
+    _default_architecture = CompilationTargets.LINUX_AARCH64
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
 
@@ -122,6 +123,7 @@ class InstallCHeaders(BuildMuslc):
         CompilationTargets.LINUX_RISCV64,
         CompilationTargets.LINUX_AARCH64,
     )
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
     @classproperty
     def repository(self):
@@ -129,6 +131,8 @@ class InstallCHeaders(BuildMuslc):
             return ReuseOtherProjectDefaultTargetRepository(BuildAllianceLinuxMuslc)
         elif self.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             return ReuseOtherProjectDefaultTargetRepository(BuildMorelloLinuxMuslc)
+        else:
+            return ReuseOtherProjectDefaultTargetRepository(BuildMuslc)
 
     def compile(self):
         pass
