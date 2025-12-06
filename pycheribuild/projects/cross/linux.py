@@ -57,6 +57,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
         CompilationTargets.LINUX_RISCV64_GCC,
         CompilationTargets.LINUX_AARCH64_GCC,
     )
+    _default_architecture = CompilationTargets.LINUX_AARCH64
     _always_add_suffixed_targets = True
     include_os_in_target_suffix = False  # Avoid adding -linux- as we are building linux-kernel here
     make_kind = MakeCommandKind.GnuMake
@@ -256,6 +257,8 @@ class InstallLinuxHeaders(BuildLinux):
             return ReuseOtherProjectDefaultTargetRepository(BuildCheriAllianceLinux)
         elif self.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             return ReuseOtherProjectDefaultTargetRepository(BuildMorelloLinux)
+        else:
+            return ReuseOtherProjectDefaultTargetRepository(BuildLinux)
 
     @property
     def _only_install_headers(self):
