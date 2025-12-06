@@ -36,6 +36,7 @@ from ..project import (
     DefaultInstallDir,
     GitRepository,
     MakeCommandKind,
+    ReuseOtherProjectDefaultTargetRepository,
 )
 from ..run_qemu import LaunchQEMUBase
 from ...config.chericonfig import RiscvCheriISA
@@ -56,6 +57,7 @@ class BuildLinux(CrossCompileAutotoolsProject):
         CompilationTargets.LINUX_RISCV64_GCC,
         CompilationTargets.LINUX_AARCH64_GCC,
     )
+    _default_architecture = CompilationTargets.LINUX_AARCH64
     _always_add_suffixed_targets = True
     include_os_in_target_suffix = False  # Avoid adding -linux- as we are building linux-kernel here
     make_kind = MakeCommandKind.GnuMake
@@ -109,6 +111,10 @@ class BuildLinux(CrossCompileAutotoolsProject):
         # Install kernel headers at rootfs (and sysroot)'s path
         self.make_args.set(INSTALL_HDR_PATH=self.install_dir / "usr")
 
+        # Build verbose if passed -v
+        if self.config.verbose:
+            self.make_args.set(V=True)
+
         # Don't overwrite our manually edited .config file with default values
         self.make_args.set_env(KCONFIG_NOSILENTUPDATE=1)
 
@@ -129,9 +135,14 @@ class BuildLinux(CrossCompileAutotoolsProject):
                 "20250811-riscv-wa-llvm-asm-goto-outputs-assertion-failure-v1-1-7bb8c9cbb92b@kernel.org/raw",
             )
 
+    @property
+    def _only_install_headers(self):
+        return False
+
     def compile(self, **kwargs):
         self._apply_build_patches()
-        self.run_make()
+        if not self._only_install_headers:
+            self.run_make()
 
     def _apply_patch_from_url(self, patch_output_path: Path, patch_url: str):
         self.download_file(patch_output_path, patch_url)
@@ -152,10 +163,13 @@ class BuildLinux(CrossCompileAutotoolsProject):
         self.run_make(self.defconfig, cwd=self.source_dir, parallel=False)
 
     def install(self, **kwargs):
-        self.install_file(self.build_dir / "vmlinux", self.install_dir / "boot/vmlinux")
-        self.install_file(self.build_dir / "System.map", self.install_dir / "boot/System.map")
-        self.install_file(self.build_dir / f"arch/{self.linux_arch}/boot/Image", self.install_dir / "boot/Image")
-        self.install_file(self.build_dir / f"arch/{self.linux_arch}/boot/Image.gz", self.install_dir / "boot/Image.gz")
+        if not self._only_install_headers:
+            self.install_file(self.build_dir / "vmlinux", self.install_dir / "boot/vmlinux")
+            self.install_file(self.build_dir / "System.map", self.install_dir / "boot/System.map")
+            self.install_file(self.build_dir / f"arch/{self.linux_arch}/boot/Image", self.install_dir / "boot/Image")
+            self.install_file(
+                self.build_dir / f"arch/{self.linux_arch}/boot/Image.gz", self.install_dir / "boot/Image.gz"
+            )
         self.run_make("headers_install", cwd=self.source_dir)
 
 
@@ -171,6 +185,7 @@ class BuildCheriAllianceLinux(BuildLinux):
         CompilationTargets.LINUX_AARCH64_GCC,
     )
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    _default_architecture = CompilationTargets.LINUX_RISCV64_PURECAP_093
 
     @property
     def defconfig(self) -> str:
@@ -226,6 +241,30 @@ class BuildMorelloLinux(BuildLinux):
         self.run_make("oldconfig")  # regen dependencies
 
 
+class InstallLinuxHeaders(BuildLinux):
+    target = "linux-kernel-headers"
+    _supported_architectures = (
+        CompilationTargets.LINUX_MORELLO_PURECAP,
+        CompilationTargets.LINUX_RISCV64_PURECAP_093,
+        CompilationTargets.LINUX_RISCV64,
+        CompilationTargets.LINUX_AARCH64,
+    )
+    supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+
+    @classproperty
+    def repository(self):
+        if self.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            return ReuseOtherProjectDefaultTargetRepository(BuildCheriAllianceLinux)
+        elif self.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            return ReuseOtherProjectDefaultTargetRepository(BuildMorelloLinux)
+        else:
+            return ReuseOtherProjectDefaultTargetRepository(BuildLinux)
+
+    @property
+    def _only_install_headers(self):
+        return True
+
+
 class LaunchCheriLinux(LaunchQEMUBase):
     target = "run-minimal"
     _supported_architectures = (
@@ -246,6 +285,9 @@ class LaunchCheriLinux(LaunchQEMUBase):
         if cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             result += ("cheri-std093-linux-kernel",)
             result += ("cheri-std093-opensbi-baremetal-riscv64-purecap",)
+            result += ("cheri-std093-compiler-rt-builtins",)
+            result += ("cheri-std093-busybox",)
+            result += ("cheri-std093-muslc",)
             # TODO: Add more projects (eg busybox and muslc once released and is public)
         elif cls.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
             result += ("morello-linux-kernel",)
@@ -271,9 +313,6 @@ class LaunchCheriLinux(LaunchQEMUBase):
 
         kernel = f"{linux_project.install_dir}/boot/Image"
         initramfs = f"{linux_project.install_dir}/boot/initramfs.cpio.gz"
-        if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            # No initramfs available yet
-            initramfs = "/dev/null"
         self._project_specific_options += ["-append", "init=/init", "-initrd", initramfs]
         # This is not enabled by default for AArch64
         self.qemu_options.can_boot_kernel_directly = True
