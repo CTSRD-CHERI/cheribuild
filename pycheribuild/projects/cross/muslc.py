@@ -51,6 +51,7 @@ class BuildMuslc(CrossCompileAutotoolsProject):
         CompilationTargets.LINUX_AARCH64,
         CompilationTargets.LINUX_RISCV64,
     )
+    _default_architecture = CompilationTargets.LINUX_AARCH64
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
 
