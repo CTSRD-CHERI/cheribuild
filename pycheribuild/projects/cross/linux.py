@@ -172,6 +172,7 @@ class BuildCheriAllianceLinux(BuildLinux):
         CompilationTargets.LINUX_AARCH64_GCC,
     )
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    _default_architecture = CompilationTargets.LINUX_RISCV64_PURECAP_093
 
     @property
     def defconfig(self) -> str:
