@@ -80,6 +80,7 @@ class BuildMorelloLinuxMuslc(BuildMuslc):
     target = "morello-muslc"
     repository = GitRepository("https://git.morello-project.org/morello/musl-libc.git")
     _supported_architectures = CompilationTargets.ALL_MORELLO_LINUX_TARGETS
+    _default_architecture = CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP
     dependencies = ("morello-compiler-rt-builtins", "morello-linux-kernel")
 
     def setup(self) -> None:

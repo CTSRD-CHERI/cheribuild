@@ -177,6 +177,7 @@ class BuildMorelloBusyBox(BuildBusyBox):
     target = "morello-busybox"
     repository = GitRepository("https://git.morello-project.org/morello/morello-busybox.git")
     _supported_architectures = CompilationTargets.ALL_MORELLO_LINUX_TARGETS
+    _default_architecture = CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP
 
     def setup(self) -> None:
         super().setup()
@@ -205,4 +206,5 @@ class BuildAllianceBusyBox(BuildBusyBox):
     target = "cheri-std093-busybox"
     repository = GitRepository("https://github.com/CHERI-Alliance/busybox.git")
     _supported_architectures = CompilationTargets.ALL_CHERI_LINUX_TARGETS
+    _default_architecture = CompilationTargets.CHERI_LINUX_MORELLO_PURECAP
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093

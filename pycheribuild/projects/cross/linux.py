@@ -168,6 +168,7 @@ class BuildCheriAllianceLinux(BuildLinux):
         CompilationTargets.LINUX_KERNEL_AARCH64_GCC,
     )
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
+    _default_architecture = CompilationTargets.CHERI_LINUX_RISCV64_PURECAP_093
 
     @property
     def defconfig(self) -> str:
@@ -207,6 +208,7 @@ class BuildMorelloLinux(BuildLinux):
     # To avoid workarounds and long target names, mark it as LINUX_MORELLO_PURECAP here but it will
     # still be built as a hybrid kernel.
     _supported_architectures = CompilationTargets.ALL_MORELLO_LINUX_TARGETS
+    _default_architecture = CompilationTargets.MORELLO_LINUX_MORELLO_PURECAP
 
     @property
     def defconfig(self) -> str:
