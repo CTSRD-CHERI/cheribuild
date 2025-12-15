@@ -477,6 +477,7 @@ class BuildFreeBSDBase(Project):
     minimal: "ClassVar[bool]"
     build_tests: "ClassVar[bool]"
     extra_make_args: "ClassVar[list[str]]"
+    extra_make_env: "ClassVar[list[str]]"
 
     @property
     def use_bootstrapped_toolchain(self) -> bool:
@@ -498,6 +499,13 @@ class BuildFreeBSDBase(Project):
             default=cls.default_extra_make_options,
             metavar="OPTIONS",
             help="Additional make options to be passed to make when building FreeBSD/CheriBSD. See `man src.conf` "
+            "for more info.",
+            show_help=True,
+        )
+        cls.extra_make_env = cls.add_list_option(
+            "extra-env",
+            metavar="ENV",
+            help="Additional make env to be passed to make when building FreeBSD/CheriBSD. See `man src-env.conf` "
             "for more info.",
             show_help=True,
         )
@@ -606,6 +614,13 @@ class BuildFreeBSDBase(Project):
                 self.make_args.set(**args)
             else:
                 self.make_args.add_flags(option)
+        for env in self.extra_make_env:
+            if "=" not in env:
+                self.fatal("Missing value for extra environment variable: " + env)
+                continue
+            key, value = env.split("=", 1)
+            args = {key: value}
+            self.make_args.set_env(**args)
 
     def run_make(self, make_target="", *, options: "Optional[MakeOptions]" = None, parallel=True, **kwargs):
         # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested

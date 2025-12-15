@@ -1275,6 +1275,7 @@ def test_mfs_root_kernel_config_options():
         "debug_kernel",
         "default_kernel_abi",
         "extra_make_args",
+        "extra_make_env",
         "fast_rebuild",
         "force_configure",
         "kernel_config",
