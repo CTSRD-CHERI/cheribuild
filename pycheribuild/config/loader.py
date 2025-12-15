@@ -100,9 +100,9 @@ class _EnumArgparseType(typing.Generic[EnumTy]):
                     return e
             v = self.enums[enum_value_name]
         except KeyError:
-            msg = ", ".join([t.name.lower() for t in self.enums])
+            msg = ", ".join([t.name.lower().replace("_", "-") for t in self.enums])
             msg = f"{name}: use one of {{{msg}}}"
-            raise argparse.ArgumentTypeError(msg)
+            raise ValueError(msg)
         #       else:
         #           self.action.choices = None  # hugly hack to prevent post validation from choices
         return v
