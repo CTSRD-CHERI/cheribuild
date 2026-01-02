@@ -50,6 +50,8 @@ class BuildMuslc(CrossCompileAutotoolsProject):
     _supported_architectures = (
         CompilationTargets.LINUX_AARCH64,
         CompilationTargets.LINUX_RISCV64,
+        CompilationTargets.LINUX_RISCV64_GCC,
+        CompilationTargets.LINUX_AARCH64_GCC,
     )
     _default_architecture = CompilationTargets.LINUX_AARCH64
     make_kind = MakeCommandKind.GnuMake
@@ -80,7 +82,12 @@ class BuildMuslc(CrossCompileAutotoolsProject):
 class BuildMorelloLinuxMuslc(BuildMuslc):
     target = "morello-muslc"
     repository = GitRepository("https://git.morello-project.org/morello/musl-libc.git")
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = (
+        CompilationTargets.LINUX_MORELLO_PURECAP,
+        CompilationTargets.LINUX_AARCH64,
+        CompilationTargets.LINUX_AARCH64_GCC,
+    )
+    _default_architecture = CompilationTargets.LINUX_MORELLO_PURECAP
     dependencies = ("morello-compiler-rt-builtins", "linux-kernel-headers")
 
     def setup(self) -> None:
@@ -96,7 +103,14 @@ class BuildMorelloLinuxMuslc(BuildMuslc):
 class BuildAllianceLinuxMuslc(BuildMuslc):
     target = "cheri-std093-muslc"
     repository = GitRepository("https://github.com/CHERI-Alliance/musl.git")
-    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
+    _supported_architectures = (
+        CompilationTargets.LINUX_RISCV64_PURECAP_093,
+        CompilationTargets.LINUX_MORELLO_PURECAP,
+        CompilationTargets.LINUX_AARCH64,
+        CompilationTargets.LINUX_RISCV64,
+        CompilationTargets.LINUX_RISCV64_GCC,
+        CompilationTargets.LINUX_AARCH64_GCC,
+    )
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
     dependencies = ("cheri-std093-compiler-rt-builtins", "linux-kernel-headers")
 

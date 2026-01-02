@@ -248,6 +248,10 @@ class BuildUpstreamCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "upstream-compiler-rt-builtins"
     llvm_project = BuildUpstreamLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
+    _supported_architectures = (
+        CompilationTargets.FREESTANDING_RISCV64,
+        CompilationTargets.FREESTANDING_AARCH64,
+    )
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":
@@ -288,6 +292,11 @@ class BuildMorelloCompilerRtBuiltins(BuildCompilerRtBuiltins):
     target = "morello-compiler-rt-builtins"
     llvm_project = BuildMorelloLLVM
     repository = ReuseOtherProjectDefaultTargetRepository(llvm_project, subdirectory="compiler-rt")
+    _supported_architectures = (
+        CompilationTargets.LINUX_AARCH64,
+        CompilationTargets.LINUX_AARCH64_GCC,
+        CompilationTargets.LINUX_MORELLO_PURECAP,
+    )
 
     @classmethod
     def dependencies(cls, config) -> "tuple[str, ...]":

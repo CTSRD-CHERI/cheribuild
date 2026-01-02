@@ -222,7 +222,10 @@ class BuildMorelloLinux(BuildLinux):
     # Morello Linux is actually built hybrid (at the moment), but in the future it will be purecap.
     # To avoid workarounds and long target names, mark it as LINUX_MORELLO_PURECAP here but it will
     # still be built as a hybrid kernel.
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    _supported_architectures = (
+        CompilationTargets.LINUX_MORELLO_PURECAP,
+        CompilationTargets.LINUX_AARCH64,
+    )
 
     @property
     def defconfig(self) -> str:
@@ -248,6 +251,8 @@ class InstallLinuxHeaders(BuildLinux):
         CompilationTargets.LINUX_RISCV64_PURECAP_093,
         CompilationTargets.LINUX_RISCV64,
         CompilationTargets.LINUX_AARCH64,
+        CompilationTargets.LINUX_RISCV64_GCC,
+        CompilationTargets.LINUX_AARCH64_GCC,
     )
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
 
