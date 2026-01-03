@@ -259,11 +259,11 @@ class InstallLinuxHeaders(BuildLinux):
     @classproperty
     def repository(self):
         if self.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            return ReuseOtherProjectDefaultTargetRepository(BuildCheriAllianceLinux)
+            return ReuseOtherProjectDefaultTargetRepository(BuildCheriAllianceLinux, do_update=True)
         elif self.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
-            return ReuseOtherProjectDefaultTargetRepository(BuildMorelloLinux)
+            return ReuseOtherProjectDefaultTargetRepository(BuildMorelloLinux, do_update=True)
         else:
-            return ReuseOtherProjectDefaultTargetRepository(BuildLinux)
+            return ReuseOtherProjectDefaultTargetRepository(BuildLinux, do_update=True)
 
     @property
     def _only_install_headers(self):
