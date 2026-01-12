@@ -117,6 +117,11 @@ mount -t tmpfs none /dev/shm
 mount -t sysfs none /sys
 mount -t cgroup none /sys/fs/cgroup
 
+# Attach stdio to kernel console
+if [ -c /dev/console ]; then
+    exec </dev/console >/dev/console 2>&1
+fi
+
 # Set hostname
 hostname {hostname}
 
@@ -214,3 +219,6 @@ class BuildAllianceBusyBox(BuildBusyBox):
     _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
     supported_riscv_cheri_standard = RiscvCheriISA.EXPERIMENTAL_STD093
     dependencies = ("cheri-std093-muslc", "linux-kernel-headers")
+
+    def configure(self) -> None:
+        self.run_make("morello_busybox_defconfig", cwd=self.source_dir)
