@@ -35,6 +35,7 @@ from ..project import (
     GitRepository,
     Linkage,
     MakeCommandKind,
+    ReuseOtherProjectBuildDir,
 )
 from ...config.chericonfig import RiscvCheriISA
 from ...config.compilation_targets import CompilationTargets
@@ -127,6 +128,7 @@ class BuildAllianceLinuxMuslc(BuildMuslc):
 
 class InstallCHeaders(BuildMuslc):
     target = "muslc-headers"
+    _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildMuslc)
 
     def compile(self):
         pass
@@ -138,6 +140,7 @@ class InstallCHeaders(BuildMuslc):
 class InstallAllianceCHeaders(BuildAllianceLinuxMuslc):
     target = "cheri-std093-muslc-headers"
     dependencies = ()
+    _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildAllianceLinuxMuslc)
 
     def compile(self):
         pass
@@ -149,6 +152,7 @@ class InstallAllianceCHeaders(BuildAllianceLinuxMuslc):
 class InstallMorelloCHeaders(BuildMorelloLinuxMuslc):
     target = "morello-muslc-headers"
     dependencies = ()
+    _build_dir: ReuseOtherProjectBuildDir = ReuseOtherProjectBuildDir(build_project=BuildMorelloLinuxMuslc)
 
     def compile(self):
         pass
