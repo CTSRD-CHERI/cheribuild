@@ -36,6 +36,7 @@ from ..project import (
     DefaultInstallDir,
     GitRepository,
     MakeCommandKind,
+    ReuseOtherProjectBuildDir,
     ReuseOtherProjectDefaultTargetRepository,
 )
 from ..run_qemu import LaunchQEMUBase
@@ -264,6 +265,15 @@ class InstallLinuxHeaders(BuildLinux):
             return ReuseOtherProjectDefaultTargetRepository(BuildMorelloLinux, do_update=True)
         else:
             return ReuseOtherProjectDefaultTargetRepository(BuildLinux, do_update=True)
+
+    @classproperty
+    def _build_dir(self):
+        if self.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            return ReuseOtherProjectBuildDir(build_project=BuildCheriAllianceLinux)
+        elif self.get_crosscompile_target().is_hybrid_or_purecap_cheri([CPUArchitecture.AARCH64]):
+            return ReuseOtherProjectBuildDir(build_project=BuildMorelloLinux)
+        else:
+            return ReuseOtherProjectBuildDir(build_project=BuildLinux)
 
     @property
     def _only_install_headers(self):
