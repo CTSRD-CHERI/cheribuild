@@ -66,7 +66,6 @@ def get_default_ssh_forwarding_port(addend: int):
 class QEMUType(Enum):
     DEFAULT = "default"
     CHERI = "cheri"
-    MORELLO = "morello"
     UPSTREAM = "upstream"
     SYSTEM = "system"
     CUSTOM = "custom"
@@ -324,7 +323,7 @@ class LaunchQEMUBase(SimpleProject):
             if cls.use_qemu == QEMUType.DEFAULT:
                 qemu_class = supported_qemu_classes[0]
                 qemu_binary = None
-            elif cls.use_qemu in (QEMUType.CHERI, QEMUType.MORELLO, QEMUType.UPSTREAM):
+            elif cls.use_qemu in (QEMUType.CHERI, QEMUType.UPSTREAM):
                 qemu_class = {
                     QEMUType.CHERI: BuildQEMU,
                     QEMUType.UPSTREAM: BuildUpstreamQEMU,
