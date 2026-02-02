@@ -115,6 +115,8 @@ class BuildCheriAPITests(CrossCompileMakefileProject):
             MK_CHERI_CODEPTR_RELOCS="no",
             MAKESYSPATH=str(self.source_dir / "mk"),
             MAKEOBJDIRPREFIX=str(self.build_dir),
+            # This property was added to _ClangBasedTargetInfo to support this specific use case.
+            OBJCOPY=self.target_info.objcopy,
             **self.env_make_args,
         )
 
