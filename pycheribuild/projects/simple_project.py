@@ -671,6 +671,11 @@ class SimpleProjectBase(AbstractProject, ABC):
 
     # noinspection PyPep8Naming
     @property
+    def OBJCOPY(self) -> Path:  # noqa: N802
+        return self.target_info.objcopy
+
+    # noinspection PyPep8Naming
+    @property
     def host_CC(self) -> Path:  # noqa: N802
         return TargetInfo.host_c_compiler(self.config)
 
