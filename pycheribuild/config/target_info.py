@@ -1271,6 +1271,7 @@ def cheribsd_morello_version_dependent_flags(cheribsd_version: "Optional[int]", 
         # disrupt configure scripts by warning about the unused argument when
         # not linking.
         result.extend(["--start-no-unused-arguments", "-Wl,--local-caprelocs=elf", "--end-no-unused-arguments"])
+    if cheribsd_version >= 20250301:
         result.append("-cheri-codeptr-relocs")
     return result
 
