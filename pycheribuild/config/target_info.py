@@ -1251,19 +1251,21 @@ def cheribsd_morello_version_dependent_flags(cheribsd_version: "Optional[int]", 
     # ABI will be used when CheriBSD is eventually built. This ensures the
     # LLVM config files for the SDK utilities get the right flags in the
     # common case as otherwise there is a circular dependency.
-    if cheribsd_version is None or cheribsd_version >= 20220511:
+    if cheribsd_version is None:
+        cheribsd_version = 99999999
+    if is_purecap and cheribsd_version < 20220511:
+        # Use emulated TLS on older purecap
+        result.append("-femulated-tls")
+    if cheribsd_version >= 20220511:
         # Use new var-args ABI
         result.extend(["-Xclang", "-morello-vararg=new"])
-    if cheribsd_version is None or cheribsd_version >= 20240315:
+    if cheribsd_version >= 20240315:
         # Use new function call ABI
         result.extend(["-Xclang", "-morello-bounded-memargs"])
     elif cheribsd_version >= 20230804:
         # Use transitionary function call ABI on older purecap
         result.extend(["-Xclang", "-morello-bounded-memargs=caller-only"])
-    if is_purecap and cheribsd_version is not None and cheribsd_version < 20220511:
-        # Use emulated TLS on older purecap
-        result.append("-femulated-tls")
-    if cheribsd_version is None or cheribsd_version >= 20250127:
+    if cheribsd_version >= 20250127:
         # NB: get_essential_compiler_and_linker_flags conflates CFLAGS and
         # LDFLAGS so this will end up in CFLAGS, but we don't want it to
         # disrupt configure scripts by warning about the unused argument when
