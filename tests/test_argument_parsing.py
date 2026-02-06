@@ -742,6 +742,30 @@ class SystemClangIfExistsElse:
             CompilerType.CUSTOM,
             ["--cheribsd-riscv64/toolchain-path", "/path/to/custom/toolchain"],
         ),
+        pytest.param(
+            "cheribsd-riscv64-hybrid",
+            "/path/to/custom/toolchain/bin/clang",
+            CompilerType.CUSTOM,
+            ["--cheribsd-riscv64-hybrid/toolchain-path", "/path/to/custom/toolchain"],
+        ),
+        pytest.param(
+            "cheribsd-riscv64-purecap",
+            "/path/to/custom/toolchain/bin/clang",
+            CompilerType.CUSTOM,
+            ["--cheribsd-riscv64-purecap/toolchain-path", "/path/to/custom/toolchain"],
+        ),
+        pytest.param(
+            "cheribsd-morello-hybrid",
+            "/path/to/custom/toolchain/bin/clang",
+            CompilerType.CUSTOM,
+            ["--cheribsd-morello-hybrid/toolchain-path", "/path/to/custom/toolchain"],
+        ),
+        pytest.param(
+            "cheribsd-morello-purecap",
+            "/path/to/custom/toolchain/bin/clang",
+            CompilerType.CUSTOM,
+            ["--cheribsd-morello-purecap/toolchain-path", "/path/to/custom/toolchain"],
+        ),
     ],
 )
 def test_freebsd_toolchains(
@@ -1021,20 +1045,6 @@ def test_mfsroot_kernel_configs(target: str, config_options: "list[str]", expect
     assert project.kernconf_list() == expected_kernels
 
 
-def test_freebsd_toolchains_cheribsd_purecap():
-    # Targets that need CHERI don't have the --toolchain option:
-    # Argparse should exit with exit code 2
-    for i in CompilerType:
-        for target in (
-            "cheribsd-riscv64-hybrid",
-            "cheribsd-riscv64-purecap",
-            "cheribsd-morello-hybrid",
-            "cheribsd-morello-purecap",
-        ):
-            with pytest.raises(KeyError, match=r"error: unknown argument '--[\w-]+/toolchain'"):
-                test_freebsd_toolchains(target, "/wrong/path", i, [])
-
-
 @pytest.mark.parametrize(
     ("target", "args", "expected"),
     [
@@ -1260,6 +1270,7 @@ def test_mfs_root_kernel_config_options():
     ]
     config_options.sort()
     assert config_options == [
+        "_cross_toolchain_root",
         "_initial_build_dir",
         "_initial_source_dir",
         "_install_dir",
@@ -1271,6 +1282,7 @@ def test_mfs_root_kernel_config_options():
         "build_fett_kernels",
         "build_fpga_kernels",
         "build_nocaprevoke_kernels",
+        "build_toolchain",
         "build_type",
         "debug_kernel",
         "default_kernel_abi",
