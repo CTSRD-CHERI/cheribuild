@@ -712,8 +712,15 @@ class BuildFreeBSD(BuildFreeBSDBase):
             cls.linker_for_kernel = "should-not-be-used"
             cls.linker_for_world = "should-not-be-used"
         else:
-            # Prefer using system clang for FreeBSD builds rather than a self-built snapshot of LLVM since that might
-            # have new warnings that break the -Werror build.
+            # override in CheriBSD
+            cls.linker_for_world = cls.add_config_option(
+                "linker-for-world", default="lld", choices=["bfd", "lld"], help="The linker to use for world"
+            )
+            cls.linker_for_kernel = cls.add_config_option(
+                "linker-for-kernel", default="lld", choices=["bfd", "lld"], help="The linker to use for the kernel"
+            )
+
+        if not bootstrap_toolchain:
             cls.build_toolchain = typing.cast(
                 CompilerType,
                 cls.add_config_option(
@@ -721,19 +728,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     kind=CompilerType,
                     default=CompilerType.DEFAULT_COMPILER,
                     enum_choice_strings=[t.value for t in CompilerType],
-                    help="The toolchain to use for building FreeBSD. When set to 'custom', the 'toolchain-path' option "
-                    "must also be set",
+                    help="The toolchain to use for building FreeBSD/CheriBSD.  When set to 'custom',"
+                    " the 'toolchain-path' option must also be set",
                 ),
             )
             cls._cross_toolchain_root = cls.add_optional_path_option(
                 "toolchain-path", help="Path to the cross toolchain tools"
-            )
-            # override in CheriBSD
-            cls.linker_for_world = cls.add_config_option(
-                "linker-for-world", default="lld", choices=["bfd", "lld"], help="The linker to use for world"
-            )
-            cls.linker_for_kernel = cls.add_config_option(
-                "linker-for-kernel", default="lld", choices=["bfd", "lld"], help="The linker to use for the kernel"
             )
 
         cls.with_debug_info = cls.add_bool_option(
