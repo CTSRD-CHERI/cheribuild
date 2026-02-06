@@ -562,6 +562,8 @@ class BuildFreeBSDBase(Project):
             I_REALLY_MEAN_NO_CLEAN=True,  # Also skip the useless delete-old step
             NO_ROOT=True,  # use this even if current user is root, as without it the METALOG file is not created
             BUILD_WITH_STRICT_TMPPATH=True,  # This can catch lots of depdency errors
+            SRCCONF="/dev/null",  # don't let system's config pollute build
+            SRC_ENV_CONF="/dev/null",
         )
         # FreeBSD has renamed NO_CLEAN to WITHOUT_CLEAN
         self.make_args.set_with_options(CLEAN=False)
