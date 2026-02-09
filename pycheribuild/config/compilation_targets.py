@@ -186,6 +186,10 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         return self._compiler_dir / "ld.lld"
 
     @property
+    def objcopy(self) -> Path:
+        return self._compiler_dir / "objcopy"
+
+    @property
     def ar(self) -> Path:
         return self._compiler_dir / "llvm-ar"
 
