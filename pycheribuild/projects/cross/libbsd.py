@@ -40,16 +40,13 @@ from ...utils import classproperty
 
 class BuildLibbsd(CrossCompileAutotoolsProject):
     _always_add_suffixed_targets = True
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
     _can_use_autogen_sh = True
-    dependencies = ("morello-muslc", "libmd")
     make_kind = MakeCommandKind.GnuMake
     # `default_branch` is set because the build scripts assume that 
     # a git tag is checked out. In more detail ./get-version returns an 
     # empty string if main is checked out.
     repository = GitRepository("https://gitlab.freedesktop.org/libbsd/libbsd.git", 
                                default_branch="0.12.2")
-    target = 'libbsd'
 
     @classproperty
     def default_install_dir(self):
@@ -85,6 +82,8 @@ index 3f1b3fb..f8cb602 100644
         super().setup()
         # Remove dependency on libgcc_eh
         self.COMMON_LDFLAGS.append("--unwindlib=none")
+        # Remove dependcy on libgcc_s
+        self.COMMON_LDFLAGS.append("-Wc,--unwindlib=none")
 
     def configure(self, **kwargs):
         if not self.configure_command.exists():
@@ -99,3 +98,15 @@ index 3f1b3fb..f8cb602 100644
     def install(self, **kwargs):
         self.run_make_install()
         super().install(**kwargs)
+
+
+class BuildRISCVLibbsd(BuildLibbsd):
+    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
+    dependencies = ("cheri-std093-muslc", "cheri-std093-libmd")
+    target = 'cheri-std093-libbsd'
+
+
+class BuildMorelloLibbsd(BuildLibbsd):
+    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    dependencies = ("morello-muslc", "morello-libmd")
+    target = 'morello-libbsd'

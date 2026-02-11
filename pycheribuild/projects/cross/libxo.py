@@ -40,12 +40,10 @@ from ...utils import classproperty
 
 class BuildLibxo(CrossCompileAutotoolsProject):
     _always_add_suffixed_targets = True
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
     _can_use_autogen_sh = True
-    dependencies = ("libbsd", "libmd",  "morello-compiler-rt-builtins", "morello-muslc")
     make_kind = MakeCommandKind.GnuMake
     repository = GitRepository("https://github.com/Juniper/libxo.git")
-    target = "libxo"
+    compiler_rt_dependency = None
 
     @classproperty
     def default_install_dir(self):
@@ -72,19 +70,22 @@ class BuildLibxo(CrossCompileAutotoolsProject):
         
         # Don't depend on libgcc_eh
         self.COMMON_LDFLAGS.append("--unwindlib=none")
+        # Remove dependcy on libgcc_s
+        self.COMMON_LDFLAGS.append("-Wc,--unwindlib=none")
 
         # Search for the build directory of compiler-rt-builtins
         compiler_rt_builtins_build_dir = None
         for d in self.cached_full_dependencies():
-            if d.name == "morello-compiler-rt-builtins-linux-morello-purecap":
-                compiler_rt_builtins_build_dir = d.get_or_create_project(None, None, self).get_build_dir(self)
+            if str(d.name).find(self.compiler_rt_dependency) != -1:
+                compiler_rt_builtins_build_dir = d.get_or_create_project(
+                    self.crosscompile_target, self.config, self).get_build_dir(self)
                 break
-        print(compiler_rt_builtins_build_dir)
         # Don't try to link with libgcc_s. The compiler cannot find libclang_rt.builtins-aarch64.a if just 
         # -rtlib=compiler-rt is set without setting the resource path.
         self.make_args.set(
             CFLAGS=" ".join(self.default_compiler_flags() + 
                             ["-rtlib=compiler-rt", "-resource-dir={}".format(compiler_rt_builtins_build_dir)]),
+            LDFLAGS=" ".join(self.COMMON_LDFLAGS)
         )
     
     def configure(self, **kwargs):
@@ -101,3 +102,18 @@ class BuildLibxo(CrossCompileAutotoolsProject):
         self.run_make_install()
         super().install(**kwargs)
 
+
+class BuildRISCVLibxo(BuildLibxo):
+    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
+    compiler_rt_dependency = "cheri-std093-compiler-rt-builtins"
+    dependencies = ("cheri-std093-libbsd", "cheri-std093-libmd",  
+                    "cheri-std093-compiler-rt-builtins", "cheri-std093-muslc")
+    target = "cheri-std093-libxo"
+
+
+class BuildMorelloLibxo(BuildLibxo):
+    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    compiler_rt_dependency = "morello-compiler-rt-builtins"
+    dependencies = ("morello-libbsd", "morello-libmd",  
+                    "morello-compiler-rt-builtins", "morello-muslc")
+    target = "morello-libxo"

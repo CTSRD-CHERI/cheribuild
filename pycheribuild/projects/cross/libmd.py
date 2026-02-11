@@ -40,13 +40,11 @@ from ...utils import classproperty
 
 class BuildLibmd(CrossCompileAutotoolsProject):
     _always_add_suffixed_targets = True
-    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
     _can_use_autogen_sh = True
-    dependencies = ("morello-muslc",)
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = False
     repository = GitRepository("https://git.hadrons.org/git/libmd.git")
-    target = 'libmd'
+    compiler_rt_dependency = None
 
     @classproperty
     def default_install_dir(self):
@@ -60,6 +58,8 @@ class BuildLibmd(CrossCompileAutotoolsProject):
         super().setup()
         # Remove dependency on libgcc_eh
         self.COMMON_LDFLAGS.append("--unwindlib=none")
+        # Remove dependcy on libgcc_s
+        self.COMMON_LDFLAGS.append("-Wc,--unwindlib=none")
     
     def configure(self, **kwargs):
         if not self.configure_command.exists():
@@ -67,7 +67,6 @@ class BuildLibmd(CrossCompileAutotoolsProject):
         super().configure(**kwargs)
 
     def compile(self, **kwargs):
-        #self.make_args.set(DESTDIR=self.install_dir)
         self.run_make()
         super().compile(**kwargs)
 
@@ -76,4 +75,15 @@ class BuildLibmd(CrossCompileAutotoolsProject):
         super().install(**kwargs)
 
 
+class BuildRISCVLibmd(BuildLibmd):
+    _supported_architectures = (CompilationTargets.LINUX_RISCV64_PURECAP_093,)
+    compiler_rt_dependency = "cheri-std093-compiler-rt-builtins"
+    dependencies = ("cheri-std093-muslc", compiler_rt_dependency)
+    target = 'cheri-std093-libmd'
 
+
+class BuildMorelloLibmd(BuildLibmd):
+    _supported_architectures = (CompilationTargets.LINUX_MORELLO_PURECAP,)
+    compiler_rt_dependency = "morello-compiler-rt-builtins"
+    dependencies = ("morello-muslc", compiler_rt_dependency)
+    target = 'morello-libmd'
