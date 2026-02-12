@@ -786,7 +786,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if cls._xtarget is None or not cls._xtarget.cpu_architecture.is_32bit():
             cls.build_lib32 = cls.add_bool_option(
                 "build-lib32",
-                default=False,
+                default=True,
                 help="Build the 32-bit compatibility userspace libraries (if supported for the current architecture)",
             )
         else:
