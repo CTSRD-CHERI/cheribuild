@@ -141,6 +141,9 @@ class BuildRISCVCheriTestSuite(BuildCheriTestSuite):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         # Copy riscv-specific headers to the machine include directory
+        machine_headers = self.source_dir / "compat_headers" / "machine"
+        if os.path.exists(machine_headers):
+            shutil.rmtree(machine_headers)
         shutil.copytree(self.source_dir / "compat_headers" / "riscv", 
                     self.source_dir / "compat_headers" / "machine",
                     dirs_exist_ok=True)
@@ -159,8 +162,11 @@ class BuildMorelloCheriTestSuite(BuildCheriTestSuite):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Copy arm64-specific headers to the machine include directory
+        machine_headers = self.source_dir / "compat_headers" / "machine"
+        if os.path.exists(machine_headers):
+            shutil.rmtree(machine_headers)
         shutil.copytree(self.source_dir / "compat_headers" / "arm64", 
-                    self.source_dir / "compat_headers" / "machine",
+                    machine_headers,
                     dirs_exist_ok=True)
         self.set_env_make_args(machine_cpuarch="aarch64c",
                                machine_abi="purecap",
