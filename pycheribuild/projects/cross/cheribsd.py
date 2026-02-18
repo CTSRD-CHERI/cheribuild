@@ -843,7 +843,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 result["WITH_CHERI"] = True
             else:
                 if self.crosscompile_target.is_experimental_cheri093_std(self.config):
-                    result["TARGET_CPUTYPE"] = "zcheri093"
+                    result["TARGET_CPUTYPE"] = "rvy"
                 else:
                     result["TARGET_CPUTYPE"] = "cheri"
                 if self.compiling_for_mips(include_purecap=True):
