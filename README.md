@@ -59,7 +59,7 @@ the most commonly used cheribuild targets:
 pacman -Syu autoconf automake libtool pkgconf clang bison cmake ninja samba flex texinfo time glib2 pixman libarchive bzip2 attr libcap-ng inetutils mercurial expat gmp
 ```
 
-These package used approx 350MiB, though you probably have most already installed.
+These packages used approx 350MiB, though you probably have most already installed.
 
 # Contributing
 
