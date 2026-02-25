@@ -375,7 +375,7 @@ class SimpleProjectBase(AbstractProject, ABC):
         include_sdk_dependencies: bool,
         explicit_dependencies_only: bool,
     ) -> "typing.Iterator[Target]":
-        if not include_sdk_dependencies:
+        if not include_sdk_dependencies or cls.uses_custom_toolchain():
             include_toolchain_dependencies = False  # --skip-sdk means skip toolchain and skip sysroot
         assert cls._xtarget is not None
         dependencies = cls.dependencies
@@ -652,6 +652,10 @@ class SimpleProjectBase(AbstractProject, ABC):
             if self.target_info.is_baremetal():
                 return xtarget.is_cheri_purecap()
             return self.config.mips_float_abi == MipsFloatAbi.SOFT
+        return False
+
+    @classmethod
+    def uses_custom_toolchain(cls) -> bool:
         return False
 
     # noinspection PyPep8Naming
