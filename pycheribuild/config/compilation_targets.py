@@ -359,7 +359,7 @@ class _ClangBasedTargetInfo(TargetInfo, ABC):
         arch_string += "c"
         if xtarget.is_hybrid_or_purecap_cheri():
             if xtarget.is_experimental_cheri093_std(config):
-                arch_string += "zcherihybrid"
+                arch_string += "zcherihybrid_zcherilevels"
             else:
                 arch_string += "xcheri"
         return arch_string
@@ -874,6 +874,10 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
             result = "riscv64-linux-musl"
         else:
             assert False, "No support for building Linux for this architecture"
+
+        if target.is_cheri_purecap():
+            result += "_purecap"
+
         return result
 
     @classmethod
@@ -905,35 +909,22 @@ class LinuxTargetInfo(_ClangBasedTargetInfo):
             dirname = "sysroot" + self.target.get_rootfs_target().build_suffix(self.config, include_os=True)
         return self.sysroot_dir.parent.parent / dirname
 
-    @property
-    def must_link_statically(self):
-        return True  # only static linking tested for now.
-
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> "list[str]":
+        # TODO unify the following codebases without the morello/cheri-std093 prefixes
         if cls.uses_morello_llvm:
-            return ["morello-linux-kernel", "morello-muslc", "morello-compiler-rt-builtins"]
+            return ["linux-kernel-headers", "morello-muslc", "morello-compiler-rt-builtins"]
         elif target.is_experimental_cheri093_std(config):
-            # TODO: need to add "muslc" CHERI port
-            return ["cheri-std093-linux-kernel", "compiler-rt-builtins"]
+            return ["linux-kernel-headers", "cheri-std093-muslc", "cheri-std093-compiler-rt-builtins"]
         assert not target.is_cheri_purecap(), "Only RVY 0.9.3 and Morello are supported for purecap"
         # Note: even when targetting non-CHERI Linux, we use the CHERI targets since the latest upstream
         # LLVM does not build compiler-rt correctly for RISC-V with the current build setup.
-        return ["linux-kernel", "muslc", "compiler-rt-builtins"]
+        return ["linux-kernel-headers", "muslc", "compiler-rt-builtins"]
 
 
 class LinuxMorelloTargetInfo(LinuxTargetInfo):
     shortname: str = "Linux"
     uses_morello_llvm: bool = True
-
-    @classmethod
-    def triple_for_target(cls, target: "CrossCompileTarget", config, *, include_version):
-        if target.is_hybrid_or_purecap_cheri():
-            assert target.is_aarch64(
-                include_purecap=True,
-            ), "AArch64 is the only CHERI target supported with the Morello toolchain"
-            return "aarch64-linux-musl_purecap"  # FIXME: this seems wrong for hybrid?
-        return super().triple_for_target(target, config, include_version=include_version)
 
 
 class BaremetalClangTargetInfo(_ClangBasedTargetInfo, ABC):
