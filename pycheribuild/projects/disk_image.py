@@ -54,7 +54,7 @@ from .project import (
 from .simple_project import BoolConfigOption, SimpleProject
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile, MtreePath
-from ..utils import AnsiColour, coloured, include_local_file
+from ..utils import AnsiColour, coloured, include_file, include_local_file
 
 # Notes:
 # Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo
@@ -1118,6 +1118,10 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
             default=[""],
             help="Kernel(s) to include in the image; empty string or '/' for /boot/kernel/, X for /boot/kernel.X/",
         )
+        cls.extra_files_lists = cls.add_list_option(
+            "extra-files-lists",
+            help="Files containing a list of files from the full rootfs to include in the minimal image",
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1172,6 +1176,8 @@ class BuildMinimalCheriBSDDiskImage(BuildDiskImageBase):
                     files_to_add.append(f"boot/{kernel_dir}/{f}")
         elif self.kernels is not None:
             self.warning("This disk image is not installing kernels or modules, yet kernel names given.")
+
+        files_to_add += [include_file(Path(file)) for file in self.extra_files_lists]
 
         for files_list in files_to_add:
             self.process_files_list(files_list)
