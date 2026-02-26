@@ -237,9 +237,9 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
             [
                 "morello-llvm-native",
                 "cheribsd-morello-purecap",
-                "gmp-morello-hybrid-for-purecap-rootfs",
-                "mpfr-morello-hybrid-for-purecap-rootfs",
-                "gdb-morello-hybrid-for-purecap-rootfs",
+                "gmp-morello-purecap",
+                "mpfr-morello-purecap",
+                "gdb-morello-purecap",
                 "qemu",
                 "disk-image-morello-purecap",
             ],
@@ -278,9 +278,9 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
                 "llvm-native",
                 "bbl-baremetal-riscv64-purecap",
                 "cheribsd-riscv64-purecap",
-                "gmp-riscv64-hybrid-for-purecap-rootfs",
-                "mpfr-riscv64-hybrid-for-purecap-rootfs",
-                "gdb-riscv64-hybrid-for-purecap-rootfs",
+                "gmp-riscv64-purecap",
+                "mpfr-riscv64-purecap",
+                "gdb-riscv64-purecap",
                 "qemu",
                 "disk-image-riscv64-purecap",
             ],
@@ -334,9 +334,9 @@ def test_build_and_run(target_name: str, expected_list: "list[str]"):
                 "morello-firmware",
                 "morello-llvm-native",
                 "cheribsd-morello-purecap",
-                "gmp-morello-hybrid-for-purecap-rootfs",
-                "mpfr-morello-hybrid-for-purecap-rootfs",
-                "gdb-morello-hybrid-for-purecap-rootfs",
+                "gmp-morello-purecap",
+                "mpfr-morello-purecap",
+                "gdb-morello-purecap",
                 "disk-image-morello-purecap",
             ],
         ),
@@ -553,30 +553,30 @@ def test_webkit_cached_deps():
 
 
 def test_gdb_cached_deps():
-    target_names = _sort_targets(["gdb-morello-hybrid-for-purecap-rootfs"], add_dependencies=True, skip_sdk=True)
+    target_names = _sort_targets(["gdb-morello-purecap"], add_dependencies=True, skip_sdk=True)
     assert target_names == [
-        "gmp-morello-hybrid-for-purecap-rootfs",
-        "mpfr-morello-hybrid-for-purecap-rootfs",
-        "gdb-morello-hybrid-for-purecap-rootfs",
+        "gmp-morello-purecap",
+        "mpfr-morello-purecap",
+        "gdb-morello-purecap",
     ]
-    gdb_morello_hybrid = target_manager.get_target_raw("gdb-morello-hybrid-for-purecap-rootfs").project_class
+    gdb_morello = target_manager.get_target_raw("gdb-morello-purecap").project_class
     # LLVM and CheriBSD is not included in the list above since we did not request them, but full deps should include
-    all_names = list(sorted([x.name for x in gdb_morello_hybrid.cached_full_dependencies()]))
+    all_names = list(sorted([x.name for x in gdb_morello.cached_full_dependencies()]))
     assert all_names == [
         "cheribsd-morello-purecap",
-        "gmp-morello-hybrid-for-purecap-rootfs",
+        "gmp-morello-purecap",
         "morello-llvm-native",
-        "mpfr-morello-hybrid-for-purecap-rootfs",
+        "mpfr-morello-purecap",
     ]
     sorted_by_order = _sort_targets(
-        [*all_names, "gdb-morello-hybrid-for-purecap-rootfs"], add_dependencies=False, skip_sdk=True
+        [*all_names, "gdb-morello-purecap"], add_dependencies=False, skip_sdk=True
     )
     assert sorted_by_order == [
         "morello-llvm-native",
         "cheribsd-morello-purecap",
-        "gmp-morello-hybrid-for-purecap-rootfs",
-        "mpfr-morello-hybrid-for-purecap-rootfs",
-        "gdb-morello-hybrid-for-purecap-rootfs",
+        "gmp-morello-purecap",
+        "mpfr-morello-purecap",
+        "gdb-morello-purecap",
     ]
 
 

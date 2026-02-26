@@ -39,7 +39,7 @@ from pathlib import Path, PurePath
 from typing import Optional, Union
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDWithDefaultOptions
-from .cross.gdb import BuildKGDB, get_build_gdb_class
+from .cross.gdb import BuildKGDB, get_build_gdb_class, get_gdb_xtarget
 from .project import (
     AutotoolsProject,
     CheriConfig,
@@ -570,8 +570,7 @@ class BuildDiskImageBase(SimpleProject):
             return
         # FIXME: if /usr/local/bin/gdb is in the image make /usr/bin/gdb a symlink
         cross_target = self.source_project.crosscompile_target
-        if cross_target.is_cheri_purecap():
-            cross_target = cross_target.get_cheri_hybrid_for_purecap_rootfs_target()
+        cross_target = get_gdb_xtarget(cross_target, self.config)
         gdb_cls = get_build_gdb_class(cross_target, self.config)
         if cross_target not in gdb_cls.supported_architectures():
             self.warning("GDB cannot be built for architecture ", cross_target, " -> not addding it")
@@ -1454,7 +1453,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
         result = super().dependencies(config)
         # GDB is not strictly a dependency, but having it in the disk image makes life a lot easier
         xtarget = cls.get_crosscompile_target()
-        gdb_xtarget = xtarget.get_cheri_hybrid_for_purecap_rootfs_target() if xtarget.is_cheri_purecap() else xtarget
+        gdb_xtarget = get_gdb_xtarget(xtarget, config)
         gdb_cls = get_build_gdb_class(gdb_xtarget, config)
         if gdb_xtarget in gdb_cls.supported_architectures():
             result += (gdb_cls.get_class_for_target(gdb_xtarget).target,)
