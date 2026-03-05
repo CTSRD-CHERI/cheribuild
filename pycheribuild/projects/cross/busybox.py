@@ -106,7 +106,7 @@ export PATH
 echo "Hello from BusyBox"
 
 # Ensure required mount points exist
-mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc
+mkdir -p /proc /dev/pts /dev/mqueue /dev/shm /sys /sys/fs/cgroup /etc /tmp
 ln -sf /proc/mounts /etc/mtab
 
 # Mount essential filesystems
@@ -116,6 +116,13 @@ mount -t mqueue none /dev/mqueue
 mount -t tmpfs none /dev/shm
 mount -t sysfs none /sys
 mount -t cgroup none /sys/fs/cgroup
+mount -t tmpfs none /tmp
+
+# Create special character devices
+mknod -m 666 /dev/null c 1 3
+mknod -m 666 /dev/zero c 1 5
+mknod -m 666 /dev/random c 1 8
+mknod -m 666 /dev/urandom c 1 9
 
 # Attach stdio to kernel console
 if [ -c /dev/console ]; then
