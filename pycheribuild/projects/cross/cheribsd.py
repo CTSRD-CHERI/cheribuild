@@ -794,6 +794,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             assert not cls._xtarget.is_hybrid_or_purecap_cheri()
             cls.build_lib32 = False
 
+    @classmethod
+    def uses_custom_toolchain(cls) -> bool:
+        return cls.build_toolchain == CompilerType.CUSTOM
+
     def get_default_kernel_platform(self) -> ConfigPlatform:
         if self.crosscompile_target.is_aarch64(include_purecap=True):
             return ConfigPlatform.FVP
