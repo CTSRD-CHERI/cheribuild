@@ -2294,6 +2294,9 @@ class BuildFreeBSDReleaseMixin(ReleaseMixinBase):
             PATH=":".join(map(str, extra_path_entries)) + ":" + release_args.env_vars.get("PATH", os.getenv("PATH"))
         )
 
+        # Also include all the other kernels in the distribution.
+        release_args.set(NO_INSTALLEXTRAKERNELS="no")
+
         # DESTDIR for install target is where to install the media, as you'd
         # expect, unlike the release target where it leaks into installworld
         # etc recursive makes. Otherwise everything is the same, though many
