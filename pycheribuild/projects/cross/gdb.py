@@ -65,13 +65,6 @@ class BuildGDBBase(CrossCompileAutotoolsProject):
     _default_architecture = CompilationTargets.NATIVE
     prefer_full_lto_over_thin_lto = True
 
-    @staticmethod
-    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
-        if xtarget is CompilationTargets.NATIVE_NON_PURECAP and xtarget != CompilationTargets.NATIVE:
-            assert xtarget.generic_target_suffix == "native-hybrid", xtarget.generic_target_suffix
-            return base_target + "-native"
-        return base_target + "-" + xtarget.generic_target_suffix
-
     @classmethod
     def dependencies(cls, config: CheriConfig) -> "tuple[str, ...]":
         deps = super().dependencies(config)
@@ -283,6 +276,13 @@ class BuildUpstreamGDB(BuildGDBBase):
     )
     _default_architecture = CompilationTargets.NATIVE_NON_PURECAP
 
+    @staticmethod
+    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
+        if xtarget is CompilationTargets.NATIVE_NON_PURECAP and xtarget != CompilationTargets.NATIVE:
+            assert xtarget.generic_target_suffix == "native-hybrid", xtarget.generic_target_suffix
+            return base_target + "-native"
+        return base_target + "-" + xtarget.generic_target_suffix
+
 
 class BuildGDB(BuildGDBBase):
     path_in_rootfs = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
@@ -320,6 +320,13 @@ class BuildCheriAllianceGDB(BuildGDBBase):
         CompilationTargets.NATIVE_NON_PURECAP,
     )
     _default_architecture = CompilationTargets.NATIVE_NON_PURECAP
+
+    @staticmethod
+    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
+        if xtarget is CompilationTargets.NATIVE_NON_PURECAP and xtarget != CompilationTargets.NATIVE:
+            assert xtarget.generic_target_suffix == "native-hybrid", xtarget.generic_target_suffix
+            return base_target + "-native"
+        return base_target + "-" + xtarget.generic_target_suffix
 
 
 class BuildKGDB(BuildGDB):
